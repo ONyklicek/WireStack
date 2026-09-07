@@ -33,8 +33,17 @@ const { check, finish } = checker();
 // The menu the workbench declares, in the order it must be drawn in. One copy:
 // this driver asserted it twice for a while, and the second copy is what went
 // stale the moment a third group appeared.
+// The workbench's *own* groups, and the order their declared sort() asks for.
+// Module packages register groups of their own beside these — `access`,
+// `system`, `content` — so the assertions below are about where these three sit
+// relative to each other, not about the whole menu: a driver that hard-codes the
+// entire catalogue fails the day someone installs a module, which is a change in
+// the application rather than a regression in the menu.
 const GROUP_KEYS = ['insights', 'operations', 'billing'];
 const GROUP_HEADINGS = ['Insights', 'Operations', 'Billing & invoicing'];
+
+/** The drawn order of just the keys we declared, with the rest filtered out. */
+const ours = (keys) => keys.filter((key) => GROUP_KEYS.includes(key));
 
 // Enter on a resource, not on the shell's default page — the default is the
 // dashboard, and section 7 needs somewhere to navigate *to*.
@@ -80,14 +89,18 @@ try {
   // billing resource is the FIRST one registered. So this order can only come
   // from the declared group sort — an implicit menu would read the other way.
   const drawnKeys = await groupKeys();
-  check('groups are drawn in their declared order, against registration order', JSON.stringify(drawnKeys) === JSON.stringify(GROUP_KEYS), drawnKeys.join(' → '));
+  check('groups are drawn in their declared order, against registration order', JSON.stringify(ours(drawnKeys)) === JSON.stringify(GROUP_KEYS), drawnKeys.join(' → '));
 
   const drawnHeadings = await headings();
-  check('the heading is the group\'s label, not its key', JSON.stringify(drawnHeadings) === JSON.stringify(GROUP_HEADINGS), drawnHeadings.join(' → '));
-  check('a declared group draws its icon', (await groupIcons()) === GROUP_KEYS.length, `${await groupIcons()} icon(s)`);
+  check('the heading is the group\'s label, not its key', GROUP_HEADINGS.every((h) => drawnHeadings.includes(h)), drawnHeadings.join(' → '));
+  // The failure this catches is a heading rendered as `namespace::messages.key`,
+  // which is what a translation looked up before its package registered one
+  // leaves behind — for the whole request, because the miss is cached.
+  check('no heading is an unresolved translation key', drawnHeadings.every((h) => ! h.includes('::')), drawnHeadings.join(' → '));
+  check('a declared group draws its icon', (await groupIcons()) >= GROUP_KEYS.length, `${await groupIcons()} icon(s)`);
 
   const drawnLabels = await labels();
-  check('every entry is named', drawnLabels.length === 4 && drawnLabels.every((l) => l.length > 0), JSON.stringify(drawnLabels));
+  check('every entry is named', drawnLabels.length >= 4 && drawnLabels.every((l) => l.length > 0), JSON.stringify(drawnLabels));
 
   // An entry whose key the application has no page for renders as plain text
   // rather than a link — silent, and exactly what a mismatched key produces.
@@ -169,7 +182,13 @@ try {
   check('a second hop reaches the third resource', !! onDocuments, `${await eval_('location.pathname')}, ${await rowCount()} rows`);
   check('the menu still names every entry after two hops', (await labels()).every((l) => l.length > 0), JSON.stringify(await labels()));
   check('the badges survived the hops', /^\d+$/.test(await badgeOf('invoices')) && /^\d+$/.test(await badgeOf('tasks')), `${await badgeOf('invoices')} / ${await badgeOf('tasks')}`);
-  check('so did the group order and the headings', JSON.stringify(await groupKeys()) === JSON.stringify(GROUP_KEYS) && JSON.stringify(await headings()) === JSON.stringify(GROUP_HEADINGS), (await headings()).join(' → '));
+  const keysAfterHops = ours(await groupKeys());
+  const headingsAfterHops = await headings();
+  check(
+    'so did the group order and the headings',
+    JSON.stringify(keysAfterHops) === JSON.stringify(GROUP_KEYS) && GROUP_HEADINGS.every((h) => headingsAfterHops.includes(h)),
+    headingsAfterHops.join(' → '),
+  );
   await shot('03-documents');
 
   // ── 7. And the dashboard renders, from a declaration, not a component ────

@@ -30,8 +30,11 @@ Use the smallest useful context first.
 ## Repo Graph
 
 ```text
-wire-admin -> wire-panels -> wire-table -> wire-forms -> wire-core
-wire-sortable -> wire-table
+wire-suite ------> everything below (a meta-package, plus `php artisan wire:install`)
+wire-admin        -> wire-panels -> wire-table -> wire-forms -> wire-core
+wire-module-*     -> wire-panels   (users, settings, audit, notifications, media)
+wire-module-auth  -> wire-core + laravel/fortify   (screens, not a DomainModule)
+wire-sortable     -> wire-table
 ```
 
 `wire-admin` is the optional shell (layout + sidebar) and `wire-panels` the owner
@@ -43,6 +46,16 @@ Monorepo packages are loaded from root `composer.json` as local path repositorie
 ## Architectural Invariants
 
 Prefer one canonical owner for every reusable behavior.
+
+**Permissions always go through `nyoncode/laravel-permission-extended`**, never
+bare `spatie/laravel-permission`. The extended package requires and extends
+Spatie; what this framework's screens assume — wildcard matching, the super-admin
+gate, the permission-change events — lives only in the extended one. So a user
+model carrying Spatie's `HasRoles` instead of its own is deliberately **not**
+detected, and the role and team surfaces stay off
+(`packages/module-users/src/Support/{Roles,Teams}.php`). Spatie is named in code
+only as the mechanism underneath — the role/permission models, and the
+`PermissionRegistrar` a team id is set on — never as an install target.
 
 - If a capability is shared across packages or component types, extend the existing canonical abstraction instead of creating a local variant.
 - Canonical shared abstractions should usually live in the lowest dependency layer that can own them, most often `packages/core/src/Foundation/`.
@@ -121,8 +134,24 @@ Before changing shared behavior, ask:
   `architecture/assets.md` for the current state (what ships, what the toolkit
   owns, the traps), then `architecture/plans/js-asset-registration.md` and ADR
   `architecture/decisions/0024-js-asset-delivery-and-registration.md` for why
+- A ready-made area shipped as a package, or writing another one:
+  `packages/module-users/` (the reference), then `packages/module-{settings,audit,notifications,media}/`
+  and `docs/modules/users.md`
+- Anything on the way *in* — the login screen, password reset, e-mail
+  verification, the two-factor challenge, the sign-out in the user menu:
+  `packages/module-auth/`, then `docs/modules/auth.md` and ADR
+  `architecture/decisions/0032-authentication-surface.md`. Fortify owns the
+  security; that package owns seven views and nothing else. The panel's own
+  guard is `wire-panels.routes.middleware`, which defaults to `['web', 'auth']`
+- The signed-in user's own account — the profile cards, avatars, two-factor over
+  Fortify, roles and teams over `nyoncode/laravel-permission-extended` (each an
+  `auto` switch that looks for the thing itself):
+  `packages/module-users/src/{Support,Livewire}/`, then
+  `docs/modules/teams-and-two-factor.md`
+- The one-command setup over a clean Laravel (`wire:install`, what it offers and
+  what it refuses to do): `packages/suite/`, then `docs/start/installation.md`
 - The admin shell itself — the layout, the sidebar, what a page renders inside:
-  `packages/admin/`, then `docs/core/admin-shell.md` and ADR
+  `packages/admin/`, then `docs/admin/overview.md` and ADR
   `architecture/decisions/0028-optional-panel-shell.md`
 - Making the admin optional, shipping a shell, or adding ready-made parts as
   installable packages:
@@ -198,6 +227,13 @@ composer test:forms
 composer test:table
 composer test:panels
 composer test:admin
+composer test:module-auth
+composer test:module-users
+composer test:module-settings
+composer test:module-audit
+composer test:module-notifications
+composer test:module-media
+composer test:suite
 composer test:sortable
 
 vendor/bin/pest --configuration phpunit.xml --testsuite "Integration"
@@ -261,6 +297,6 @@ npm run docs:verify-ui
 - `architecture/sortable.md`
 - `architecture/integrations.md`
 - `architecture/audit.md`
-- `docs/project-map.md`
-- `docs/configuration.md`
-- `docs/getting-started.md`
+- `docs/start/project-map.md`
+- `docs/start/configuration.md`
+- `docs/start/getting-started.md`

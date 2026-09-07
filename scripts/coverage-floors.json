@@ -3,7 +3,14 @@
     "boost": 100,
     "core": 96,
     "forms": 96,
+    "module-audit": 100,
+    "module-auth": 100,
+    "module-media": 100,
+    "module-notifications": 100,
+    "module-settings": 100,
+    "module-users": 100,
     "panels": 100,
     "sortable": 96,
+    "suite": 100,
     "table": 93
 }

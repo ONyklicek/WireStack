@@ -108,19 +108,25 @@ async function menus() {
     ]),
   ))()`);
 
+  // Filtered to the keys this preview declares: module packages register
+  // resources of their own, and a driver that hard-codes the whole catalogue
+  // fails when an application installs one — which is not what this is about.
+  const mine = (entries) => (entries ?? []).filter((entry) => ['overview', 'documents', 'tasks', 'invoices']
+    .includes(entry.replace('*', '')));
+
   check(
     'a zone links what it routes and greys out what it does not',
-    JSON.stringify(read['business · as registered']) === JSON.stringify(['overview*', 'documents', 'tasks', 'invoices*']),
+    JSON.stringify(mine(read['business · as registered'])) === JSON.stringify(['overview*', 'documents', 'tasks', 'invoices*']),
     JSON.stringify(read['business · as registered']),
   );
   check(
     'linkedOnly keeps only what this zone can reach',
-    JSON.stringify(read['business · linkedOnly']) === JSON.stringify(['overview*', 'invoices*']),
+    JSON.stringify(mine(read['business · linkedOnly'])) === JSON.stringify(['overview*', 'invoices*']),
     JSON.stringify(read['business · linkedOnly']),
   );
   check(
     'a second zone reaches more, from the same registration',
-    JSON.stringify(read['admin · linkedOnly']) === JSON.stringify(['overview*', 'tasks*', 'invoices*']),
+    JSON.stringify(mine(read['admin · linkedOnly'])) === JSON.stringify(['overview*', 'tasks*', 'invoices*']),
     JSON.stringify(read['admin · linkedOnly']),
   );
 

@@ -57,5 +57,11 @@ parameters:
         - { identifier: trait.unused, path: packages/table/src/Concerns/CanSelectRecords.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTable.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTableQueryString.php }
+        # Composed by resource pages in the module packages, which are outside the
+        # analysed paths — so "unused" is a fact about this list, not about the
+        # trait. Unlike the host traits above it carries
+        # `@phpstan-require-extends ViewPage`, so its body is still checked
+        # against the class it is written for; only the unused verdict is muted.
+        - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/InteractsWithRecordTitle.php }
         - { identifier: trait.unused, path: packages/core/src/Core/Resources/Concerns/DescribesRecords.php }
         - { identifier: trait.unused, path: packages/core/src/Core/Tenancy/Concerns/BelongsToTenant.php }

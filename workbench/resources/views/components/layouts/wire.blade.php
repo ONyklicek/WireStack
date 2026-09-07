@@ -14,7 +14,15 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </x-slot:head>
 
-    <x-slot:brand>Wire Workbench</x-slot:brand>
+    {{-- No brand slot: the logo is `wire-admin.brand` configuration and the
+         sidebar draws it. Passing one here too is how the workbench ended up
+         with the name twice, once beside its own logo. --}}
+
+    {{-- No user-menu slot, and that is the change worth noticing: the profile
+         link and the way out used to be written here by hand, against packages
+         this file happened to know the translation keys of. They are now rows
+         the modules that own them contribute, through PageChrome::USER_MENU. The
+         slot is still there for what an application genuinely owns. --}}
 
     {{ $slot }}
 </x-wire-admin::layout>

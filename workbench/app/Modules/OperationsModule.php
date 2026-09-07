@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Workbench\App\Modules;
 
-use NyonCode\WireCore\Core\Modules\DomainModule;
+use NyonCode\WireCore\Core\Modules\Module;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use Workbench\App\Dashboards\OverviewDashboard;
@@ -21,7 +21,7 @@ use Workbench\App\Resources\TaskResource;
  * dependency is not registered yet, which is the ordering guarantee V2.6 wanted
  * and did not have to build.
  */
-final class OperationsModule extends DomainModule implements HasDependencies
+final class OperationsModule extends Module implements HasDependencies
 {
     public function getId(): string
     {

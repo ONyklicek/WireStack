@@ -36,12 +36,16 @@ Read the recipe, catalog, and protocol files only when the task requires them.
 `nyoncode/wire` is a Laravel/Livewire monorepo for enterprise-grade UI
 components.
 
-It contains six runtime packages plus one companion tooling package:
+It contains eleven runtime packages, a meta-package and one companion tooling
+package:
 
 ```text
-wire-admin -> wire-panels -> wire-table -> wire-forms -> wire-core
-wire-sortable -> wire-table
-wire-boost ----> wire-core   (companion AI tooling; suggests the rest)
+wire-suite ------> core, forms, table, sortable, panels, admin (+ `wire:install`)
+wire-admin        -> wire-panels -> wire-table -> wire-forms -> wire-core
+wire-module-*     -> wire-panels   (users, settings, audit, notifications, media)
+wire-module-auth  -> wire-core + laravel/fortify   (the screens on the way in)
+wire-sortable     -> wire-table
+wire-boost ------> wire-core   (companion AI tooling; suggests the rest)
 ```
 
 Dependency direction matters:
@@ -56,6 +60,19 @@ Dependency direction matters:
   (resources, their pages, routing), and nothing may depend on it but the shell.
 - `wire-admin` consumes `wire-panels` and sits at the top: the optional shell.
   Nothing requires it, which is what makes installing it the opt-in (ADR 0028).
+- `wire-module-*` are **modules**, not layers: business areas shipped as packages
+  (ADR 0029), each registering itself and requiring nothing but `wire-panels`.
+  `users` is the reference implementation; `settings`, `audit`, `notifications`
+  and `media` follow the same shape.
+- `wire-module-auth` shares the naming and not the shape: it declares no
+  resources and no navigation, so it is **not** a `DomainModule` (ADR 0032). It
+  requires `wire-core` and `laravel/fortify`, and *suggests* the shell whose
+  frame its screens render in — a module above the shell would make the graph
+  above a set of exceptions.
+- `wire-suite` is a meta-package: a dependency list plus `php artisan wire:install`.
+  It ships no runtime code, and modules stay `suggest` rather than `require` —
+  an application that wants users and nothing else should not carry a media
+  library.
 - `wire-boost` is companion AI tooling that requires only `wire-core` and
   *suggests* `wire-forms`/`wire-table`/`wire-sortable`; it introspects whichever
   packages are installed and never participates in the runtime UI graph.
@@ -242,6 +259,83 @@ Start files:
 - `packages/admin/src/View/Sidebar.php`
 - `packages/admin/resources/views/layout.blade.php`
 - `packages/admin/resources/views/sidebar.blade.php`
+
+### wire-module-users
+
+Path: `packages/module-users`
+
+The reference module package — what ADR 0029 describes, with a consumer:
+
+- `UsersModule` (a `Module`), registered from its own provider's register phase
+- `UserResource` + its four pages, over `config('wire-module-users.model')`
+- `RoleResource` + pages, present only where roles exist
+- `EditProfile` and the cards below it — `Livewire\{UpdatePassword,
+  TwoFactorAuthentication, DeleteAccount, TeamSwitcher}`, each a component in its
+  own right so an application can mount one on a page of its own
+- `Support\{Roles, Avatars, TwoFactor, Teams}` — four questions about *somebody
+  else's* installation, each with an `auto` that looks for the thing itself: a
+  role class and the trait, a column on the users table, Fortify with its feature
+  on, `permission.teams`
+
+It owns no authorization (`Gate::allows()` does), no authentication (Fortify or
+Breeze do), no two-factor (Fortify), no roles-and-teams engine
+(`nyoncode/laravel-permission-extended`, over the Spatie it requires — bare
+Spatie is deliberately not detected) and no teams table (the application). What it owns is the **screens** over those, and
+password handling: the hash never reaches the form state, an empty field keeps
+the current password, a typed one is hashed, and a change moves the session's
+copy of the hash along so `AuthenticateSession` does not sign you out.
+
+Start files:
+
+- `packages/module-users/src/WireModuleUsersServiceProvider.php`
+- `packages/module-users/src/UsersModule.php`
+- `packages/module-users/src/Resources/UserResource.php`
+- `packages/module-users/src/Support/Roles.php`
+- `packages/module-users/src/Pages/EditProfile.php`
+
+### wire-module-auth
+
+Path: `packages/module-auth`
+
+The signed-out surface, and the smallest package in the repo on purpose:
+
+- `WireModuleAuthServiceProvider` — answers Fortify's seven view callbacks in
+  **booted**, so an application provider can replace any one of them and keep the
+  other six
+- seven Blade screens (login, register, forgot, reset, verify, confirm, the
+  two-factor challenge) and `user-menu.blade.php`, the sign-out row
+- `View\Screen` — the one seam between a screen and the frame it renders in
+- `Support\Frame` — which layout that is: `auto` borrows the shell's, or the
+  application names its own, or `AuthFrameException` says which line to write
+- `Support\Screens` — the four feature questions and "is there a logout route",
+  each asked of the switch that creates the route rather than of a copy
+
+It owns **no authentication**: the credential check, the throttle, the session
+regeneration, the reset tokens, the verification links, the TOTP window and the
+recovery codes are Fortify's (ADR 0032). It ships no frame and no `Module`
+manifest. The panel's own guard is `wire-panels.routes.middleware`, which
+defaults to `['web', 'auth']`; the installer warns when an application has taken
+it out.
+
+Start files:
+
+- `packages/module-auth/src/WireModuleAuthServiceProvider.php`
+- `packages/module-auth/src/Support/Frame.php`
+- `packages/module-auth/resources/views/screen.blade.php`
+
+### wire-suite
+
+Path: `packages/suite`
+
+The one-require entry point and the interactive installer:
+
+- `Install\Catalogue` — every part of the stack, installed or not, answered by a
+  marker class rather than by reading `installed.json`
+- `Install\WireInstallCommand` — runs each installed package's **own** installer,
+  and prints a `composer require` line for what is missing
+
+It never runs composer: the command runs inside the application it is changing,
+and a part whose provider is not loaded is reported rather than fatal.
 
 ### wire-boost
 

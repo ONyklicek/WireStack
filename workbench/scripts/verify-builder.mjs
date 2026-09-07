@@ -25,7 +25,12 @@ const { check, finish } = checker();
 try {
   await eval_(`
     window.items = () => [...document.querySelectorAll('[wire\\\\:key^="builder-content-"]')];
-    window.headerText = (i) => items()[i].querySelector('span').textContent.trim();
+    // Named, not positional. This used to be \`querySelector('span')\`, which meant
+    // the first span the header happened to contain — so adding keyboard move
+    // buttons ahead of the label silently made every header read as empty.
+    window.headerText = (i) => document
+      .querySelector('[data-testid="form-builder-content-label-' + i + '"]')
+      ?.textContent.trim() ?? '';
     window.fieldPaths = (i) => [...items()[i].querySelectorAll('input, textarea')]
       .map((e) => e.getAttribute('wire:model') ?? e.getAttribute('wire:model.live') ?? '')
       .filter(Boolean);

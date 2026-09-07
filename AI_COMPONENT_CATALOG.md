@@ -22,7 +22,15 @@ Path: `packages/core/src/Foundation`
 
 - `MoneyFormat` — the currency vocabulary (precision, separators, placement) plus `format()`/`parse()`/minor units. Read by `FormatsState::money()` (every `TextColumn`, `MoneyColumn`, `TextEntry`), `WireForms\Components\MoneyInput` and `TextInputColumn::money()`
 - `DialingCodes` / `DialingCode` — the dialling-code table, prefix matching and how a number is written. Read by `WireForms\Components\PhoneInput`, `WireTable\Columns\PhoneColumn` and the phone rule
+- `ChangeSet` — a before/after diff as display rows, and the one rule for how a stored value reads once it is a change (`null` stays null so a renderer can say *(empty)*, a boolean is `true`/`false` not `1`, an array is readable JSON). Read by `Infolists\Components\ChangesEntry`, the `wire-core::audit.trail` slide-over and `WireModuleAudit\Support\Changes`. In Foundation because `Audit` and `Infolists` are both L2 and may not see each other
 - `PollDirective`, `ShortcutHint`
+
+### Mentions
+
+- `Foundation\Mentions\MentionRenderer` — the canonical owner for reading rich text back. A stored mention is an identity (`data-mention-type` + `data-id`, written from `getMorphClass()`), never a name or a link, so this resolves every one of them on every render: one query per stored *type*, and content with no mentions is returned byte-for-byte. Read by `<x-wire::rich-content>`, `Infolists\Components\HtmlEntry` and `WireTable\Columns\TextColumn::richContent()`. Never print editor output any other way once a field declares mentions
+- `Foundation\Mentions\Contracts\Mentionable` — how a model you own says its own fresh label and URL. `Foundation\Mentions\MentionRegistry` is the escape hatch for models you do not, and is also where viewer-scoped visibility belongs (`modifyQueryUsing()`): an excluded record is simply not found, so *deleted* and *not allowed to see* share the one path that leaks nothing
+- `Foundation\Support\MorphedModels` — the model class behind a stored polymorphic type, class name or morph alias. One owner for a question every reader of a morph-typed column asks; `WireModuleAudit\Support\AuditedRecords` delegates to it
+- `Foundation\Contracts\ResolvesRecordUrls` — "where can this record be read", asked from Foundation without reaching up at `Core\Resources`. Answered by `Core\Resources\ResourceRecordUrls` (a resource's own view page, then its edit page), rebindable by an application that routes its own public screens
 
 ### Concerns
 
@@ -30,6 +38,7 @@ Use these before creating local field/column/action helpers:
 
 - `BelongsToComponent`
 - `CanBeLive`
+- `CanBeNullable`
 - `CanBeReadOnly`
 - `CanBeTyped`
 - `HasAuthorization`
@@ -54,9 +63,26 @@ Use these before creating local field/column/action helpers:
 
 Contracts:
 
+- `Foundation\Contracts\HasAvatar` — a record that can show a picture of itself.
+  The shell asks this and never a module, so an application resolving Gravatar or
+  an identity provider is drawn the same as one storing a path
 - `Foundation\Contracts\HasIcon`
 - `Foundation\Contracts\HasLabel`
 - `Foundation\Contracts\HasVisibility`
+
+Chrome the shell renders for packages that cannot reach into its layout:
+
+- `Foundation\View\PageChrome` — `add($view)` for the end of the document
+  (`BODY`, the default: modals, hosts), `add($view, PageChrome::TOPBAR)` for the
+  top bar (things that have to be *seen*: a team switcher, a tenant picker),
+  `add($view, PageChrome::USER_MENU, sort: 10)` for the signed-in user's own menu
+  (the users module's profile link, the auth module's sign-out). One registry,
+  three regions; lower sorts first, equal sorts in registration order, because
+  provider order is composer's discovery order and not a contract
+- `Foundation\View\MenuItem` — `<x-wire::menu-item :href icon type>`, one row of
+  that menu: an `href` makes it a link, no `href` makes it the submit button of
+  the form around it. In core rather than the shell because two packages outside
+  the shell contribute rows; `<x-wire-admin::menu-item>` delegates here
 
 Registration and routing (ADR 0026 — one seam for the menu, the router and the
 search palette; **never inject a registry into a new surface**):
@@ -154,6 +180,8 @@ Action concerns:
 - `Actions\Concerns\HasLoadingState`
 - `Actions\Concerns\HasModal`
 - `Actions\Concerns\HasVisibility`
+- `Infolists\Components\HtmlEntry` — stored rich text printed as markup, with its mentions resolved through `Foundation\Mentions\MentionRenderer`. Its own entry rather than a flag on `TextEntry`, because a text entry escapes and must keep escaping; never render-memoised, since a resolved mention belongs to the row it was looked up for
+- `Infolists\Components\ChangesEntry` — a before/after diff as **one** table, a row per field, over `Foundation\ValueObjects\ChangeSet`. Takes either the `{old, new}` map an audit entry produces or rows already shaped `{field, before, after}`; `dense()` for a diff inside a slide-over. Never draw a diff as a `RepeatableEntry` of labelled cards — that repeats three headings per row
 - `Actions\Concerns\InteractsWithActions` — canonical, form-agnostic action runtime (payload resolver, pipeline, halt/notification/redirect, infolist actions). Composed by `WithTable` and by the standalone `WithActions` host.
 
 Action views/components:
@@ -298,7 +326,7 @@ Fields:
 
 - `BelongsToSelect`
 - `Checkbox`
-- `CheckboxList`
+- `CheckboxList` — `searchable()`, `bulkToggleable()` (both toggles act on what the search left, and leave the rest of the selection alone), `groups()` and `showSelected()` (the chosen options as removable chips above the list, read off the entangled state so a filter cannot hide them). Reach for it over a multiple `Select` wherever the question is "what else is there" rather than "what did I choose" — a permission list is the type case
 - `CodeEditor`
 - `ColorPicker`
 - `DateRangePicker` (a LayoutComponent composing two `DateTimePicker`s over two columns)
@@ -320,10 +348,10 @@ Fields:
 - `SignaturePad` (pointer-drawn canvas; data URI, or a PNG on a disk via `storeOn()`)
 - `Slider`
 - `Tags`
-- `TextInput`
+- `TextInput` (`nullable()` from `Foundation\Concerns\CanBeNullable`; a `type=number` input nullifies an emptied value without being asked)
 - `Textarea`
 - `TimePicker` (mode-locked `DateTimePicker`; slot-list panel, own view)
-- `TiptapEditor`
+- `TiptapEditor` (`mentions(Mention...)` — `@`/`#` triggers, each standing for one *or several* models via `Mention\Source`; the document stores a morph type + id, read back by `MentionRenderer`. Third ESM entry, loaded only when declared)
 - `Toggle`
 
 Display components:
@@ -364,6 +392,7 @@ Config/runtime:
 - `Runtime\FormRuntime`
 - `Runtime\StateManager`
 - `Runtime\SaveHandler`
+- `Runtime\StateDehydrator` — what a field's state becomes on the way out, for every host (a save, and an action modal via `dehydrateMountedActionFormData()`)
 - `Runtime\RelationshipSaveHandler`
 - `Validation\FormValidationResolver`
 - `Rendering\FormRenderer`

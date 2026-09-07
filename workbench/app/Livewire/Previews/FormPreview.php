@@ -59,7 +59,7 @@ class FormPreview extends Component
             return;
         }
 
-        $contacts = $variant === 'repeater'
+        $contacts = ($variant === 'repeater' || $variant === 'repeater-controls')
             ? [
                 ['label' => 'Support', 'value' => 'support@example.com'],
                 ['label' => 'Billing', 'value' => '+420 777 555 222'],
@@ -71,7 +71,7 @@ class FormPreview extends Component
 
         $this->contacts = $contacts;
 
-        if ($variant === 'repeater-table') {
+        if ($variant === 'repeater-table' || $variant === 'repeater-controls') {
             $this->lines = [
                 ['description' => 'Consulting', 'quantity' => '4', 'amount' => '1200'],
                 ['description' => 'Hosting', 'quantity' => '1', 'amount' => '300'],
@@ -119,6 +119,7 @@ class FormPreview extends Component
             'default-on-null' => $this->buildDefaultOnNullForm($form),
             'repeater' => $this->buildRepeaterForm($form),
             'repeater-table' => $this->buildRepeaterTableForm($form),
+            'repeater-controls' => $this->buildRepeaterControlsForm($form),
             'builder' => $this->buildBuilderForm($form),
             'tabs' => $this->buildTabsForm($form),
             'wizard' => $this->buildWizardForm($form),
@@ -415,6 +416,48 @@ class FormPreview extends Component
                         Repeater::make('lines')
                             ->table()
                             ->reorderable()
+                            ->addButtonLabel('Add line')
+                            ->schema([
+                                TextInput::make('description')->label('Description'),
+                                TextInput::make('quantity')->label('Qty'),
+                                TextInput::make('amount')->label('Amount'),
+                            ]),
+                    ]),
+            ]);
+    }
+
+    /**
+     * Everything a row can be made to do: named, duplicated, moved from the
+     * keyboard, dragged, and folded away with only the last one open.
+     *
+     * A variant of its own rather than options bolted onto the two existing
+     * repeater previews, so the drag driver has a stable target and the
+     * documented previews keep the shape their screenshots were taken in.
+     */
+    protected function buildRepeaterControlsForm(Form $form): Form
+    {
+        return $form
+            ->schema([
+                Section::make('Contacts')
+                    ->description('Named rows, duplication, keyboard moves, and only the last row open.')
+                    ->compact()
+                    ->schema([
+                        Repeater::make('contacts')
+                            ->schema($this->contactSchema())
+                            ->reorderable()
+                            ->cloneable()
+                            ->expandLast()
+                            ->itemLabel(fn (array $state) => $state['label'] ?? null)
+                            ->addButtonLabel('Add contact'),
+                    ]),
+                Section::make('Invoice lines')
+                    ->description('The same controls in the table layout, where the name gets its own column.')
+                    ->schema([
+                        Repeater::make('lines')
+                            ->table()
+                            ->reorderable()
+                            ->cloneable()
+                            ->itemLabel(fn (array $state) => $state['description'] ?? null)
                             ->addButtonLabel('Add line')
                             ->schema([
                                 TextInput::make('description')->label('Description'),

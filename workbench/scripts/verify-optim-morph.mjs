@@ -110,7 +110,10 @@ try {
   await page('Page.navigate', { url: `${base}/forms-repeater` });
   await sleep(3500);
   await eval_(common + `
-    window.repRoot = () => $qa('[x-data]').find(el => /collapsed\\s*:/.test(el.getAttribute('x-data')||''));
+    // Found by the controller's name, not by a key inside its config: the key is
+    // \`collapsedByDefault\`, so a finder looking for \`collapsed:\` matched nothing
+    // and every assertion after it was made about an element that was not there.
+    window.repRoot = () => $qa('[x-data]').find(el => /wireCollapsibleItems/.test(el.getAttribute('x-data')||''));
     window.repXData = () => (repRoot()?.getAttribute('x-data') || '');
     window.collapseToggles = () => $qa('button').filter(b => b.querySelector('svg') && /rotate-180|chevron/.test(b.outerHTML));
     true;

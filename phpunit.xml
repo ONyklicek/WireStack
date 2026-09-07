@@ -5,6 +5,12 @@
          colors="true"
 >
     <testsuites>
+        <testsuite name="Suite Unit">
+            <directory>packages/suite/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Suite Feature">
+            <directory>packages/suite/tests/Feature</directory>
+        </testsuite>
         <testsuite name="Core Unit">
             <directory>packages/core/tests/Unit</directory>
         </testsuite>
@@ -38,6 +44,42 @@
         <testsuite name="Admin Feature">
             <directory>packages/admin/tests/Feature</directory>
         </testsuite>
+        <testsuite name="Module Audit Unit">
+            <directory>packages/module-audit/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Module Audit Feature">
+            <directory>packages/module-audit/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Module Auth Unit">
+            <directory>packages/module-auth/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Module Auth Feature">
+            <directory>packages/module-auth/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Module Notifications Unit">
+            <directory>packages/module-notifications/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Module Notifications Feature">
+            <directory>packages/module-notifications/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Module Settings Unit">
+            <directory>packages/module-settings/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Module Settings Feature">
+            <directory>packages/module-settings/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Module Media Unit">
+            <directory>packages/module-media/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Module Media Feature">
+            <directory>packages/module-media/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Module Users Unit">
+            <directory>packages/module-users/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Module Users Feature">
+            <directory>packages/module-users/tests/Feature</directory>
+        </testsuite>
         <testsuite name="Sortable Unit">
             <directory>packages/sortable/tests/Unit</directory>
         </testsuite>
@@ -59,11 +101,18 @@
     </testsuites>
     <source>
         <include>
+            <directory>packages/suite/src</directory>
             <directory>packages/core/src</directory>
             <directory>packages/forms/src</directory>
             <directory>packages/table/src</directory>
             <directory>packages/panels/src</directory>
             <directory>packages/admin/src</directory>
+            <directory>packages/module-users/src</directory>
+            <directory>packages/module-media/src</directory>
+            <directory>packages/module-settings/src</directory>
+            <directory>packages/module-notifications/src</directory>
+            <directory>packages/module-audit/src</directory>
+            <directory>packages/module-auth/src</directory>
             <directory>packages/sortable/src</directory>
             <directory>packages/boost/src</directory>
         </include>

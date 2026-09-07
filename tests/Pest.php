@@ -2,11 +2,18 @@
 
 declare(strict_types=1);
 
+use NyonCode\Wire\Suite\Tests\TestCase as SuiteTestCase;
 use NyonCode\Wire\Tests\TestCase;
 use NyonCode\WireAdmin\Tests\TestCase as AdminTestCase;
 use NyonCode\WireBoost\Tests\TestCase as BoostTestCase;
 use NyonCode\WireCore\Tests\TestCase as CoreTestCase;
 use NyonCode\WireForms\Tests\TestCase as FormsTestCase;
+use NyonCode\WireModuleAudit\Tests\TestCase as ModuleAuditTestCase;
+use NyonCode\WireModuleAuth\Tests\TestCase as ModuleAuthTestCase;
+use NyonCode\WireModuleMedia\Tests\TestCase as ModuleMediaTestCase;
+use NyonCode\WireModuleNotifications\Tests\TestCase as ModuleNotificationsTestCase;
+use NyonCode\WireModuleSettings\Tests\TestCase as ModuleSettingsTestCase;
+use NyonCode\WireModuleUsers\Tests\TestCase as ModuleUsersTestCase;
 use NyonCode\WirePanels\Tests\TestCase as PanelsTestCase;
 use NyonCode\WireSortable\Tests\TestCase as SortableTestCase;
 use NyonCode\WireTable\Tests\TestCase as TableTestCase;
@@ -47,6 +54,11 @@ uses()->beforeEach(function () use ($wirePublicPath): void {
 
 uses(TestCase::class)->in(__DIR__.'/Integration');
 
+uses(SuiteTestCase::class)->in(
+    __DIR__.'/../packages/suite/tests/Unit',
+    __DIR__.'/../packages/suite/tests/Feature',
+);
+
 uses(SortableTestCase::class)->in(
     __DIR__.'/../packages/sortable/tests/Feature',
 );
@@ -70,6 +82,35 @@ uses(PanelsTestCase::class)->in(
 uses(AdminTestCase::class)->in(
     __DIR__.'/../packages/admin/tests/Unit',
     __DIR__.'/../packages/admin/tests/Feature',
+);
+
+uses(ModuleAuthTestCase::class)->in(
+    __DIR__.'/../packages/module-auth/tests/Unit',
+    __DIR__.'/../packages/module-auth/tests/Feature',
+);
+
+uses(ModuleUsersTestCase::class)->in(
+    __DIR__.'/../packages/module-users/tests/Unit',
+    __DIR__.'/../packages/module-users/tests/Feature',
+);
+uses(ModuleMediaTestCase::class)->in(
+    __DIR__.'/../packages/module-media/tests/Unit',
+    __DIR__.'/../packages/module-media/tests/Feature',
+);
+
+uses(ModuleSettingsTestCase::class)->in(
+    __DIR__.'/../packages/module-settings/tests/Unit',
+    __DIR__.'/../packages/module-settings/tests/Feature',
+);
+
+uses(ModuleNotificationsTestCase::class)->in(
+    __DIR__.'/../packages/module-notifications/tests/Unit',
+    __DIR__.'/../packages/module-notifications/tests/Feature',
+);
+
+uses(ModuleAuditTestCase::class)->in(
+    __DIR__.'/../packages/module-audit/tests/Unit',
+    __DIR__.'/../packages/module-audit/tests/Feature',
 );
 
 uses(TableTestCase::class)->in(

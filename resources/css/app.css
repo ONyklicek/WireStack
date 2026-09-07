@@ -11,6 +11,19 @@
 @source "../../packages/forms/resources/views";
 @source "../../packages/table/src";
 @source "../../packages/table/resources/views";
+@source "../../packages/panels/src";
+@source "../../packages/panels/resources/views";
+@source "../../packages/admin/src";
+@source "../../packages/admin/resources/views";
+@source "../../packages/module-users/src";
+@source "../../packages/module-settings/src";
+@source "../../packages/module-settings/resources/views";
+@source "../../packages/module-audit/src";
+@source "../../packages/module-notifications/src";
+@source "../../packages/module-notifications/resources/views";
+@source "../../packages/module-auth/resources/views";
+@source "../../packages/module-media/src";
+@source "../../packages/module-media/resources/views";
 @source "../../packages/sortable/src";
 @source "../../packages/sortable/resources/views";
 

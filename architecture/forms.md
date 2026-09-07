@@ -76,6 +76,10 @@ Typical edits:
   matching Blade view under `packages/forms/resources/views/`
 - shared field behavior:
   `packages/forms/src/Components/Field.php`
+- editor mentions (`Mention`, `Mention\Source`, the `searchEditorMentions` endpoint in
+  `Concerns/InteractsWithFieldActions.php`, and `resources/js/tiptap-editor-mentions.js`):
+  the field owns *what may be inserted*; what a stored mention reads as later belongs to
+  `WireCore\Foundation\Mentions` — see `architecture/core.md`
 
 ### `Forms/Config/`
 
@@ -100,8 +104,24 @@ Execution path for:
 Most sensitive files:
 
 - `packages/forms/src/Forms/Runtime/SaveHandler.php`
+- `packages/forms/src/Forms/Runtime/StateDehydrator.php`
 - `packages/forms/src/Forms/Runtime/StateManager.php`
 - `packages/forms/src/Forms/Runtime/RelationshipSaveHandler.php`
+
+`StateDehydrator` owns what a field's state becomes on the way out, for **every**
+host. Three ask it today, through two seams in `Concerns/InteractsWithActionForms.php`:
+
+- `SaveHandler`, writing a record.
+- An action modal handing its data to a callback —
+  `dehydrateMountedActionFormData()`, declared no-op in
+  `WireCore\Actions\Concerns\InteractsWithActions` beside the validation seam it
+  mirrors.
+- A halt carrying its own form — `dehydrateHaltModalFormData()`, called from
+  `WithTable::submitHaltModal()`. No core counterpart: nothing in wire-core
+  re-executes a halted action.
+
+Adding a fourth means calling a seam, not re-walking the schema. See ADR 0021 and
+its amendment.
 
 ### `Validation/`
 
@@ -117,6 +137,8 @@ Collects validation data from form fields and delegates to core validation infra
   `Components/` + matching Blade views
 - form save hooks:
   `Runtime/SaveHandler.php`
+- what a field writes, wherever its state is handed over:
+  `Runtime/StateDehydrator.php`
 - state hydration or fill behavior:
   `Runtime/StateManager.php`
 - builder/config API:

@@ -12,6 +12,7 @@ use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Workflow\WorkflowState;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ConfiguresRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
 use NyonCode\WireCore\GlobalSearch\Contracts\GloballySearchable;
 use NyonCode\WireCore\GlobalSearch\GlobalSearchResult;
@@ -21,8 +22,10 @@ use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WireForms\Components\DateTimePicker;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireForms\Components\TiptapEditor;
 use NyonCode\WireForms\Contracts\ProvidesResourceForm;
 use NyonCode\WireForms\Forms\Form;
+use NyonCode\WireModuleMedia\Forms\MediaField;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesRelationManagers;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
 use NyonCode\WireTable\Columns\BadgeColumn;
@@ -126,7 +129,35 @@ final class InvoiceResource implements ConfiguresRoutes, DescribesResource, Glob
             ->icon('outline:document-text')
             ->group('billing')
             ->sort(10)
-            ->badge(fn (): int => Invoice::where('status', 'overdue')->count(), 'danger');
+            ->badge(fn (): int => Invoice::where('status', 'overdue')->count(), 'danger')
+            // The workbench's one submenu, and the reason it is here: a second
+            // level that nothing renders is a second level nobody notices is
+            // broken. The children are filtered views of the same list, which is
+            // what a submenu is actually for.
+            ->children([
+                NavigationItem::make('All invoices')->url(fn (): ?string => self::listUrl()),
+                NavigationItem::make('Overdue')->url(fn (): ?string => self::listUrl('overdue'))->sort(10),
+                NavigationItem::make('Paid')->url(fn (): ?string => self::listUrl('paid'))->sort(20),
+            ]);
+    }
+
+    /**
+     * The list, optionally narrowed — the URL the submenu entries point at.
+     *
+     * Asked of the URL resolver rather than of `route()`, for the same reason
+     * every other entry is: an application that registers this resource and
+     * routes nothing gets null here and an unlinked row, instead of an exception
+     * while the menu renders.
+     */
+    private static function listUrl(?string $status = null): ?string
+    {
+        $url = app(ResolvesPageUrls::class)->urlFor(self::key());
+
+        if ($url === null || $status === null) {
+            return $url;
+        }
+
+        return $url.'?status='.$status;
     }
 
     /**
@@ -185,6 +216,20 @@ final class InvoiceResource implements ConfiguresRoutes, DescribesResource, Glob
                 'overdue' => 'Overdue',
             ]),
             DateTimePicker::make('issued_at'),
+
+            // The two seams the media module adds to the rest of the system,
+            // exercised on a real form rather than only in a preview: a field
+            // that attaches library rows to this record, and an editor whose
+            // image button opens the same library instead of asking for a URL.
+            MediaField::make('attachments')
+                ->label('Attachments')
+                ->multiple()
+                ->helperText('Chosen from the media library — the file is not copied.'),
+
+            TiptapEditor::make('notes')
+                ->label('Notes')
+                ->withImages()
+                ->helperText('The image button opens the media library.'),
         ]);
     }
 

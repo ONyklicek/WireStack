@@ -159,6 +159,30 @@ Current partials under `packages/table/resources/views/tables/columns/`:
 Many UI changes also require touching these partials under
 `packages/table/resources/views/tables/columns/`.
 
+### Layout: rows or a list of cards
+
+`Table::layout(TableLayout)` decides **which rendering is emitted**, not which is
+visible — `Enums/TableLayout`, resolved through `StacksOnMobile::rendersTable()`
+/ `rendersCards()` and carried on `LayoutRenderPlan` as two booleans that
+`partials/data-region.blade.php` branches on.
+
+- `Table` (default) — the `<table>`. Unchanged for every table that never asks.
+- `List` — the card rendering at every width, and **no `<table>` in the
+  document**. One rendering per record instead of the two `stackedOnMobile()`
+  puts there for CSS to choose between, which is correct for a phone and wasteful
+  for a surface that is never a table.
+
+Everything around the records is the table's either way — search, filters,
+pagination, the selection that survives paging, bulk actions, exports — which is
+the whole argument for a layout over a hand-written list page. Two consequences:
+`ColumnRenderPlan::$mobileSortable` now also fills under the list layout (there
+is no header row to carry the sort buttons, and here it is the only sort UI, not
+a phone's consolation), and a list's shape comes from the `MobileSlot`
+vocabulary rather than from column order.
+
+`wire-module-notifications` is the reference consumer; the reasoning is in
+`Enums/TableLayout`'s docblock.
+
 ### `Filters/`
 
 Filter base plus concrete filters:

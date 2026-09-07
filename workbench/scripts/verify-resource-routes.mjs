@@ -40,7 +40,11 @@ try {
   // used to assert a body class, which stopped meaning anything the moment the
   // frame moved into a package.
   check('it came up inside the application shell', await eval_(`!! document.querySelector('[data-testid="admin-sidebar"]')`));
-  check('the shell shows what the application put in its slots', (await eval_(`document.querySelector('[data-testid="admin-brand"]')?.innerText?.trim() ?? ''`)) === 'Wire Workbench');
+  // The brand is configuration drawn in the sidebar, not a slot in the top bar.
+  // The slot still exists for an application that wants markup up there; the
+  // workbench passes none, because passing one *and* setting a logo is how it
+  // ended up showing its own name twice.
+  check('the shell shows the configured brand', await eval_(`!! document.querySelector('[data-testid="admin-brand-mark"] img')`));
   check('the menu entry for the page being shown is the active one', await eval_(`!! document.querySelector('[data-testid="admin-nav-item"][data-resource="invoices"][data-active="true"]')`));
   check('the heading is the resource plural', (await eval_(`document.querySelector('h1')?.innerText?.trim() ?? ''`)) === 'Invoices');
   await shot('01-index');
@@ -72,9 +76,11 @@ try {
 
   // ── 4. …and the one behind a permission is refused by the router ─────────
   //
-  // Nobody is signed in here, so `can:invoices.update` denies. The point is not
-  // that it denies — it is that the refusal comes from the route, so no page
-  // renders and no query runs before the answer.
+  // The demo user *is* signed in, and is a manager: the seeder gives them a
+  // wildcard over `tasks` and read-only invoices, deliberately, so this route
+  // has somebody real to refuse. The point is not that it denies — it is that
+  // the refusal comes from the route, so no page renders and no query runs
+  // before the answer.
   check('a page declaring a permission is refused when it is not held', (await status(`${routed}/1/edit`)) === 403);
 
   await sleep(200);

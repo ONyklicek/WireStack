@@ -16,6 +16,9 @@ return new class extends Migration
             $table->string('customer');
             $table->string('status');
             $table->timestamp('issued_at')->nullable();
+            // Somewhere for the rich editor to write, so the media picker it
+            // opens has a form that actually saves behind it.
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
 

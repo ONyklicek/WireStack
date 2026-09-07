@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireBoost\Support;
 
-use NyonCode\WireCore\Core\Modules\DomainModule;
+use NyonCode\WireCore\Core\Modules\Module;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 
@@ -34,7 +34,7 @@ class ModuleReflector
         $described = [];
 
         foreach ($this->plugins->all() as $plugin) {
-            if ($plugin instanceof DomainModule) {
+            if ($plugin instanceof Module) {
                 $described[] = $this->describeModule($plugin);
             }
         }
@@ -51,7 +51,7 @@ class ModuleReflector
     {
         $plugin = $this->plugins->get($id);
 
-        return $plugin instanceof DomainModule ? $this->describeModule($plugin) : null;
+        return $plugin instanceof Module ? $this->describeModule($plugin) : null;
     }
 
     /** @return array<int, string> */
@@ -63,7 +63,7 @@ class ModuleReflector
     /**
      * @return array<string, mixed>
      */
-    private function describeModule(DomainModule $module): array
+    private function describeModule(Module $module): array
     {
         $group = $module->navigation();
 

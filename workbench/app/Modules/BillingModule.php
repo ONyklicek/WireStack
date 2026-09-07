@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Workbench\App\Modules;
 
-use NyonCode\WireCore\Core\Modules\DomainModule;
+use NyonCode\WireCore\Core\Modules\Module;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use Workbench\App\Resources\InvoiceResource;
 
@@ -17,7 +17,7 @@ use Workbench\App\Resources\InvoiceResource;
  * provider used to say line by line — the same registrations, moved from an
  * application that had to know all of them to the area that owns them.
  */
-final class BillingModule extends DomainModule
+final class BillingModule extends Module
 {
     public function getId(): string
     {

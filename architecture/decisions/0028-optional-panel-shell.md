@@ -145,6 +145,22 @@ carry the same information and know nothing.
 
 ### 2. It is opt-in twice, and neither opt-in is a new mechanism
 
+**Amended 2026-09-05 (owner request): `php artisan wire-admin:install` may wire
+the second opt-in, because running it *is* the application asking.** The rule
+this ADR set is about `composer require` — having the package on disk must not
+change how a page renders. An installer is a different act: it publishes the
+provider that holds the `livewire.component_layout` line, writes the
+application's own layout view, and registers the provider in
+`bootstrap/providers.php`. Nothing inside the package's own provider does any of
+it, so the invariant stands and the user gets a working admin from two commands.
+
+Every step is idempotent and never overwrites, and every failure is a typed
+exception (`AdminInstallException`) rather than a status: the toolkit does not
+wrap install hooks in a try/catch, so a step that cannot finish stops the run —
+except the provider list, which the command catches on purpose and turns into
+the line to add by hand, since everything else it did still stands.
+
+
 The package is optional (§1 — nothing requires `wire-admin`, and `wire-panels`
 stays installable without it), and inside it the layout is used only when the
 application names it: `livewire.component_layout` — Livewire 4's key, not `layout`

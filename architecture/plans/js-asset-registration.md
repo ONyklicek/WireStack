@@ -90,7 +90,7 @@ Every bundle registered exclusively inside `alpine:init`, except one:
 
 | Controller | Source | Registration | Delivery |
 | --- | --- | --- | --- |
-| `wireDropdown`, `wireContextMenu`, `wireTabs`, `wireWizard`, `wireEditableCell`, `wireFillHandle` | `core/resources/js/dropdown.js:712` | `alpine:init` | `@assets` + route |
+| `wireDropdown`, `wireFlyout`, `wireContextMenu`, `wireTabs`, `wireWizard`, `wireEditableCell`, `wireFillHandle` | `core/resources/js/dropdown.js:712` | `alpine:init` | `@assets` + route |
 | `wireRecordSelection` | `table/resources/js/record-selection.js:19` | `alpine:init` | `@assets` + route (inline fallback) |
 | `wireRecordActions` | `table/resources/js/record-actions.js:817` | `alpine:init` | `@assets` + route |
 | `wireImageUpload` | `forms/resources/js/image-processor.js:308` | `alpine:init` | `@assets` + route |

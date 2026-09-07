@@ -29,7 +29,13 @@ try {
 
   // ── 1. The frame ─────────────────────────────────────────────────────────
   check('the shell frames the routed page', await eval_(`!! document.querySelector('[data-testid="admin-content"]')`));
-  check('the brand comes from the application slot', (await eval_(`document.querySelector('[data-testid="admin-brand"]')?.innerText?.trim() ?? ''`)) === 'Wire Workbench');
+  // The brand is `wire-admin.brand` configuration drawn in the sidebar header,
+  // not a slot in the top bar: a shell whose only way to show a logo was "write
+  // your own layout" is a shell nobody ships. The top-bar slot still exists and
+  // is still rendered when an application passes one — it is simply no longer
+  // where the logo has to go, and the workbench passes none.
+  check('the sidebar carries the configured brand', await eval_(`!! document.querySelector('[data-testid="admin-brand-mark"] img')`));
+  check('the top bar shows no second copy of it', await eval_(`! document.querySelector('[data-testid="admin-brand"]')`));
   check('the palette trigger sits in the chrome', await eval_(`!! document.querySelector('[data-testid="global-search-trigger"]')`));
 
   // ── 2. The menu knows where it is ────────────────────────────────────────
@@ -62,13 +68,18 @@ try {
 
   // Waited for rather than asserted immediately: the media-query listener runs
   // on Alpine's own tick, and a bare read here measures the frame before it.
-  await waitFor(`document.querySelector('#wire-admin-nav')?.offsetParent === null`, 4000).catch(() => {});
+  // Measured by where the drawer *is*, not by whether it is rendered: it is one
+  // element moved by a transform, so it never leaves the document and
+  // `offsetParent` is null only for a menu that was never built.
+  const drawerLeft = `document.querySelector('[data-testid="admin-sidebar"]').getBoundingClientRect().left`;
 
-  check('the menu is out of the way on a phone', await eval_(`document.querySelector('#wire-admin-nav')?.offsetParent === null`), `matchMedia=${await eval_(`window.matchMedia('(min-width: 1024px)').matches`)} innerWidth=${await eval_(`window.innerWidth`)}`);
+  await waitFor(`${drawerLeft} < -100`, 4000).catch(() => {});
+
+  check('the menu is out of the way on a phone', (await eval_(drawerLeft)) < -100, `left=${await eval_(drawerLeft)} innerWidth=${await eval_(`window.innerWidth`)}`);
 
   await eval_(`document.querySelector('[data-testid="admin-sidebar-toggle"]').click()`);
-  await waitFor(`document.querySelector('#wire-admin-nav')?.offsetParent !== null`, 4000);
-  check('the handle opens it', await eval_(`document.querySelector('#wire-admin-nav')?.offsetParent !== null`));
+  await waitFor(`${drawerLeft} === 0`, 4000);
+  check('the handle opens it', (await eval_(drawerLeft)) === 0);
   check('the handle reports its state to assistive tech', (await eval_(`document.querySelector('[data-testid="admin-sidebar-toggle"]')?.getAttribute('aria-expanded')`)) === 'true');
   await shot('02-mobile-open');
 

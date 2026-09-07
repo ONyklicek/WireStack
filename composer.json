@@ -11,11 +11,18 @@
     ],
     "require": {
         "php": "^8.2",
+        "nyoncode/wire-suite": "@dev",
         "nyoncode/wire-core": "@dev",
         "nyoncode/wire-forms": "@dev",
         "nyoncode/wire-table": "@dev",
         "nyoncode/wire-panels": "@dev",
         "nyoncode/wire-admin": "@dev",
+        "nyoncode/wire-module-auth": "@dev",
+        "nyoncode/wire-module-users": "@dev",
+        "nyoncode/wire-module-media": "@dev",
+        "nyoncode/wire-module-settings": "@dev",
+        "nyoncode/wire-module-notifications": "@dev",
+        "nyoncode/wire-module-audit": "@dev",
         "nyoncode/wire-sortable": "@dev",
         "nyoncode/wire-boost": "@dev",
         "illuminate/support": "^12.0|^13.0",
@@ -30,9 +37,18 @@
         "laravel/mcp": "^0.8",
         "laravel/boost": "^2.5",
         "openspout/openspout": "^4.0",
-        "barryvdh/laravel-dompdf": "^3.0"
+        "barryvdh/laravel-dompdf": "^3.0",
+        "nyoncode/laravel-permission-extended": "^1.0",
+        "laravel/fortify": "^1.0|^2.0"
     },
     "repositories": [
+        {
+            "type": "path",
+            "url": "packages/suite",
+            "options": {
+                "symlink": true
+            }
+        },
         {
             "type": "path",
             "url": "packages/core",
@@ -50,6 +66,48 @@
         {
             "type": "path",
             "url": "packages/table",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "packages/module-audit",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "packages/module-auth",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "packages/module-notifications",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "packages/module-settings",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "packages/module-media",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "packages/module-users",
             "options": {
                 "symlink": true
             }
@@ -89,11 +147,18 @@
             "Workbench\\Database\\Factories\\": "workbench/database/factories/",
             "Workbench\\Database\\Seeders\\": "workbench/database/seeders/",
             "NyonCode\\Wire\\Tests\\": "tests/",
+            "NyonCode\\Wire\\Suite\\Tests\\": "packages/suite/tests/",
             "NyonCode\\WireCore\\Tests\\": "packages/core/tests/",
             "NyonCode\\WireForms\\Tests\\": "packages/forms/tests/",
             "NyonCode\\WireTable\\Tests\\": "packages/table/tests/",
             "NyonCode\\WirePanels\\Tests\\": "packages/panels/tests/",
             "NyonCode\\WireAdmin\\Tests\\": "packages/admin/tests/",
+            "NyonCode\\WireModuleAuth\\Tests\\": "packages/module-auth/tests/",
+            "NyonCode\\WireModuleUsers\\Tests\\": "packages/module-users/tests/",
+            "NyonCode\\WireModuleMedia\\Tests\\": "packages/module-media/tests/",
+            "NyonCode\\WireModuleSettings\\Tests\\": "packages/module-settings/tests/",
+            "NyonCode\\WireModuleNotifications\\Tests\\": "packages/module-notifications/tests/",
+            "NyonCode\\WireModuleAudit\\Tests\\": "packages/module-audit/tests/",
         "NyonCode\\WireSortable\\Tests\\": "packages/sortable/tests/",
             "NyonCode\\WireBoost\\Tests\\": "packages/boost/tests/"
         }
@@ -111,11 +176,18 @@
         ],
         "coverage:floors": "php scripts/verify-coverage.php build/clover.xml --update-floors",
         "test:coverage": "@coverage",
+        "test:suite": "vendor/bin/pest --configuration packages/suite/phpunit.xml",
         "test:core": "vendor/bin/pest --configuration packages/core/phpunit.xml",
         "test:forms": "vendor/bin/pest --configuration packages/forms/phpunit.xml",
         "test:table": "vendor/bin/pest --configuration packages/table/phpunit.xml",
         "test:panels": "vendor/bin/pest --configuration packages/panels/phpunit.xml",
         "test:admin": "vendor/bin/pest --configuration packages/admin/phpunit.xml",
+        "test:module-auth": "vendor/bin/pest --configuration packages/module-auth/phpunit.xml",
+        "test:module-users": "vendor/bin/pest --configuration packages/module-users/phpunit.xml",
+        "test:module-media": "vendor/bin/pest --configuration packages/module-media/phpunit.xml",
+        "test:module-settings": "vendor/bin/pest --configuration packages/module-settings/phpunit.xml",
+        "test:module-notifications": "vendor/bin/pest --configuration packages/module-notifications/phpunit.xml",
+        "test:module-audit": "vendor/bin/pest --configuration packages/module-audit/phpunit.xml",
         "test:sortable": "vendor/bin/pest --configuration packages/sortable/phpunit.xml",
         "test:boost": "vendor/bin/pest --configuration packages/boost/phpunit.xml",
         "lint": "vendor/bin/pint",
@@ -127,6 +199,7 @@
         "boost:check-docs": "php scripts/sync-boost-docs.php . --check"
     },
     "config": {
+        "process-timeout": 0,
         "allow-plugins": {
             "pestphp/pest-plugin": true
         }

@@ -132,12 +132,13 @@ Lowest-level reusable code; everything else depends on it. **Keep it dependency-
   `HasColumnSpan`, `HasExtraAttributes`, `HasVisibility`, `HasAuthorization`, `HasDebounce`,
   `HasLivewire`, `CanBeLive`, `CanBeReadOnly`, `BelongsToComponent`.
   These are the trait building blocks reused by both wire-forms fields and wire-table columns.
-- **`Contracts/`** — `HasIcon`, `HasLabel`, `HasVisibility` interfaces.
+- **`Contracts/`** — `HasIcon`, `HasLabel`, `HasVisibility` interfaces, plus `ResolvesRecordUrls` ("where can this record be read", answered by `Core\Resources\ResourceRecordUrls` — the inversion that keeps L0 from naming the resource registry).
 - **`Icons/`** — `IconManager` (singleton registry), `Icon`, `IconSet` (interface), `ProvidesIconMetadata` (optional capability), `ResolvedIcon` (value object), `DefaultIconSet`. `DefaultIconSet` ships the complete Heroicons 2.2.0 solid set (324 icons, 20x20) plus Wire-friendly aliases; paths come from the generated `resources/icons/heroicons-solid.php`, loaded lazily. The `Icon` enum maps friendly names/aliases to canonical Heroicons names. Multiple sets can be registered and used at once: the bundled Heroicons set is the **unprefixed base** (`pencil`, `user`), and every additional set is registered under a **required prefix** and addressed as `prefix:name` (`lucide:home`) — registering a non-default set without a prefix throws, so resolution is deterministic and sets never collide. Sets implementing `ProvidesIconMetadata` carry their own viewBox + fill/stroke attributes (via `ResolvedIcon`), so stroke-based or non-20x20 sets (Lucide, Feather, Heroicons outline) render correctly next to the default solid set. Custom icons (`registerIcons`/`registerIconsFromDirectory`) are flat bare names that take priority over the default set. `IconManager::render()` accepts a `label` for accessibility (`role="img"`), else emits `aria-hidden`. Sets implementing only `IconSet` still work — their `getPath()` is wrapped in the default 20x20 fill format. `setDefaultIconSet()` swaps the unprefixed base.
 - **`Colors/`** — `Color` enum.
 - **`View/`** — Blade view-class components: `Badge`, `Button`, `Dropdown`, `Icon` (the `wire` namespace).
 - **`Components/`** — base classes `Component`, `LayoutComponent`, `ViewComponent`.
-- **`Support/`** — `ArrayDotHelper`, `EvaluatesClosures`.
+- **`Support/`** — `ArrayDotHelper`, `EvaluatesClosures`, `MorphedModels` (the model class behind a stored polymorphic type — class name or morph alias, one owner for every reader of such a column).
+- **`Mentions/`** — the read side of a rich-text mention. `MentionRenderer` turns the identities a document stores (`data-mention-type` + `data-id`) into the text a reader sees, resolving one query per stored *type*; `Mentionable` is how a model says its own fresh label and URL, `MentionRegistry` the escape hatch for models the application does not own (and where viewer-scoped visibility belongs). Read by `<x-wire::rich-content>`, `Infolists\Components\HtmlEntry` and `WireTable\Columns\TextColumn::richContent()`. The write side is `WireForms\Components\TiptapEditor::mentions()`.
 
 #### Icon system
 
@@ -267,8 +268,8 @@ Global defaults (`default_width`, `slide_over_width`, `close_on_click_away`, `cl
 
 Notification value objects and pluggable delivery. **Full content doc: [`architecture/core/notifications.md`](core/notifications.md).** Summary:
 
-- **`Notification`** — immutable value object; factories `make/success/error/warning/info`, fluent `title/duration/icon/position/extra/persistent/action/actions`, `toArray()` (strips nulls). Canonical types: `success`, `error`, `warning`, `info` (note `error`, not `danger`). `persistent()` = sticky (`duration 0`); `action('Undo', 'event')` / `action(NotificationAction::make(...))` append toast buttons that dispatch a Livewire event on click.
-- **`NotificationAction`** — immutable VO for a toast button (`make(label, event)`, `payload/color/keepOpen`, `toArray`). Click → `Livewire.dispatch(event, payload)`, host listens with `#[On(event)]`.
+- **`Notification`** — immutable value object; factories `make/success/error/warning/info`, fluent `title/duration/icon/position/extra/url/to/persistent/action/actions`, `toArray()` (strips nulls). `->url()` is where it points and rides in the payload; `->to()` is who it is for and deliberately does **not** — that is a column, not content. Every modifier goes through one private `copy()` rather than re-listing ten constructor arguments. Canonical types: `success`, `error`, `warning`, `info` (note `error`, not `danger`). `persistent()` = sticky (`duration 0`); `action('Undo', 'event')` / `action(NotificationAction::make(...))` append toast buttons that dispatch a Livewire event on click.
+- **`NotificationAction`** — immutable VO for a button (`make(label, event)`, `link(label, url)`, `payload/url/color/keepOpen`, `toArray`/`fromArray`). An event → `Livewire.dispatch(event, payload)` with the host listening via `#[On]`; a **link** is what a *stored* notification needs, because the component that would have listened is long gone by the time the bell is opened.
 - **`NotificationManager`** — all-static facade; `success/error/warning/info/send` plus `setDefaultDriver/getDefaultDriver/resolve/reset`. Driver resolution priority: **explicit > global default > built-in `CurrentComponentDriver(SessionDriver)`**.
 - **`InteractsWithNotifications`** trait — for Livewire components: `notify()`, `notifySuccess/Error/Warning/Info()`, `setNotificationDriver()`. Call-sites do **not** pass `$this` — the default driver resolves the active component.
 - **Drivers** (`Notifications/Drivers/`), selected by `wire-core.notifications.default`:
@@ -279,9 +280,19 @@ Notification value objects and pluggable delivery. **Full content doc: [`archite
 | `session` | `SessionDriver` | session flash **+** Livewire event with the full `toArray()` payload |
 | `livewire` | `LivewireEventDriver` | Livewire browser event with full `toArray()` payload |
 | `flasher` | `FlasherDriver` | integrates `php-flasher` (graceful session fallback) |
+| `database` | `DatabaseDriver` | writes a `wire_notifications` row against the resolved recipient |
+| `broadcast` | `BroadcastDriver` | `NotificationReceived` on the recipient's private channel — a nudge, no payload |
 | `null` | `NullDriver` | no-op (tests / disabling) |
 
+`Channels\WireChannel` bridges Laravel's own system in: `via() => ['wire']` plus `toWire($notifiable): Notification` delivers through the configured driver, with the recipient coming from Laravel rather than the session. Registered through `$app->resolving(ChannelManager::class)` and guarded on `class_exists` — `illuminate/notifications` stays out of this package's requires.
+
+`Console\PruneNotificationsCommand` (`wire-core:notifications-prune`) applies `notifications.database.retention_days` and `read_retention_days`; both null means keep, and with neither the command refuses rather than guessing.
+
+A **list** (`['session', 'database', 'broadcast']`) wraps them in `StackDriver`. `database` and `broadcast` take the container-bound `ResolvesNotifiable`, so the row and the channel name the same recipient; `Support\NotificationChannel` owns the name and its authorization, registered from `bootNotifications()` only when `broadcast` is configured — `Broadcast::channel()` resolves the default broadcaster, which an app that broadcasts nothing must not be made to construct.
+
 All implement `Contracts\NotificationDriver::send(Notification $notification, mixed $livewireComponent = null): void`. Write a custom driver by implementing that interface and registering it via `setDefaultDriver()` or the provider.
+
+**The bell.** `NotificationBell` (Livewire, `wire-notification-bell`) draws the unread count and a **slide-over panel** — `Modals\Html\SlideOver` entangled with `$panelOpen`, tabs `all`/`unread`, and the inbox verbs: `markAsRead`/`markAsUnread`/`delete` per row, `markAllAsRead`/`clearRead` in the footer, and `open()` which marks read and redirects in one round trip rather than letting a `wire:click` race a navigation. Every verb goes through `NotificationCenter::find()`, the single recipient-scoped lookup — an id from a Livewire call is user input. It reads `NotificationCenter` and holds no query. Row payloads are resolved in PHP (`Support\NotificationStyle` for the type's icon/tint), and links come from `Foundation\Routing\Contracts\ResolvesPageUrls` asked for the `notifications` key — null where nothing routes it, which is how the panel works with or without `wire-module-notifications`. With `broadcast` configured it includes `notifications.partials.live-assets` and carries `x-data="wireNotificationLive({...})"`; the bridge coalesces a burst and calls `$wire.$refresh()`.
 
 **Frontend.** Toasts render via `<x-wire-notifications::toast-container />` (`Notifications/View/ToastContainer.php`), which listens for the driver's Livewire event (default `table-notification`). Container props: `position`, `duration`, `event-name`, `progress` (countdown bar, hover-pauses), `stack` (collapsible pile, fans out on hover), `max` (visible cap + "+N more"). Honors `prefers-reduced-motion` and exposes an `aria-live` region.
 

@@ -2,7 +2,7 @@
 title: V3 — Volitelná administrace a hotové části jako balíčky
 date: 2026-09-05
 scope: packages/admin (nový — shell), packages/core (plugin seam, modules.except), docs, workbench
-status: HOTOVO 2026-09-05 — fáze A, B i C
+status: HOTOVO 2026-09-05 — fáze A–C, chrome, auth rám, pět modulů a meta-balíček s instalátorem
 north_star:
   - architecture/decisions/0028-optional-panel-shell.md
   - architecture/decisions/0029-modules-as-installable-packages.md
@@ -71,7 +71,7 @@ ADR 0029, body 1 a 2. Co skutečně vzniklo:
    `resources: invoices,tasks,documents`, `groups: billing,operations,insights`.
    Závislost operations→billing drží sama: `resolving` callbacky běží dřív než
    `afterResolving`, kde se čte config.
-4. **Docs.** `docs/core/modules.md` + CS mirror: sekce „Modul jako balíček"
+4. **Docs.** `docs/panels/modules.md` + CS mirror: sekce „Modul jako balíček"
    (obě cesty, tabulka „kdo kterou používá", podsekce „Balíček přidává,
    nepřepisuje"). `docs/core/plugins.md` + CS: tabulka toho, co config přijme
    a co odmítne, pravidlo o fázi u vzoru z balíčku, a věta o tom, že `boot()`
@@ -179,9 +179,137 @@ kreslí sama.
    do balíčku; nahrazena třemi silnějšími (sidebar, brand ze slotu, aktivní
    položka), ne smazána.
 
-Docs: `docs/core/admin-shell.md` + CS mirror, README balíčku, `AI_BLUEPRINT.md`
+Docs: `docs/admin/overview.md` + CS mirror, README balíčku, `AI_BLUEPRINT.md`
 (sekce `wire-panels` i `wire-admin` — panels tam chyběl už dřív), `CLAUDE.md`
 (graf, `test:admin`, rozcestník).
+
+## 3b. Doběh po fázi C (zadání vlastníka 2026-09-05)
+
+1. **`DomainModule` → `Module`.** Ten název sliboval bounded context a dodával
+   manifest: tři seznamy názvů tříd a nadpis do menu. Docs (EN i CS) to teď
+   říkají první větou — *je to manifest, ne doménová vrstva* — a třída taky.
+   Levné jen teď: 2.0.0 není otagované.
+2. **`wire-admin:install`.** `composer require` + jeden příkaz a admin běží:
+   publikuje `App\Providers\WireAdminServiceProvider` (drží ten jediný řádek
+   s `livewire.component_layout`), zapíše `resources/views/components/layouts/admin.blade.php`,
+   zaregistruje provider v `bootstrap/providers.php`, publikuje překlady.
+   Idempotentní, nikdy nepřepisuje, a **chyby jsou typované výjimky**
+   (`AdminInstallException`) — instalátor toolkitu hooky nezabaluje do
+   try/catch, takže krok, který nemůže doběhnout, běh zastaví; jedinou
+   odchycenou výjimkou je chybějící seznam providerů, kde zbytek instalace
+   platí a uživatel dostane řádek k doplnění. ADR 0028 §2 doplněná: instalace
+   pořád není přijetí, ale **spuštění instalátoru už je to, čím si aplikace
+   řekne**.
+3. **Record vrstva.** `ResolvesOneRecord::resolveRecord()` sliboval v docblocku
+   „override for a non-Eloquent source" a vracel `?Model` — override tedy
+   nemohl vrátit, co našel. Teď vrací `Model|RecordContract|null`.
+
+**A pod tím se našlo, co §0 nezměřila: zobrazovací vrstva na `RecordContract`
+nekoukala vůbec.** `Entry::getState()` sahal na záznam přes `data_get()`, což
+umí property a klíče pole — a kontrakt nemá ani jedno. Stránka nad read modelem
+tedy vykreslila **každou položku prázdnou**, což čte jako „žádná data", ne jako
+dvě vrstvy, které se nikdy nepotkaly. Opraveno v `Entry` (jeden `instanceof`
+větev, testy v core).
+
+**Zbývá a je to větší rozhodnutí než tenhle běh:** `Column::getState(Model $record)`
+je pořád `Model`-typované, takže **tabulka nad ne-Eloquent `DataSource` se
+rozbije při renderu**, i když ten zdroj kontrakt splní. Je to veřejné API napříč
+balíčkem table (každý typ sloupce, jeho testy, docs), takže to patří do vlastní
+ADR, ne do doběhu. `DataSource` je `@internal` do V2.0.c právě proto.
+
+## 3c. Chrome, auth rám a první modul (zadání vlastníka 2026-09-05)
+
+Otázka zněla „není to holátko horší než Filament?" — a měření dalo poctivou
+odpověď: `wire-admin` mělo 8 souborů a 602 řádků, ale **rozdíl proti Filamentu
+byl skoro celý v chrome, ne ve funkcích**. Doplněno:
+
+1. **Sbalitelné skupiny menu** — a napřed kanonický vlastník, jak si to
+   `NavigationGroup` sám vymínil: `Foundation/Concerns/CanBeCollapsed` drží pár
+   `collapsible()`/`collapsed()` (včetně pravidla, že sbalené implikuje
+   sbalitelné), `Section` a `Repeater` na něj migrované. Tři kopie → jedna.
+   Sidebar si stav pamatuje v localStorage, per skupina.
+2. **Přepínač motivu** s rozhodnutím **před prvním vykreslením** (inline skript
+   v hlavě; Alpine by to přepnul až po tom, což je ta bílá bliknutí), **rail**
+   (zúžený sidebar) se stejnou pamětí, **zvonek notifikací** a **jméno
+   přihlášeného**, když aplikace nenapsala slot.
+3. **Zvonek jen tam, kde je co ukazovat.** Měřeno: počítá řádky v tabulce
+   notifikací, jakmile je někdo přihlášený — takže pod výchozím driverem
+   `session` je to SQL chyba na každé stránce. Mountuje se podle driveru,
+   s `:notifications` jako přebitím.
+4. **Drobečky** — `ProvidesBreadcrumbs` + `<x-wire::breadcrumbs>` v core (ne
+   v shellu: stránka kreslí vlastní trail, takže je má i aplikace s vlastním
+   rámem, a `wire-panels` je smí vykreslit, aniž by závisel na `wire-admin`).
+   Trail délky jedna se nekreslí. Zóna se čte v mount hooku a jede ve snapshotu.
+5. **Auth rám, ne auth vrstva** — `<x-wire-admin::auth-layout>`. Login, reset
+   a 2FA zůstávají Fortify/Breeze: vlastní implementace by znamenala vlastnit
+   throttling, expiraci tokenů, ověření e-mailu a session fixation bez jediné
+   funkce navíc.
+6. **`packages/module-users`** — první modul jako balíček, a referenční
+   implementace ADR 0029. Nad modelem aplikace, role přes
+   `nyoncode/laravel-permission-extended` (staví na Spatie), autorizace pořád
+   jen přes `Gate::allows()`.
+
+**Co našly testy, ne review:**
+
+- `class_exists()` odpovídá **false pro trait** — detekce permission balíčku
+  četla správně a byla vždycky špatně (`trait_exists`).
+- Permission balíček odvozuje guard z `auth.providers`, takže testovací model
+  musí být i tam, jinak `GuardDoesNotMatch`.
+- **Testy prošly samostatně a spadly v plné sadě**: kořenový `phpunit.xml`
+  nastavuje `CACHE_DRIVER` (Laravel 11+ čte `CACHE_STORE`), takže cache spadla
+  na `database` a Spatie hledal tabulku `cache`. Store se teď nastavuje
+  v `TestCase`, ne v phpunit.xml.
+- **Veřejná metoda na Blade komponentě stíní proměnnou z `render()`** — Laravel
+  ji vystaví jako `InvokableComponentVariable`, což je iterovatelné, ale ne
+  countable, takže `$loop->last` byl **navždy false**: každý drobeček odkaz
+  a za každým oddělovač, bez jediné chyby.
+- `ModuleLayersTest` chytil `Foundation/View/Breadcrumbs` → `Core` hned při
+  psaní; komponenta se přestěhovala do `Core/Resources/View`.
+
+## 3d. Základní moduly a instalace nad čistým Laravelem (zadání vlastníka 2026-09-05)
+
+Zadání: přidat další základní moduly, nabízet je při instalaci, a umožnit nad
+čistým Laravelem vystavět kompletní systém — interaktivně.
+
+**Čtyři moduly navíc**, každý vlastní balíček, který se registruje sám:
+
+| Modul | Nad čím stojí | Co bylo potřeba vyrobit |
+|---|---|---|
+| `wire-module-audit` | `AuditEntry` + migrace v core | jen obrazovku — engine existoval, chyběla cesta si to přečíst bez SQL |
+| `wire-module-notifications` | `DatabaseNotification` + tabulka v core | seznam se scopingem na diváka a označení přečteného otevřením |
+| `wire-module-settings` | nic — vlastní tabulka | JSON hodnota, cache po skupinách, kontrakt `SettingsGroup` pro aplikaci |
+| `wire-module-media` | nic — vlastní tabulka | model, který maže soubor se záznamem, a zápis metadat z disku |
+
+**Meta-balíček `nyoncode/wire-suite` + `php artisan wire:install`.** Interaktivní:
+vypíše nalezené části, nechá vybrat (vše předvybrané), spustí **vlastní
+instalátor každého balíčku** místo jejich kopie, a co nainstalované není, nabídne
+jako `composer require` řádek.
+
+**Composer se z příkazu nespouští, a je to rozhodnutí, ne opomenutí.** Příkaz běží
+uvnitř aplikace, kterou se chystá změnit — autoloader, který používá, je ten,
+který by composer přepisoval — a způsoby selhání (limit paměti, pluginy,
+produkční image bez composeru) se ze stack trace neladí. Řádek k vložení je
+poctivá odpověď.
+
+**Co našlo měření nebo testy, ne review:**
+
+- **Sloupec s tečkou v názvu je pro planner relace.** `TextColumn::make('data.title')`
+  se pokusil eager-loadovat relaci `data` a odmítl; název bez tečky + `state()`.
+- **`mutateDataBeforeSave()` běží před dehydratací souborových polí** (krok 2 vs
+  2.5 v `SaveHandler`), takže cesta k souboru v něm je pořád ta dočasná. Médium
+  se proto ukládá přes `using()`, což je krok perzistence.
+- **Statický memo by pod Octane přežil request** — `Settings::tableExists()` ho
+  nemá; je volaný jen uvnitř cache miss, takže cena je stejná a past žádná.
+- **Root balíček repa se jmenuje `nyoncode/wire`**, takže meta-balíček nemohl;
+  composer to odmítne jako „root package cannot require itself". Jméno je
+  `wire-suite`.
+- **Kořenový `phpunit.xml` nastavuje `CACHE_DRIVER`**, který Laravel 11+ ignoruje
+  (čte `CACHE_STORE`), takže Spatie hledal tabulku `cache`. Store se nastavuje
+  v `TestCase` každého modulu — testy prošly samostatně a spadly v plné sadě, což
+  je nejhorší způsob, jak se to dozvědět.
+- **Instalátor musí přežít část, jejíž provider není načtený.** Třída může být
+  autoloadovatelná bez provideru (`dont-discover`, prostředí), a volání
+  neexistujícího příkazu by shodilo celý běh; hlásí se a pokračuje.
 
 ## 4. Brány (podle `AI_CHANGE_PROTOCOL.md`)
 

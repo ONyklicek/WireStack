@@ -8,7 +8,7 @@ what breaks when a step is skipped. This is the reference for the current state;
 [ADR 0024](decisions/0024-js-asset-delivery-and-registration.md) records *why* it
 looks like this, and [`plans/js-asset-registration.md`](plans/js-asset-registration.md)
 carries the Livewire line references behind the claims. Consumer-facing
-documentation is `docs/getting-started.md` § JavaScript Assets.
+documentation is `docs/start/getting-started.md` § JavaScript Assets.
 
 ## The Two Independent Halves
 
@@ -45,9 +45,11 @@ Committed IIFE bundles under each package's `dist/`, built with esbuild:
 | core | `wire-core-dropdown.js` | `resources/js/dropdown.js` (+ `editable/`, `support/`) |
 | core | `wire-core-chart.js` | `resources/js/chart.js` |
 | core | `wire-core-copy.js` | `resources/js/copy.js` |
+| core | `wire-core-sortable-list.js` | `resources/js/sortable-list.js` (SortableJS bundled in) |
+| core | `wire-core-notifications.js` | `resources/js/notification-live.js` |
 | forms | `wire-forms-image.js` | `resources/js/image-processor.js` |
 | forms | `wire-forms-fields.js` | `resources/js/fields.js` (+ `fields/`) |
-| forms | `tiptap/` (code-split ESM) | not an entry — the field delivers it | `resources/js/tiptap-editor{,-addons}.js` |
+| forms | `tiptap/` (code-split ESM) | not an entry — the field delivers it | `resources/js/tiptap-editor{,-addons,-mentions}.js` |
 | table | `wire-table-records.js` | `resources/js/record-actions.js` |
 | table | `wire-table-selection.js` | `resources/js/record-selection.js` |
 | table | `wire-table-live.js` | `resources/js/record-live.js` |
@@ -58,11 +60,23 @@ The copy affordance is core's, not table's (`2137b46`) — it is the one bundle 
 moved packages.
 
 `wire-core-dropdown.js` carries the whole shared interaction layer — `wireDropdown`,
-`wireContextMenu`, `wireTabs`, `wireWizard`, `wireEditableCell`,
+`wireFlyout`, `wireContextMenu`, `wireTabs`, `wireWizard`, `wireEditableCell`,
 `wireSearchableSelect` — which is exactly the set that must never arrive late. The
 combobox is core's rather than forms' because
 `wire-core::partials.searchable-select` is included by seven surfaces across forms
 *and* table.
+
+`wireFlyout` is `wireDropdown` opened by *pointing* rather than clicking, and it
+lives here for the same reason the combobox does: the collapsed admin sidebar is
+its first caller, `wire-admin` ships no bundle of its own, and hover intent is not
+a sidebar concept. What it adds over the click version is the four-part hover
+contract a view cannot express in attributes — a dwell before opening (so reaching
+past a rail for the edge of the page opens nothing), a delay before closing (the
+panel is teleported to `<body>`, so the pointer crossing to it *leaves* the
+trigger's subtree), the panel's own `enter()` cancelling that pending close, and a
+`dismiss()` that outlives it (on a hover surface, closing and handing focus back to
+the trigger is closing and immediately reopening). Alpine's `.debounce` can express
+the delays and neither of the cancellations.
 
 `wireFillHandle` used to be in that list and is the second bundle to move packages
 (ADR 0025 § step 10). It is a table gesture, so every wire-core consumer was
@@ -89,6 +103,37 @@ Without it the anchor is inert: the response carries the region, the browser
 receives it, and nothing on the page changes — no error, no warning, and only
 `npm run verify:drivers` sees it.
 
+`wire-core-sortable-list.js` is the one bundle that is **declared nowhere**, and
+that is deliberate. `@wireStackScripts` renders every entry a package declares
+through `hasAssets()`, so declaring it would put 38 kB of compiled SortableJS in
+the `<head>` of every page of every wire-core application — which is exactly the
+cost giving it its own bundle avoids. It reaches the browser through
+`Bundle::serve('wire-core', …)`'s route, emitted by
+`wire-core::partials.sortable-list-assets`, which only a reorderable Repeater,
+Repeater table or Builder includes. The toolkit has no "declared but not
+aggregated" flag — `loadedOnRequest()` went away with the old registry — so the
+route is the whole mechanism, and `SortableListAssetTest` asserts both halves:
+that the route serves it, and that the aggregate does not.
+
+Its controller, `wireSortableList`, lives in core rather than in forms because
+forms is below table in the graph and cannot borrow `wire-sortable`, and core is
+the lowest layer that can own drag-to-reorder for a positional list. It is not a
+second copy of `wire-sortable`'s controller: that one is the *table* case (two
+Sortable instances, injected handle cells, column reordering, width locking,
+partial-morph repair, stable record keys), this one is the *list* case (one
+container, positional indices, a server that re-renders the truth). Same library,
+different surface — and when the table controller next changes materially, its
+list half belongs here.
+
+`wire-core-notifications.js` is the notification bell's live bridge
+(`wireNotificationLive`): 1.2 kB of Alpine around `window.Echo`, which is the
+consuming app's own dependency and is not shipped here. Declared rather than
+served on request, on the same grounds as the chart registrar — the bell sits in
+a layout, so it arrives with whatever page a `wire:navigate` lands on, and ADR
+0024 forbids delivering an interaction registrar late. It is *also* emitted per
+surface by `wire-core::notifications.partials.live-assets`, which the bell
+includes only when it has a channel to listen on; `@assets` dedupes the two.
+
 `wire-forms-fields.js` carries the field controllers whose bodies used to be
 inlined per instance, and is delivered to views that do not have
 `@wireStackScripts` by `wire-forms::partials.field-assets`. **Every wire-forms
@@ -107,7 +152,7 @@ config.
 a package's `resources/js/`, run its build script:
 
 ```bash
-npm run build:core-assets       # dropdown + chart + copy
+npm run build:core-assets       # dropdown + chart + copy + sortable-list + notifications
 npm run build:forms-assets      # tiptap (ESM, split) + image processor + field controllers
 npm run build:table-assets      # records, selection, live
 npm run build:sortable-assets   # sortable, SortableJS compiled in
@@ -424,5 +469,5 @@ npm run verify:drivers
 - [ADR 0002](decisions/0002-js-alpine-distribution.md) — superseded; falsified on every clause
 - [`plans/js-asset-registration.md`](plans/js-asset-registration.md) — the analysis behind the fix
 - `AI_CODING_STANDARD.md` § Rendering — the binding registration idiom
-- `docs/getting-started.md` § JavaScript Assets — the consumer-facing page
-- `docs/troubleshooting.md` — the 404 and `wireX is not defined` entries
+- `docs/start/getting-started.md` § JavaScript Assets — the consumer-facing page
+- `docs/start/troubleshooting.md` — the 404 and `wireX is not defined` entries

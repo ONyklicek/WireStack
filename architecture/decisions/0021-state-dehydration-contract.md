@@ -237,3 +237,70 @@ timezone is the corruption described above.
   neither UTC nor the field's.
 - `composer api:dead` must drop `format()` / `timezone()` from the baseline.
 - `composer api:instanceof` guards the seam's discovery mechanism itself.
+
+## Amendment — the third and fourth hosts (2026-09-06)
+
+This ADR named two hosts, a form save and a table cell edit, and the contract was
+written for those two. There are two more, and both applied nothing: an action
+with `->form()` hands its state to a callback rather than to a record, and a
+halt that carries a form (`$halt()->form([...])`) collects values and re-executes
+the action with them. Neither path called `dehydrateState()` at all. The result was a field that behaved
+differently depending on which door its value left through — `Select`'s own
+documented rule ("an unselected select stores null") held on save and lapsed in a
+modal, where an enum cast then threw on `''`.
+
+What changed:
+
+- The walk that applies the contract was private to `SaveHandler`. It is
+  `Forms\Runtime\StateDehydrator` now, and it owns both the transform and the
+  payload walk it is defined over. `SaveHandler` delegates.
+- The modal door gets its own seam, `dehydrateMountedActionFormData()`, declared
+  as a no-op in `Actions\Concerns\InteractsWithActions` beside the
+  `validateMountedActionForm()` seam it mirrors, and implemented in
+  `WireForms\Concerns\InteractsWithActionForms`. Core still cannot see a field.
+- It is applied where the data is handed to the callback — `callMountedAction()`,
+  `submitActionModal()`, and a footer action that submits the form — **not**
+  inside validation. A footer action that does *not* submit is a helper working
+  on live state, gets the raw bag, and must not trigger a side effect on a click
+  that was never a hand-over; that is the same condition which decides whether it
+  is validated.
+  Validation runs once per wizard step and again on every footer submit; a
+  transform with a side effect (a `FileUpload` storing its upload) must not run
+  once per step. The result is not written back into the frame's state bag, which
+  is what the browser is bound to.
+- A wizard's steps share one bag while each step's Form carries only its own
+  schema, so every step is asked in turn.
+
+The halt door is the same shape with a different owner. Its seam,
+`dehydrateHaltModalFormData()`, lives only in wire-forms: nothing in wire-core
+re-executes a halted action — `showHaltModal()` records the state and the host
+owns the confirm — so a no-op counterpart there would answer a question core
+never asks. `WithTable::submitHaltModal()` calls it before `closeHaltModal()`
+drops the form, and only the keys the halt form declares are touched, so data the
+halt carried over from the first attempt is not dehydrated twice.
+
+The halt confirm validates now, which it had never done: the guard read
+`if ($validation && ! empty($formData))` and the view submits with no arguments,
+so a halt could declare rules and a `required()` field and neither was ever
+checked. `validateHaltModalForm()` runs the form's own field rules and then the
+declared ones, and re-keys the declared failures onto the fields' state paths —
+a field looks itself up by state path, and the confirmation modal has no error
+summary to fall back on (the path comes from `haltModalFormStatePath()`, the same
+seam the form binds to). `ModalStep::validation()` still reports under bare field
+names and has the same blind spot; its keys are asserted by `WithTableWizardTest`,
+so aligning the two is a separate decision rather than a silent change.
+
+Making that work needed a fix underneath it. The halt form is not Livewire state;
+it survives to the confirm as a serialized copy in the session — and that copy was
+written *after* the host component was bound to the form. A Livewire component
+cannot be serialized, so every halt form threw there and the copy was never
+written: the fallback had never once fired, and by the time anyone confirmed there
+was no schema left to shape (or validate) anything with. The copy is now taken
+before the binding, which the restore end already re-applies.
+
+The purity requirement above is what makes this safe: hosts pass the original
+state, never the result of an earlier call.
+
+`TextInput` implements the contract as part of the same change (a cleared
+`type=number` input reaches a numeric column as `null`, not `''`), which is what
+made the gap visible from an application.

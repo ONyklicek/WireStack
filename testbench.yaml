@@ -8,6 +8,12 @@ providers:
   # are registered from inside it, when present, because naming them here would
   # make the whole workbench refuse to boot without the package installed.
   - Workbench\App\Providers\WorkbenchBroadcastServiceProvider
+  # Fortify, listed rather than discovered: it is a dev dependency of the
+  # monorepo, and the workbench stands in for the application that installed it.
+  # After WorkbenchServiceProvider on purpose — that provider sets
+  # `fortify.features` in its own register(), and Fortify reads the feature list
+  # from there.
+  - Laravel\Fortify\FortifyServiceProvider
 
 migrations:
   - workbench/database/migrations

@@ -18,7 +18,7 @@ use NyonCode\WireBoost\Mcp\WireBoostServer;
 use NyonCode\WireBoost\Tests\Fixtures\DemoForm;
 use NyonCode\WireBoost\Tests\Fixtures\DemoInfolist;
 use NyonCode\WireBoost\Tests\Fixtures\DemoTable;
-use NyonCode\WireCore\Core\Modules\DomainModule;
+use NyonCode\WireCore\Core\Modules\Module;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
@@ -236,7 +236,7 @@ class WtOrderResource implements DescribesResource, ProvidesResourceInfolist
     }
 }
 
-final class WtBillingModule extends DomainModule
+final class WtBillingModule extends Module
 {
     public function getId(): string
     {
@@ -254,7 +254,7 @@ final class WtBillingModule extends DomainModule
     }
 }
 
-final class WtOperationsModule extends DomainModule implements HasDependencies
+final class WtOperationsModule extends Module implements HasDependencies
 {
     public function getId(): string
     {

@@ -79,7 +79,14 @@ export async function until(probe, { timeout = 10000, interval = 100 } = {}) {
  * sharing one means the second Chrome silently attaches to the first), CHROME_BIN
  * and SHOT_DIR.
  */
-export async function openPage({ url, shotPrefix, width = 1200, height = 1200, mobile = false, settle = 3000 }) {
+/**
+ * @param {object} o
+ * @param {string} [o.preload] JS evaluated in every new document BEFORE the page's
+ *   own scripts run. The hook for standing something in that the page reads at
+ *   init — `window.Echo` is the one this exists for: the socket belongs to the
+ *   application, so what a driver can verify is the bridge to it.
+ */
+export async function openPage({ url, shotPrefix, width = 1200, height = 1200, mobile = false, settle = 3000, preload = null }) {
   const chromeBin = process.env.CHROME_BIN
     ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
   const devtoolsPort = Number(process.env.CHROME_PORT ?? 9335);
@@ -141,6 +148,7 @@ export async function openPage({ url, shotPrefix, width = 1200, height = 1200, m
   await page('Runtime.enable');
   await page('Network.enable');
   await page('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile });
+  if (preload) await page('Page.addScriptToEvaluateOnNewDocument', { source: preload });
   await page('Page.navigate', { url });
   await sleep(settle);
 

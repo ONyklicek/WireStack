@@ -6,10 +6,12 @@ namespace Workbench\App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Features;
 use Livewire\Livewire;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
+use NyonCode\WireModuleSettings\Support\SettingsRegistry;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
@@ -30,8 +32,12 @@ use Workbench\App\Livewire\Resources\ListDocuments;
 use Workbench\App\Livewire\Resources\ListInvoices;
 use Workbench\App\Livewire\Resources\ListTasks;
 use Workbench\App\Livewire\Resources\ViewInvoice;
+use Workbench\App\Models\Team;
+use Workbench\App\Models\User;
 use Workbench\App\Modules\BillingModule;
 use Workbench\App\Modules\OperationsModule;
+use Workbench\App\Settings\BrandingSettings;
+use Workbench\App\Settings\MailSettings;
 
 class WorkbenchServiceProvider extends ServiceProvider
 {
@@ -75,6 +81,38 @@ class WorkbenchServiceProvider extends ServiceProvider
         config()->set('wire-core.plugins', [
             OperationsModule::class,
         ]);
+
+        // The optional halves of the users module, all switched on, because the
+        // workbench stands in for the application that has them: an avatar
+        // column (see the migration), Fortify with its two-factor feature
+        // enabled, and teams over the permission package. Each is `auto` in the
+        // package and would be silently absent here otherwise, which is exactly
+        // the preview nobody can check.
+        //
+        // In `register()`, not `boot()`, and that is load-bearing for three of
+        // these four. The users module decides **at boot** whether roles exist
+        // (which is what registers `RoleResource` and puts it in the menu) and
+        // whether teams do (which pushes its middleware onto the `web` group and
+        // its switcher into the chrome) — and a discovered package boots before
+        // this provider does. Set in `boot()`, the answers were read against a
+        // `App\Models\User` that does not exist here, and the screens were
+        // silently absent.
+        //
+        // An application reads all of this from config files, which are in place
+        // before any provider runs at all. This is the workbench paying for not
+        // having one.
+        config()->set('wire-module-users.model', User::class);
+        config()->set('wire-module-users.profile.delete_account', true);
+        // Two-factor for the users module's profile card, password resets for the
+        // auth module's screens. Registration stays off, which is what an admin
+        // panel looks like — and is also what `verify-auth-screens.mjs` asserts
+        // the login screen does about a link it must not draw.
+        config()->set('fortify.features', [
+            Features::resetPasswords(),
+            Features::twoFactorAuthentication(['confirm' => true]),
+        ]);
+        config()->set('permission.teams', true);
+        config()->set('wire-module-users.teams.model', Team::class);
     }
 
     /**
@@ -93,6 +131,44 @@ class WorkbenchServiceProvider extends ServiceProvider
         // rather than a wrong key — worth the note, since every guide still
         // shows the old one.
         config()->set('livewire.component_layout', 'components.layouts.wire');
+
+        // Read at render, so `boot()` is early enough for this one.
+        config()->set('wire-module-settings.groups', [BrandingSettings::class]);
+
+        // The other half of the same screen, arriving the way a package ships
+        // one: registered from a provider rather than listed in the
+        // application's config. The workbench is the application here, so this
+        // stands in for a package — what it exercises is that both sources reach
+        // one switcher, which is the part only a rendered screen can show.
+        SettingsRegistry::instance()->register(MailSettings::class);
+
+        // Stored notifications, so the bell and the notification list have
+        // something to show rather than being permanently empty demos.
+        // Root-relative, because the testbench skeleton's own .env pins
+        // APP_URL to `http://localhost` and Laravel builds a stored file's URL
+        // from it — so on the preview server every <img> pointed at a host
+        // nothing is listening on. The markup was right and the images were
+        // blank, which is the kind of failure only a browser notices.
+        //
+        // A real application sets APP_URL and needs none of this.
+        config()->set('filesystems.disks.public.url', '/storage');
+
+        // A logo, inlined rather than published into the skeleton's public
+        // directory: the point of the workbench is to show the shell with a real
+        // brand in it, and a data URI is the shortest path to one that survives
+        // a fresh checkout with no build step.
+        config()->set('wire-admin.brand.name', 'Wire Workbench');
+        config()->set('wire-admin.brand.logo', 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 132 28\'><rect width=\'28\' height=\'28\' rx=\'8\' fill=\'%232563eb\'/><path d=\'M8 9h3l2 7 2-7h3l2 7 2-7h3l-3.5 11h-3l-2-6.5-2 6.5h-3z\' fill=\'white\'/><text x=\'36\' y=\'20\' font-family=\'ui-sans-serif,system-ui,sans-serif\' font-size=\'15\' font-weight=\'650\' fill=\'%230f172a\'>Workbench</text></svg>');
+        config()->set('wire-admin.brand.logo_dark', 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 132 28\'><rect width=\'28\' height=\'28\' rx=\'8\' fill=\'%232563eb\'/><path d=\'M8 9h3l2 7 2-7h3l2 7 2-7h3l-3.5 11h-3l-2-6.5-2 6.5h-3z\' fill=\'white\'/><text x=\'36\' y=\'20\' font-family=\'ui-sans-serif,system-ui,sans-serif\' font-size=\'15\' font-weight=\'650\' fill=\'%23f8fafc\'>Workbench</text></svg>');
+        config()->set('wire-admin.brand.mark', 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 28 28\'><rect width=\'28\' height=\'28\' rx=\'8\' fill=\'%232563eb\'/><path d=\'M8 9h3l2 7 2-7h3l2 7 2-7h3l-3.5 11h-3l-2-6.5-2 6.5h-3z\' fill=\'white\'/></svg>');
+
+        // `broadcast` alongside them so the bell carries its live bridge in the
+        // previews: the toast for the tab that asked, the row for later, and the
+        // nudge for every other tab. Without a broadcaster configured the event
+        // goes to Laravel's default connection and costs nothing — which is also
+        // what an application that has not set one up gets.
+        config()->set('wire-core.notifications.default', ['session', 'database', 'broadcast']);
+        config()->set('wire-core.audit.enabled', true);
         // What is left for the application to declare: the one group no single
         // module owns. The dashboard lives in operations, but "Insights" is the
         // application's own heading above everything, which is exactly the split

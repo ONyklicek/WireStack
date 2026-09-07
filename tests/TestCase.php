@@ -8,6 +8,7 @@ use Livewire\LivewireServiceProvider;
 use NyonCode\WireAdmin\WireAdminServiceProvider;
 use NyonCode\WireCore\WireCoreServiceProvider;
 use NyonCode\WireForms\WireFormsServiceProvider;
+use NyonCode\WireModuleAuth\WireModuleAuthServiceProvider;
 use NyonCode\WirePanels\WirePanelsServiceProvider;
 use NyonCode\WireSortable\WireSortableServiceProvider;
 use NyonCode\WireTable\WireTableServiceProvider;
@@ -21,12 +22,17 @@ abstract class TestCase extends BaseTestCase
         // stack end to end — a Livewire table (table + forms + core) or a
         // reorderable table (sortable on top) through the real component lifecycle.
         //
-        // Panels and admin are here for a narrower reason too: the Blade
-        // integrity test compiles every shipped view, and a view that uses
-        // another package's component tag cannot compile unless that package's
-        // namespace is registered. Leaving them out made the shell's layout fail
-        // with "Unable to locate a class or view for component" — which reads
-        // like a broken view rather than a missing provider.
+        // Panels, admin and the auth module are here for a narrower reason too:
+        // the Blade integrity test compiles every shipped view, and a view that
+        // uses another package's component tag cannot compile unless that
+        // package's namespace is registered. Leaving them out made the shell's
+        // layout — and then the signed-out screens — fail with "Unable to locate
+        // a class or view for component", which reads like a broken view rather
+        // than a missing provider.
+        //
+        // The auth module is the only `module-*` package here, and that is not a
+        // preference: it is the only one whose views use a component tag of its
+        // own. The others render through wire-core's, which is already up.
         return [
             LivewireServiceProvider::class,
             WireCoreServiceProvider::class,
@@ -35,6 +41,7 @@ abstract class TestCase extends BaseTestCase
             WirePanelsServiceProvider::class,
             WireAdminServiceProvider::class,
             WireSortableServiceProvider::class,
+            WireModuleAuthServiceProvider::class,
         ];
     }
 
