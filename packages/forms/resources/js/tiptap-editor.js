@@ -53,7 +53,7 @@ const tiptapEditor = (config = {}) => {
 
             editor = new Editor({
                 element: mount,
-                extensions: buildTiptapExtensions(config),
+                extensions: buildTiptapExtensions(config, this),
                 content: initialContent,
                 editable: !config.disabled && !config.readOnly,
                 onCreate: ({ editor: ed }) => {
@@ -154,6 +154,52 @@ const tiptapEditor = (config = {}) => {
         },
 
         insertImage() {
+            // Ask the page for a media picker before asking the person for a URL.
+            //
+            // The editor cannot require the media library: `wire-forms` sits
+            // below it in the package graph and an application may not have
+            // installed it at all. So it *offers* the job, and whoever handles it
+            // claims the event by calling preventDefault(). Un-claimed, this
+            // falls through to the prompt it has always used — which is what an
+            // application with no media module still gets.
+            const token = 'tiptap-' + Math.random().toString(36).slice(2)
+
+            const onPicked = (event) => {
+                if (event.detail?.token !== token) return
+
+                window.removeEventListener('wire-media-picker:picked', onPicked)
+
+                const file = (event.detail?.files ?? [])[0]
+                if (! file?.url) return
+
+                // The alt text comes from the library, where it was written once
+                // about the file itself. Asking again at every insertion is how
+                // half the images on a site end up with none.
+                // The id travels with the picture. Without it the saved HTML is
+                // a bare URL and the library reports zero uses for a photograph
+                // that is in twelve articles — a false all-clear in front of
+                // every delete and every replace (ADR 0034).
+                editor?.chain().focus().setImage({
+                    src: file.url,
+                    alt: file.alt ?? '',
+                    title: file.title ?? null,
+                    mediaId: file.id ?? null,
+                }).run()
+            }
+
+            window.addEventListener('wire-media-picker:picked', onPicked)
+
+            const request = new CustomEvent('wire-media-picker:open', {
+                cancelable: true,
+                detail: { token, multiple: false, accepts: 'image/' },
+            })
+
+            window.dispatchEvent(request)
+
+            if (request.defaultPrevented) return
+
+            window.removeEventListener('wire-media-picker:picked', onPicked)
+
             const url = prompt(config.prompts?.imageUrl ?? 'Image URL')
             if (url) editor?.chain().focus().setImage({ src: url }).run()
         },
@@ -174,7 +220,7 @@ const tiptapEditor = (config = {}) => {
     }
 }
 
-function buildTiptapExtensions(config) {
+function buildTiptapExtensions(config, component) {
     const extensions = [
         StarterKit.configure({
             heading: { levels: [1, 2, 3] },
@@ -212,7 +258,204 @@ function buildTiptapExtensions(config) {
         extensions.push(CharacterCount.configure({ limit: config.maxLength }))
     }
 
+    // One configured node per trigger: `@` and `#` are separate lists with
+    // separate sources, and TipTap keys a suggestion plugin by its char.
+    const mentions = window.WireTiptapMentions ?? {}
+
+    if (mentions.Mention) {
+        for (const mention of config.mentions ?? []) {
+            extensions.push(mentions.Mention.extend({ name: `mention${mention.trigger}` }).configure({
+                suggestion: buildSuggestion(mention, config, component),
+            }))
+        }
+    }
+
     return extensions
+}
+
+/**
+ * Suggestion wiring for one trigger.
+ *
+ * Everything that decides *what* can be mentioned stays on the server — the
+ * field is re-resolved by state path and answers with its own scoped sources —
+ * so this only asks and draws. An empty term is never sent: the endpoint would
+ * answer it with "every user we have".
+ */
+function buildSuggestion(mention, config, component) {
+    return {
+        char: mention.trigger,
+        allowSpaces: mention.allowSpaces === true,
+
+        items: async ({ query }) => {
+            if (!query) return []
+
+            try {
+                return await component.$wire.searchEditorMentions(config.statePath, mention.trigger, query)
+            } catch {
+                // A failed lookup closes the list rather than freezing it open.
+                return []
+            }
+        },
+
+        command: ({ editor, range, props }) => {
+            editor.chain().focus().insertContentAt(range, [
+                {
+                    type: `mention${mention.trigger}`,
+                    attrs: {
+                        id: props.id,
+                        mentionType: props.type,
+                        trigger: mention.trigger,
+                        label: props.label,
+                    },
+                },
+                { type: 'text', text: ' ' },
+            ]).run()
+        },
+
+        render: createSuggestionPopup,
+    }
+}
+
+/**
+ * The suggestion list, drawn without a popup library.
+ *
+ * `wire-core` already owns floating placement for dropdowns, but this list is
+ * inside a `wire:ignore`d ProseMirror mount and follows a caret rather than an
+ * element, so it positions against the range rect TipTap hands over and keeps
+ * its own keyboard handling. Rows are grouped by source: several models share
+ * one trigger, and a heading is an honest way to say a row came from a
+ * different table without claiming to rank the two against each other.
+ */
+function createSuggestionPopup() {
+    let element = null
+    let items = []
+    let selected = 0
+    let command = null
+
+    const close = () => {
+        element?.remove()
+        element = null
+        items = []
+        selected = 0
+    }
+
+    const paint = () => {
+        if (!element) return
+
+        element.innerHTML = ''
+
+        if (items.length === 0) {
+            close()
+            return
+        }
+
+        let group = null
+
+        items.forEach((item, index) => {
+            if (item.group && item.group !== group) {
+                group = item.group
+                const heading = document.createElement('div')
+                heading.className = 'wire-mention-group'
+                heading.textContent = item.group
+                element.appendChild(heading)
+            }
+
+            const row = document.createElement('button')
+            row.type = 'button'
+            row.className = 'wire-mention-item' + (index === selected ? ' is-selected' : '')
+            row.textContent = item.label
+            // mousedown, not click: click fires after the editor has already lost
+            // the selection the command needs to replace.
+            row.addEventListener('mousedown', (event) => {
+                event.preventDefault()
+                command?.(item)
+            })
+            element.appendChild(row)
+        })
+    }
+
+    const place = (clientRect) => {
+        const rect = clientRect?.()
+        if (!element || !rect) return
+
+        const margin = 6
+        const below = window.innerHeight - rect.bottom
+        const height = element.offsetHeight
+
+        element.style.left = `${Math.min(rect.left + window.scrollX, window.innerWidth - element.offsetWidth - margin)}px`
+        element.style.top = below < height + margin
+            ? `${rect.top + window.scrollY - height - margin}px`
+            : `${rect.bottom + window.scrollY + margin}px`
+    }
+
+    return {
+        onStart(props) {
+            items = props.items ?? []
+            selected = 0
+            command = props.command
+
+            if (items.length === 0) return
+
+            element = document.createElement('div')
+            element.className = 'wire-mention-suggestions'
+            element.setAttribute('role', 'listbox')
+            document.body.appendChild(element)
+
+            paint()
+            place(props.clientRect)
+        },
+
+        onUpdate(props) {
+            items = props.items ?? []
+            command = props.command
+            selected = 0
+
+            if (items.length === 0) {
+                close()
+                return
+            }
+
+            if (!element) {
+                this.onStart(props)
+                return
+            }
+
+            paint()
+            place(props.clientRect)
+        },
+
+        onKeyDown(props) {
+            if (!element) return false
+
+            const key = props.event.key
+
+            if (key === 'Escape') {
+                close()
+                return true
+            }
+
+            if (key === 'ArrowDown') {
+                selected = (selected + 1) % items.length
+                paint()
+                return true
+            }
+
+            if (key === 'ArrowUp') {
+                selected = (selected - 1 + items.length) % items.length
+                paint()
+                return true
+            }
+
+            if (key === 'Enter' || key === 'Tab') {
+                command?.(items[selected])
+                return true
+            }
+
+            return false
+        },
+
+        onExit: close,
+    }
 }
 
 /** Nothing to show: no value at all, or an empty JSON document string. */
