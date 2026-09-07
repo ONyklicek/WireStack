@@ -1,0 +1,60 @@
+{
+    "name": "nyoncode/wire-suite",
+    "description": "The whole wire stack in one require, with an interactive installer.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ondrej Nyklicek",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "nyoncode/wire-core": "self.version",
+        "nyoncode/wire-forms": "self.version",
+        "nyoncode/wire-table": "self.version",
+        "nyoncode/wire-sortable": "self.version",
+        "nyoncode/wire-panels": "self.version",
+        "nyoncode/wire-admin": "self.version",
+        "illuminate/support": "^12.0|^13.0",
+        "nyoncode/laravel-package-toolkit": "^2.4.2"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.0|^11.0",
+        "laravel/pint": "^1.29",
+        "pestphp/pest": "^4.0|^5.0"
+    },
+    "suggest": {
+        "nyoncode/wire-module-users": "User administration, with roles where the application has them.",
+        "nyoncode/wire-module-audit": "A screen for the audit trail wire-core already records.",
+        "nyoncode/wire-module-notifications": "The history behind the notification bell.",
+        "nyoncode/wire-module-settings": "Typed application settings with a page to edit them.",
+        "nyoncode/wire-module-media": "A media library with uploads and previews.",
+        "nyoncode/laravel-permission-extended": "Roles and wildcard permissions, used by the users module."
+    },
+    "autoload": {
+        "psr-4": {
+            "NyonCode\\Wire\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "NyonCode\\Wire\\Suite\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "NyonCode\\Wire\\WireServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}

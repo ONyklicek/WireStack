@@ -1,0 +1,11 @@
+The Unit suite is declared in packages/suite/phpunit.xml, the root phpunit.xml
+and tests/Pest.php, and the package has no unit tests yet — wire-suite is an
+installer, so what there is to test is the command end to end.
+
+This file is why the directory survives. Git does not track an empty directory,
+so a clone would arrive without it and Pest aborts the whole run on a declared
+test directory that is not there ("Test directory ... not found"), taking every
+other package's tests with it. That is a failure with no connection to whatever
+change is being tested, on a machine that has never been wrong before.
+
+Delete this once there is a real test beside it.
