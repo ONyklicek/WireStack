@@ -150,3 +150,64 @@ it('says so when a block is placed in a schema directly', function () {
 it('refuses the table layout, which cannot apply to mixed blocks', function () {
     Builder::make('content')->table();
 })->throws(FormConfigurationException::class, 'cannot use table()');
+
+// ─── The chrome a Builder shares with a Repeater ────────────────────────────
+
+it('drags its blocks with the same controller a repeater uses', function () {
+    // The builder shipped the same dead `x-sortable` markup as the repeater, and
+    // for the same reason: the handle was there, so nothing looked wrong.
+    $html = Livewire::test(BuilderComponent::class)->html();
+
+    expect($html)->toContain('wireSortableList(')
+        ->and($html)->toContain('data-sortable-item="0"')
+        ->and($html)->toContain('data-sortable-handle')
+        ->and($html)->not->toContain('x-sortable');
+});
+
+it('moves a block without a pointer', function () {
+    Livewire::test(BuilderComponent::class)
+        ->call('moveRepeaterItem', 'data.content', 1, 0)
+        ->assertSet('data.content.0.type', 'paragraph');
+});
+
+it('names a block beside its type when itemLabel reads the block data', function () {
+    // A builder item stores its fields under `data`, so the label closure is
+    // handed that envelope's contents rather than the item itself.
+    $component = new class extends BuilderComponent
+    {
+        public function form(Form $form): Form
+        {
+            return $form->statePath('data')->schema([
+                Builder::make('content')
+                    ->itemLabel(fn (array $state) => $state['text'] ?? null)
+                    ->blocks([
+                        Block::make('heading')->schema([TextInput::make('text')]),
+                        Block::make('paragraph')->schema([Textarea::make('body')]),
+                    ]),
+            ]);
+        }
+    };
+
+    expect(Livewire::test($component::class)->html())->toContain('Hello');
+});
+
+it('duplicates a block when cloneable', function () {
+    $component = new class extends BuilderComponent
+    {
+        public function form(Form $form): Form
+        {
+            return $form->statePath('data')->schema([
+                Builder::make('content')->cloneable()->blocks([
+                    Block::make('heading')->schema([TextInput::make('text')]),
+                    Block::make('paragraph')->schema([Textarea::make('body')]),
+                ]),
+            ]);
+        }
+    };
+
+    Livewire::test($component::class)
+        ->call('cloneRepeaterItem', 'data.content', 0, 'id')
+        ->assertCount('data.content', 3)
+        ->assertSet('data.content.1.type', 'heading')
+        ->assertSet('data.content.1.data.text', 'Hello');
+});

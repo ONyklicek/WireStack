@@ -8,9 +8,9 @@ use Closure;
 use Illuminate\Contracts\View\View;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
-use NyonCode\WireCore\Foundation\Concerns\CanBeCollapsed;
 use NyonCode\WireCore\Foundation\Concerns\CanBeDehydrated;
 use NyonCode\WireCore\Foundation\Concerns\HasDefault;
+use NyonCode\WireCore\Foundation\Concerns\HasItemExpansion;
 use NyonCode\WireCore\Foundation\Contracts\CanBeDehydrated as CanBeDehydratedContract;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 use NyonCode\WireForms\Concerns\ClonesItemSchema;
@@ -34,7 +34,6 @@ use NyonCode\WireForms\Forms\Runtime\RelationshipSaveHandler;
  */
 class Repeater extends LayoutComponent implements CanBeDehydratedContract, HasValidation
 {
-    use CanBeCollapsed;
     use CanBeDehydrated {
         isDehydrated as isDehydratedByDeclaration;
     }
@@ -42,6 +41,10 @@ class Repeater extends LayoutComponent implements CanBeDehydratedContract, HasVa
     use EvaluatesClosures;
     use HasDefault;
     use HasFormValidation;
+
+    // Not CanBeCollapsed: this brings it in, plus the positional policies a list
+    // needs (expandFirst/expandLast). Using both would bind the wrong collapsed().
+    use HasItemExpansion;
     use HasItemLimits;
 
     protected ?string $relationship = null;
@@ -53,6 +56,14 @@ class Repeater extends LayoutComponent implements CanBeDehydratedContract, HasVa
     protected bool $reorderable = false;
 
     protected bool $table = false;
+
+    protected bool $cloneable = false;
+
+    protected ?string $orderColumn = null;
+
+    protected string $itemKeyName = 'id';
+
+    protected ?string $emptyLabel = null;
 
     protected ?string $addButtonLabel = null;
 
@@ -111,6 +122,67 @@ class Repeater extends LayoutComponent implements CanBeDehydratedContract, HasVa
     public function reorderable(bool $condition = true): static
     {
         $this->reorderable = $condition;
+
+        return $this;
+    }
+
+    /**
+     * Whether each row offers a "duplicate" button.
+     *
+     * The copy is inserted directly below its original and carries every field's
+     * value — except {@see itemKeyName()}, which is stripped so the relationship
+     * save treats it as a new child. Leaving the key on would make both rows
+     * match the same record: the second `fill()->save()` would overwrite the
+     * first and one of the two rows would vanish on reload.
+     */
+    public function cloneable(bool $condition = true): static
+    {
+        $this->cloneable = $condition;
+
+        return $this;
+    }
+
+    /**
+     * Persist the rows' order into this column on the related model.
+     *
+     * Reordering is otherwise only true of the array in the browser: a HasMany
+     * comes back in whatever order the database returns, so a drag survived until
+     * the next load and no further. With a column named, each row is written with
+     * its zero-based position before it is saved (a pivot column, for a
+     * BelongsToMany).
+     *
+     * Writing the order is this package's half. Reading it back is the caller's:
+     * the form is filled from data you pass it, so order the relation yourself —
+     * `$record->contacts()->orderBy('sort_order')->get()`, or an `orderBy` on the
+     * relation method — or the rows return in the database's order and the column
+     * looks broken while being written correctly.
+     */
+    public function orderColumn(?string $column = 'sort_order'): static
+    {
+        $this->orderColumn = $column;
+
+        return $this;
+    }
+
+    /**
+     * The per-row key that identifies an existing child record.
+     *
+     * Only {@see cloneable()} reads it, to strip the key from a copy. It defaults
+     * to `id` rather than being derived from the relation because a component
+     * never sees the model — the record reaches the save handler, not the schema
+     * — and every other consumer of the key already resolves it there.
+     */
+    public function itemKeyName(string $name): static
+    {
+        $this->itemKeyName = $name;
+
+        return $this;
+    }
+
+    /** What to show in place of the rows when there are none. */
+    public function emptyLabel(?string $label): static
+    {
+        $this->emptyLabel = $label;
 
         return $this;
     }
@@ -181,6 +253,31 @@ class Repeater extends LayoutComponent implements CanBeDehydratedContract, HasVa
     }
 
     /**
+     * Duplicating a row adds one, so it is gated by the same switches adding is:
+     * a full repeater must not grow past `maxItems()` through the back door, and
+     * a repeater that cannot be added to cannot be cloned into either.
+     */
+    public function isCloneable(): bool
+    {
+        return $this->cloneable && $this->isAddable();
+    }
+
+    public function getOrderColumn(): ?string
+    {
+        return $this->orderColumn;
+    }
+
+    public function getItemKeyName(): string
+    {
+        return $this->itemKeyName;
+    }
+
+    public function getEmptyLabel(): string
+    {
+        return $this->emptyLabel ?? __('No items yet');
+    }
+
+    /**
      * Lay the items out as table rows: one column per schema field, headed once,
      * instead of a stacked card per item.
      *
@@ -237,6 +334,17 @@ class Repeater extends LayoutComponent implements CanBeDehydratedContract, HasVa
             : $this->itemLabel;
 
         return ($label === null || $label === '') ? null : (string) $label;
+    }
+
+    /**
+     * Whether a name was configured at all — which is not the same as one
+     * resolving. The table layout heads a whole column with it, so it has to know
+     * before it reaches the first row whether that column exists; a closure that
+     * happens to return null for row 1 must not remove the heading.
+     */
+    public function hasItemLabel(): bool
+    {
+        return $this->itemLabel !== null;
     }
 
     public function isDisabled(): bool

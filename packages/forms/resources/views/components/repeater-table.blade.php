@@ -1,6 +1,6 @@
 {{-- Repeater in its table layout: one column per schema field, headed once.
-     Same state paths, add/remove/reorder wiring and Livewire methods as the card
-     layout — only the arrangement differs. --}}
+     Same state paths, add/remove/clone/reorder wiring and Livewire methods as the
+     card layout — only the arrangement differs. --}}
 @php
     use NyonCode\WireForms\Components\Repeater;
 
@@ -11,7 +11,21 @@
     if (!is_array($items)) $items = [];
     $itemCount = count($items);
     $headings = $field->getTableHeadings();
+    $canRemove = $field->isDeletable();
+    $canClone = $field->isCloneable();
+    $showLabels = $field->hasItemLabel();
+
+    // Every column the header draws that is not a schema field, so the empty
+    // row's colspan cannot drift from what is above it.
+    $extraColumns = ($field->isReorderable() ? 1 : 0)
+        + ($showLabels ? 1 : 0)
+        + ($canClone ? 1 : 0)
+        + ($canRemove ? 1 : 0);
 @endphp
+
+@if($field->isReorderable())
+    @include('wire-core::partials.sortable-list-assets')
+@endif
 
 <div class="space-y-2">
     @if($field->getLabel())
@@ -20,12 +34,31 @@
         </label>
     @endif
 
-    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-600">
+    <div
+        class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-600"
+        @if($field->isReorderable())
+            {{-- The rows live in <tbody>, not among this element's own children,
+                 so the controller is told where to look rather than being wrapped
+                 around a <tbody> that cannot hold the scroll container. --}}
+            x-data="wireSortableList({ container: 'tbody' })"
+            x-on:sorted="$wire.reorderRepeaterItems('{{ $statePath }}', $event.detail.order)"
+        @endif
+    >
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
             <thead class="bg-gray-50 dark:bg-gray-800">
                 <tr>
                     @if($field->isReorderable())
-                        <th scope="col" class="w-8 px-2 py-2"><span class="sr-only">{{ __('Reorder') }}</span></th>
+                        <th scope="col" class="w-16 px-2 py-2"><span class="sr-only">{{ __('Reorder') }}</span></th>
+                    @endif
+
+                    @if($showLabels)
+                        {{-- Numbering and the row's name, which the card layout puts
+                             in each item's header. Only when `itemLabel()` was
+                             configured: gating on whether a given row's closure
+                             *resolves* would make the heading come and go. --}}
+                        <th scope="col" class="w-px whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            {{ __('Item') }}
+                        </th>
                     @endif
 
                     @foreach($headings as $heading)
@@ -34,32 +67,56 @@
                         </th>
                     @endforeach
 
-                    @if($field->isDeletable())
+                    @if($canClone)
+                        <th scope="col" class="w-10 px-2 py-2"><span class="sr-only">{{ __('Duplicate') }}</span></th>
+                    @endif
+
+                    @if($canRemove)
                         <th scope="col" class="w-10 px-2 py-2"><span class="sr-only">{{ __('Remove') }}</span></th>
                     @endif
                 </tr>
             </thead>
 
-            <tbody
-                class="divide-y divide-gray-200 bg-white dark:divide-gray-600 dark:bg-gray-800"
-                @if($field->isReorderable())
-                    x-sortable
-                    x-on:sort-end.camel="
-                        let sorted = [];
-                        $el.querySelectorAll('[x-sortable-item]').forEach(el => {
-                            sorted.push(parseInt(el.getAttribute('x-sortable-item')));
-                        });
-                        $wire.reorderRepeaterItems('{{ $statePath }}', sorted);
-                    "
-                @endif
-            >
+            <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-600 dark:bg-gray-800">
                 @foreach($items as $index => $item)
-                    <tr x-sortable-item="{{ $index }}">
+                    <tr @if($field->isReorderable()) data-sortable-item="{{ $index }}" @endif>
                         @if($field->isReorderable())
                             <td class="px-2 py-2 align-top">
-                                <button type="button" x-sortable-handle data-testid="form-repeater-{{ $statePath }}-reorder-{{ $index }}" aria-label="{{ __('Reorder') }}" class="cursor-grab text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                                    {!! icon('outline:bars-3', 'w-4 h-4', 'w-4 h-4') !!}
-                                </button>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" data-sortable-handle data-testid="form-repeater-{{ $statePath }}-reorder-{{ $index }}" aria-label="{{ __('Reorder') }}" class="cursor-grab text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                        {!! icon('outline:bars-3', 'w-4 h-4', 'w-4 h-4') !!}
+                                    </button>
+
+                                    {{-- The keyboard's half of reordering; see the card layout. --}}
+                                    <span class="flex flex-col">
+                                        <button
+                                            type="button"
+                                            wire:click="moveRepeaterItem('{{ $statePath }}', {{ $index }}, {{ $index - 1 }})"
+                                            data-testid="form-repeater-{{ $statePath }}-move-up-{{ $index }}"
+                                            aria-label="{{ __('Move up') }}"
+                                            @disabled($index === 0)
+                                            class="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:hover:text-gray-400 dark:hover:text-gray-300"
+                                        >{!! icon('outline:chevron-up', 'w-3 h-3') !!}</button>
+                                        <button
+                                            type="button"
+                                            wire:click="moveRepeaterItem('{{ $statePath }}', {{ $index }}, {{ $index + 1 }})"
+                                            data-testid="form-repeater-{{ $statePath }}-move-down-{{ $index }}"
+                                            aria-label="{{ __('Move down') }}"
+                                            @disabled($index === $itemCount - 1)
+                                            class="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:hover:text-gray-400 dark:hover:text-gray-300"
+                                        >{!! icon('outline:chevron-down', 'w-3 h-3') !!}</button>
+                                    </span>
+                                </div>
+                            </td>
+                        @endif
+
+                        @if($showLabels)
+                            @php $itemLabel = $field->getItemLabel(is_array($item) ? $item : [], $index); @endphp
+                            <td class="whitespace-nowrap px-3 py-2 align-top text-sm font-medium text-gray-700 dark:text-gray-300">
+                                #{{ $index + 1 }}
+                                @if($itemLabel !== null)
+                                    <span class="ml-1 font-normal text-gray-500 dark:text-gray-400">{{ $itemLabel }}</span>
+                                @endif
                             </td>
                         @endif
 
@@ -76,7 +133,21 @@
                             </td>
                         @endforeach
 
-                        @if($field->isDeletable())
+                        @if($canClone)
+                            <td class="px-2 py-2 align-top">
+                                <button
+                                    type="button"
+                                    wire:click="cloneRepeaterItem('{{ $statePath }}', {{ $index }}, '{{ $field->getItemKeyName() }}')"
+                                    data-testid="form-repeater-{{ $statePath }}-clone-{{ $index }}"
+                                    aria-label="{{ __('Duplicate') }}"
+                                    class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                >
+                                    {!! icon('duplicate', 'w-4 h-4', 'w-4 h-4') !!}
+                                </button>
+                            </td>
+                        @endif
+
+                        @if($canRemove)
                             <td class="px-2 py-2 align-top">
                                 @if($field->getMinItems() === null || $itemCount > $field->getMinItems())
                                     <button
@@ -96,8 +167,8 @@
 
                 @if($items === [])
                     <tr>
-                        <td colspan="{{ count($headings) + ($field->isReorderable() ? 1 : 0) + ($field->isDeletable() ? 1 : 0) }}" class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                            {{ __('No items yet') }}
+                        <td colspan="{{ count($headings) + $extraColumns }}" data-testid="form-repeater-{{ $statePath }}-empty" class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                            {{ $field->getEmptyLabel() }}
                         </td>
                     </tr>
                 @endif

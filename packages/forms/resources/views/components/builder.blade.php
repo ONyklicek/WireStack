@@ -1,6 +1,7 @@
 {{-- Builder: a repeater whose every item picks its own block type. Item chrome
      matches the repeater card; only the schema and the add trigger differ. --}}
 @php
+    use NyonCode\WireCore\Foundation\Enums\ItemExpansion;
     use NyonCode\WireForms\Components\Builder;
 
     assert($field instanceof Builder);
@@ -14,65 +15,127 @@
 
 @include('wire-forms::partials.field-assets')
 
+@if($field->isReorderable())
+    @include('wire-core::partials.sortable-list-assets')
+@endif
+
 <div
     {{-- x-data must stay byte-identical across Livewire morphs — see the repeater
          view: keying collapse state by index keeps the attribute text static as
-         items are added and removed. `adding` drives the block picker. --}}
+         items are added and removed, and the per-item default is passed per row
+         rather than interpolated here. `adding` drives the block picker. --}}
     {{-- Body registered as `wireBuilderBlocks`; only per-instance config here. --}}
     x-data="wireBuilderBlocks({
-        collapsedByDefault: @js($field->isCollapsed()),
+        allCollapsed: @js($field->getItemExpansion() === ItemExpansion::None),
     })"
-    @if($field->isReorderable())
-        x-sortable
-        x-on:sort-end.camel="
-            let sorted = [];
-            $el.querySelectorAll('[x-sortable-item]').forEach(el => {
-                sorted.push(parseInt(el.getAttribute('x-sortable-item')));
-            });
-            $wire.reorderRepeaterItems('{{ $statePath }}', sorted);
-        "
-    @endif
     class="space-y-2"
 >
-    @if($field->getLabel())
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            {{ $field->getLabel() }}
-        </label>
+    @if($field->getLabel() || ($field->isCollapsible() && $itemCount > 1))
+        <div class="flex items-center justify-between gap-2">
+            @if($field->getLabel())
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ $field->getLabel() }}
+                </label>
+            @else
+                <span></span>
+            @endif
+
+            @if($field->isCollapsible() && $itemCount > 1)
+                <button
+                    type="button"
+                    @click="setAllCollapsed(!allCollapsed)"
+                    data-testid="form-builder-{{ $statePath }}-toggle-all"
+                    class="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                    <span x-show="!allCollapsed" class="flex items-center gap-1">
+                        {!! icon('outline:chevron-double-up', 'w-3.5 h-3.5') !!}{{ __('Collapse all') }}
+                    </span>
+                    <span x-show="allCollapsed" x-cloak class="flex items-center gap-1">
+                        {!! icon('outline:chevron-double-down', 'w-3.5 h-3.5') !!}{{ __('Expand all') }}
+                    </span>
+                </button>
+            @endif
+        </div>
     @endif
 
+    <div
+        class="space-y-2"
+        @if($field->isReorderable())
+            x-data="wireSortableList()"
+            x-on:sorted="$wire.reorderRepeaterItems('{{ $statePath }}', $event.detail.order)"
+        @endif
+    >
     @foreach($items as $index => $item)
         @php
             $type = $field->getItemType($item);
             $block = $type !== null ? $field->getBlock($type) : null;
+            $itemLabel = $field->getItemLabel(is_array($item) ? ($item['data'] ?? []) : [], $index);
+            $startsCollapsed = $field->isItemCollapsedByDefault($index, $itemCount);
         @endphp
 
         <div
-            x-sortable-item="{{ $index }}"
+            data-collapsible-item="{{ $index }}"
+            @if($field->isReorderable()) data-sortable-item="{{ $index }}" @endif
             wire:key="builder-{{ $statePath }}-{{ $index }}"
             class="rounded-lg border border-gray-200 bg-white dark:border-gray-600 dark:bg-gray-800"
         >
             <div class="flex items-center justify-between border-b border-gray-200 px-4 py-2 dark:border-gray-600">
                 <div class="flex items-center gap-2">
                     @if($field->isReorderable())
-                        <button type="button" x-sortable-handle data-testid="form-builder-{{ $statePath }}-reorder-{{ $index }}" aria-label="{{ __('Reorder') }}" class="cursor-grab text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <button type="button" data-sortable-handle data-testid="form-builder-{{ $statePath }}-reorder-{{ $index }}" aria-label="{{ __('Reorder') }}" class="cursor-grab text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                             {!! icon('outline:bars-3', 'w-4 h-4', 'w-4 h-4') !!}
                         </button>
+
+                        {{-- The keyboard's half of reordering; see the repeater view. --}}
+                        <span class="flex flex-col">
+                            <button
+                                type="button"
+                                wire:click="moveRepeaterItem('{{ $statePath }}', {{ $index }}, {{ $index - 1 }})"
+                                data-testid="form-builder-{{ $statePath }}-move-up-{{ $index }}"
+                                aria-label="{{ __('Move up') }}"
+                                @disabled($index === 0)
+                                class="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:hover:text-gray-400 dark:hover:text-gray-300"
+                            >{!! icon('outline:chevron-up', 'w-3 h-3') !!}</button>
+                            <button
+                                type="button"
+                                wire:click="moveRepeaterItem('{{ $statePath }}', {{ $index }}, {{ $index + 1 }})"
+                                data-testid="form-builder-{{ $statePath }}-move-down-{{ $index }}"
+                                aria-label="{{ __('Move down') }}"
+                                @disabled($index === $itemCount - 1)
+                                class="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:hover:text-gray-400 dark:hover:text-gray-300"
+                            >{!! icon('outline:chevron-down', 'w-3 h-3') !!}</button>
+                        </span>
                     @endif
 
-                    <span class="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <span data-testid="form-builder-{{ $statePath }}-label-{{ $index }}" class="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
                         @if($block?->getIcon())
                             {!! icon($block->getIcon(), 'w-4 h-4', 'text-gray-400') !!}
                         @endif
                         {{-- An item whose block is gone still names its stored type, so
                              the content can be recognised and moved rather than lost. --}}
                         {{ $block?->getLabel() ?? $type ?? __('Unknown block') }}
+                        @if($itemLabel !== null)
+                            <span class="font-normal text-gray-500 dark:text-gray-400">{{ $itemLabel }}</span>
+                        @endif
                     </span>
                 </div>
 
                 <div class="flex items-center gap-1">
+                    @if($field->isCloneable())
+                        <button
+                            type="button"
+                            wire:click="cloneRepeaterItem('{{ $statePath }}', {{ $index }}, '{{ $field->getItemKeyName() }}')"
+                            data-testid="form-builder-{{ $statePath }}-clone-{{ $index }}"
+                            aria-label="{{ __('Duplicate') }}"
+                            class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        >
+                            {!! icon('duplicate', 'w-4 h-4', 'w-4 h-4') !!}
+                        </button>
+                    @endif
+
                     @if($field->isCollapsible())
-                        <button type="button" @click="toggleCollapse({{ $index }})" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                            {!! icon('chevron-down', 'w-4 h-4', 'w-4 h-4 transition-transform', '', [':class' => "{ 'rotate-180': !isCollapsed({$index}) }"]) !!}
+                        <button type="button" @click="toggleCollapse({{ $index }}, {{ $startsCollapsed ? 'true' : 'false' }})" data-testid="form-builder-{{ $statePath }}-collapse-{{ $index }}" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            {!! icon('chevron-down', 'w-4 h-4', 'w-4 h-4 transition-transform', '', [':class' => "{ 'rotate-180': !isCollapsed({$index}, ".($startsCollapsed ? 'true' : 'false').") }"]) !!}
                         </button>
                     @endif
 
@@ -90,7 +153,7 @@
                 </div>
             </div>
 
-            <div x-show="!isCollapsed({{ $index }})" x-collapse class="space-y-4 p-4">
+            <div x-show="!isCollapsed({{ $index }}, {{ $startsCollapsed ? 'true' : 'false' }})" x-collapse @if($startsCollapsed) x-cloak @endif class="space-y-4 p-4">
                 @foreach($field->getItemSchema($index, $type ?? '') as $component)
                     @if($component->isVisible())
                         {{ $component }}
@@ -99,6 +162,13 @@
             </div>
         </div>
     @endforeach
+    </div>
+
+    @if($items === [])
+        <p data-testid="form-builder-{{ $statePath }}-empty" class="rounded-lg border border-dashed border-gray-200 px-3 py-4 text-center text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400">
+            {{ $field->getEmptyLabel() }}
+        </p>
+    @endif
 
     @if($field->isAddable() && ($field->getMaxItems() === null || $itemCount < $field->getMaxItems()))
         <div class="relative">

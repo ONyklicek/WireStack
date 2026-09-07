@@ -422,3 +422,50 @@ test('wire model attribute equals state path', function () {
 
     expect($repeater->getWireModelAttribute())->toBe('form.contacts');
 });
+
+// ─── Which rows start open ────────────────────────────────────────────
+
+test('expandFirst opens only the first row and implies collapsible', function () {
+    $repeater = Repeater::make('items')->expandFirst();
+
+    expect($repeater->isCollapsible())->toBeTrue()
+        ->and($repeater->isItemCollapsedByDefault(0, 3))->toBeFalse()
+        ->and($repeater->isItemCollapsedByDefault(1, 3))->toBeTrue();
+});
+
+test('expandLast opens only the row a user has just added', function () {
+    $repeater = Repeater::make('items')->expandLast();
+
+    expect($repeater->isItemCollapsedByDefault(2, 3))->toBeFalse()
+        ->and($repeater->isItemCollapsedByDefault(0, 3))->toBeTrue();
+});
+
+test('collapsed() still means every row folded, and still wins if it comes last', function () {
+    expect(Repeater::make('items')->collapsed()->isItemCollapsedByDefault(0, 2))->toBeTrue()
+        ->and(Repeater::make('items')->expandFirst()->collapsed()->isItemCollapsedByDefault(0, 2))->toBeTrue();
+});
+
+// ─── Duplicating, ordering, naming, emptiness ─────────────────────────
+
+test('cloneable defaults to false', function () {
+    expect(Repeater::make('items')->isCloneable())->toBeFalse();
+});
+
+test('cloneable answers to the same switches adding does', function () {
+    // Duplicating a row adds one, so it must not be a way past addable(false)
+    // or a disabled repeater.
+    expect(Repeater::make('items')->cloneable()->isCloneable())->toBeTrue()
+        ->and(Repeater::make('items')->cloneable()->addable(false)->isCloneable())->toBeFalse()
+        ->and(Repeater::make('items')->cloneable()->disabled()->isCloneable())->toBeFalse();
+});
+
+test('the row key stripped from a copy defaults to id and can be named', function () {
+    expect(Repeater::make('items')->getItemKeyName())->toBe('id')
+        ->and(Repeater::make('items')->itemKeyName('uuid')->getItemKeyName())->toBe('uuid');
+});
+
+test('orderColumn is off until asked for, and names sort_order by default', function () {
+    expect(Repeater::make('items')->getOrderColumn())->toBeNull()
+        ->and(Repeater::make('items')->orderColumn()->getOrderColumn())->toBe('sort_order')
+        ->and(Repeater::make('items')->orderColumn('position')->getOrderColumn())->toBe('position');
+});
