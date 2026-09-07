@@ -34,10 +34,37 @@ use Illuminate\View\Component;
  */
 class Layout extends Component
 {
+    /**
+     * @param  bool|null  $notifications  Whether to mount the bell. Null asks the
+     *                                    configuration, which is the honest default: the bell reads stored
+     *                                    notifications, and only the `database` driver stores any.
+     */
     public function __construct(
         public ?string $title = null,
         public bool $linkedOnly = false,
+        public ?bool $notifications = null,
     ) {}
+
+    /**
+     * Whether this page shows the notification bell.
+     *
+     * Asked of the driver rather than assumed, and the reason is a failure this
+     * caught: the bell counts rows in the notifications table as soon as a user
+     * is authenticated, so mounting it under the default `session` driver is a
+     * SQL error on every page of an application that never asked for stored
+     * notifications — and a query per render for one that did not migrate.
+     *
+     * An application that keeps its own table and knows better passes the
+     * attribute and skips the question.
+     */
+    public function showsNotifications(): bool
+    {
+        if ($this->notifications !== null) {
+            return $this->notifications;
+        }
+
+        return in_array('database', (array) config('wire-core.notifications.default', []), true);
+    }
 
     public function render(): View
     {

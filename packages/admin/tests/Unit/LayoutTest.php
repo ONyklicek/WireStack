@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
+use NyonCode\WireCore\Foundation\View\PageChrome;
 
 /*
  * The page frame.
@@ -73,4 +74,14 @@ it('mounts the palette and the toast container itself', function () {
 
 it('offers a way past the menu for keyboard users', function () {
     expect(alGet('bare'))->toContain('href="#wire-admin-main"');
+});
+
+it('renders what another package asked the chrome to render', function () {
+    // The shell names no module package's views and no module package reaches
+    // into this layout. A media picker that has to be on every screen gets there
+    // through the registry, and this is the only place that is visible.
+    View::addLocation(__DIR__.'/../fixtures/views');
+    app(PageChrome::class)->add('chrome-probe');
+
+    expect(alGet('bare'))->toContain('data-testid="chrome-probe"');
 });

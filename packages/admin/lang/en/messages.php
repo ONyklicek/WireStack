@@ -8,4 +8,10 @@ return [
     'search' => 'Search…',
     'skip_to_content' => 'Skip to content',
     'empty' => 'Nothing is registered yet.',
+    'theme' => 'Toggle theme',
+    'collapse_menu' => 'Collapse the menu',
+    'expand_menu' => 'Expand the menu',
+    'breadcrumbs' => 'Breadcrumb',
+    'close_menu' => 'Close the menu',
+    'brand' => 'Home',
 ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use NyonCode\WireAdmin\View\Sidebar;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
@@ -13,6 +14,7 @@ use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
+use NyonCode\WireCore\Foundation\View\Badge;
 
 /*
  * The menu, rendered.
@@ -55,6 +57,22 @@ class SbReportResource implements DescribesResource, ProvidesNavigation
     }
 }
 
+/** A badge with no colour of its own — the default every surface must agree on. */
+class SbPlainBadgeResource implements DescribesResource, ProvidesNavigation
+{
+    use DescribesRecords;
+
+    public static function modelClass(): ?string
+    {
+        return null;
+    }
+
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make()->group('billing')->sort(99)->badge('7');
+    }
+}
+
 /** Registered and deliberately not in the menu. */
 class SbInternalResource implements DescribesResource
 {
@@ -63,6 +81,24 @@ class SbInternalResource implements DescribesResource
     public static function modelClass(): ?string
     {
         return null;
+    }
+}
+
+/** An entry with a second level under it. */
+class SbCatalogueResource implements DescribesResource, ProvidesNavigation
+{
+    use DescribesRecords;
+
+    public static function modelClass(): ?string
+    {
+        return null;
+    }
+
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make()->group('billing')->children([
+            NavigationItem::make('Archived')->url('/admin/sb-catalogues?filter=archived'),
+        ]);
     }
 }
 
@@ -160,4 +196,129 @@ it('reads its zone and its active key once, at construction', function () {
     expect($sidebar->zone)->toBe('business.')
         ->and($sidebar->activeKey)->toBe('sb-invoices')
         ->and(array_keys($sidebar->groups()))->toBe(['billing']);
+});
+
+it('draws a submenu under an entry that declares children', function () {
+    app(ResourceRegistry::class)->register(SbCatalogueResource::class);
+
+    $html = sbRender();
+
+    expect($html)->toContain('data-testid="admin-nav-child"')
+        ->and($html)->toContain('href="/admin/sb-catalogues?filter=archived"')
+        // The parent stops being a link and becomes the disclosure for its own
+        // list: two things to click in one row is what makes a nested menu
+        // impossible to hit.
+        // Which tag the row is, found by walking back to the one that opened
+        // it rather than by a regex: the attributes between the two now include
+        // an arrow function, and `[^>]*` stops at its `=>`.
+        ->and(Str::afterLast(Str::before($html, 'data-resource="sb-catalogues"'), '<'))->toStartWith('button')
+        ->and($html)->toContain('aria-controls="wire-admin-sub-');
+});
+
+it('gives an entry with a badge a second, smaller one for the rail', function () {
+    // The defect this fixes was visible only in a screenshot: in the collapsed
+    // rail the badge sat *beside* the icon, so it pushed the icon off centre and
+    // the whole column looked misaligned. It now sits on the icon.
+    $html = sbRender();
+
+    expect($html)->toContain('data-testid="admin-nav-badge-dot"')
+        ->and($html)->toContain('absolute');
+});
+
+it('draws the rail dot in the colour the entry declared', function () {
+    // The dot used to be a hard-coded `bg-primary-600`, so a count that was red
+    // for being overdue turned brand-blue for being narrow — and in a dot that
+    // small the hue is the only thing left saying anything. The fill comes from
+    // the canonical solid-fill resolver now, which is what the wide badge and
+    // every other solid surface already read.
+    $html = sbRender();
+    $dot = Str::before(Str::after($html, 'data-testid="admin-nav-badge-dot"'), '>');
+
+    expect($dot)->toContain(Badge::getSolidBgClass('danger'))
+        ->and($dot)->not->toContain('bg-primary-600');
+});
+
+it('resolves one badge colour for every surface that draws it', function () {
+    // Three places draw the badge — the pill, the rail dot, the flyout pill —
+    // and an entry that declared no colour used to get `gray` in two of them and
+    // `primary` in the third.
+    app(ResourceRegistry::class)->register(SbPlainBadgeResource::class);
+
+    $html = sbRender();
+    $dot = Str::before(Str::after($html, 'data-testid="admin-nav-badge-dot"'), '>');
+
+    expect($dot)->toContain(Badge::getSolidBgClass('danger'))
+        ->and(Str::afterLast($html, 'data-testid="admin-nav-badge-dot"'))
+        ->toContain(Badge::getSolidBgClass('gray'));
+});
+
+it('gives a row with no children a tooltip, and a row with children a menu', function () {
+    // The rule SAP Fiori's side navigation states for a collapsed rail: a tooltip
+    // with the label pops up on hover, and subitems appear in a popover. They are
+    // different objects, and an earlier attempt here made them the same one — so
+    // pointing at an entry with no children answered "what is this icon?" with a
+    // menu-sized card holding a single word.
+    app(ResourceRegistry::class)->register(SbCatalogueResource::class);
+
+    $html = sbRender();
+
+    expect($html)->toContain('data-testid="admin-nav-tip"')
+        ->and($html)->toContain('role="tooltip"')
+        ->and($html)->toContain('data-testid="admin-nav-flyout"')
+        // The entry with children gets the menu and not the tooltip; the one
+        // without gets the tooltip and not the menu.
+        ->and(Str::before($html, 'data-resource="sb-catalogues"'))->toContain('data-testid="admin-nav-tip"');
+});
+
+it('draws a popover child through the same partial as the one under the parent', function () {
+    // Not a second hand-written copy of a child row. The copy this replaced
+    // re-encoded the url, the active state, the badge colour and the disabled
+    // case, and a copy diverges the first time either side is touched. One
+    // definition, drawn in two places: the link appears twice, its markup once.
+    app(ResourceRegistry::class)->register(SbCatalogueResource::class);
+
+    $html = sbRender();
+
+    expect(substr_count($html, 'href="/admin/sb-catalogues?filter=archived"'))->toBe(2)
+        ->and(substr_count($html, 'data-testid="admin-nav-child"'))->toBe(2);
+});
+
+it('opens the popover from a parent row instead of re-expanding the whole menu', function () {
+    // The old answer to "show me what is under this" in the rail was
+    // `toggleRail()` — it undid the collapse the user had just asked for.
+    app(ResourceRegistry::class)->register(SbCatalogueResource::class);
+
+    $html = sbRender();
+
+    expect($html)->toContain('wireFlyout(')
+        ->and($html)->toContain('x-teleport="body"')
+        ->and($html)->toContain('toggle()')
+        ->and($html)->toContain('expanded = ! expanded')
+        // Escape has to dismiss rather than close: focus goes back to a row that
+        // opens on focus, so a plain close is a close and an immediate reopen.
+        ->and($html)->toContain('dismiss()')
+        ->and($html)->not->toContain('toggleRail()');
+});
+
+it('keeps an accessible name on a row whose label the rail hides', function () {
+    // The label is `x-show`n away in the rail, and a hidden element carries no
+    // accessible name — so without this every entry announced itself as its own
+    // badge, or as nothing at all.
+    // Matched over the whole opening tag: the two attributes appear in the order
+    // the view happens to list them, and a regex anchored on one of them asserts
+    // that order rather than the name it is really about.
+    expect(sbRender())->toMatch('/<a[^>]*aria-label="[^"]+"[^>]*data-resource="sb-invoices"/s');
+});
+
+it('is a drawer on a phone and a column on a desktop, as one element', function () {
+    // One element moved by a transform, not two copies behind media queries.
+    // Two copies would put every data-testid in the menu into the document
+    // twice, and every test and driver that counts entries would be counting
+    // double without saying so.
+    $html = sbRender();
+
+    expect(substr_count($html, 'data-testid="admin-sidebar"'))->toBe(1)
+        ->and($html)->toContain('data-testid="admin-sidebar-overlay"')
+        ->and($html)->toContain('data-testid="admin-sidebar-close"')
+        ->and($html)->toContain('-translate-x-full');
 });
