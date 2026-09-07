@@ -6,12 +6,15 @@ namespace NyonCode\WireTable\Columns;
 
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Concerns\FormatsState;
+use NyonCode\WireCore\Foundation\Mentions\MentionRenderer;
 
 class TextColumn extends Column
 {
     use FormatsState;
 
     protected ?string $fontFamily = null;
+
+    protected bool $richContent = false;
 
     /**
      * Render the cell in a font family: `sans`, `serif` or `mono`.
@@ -50,6 +53,36 @@ class TextColumn extends Column
         });
     }
 
+    /**
+     * Print stored editor content with its mentions read back from the database.
+     *
+     * Implies {@see Column::html()} — resolved mentions are markup — so this is
+     * not a second raw-HTML switch, it is what to do with the identities such
+     * markup holds. Without it a mention renders as the name it was written
+     * with, which in a table is quietly wrong rather than visibly broken.
+     *
+     * **It costs queries per row.** A cell is rendered on its own, so mentions
+     * batch within one cell and not across the page: twenty-five rows naming
+     * articles are twenty-five lookups. Worth it on a narrow table of documents;
+     * not worth it on a listing that only shows the first eighty characters,
+     * where `limit()` on plain text says the same thing for free.
+     */
+    public function richContent(bool $condition = true): static
+    {
+        $this->richContent = $condition;
+
+        if ($condition) {
+            $this->html();
+        }
+
+        return $this;
+    }
+
+    public function isRichContent(): bool
+    {
+        return $this->richContent;
+    }
+
     public function formatValue(mixed $value, Model $record): string
     {
         if ($value === null || $value === '') {
@@ -58,6 +91,10 @@ class TextColumn extends Column
 
         $value = $this->applyNumericAndDateFormatting($value);
 
-        return parent::formatValue($value, $record);
+        $formatted = parent::formatValue($value, $record);
+
+        return $this->richContent
+            ? app(MentionRenderer::class)->render($formatted)
+            : $formatted;
     }
 }

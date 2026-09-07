@@ -46,6 +46,8 @@ final class LayoutRenderPlan
      * @param  string  $headerPadding  The same for a header cell.
      * @param  string  $stickyHeaderClass  Pins the `<thead>`; empty when it does not pin.
      * @param  string  $scrollRegionStyle  Inline `max-height` for the scroll region; empty when uncapped.
+     * @param  bool  $rendersTable  Whether a `<table>` is emitted at all.
+     * @param  bool  $rendersCards  Whether the card rendering is emitted at all.
      * @param  string  $tableHiddenClass  Hides the `<table>` below the breakpoint.
      * @param  string  $cardsVisibleClass  Shows the stacked cards there.
      * @param  string  $sheetBreakpoint  The breakpoint the sheet switches at.
@@ -58,6 +60,8 @@ final class LayoutRenderPlan
         public readonly string $stickyHeaderClass,
         public readonly string $scrollRegionStyle,
         public readonly bool $isStackedOnMobile,
+        public readonly bool $rendersTable,
+        public readonly bool $rendersCards,
         public readonly string $tableHiddenClass,
         public readonly string $cardsVisibleClass,
         public readonly bool $sheetOnMobile,
@@ -86,6 +90,11 @@ final class LayoutRenderPlan
                 ? ''
                 : 'max-height: '.$stickyMaxHeight,
             isStackedOnMobile: $table->isStackedOnMobile(),
+            // Which halves exist, as opposed to which is visible: the list
+            // layout emits one rendering per record rather than two chosen by
+            // CSS, so this is a payload decision and not a display one.
+            rendersTable: $table->rendersTable(),
+            rendersCards: $table->rendersCards(),
             tableHiddenClass: $table->getStackedTableHiddenClass(),
             cardsVisibleClass: $table->getStackedCardsVisibleClass(),
             sheetOnMobile: $table->usesSheetOnMobile(),

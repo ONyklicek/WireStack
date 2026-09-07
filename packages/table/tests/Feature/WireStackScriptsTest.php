@@ -47,24 +47,44 @@ it('emits each bundle exactly once', function () {
     // The per-surface @assets partials still exist for apps without the directive;
     // the directive must not turn into a second copy of them for apps with it.
     //
-    // Nine: dropdown, copy and chart from core, image and fields from forms,
-    // records, selection, live and fill from the table. They ship on every page for
-    // the same reason: the behaviour a table's markup reaches for has to exist before
-    // a wire:navigate visit renders the table, and the page that visit is made
-    // *from* may have no table on it at all.
+    // Asserted as the list rather than as a count, because a count that moves
+    // says only that it moved: the ten below are named so a failure names the
+    // newcomer and this comment can say why it ships.
     //
-    // Chart is the one that moved. It was held back as an optional heavy body,
-    // which it is not — 671 bytes of Alpine registrar around the app's own
-    // Chart.js — and delivering a registrar late is precisely what ADR 0024
-    // forbids.
+    // They all ship on every page for one reason: the behaviour a page's markup
+    // reaches for has to exist before a wire:navigate visit renders it, and the
+    // page that visit is made *from* may have none of that markup on it.
     //
-    // `wire-forms-fields.js` is here for the same rule: it registers the date/time
-    // pickers, tags, rating and the two editors, so it is a registrar rather than a
-    // body.
+    //   core    dropdown (every shared Alpine controller), copy, chart, notifications
+    //   forms   image, fields (the date/time pickers, tags, rating, the editors)
+    //   table   records, selection, live, fill
     //
-    // `wire-table-fill.js` is the newest, and it did not add a ninth page-weight:
-    // it left `wire-core-dropdown.js`, which shrank by the same 9 KB (ADR 0025 §
-    // step 10). What changed is who pays — an application with no table now ships
-    // eight bundles here and none of them carries the fill handle.
-    expect(substr_count(Blade::render('@wireStackScripts'), '<script'))->toBe(9);
+    // Chart and notifications are the two that look like optional heavy bodies
+    // and are not: 671 bytes and 1.2 kB of Alpine registrar around `window.Chart`
+    // and `window.Echo`, both of them the consuming app's own dependency and
+    // neither shipped here. Delivering a registrar late is precisely what ADR
+    // 0024 forbids, and the bell can arrive on a navigate visit like anything
+    // else.
+    //
+    // `wire-table-fill.js` added no page weight when it landed: it left
+    // `wire-core-dropdown.js`, which shrank by the same 9 KB (ADR 0025 § step
+    // 10). What changed is who pays — an application with no table now ships
+    // nine bundles here and none of them carries the fill handle.
+    preg_match_all('/src="[^"]*\/vendor\/[^"\/]+\/([^"\/?]+\.js)/', Blade::render('@wireStackScripts'), $matches);
+
+    $emitted = $matches[1];
+    sort($emitted);
+
+    expect($emitted)->toBe([
+        'wire-core-chart.js',
+        'wire-core-copy.js',
+        'wire-core-dropdown.js',
+        'wire-core-notifications.js',
+        'wire-forms-fields.js',
+        'wire-forms-image.js',
+        'wire-table-fill.js',
+        'wire-table-live.js',
+        'wire-table-records.js',
+        'wire-table-selection.js',
+    ]);
 });

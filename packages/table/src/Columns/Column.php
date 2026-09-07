@@ -334,6 +334,33 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
 
     private ?string $staticIconHtml = null;
 
+    /**
+     * The icon's own colour, when it differs per record.
+     *
+     * `color()` is the column's colour and is resolved once for the whole
+     * column — which is right for a text tint and wrong for a status icon, whose
+     * whole job is to differ per row. A notification's icon is green or red
+     * because of what the row *is*, and a column that can only be one colour has
+     * to render every status in grey.
+     *
+     * Null means "the column's colour", so nothing changes for a column that
+     * never asks. A Closure is resolved per record and, like a Closure icon,
+     * gives up the static memo below — which is the honest cost and the same one
+     * a per-record icon already pays.
+     */
+    protected string|Closure|null $iconColor = null;
+
+    /**
+     * Whether the icon sits in a tinted tile rather than beside the text.
+     *
+     * A bare tinted glyph is enough on a grid of columns, where the row is
+     * already a line of aligned values. In a **list**, where the record is a
+     * sentence, the tile is what gives the rows a left edge for the eye to run
+     * down — and it is the one place the colour is allowed to be, which is why
+     * it can be the strongest thing on the row without shouting.
+     */
+    protected bool $iconTile = false;
+
     public function renderCellFast(Model $record): string
     {
         if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
@@ -358,7 +385,9 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         $description = $this->description instanceof Closure
             ? ($this->description)($record)
             : (is_string($this->description) ? $this->description : null);
-        $iconHtml = $this->icon instanceof Closure
+        // Either half being per-record makes the icon per-record: a static memo
+        // would otherwise serve row two the colour row one resolved.
+        $iconHtml = $this->icon instanceof Closure || $this->iconColor instanceof Closure
             ? $this->iconHtmlFor($record)
             : ($this->staticIconHtml ??= $this->iconHtmlFor(null));
 
@@ -626,17 +655,63 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
 
         $icon = $icon instanceof Icon ? $icon->value() : $icon;
 
-        return is_string($icon) && $icon !== '' ? $this->renderIcon($icon) : '';
+        if (! is_string($icon) || $icon === '') {
+            return '';
+        }
+
+        $color = $this->iconColor instanceof Closure
+            ? ($record !== null ? $this->evaluate($this->iconColor, ['record' => $record]) : null)
+            : $this->iconColor;
+
+        return $this->renderIcon($icon, is_string($color) && $color !== '' ? $color : null);
     }
 
     /**
-     * Render an icon SVG
+     * Render an icon SVG — bare, or seated in a tinted tile.
      */
-    protected function renderIcon(string $icon): string
+    protected function renderIcon(string $icon, ?string $iconColor = null): string
     {
-        $color = $this->color ? $this->getColorClass($this->color) : 'text-gray-400';
+        $role = $iconColor ?? (is_string($this->color) && $this->color !== '' ? $this->color : null);
 
-        return app(IconManager::class)->render($icon, 'w-4 h-4 inline-block', $color);
+        if (! $this->iconTile) {
+            return app(IconManager::class)->render(
+                $icon,
+                'w-4 h-4 inline-block',
+                $role === null ? 'text-gray-400' : $this->getColorClass($role),
+            );
+        }
+
+        // The tile carries its own colour on its own ground, so the glyph inside
+        // is `currentColor` and the pair cannot drift apart.
+        return (string) view('wire-table::tables.columns.partials.icon-tile', [
+            'classes' => $this->getIconTileClasses($role),
+            // Slightly larger than the inline glyph: inside a tile the icon is
+            // the tile's content, not a mark beside a word.
+            'icon' => app(IconManager::class)->render($icon, 'w-[18px] h-[18px]', ''),
+        ])->render();
+    }
+
+    /**
+     * The tile's ground and ink for one semantic role.
+     *
+     * Literal class strings, never interpolated from `$role`: Tailwind's scanner
+     * has to see every one of them, and the match arms double as the allow-list
+     * for a role that arrives from a closure over a record.
+     *
+     * Only the semantic roles get a tile. A tile is a statement about *kind* —
+     * done, waiting, failed — and a raw hue makes no such statement, so anything
+     * unrecognised lands on the neutral tile rather than inventing a meaning.
+     */
+    protected function getIconTileClasses(?string $role): string
+    {
+        return match ($role) {
+            'success', 'emerald' => 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400',
+            'danger', 'red', 'error' => 'bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-400',
+            'warning', 'amber' => 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400',
+            'info', 'cyan' => 'bg-cyan-100 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-400',
+            'primary' => 'bg-primary-100 text-primary-600 dark:bg-primary-500/15 dark:text-primary-400',
+            default => 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
+        };
     }
 
     /**
@@ -804,6 +879,36 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     public function shouldOpenUrlInNewTab(): bool
     {
         return $this->openUrlInNewTab;
+    }
+
+    /**
+     * Tint the icon per record, independently of the column's colour.
+     *
+     * `->iconColor(fn ($record) => $record->failed ? 'danger' : 'success')` —
+     * a role from the shared vocabulary, or a Closure returning one. Without it
+     * the icon takes `color()`, which is what it always did.
+     */
+    public function iconColor(string|Color|Closure|null $color): static
+    {
+        $this->iconColor = $color instanceof Color ? $color->value : $color;
+
+        return $this;
+    }
+
+    /**
+     * Seat the icon in a tinted tile — the list archetype's row anchor.
+     *
+     * The tile takes its colour from `iconColor()` (or `color()`), so one role
+     * decides the ground and the glyph together and the two cannot disagree.
+     * Pair it with a per-record `iconColor()` and a per-record `icon()`; a tile
+     * whose colour never changes is a decoration, and decoration is what a list
+     * has least room for.
+     */
+    public function iconTile(bool $tile = true): static
+    {
+        $this->iconTile = $tile;
+
+        return $this;
     }
 
     /** Set one fixed cell color for every row (a palette name or `Color` enum). For per-row color use a `BadgeColumn` with `colorUsing()`. */

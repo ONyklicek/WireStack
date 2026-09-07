@@ -96,9 +96,11 @@ final class ColumnRenderPlan
             array_filter($visible, fn ($c) => $c->isFillable()),
         ));
 
-        // Sorting on a phone: the stacked card view hides the header row that
-        // holds the sort buttons, so the control has to exist somewhere else.
-        $mobileSortable = ($table->isStackedOnMobile() && $table->isSortable())
+        // Sorting without a header row. The stacked card view hides the header
+        // that holds the sort buttons; the list layout never renders one at all.
+        // Either way the control has to exist somewhere else — and under the list
+        // layout it is the only sort UI there is, not a phone's consolation.
+        $mobileSortable = (($table->isStackedOnMobile() || ! $table->rendersTable()) && $table->isSortable())
             ? array_values(array_filter($visible, fn ($c) => $c->isSortable()))
             : [];
 

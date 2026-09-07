@@ -85,6 +85,9 @@ class Table implements Htmlable
     /** @var array<int, int> */
     protected array $perPageOptions = [10, 25, 50, 100];
 
+    /** Whether the footer draws the page-size control. See {@see perPageSelector()}. */
+    protected bool $showPerPageSelector = true;
+
     protected bool $searchable = true;
 
     protected ?SearchConfig $searchConfig = null;
@@ -503,6 +506,28 @@ class Table implements Htmlable
         );
 
         return $this;
+    }
+
+    /**
+     * Whether the footer offers a page-size `<select>`.
+     *
+     * On a grid of columns it is a genuine control: how many rows fit before
+     * you scroll is the reader's business. On a **list** it is table furniture —
+     * a reader of an inbox does not think in tens and fifties, and a
+     * `Show [10] records` dropdown is the last thing that makes a list announce
+     * itself as a table. Turning it off leaves the paging itself untouched; only
+     * the control goes.
+     */
+    public function perPageSelector(bool $show = true): static
+    {
+        $this->showPerPageSelector = $show;
+
+        return $this;
+    }
+
+    public function showsPerPageSelector(): bool
+    {
+        return $this->showPerPageSelector;
     }
 
     /**

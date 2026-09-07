@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 use NyonCode\WireCore\Core\Capabilities\Capability;
+use NyonCode\WireCore\Foundation\Concerns\CanBeNullable;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Contracts\HydratesState;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
@@ -22,6 +23,7 @@ use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
 
 class TextInputColumn extends Column implements DehydratesState, HydratesState
 {
+    use CanBeNullable;
     use HasRecordVersion;
     use HasView;
     use InteractsWithRecordDisabledState;
@@ -72,8 +74,6 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     protected ?Closure $afterLoadFormatter = null;
 
     protected bool $trim = true;
-
-    protected bool $nullable = false;
 
     protected ?string $inputPrefix = null;
 
@@ -506,9 +506,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
             $value = trim($value);
         }
 
-        if ($this->nullable && $value === '') {
-            $value = null;
-        }
+        $value = $this->nullifyEmptyState($value);
 
         // Read the written figure back as a number, through the owner of that
         // grammar. Its own attempt stripped the thousands separator by name and
@@ -538,14 +536,6 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
     public function trim(bool $trim = true): static
     {
         $this->trim = $trim;
-
-        return $this;
-    }
-
-    /** Save an empty value as null instead of an empty string. */
-    public function nullable(bool $nullable = true): static
-    {
-        $this->nullable = $nullable;
 
         return $this;
     }

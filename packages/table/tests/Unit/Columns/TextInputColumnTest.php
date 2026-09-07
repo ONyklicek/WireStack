@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Auth\GenericUser;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Gate;
 use NyonCode\WireTable\Columns\TextInputColumn;
 use Workbench\App\Models\User;
@@ -181,11 +182,15 @@ it('can edit by default and respects edit permission with no user', function () 
 });
 
 it('grants edit to Super Admin role', function () {
+    // The signature is the permission package's, not a narrower one of this
+    // test's choosing: the workbench user carries
+    // `nyoncode/laravel-permission-extended`'s `HasRoles`, and an override that
+    // tightened `string $role` would be a fatal at class-declaration time.
     $user = new class extends User
     {
-        public function hasRole(string $role): bool
+        public function hasRole($roles, ?string $guard = null): bool
         {
-            return $role === 'Super Admin';
+            return $roles === 'Super Admin';
         }
     };
     $this->actingAs($user);
@@ -196,12 +201,12 @@ it('grants edit to Super Admin role', function () {
 it('delegates to hasPermissionTo when present', function () {
     $user = new class extends User
     {
-        public function hasRole(string $role): bool
+        public function hasRole($roles, ?string $guard = null): bool
         {
             return false;
         }
 
-        public function hasPermissionTo(string $permission): bool
+        public function hasPermissionTo($permission, ?string $guardName = null): bool
         {
             return $permission === 'edit-tasks';
         }
@@ -213,8 +218,14 @@ it('delegates to hasPermissionTo when present', function () {
 });
 
 it('falls back to the can() gate check', function () {
+    // A user with *no* permission package on it, which is the whole point of
+    // this test: `canEdit()` reaches for `hasRole()` and `hasPermissionTo()`
+    // first, and only a user that has neither gets as far as the gate. The
+    // workbench user used to stand in here and stopped being able to the day it
+    // took the permission trait — which made this pass for a reason it was never
+    // about.
     Gate::define('edit-tasks', fn ($user) => true);
-    $this->actingAs(new User);
+    $this->actingAs(new TicGateOnlyUser);
 
     expect(TextInputColumn::make('a')->editPermission('edit-tasks')->canEdit(ticRecord()))->toBeTrue();
 });
@@ -368,3 +379,11 @@ it('renders nothing when the column is not viewable', function () {
 
     expect($html)->toBe('');
 });
+
+/** A user the gate is the only thing that can answer for. */
+class TicGateOnlyUser extends Authenticatable
+{
+    protected $table = 'users';
+
+    protected $guarded = [];
+}

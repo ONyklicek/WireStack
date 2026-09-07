@@ -139,6 +139,11 @@
     $isStackedOnMobile = $plan->layout()->isStackedOnMobile;
     $tableHiddenClass = $plan->layout()->tableHiddenClass;
     $cardsVisibleClass = $plan->layout()->cardsVisibleClass;
+    // Which halves are EMITTED, as opposed to which is visible. Under the list
+    // layout the <table> is not in the document at all — one rendering per
+    // record instead of two chosen by CSS.
+    $rendersTable = $plan->layout()->rendersTable;
+    $rendersCards = $plan->layout()->rendersCards;
 
     // Where this page sits in the whole result set — read by the footer's
     // "from - to of total" line and, before it, by aria-rowindex, since an ARIA
@@ -176,6 +181,7 @@
                          element takes one `x-data`. The literal is constant, so a morph
                          cannot change the attribute text and re-initialise the
                          component underneath a drag. --}}
+                    @if($rendersTable)
                     <div
                             class="relative {{ $tableHiddenClass }}"
                             x-data="{
@@ -566,9 +572,11 @@
                                 class="pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-gray-900/10 to-transparent dark:from-black/40"
                         ></div>
                     </div>{{-- /scroll frame --}}
+                    @endif
 
-                    {{-- Mobile Cards (Stacked Layout) --}}
-                    @if($isStackedOnMobile && $hasVisibleColumns)
+                    {{-- The card rendering: the second half under stackedOnMobile(),
+                         and the only half under layout('list'). --}}
+                    @if($rendersCards && $hasVisibleColumns)
                         <div class="{{ $cardsVisibleClass }}">
                             {{-- The card view's select-all. It has to live here because the
                                  header row that carries it on desktop is hidden at this
@@ -617,6 +625,12 @@
                                 $mobileCell = fn($column, $record) => $column->hasResponsiveDisplay()
                                     ? $column->renderMobileCell($record)
                                     : $column->renderCellFast($record);
+                                // One group with a null heading when the table asked for none,
+                                // so the loop below has one shape rather than two. The branch it
+                                // costs is per GROUP, never per card: an `@if` inside the card
+                                // loop is a pair of morph markers on every row and the payload
+                                // fuse budgets those.
+                                $cardGroups = $table->groupCards($records);
                             @endphp
                             {{-- Record actions are a desktop pointer affordance: the delegated
                                  controller lives on the desktop <tbody> only, so click/dblclick/
@@ -639,8 +653,17 @@
                                  Mind also that a directive must never be glued straight onto a
                                  Blade comment: Livewire then fails to inject its opening marker.
                             --}}
-                            @forelse($records as $record)
+                            @forelse($cardGroups as $cardGroup)
+                                @if($cardGroup['heading'] !== null)
+                                    {{-- A run of cards under the day it landed on: a grid says
+                                         *when* in a column, and a list has no column. Sticky, so
+                                         the heading stays legible while its own run scrolls past
+                                         — which is the whole value of having one. --}}
+                                    <p class="sticky top-0 z-10 bg-gray-50/95 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 backdrop-blur sm:px-6 dark:bg-gray-900/95 dark:text-gray-400">{{ $cardGroup['heading'] }}</p>
+                                @endif
+                                @foreach($cardGroup['records'] as $record)
                                 {!! $cardRenderer->render($record) !!}
+                                @endforeach
                             @empty
                                 <div class="px-4 py-12 text-center bg-white dark:bg-gray-800">
                                     {{-- The same canonical surface the desktop table's empty state
@@ -693,8 +716,13 @@
                         <div
                                 class="px-4 lg:px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
                             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                {{-- Per Page Selector - Always visible when paginated --}}
+                                {{-- Per Page Selector. Present when paginated unless the table
+                                     turned it off: on a list it is the last control that makes
+                                     the page announce itself as a table. The empty <div> stays
+                                     either way so `justify-between` keeps the count on the
+                                     right instead of pulling it to the left edge. --}}
                                 <div class="flex items-center gap-2">
+                                @if($table->showsPerPageSelector())
                                     <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.show') }}</span>
                                     <select
                                             wire:model.live="tableState.pagination.perPage"
@@ -710,6 +738,7 @@
                                         @endforeach
                                     </select>
                                     <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.records') }}</span>
+                                @endif
                                 </div>
 
                                 {{-- Results info. A simple paginator knows its offsets but not

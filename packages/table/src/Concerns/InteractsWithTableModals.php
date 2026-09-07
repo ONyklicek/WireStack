@@ -63,7 +63,6 @@ trait InteractsWithTableModals
         $isBulkAction = (bool) $this->getMountedActionState('isBulk');
         $actionName = $this->getMountedActionState('name');
         $recordKey = $this->getMountedActionState('recordKey');
-        $formData = $this->getMountedActionFormData();
 
         if (! $actionName) {
             $this->closeActionModal();
@@ -83,6 +82,11 @@ trait InteractsWithTableModals
         }
 
         $this->validateMountedActionForm();
+
+        // After validation, never before: validation throws on invalid input, and
+        // a transform with a side effect (a FileUpload storing its upload) must
+        // not run for a submit that is about to be rejected.
+        $formData = $this->dehydrateMountedActionFormData($this->getMountedActionFormData());
 
         $stackVersionBefore = $this->actionStackVersion;
 

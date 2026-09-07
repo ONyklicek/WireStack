@@ -17,7 +17,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithPagination;
 use NyonCode\WireCore\Actions\Action;
@@ -31,7 +30,6 @@ use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
-use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithPartials;
 use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Notifications\Notification;
@@ -99,6 +97,7 @@ trait WithTable
     // engine's defaults.
     use InteractsWithActionForms, InteractsWithActions, InteractsWithTableActions {
         InteractsWithActionForms::validateMountedActionForm insteadof InteractsWithActions;
+        InteractsWithActionForms::dehydrateMountedActionFormData insteadof InteractsWithActions;
         InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions;
         InteractsWithActionForms::getActionModalFormInstance insteadof InteractsWithActions;
         InteractsWithActionForms::getActionModalFormInstanceForDepth insteadof InteractsWithActions;
@@ -2111,27 +2110,32 @@ trait WithTable
 
         $haltConfig = $this->tableState->get('modal.halt.config', []);
 
-        // Validate form if present
-        $validation = $haltConfig['formValidation'] ?? null;
-        if ($validation && ! empty($formData)) {
-            $result = app(ValidationPipeline::class)->validate(
-                $formData,
-                $validation,
-                $haltConfig['formValidationMessages'] ?? [],
-                $haltConfig['formValidationAttributes'] ?? [],
-            );
-
-            if ($result->failed()) {
-                throw ValidationException::withMessages($result->errors());
-            }
-        }
-
-        // Merge form data
-        $data = array_merge($this->tableState->get('modal.halt.formData', []), $formData);
-
         // Capture context before closing
         $actionName = $haltActionName;
         $recordKey = $this->tableState->get('modal.halt.recordKey');
+
+        // The halt form's fields bind to the halt bag, so that bag is its live
+        // state; $formData is the escape hatch for a caller submitting from code.
+        // The old branch here validated $formData alone — and the view submits
+        // with no arguments, so it was never anything but empty: a halt could
+        // declare rules and a required field and neither was ever checked.
+        $haltData = array_merge($this->tableState->get('modal.halt.formData', []), $formData);
+
+        // Throws before anything is executed or closed, leaving the modal open
+        // with its messages on the fields.
+        $this->validateHaltModalForm(
+            $haltData,
+            $haltConfig['formValidation'] ?? [],
+            $haltConfig['formValidationMessages'] ?? [],
+            $haltConfig['formValidationAttributes'] ?? [],
+        );
+
+        // Then let the halt form's fields shape what they collected — the same
+        // transform a save or an action modal applies, so a halted action is
+        // handed the value it would have been handed anywhere else. Read before
+        // closeHaltModal(), which drops the form instance and its session copy.
+        $data = $this->dehydrateHaltModalFormData($haltData, $this->haltModalRecord($recordKey));
+
         $actionType = $this->tableState->get('modal.halt.actionType') ?? 'row';
         $haltContext = $this->tableState->get('modal.halt.context', []);
         $redirectAfterConfirm = $haltContext['redirectAfterConfirm'] ?? null;
@@ -2151,6 +2155,24 @@ trait WithTable
         if ($redirectAfterConfirm) {
             $this->redirect($redirectAfterConfirm);
         }
+    }
+
+    /**
+     * The record a row halt is about, for the fields shaping its data.
+     *
+     * Resolved only when there is a form to shape anything with: a header or
+     * bulk halt has no record, and neither does a confirm that carries no form —
+     * asking the data source for one would be a query bought for nothing.
+     */
+    protected function haltModalRecord(mixed $recordKey): ?Model
+    {
+        if ($recordKey === null || $this->getHaltModalFormInstance() === null) {
+            return null;
+        }
+
+        $record = $this->getTable()->getDataSource()->resolveRecord((string) $recordKey)?->unwrap();
+
+        return $record instanceof Model ? $record : null;
     }
 
     /**
