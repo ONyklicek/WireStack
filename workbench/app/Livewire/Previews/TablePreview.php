@@ -182,6 +182,22 @@ class TablePreview extends Component
             $table->paginated()->perPage(3);
         }
 
+        // `layout('list')` — the card rendering as the *only* rendering, at every
+        // width, rather than the mobile half of a stacked table. Selection off
+        // and the row verbs folded behind one trigger, because that is the shape
+        // the layout is for: a list you read and act on one item at a time.
+        //
+        // `bulkActions([])` as well as `selectable(false)`: `isSelectable()` is
+        // true while either is set, so turning the flag off on a table that
+        // declares bulk actions turns nothing off.
+        if ($this->variant === 'list') {
+            $table
+                ->layout('list')
+                ->selectable(false)
+                ->bulkActions([])
+                ->collapseActionsOnMobile(threshold: 1);
+        }
+
         // Stacked cards + selection + more rows than one page: what the card
         // select-all strip, the "select all matching" escalation and the mobile
         // sort control need in order to be visible at all. Applied after

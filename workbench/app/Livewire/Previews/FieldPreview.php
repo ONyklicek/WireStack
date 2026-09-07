@@ -16,6 +16,8 @@ use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Components\FileUpload;
 use NyonCode\WireForms\Components\KeyValue;
 use NyonCode\WireForms\Components\MarkdownEditor;
+use NyonCode\WireForms\Components\Mention;
+use NyonCode\WireForms\Components\Mention\Source;
 use NyonCode\WireForms\Components\MoneyInput;
 use NyonCode\WireForms\Components\MorphToSelect;
 use NyonCode\WireForms\Components\MorphToSelect\Type as MorphType;
@@ -36,7 +38,9 @@ use NyonCode\WireForms\Components\Toggle;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
 use Workbench\App\Models\Document;
+use Workbench\App\Models\Invoice;
 use Workbench\App\Models\Task;
+use Workbench\App\Models\User;
 
 class FieldPreview extends Component
 {
@@ -187,6 +191,21 @@ class FieldPreview extends Component
                 ->default('<h2>Zápis z porady</h2><p>Nějaký <strong>text</strong>.</p><ul><li>První bod</li></ul>')
                 ->helperText('Opens on the ->default() markup when the bound state is empty.'),
 
+            // Two models under one trigger — the case a single ->model() could not
+            // express, and the reason a mention stores a morph type beside its id.
+            'tiptap-mentions' => TiptapEditor::make('bio')
+                ->label('Rich text with mentions')
+                ->mentions(
+                    Mention::make('@')->source(
+                        Source::make(User::class)->titleAttribute('name')->label('Lidé'),
+                    ),
+                    Mention::make('#')->sources([
+                        Source::make(Task::class)->titleAttribute('title')->label('Úkoly'),
+                        Source::make(Invoice::class)->titleAttribute('number')->label('Faktury'),
+                    ]),
+                )
+                ->helperText('Type @ for people, # for tasks and invoices.'),
+
             'tiptap-tables' => TiptapEditor::make('bio')
                 ->label('Rich text with tables')
                 ->withTables()
@@ -254,6 +273,39 @@ class FieldPreview extends Component
                     'delete' => 'Delete records',
                 ])
                 ->columns(2),
+
+            // The permission shape: every option on the page, a search over them,
+            // groups by the resource each one is about, and the chosen ones as
+            // chips above the list — which is where the answer to "what does
+            // this role actually have" goes once the list is long enough to
+            // scroll or filtered enough to hide it.
+            'checkbox-list-permissions' => CheckboxList::make('permissions')
+                ->label('Permissions')
+                ->helperText('Search, group by resource, and see what is granted above the list.')
+                ->options([
+                    'invoices.view' => 'invoices.view',
+                    'invoices.create' => 'invoices.create',
+                    'invoices.*' => 'invoices.*',
+                    'users.view' => 'users.view',
+                    'users.create' => 'users.create',
+                    'impersonate' => 'impersonate',
+                ])
+                ->groups([
+                    'invoices' => [
+                        'invoices.view' => 'invoices.view',
+                        'invoices.create' => 'invoices.create',
+                        'invoices.*' => 'invoices.*',
+                    ],
+                    'users' => [
+                        'users.view' => 'users.view',
+                        'users.create' => 'users.create',
+                    ],
+                    'Other' => ['impersonate' => 'impersonate'],
+                ])
+                ->searchable()
+                ->bulkToggleable()
+                ->showSelected()
+                ->columns(['default' => 1, 'sm' => 2]),
 
             // Filament-style per-breakpoint columns: 1 on phones, 2 from md, 4 from xl.
             'checkbox-list-responsive' => CheckboxList::make('permissions')
@@ -459,6 +511,16 @@ class FieldPreview extends Component
                 ->image()
                 ->imageCropAspectRatio('16:9')
                 ->imageResizeTargetWidth(320),
+
+            // A file field that is *not* an image field: what it lists is a
+            // contract, an archive, a spreadsheet. It used to draw one grey
+            // document icon for all three; now each carries its own extension
+            // over its family's colour (ADR 0033). The only preview of that
+            // half of the change — the media library covers the other.
+            'file-upload-document' => FileUpload::make('attachment')
+                ->label('Attachment')
+                ->helperText('A contract, an export, an archive — anything but a picture.')
+                ->multiple(),
 
             default => TextInput::make('name')
                 ->label('Full name')

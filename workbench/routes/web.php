@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use NyonCode\WireCore\Core\Resources\Workspace;
+use Workbench\App\Http\Middleware\SignInDemoUser;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
@@ -25,6 +27,7 @@ use Workbench\App\Livewire\Resources\ListDocuments;
 use Workbench\App\Livewire\Resources\ListInvoices;
 use Workbench\App\Livewire\Resources\ListTasks;
 use Workbench\App\Livewire\Resources\ViewInvoice;
+use Workbench\App\Models\User as WorkbenchUser;
 
 // One source of truth for the preview surface: every entry below registers its
 // own route *and* is listed on the /previews index. A new variant needs a line
@@ -37,6 +40,7 @@ $screens = [
     'forms-option-wizard' => ['title' => 'Wire Forms Option Wizard', 'subtitle' => 'A wizard inside a create-option modal, its navigation handed to the modal footer.', 'component' => FormPreview::class, 'variant' => 'option-wizard'],
     'forms-repeater' => ['title' => 'Wire Forms Repeater', 'subtitle' => 'Focused nested repeater preview.', 'component' => FormPreview::class, 'variant' => 'repeater'],
     'forms-repeater-table' => ['title' => 'Wire Forms Repeater (table layout)', 'subtitle' => 'The same repeater laid out as rows under one header: one column per schema field, the per-cell label hidden.', 'component' => FormPreview::class, 'variant' => 'repeater-table'],
+    'forms-repeater-controls' => ['title' => 'Wire Forms Repeater (row controls)', 'subtitle' => 'Named rows, duplication, keyboard moves, real drag-to-reorder, and only the last row open.', 'component' => FormPreview::class, 'variant' => 'repeater-controls'],
     'forms-builder' => ['title' => 'Wire Forms Builder', 'subtitle' => 'Heterogeneous content: every item picks its own block type from the add picker and is edited with that block\'s schema.', 'component' => FormPreview::class, 'variant' => 'builder'],
     'forms-enum-defaults' => ['title' => 'Wire Forms Enum Defaults', 'subtitle' => 'Create-mode defaults: an enum-instance default, a clearable enum select, and a numeric default.', 'component' => FormPreview::class, 'variant' => 'enum-defaults'],
     'forms-default-on-null' => ['title' => 'Wire Forms defaultOnNull', 'subtitle' => 'Edit mode with an all-null record: only ->defaultOnNull() fields resurrect their default; a plain default keeps the null.', 'component' => FormPreview::class, 'variant' => 'default-on-null'],
@@ -54,6 +58,7 @@ $screens = [
     'table-sticky-header' => ['title' => 'Wire Table Sticky Header', 'subtitle' => '40 rows in a 20rem scroll region: the header pins to the table\'s own scrollport, and the edge gradients say which side there is more table on.', 'component' => TablePreview::class, 'variant' => 'sticky-header'],
     'table-sticky-actions' => ['title' => 'Wire Table Sticky Actions', 'subtitle' => 'The actions column pinned to the right edge of a table three screens wide: the columns disappear behind an opaque pane, on striped, hovered and selected rows alike.', 'component' => TablePreview::class, 'variant' => 'sticky-actions'],
     'table-selection-only' => ['title' => 'Wire Table Selection Only', 'subtitle' => 'Selectable without any record action: the variant that proves grid semantics attach to selectable() itself.', 'component' => TablePreview::class, 'variant' => 'selection-only'],
+    'table-list' => ['title' => 'Wire Table List Layout', 'subtitle' => 'layout(\'list\'): the card rendering as the only rendering, at every width — no table, no selection, row verbs behind one trigger.', 'component' => TablePreview::class, 'variant' => 'list'],
     'table-stacked-selection' => ['title' => 'Wire Table Stacked Selection', 'subtitle' => 'Card layout with the always-visible select-all strip, the select-all-matching escalation, and mobile sorting.', 'component' => TablePreview::class, 'variant' => 'stacked-selection'],
     'table-subrows' => ['title' => 'Wire Table Sub-rows', 'subtitle' => 'Expandable invoice line items with sortable headers, row actions, and a subtotal.', 'component' => TablePreview::class, 'variant' => 'subrows'],
     'table-summary' => ['title' => 'Wire Table Summary', 'subtitle' => 'Rollup totals, a multi-aggregate footer, and the page/all scope toggle.', 'component' => TablePreview::class, 'variant' => 'summary'],
@@ -124,6 +129,7 @@ $fieldPreviews = [
     'text-input' => 'Text Input',
     'textarea' => 'Textarea',
     'tiptap' => 'TipTap (core)',
+    'tiptap-mentions' => 'TipTap · mentions (@ and #)',
     'tiptap-tables' => 'TipTap (with tables)',
     'tiptap-default' => 'TipTap · default document',
     'rich-editor' => 'Rich Editor',
@@ -134,6 +140,7 @@ $fieldPreviews = [
     'checkbox-list-responsive' => 'CheckboxList · per-breakpoint columns',
     'checkbox' => 'Checkbox',
     'checkbox-list' => 'Checkbox List',
+    'checkbox-list-permissions' => 'CheckboxList · search, groups & chosen chips',
     'radio' => 'Radio',
     'radio-color' => 'Radio Color',
     'radio-sizes' => 'Radio Sizes',
@@ -158,6 +165,7 @@ $fieldPreviews = [
     'time-picker' => 'Time Picker',
     'file-upload' => 'File Upload',
     'file-upload-auto' => 'File Upload (centre crop)',
+    'file-upload-document' => 'File Upload · documents',
 ];
 
 // Pages that are not a captured component preview but still belong on the index.
@@ -340,6 +348,29 @@ foreach ($resourcePages as $slug => [$title, $subtitle, $component, $params]) {
     ]));
 }
 
+// The two-factor challenge, reachable.
+//
+// Fortify serves that screen from a **half**-authenticated session — the
+// password was right, the second factor has not been given — and it redirects
+// anyone without one straight back to the login form. So a driver that simply
+// visits the URL asserts nothing, and looks like it asserted six things.
+//
+// This is the only way into that state from a browser without knowing somebody's
+// password: put Fortify's own session key in place and hand over. Nothing here
+// belongs in an application, for the same reason `SignInDemoUser` does not — and
+// note it is deliberately *outside* that middleware, because a signed-in visitor
+// is a `guest`-middleware redirect away from the screen this exists to show.
+Route::get('previews/auth/two-factor', function (Request $request): RedirectResponse {
+    $user = WorkbenchUser::query()->orderBy('id')->first();
+
+    abort_if($user === null, 404, 'No seeded user to stand in for a pending sign-in.');
+
+    $request->session()->put('login.id', $user->getKey());
+    $request->session()->put('login.remember', false);
+
+    return redirect()->route('two-factor.login');
+})->name('workbench.two-factor-preview');
+
 // The route helper, on the real thing. Four Route::get() lines per resource used
 // to be written by hand here; a resource now declares its pages and this
 // registers them inside whatever group it is called in — the prefix, and any
@@ -349,7 +380,7 @@ foreach ($resourcePages as $slug => [$title, $subtitle, $component, $params]) {
 //   GET previews/routed/invoices/create         → wire.invoices.create
 //   GET previews/routed/invoices/{record}       → wire.invoices.view
 //   GET previews/routed/invoices/{record}/edit  → wire.invoices.edit  (can:invoices.update)
-Route::prefix('previews/routed')->group(function (): void {
+Route::middleware(SignInDemoUser::class)->prefix('previews/routed')->group(function (): void {
     Route::wireResources();
 });
 
