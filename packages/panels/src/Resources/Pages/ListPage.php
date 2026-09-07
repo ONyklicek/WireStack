@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
 use NyonCode\WireTable\Concerns\WithTable;
@@ -46,7 +47,7 @@ use NyonCode\WireTable\Table;
  * application mounts wherever it likes; the registry holds no URL shell, and
  * this holds none either.
  */
-abstract class ListPage extends Component implements IdentifiesHookTarget
+abstract class ListPage extends Component implements IdentifiesHookTarget, ProvidesBreadcrumbs
 {
     use BelongsToResource;
     use WithTable;
@@ -95,6 +96,7 @@ abstract class ListPage extends Component implements IdentifiesHookTarget
     {
         return view('wire-panels::pages.list-page', [
             'title' => $this->getTitle(),
+            'breadcrumbs' => $this->breadcrumbs(),
         ]);
     }
 }

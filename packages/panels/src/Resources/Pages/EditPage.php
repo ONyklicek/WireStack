@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireForms\Contracts\ProvidesResourceForm;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
@@ -35,7 +36,7 @@ use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
  * than the key and stale by the time the next request lands — so the key is what
  * travels and the record is resolved per request.
  */
-abstract class EditPage extends Component implements IdentifiesHookTarget
+abstract class EditPage extends Component implements IdentifiesHookTarget, ProvidesBreadcrumbs
 {
     use BelongsToResource;
     use EmbedsRelationManagers;
@@ -66,7 +67,11 @@ abstract class EditPage extends Component implements IdentifiesHookTarget
     public function form(Form $form): Form
     {
         $resource = $this->requireResource(ProvidesResourceForm::class);
-        $model = $this->resolveRecord();
+
+        // Eloquent, or a refusal that names the way out: the save lifecycle is
+        // Eloquent all the way down, so a record that cannot be a model is
+        // caught here rather than inside the save.
+        $model = $this->requireEloquentRecord();
 
         $form = $form->statePath('data');
 
@@ -108,18 +113,19 @@ abstract class EditPage extends Component implements IdentifiesHookTarget
      */
     protected function recordData(): array
     {
-        return $this->resolveRecord()?->attributesToArray() ?? [];
+        return $this->recordAttributes();
     }
 
     public function render(): View
     {
         return view('wire-panels::pages.edit-page', [
             'title' => $this->getTitle(),
+            'breadcrumbs' => $this->breadcrumbs(),
             'relationManagers' => $this->relationManagers(),
             // Not `record`: that is the public property holding the *key*, and
             // Livewire injects public properties into the view scope, where it
             // would shadow this.
-            'ownerRecord' => $this->resolveRecord(),
+            'ownerRecord' => $this->nativeRecord(),
         ]);
     }
 }

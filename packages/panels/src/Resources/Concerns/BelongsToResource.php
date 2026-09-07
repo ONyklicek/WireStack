@@ -4,7 +4,13 @@ declare(strict_types=1);
 
 namespace NyonCode\WirePanels\Resources\Concerns;
 
+use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
+use NyonCode\WireCore\Foundation\Routing\RoutePage;
+use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WirePanels\Exceptions\ResourcePageException;
 
 /**
@@ -23,6 +29,115 @@ trait BelongsToResource
      * wants the plural and a form wants the singular.
      */
     protected ?string $title = null;
+
+    /**
+     * The zone this page was opened in, read once and carried.
+     *
+     * Public because it has to survive the round trip, and read in a mount hook
+     * because that is the only moment it can be read at all: during a Livewire
+     * update `Route::currentRouteName()` is `livewire.update`, so a breadcrumb
+     * that re-derived it would link out of the zone the user is in — correctly
+     * on the first paint and wrongly on every one after (ADR 0027).
+     */
+    public ?string $breadcrumbZone = null;
+
+    /** Livewire calls this for the trait, on mount, before the page's own. */
+    public function mountBelongsToResource(): void
+    {
+        $this->breadcrumbZone = Zone::current();
+    }
+
+    /**
+     * Where this page sits: the resource's list, then the page itself.
+     *
+     * Two crumbs at most, because that is the whole depth these pages have — a
+     * list is inside nothing, and an edit page is inside its list. A trail of one
+     * renders nothing, so a list page pays for none of this.
+     *
+     * @return array<int, NavigationItem>
+     */
+    public function breadcrumbs(): array
+    {
+        $resource = static::$resource;
+
+        if ($resource === null || ! in_array(DescribesResource::class, class_implements($resource) ?: [], true)) {
+            return [];
+        }
+
+        $crumbs = [
+            NavigationItem::make($resource::pluralLabel())->url(
+                app(ResolvesPageUrls::class)->urlFor($resource::key(), 'index', [], $this->breadcrumbZone),
+            ),
+        ];
+
+        $title = $this->getTitle();
+
+        if ($title !== null && $title !== $resource::pluralLabel()) {
+            $crumbs[] = NavigationItem::make($title);
+        }
+
+        return $crumbs;
+    }
+
+    /**
+     * Where one of this resource's pages is, in the zone this page was opened in.
+     *
+     * The zone is the whole reason this cannot live on the resource: the same
+     * resource mounted in two zones has two different edit URLs, and a resource
+     * has no way to know which one it is being drawn in. The page does — it read
+     * it in `mount()` and kept it, because during a Livewire update
+     * `Route::currentRouteName()` is `livewire.update` and re-deriving would give
+     * a row action the right link on the first paint and a null on every one
+     * after (ADR 0027). A table re-renders on every search keystroke.
+     *
+     * Null is a real answer: a resource that declares no such page, or an
+     * application that routes none, gets a list with no link rather than one
+     * with a broken link.
+     *
+     * @param  string  $page  A page kind — `index`, `create`, `view`, `edit`, or one of the resource's own.
+     */
+    protected function pageUrl(string $page, mixed $record = null): ?string
+    {
+        $resource = static::$resource;
+
+        if ($resource === null || ! in_array(DescribesResource::class, class_implements($resource) ?: [], true)) {
+            return null;
+        }
+
+        $parameters = $record instanceof Model
+            ? ['record' => $record->getKey()]
+            : [];
+
+        return app(ResolvesPageUrls::class)->urlFor($resource::key(), $page, $parameters, $this->breadcrumbZone);
+    }
+
+    /**
+     * The ability one of this resource's pages requires, as the resource declared it.
+     *
+     * Derived rather than restated, and that is the point: `ResourceRoutes` turns
+     * the same declaration into `can:` middleware on the route, so a button
+     * hidden by this and a route guarded by that cannot disagree. A page declared
+     * as a bare class string requires nothing, and neither does the button.
+     */
+    protected function pagePermission(string $page): ?string
+    {
+        $resource = static::$resource;
+
+        // `is_a()` with a class *string* rather than the `class_implements()`
+        // shape the crumb trail above uses: the two are equivalent at runtime,
+        // and only this one narrows the type, so `pages()` is a call static
+        // analysis can see is declared.
+        if ($resource === null || ! is_a($resource, ProvidesPages::class, true)) {
+            return null;
+        }
+
+        $declared = $resource::pages()[$page] ?? null;
+
+        return $declared instanceof RoutePage ? $declared->getPermission() : null;
+    }
+
+    /** Every page has one; the trail's last crumb is it. */
+    abstract public function getTitle(): ?string;
 
     /** @return class-string<DescribesResource>|null */
     public static function resourceClass(): ?string

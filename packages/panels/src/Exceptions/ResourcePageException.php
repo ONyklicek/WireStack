@@ -68,4 +68,27 @@ final class ResourcePageException extends RuntimeException implements WireExcept
             'modelClass(), or override resolveRecord() on the page.'
         );
     }
+
+    /**
+     * A page that must write, holding a record it cannot write through.
+     *
+     * The form's save lifecycle is Eloquent — relationship repeaters, optimistic
+     * locking, `$model->save()` — so a record that does not unwrap to a `Model`
+     * cannot be bound to it. Refused here, at the point the page composes its
+     * form, rather than allowed through to fail inside the save with a message
+     * about a method on null.
+     *
+     * The remedy is the page's own `form()`: bind nothing, and give the form a
+     * command with `Form::using()`, which is the write seam a non-Eloquent
+     * source is meant to arrive through.
+     */
+    public static function recordIsNotEloquent(string $page, string $record): self
+    {
+        return new self(
+            "[{$page}] resolved a record of type [{$record}], which does not unwrap to an ".
+            'Eloquent model, and a form cannot be bound to it: saving is Eloquent all the '.
+            'way down. Override form() on the page, leave the model unbound and give the '.
+            'form its own command with Form::using().'
+        );
+    }
 }

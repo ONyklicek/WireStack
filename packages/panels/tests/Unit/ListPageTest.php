@@ -144,9 +144,13 @@ it('takes its heading from the resource when none is set', function () {
 });
 
 it('prefers an explicit heading over the resource label', function () {
-    Livewire::test(LpTitledOrdersPage::class)
-        ->assertSee('Open orders')
-        ->assertDontSee('Lp Orders');
+    // The plural is on the page — it is the breadcrumb naming the list — so the
+    // assertion has to be about the *heading* rather than about the page text,
+    // which is what it always meant.
+    $html = Livewire::test(LpTitledOrdersPage::class)->assertSee('Open orders')->html();
+
+    expect($html)->toMatch('/<h1[^>]*>\s*Open orders\s*<\/h1>/')
+        ->and($html)->not->toMatch('/<h1[^>]*>\s*Lp Orders\s*<\/h1>/');
 });
 
 it('binds the model the resource declares, so table() need not repeat it', function () {

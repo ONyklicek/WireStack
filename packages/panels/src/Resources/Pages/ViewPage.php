@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireCore\Infolists\Contracts\ProvidesResourceInfolist;
 use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
@@ -32,7 +33,7 @@ use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
  *
  * The record travels as a key, for the reason {@see EditPage} gives.
  */
-abstract class ViewPage extends Component implements IdentifiesHookTarget
+abstract class ViewPage extends Component implements IdentifiesHookTarget, ProvidesBreadcrumbs
 {
     use BelongsToResource;
     use EmbedsRelationManagers;
@@ -73,11 +74,12 @@ abstract class ViewPage extends Component implements IdentifiesHookTarget
     {
         return view('wire-panels::pages.view-page', [
             'title' => $this->getTitle(),
+            'breadcrumbs' => $this->breadcrumbs(),
             'relationManagers' => $this->relationManagers(),
             // Not `record`: that is the public property holding the *key*, and
             // Livewire injects public properties into the view scope, where it
             // would shadow this.
-            'ownerRecord' => $this->resolveRecord(),
+            'ownerRecord' => $this->nativeRecord(),
             'infolist' => $this->infolist(),
         ]);
     }

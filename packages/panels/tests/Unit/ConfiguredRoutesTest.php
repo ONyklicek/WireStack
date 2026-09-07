@@ -32,14 +32,11 @@ use NyonCode\WirePanels\Routing\ResourceRoutes;
  */
 function crBoot(array $routes): void
 {
-    config()->set('wire-panels.routes', $routes + [
-        'enabled' => true,
-        'prefix' => null,
-        'middleware' => ['web'],
-        'domain' => null,
-        'only' => [],
-        'except' => [],
-    ]);
+    // Filled in from what the package actually ships rather than from a copy
+    // kept here: a second list of defaults in the test file is a list that can
+    // disagree with the real one, and the `auth` in it is the kind of default
+    // where disagreeing is expensive.
+    config()->set('wire-panels.routes', $routes + ['enabled' => true] + config('wire-panels.routes'));
 
     $provider = new WireCoreServiceProvider(app());
     (new ReflectionMethod($provider, 'bootResources'))->invoke($provider);
@@ -123,9 +120,41 @@ it('ships the config it reads, merged and publishable', function () {
     // never publishes it still gets `enabled => false` rather than a missing key
     // the registrar would read as "no".
     expect(config('wire-panels.routes.enabled'))->toBeFalse()
-        ->and(config('wire-panels.routes.middleware'))->toBe(['web'])
         ->and(array_keys(ServiceProvider::$publishGroups))
         ->toContain('wire-panels::config');
+});
+
+it('guards the group it registers, by default', function () {
+    // The one default here that is a safety decision rather than a convenience.
+    // What this registers is a resource's create, edit and delete screens; a
+    // group without `auth` serves every one of them to anybody who knows the
+    // URL, and nothing about the panel looks wrong while it does.
+    expect(config('wire-panels.routes.middleware'))->toBe(['web', 'auth']);
+});
+
+it('lets an application that guards its panel some other way take it out', function () {
+    // A public panel, or one behind a gateway, is a real application — the
+    // default is what an application gets for saying nothing, not a rule.
+    app(ResourceRegistry::class)->register(RtOrderResource::class);
+
+    crBoot(['enabled' => true, 'middleware' => ['web']]);
+    Route::getRoutes()->refreshNameLookups();
+
+    expect(Route::getRoutes()->getByName('wire.rt-orders.index')->gatherMiddleware())
+        ->toBe(['web']);
+});
+
+it('puts the guard on the routes it registers, not only in the config', function () {
+    // The config value is only worth anything if it reaches the group. Asserted
+    // on the route rather than on the array it came from, which would pass for a
+    // registrar that read the key and dropped it.
+    app(ResourceRegistry::class)->register(RtOrderResource::class);
+
+    crBoot(['enabled' => true]);
+    Route::getRoutes()->refreshNameLookups();
+
+    expect(Route::getRoutes()->getByName('wire.rt-orders.index')->gatherMiddleware())
+        ->toContain('auth');
 });
 
 it('mounts one group per zone, named after the zone key', function () {

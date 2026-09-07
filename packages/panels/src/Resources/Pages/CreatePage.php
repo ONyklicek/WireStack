@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireForms\Contracts\ProvidesResourceForm;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
@@ -35,7 +36,7 @@ use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
  * `Form::using()` in its own `form()` and this page is unchanged, which is the
  * whole of ADR 0020's answer to non-Eloquent writes.
  */
-abstract class CreatePage extends Component implements IdentifiesHookTarget
+abstract class CreatePage extends Component implements IdentifiesHookTarget, ProvidesBreadcrumbs
 {
     use BelongsToResource;
     use WithForms;
@@ -120,6 +121,7 @@ abstract class CreatePage extends Component implements IdentifiesHookTarget
     {
         return view('wire-panels::pages.create-page', [
             'title' => $this->getTitle(),
+            'breadcrumbs' => $this->breadcrumbs(),
         ]);
     }
 }

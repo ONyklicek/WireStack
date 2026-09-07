@@ -57,11 +57,23 @@ return [
     | all they are one unnamed group, which is what a single-zone application
     | wants and what these values already do.
     |
+    | MIDDLEWARE. `auth` is in the default, and it is the one default here that
+    | is a safety decision rather than a convenience. The pages this registers
+    | are a resource's create, edit and delete screens; a group without `auth`
+    | serves every one of them to anybody who knows the URL, and nothing about
+    | the panel looks wrong while it does — which is why it is the default rather
+    | than a line in the docs. An application whose panel is deliberately public,
+    | or which guards it some other way, takes it out.
+    |
+    | Without `nyoncode/wire-module-auth` or another package answering Laravel's
+    | `login` route, `auth` redirects to a route that does not exist. That is a
+    | loud failure and the right one: the alternative is a quiet open door.
+    |
     */
     'routes' => [
         'enabled' => false,
         'prefix' => null,
-        'middleware' => ['web'],
+        'middleware' => ['web', 'auth'],
         'domain' => null,
         'only' => [],
         'except' => [],
