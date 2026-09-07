@@ -325,6 +325,73 @@ test('does not mass-assign a client-supplied primary key on create (regression)'
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
+// ─── Persisting the order ─────────────────────────────────────────────
+
+test('orderColumn writes each row its position, so a drag survives the reload', function () {
+    // Without it, reordering is true of the browser's array and nothing else: a
+    // HasMany comes back in whatever order the database returns.
+    $parent = createRshParent();
+    $first = $parent->children()->create(['label' => 'A', 'sort_order' => 0]);
+    $second = $parent->children()->create(['label' => 'B', 'sort_order' => 1]);
+
+    $repeater = Repeater::make('children')->relationship('children')->orderColumn('sort_order');
+
+    // The rows arrive in the order the user dragged them into.
+    (new RelationshipSaveHandler)->save($parent, [$repeater], [
+        'children' => [
+            ['id' => $second->id, 'label' => 'B'],
+            ['id' => $first->id, 'label' => 'A'],
+        ],
+    ]);
+
+    expect($second->fresh()->sort_order)->toBe(0)
+        ->and($first->fresh()->sort_order)->toBe(1);
+});
+
+test('orderColumn numbers created rows too, from zero', function () {
+    $parent = createRshParent();
+
+    $repeater = Repeater::make('children')->relationship('children')->orderColumn('sort_order');
+
+    (new RelationshipSaveHandler)->save($parent, [$repeater], [
+        'children' => [['label' => 'A'], ['label' => 'B'], ['label' => 'C']],
+    ]);
+
+    expect($parent->children()->orderBy('sort_order')->pluck('label')->all())
+        ->toBe(['A', 'B', 'C'])
+        ->and($parent->children()->orderBy('sort_order')->pluck('sort_order')->all())
+        ->toBe([0, 1, 2]);
+});
+
+test('the position outlives a mutator that rewrites the row', function () {
+    // Numbered after the mutator runs, so a mutator cannot overwrite it — and it
+    // still reaches both the create and the update branch.
+    $parent = createRshParent();
+
+    $repeater = Repeater::make('children')
+        ->relationship('children')
+        ->orderColumn('sort_order')
+        ->mutateRelationshipDataBeforeSaveUsing(fn (array $d) => ['label' => strtoupper($d['label']), 'sort_order' => 99]);
+
+    (new RelationshipSaveHandler)->save($parent, [$repeater], [
+        'children' => [['label' => 'a'], ['label' => 'b']],
+    ]);
+
+    expect($parent->children()->orderBy('sort_order')->pluck('sort_order')->all())->toBe([0, 1]);
+});
+
+test('a repeater without orderColumn writes no position at all', function () {
+    $parent = createRshParent();
+    $child = $parent->children()->create(['label' => 'A', 'sort_order' => 7]);
+
+    (new RelationshipSaveHandler)->save($parent, [Repeater::make('children')->relationship('children')], [
+        'children' => [['id' => $child->id, 'label' => 'A']],
+    ]);
+
+    // Untouched: opting in is what turns the column on.
+    expect($child->fresh()->sort_order)->toBe(7);
+});
+
 function createRshParent(): Model
 {
     return RshParentModel::create(['name' => 'Parent 1']);
@@ -377,6 +444,46 @@ test('syncs a belongsToMany repeater: applies the mutator and skips malformed ro
     expect($pivot)->toHaveCount(1)
         ->and((int) $pivot->first()->tag_id)->toBe($tag->id)
         ->and($pivot->first()->note)->toBe('mutated');
+
+    Schema::dropIfExists('rsh_parent_tag');
+    Schema::dropIfExists('rsh_tags');
+});
+
+test('orderColumn on a belongsToMany repeater is a pivot column, numbered past skipped rows', function () {
+    Schema::create('rsh_tags', function (Blueprint $t) {
+        $t->id();
+        $t->string('label');
+    });
+    Schema::create('rsh_parent_tag', function (Blueprint $t) {
+        $t->id();
+        $t->unsignedBigInteger('parent_id');
+        $t->unsignedBigInteger('tag_id');
+        $t->string('note')->nullable();
+        $t->integer('position')->default(0);
+    });
+
+    $one = RshTag::create(['label' => 'one']);
+    $two = RshTag::create(['label' => 'two']);
+    $parent = RshBtmParent::create(['name' => 'P']);
+
+    $repeater = Repeater::make('tags')->relationship('tags')->orderColumn('position');
+
+    (new RelationshipSaveHandler)->save($parent, [$repeater], [
+        'tags' => [
+            ['id' => $two->id],
+            ['note' => 'no related key'],  // not synced, and must not eat a position
+            ['id' => $one->id],
+        ],
+    ]);
+
+    $pivot = DB::table('rsh_parent_tag')->orderBy('position')->get();
+
+    expect($pivot)->toHaveCount(2)
+        ->and((int) $pivot[0]->tag_id)->toBe($two->id)
+        ->and((int) $pivot[0]->position)->toBe(0)
+        ->and((int) $pivot[1]->tag_id)->toBe($one->id)
+        // 1, not 2: the skipped row leaves no hole in the stored order.
+        ->and((int) $pivot[1]->position)->toBe(1);
 
     Schema::dropIfExists('rsh_parent_tag');
     Schema::dropIfExists('rsh_tags');
@@ -441,7 +548,7 @@ class RshBtmParent extends Model
     /** @return BelongsToMany<RshTag, $this> */
     public function tags(): BelongsToMany
     {
-        return $this->belongsToMany(RshTag::class, 'rsh_parent_tag', 'parent_id', 'tag_id')->withPivot('note');
+        return $this->belongsToMany(RshTag::class, 'rsh_parent_tag', 'parent_id', 'tag_id')->withPivot('note', 'position');
     }
 }
 

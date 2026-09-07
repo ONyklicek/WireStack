@@ -21,6 +21,11 @@ use NyonCode\WireForms\Components\Repeater;
  * `BelongsToMany` repeater syncs the pivot (attach/detach/update pivot columns),
  * keyed by the related model's key.
  *
+ * A repeater with {@see Repeater::orderColumn()} also writes each row's position
+ * into that column (a pivot column, for a `BelongsToMany`) — without it a drag
+ * lives only as long as the page, since the rows come back in the database's
+ * order.
+ *
  * @internal
  */
 final class RelationshipSaveHandler
@@ -76,9 +81,10 @@ final class RelationshipSaveHandler
         }
 
         $mutator = $repeater->getMutateRelationshipDataBeforeSaveUsing();
+        $orderColumn = $repeater->getOrderColumn();
 
         if ($relation instanceof BelongsToMany) {
-            $this->syncBelongsToMany($record, $relationName, $items, $mutator);
+            $this->syncBelongsToMany($record, $relationName, $items, $mutator, $orderColumn);
 
             return;
         }
@@ -96,10 +102,24 @@ final class RelationshipSaveHandler
         $existingIds = $relation->pluck($primaryKey)->all();
         $keptIds = [];
 
-        foreach ($items as $index => $itemData) {
+        $position = 0;
+
+        foreach ($items as $itemData) {
             if ($mutator) {
                 $itemData = $mutator($itemData);
             }
+
+            // After the mutator, so a mutator that reorders or renames fields
+            // cannot overwrite the position — and before the key is read, so the
+            // column travels with both the create and the update branch.
+            // Counted here rather than taken from the array key: a repeater whose
+            // rows were removed and re-added can hand us a non-list, and the
+            // stored order has to be 0..n-1 whatever the keys say.
+            if ($orderColumn !== null && is_array($itemData)) {
+                $itemData[$orderColumn] = $position;
+            }
+
+            $position++;
 
             $id = $itemData[$primaryKey] ?? null;
 
@@ -144,12 +164,13 @@ final class RelationshipSaveHandler
      *
      * @param  array<int, mixed>  $items
      */
-    private function syncBelongsToMany(Model $record, string $relationName, array $items, ?\Closure $mutator): void
+    private function syncBelongsToMany(Model $record, string $relationName, array $items, ?\Closure $mutator, ?string $orderColumn = null): void
     {
         $relatedKeyName = $record->{$relationName}()->getRelated()->getKeyName();
 
         /** @var array<int|string, array<string, mixed>> $sync */
         $sync = [];
+        $position = 0;
 
         foreach ($items as $itemData) {
             if (! is_array($itemData)) {
@@ -164,6 +185,18 @@ final class RelationshipSaveHandler
 
             if ($relatedId === null || $relatedId === '') {
                 continue;
+            }
+
+            // A pivot column here, not a column on the related model: everything
+            // but the related key is pivot data, and the order of a many-to-many
+            // belongs to the link, not to the thing linked.
+            //
+            // Numbered after the skip above, not before it: a half-filled row
+            // that names no related model is not synced, and letting it consume a
+            // position would leave a hole in the stored order.
+            if ($orderColumn !== null) {
+                $itemData[$orderColumn] = $position;
+                $position++;
             }
 
             // Everything but the related key is pivot data.

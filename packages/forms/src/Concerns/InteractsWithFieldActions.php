@@ -9,6 +9,7 @@ use NyonCode\WireCore\Foundation\Components\Component as FieldComponent;
 use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
 use NyonCode\WireCore\Foundation\Contracts\HasStateAccessors;
 use NyonCode\WireForms\Components\Select;
+use NyonCode\WireForms\Components\TiptapEditor;
 use NyonCode\WireForms\Forms\Form;
 
 /**
@@ -80,6 +81,28 @@ trait InteractsWithFieldActions
         }
 
         return $field->getSearchResults($search);
+    }
+
+    /**
+     * Livewire endpoint backing an editor's mention suggestions
+     * ({@see TiptapEditor::mentions()}).
+     *
+     * Resolved the same way a remote select is — field re-read from the live form
+     * definition by state path — so the per-source scoping declared on the field
+     * is the scoping that runs, and a trigger this editor does not offer answers
+     * with nothing rather than with somebody else's list.
+     *
+     * @return array<int, array{type: string, id: string, label: string, group: string}>
+     */
+    public function searchEditorMentions(string $statePath, string $trigger, string $search): array
+    {
+        $field = $this->resolveFieldForAction($statePath);
+
+        if (! $field instanceof TiptapEditor) {
+            return [];
+        }
+
+        return $field->findMention($trigger)?->search($search) ?? [];
     }
 
     /**

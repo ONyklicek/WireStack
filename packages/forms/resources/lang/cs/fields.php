@@ -8,6 +8,7 @@ return [
     'search' => 'Hledat...',
     'select_all' => 'Vybrat vše',
     'deselect_all' => 'Zrušit výběr',
+    'deselect' => 'Odebrat',
     'no_results' => 'Žádné výsledky',
     'loading' => 'Načítání...',
     'create_option' => 'Vytvořit položku',

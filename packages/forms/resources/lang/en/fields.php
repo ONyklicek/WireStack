@@ -8,6 +8,7 @@ return [
     'search' => 'Search...',
     'select_all' => 'Select all',
     'deselect_all' => 'Deselect all',
+    'deselect' => 'Deselect',
     'no_results' => 'No results found',
     'loading' => 'Loading...',
     'create_option' => 'Create option',

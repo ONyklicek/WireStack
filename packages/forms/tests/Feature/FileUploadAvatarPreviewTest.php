@@ -55,3 +55,40 @@ it('shows an ordinary image preview square', function () {
     Livewire::test(AvatarPreviewHost::class, ['asAvatar' => false])
         ->assertDontSee('rounded-full', false);
 });
+
+it('draws the picture itself, not a file listed under a drop target', function () {
+    // The shape of the thumbnail was all `avatar()` used to change, so a profile
+    // page asking for one picture of one person got the same full-width dashed
+    // dropzone as a document library, with the face listed beneath it as a file
+    // with a filename and a link. One image, of a known size and shape, on a
+    // screen asking what you look like, is a picture with a button beside it.
+    $html = Livewire::test(AvatarPreviewHost::class)->html();
+
+    expect($html)->toContain('form-file-data.photo-avatar')
+        ->and($html)->toContain('Change photo')
+        // The file-list row and its "open in a new tab" link are what the compact
+        // control replaces; a filename under an avatar is noise.
+        ->and($html)->not->toContain('Pending upload')
+        ->and($html)->not->toContain('or drag and drop');
+});
+
+it('offers an upload button when there is no picture yet', function () {
+    $host = Livewire::test(AvatarPreviewHost::class);
+
+    $host->set('data.photo', null);
+
+    expect($host->html())->toContain('Upload a photo')
+        // Nothing to remove, so nothing offering to.
+        ->and($host->html())->not->toContain('form-file-data.photo-remove');
+});
+
+it('keeps the same picker and drop target the other layout has', function () {
+    // Both layouts hold the same inputs, inside the same Alpine root: what
+    // changes is where you click, not what happens then. Drag and drop still
+    // works, because the picture is the drop target.
+    $html = Livewire::test(AvatarPreviewHost::class)->html();
+
+    expect($html)->toContain('form-file-data.photo-dropzone')
+        ->and($html)->toContain('form-file-data.photo-picker')
+        ->and($html)->toContain('handleDrop($event)');
+});

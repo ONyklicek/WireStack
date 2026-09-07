@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Closure;
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Concerns\CanBeNullable;
 use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
+use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireForms\Concerns\HasCharacterLimits;
 use NyonCode\WireForms\Exceptions\FormConfigurationException;
 use NyonCode\WireForms\Support\FieldBounds;
 
-class TextInput extends Field
+class TextInput extends Field implements DehydratesState
 {
+    use CanBeNullable;
     use HasCharacterLimits;
     use HasExtraInputAttributes;
 
@@ -306,6 +310,31 @@ class TextInput extends Field
     public function isRevealable(): bool
     {
         return $this->isRevealable;
+    }
+
+    // ─── Save path ─────────────────────────────────────────────────
+
+    /**
+     * A cleared input reaches the record as `null` when `''` cannot be what the
+     * author meant.
+     *
+     * A `<input type=number>` submits `''` when it is emptied — there is no
+     * other value a browser can send — and `''` is not a figure. Postgres and
+     * strict-mode MySQL reject it on a numeric column; SQLite stores an empty
+     * string next to the decimals. So a number input nullifies without being
+     * asked, exactly as {@see Select} does for its empty option.
+     *
+     * Every other type has to be told with {@see nullable()}, because on a text
+     * column `''` is a value an author may well mean, and a `NOT NULL` column
+     * would reject the null a blanket rule wrote for them.
+     */
+    public function dehydrateState(mixed $state, ?Model $record = null): mixed
+    {
+        if ($state === '' && $this->inputType === 'number') {
+            return null;
+        }
+
+        return $this->nullifyEmptyState($state);
     }
 
     protected function viewName(): string

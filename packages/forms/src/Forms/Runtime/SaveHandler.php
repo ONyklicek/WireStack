@@ -17,7 +17,6 @@ use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Foundation\Contracts\CanBeDehydrated;
-use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Components\MorphToSelect;
 use NyonCode\WireForms\Components\Repeater;
@@ -32,10 +31,14 @@ use NyonCode\WireForms\Forms\Config\FormConfig;
  */
 final class SaveHandler
 {
+    private readonly StateDehydrator $dehydrator;
+
     public function __construct(
         private readonly FormConfig $config,
         private readonly FormRuntime $runtime,
-    ) {}
+    ) {
+        $this->dehydrator = new StateDehydrator;
+    }
 
     public function save(): mixed
     {
@@ -204,13 +207,6 @@ final class SaveHandler
     }
 
     /**
-     * Move any pending file uploads in the data to permanent storage and replace
-     * them with their stored paths, keeping already-stored paths as-is (merge).
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
-     */
-    /**
      * Apply every field's own dehydration to the data about to be persisted.
      *
      * @param  array<string, mixed>  $data
@@ -218,76 +214,11 @@ final class SaveHandler
      */
     private function dehydrateFields(array $data): array
     {
-        $model = $this->config->model instanceof Model ? $this->config->model : null;
-
-        // Top-level fields (not nested inside a repeater).
-        foreach ($this->payloadComponents($this->config->schema) as $component) {
-            if (! $component instanceof Field) {
-                continue;
-            }
-
-            $name = $component->getName();
-
-            if (! array_key_exists($name, $data)) {
-                continue;
-            }
-
-            $data[$name] = $this->dehydrateValue($component, $data[$name], $model);
-        }
-
-        // Repeater children: a child that shapes its own state (FileUpload storing
-        // its upload, DateTimePicker applying format/timezone) or carries an
-        // owner's dehydrateStateUsing() lives under the repeater key as an array
-        // of items, so the top-level pass never reaches it. Without this a nested
-        // file is never moved to permanent storage and a nested date keeps its raw
-        // wire value.
-        foreach ($this->payloadRepeaters($this->config->schema) as $repeater) {
-            $name = $repeater->getName();
-
-            if (! isset($data[$name]) || ! is_array($data[$name])) {
-                continue;
-            }
-
-            $childFields = array_filter(
-                $this->payloadComponents($repeater->getSchema()),
-                static fn (Field|Repeater $child): bool => $child instanceof Field,
-            );
-
-            foreach ($data[$name] as $index => $item) {
-                if (! is_array($item)) {
-                    continue;
-                }
-
-                foreach ($childFields as $child) {
-                    $childName = $child->getName();
-
-                    if (array_key_exists($childName, $item)) {
-                        $data[$name][$index][$childName] = $this->dehydrateValue($child, $item[$childName], $model);
-                    }
-                }
-            }
-        }
-
-        return $data;
-    }
-
-    /**
-     * One field's value on the way out: the field's own transform first, the
-     * owner's callback last.
-     *
-     * That order is the point of having both. The field type states how its
-     * value is stored at all — an upload moved to permanent storage, a date in
-     * its storage format and timezone — and the owner then shapes the value that
-     * is actually about to be written, rather than racing the field type over a
-     * raw wire value it would have replaced anyway.
-     */
-    private function dehydrateValue(Field $field, mixed $value, ?Model $model): mixed
-    {
-        if ($field instanceof DehydratesState) {
-            $value = $field->dehydrateState($value, $model);
-        }
-
-        return $field->applyStateDehydration($value, $model);
+        return $this->dehydrator->dehydrate(
+            $data,
+            $this->config->schema,
+            $this->config->model instanceof Model ? $this->config->model : null,
+        );
     }
 
     /**
@@ -309,56 +240,13 @@ final class SaveHandler
     {
         $names = [];
 
-        foreach ($this->payloadComponents($this->config->schema) as $component) {
+        foreach ($this->dehydrator->payloadComponents($this->config->schema) as $component) {
             if ($component instanceof SavesAfterRecord || ! $component->isDehydrated()) {
                 $names[] = $component->getName();
             }
         }
 
         return $names;
-    }
-
-    /**
-     * Every component that keys the top-level save payload: fields anywhere in
-     * the layout tree, plus repeaters themselves.
-     *
-     * A repeater is a leaf here. Its children are keyed inside its own array
-     * value, never at the top level, so flattening them in would match a child's
-     * name against a parent column that happens to share it.
-     *
-     * @param  array<int, mixed>  $schema
-     * @return array<int, Field|Repeater>
-     */
-    private function payloadComponents(array $schema): array
-    {
-        /** @var array<int, Field|Repeater> $components */
-        $components = [];
-
-        foreach ($schema as $component) {
-            if ($component instanceof Repeater) {
-                $components[] = $component;
-            } elseif ($component instanceof LayoutComponent) {
-                $components = array_merge($components, $this->payloadComponents($component->getSchema()));
-            } elseif ($component instanceof Field) {
-                $components[] = $component;
-            }
-        }
-
-        return $components;
-    }
-
-    /**
-     * Repeaters anywhere in the schema (used to dehydrate their child fields).
-     *
-     * @param  array<int, mixed>  $schema
-     * @return array<int, Repeater>
-     */
-    private function payloadRepeaters(array $schema): array
-    {
-        return array_values(array_filter(
-            $this->payloadComponents($schema),
-            static fn (Field|Repeater $component): bool => $component instanceof Repeater,
-        ));
     }
 
     /**

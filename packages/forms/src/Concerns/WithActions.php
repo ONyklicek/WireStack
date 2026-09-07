@@ -48,6 +48,7 @@ trait WithActions
     // (no-op in core so a form-free host still works standalone).
     use InteractsWithActionForms, InteractsWithActions {
         InteractsWithActionForms::validateMountedActionForm insteadof InteractsWithActions;
+        InteractsWithActionForms::dehydrateMountedActionFormData insteadof InteractsWithActions;
         InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions;
         InteractsWithActionForms::getActionModalFormInstance insteadof InteractsWithActions;
         InteractsWithActionForms::getActionModalFormInstanceForDepth insteadof InteractsWithActions;
@@ -209,7 +210,7 @@ trait WithActions
         $this->runStandaloneAction(
             $action,
             $record instanceof Model ? $record : null,
-            $this->getMountedActionFormData(),
+            $this->dehydrateMountedActionFormData($this->getMountedActionFormData()),
             (array) $this->getMountedActionState('arguments', []),
         );
 
