@@ -421,6 +421,22 @@ výsledků nedostane; `GlobalSearchResult` je plochý readonly řádek
 `GlobalSearchPalette::select()` proto umí jedinou věc — `redirect($url, navigate: true)`
 (`GlobalSearchPalette.php:137`), s `url === null` nedělá nic.
 
+**Jedna rozšiřovací cesta dovnitř už vede, a na tohle neodpovídá.**
+`Hook::SearchQuerying` se dispatchuje **per resource** na dotazu, který se chystá
+běžet — před `get()` a před `canView()`, takže callback smí dotaz zúžit a nesmí se
+jím protáhnout kolem policy (`GlobalSearch.php:158`). `for: 'invoices'` zaměří
+callback na řádky jednoho modulu. Je to ale hook nad **`Builder`em**: umí změnit,
+*které záznamy* se najdou, ne *jaké druhy řádků* paleta zná. Pro navigaci ani pro
+příkazy tedy neplatí jako řešení — platí jako důkaz, že rozšiřitelnost palety už má
+zavedený tvar (typed payload, `HookTarget`, `for:`), který má nový zdroj řádků
+následovat, ne obcházet.
+
+> **Pozor na stav:** `Hook::SearchQuerying`, `Hook::NavigationBuilding` a jejich
+> payloady jsou k 2026-09-08 **v pracovním stromě, necommitnuté**
+> (`SearchQueryingPayload.php` je dokonce untracked). Než se podle nich něco
+> naplánuje, ověř je proti HEAD — v commitnutém kódu zatím nejsou. Kontext:
+> ADR [0030](../decisions/0030-hook-surface.md).
+
 **Zadání vlastníka 2026-09-08:** paleta má nabízet **čtyři druhy řádků** — záznamy
 (hotové), **položky navigace**, **globální příkazy** („Nový zákazník") a **akce nad
 nalezeným záznamem** („Objednávka #412 → Stornovat"). Nejsou to čtyři varianty jedné
@@ -437,14 +453,37 @@ skupina ve výsledcích, a rozhodnutí o pořadí skupin (navigace nad záznamy,
 Autorizace je tu jiná otázka než u záznamů — menu filtruje `isVisible()`, ne policy
 nad instancí, takže se **nesmí** recyklovat `canView()`.
 
+**A ten zdroj je od 2026-09-08 rozšiřitelný, což mění bod 1 níž.** `Workspace`
+dispatchuje `Hook::NavigationBuilding` na ploché keyované mapě položek, po
+viditelnosti a po doplnění labelu/URL, před seskupením a řazením
+(`Workspace.php:242`) — jeden dispatch site pro `navigation()` i `items()`, aby se
+seskupené a ploché menu neneshodlo na tom, co v menu je. Payload je
+**modifikovatelný a smí do mapy přidávat**:
+
+    unset($payload->items['media']);
+    $payload->items['docs'] = NavigationItem::make('Docs')->url('/docs')->sort(90);
+
+Takže mechanismus „plugin vloží pojmenovaný, ikonovaný, řaditelný řádek do seznamu,
+který paleta čte" **už existuje**, je scoped přes `Zone` (což paleta drží), a
+navigační řádky by ho zdědily zadarmo. Dvě věci si to žádá zapsat: položka přidaná
+callbackem **neprošla** `isVisible()` (hook běží až po filtru), což není defekt
+palety ani menu, ale platí to o obou; a `sort()` uvnitř callbacku je marná práce,
+řadí se až za ním.
+
 **Drahá polovina — akce.** Ta stojí na třech rozhodnutích, ne na třech řádcích kódu:
 
-1. **Zdroj příkazů.** Kontrakt typu `ProvidesCommands`, čtený z `Catalog` stejně jako
-   dnes `GloballySearchable`, aby příkaz nemusel viset na `DescribesResource` — jinak
-   se globální příkaz musí předstírat jako resource. Umístění podle zavedeného vzoru
+1. **Zdroj příkazů — a nejdřív otázka, jestli je vůbec nový.** Nabízí se kontrakt
+   typu `ProvidesCommands`, čtený z `Catalog` stejně jako dnes `GloballySearchable`,
+   aby příkaz nemusel viset na `DescribesResource`; umístění podle zavedeného vzoru
    (`ProvidesResourceForm` ve forms, `ProvidesResourceInfolist` v core/Infolists,
-   `ProvidesResourceTable` v panels) → vlastníkem je surface, tedy `Actions/`. **Což
-   je přesně ta past, viz bod 3.**
+   `ProvidesResourceTable` v panels) → vlastníkem je surface, tedy `Actions/`, **což
+   je přesně ta past z bodu 3**. Jenže `NavigationBuildingPayload` výš už umí to
+   samé — vložit pojmenovaný řádek do seznamu, který paleta čte — a liší se jedinou
+   věcí: `NavigationItem` ukazuje na URL a neumí spustit akci. **Než vznikne druhý
+   slovník pro „pojmenovaný řádek v seznamu", musí padnout rozhodnutí, jestli
+   příkazový řádek není `NavigationItem`, který smí ukazovat i jinam než na URL.**
+   To je přesně ta otázka, kterou § kanonického vlastnictví v `CLAUDE.md` chce
+   položit dřív, ne po.
 2. **Tvar řádku.** Alternativa k `url` na výsledku — jméno akce + payload,
    **serializovatelné**, ne closure: řádek je `readonly` a plochý záměrně, protože se
    jich renderuje mnoho najednou a paleta nesmí volat zpátky do resource na řádek.
