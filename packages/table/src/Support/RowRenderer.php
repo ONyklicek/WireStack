@@ -126,14 +126,14 @@ final class RowRenderer
      *
      * A record url turns every non-editable cell into a link to the record; an
      * editable one keeps its own interaction, or the link would swallow the click
-     * that starts the edit.
+     * that starts the edit. The link's markup is the table's compiled partial
+     * ({@see Table::getRecordLinkSkeleton()}), filled per cell.
      */
     private function renderCells(Model $record, ColumnRenderPlan $columns): string
     {
         $recordUrl = $this->table->getRecordUrl($record);
-        $linkOpen = $recordUrl
-            ? '<a href="'.e($recordUrl).'" class="hover:text-primary-600 dark:hover:text-primary-400">'
-            : '';
+        $link = $recordUrl ? $this->table->getRecordLinkSkeleton() : null;
+        $linkUrl = $recordUrl ? e($recordUrl) : '';
 
         $html = '';
 
@@ -144,8 +144,8 @@ final class RowRenderer
                 ? $column->renderResponsiveCell($record)
                 : $column->renderCellFast($record);
 
-            if ($linkOpen !== '' && ! $meta['editable']) {
-                $cell = $linkOpen.$cell.'</a>';
+            if ($link !== null && ! $meta['editable']) {
+                $cell = $link->fill(['url' => $linkUrl, 'content' => $cell]);
             }
 
             $html .= $meta['cell']->fill(['content' => $cell]);

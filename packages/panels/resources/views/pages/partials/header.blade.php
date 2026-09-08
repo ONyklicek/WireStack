@@ -10,13 +10,18 @@
      the way a 24px one fills a desktop's, so it is not one size clamped for the
      smallest screen. --}}
 @php
+    use NyonCode\WireCore\Core\Resources\View\Breadcrumbs;
+    use NyonCode\WireCore\Foundation\View\ComponentRenderer;
+
     /** @var string|null $title */
     /** @var array<int, mixed> $breadcrumbs */
 @endphp
 
 @if(($breadcrumbs ?? []) !== [] || $title)
     <div class="space-y-1">
-        <x-wire::breadcrumbs :items="$breadcrumbs ?? []" />
+        {{-- The object, not <x-wire::breadcrumbs>: rule 5 keeps the component
+             tags for consumers and has the framework draw without them. --}}
+        {!! ComponentRenderer::render(new Breadcrumbs($breadcrumbs ?? [])) !!}
 
         @if($title)
             <h1 class="text-lg font-semibold tracking-tight text-gray-900 sm:text-xl lg:text-2xl dark:text-white">

@@ -301,6 +301,22 @@ explicitly documents an exception.
    configuration — never the Livewire component, parent, routing, or HTTP request
    (host-specific behaviour is injected via a contract, e.g. `ResolvesActionClick`).
 
+**Where rule 5 draws the line: engine, not screen.** The rule is about the render
+engine — `wire-core`, `wire-forms`, `wire-table`, `wire-panels`, `wire-sortable`. Their
+views run inside row loops and get compiled into skeletons, so a Blade component there
+is a view render the engine cannot account for plus a dependency on a tag registration
+it should not need. When one of those views wants a canonical component, it renders the
+object: `{!! ComponentRenderer::render(new Button(size: 'md'), __('Save'), ['class' => 'w-full']) !!}`
+(`Foundation\View\ComponentRenderer` — same class, same single view, the slot and the
+attribute bag passed explicitly). Chrome that repeats per row wants a `Skeleton` rather
+than either.
+
+The *screen* packages are the other side of that line and use the tags on purpose:
+`wire-admin` and every `wire-module-*` ship ready-made pages published for a consumer to
+open and edit, and `<x-wire::button>` in a profile card is the component API being used
+as what it is. They render once per page, not per row. `MarkupBelongsInBladeTest` enforces
+exactly this split — the engine list is checked, the screens are not.
+
 **The render-cost model is binding — it is *how* rule 2 is satisfied, not a tradeoff
 against it.** Every `view()->render()`, every `<x-*>` Blade component, and every
 `@include` is one *view render*; inside a per-row / per-cell / per-item loop that is
@@ -322,6 +338,14 @@ template, and PHP produces it only through an `Htmlable` owner (`Skeleton`, `Htm
 a component's own `toHtml()` / `getXHtml()`). Raw HTML concatenated from PHP strings is
 never acceptable — not for speed, not for a single tag, not when the output is
 byte-identical and the suite is green.
+
+This holds inside a view's own `@php` block too: a template that assembles its markup as
+a string has moved it out of Blade just as surely as a class would have. And it is
+enforced now rather than reviewed — `tests/Integration/MarkupBelongsInBladeTest.php`
+reads every package's `src/` and every shipped view's `@php` regions for a tag in a
+string literal, with a short, ratcheting exception list (the icon pipeline, and two
+places that do string surgery over markup a partial already rendered). It found eight
+violations the day it was written, every one of them green.
 
 **The markup MUST stay in a Blade template. This is not negotiable.** A skeleton is
 compiled from `view(...)->render()` — it is a template *rendered once*, never a tag

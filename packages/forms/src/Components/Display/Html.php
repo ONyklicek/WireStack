@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components\Display;
 
+use Closure;
+
 /**
  * Raw HTML display component with static helper factories.
  *
@@ -29,30 +31,52 @@ class Html extends Display
 
     public static function divider(): static
     {
-        return static::make()->content('<hr class="my-4 border-gray-200 dark:border-gray-700">');
+        return static::make()->content(static::partial('divider'));
     }
 
     public static function spacer(string $size = '4'): static
     {
-        return static::make()->content("<div class=\"h-{$size}\"></div>");
+        return static::make()->content(static::partial('spacer', ['size' => $size]));
     }
 
     public static function heading(string $text, int $level = 2): static
     {
-        $tag = "h{$level}";
-        $classes = match ($level) {
-            1 => 'text-2xl font-bold',
-            2 => 'text-xl font-semibold',
-            3 => 'text-lg font-medium',
-            default => 'text-base font-medium',
-        };
-
-        return static::make()->content("<{$tag} class=\"{$classes} text-gray-900 dark:text-white\">".e($text)."</{$tag}>");
+        return static::make()->content(static::partial('heading', [
+            'tag' => "h{$level}",
+            'classes' => match ($level) {
+                1 => 'text-2xl font-bold',
+                2 => 'text-xl font-semibold',
+                3 => 'text-lg font-medium',
+                default => 'text-base font-medium',
+            },
+            'text' => $text,
+        ]));
     }
 
     public static function paragraph(string $text): static
     {
-        return static::make()->content('<p class="text-sm text-gray-600 dark:text-gray-400">'.e($text).'</p>');
+        return static::make()->content(static::partial('paragraph', ['text' => $text]));
+    }
+
+    /**
+     * One factory's markup, as a closure the component resolves at render time.
+     *
+     * The factories set `content()` like any caller would, but what they set is
+     * framework markup rather than the consumer's own — so it comes out of a
+     * Blade partial ({@see AI_CODING_STANDARD.md}, "always Htmlable, always
+     * Blade"), which is also the vendor:publish override point for it.
+     *
+     * A closure rather than a rendered string because `content()` already accepts
+     * one: a schema is built on every request and these factories sit in it, so
+     * rendering eagerly would pay for the markup of a field that is never shown.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected static function partial(string $name, array $data = []): Closure
+    {
+        // Trimmed, so a partial's own trailing newline does not become a text
+        // node the concatenated strings never emitted.
+        return fn (): string => trim(view("wire-forms::components.html.{$name}", $data)->render());
     }
 
     protected function viewName(): string

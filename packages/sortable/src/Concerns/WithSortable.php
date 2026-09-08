@@ -68,18 +68,16 @@ trait WithSortable
             ? __('wire-sortable::messages.done_reordering')
             : __('wire-sortable::messages.reorder');
 
-        $activeClass = $this->isReordering
-            ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
-            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700';
-
-        $icon = $this->isReordering
-            ? '<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />'
-            : '<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />';
-
         return [
-            '<button type="button" wire:click="toggleReordering" class="p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 '.$activeClass.'" title="'.e($title).'">
-                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">'.$icon.'</svg>
-            </button>',
+            view('wire-sortable::partials.reorder-toggle', [
+                'title' => $title,
+                'activeClass' => $this->isReordering
+                    ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700',
+                // Reordering is finished by the same control that started it, so
+                // the toggle says which of the two it is about to do.
+                'icon' => $this->isReordering ? 'outline:check' : 'outline:bars-3',
+            ])->render(),
         ];
     }
 

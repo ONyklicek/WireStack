@@ -70,7 +70,8 @@ final class CardRenderer
 
     /**
      * A record url turns the card's title into a link to the record — the same
-     * affordance the desktop cells get, on the one slot a thumb aims at.
+     * affordance the desktop cells get, on the one slot a thumb aims at, and out
+     * of the same compiled partial ({@see Table::getRecordLinkSkeleton()}).
      */
     private function title(Model $record): string
     {
@@ -84,16 +85,20 @@ final class CardRenderer
         $url = $this->table->getRecordUrl($record);
 
         return $url
-            ? '<a href="'.e($url).'" class="hover:text-primary-600 dark:hover:text-primary-400">'.$cell.'</a>'
+            ? $this->table->getRecordLinkSkeleton()->fill([
+                'url' => e($url),
+                'content' => $cell,
+            ])
             : $cell;
     }
 
     private function meta(Model $record): string
     {
+        $chip = $this->table->getMobileCardMetaSkeleton();
         $html = '';
 
         foreach ($this->card->meta() as $column) {
-            $html .= '<span>'.$this->cell($column, $record).'</span>';
+            $html .= $chip->fill(['content' => $this->cell($column, $record)]);
         }
 
         return $html;
@@ -107,16 +112,17 @@ final class CardRenderer
     {
         $details = $this->card->details();
         $count = count($details);
+        $pair = $this->table->getMobileCardDetailSkeleton();
         $html = '';
 
         foreach (array_values($details) as $index => $column) {
             $isLastOdd = $index === $count - 1 && $count % 2 === 1;
 
-            $html .= '<div class="'.($isLastOdd ? 'col-span-2' : 'col-span-1').'"><dt'
-                .' class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5"'
-                .'>'.e($column->getLabel()).'</dt><dd'
-                .' class="text-sm text-gray-900 dark:text-white"'
-                .'>'.$this->cell($column, $record).'</dd></div>';
+            $html .= $pair->fill([
+                'spanClass' => $isLastOdd ? 'col-span-2' : 'col-span-1',
+                'label' => e($column->getLabel()),
+                'content' => $this->cell($column, $record),
+            ]);
         }
 
         return $html;

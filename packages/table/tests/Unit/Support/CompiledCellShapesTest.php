@@ -133,3 +133,52 @@ it('compiles the context-menu scaffolding once, with two holes', function () {
         ->toContain('<li>Edit</li>')
         ->toContain('7');
 });
+
+// ─── The record link and the card's repeating parts ──────────────────────────
+
+/*
+ * These three used to be written as HTML strings in PHP — `'<a href="'.e($url).'"…'`
+ * in RowRenderer and CardRenderer. They are partials now, compiled once and
+ * spliced, which is the same move the cells above make. The assertions are
+ * byte-exact on purpose: the whole risk of moving markup into a template is that
+ * Blade adds a newline or a space the concatenation never had, and a run of
+ * whitespace between two tags is a DOM node the morph then walks on every commit.
+ */
+
+it('compiles the record link once and fills it per cell', function () {
+    $table = shapesTable();
+    $skeleton = $table->getRecordLinkSkeleton();
+
+    expect($table->getRecordLinkSkeleton())->toBe($skeleton)
+        ->and($skeleton->fill(['url' => e('/rows/1?a=1&b=2'), 'content' => '<span>Ada</span>']))
+        ->toBe('<a href="/rows/1?a=1&amp;b=2" class="hover:text-primary-600 dark:hover:text-primary-400"><span>Ada</span></a>');
+});
+
+it('compiles one meta chip for the card, not one per record', function () {
+    $table = shapesTable();
+    $skeleton = $table->getMobileCardMetaSkeleton();
+
+    expect($table->getMobileCardMetaSkeleton())->toBe($skeleton)
+        ->and($skeleton->fill(['content' => 'Active']))->toBe('<span>Active</span>');
+});
+
+it('spans a card detail across both columns without changing its shape', function () {
+    // The odd last item takes the full width. That is a class value, so it rides
+    // in as a slot — one compiled pair for the grid, not one per span.
+    $table = shapesTable();
+    $skeleton = $table->getMobileCardDetailSkeleton();
+    $fill = fn (string $span): string => $skeleton->fill([
+        'spanClass' => $span,
+        'label' => e('Signed & sent'),
+        'content' => '<b>yes</b>',
+    ]);
+
+    expect($table->getMobileCardDetailSkeleton())->toBe($skeleton)
+        ->and($fill('col-span-1'))->toBe(
+            '<div class="col-span-1">'
+            .'<dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">Signed &amp; sent</dt>'
+            .'<dd class="text-sm text-gray-900 dark:text-white"><b>yes</b></dd>'
+            .'</div>'
+        )
+        ->and($fill('col-span-2'))->toContain('<div class="col-span-2">');
+});

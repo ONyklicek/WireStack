@@ -108,6 +108,9 @@ class Table implements Htmlable
     /** The context-menu panel's compiled markup — {@see getRowContextMenuSkeleton()}. */
     protected ?Skeleton $rowContextMenuSkeleton = null;
 
+    /** The record link's compiled markup — {@see getRecordLinkSkeleton()}. */
+    protected ?Skeleton $recordLinkSkeleton = null;
+
     /**
      * The sub-row expander cell, one compiled shape per state.
      *
@@ -738,6 +741,32 @@ class Table implements Htmlable
     }
 
     /**
+     * The link a record url puts around a cell, compiled once and spliced per
+     * record.
+     *
+     * Both surfaces that offer the affordance fill this one skeleton — every
+     * non-editable cell of a row ({@see Support\RowRenderer}) and the stacked
+     * card's title ({@see Support\CardRenderer}) — so `tables.partials.record-link`
+     * is the single source of the markup and the vendor:publish override point for
+     * both, instead of an `<a>` written twice in PHP.
+     *
+     * Memoised per table instance, which is per render: a row wraps one link per
+     * visible column, so a 10-column page would otherwise pay ten view renders per
+     * row for markup that never changes.
+     */
+    public function getRecordLinkSkeleton(): Skeleton
+    {
+        return $this->recordLinkSkeleton ??= Skeleton::compile(
+            view('wire-table::tables.partials.record-link', [
+                'url' => Skeleton::slot('url'),
+                'content' => Skeleton::slot('content'),
+            ])->render(),
+            'url',
+            'content',
+        );
+    }
+
+    /**
      * Enable model policy auto-resolution.
      *
      * When enabled, create/update/delete/view permissions are resolved
@@ -969,6 +998,13 @@ class Table implements Htmlable
         return $this->primaryKey;
     }
 
+    /**
+     * Bind the host component a table renders through.
+     *
+     * @docs-ignore Plumbing, not configuration: `WithTable` calls this while
+     * building the table, and a definition that has not been bound cannot render
+     * at all (see {@see toHtml()}). Nothing an owner writes calls it.
+     */
     public function livewireComponent(mixed $component): static
     {
         $this->livewireComponent = $component;

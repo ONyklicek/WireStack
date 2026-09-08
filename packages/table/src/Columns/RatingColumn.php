@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireCore\Foundation\Icons\WireIconSet;
 
 /**
  * Rating column — renders a numeric state as a row of filled/empty stars.
@@ -24,9 +25,14 @@ class RatingColumn extends Column
 
     protected ?string $ratingColor = 'warning';
 
-    protected string $filledIcon = 'star';
+    /**
+     * The framework's own star, not Heroicons' — see {@see WireIconSet}.
+     * The `Rating` field draws the same one, so a rating does not look like two
+     * different things depending on whether you can edit it.
+     */
+    protected string $filledIcon = 'wire:star';
 
-    protected string $emptyIcon = 'outline:star';
+    protected string $emptyIcon = 'wire:star-outline';
 
     protected bool $showValue = false;
 
@@ -98,8 +104,14 @@ class RatingColumn extends Column
         // §7: a rating is low-cardinality by construction (max+1 whole values, or
         // 2×max+1 with halves) — memoise the view render by its data so rows
         // sharing a rating reuse one render.
+        $icons = app(IconManager::class);
+
         return $this->renderViewCached('tables.columns.rating', [
-            'starsHtml' => $this->starsHtml($rating),
+            'stars' => $this->starKinds($rating),
+            'colorClass' => self::getTextColorClasses($this->ratingColor ?? 'warning'),
+            'emptyClass' => 'text-gray-300 dark:text-gray-600',
+            'filledIcon' => $icons->render($this->filledIcon, 'w-4 h-4'),
+            'emptyIcon' => $icons->render($this->emptyIcon, 'w-4 h-4'),
             'displayValue' => $this->showValue ? $this->formatValue($state, $record) : '',
             'label' => __('wire-table::messages.rating_of_max', [
                 'rating' => $this->allowHalf ? round($rating, 1) : (int) round($rating),
@@ -109,37 +121,26 @@ class RatingColumn extends Column
     }
 
     /**
-     * The star row as resolved SVG markup.
+     * What each position of the row is: `filled`, `half` or `empty`.
      *
-     * A half position is drawn by clipping a filled star to half its width over
-     * the empty one, so a half star needs no third icon in the set.
+     * The decision is the column's (rule 1) and the markup is the partial's — a
+     * half position is drawn there by clipping a filled star to half its width
+     * over the empty one, so a half star needs no third icon in the set.
+     *
+     * @return array<int, string>
      */
-    protected function starsHtml(float $rating): string
+    protected function starKinds(float $rating): array
     {
-        $icons = app(IconManager::class);
-        $colorClass = self::getTextColorClasses($this->ratingColor ?? 'warning');
-        $emptyClass = 'text-gray-300 dark:text-gray-600';
-
-        $filled = $icons->render($this->filledIcon, 'w-4 h-4');
-        $empty = $icons->render($this->emptyIcon, 'w-4 h-4');
-
-        $html = '';
+        $kinds = [];
 
         for ($position = 1; $position <= $this->max; $position++) {
-            $isHalf = $this->allowHalf && $rating > $position - 1 && $rating < $position;
-
-            if ($rating >= $position) {
-                $html .= '<span class="'.$colorClass.'">'.$filled.'</span>';
-            } elseif ($isHalf) {
-                $html .= '<span class="relative inline-flex">'
-                    .'<span class="'.$emptyClass.'">'.$empty.'</span>'
-                    .'<span class="absolute inset-y-0 left-0 w-1/2 overflow-hidden '.$colorClass.'">'.$filled.'</span>'
-                    .'</span>';
-            } else {
-                $html .= '<span class="'.$emptyClass.'">'.$empty.'</span>';
-            }
+            $kinds[] = match (true) {
+                $rating >= $position => 'filled',
+                $this->allowHalf && $rating > $position - 1 => 'half',
+                default => 'empty',
+            };
         }
 
-        return $html;
+        return $kinds;
     }
 }

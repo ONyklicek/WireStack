@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\BooleanColumn;
 use NyonCode\WireTable\Columns\ButtonColumn;
@@ -406,4 +407,19 @@ it('names the island every editable cell writes into', function () {
         ->and(TextInputColumn::make('name')->renderCell($record))->toContain("island: 'data-region'")
         ->and(SelectColumn::make('role')->options(['a' => 'A'])->renderCell($record))
         ->toContain("island: 'data-region'");
+});
+
+it('draws the same star the Rating field draws', function () {
+    // The two rating surfaces used to reach for different glyphs — Heroicons here,
+    // a compact one in the field, because the field emits twenty <svg> per
+    // instance and could not afford Heroicons' path. They share core's `wire:star`
+    // now, so a rating does not look like two different things depending on
+    // whether you can edit it.
+    $cell = RatingColumn::make('score')->allowHalf()->renderCell(partialRecord(['score' => 2.5]));
+    $star = app(IconManager::class)->getPath('wire:star');
+
+    expect($cell)->toContain($star)
+        // Still configurable per column; only the default moved.
+        ->and(RatingColumn::make('score')->icons('heart', 'outline:heart')->renderCell(partialRecord(['score' => 1])))
+        ->not->toContain($star);
 });

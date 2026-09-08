@@ -9,6 +9,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\HtmlString;
 use NyonCode\WireCore\Core\Query\Contracts\HasSearchColumns;
+use NyonCode\WireCore\Foundation\View\Skeleton;
 
 class StackedColumn extends Column implements HasSearchColumns
 {
@@ -31,6 +32,9 @@ class StackedColumn extends Column implements HasSearchColumns
 
     /** @var array<int, string> */
     protected array $searchColumns = [];
+
+    /** One line's compiled markup — {@see getLinesHtml()}. */
+    private ?Skeleton $lineSkeleton = null;
 
     /**
      * Set primary (main) text column
@@ -262,18 +266,32 @@ class StackedColumn extends Column implements HasSearchColumns
     /**
      * Render the stacked text lines as one HTML fragment.
      *
-     * Canonical owner of the stacked-line markup so the cell view only emits the
-     * result instead of building HTML in a Blade closure. Class and value are
-     * escaped.
+     * Canonical owner of the stacked lines, so the cell view emits one value
+     * instead of looping. The markup itself stays where markup belongs — the
+     * `stacked-line` partial, compiled once per column and spliced per line, so
+     * three lines over fifty rows cost one view render rather than a hundred and
+     * fifty. Class and value are escaped for the positions they land in.
      *
      * @param  array<int, array{class: string, value: string}>  $items
      */
     public function getLinesHtml(array $items): Htmlable
     {
+        $line = $this->lineSkeleton ??= Skeleton::compile(
+            view('wire-table::tables.columns.partials.stacked-line', [
+                'class' => Skeleton::slot('class'),
+                'value' => Skeleton::slot('value'),
+            ])->render(),
+            'class',
+            'value',
+        );
+
         $html = '';
 
         foreach ($items as $item) {
-            $html .= '<p class="'.e($item['class']).'">'.e($item['value']).'</p>';
+            $html .= $line->fill([
+                'class' => e($item['class']),
+                'value' => e($item['value']),
+            ]);
         }
 
         return new HtmlString($html);

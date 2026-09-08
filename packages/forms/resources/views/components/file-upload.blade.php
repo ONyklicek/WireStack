@@ -114,11 +114,17 @@
                              price list and a print archive apart not at all.
                              See ADR 0033. --}}
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden {{ $thumbShape }}">
-                            <x-wire::file-thumb
-                                :name="$preview['name']"
-                                :url="$preview['isImage'] ? $preview['url'] : null"
-                                size="md"
-                            />
+                            {{-- The canonical FileThumb, rendered as an object:
+                                 rule 5 keeps `<x-wire::file-thumb>` for
+                                 consumers and has the framework draw without
+                                 the tag. Same class, same view. --}}
+                            {!! \NyonCode\WireCore\Foundation\View\ComponentRenderer::render(
+                                new \NyonCode\WireCore\Foundation\View\FileThumb(
+                                    name: $preview['name'],
+                                    url: $preview['isImage'] ? $preview['url'] : null,
+                                    size: 'md',
+                                ),
+                            ) !!}
                         </span>
 
                         <div class="flex-1 min-w-0">

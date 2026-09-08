@@ -11,6 +11,7 @@ use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
+use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireTable\Table;
 
 class WireSortableServiceProvider extends PackageServiceProvider
@@ -35,6 +36,7 @@ class WireSortableServiceProvider extends PackageServiceProvider
             })
             ->bootedPackage(function ($packager) {
                 $this->registerTableMacros();
+                $this->registerIcons();
                 Bundle::serve('wire-sortable', self::ASSETS_PATH);
             })
             ->hasConfig()
@@ -53,6 +55,23 @@ class WireSortableServiceProvider extends PackageServiceProvider
                     ->publishViews()
                     ->publishTranslations();
             });
+    }
+
+    /**
+     * The grip this package draws its handle with, through the canonical owner.
+     *
+     * A six-dot grip is in no icon set the framework ships, and the alternative
+     * to registering one is an inline `<svg>` in the handle partial — which is
+     * the thing the Icons rule exists to prevent. Registered from a `.svg` file
+     * rather than a PHP string so the markup stays markup, and prefixed so it
+     * cannot collide with a consumer's own `grip`.
+     */
+    protected function registerIcons(): void
+    {
+        app(IconManager::class)->registerIconsFromDirectory(
+            __DIR__.'/../resources/icons',
+            'sortable',
+        );
     }
 
     protected function registerTableMacros(): void

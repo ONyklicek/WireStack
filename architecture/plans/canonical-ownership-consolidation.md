@@ -69,6 +69,13 @@ ale **dostat canonical paletu za stabilní owner-facing API** — viz
     interpolace.
   - **BarChartWidget** — `getCardRadiusClass()` + `getPartialName()`.
   - **StackedColumn** — `getLinesHtml(): Htmlable` (escaped) místo Blade closure.
+    **Pozn. (oprava):** tenhle krok posunul *markup* z Blade do PHP konkatenace,
+    což je proti binding pravidlu „always Htmlable, always Blade" v
+    `AI_CODING_STANDARD.md` § Rendering. Vlastnictví je správně (jeden owner
+    řádků, view emituje jednu hodnotu), markup ne — dnes se skládá z partialu
+    `tables.columns.partials.stacked-line`, zkompilovaného jednou do `Skeleton`
+    a spliceovaného po řádcích. Stejný vzor platí pro každý další „owner vrací
+    HTML" krok: owner rozhoduje, šablona kreslí.
   - **Table responsive** — `getStackedTableHiddenClass/getStackedCardsVisibleClass()`.
   - **Sortable drag handle** — markup do partialu `wire-sortable::partials.`
     `drag-handle` + `Table::getDragHandleHtml()` macro; injektován do Alpine

@@ -74,6 +74,12 @@ trait StacksOnMobile
      */
     protected array $mobileCardSkeletons = [];
 
+    /** One meta chip's compiled markup — {@see getMobileCardMetaSkeleton()}. */
+    protected ?Skeleton $mobileCardMetaSkeleton = null;
+
+    /** One detail pair's compiled markup — {@see getMobileCardDetailSkeleton()}. */
+    protected ?Skeleton $mobileCardDetailSkeleton = null;
+
     /**
      * Shape the stacked mobile card: which column is the title, which is the
      * supporting line, which is the figure set right, and what sits beside them
@@ -345,6 +351,47 @@ trait StacksOnMobile
             ])->render(),
             'cardClasses', 'key', 'keyJs', 'title', 'metric', 'subtitle',
             'meta', 'groupActions', 'details', 'actions', 'subRows',
+        );
+    }
+
+    /**
+     * One meta chip on a card, compiled once and filled per record.
+     *
+     * The shell above cannot hold this: how many chips a card has is a property
+     * of the card, but the chips themselves repeat *within* one card's `meta`
+     * slot. So it is its own partial, rendered once and spliced — a card with
+     * four meta columns over fifty records fills two hundred times and renders
+     * once.
+     */
+    public function getMobileCardMetaSkeleton(): Skeleton
+    {
+        return $this->mobileCardMetaSkeleton ??= Skeleton::compile(
+            view('wire-table::tables.partials.mobile-card-meta', [
+                'content' => Skeleton::slot('content'),
+            ])->render(),
+            'content',
+        );
+    }
+
+    /**
+     * One label/value pair in a card's detail grid, compiled once and filled per
+     * record.
+     *
+     * Same reason as the meta chip: the grid is a card-level slot, the pairs
+     * inside it repeat. The odd-last-item span rides in as a slot rather than a
+     * second compiled shape — it is a class value, not a different structure.
+     */
+    public function getMobileCardDetailSkeleton(): Skeleton
+    {
+        return $this->mobileCardDetailSkeleton ??= Skeleton::compile(
+            view('wire-table::tables.partials.mobile-card-detail', [
+                'spanClass' => Skeleton::slot('spanClass'),
+                'label' => Skeleton::slot('label'),
+                'content' => Skeleton::slot('content'),
+            ])->render(),
+            'spanClass',
+            'label',
+            'content',
         );
     }
 }

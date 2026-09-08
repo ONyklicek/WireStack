@@ -82,30 +82,38 @@ test('html with raw content', function () {
     expect($html->getContent())->toBe('<div>Raw</div>');
 });
 
+/*
+ * The four factories ship framework markup, so it comes out of a Blade partial
+ * rather than a PHP string. These pin the output byte for byte — that move is
+ * only free if the partial emits exactly what the concatenation did, whitespace
+ * included, and a stray newline in a template is invisible to a toContain().
+ */
 test('html divider factory', function () {
-    $html = Html::divider();
-
-    expect($html->getContent())->toContain('<hr');
+    expect(Html::divider()->getContent())
+        ->toBe('<hr class="my-4 border-gray-200 dark:border-gray-700">');
 });
 
 test('html spacer factory', function () {
-    $html = Html::spacer('8');
-
-    expect($html->getContent())->toContain('h-8');
+    expect(Html::spacer('8')->getContent())->toBe('<div class="h-8"></div>');
 });
 
 test('html heading factory', function () {
-    $html = Html::heading('Title', 2);
-
-    expect($html->getContent())->toContain('<h2')
-        ->and($html->getContent())->toContain('Title');
+    expect(Html::heading('Title', 2)->getContent())
+        ->toBe('<h2 class="text-xl font-semibold text-gray-900 dark:text-white">Title</h2>')
+        ->and(Html::heading('Title', 1)->getContent())->toContain('<h1 class="text-2xl font-bold ')
+        ->and(Html::heading('Title', 7)->getContent())->toContain('<h7 class="text-base font-medium ');
 });
 
 test('html paragraph factory', function () {
-    $html = Html::paragraph('Some text');
+    expect(Html::paragraph('Some text')->getContent())
+        ->toBe('<p class="text-sm text-gray-600 dark:text-gray-400">Some text</p>');
+});
 
-    expect($html->getContent())->toContain('<p')
-        ->and($html->getContent())->toContain('Some text');
+test('the escaping factories still escape', function () {
+    // heading() and paragraph() take prose, not markup — that is what separates
+    // them from content(), where the caller supplies trusted HTML of their own.
+    expect(Html::paragraph('<script>x</script>')->getContent())->toContain('&lt;script&gt;')
+        ->and(Html::heading('a & b')->getContent())->toContain('a &amp; b');
 });
 
 // ─── ViewField ─────────────────────────────────────────────────

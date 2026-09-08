@@ -33,26 +33,38 @@
                 'cursor-not-allowed opacity-50' => $field->isDisabled(),
             ])
         >
+            {{-- The three states of one position, each drawn by the canonical icon
+                 owner rather than an inline <svg> (Rendering § Icons).
+
+                 The glyph is `wire:star`, the framework's own — the same one
+                 the read-only RatingColumn draws, so a rating does not look like
+                 two different things depending on whether you can edit it.
+
+                 Not Heroicons' star, which exists: all three states are emitted
+                 for every position and switched by x-show in the browser, so
+                 four <svg> per position and twenty per field at the default max.
+                 Heroicons' is 336 B of path against this one's 104 (426 against
+                 157 outlined), which measured 14 718 B per field against a
+                 10 400 ceiling in FormFieldPayloadTest. The table pays far less
+                 for the same choice — its cell render is memoised per distinct
+                 rating — but one star beats a cheaper one and a prettier one.
+
+                 x-show rides in as a root attribute, which is what lets an
+                 Alpine-bound icon still come out of PHP. --}}
             {{-- Full star --}}
-            <svg
-                x-show="isFilled({{ $i }})"
-                class="w-7 h-7 {{ $colorClasses }}" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-            {{-- Half star --}}
-            <svg
-                x-show="isHalfFilled({{ $i }})"
-                class="w-7 h-7 {{ $colorClasses }}" viewBox="0 0 24 24" fill="currentColor">
-                <defs><clipPath id="half-{{ $i }}"><rect x="0" y="0" width="12" height="24"/></clipPath></defs>
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor" clip-path="url(#half-{{ $i }})"/>
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
+            {!! icon('wire:star', 'w-7 h-7', $colorClasses, '', ['x-show' => 'isFilled(' . $i . ')']) !!}
+
+            {{-- Half star: the empty glyph with the filled one clipped to half its
+                 width over it, so the set needs no third icon. currentColor is
+                 inherited from the wrapper, which is why the outline and the filled
+                 half share the accent colour the way the clipped version did. --}}
+            <span x-show="isHalfFilled({{ $i }})" class="relative inline-flex {{ $colorClasses }}">
+                {!! icon('wire:star-outline', 'w-7 h-7') !!}
+                <span class="absolute inset-y-0 left-0 w-1/2 overflow-hidden">{!! icon('wire:star', 'w-7 h-7') !!}</span>
+            </span>
+
             {{-- Empty star --}}
-            <svg
-                x-show="!isFilled({{ $i }}) && !isHalfFilled({{ $i }})"
-                class="w-7 h-7 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
+            {!! icon('wire:star-outline', 'w-7 h-7', 'text-gray-300 dark:text-gray-600', '', ['x-show' => '!isFilled(' . $i . ') && !isHalfFilled(' . $i . ')']) !!}
         </button>
     @endfor
 

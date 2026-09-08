@@ -12,10 +12,12 @@ use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\Contracts\ModalFormFactory;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
+use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\Runtime\FieldPartialHook;
 use NyonCode\WireForms\Forms\Support\FormModalFormFactory;
 use NyonCode\WireForms\Integration\ActionMacros;
+use NyonCode\WireForms\Support\Icons\FormsIconSet;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class WireFormsServiceProvider extends PackageServiceProvider
@@ -54,6 +56,13 @@ class WireFormsServiceProvider extends PackageServiceProvider
 
                 Bundle::serve('wire-forms', self::ASSETS_PATH);
                 $this->registerTiptapRoute();
+
+                // The glyphs Heroicons has no answer for, as `forms:bold` and
+                // friends. Registering the set costs nothing until one is asked
+                // for — the bodies load on first use — and it is what keeps the
+                // editors and the rating field free of inline <svg>
+                // (AI_CODING_STANDARD.md, Rendering § Icons).
+                app(IconManager::class)->registerIconSet(new FormsIconSet, 'forms');
             })
             ->hasConfig()
             ->hasViews()
