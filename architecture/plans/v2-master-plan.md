@@ -415,7 +415,7 @@ selection/sort.
 **Otevřené po V2.5 — z palety záznamů udělat command palette (zapsáno 2026-09-08):**
 ⌘K dnes hledá jen *záznamy*. `GloballySearchable` má dvě metody a obě jsou nad
 záznamem modelu; `GlobalSearch::search()` přeskočí vše, co není `DescribesResource`
-s modelem (`GlobalSearch.php:85`), takže dashboard ani jiný bezzáznamový zdroj se do
+s modelem (`GlobalSearch.php:89`), takže dashboard ani jiný bezzáznamový zdroj se do
 výsledků nedostane; `GlobalSearchResult` je plochý readonly řádek
 `title`/`subtitle`/`url`/`icon` (`GlobalSearchResult.php:25–31`); a
 `GlobalSearchPalette::select()` proto umí jedinou věc — `redirect($url, navigate: true)`
@@ -431,11 +431,14 @@ příkazy tedy neplatí jako řešení — platí jako důkaz, že rozšiřiteln
 zavedený tvar (typed payload, `HookTarget`, `for:`), který má nový zdroj řádků
 následovat, ne obcházet.
 
-> **Pozor na stav:** `Hook::SearchQuerying`, `Hook::NavigationBuilding` a jejich
-> payloady jsou k 2026-09-08 **v pracovním stromě, necommitnuté**
-> (`SearchQueryingPayload.php` je dokonce untracked). Než se podle nich něco
-> naplánuje, ověř je proti HEAD — v commitnutém kódu zatím nejsou. Kontext:
-> ADR [0030](../decisions/0030-hook-surface.md).
+> **Stav ověřen proti HEAD (2026-09-08, `a5783df9`):** oba hooky jsou commitnuté
+> a čtyři tvrzení, na kterých tenhle blok stojí, platí — `SearchQuerying` se
+> dispatchuje na řádku 158, `get()` až na 171 a `canView()` na 176, takže pořadí
+> „před authorizací" drží; `NavigationBuildingPayload::$items` je `public array`,
+> **ne** `readonly`, takže vkládání řádků je opravdu možné; scoping přes `Zone`
+> sedí (`Workspace.php:245`); a filtr viditelnosti běží na řádku 173, tedy
+> **před** dispatchem na 242 — varování o nefiltrované vložené položce platí.
+> Kontext: ADR [0030](../decisions/0030-hook-surface.md).
 
 **Zadání vlastníka 2026-09-08:** paleta má nabízet **čtyři druhy řádků** — záznamy
 (hotové), **položky navigace**, **globální příkazy** („Nový zákazník") a **akce nad
@@ -443,10 +446,10 @@ nalezeným záznamem** („Objednávka #412 → Stornovat"). Nejsou to čtyři v
 práce; dělí se na dvě poloviny s velmi různou cenou.
 
 **Levná polovina — navigace.** Zdroj už existuje a nic nového nepotřebuje:
-`Workspace::items($zone, $linkedOnly)` (`Workspace.php:119`) vrací ploché, seřazené,
+`Workspace::items($zone, $linkedOnly)` (`Workspace.php:123`) vrací ploché, seřazené,
 už resolvované `NavigationItem` — label doplněný z `pluralLabel()`, ikona, URL
 vyplněná přes `ResolvesPageUrls` pro dané `Zone`, a **viditelnost i skryté skupiny
-už odfiltrované** (`Workspace.php:167`). `Core/Resources/` je L1, takže `GlobalSearch/`
+už odfiltrované** (`Workspace.php:173`). `Core/Resources/` je L1, takže `GlobalSearch/`
 (L2) na něj smí. Navigační řádek je navíc *URL řádek*, takže dnešní `select()` ho
 odbaví beze změny. Zbývá jen: druhý zdroj řádků vedle resources v `search()`, vlastní
 skupina ve výsledcích, a rozhodnutí o pořadí skupin (navigace nad záznamy, nebo pod).
