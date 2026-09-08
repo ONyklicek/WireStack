@@ -29,6 +29,9 @@ class ModalStackingPreview extends Component
     /** Customers created inline during the create-and-select demos (feeds the Select). */
     public array $addedCustomers = [];
 
+    /** What the halted action was told, once it ran on the confirmed pass. */
+    public string $haltAnswer = '';
+
     public function mount(string $variant = 'gallery'): void
     {
         $this->variant = $variant;
@@ -49,6 +52,7 @@ class ModalStackingPreview extends Component
             ['idx' => '05', 'entry' => 'stackPanel', 'name' => 'Slide-over parent', 'desc' => 'A modal stacked over a slide-over.'],
             ['idx' => '06', 'entry' => 'stackTeam', 'name' => 'Wizard in the stack', 'desc' => 'A multi-step wizard stacked on a parent.'],
             ['idx' => '07', 'entry' => 'stackReplace', 'name' => 'Replace & cancel', 'desc' => 'Swap a modal in place, or cancel the whole stack.'],
+            ['idx' => '08', 'entry' => 'haltAsk', 'name' => 'Halt outside a table', 'desc' => 'The action stops mid-flight and asks — on a plain component.'],
         ];
     }
 
@@ -228,6 +232,29 @@ class ModalStackingPreview extends Component
                         ->action(fn ($cancelParents) => $cancelParents()),
                 ])
                 ->action(fn () => null),
+
+            // 08 — a halt on a host that is not a table. The action runs, stops
+            // itself mid-flight and asks; the answer comes back on the confirmed
+            // pass. Until 2.0 this set state that no view outside wire-table read.
+            Action::make('haltAsk')
+                ->label('Archive order')
+                ->action(function (bool $confirmed, array $data, callable $halt) {
+                    if (! $confirmed) {
+                        return $halt()
+                            ->danger()
+                            ->heading('Why are you archiving ORD-1042?')
+                            ->description('The reason is kept on the order and shown in its history.')
+                            ->submitLabel('Archive')
+                            ->closeOnEscape(false)
+                            ->form([
+                                TextInput::make('reason')->label('Reason')->placeholder('superseded, duplicate, mistake…')->required(),
+                                Textarea::make('note')->label('Note')->rows(2)->placeholder('Anything the next person should know…'),
+                            ])
+                            ->validation(['reason' => 'required'], ['reason.required' => 'Pick a reason before archiving.']);
+                    }
+
+                    $this->haltAnswer = (string) ($data['reason'] ?? '');
+                }),
         ];
     }
 

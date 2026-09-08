@@ -109,7 +109,7 @@ class FetchDoc extends BoostTool
     {
         return [
             'id' => $schema->string()
-                ->description('A section id ("docs/core/actions.md#confirmation") or a document id ("docs/core/actions.md").')
+                ->description('A section id ("docs/core/actions/modals.md#confirmation-modal") or a document id ("docs/core/actions/index.md").')
                 ->required(),
             'full' => $schema->boolean()
                 ->description('Return the entire document instead of a single section or an outline.'),

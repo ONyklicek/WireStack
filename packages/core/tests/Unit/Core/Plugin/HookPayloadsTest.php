@@ -29,7 +29,11 @@ it('serializes table configuring payloads', function () {
     ]);
 });
 
-it('serializes table querying payloads with force sort overrides', function () {
+it('serializes table querying payloads', function () {
+    // No sort override in here, and not by omission: this payload is built after
+    // the plan is, so the override goes on the array hook that runs before the
+    // planner. The two properties that used to sit here were filled by nothing
+    // and read by nothing — removed in 2.0.
     $table = new stdClass;
     $plan = new QueryPlan;
     $query = Mockery::mock(Builder::class);
@@ -38,16 +42,12 @@ it('serializes table querying payloads with force sort overrides', function () {
         table: $table,
         plan: $plan,
         query: $query,
-        forceSortColumn: 'position',
-        forceSortDirection: 'asc',
     );
 
     expect($payload->toArray())->toBe([
         'table' => $table,
         'plan' => $plan,
         'query' => $query,
-        'force_sort_column' => 'position',
-        'force_sort_direction' => 'asc',
     ]);
 });
 

@@ -114,10 +114,24 @@ try {
   const bound = await eval_(`(() => {
     const root = sortRoot();
     if (! root) return 'no-root';
+
     const data = Alpine.$data(root);
+
     // The whole point: an unregistered factory leaves x-data evaluating to
-    // nothing and there is no instance to find.
-    return data && data.instance ? 'bound' : 'no-instance';
+    // nothing, and a declared drag that never bound is the failure this
+    // controller was written to end.
+    if (! data || typeof data.sortableConfig !== 'function') return 'no-controller';
+
+    // SortableJS stamps itself onto the element it bound, under a key it builds
+    // as 'Sortable' + a timestamp. Asked by prefix rather than by name because
+    // the timestamp is not knowable — and asked of the element rather than of
+    // the controller because Alpine's x-sort owns the instance now, so there is
+    // nothing on our side to hold it. That makes this a stronger check than the
+    // one it replaces: it proves the library bound, not merely that an object
+    // existed.
+    const isBound = (el) => !! el && Object.keys(el).some((key) => key.startsWith('Sortable'));
+
+    return isBound(root) || Array.from(root.children).some(isBound) ? 'bound' : 'no-instance';
   })()`);
   check('SortableJS is bound to the list, not just declared on it', bound === 'bound', bound);
 

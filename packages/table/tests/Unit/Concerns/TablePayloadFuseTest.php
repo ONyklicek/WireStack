@@ -115,7 +115,7 @@ class PfComponent extends Component
         }
 
         if ($this->contextMenu) {
-            $table->gestures()->rowContextMenu([Action::make('edit')->label('Edit')]);
+            $table->gestures()->recordAction(Action::make('edit')->label('Edit')->onContextMenu());
         }
 
         if ($this->subRows) {
@@ -408,6 +408,12 @@ it('keeps the context-menu panel to its items', function () {
     // Measured 2026-08-08: 982 B (−41 %) and 7 whitespace nodes. What is left is
     // almost entirely the item markup itself, which is genuinely per-record (an action
     // may be hidden for this row) and is core's dropdown-item, not this partial.
+    //
+    // Re-measured 2026-09-08 at 1242 B, and the extra 260 B are not the panel: with
+    // `Table::rowContextMenu()` removed in 2.0 the menu is bound as a record action,
+    // and a table that has record actions is a grid — so every row also carries the
+    // role and tabindex the keyboard layer needs. That is the trade the removal makes:
+    // the dedicated list was cheaper per row and could only be opened with a mouse.
     $plain = pfPerRow();
     $menu = pfPerRow(contextMenu: true);
 
@@ -416,7 +422,7 @@ it('keeps the context-menu panel to its items', function () {
         'whitespaceRuns' => $menu['whitespaceRuns'] - $plain['whitespaceRuns'],
     ];
 
-    expect($panel['bytes'])->toBeLessThan(1050)
+    expect($panel['bytes'])->toBeLessThan(1300)
         ->and($panel['whitespaceRuns'])->toBeLessThanOrEqual(7);
 });
 

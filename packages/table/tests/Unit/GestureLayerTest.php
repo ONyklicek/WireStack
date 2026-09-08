@@ -130,7 +130,7 @@ it('takes the whole layer away with gestures(false)', function () {
         ->gestures(false)
         ->selectable()
         ->fillHandle()
-        ->rowContextMenu([Action::make('archive')]);
+        ->recordAction(Action::make('archive')->onContextMenu());
 
     expect($table->usesGridSemantics())->toBeFalse()
         ->and($table->getTableRole())->toBeNull()

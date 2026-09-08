@@ -72,6 +72,13 @@ it('mounts the palette and the toast container itself', function () {
         ->and($html)->toContain('x-data');
 });
 
+it('hovers the search trigger in the theme it is being viewed in', function () {
+    // `dark:` is a zero-specificity `:where()` variant, so a hover written for
+    // light mode alone outranks the dark background it sits on: this button
+    // used to turn pure white on hover in a dark chrome.
+    expect(alGet('bare'))->toContain('dark:hover:bg-gray-700');
+});
+
 it('offers a way past the menu for keyboard users', function () {
     expect(alGet('bare'))->toContain('href="#wire-admin-main"');
 });

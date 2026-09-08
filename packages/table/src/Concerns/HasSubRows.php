@@ -220,18 +220,6 @@ trait HasSubRows
     }
 
     /**
-     * Start with every row's children open.
-     *
-     * @deprecated Flatten mode never flattened anything — it was a second flag
-     *             with the same visible effect as {@see subRowsDefaultExpanded()},
-     *             which it now delegates to.
-     */
-    public function flattenSubRows(bool $flatten = true): static
-    {
-        return $this->subRowsDefaultExpanded($flatten);
-    }
-
-    /**
      * Enable independent filtering of sub-rows.
      */
     public function subRowsFilterable(bool $filterable = true): static
@@ -444,14 +432,6 @@ trait HasSubRows
     public function isSubRowsExpandable(): bool
     {
         return $this->subRowsExpandable;
-    }
-
-    /**
-     * @deprecated Use {@see isSubRowsDefaultExpanded()}.
-     */
-    public function isFlattenSubRows(): bool
-    {
-        return $this->subRowsDefaultExpanded;
     }
 
     public function isSubRowsFilterable(): bool

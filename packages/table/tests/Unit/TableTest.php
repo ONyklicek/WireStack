@@ -578,14 +578,6 @@ it('can enable polling with interval', function () {
     expect($table->isPolling())->toBeTrue()
         ->and($table->getPollingInterval())->toBe('10s');
 });
-
-it('polling alias works', function () {
-    $table = Table::make()->polling('30s');
-
-    expect($table->isPolling())->toBeTrue()
-        ->and($table->getPollingInterval())->toBe('30s');
-});
-
 it('can configure polling options', function () {
     $table = Table::make()
         ->poll('5s')

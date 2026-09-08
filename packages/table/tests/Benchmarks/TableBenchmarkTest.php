@@ -397,7 +397,7 @@ it('serializes ActionHalt quickly', function () {
     for ($i = 0; $i < 10000; $i++) {
         ActionHalt::make()
             ->heading('Smazat?')
-            ->body('Opravdu?')
+            ->description('Opravdu?')
             ->icon('trash', 'danger')
             ->submitLabel('Smazat')
             ->cancelLabel('Zrušit')

@@ -357,6 +357,28 @@ it('resolves the achromatic endpoints on every surface, never through the defaul
     }
 });
 
+it('gives every choice hue a filled-button hover of its own', function () {
+    // The `buttons` variant paints an unselected face grey on hover. A selected
+    // one must answer with its own accent instead — and it only can because
+    // `peer-checked:hover:` outranks the plain `hover:` it would otherwise tie
+    // with. A hue whose `solid` arm forgets the pair does not merely look flat:
+    // its selected button turns grey under its own white label.
+    $hues = [...rawHues(), 'primary', 'success', 'danger', 'warning', 'info',
+        'gray', 'secondary', 'emerald', 'amber', 'black', 'white', 'not-a-color'];
+
+    foreach ($hues as $hue) {
+        $solid = TestColorClass::getChoiceColorClasses($hue)['solid'];
+
+        $this->assertStringContainsString('peer-checked:hover:bg-', $solid, "[{$hue}] has no hover for its filled button.");
+        $this->assertStringContainsString('peer-checked:hover:border-', $solid, "[{$hue}] hovers its filled button without moving its border.");
+
+        // The hover step has to be a different shade, or it is not a hover.
+        preg_match('/peer-checked:bg-(\S+)/', $solid, $rest);
+        preg_match('/peer-checked:hover:bg-(\S+)/', $solid, $over);
+        $this->assertNotSame($rest[1], $over[1], "[{$hue}] hovers its filled button to the shade it already had.");
+    }
+});
+
 it('maps every semantic alias to its role, on every surface', function () {
     // emerald/amber/secondary are the only true aliases left: they must be
     // indistinguishable from the role they stand for, everywhere.

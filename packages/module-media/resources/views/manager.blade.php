@@ -271,7 +271,13 @@
         x-on:dragleave="isDragging = false"
         x-on:drop.prevent="handleDrop($event)"
     >
-        <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+        {{-- `overflow-clip`, so the radius is kept by what is inside it too. The
+             list rows run to both edges and the last one's hover paints a
+             rectangle into the bottom corners; the toolbar below reaches the top
+             ones, which is why it was carrying a `rounded-t-xl` of its own. Clip
+             and not `overflow-hidden`: that toolbar is `sticky top-0` against the
+             PAGE, and a scroll container here would leave it in flow. --}}
+        <div class="overflow-clip rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
 
             {{-- The toolbar stops scrolling with the files. Where you are, what
                  you are looking for and how it is shown are the three things you

@@ -14,9 +14,12 @@ use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\LaravelPackageToolkit\Support\PackageAssets;
 use NyonCode\LaravelPackageToolkit\Support\PublishedAssets;
+use NyonCode\WireCore\Actions\Support\ActionCallbackInvoker;
+use NyonCode\WireCore\Actions\Support\ComponentActionRunner;
 use NyonCode\WireCore\Actions\View\BulkButtonComponent;
 use NyonCode\WireCore\Actions\View\ButtonComponent;
 use NyonCode\WireCore\Actions\View\GroupComponent;
+use NyonCode\WireCore\Actions\View\HaltHostComponent;
 use NyonCode\WireCore\Actions\View\ModalHostComponent;
 use NyonCode\WireCore\Audit\AuditEventSubscriber;
 use NyonCode\WireCore\Audit\Console\PruneAuditEntriesCommand;
@@ -40,6 +43,7 @@ use NyonCode\WireCore\Exceptions\PluginRegistrationException;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Contracts\ResolvesRecordUrls;
+use NyonCode\WireCore\Foundation\Contracts\RunsComponentActions;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
 use NyonCode\WireCore\Foundation\Mentions\MentionRegistry;
@@ -76,6 +80,7 @@ use NyonCode\WireCore\Notifications\NotificationBell;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireCore\Notifications\Support\NotificationChannel;
 use NyonCode\WireCore\Widgets\Console\MakeDashboardCommand;
+use NyonCode\WireCore\Widgets\Console\MakeWidgetCommand;
 use NyonCode\WireCore\Widgets\DashboardRegistry;
 
 class WireCoreServiceProvider extends PackageServiceProvider
@@ -112,11 +117,17 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->hasCommand(PruneAuditEntriesCommand::class)
             ->hasCommand(PruneNotificationsCommand::class)
             ->hasCommand(MakeDashboardCommand::class)
-            // The dashboard generator's template, publishable so an application
-            // can change what it produces — Laravel's own `stub:publish`
-            // convention, which the command honours by preferring
-            // `base_path('stubs/dashboard.stub')` over this one.
-            ->hasStubs(['../stubs/dashboard.stub'])
+            ->hasCommand(MakeWidgetCommand::class)
+            // The generators' templates, publishable so an application can
+            // change what they produce — Laravel's own `stub:publish`
+            // convention, which the commands honour by preferring
+            // `base_path('stubs/…')` over these. The widget generator writes two
+            // files, so it has two: the class and the Blade view it names.
+            ->hasStubs([
+                '../stubs/dashboard.stub',
+                '../stubs/widget.stub',
+                '../stubs/widget-view.stub',
+            ])
             // A provider the consumer owns, the way Cashier and Fortify ship
             // one: where an application registers its dashboards and declares
             // its navigation groups. Shipped as a .stub so the package's own
@@ -369,6 +380,14 @@ class WireCoreServiceProvider extends PackageServiceProvider
         $this->app->singleton(ValidationPipeline::class);
         $this->app->singleton(ActionRegistry::class);
         $this->app->singleton(MetadataRegistry::class);
+        $this->app->singleton(ActionCallbackInvoker::class);
+
+        // The way across a module boundary the layers forbid importing over: a
+        // widget carries actions, `Widgets` may not see `Actions`, so the widget
+        // host asks the container for the capability and this is what answers.
+        // Bound to the contract rather than to the class, so a consumer names
+        // `Foundation\Contracts\RunsComponentActions` and nothing else.
+        $this->app->singleton(RunsComponentActions::class, ComponentActionRunner::class);
 
         // ActionPipeline is transient — each execution gets a fresh instance
         $this->app->bind(ActionPipeline::class);
@@ -386,6 +405,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
         Blade::component('wire-actions::group', GroupComponent::class);
         Blade::component('wire-actions::bulk-button', BulkButtonComponent::class);
         Blade::component('wire-actions::modal-host', ModalHostComponent::class);
+        Blade::component('wire-actions::halt-host', HaltHostComponent::class);
     }
 
     // ─── Notifications ──────────────────────────────────────────

@@ -27,9 +27,8 @@ const { eval_, waitFor, shot, shotDir, consoleErrors, badResponses, close } =
   await openPage({ url, shotPrefix: 'table-sticky-actions', width: 900, height: 900 });
 const { check, finish } = checker();
 
-// The scroll region, found the way the header-chrome driver finds it: through the
-// edge gradient that is guaranteed to sit beside it.
-const scroller = 'document.querySelector("[data-testid=table-scroll-shadow-end]").parentElement.querySelector(".overflow-x-auto")';
+// The scroll region, by the class that carries its scrollbar rules.
+const scroller = 'document.querySelector(".wire-scroller")';
 
 // The pinned cell of the second body row, and an ordinary cell in the same row.
 const pinned = 'document.querySelectorAll("tbody tr")[1].querySelector("td.sticky")';

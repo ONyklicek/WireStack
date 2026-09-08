@@ -69,7 +69,7 @@ class WtSubRowsComponent extends Component
         }
 
         if ($this->flatten) {
-            $table->flattenSubRows();
+            $table->subRowsDefaultExpanded();
         }
 
         return $table;
@@ -116,14 +116,14 @@ afterEach(function () {
 
 it('defaults the summary scope to query', function () {
     $component = new WtSubRowsComponent;
-    $component->flattenMode = false; // bootstrap tableState
+    $component->mountWithTable();
 
     expect($component->getSummaryScope())->toBe('query');
 });
 
 it('can switch the summary scope to page', function () {
     $component = new WtSubRowsComponent;
-    $component->flattenMode = false;
+    $component->mountWithTable();
 
     $component->setSummaryScope('page');
 
@@ -132,7 +132,7 @@ it('can switch the summary scope to page', function () {
 
 it('ignores an unknown summary scope', function () {
     $component = new WtSubRowsComponent;
-    $component->flattenMode = false;
+    $component->mountWithTable();
 
     $component->setSummaryScope('bogus');
 
@@ -141,7 +141,7 @@ it('ignores an unknown summary scope', function () {
 
 it('falls back to query when selection scope is active but nothing is selected', function () {
     $component = new WtSubRowsComponent;
-    $component->flattenMode = false;
+    $component->mountWithTable();
 
     $component->setSummaryScope('selection');
 
@@ -150,14 +150,15 @@ it('falls back to query when selection scope is active but nothing is selected',
 
 it('omits selection from scope options when nothing is selected', function () {
     $component = new WtSubRowsComponent;
-    $component->flattenMode = false;
+    $component->mountWithTable();
 
     expect($component->getSummaryScopeOptions())->toBe(['query', 'page']);
 });
 
 it('includes selection in scope options when rows are selected', function () {
     $component = new WtSubRowsComponent;
-    $component->selectedRecords = [1, 2];
+    $component->mountWithTable();
+    $component->tableState->set('selection.records', [1, 2]);
 
     expect($component->getSummaryScopeOptions())->toContain('selection')
         ->and($component->getSummaryScope())->toBe('query');
@@ -167,7 +168,8 @@ it('includes selection in scope options when rows are selected', function () {
 
 it('eager-loads sub-rows for all rows in flatten mode in a single query', function () {
     $component = new WtSubRowsComponent;
-    $component->flattenMode = true;
+    $component->mountWithTable();
+    $component->tableState->set('rows.expandAll', true);
 
     DB::flushQueryLog();
     DB::enableQueryLog();
@@ -193,7 +195,7 @@ it('eager-loads sub-rows for all rows in flatten mode in a single query', functi
 
 it('does not eager-load sub-rows when no rows are expanded', function () {
     $component = new WtSubRowsComponent;
-    $component->flattenMode = false;
+    $component->mountWithTable();
 
     $records = $component->getTableRecords();
     $collection = $records instanceof EloquentCollection ? $records : collect($records->all());
@@ -203,7 +205,8 @@ it('does not eager-load sub-rows when no rows are expanded', function () {
 
 it('returns sorted sub-rows from the eager-loaded relation', function () {
     $component = new WtSubRowsComponent;
-    $component->flattenMode = true;
+    $component->mountWithTable();
+    $component->tableState->set('rows.expandAll', true);
 
     $records = $component->getTableRecords();
     $first = (($records instanceof EloquentCollection) ? $records : collect($records->all()))->first();
@@ -216,7 +219,8 @@ it('returns sorted sub-rows from the eager-loaded relation', function () {
 it('applies the per-parent limit in memory when eager-loaded', function () {
     $component = new WtSubRowsComponent;
     $component->subRowsLimit = 2;
-    $component->flattenMode = true;
+    $component->mountWithTable();
+    $component->tableState->set('rows.expandAll', true);
 
     $records = $component->getTableRecords();
     $first = (($records instanceof EloquentCollection) ? $records : collect($records->all()))->first();
@@ -229,7 +233,8 @@ it('applies the per-parent limit in memory when eager-loaded', function () {
 it('reveals all sub-rows after showAllSubRows even with a limit', function () {
     $component = new WtSubRowsComponent;
     $component->subRowsLimit = 2;
-    $component->flattenMode = true;
+    $component->mountWithTable();
+    $component->tableState->set('rows.expandAll', true);
 
     $records = $component->getTableRecords();
     $first = (($records instanceof EloquentCollection) ? $records : collect($records->all()))->first();
@@ -239,16 +244,16 @@ it('reveals all sub-rows after showAllSubRows even with a limit', function () {
     expect($component->getSubRows($first))->toHaveCount(3);
 });
 
-// ─── flattenSubRows() config feeds the expansion baseline ────────────────────
+// ─── subRowsDefaultExpanded() feeds the expansion baseline ───────────────────
 
-it('opens every row when the deprecated flattenSubRows() config is set', function () {
+it('opens every row when the subRowsDefaultExpanded() config is set', function () {
     $component = new WtSubRowsComponent;
     $component->flatten = true;
     $component->mountWithTable();
 
     // No runtime flag is seeded: the config *is* the baseline until the user
     // chooses otherwise.
-    expect($component->flattenMode)->toBeNull()
+    expect($component->tableState->get('rows.expandAll'))->toBeNull()
         ->and($component->expandsSubRowsByDefault())->toBeTrue()
         ->and($component->isRowExpanded(1))->toBeTrue();
 });

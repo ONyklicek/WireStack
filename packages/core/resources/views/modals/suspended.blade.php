@@ -42,7 +42,7 @@
        - $zIndex:         the stacking z-index for this depth (below the active modal)
        - $depthBelowTop:  levels below the active modal (>= 1) --}}
 @php
-    use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
+    use NyonCode\WireCore\Foundation\Concerns\HasModalProperties;
 
     $isSlideOver = (bool) ($modalData['slideOver'] ?? false);
     $widthClass = HasModalProperties::getMaxWidthClass($modalData['width'] ?? 'md');

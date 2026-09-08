@@ -15,9 +15,6 @@ use NyonCode\WireTable\Table;
  */
 final class TableStateSchema
 {
-    /** @var array<string, string>|null Memoized legacy map — __get/__set run per property access. */
-    private static ?array $legacyPropertyMap = null;
-
     /**
      * The state a specific table starts in: {@see defaults()} with everything
      * the table's own configuration decides applied over it.
@@ -193,45 +190,6 @@ final class TableStateSchema
                 'active' => true,
                 'checksum' => null,
             ],
-        ];
-    }
-
-    /**
-     * Map from legacy property names to state paths.
-     *
-     * Used for backward compatibility via __get/__set magic methods.
-     *
-     * @return array<string, string>
-     */
-    public static function legacyPropertyMap(): array
-    {
-        return self::$legacyPropertyMap ??= [
-            'tableSortColumn' => 'sort.column',
-            'tableSortDirection' => 'sort.direction',
-            'tablePerPage' => 'pagination.perPage',
-            'tableSearch' => 'search',
-            'tableFilters' => 'filters',
-            'columnFilters' => 'columnFilters',
-            'selectedRecords' => 'selection.records',
-            'hiddenColumns' => 'columns.hidden',
-            'expandedRows' => 'rows.expanded',
-            // Flatten mode was a second, redundant "everything is open" flag; it
-            // now aliases the expansion baseline that replaced it.
-            'flattenMode' => 'rows.expandAll',
-            'subRowFilters' => 'rows.subRowFilters',
-            // The single-slot `modal.action.*` aliases are intentionally gone:
-            // action modals are now a live stack under `modal.actions.{depth}.*`
-            // (there is no stable single path to alias). Halt modal is unchanged.
-            'showHaltModal' => 'modal.halt.show',
-            'haltActionName' => 'modal.halt.actionName',
-            'haltRecordKey' => 'modal.halt.recordKey',
-            'haltModalConfig' => 'modal.halt.config',
-            'haltModalFormData' => 'modal.halt.formData',
-            'haltActionConfirmed' => 'modal.halt.confirmed',
-            'haltActionType' => 'modal.halt.actionType',
-            'haltContext' => 'modal.halt.context',
-            'tableReady' => 'ready',
-            'tablePollingActive' => 'polling.active',
         ];
     }
 }

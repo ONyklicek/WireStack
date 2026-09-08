@@ -55,7 +55,7 @@ class RmkHost extends Component
             ->selectable()
             ->subRows('children')
             ->actions([Action::make('open')->label('Open')])
-            ->rowContextMenu([Action::make('open')->label('Open')])
+            ->recordAction(Action::make('open')->label('Open')->onContextMenu())
             ->headerActions([HeaderAction::make('create')->label('Create')])
             ->columns([TextColumn::make('name')]);
     }

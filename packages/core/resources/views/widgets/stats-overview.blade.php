@@ -7,14 +7,18 @@
          these two lines differently on purpose (a chart's sits beside its
          filter, a table's above a border), and collapsing distinct surfaces into
          one helper is what CLAUDE.md forbids. --}}
-    @if($widget->getHeading() || $widget->getDescription())
-        <div class="mb-4">
-            @if($widget->getHeading())
-                <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ $widget->getHeading() }}</h3>
-            @endif
-            @if($widget->getDescription())
-                <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{{ $widget->getDescription() }}</p>
-            @endif
+    @if($widget->getHeading() || $widget->getDescription() || $widget->hasRenderableActions())
+        <div class="mb-4 flex items-start justify-between gap-4">
+            <div>
+                @if($widget->getHeading())
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ $widget->getHeading() }}</h3>
+                @endif
+                @if($widget->getDescription())
+                    <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{{ $widget->getDescription() }}</p>
+                @endif
+            </div>
+
+            @include('wire-core::widgets.partials.widget-actions', ['widget' => $widget])
         </div>
     @endif
 

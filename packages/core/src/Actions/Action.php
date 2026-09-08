@@ -11,7 +11,6 @@ use NyonCode\WireCore\Actions\Contracts\RendersAsMenuItem;
 use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
 use NyonCode\WireCore\Actions\Support\FixedClickResolver;
 use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
-use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Foundation\View\Primitives;
 use NyonCode\WireCore\Foundation\View\Skeleton;
 
@@ -96,25 +95,13 @@ class Action extends BaseAction implements RendersAsButton, RendersAsMenuItem
     }
 
     /**
-     * Hide the label text (show only icon). Fixed typo from `hiddeLabel`.
+     * Hide the label text, leaving the icon.
      */
     public function hideLabel(bool $hideLabel = true): static
     {
         $this->hideLabel = $hideLabel;
 
         return $this;
-    }
-
-    /**
-     * Misspelled alias of {@see hideLabel()}, kept for backwards compatibility.
-     *
-     * @deprecated Use hideLabel() instead. Will be removed in v2.0.
-     */
-    public function hiddeLabel(bool $hiddeLabel = true): static
-    {
-        Deprecation::method('hiddeLabel', 'hideLabel');
-
-        return $this->hideLabel($hiddeLabel);
     }
 
     /**

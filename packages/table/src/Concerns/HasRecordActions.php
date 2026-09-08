@@ -90,27 +90,15 @@ trait HasRecordActions
     }
 
     /**
-     * @return array<int, Action|ActionGroup>
-     */
-    public function getRowContextMenuActions(): array
-    {
-        return $this->rowContextMenuActions;
-    }
-
-    /**
-     * The full context-menu action list: the dedicated `rowContextMenu()` actions
-     * plus any record action bound with `onContextMenu()`. This is the single
-     * owner of "what the right-click menu shows" — the record-action layer feeds
-     * the existing menu rather than standing up a second one.
+     * What the right-click menu shows: every record action bound with
+     * `onContextMenu()`. One owner, one list — the dedicated `rowContextMenu()`
+     * list that used to be merged in front of it was removed in 2.0.
      *
      * @return array<int, Action|ActionGroup>
      */
     public function getContextMenuActions(): array
     {
-        return array_merge(
-            array_values($this->rowContextMenuActions),
-            $this->recordActionResolver()->contextMenuActions(),
-        );
+        return $this->recordActionResolver()->contextMenuActions();
     }
 
     /**

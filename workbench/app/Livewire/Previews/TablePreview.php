@@ -57,6 +57,9 @@ class TablePreview extends Component
     /** Whether the one-off expansion seed above has already been applied. */
     public bool $expansionSeeded = false;
 
+    /** Whether the one-off modal auto-open below has already been applied. */
+    public bool $modalSeeded = false;
+
     /** Variants that auto-open the header-action form modal for visual QA. */
     private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-slideover-compose', 'modal-fullscreen-mobile', 'modal-wizard', 'modal-nested'];
 
@@ -101,10 +104,15 @@ class TablePreview extends Component
         }
 
         if (in_array($this->variant, self::MODAL_VARIANTS, true)) {
-            // booted() runs on every request; only open the modal once, or a
-            // stacked/nested modal would be re-opened and its form reset on each
-            // roundtrip. No open frames = nothing mounted yet.
-            if ($this->actionFrameCount() === 0) {
+            // booted() runs on every request; seed the auto-open exactly once.
+            // Counting open frames instead would re-open the modal on the very
+            // request that opens it by hand — close it, click "Invite user",
+            // and booted() would stack a second copy under the one the click
+            // mounts. A flag survives the roundtrip; the frame count does not
+            // say whether the seed already happened.
+            if (! $this->modalSeeded) {
+                $this->modalSeeded = true;
+
                 $this->openHeaderActionModal('invite');
             }
 
@@ -242,7 +250,7 @@ class TablePreview extends Component
             ]);
 
         if ($this->variant === 'subrows-flatten') {
-            $table->flattenSubRows();
+            $table->subRowsDefaultExpanded();
         }
 
         if ($this->variant === 'subrows-limit') {
@@ -985,12 +993,12 @@ class TablePreview extends Component
             // capabilities the shipped default leaves allowed, so it works on
             // every variant — unlike the keyboard, the ranges and the sweep,
             // which only the record-action variants below ask for.
-            ->rowContextMenu([
-                Action::make('view')->label('View')->icon('outline:eye'),
-                Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
-                Action::make('duplicate')->label('Duplicate')->icon('outline:document-duplicate'),
-                DeleteAction::make(),
-            ])
+            // `recordAction()` appends; `recordActions()` would replace whatever
+            // the variant above bound to click, double-click or a key.
+            ->recordAction(Action::make('view')->label('View')->icon('outline:eye')->onContextMenu())
+            ->recordAction(Action::make('edit')->label('Edit')->icon('pencil')->color('primary')->onContextMenu())
+            ->recordAction(Action::make('duplicate')->label('Duplicate')->icon('outline:document-duplicate')->onContextMenu())
+            ->recordAction(DeleteAction::make()->onContextMenu())
             ->paginated(false);
 
         // Only the variants whose whole point is whole-row interaction ask for

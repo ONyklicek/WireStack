@@ -412,7 +412,7 @@ final class PluginManager
      *
      * It resolves to the **array** side, which is the deprecated one, and that is
      * deliberate rather than a concession. A callback written without a hint was
-     * written when the array payload was the only payload — `docs/core/plugins.md`
+     * written when the array payload was the only payload — `docs/core/plugins/index.md`
      * said so — so handing it a DTO would break the very plugins the 2.x BC
      * promise covers. A callback that wants the typed payload names its type, and
      * naming it is what every documented example already does.

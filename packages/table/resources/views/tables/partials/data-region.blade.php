@@ -168,55 +168,32 @@
                     @if($isFillEnabled)
                         @include('wire-table::tables.partials.fill-assets')
                     @endif
-                    {{-- The scroll region, inside a frame that says when it is scrolled.
+                    {{-- The scroll region.
+
                          A region that clips is clipped silently: `overflow` draws nothing
-                         at the edge it cuts, so on a phone a whole actions column sits
-                         off-screen, and under a sticky header the last visible row is
-                         sliced through the middle with nothing to say more follow. The
-                         gradients are that sign, and each appears only on an edge there
-                         is more content past.
+                         at the edge it cuts, so a table three screens wide looks, at
+                         rest, exactly like one that fits — a whole actions column
+                         off-screen, or the last visible row sliced through the middle
+                         with nothing to say more follow.
 
-                         Alpine on THIS element, never on the scroller: the scroller
-                         already names `wireFillHandle` on an editable table, and one
-                         element takes one `x-data`. The literal is constant, so a morph
-                         cannot change the attribute text and re-initialise the
-                         component underneath a drag. --}}
+                         What says so is the scrollbar, made visible by
+                         `wire-core::partials.scroller-assets`. It used to be three gradients laid over the
+                         edges, kept in sync with the scroller's own offsets by the
+                         Alpine component that stood here: an `x-data` on a frame
+                         wrapping this element (the scroller already names
+                         `wireFillHandle` on an editable table, and one element takes one
+                         `x-data`), a `scroll` listener, and a ResizeObserver on both
+                         boxes because a column toggled off changes the answer without
+                         scrolling anything. They marked an edge without saying how far
+                         it went or letting anyone go there, and they dimmed what they
+                         covered — the pinned header row, the rules between rows, the
+                         first characters of the first column. A scrollbar says both,
+                         answers a drag, and is a property of the box rather than state
+                         that can be wrong after a morph. The frame, the three overlays
+                         and all of the wiring went with it. --}}
                     @if($rendersTable)
-                    <div
-                            class="relative {{ $tableHiddenClass }}"
-                            x-data="{
-                                atStart: true,
-                                atEnd: true,
-                                atBottom: true,
-                                syncScrollEdges() {
-                                    const el = $refs.scroller
-                                    if (! el) return
-                                    this.atStart = el.scrollLeft <= 1
-                                    this.atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1
-                                    this.atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1
-                                },
-                            }"
-                            {{-- Deferred: `x-init` runs while THIS element is being
-                                 initialised, and `x-ref` on a child is registered only
-                                 when Alpine walks down to it — so `$refs.scroller` is
-                                 still undefined here without the tick, and ResizeObserver
-                                 throws on the whole data region.
-
-                                 Both the frame and the table are observed: the frame
-                                 resizes with the viewport, the table with a column
-                                 toggled off. --}}
-                            x-init="$nextTick(() => {
-                                        const el = $refs.scroller
-                                        if (! el) return
-                                        syncScrollEdges()
-                                        const ro = new ResizeObserver(() => syncScrollEdges())
-                                        ro.observe(el)
-                                        if (el.firstElementChild) ro.observe(el.firstElementChild)
-                                    })"
-                    >
-                    <div class="relative overflow-x-auto"
-                         x-ref="scroller"
-                         x-on:scroll.passive="syncScrollEdges()"
+                        @include('wire-core::partials.scroller-assets')
+                    <div class="relative overflow-x-auto wire-scroller {{ $tableHiddenClass }}"
                          @if($scrollRegionStyle) style="{{ $scrollRegionStyle }}" @endif
                          @if($isFillEnabled)
                              {{-- Deliberately NOT island-targeted, unlike the editable
@@ -538,40 +515,6 @@
                             </div>
                         @endif
                     </div>{{-- /scroll region --}}
-                        {{-- Pointer-events-none, so the edge a finger lands on is still
-                             the scroller's. Inset from the top by the header's own
-                             height would need a measurement; overlaying it instead is
-                             what every scroll shadow does, and at this opacity the
-                             header reads through unchanged.
-
-                             Three edges, not four. The top one is the one edge a table
-                             does not need: an uncapped region cannot scroll vertically
-                             at all, and a capped one is capped because its header is
-                             pinned there — the header IS the marker for what is above,
-                             and a gradient would have to be offset by its measured
-                             height to avoid simply dimming it. --}}
-                        <div
-                                x-show="! atStart"
-                                x-cloak
-                                aria-hidden="true"
-                                data-testid="table-scroll-shadow-start"
-                                class="pointer-events-none absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-gray-900/10 to-transparent dark:from-black/40"
-                        ></div>
-                        <div
-                                x-show="! atEnd"
-                                x-cloak
-                                aria-hidden="true"
-                                data-testid="table-scroll-shadow-end"
-                                class="pointer-events-none absolute inset-y-0 right-0 w-5 bg-gradient-to-l from-gray-900/10 to-transparent dark:from-black/40"
-                        ></div>
-                        <div
-                                x-show="! atBottom"
-                                x-cloak
-                                aria-hidden="true"
-                                data-testid="table-scroll-shadow-bottom"
-                                class="pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-gray-900/10 to-transparent dark:from-black/40"
-                        ></div>
-                    </div>{{-- /scroll frame --}}
                     @endif
 
                     {{-- The card rendering: the second half under stackedOnMobile(),

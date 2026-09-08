@@ -195,7 +195,7 @@ it('copies the shipped skill modules', function () {
 
     $installed = SkillInstaller::default()->install($target);
 
-    expect($installed)->toContain('wire-table-development', 'wire-forms-development')
+    expect($installed)->toContain('wire-table-development', 'wire-forms-development', 'wire-v2-upgrade')
         ->and(is_file($target.'/wire-table-development/SKILL.md'))->toBeTrue();
 });
 

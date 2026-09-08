@@ -61,4 +61,24 @@ return [
         'code' => 'Code',
         'other' => 'File',
     ],
+
+    // The dashboard grid ({@see Widgets\Widget}). `widget_loading` is announced
+    // to a screen reader while a deferred widget is being fetched; the empty
+    // state is what a list widget shows when its query came back with nothing.
+    'widget_loading' => 'Loading…',
+    'widget_filter' => 'Filter',
+    'widget_empty' => 'Nothing to show.',
+    'widget_reorder' => 'Drag to reorder',
+    'widget_tray' => 'Available widgets',
+    'widget_tray_empty' => 'Everything is on the dashboard.',
+    'widget_add' => 'Add to dashboard',
+    'widget_remove' => 'Remove from dashboard',
+    'widget_wider' => 'Wider',
+    'widget_narrower' => 'Narrower',
+    'widget_taller' => 'Taller',
+    'widget_shorter' => 'Shorter',
+    'widget_customise' => 'Customise',
+    'widget_save_layout' => 'Save layout',
+    'widget_cancel_layout' => 'Cancel',
+    'widget_reset_layout' => 'Reset to default',
 ];

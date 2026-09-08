@@ -7,7 +7,6 @@ use NyonCode\WireCore\Widgets\ChartWidget;
 use NyonCode\WireCore\Widgets\CustomWidget;
 use NyonCode\WireCore\Widgets\Stat;
 use NyonCode\WireCore\Widgets\StatsOverviewWidget;
-use NyonCode\WireCore\Widgets\TableWidget;
 use NyonCode\WireCore\Widgets\Widget;
 
 // ─── CustomWidget ────────────────────────────────────────────────────────────
@@ -61,16 +60,6 @@ it('renders a chart widget with chart data', function () {
         ->toContain('wire-chart-widget')
         ->toContain('Revenue')
         ->toContain('Jan');
-});
-
-// ─── TableWidget ─────────────────────────────────────────────────────────────
-
-it('creates a table widget with callback', function () {
-    $callback = fn () => null;
-    $widget = TableWidget::make()->table($callback);
-
-    expect($widget)->toBeInstanceOf(Widget::class)
-        ->and($widget->getTableCallback())->toBe($callback);
 });
 
 // ─── HasPolling ──────────────────────────────────────────────────────────────
@@ -135,14 +124,21 @@ it('supports heading and description', function () {
 
 // ─── Lazy Loading ────────────────────────────────────────────────────────────
 
-it('has no lazy() setter, because deferral was never wired up', function () {
-    // Widget::lazy()/isLazy() were removed in 2.0: no widget view ever read the
-    // flag — no `wire:init`, no intersect, no island — so the method promised
-    // deferral and delivered a full render. Per-widget islands cannot supply it
-    // either (`@island` inside `@foreach` does not compile: one compiled body per
-    // directive occurrence, and the loop variable is not in its scope). Deferring
-    // a whole dashboard is Table/Dashboard-level lazy, which is a different
-    // feature. See architecture/plans/forms-and-surfaces-performance.md step 4.
-    expect(method_exists(CustomWidget::class, 'lazy'))->toBeFalse()
-        ->and(method_exists(CustomWidget::class, 'isLazy'))->toBeFalse();
+it('is eager unless asked otherwise', function () {
+    // The render standard's default: make the render cheap, do not defer it.
+    expect(CustomWidget::make()->isLazy())->toBeFalse()
+        ->and(CustomWidget::make()->lazy()->isLazy())->toBeTrue()
+        ->and(CustomWidget::make()->lazy()->lazy(false)->isLazy())->toBeFalse();
+});
+
+// ─── Addressable Regions ─────────────────────────────────────────────────────
+
+it('needs no anchor until something replaces it on its own', function () {
+    // A widget nothing targets renders inline, exactly as it always did — the
+    // anchor is what a poll tick, a deferred load and a filter change all need,
+    // and only those three.
+    expect(CustomWidget::make()->usesPartialAnchor())->toBeFalse()
+        ->and(CustomWidget::make()->pollingInterval('10s')->usesPartialAnchor())->toBeTrue()
+        ->and(CustomWidget::make()->lazy()->usesPartialAnchor())->toBeTrue()
+        ->and(CustomWidget::make()->filter(['week' => 'Week'])->usesPartialAnchor())->toBeTrue();
 });

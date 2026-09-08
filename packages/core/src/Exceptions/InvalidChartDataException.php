@@ -28,11 +28,6 @@ final class InvalidChartDataException extends InvalidArgumentException implement
         return new self(sprintf('Invalid chart variant [%s]. Allowed: %s.', $variant, implode(', ', $allowed)));
     }
 
-    public static function notChartItems(string $expected): self
-    {
-        return new self('BarChartWidget::items() expects an array of '.$expected.' instances.');
-    }
-
     public static function percentageOutOfRange(float $percentage): self
     {
         return new self("Chart item percentage must be between 0 and 100, [{$percentage}] given.");

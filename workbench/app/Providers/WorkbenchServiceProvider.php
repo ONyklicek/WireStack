@@ -46,6 +46,21 @@ class WorkbenchServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // A cache store that survives a request, which the halt modal needs: it
+        // parks its form there between the render that raised it and the one
+        // that confirms it. Testbench defaults to the `database` store, whose
+        // table the workbench has no reason to migrate — so a halt form would
+        // come back without its fields on the preview and nowhere else.
+        config()->set('cache.default', 'file');
+
+        // The customisable-dashboard preview has to survive a reload, and the
+        // shipped default is `null` — nothing persisted, which is the right
+        // default for a framework and the wrong one for showing what saving a
+        // layout does. Session rather than database: no migration to run before
+        // a preview works.
+        config()->set('wire-core.preferences.default', 'session');
+        config()->set('wire-core.preferences.guest', 'session');
+
         // Two domain modules, and nothing else. V2.6 step 5: what used to be
         // three arrays here — resources, dashboards, navigation groups, each
         // listing things this provider had to know about individually — is now

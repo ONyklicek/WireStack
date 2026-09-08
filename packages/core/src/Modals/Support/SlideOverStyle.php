@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Modals\Support;
 
+use NyonCode\WireCore\Foundation\Concerns\HasModalProperties;
 use NyonCode\WireCore\Foundation\Support\MobileSheet;
-use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
 
 /**
  * Presentation/layout resolver for the slide-over panel shell.

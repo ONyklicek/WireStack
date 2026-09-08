@@ -36,9 +36,9 @@ class CtxComponent extends Component
             ->columns([TextColumn::make('name')]);
 
         return $this->withMenu
-            ? $table->rowContextMenu([
-                Action::make('edit')->label('Edit'),
-                Action::make('delete')->label('Delete')->color('danger'),
+            ? $table->recordActions([
+                Action::make('edit')->label('Edit')->onContextMenu(),
+                Action::make('delete')->label('Delete')->color('danger')->onContextMenu(),
             ])
             : $table;
     }
@@ -71,19 +71,19 @@ function ctxRecord(): CtxRow
 
 // ─── Fluent API ──────────────────────────────────────────────────
 
-it('is off until dedicated actions are given', function () {
+it('is off until an action is bound to the right click', function () {
     expect(Table::make()->hasRowContextMenu())->toBeFalse()
-        ->and(Table::make()->rowContextMenu([])->hasRowContextMenu())->toBeFalse();
+        ->and(Table::make()->recordActions([])->hasRowContextMenu())->toBeFalse();
 
-    $table = Table::make()->rowContextMenu([Action::make('edit')]);
+    $table = Table::make()->recordAction(Action::make('edit')->onContextMenu());
     expect($table->hasRowContextMenu())->toBeTrue()
-        ->and($table->getRowContextMenuActions())->toHaveCount(1);
+        ->and($table->getContextMenuActions())->toHaveCount(1);
 });
 
 it('keeps the context-menu actions separate from the row actions', function () {
     $table = Table::make()
         ->actions([Action::make('edit')->label('Edit')])
-        ->rowContextMenu([Action::make('archive')->label('Archive')]);
+        ->recordAction(Action::make('archive')->label('Archive')->onContextMenu());
 
     // Only the dedicated menu actions render — not the toolbar actions.
     $html = $table->getRowContextMenuHtml(ctxRecord())->toHtml();
@@ -93,9 +93,9 @@ it('keeps the context-menu actions separate from the row actions', function () {
 // ─── Menu HTML ───────────────────────────────────────────────────
 
 it('renders the menu actions as context-menu items', function () {
-    $table = Table::make()->rowContextMenu([
-        Action::make('edit')->label('Edit'),
-        Action::make('delete')->label('Delete'),
+    $table = Table::make()->recordActions([
+        Action::make('edit')->label('Edit')->onContextMenu(),
+        Action::make('delete')->label('Delete')->onContextMenu(),
     ]);
 
     $html = $table->getRowContextMenuHtml(ctxRecord())->toHtml();
@@ -104,9 +104,9 @@ it('renders the menu actions as context-menu items', function () {
 });
 
 it('omits a hidden action from the context menu', function () {
-    $table = Table::make()->rowContextMenu([
-        Action::make('edit')->label('Edit'),
-        Action::make('secret')->label('Secret')->visible(fn () => false),
+    $table = Table::make()->recordActions([
+        Action::make('edit')->label('Edit')->onContextMenu(),
+        Action::make('secret')->label('Secret')->visible(fn () => false)->onContextMenu(),
     ]);
 
     $html = $table->getRowContextMenuHtml(ctxRecord())->toHtml();
@@ -114,12 +114,13 @@ it('omits a hidden action from the context menu', function () {
     expect($html)->toContain('Edit')->not->toContain('Secret');
 });
 
-it('flattens an action group into the context menu items', function () {
-    $table = Table::make()->rowContextMenu([
-        ActionGroup::make([
-            Action::make('edit')->label('Edit'),
-            Action::make('archive')->label('Archive'),
-        ]),
+it('renders every bound action as its own menu item', function () {
+    // A pre-built ActionGroup used to be accepted here and flattened; since 2.0
+    // the menu is fed one record action at a time, which is the same list with
+    // the grouping object taken out of the middle.
+    $table = Table::make()->recordActions([
+        Action::make('edit')->label('Edit')->onContextMenu(),
+        Action::make('archive')->label('Archive')->onContextMenu(),
     ]);
 
     $html = $table->getRowContextMenuHtml(ctxRecord())->toHtml();
