@@ -412,6 +412,63 @@ milníky). ~11–14 d; SV nezávislé, GS po V2.3, LT těží z V2.1.
 filtrem; virtuální scroll opt-in mode drží perf na 100k+ řádcích, koexistuje se
 selection/sort.
 
+**Otevřené po V2.5 — z palety záznamů udělat command palette (zapsáno 2026-09-08):**
+⌘K dnes hledá jen *záznamy*. `GloballySearchable` má dvě metody a obě jsou nad
+záznamem modelu; `GlobalSearch::search()` přeskočí vše, co není `DescribesResource`
+s modelem (`GlobalSearch.php:85`), takže dashboard ani jiný bezzáznamový zdroj se do
+výsledků nedostane; `GlobalSearchResult` je plochý readonly řádek
+`title`/`subtitle`/`url`/`icon` (`GlobalSearchResult.php:25–31`); a
+`GlobalSearchPalette::select()` proto umí jedinou věc — `redirect($url, navigate: true)`
+(`GlobalSearchPalette.php:137`), s `url === null` nedělá nic.
+
+**Zadání vlastníka 2026-09-08:** paleta má nabízet **čtyři druhy řádků** — záznamy
+(hotové), **položky navigace**, **globální příkazy** („Nový zákazník") a **akce nad
+nalezeným záznamem** („Objednávka #412 → Stornovat"). Nejsou to čtyři varianty jedné
+práce; dělí se na dvě poloviny s velmi různou cenou.
+
+**Levná polovina — navigace.** Zdroj už existuje a nic nového nepotřebuje:
+`Workspace::items($zone, $linkedOnly)` (`Workspace.php:119`) vrací ploché, seřazené,
+už resolvované `NavigationItem` — label doplněný z `pluralLabel()`, ikona, URL
+vyplněná přes `ResolvesPageUrls` pro dané `Zone`, a **viditelnost i skryté skupiny
+už odfiltrované** (`Workspace.php:167`). `Core/Resources/` je L1, takže `GlobalSearch/`
+(L2) na něj smí. Navigační řádek je navíc *URL řádek*, takže dnešní `select()` ho
+odbaví beze změny. Zbývá jen: druhý zdroj řádků vedle resources v `search()`, vlastní
+skupina ve výsledcích, a rozhodnutí o pořadí skupin (navigace nad záznamy, nebo pod).
+Autorizace je tu jiná otázka než u záznamů — menu filtruje `isVisible()`, ne policy
+nad instancí, takže se **nesmí** recyklovat `canView()`.
+
+**Drahá polovina — akce.** Ta stojí na třech rozhodnutích, ne na třech řádcích kódu:
+
+1. **Zdroj příkazů.** Kontrakt typu `ProvidesCommands`, čtený z `Catalog` stejně jako
+   dnes `GloballySearchable`, aby příkaz nemusel viset na `DescribesResource` — jinak
+   se globální příkaz musí předstírat jako resource. Umístění podle zavedeného vzoru
+   (`ProvidesResourceForm` ve forms, `ProvidesResourceInfolist` v core/Infolists,
+   `ProvidesResourceTable` v panels) → vlastníkem je surface, tedy `Actions/`. **Což
+   je přesně ta past, viz bod 3.**
+2. **Tvar řádku.** Alternativa k `url` na výsledku — jméno akce + payload,
+   **serializovatelné**, ne closure: řádek je `readonly` a plochý záměrně, protože se
+   jich renderuje mnoho najednou a paleta nesmí volat zpátky do resource na řádek.
+   Akce nad záznamem k tomu potřebuje klíč záznamu v payloadu a **druhou úroveň
+   paletky** (vybraný řádek → jeho akce), což je jediná část s vlastním UI návrhem.
+3. **Kdo akci spustí — a to je ta drahá půlka.** `GlobalSearch/` i `Actions/` jsou
+   **obojí L2** (`ModuleLayersTest.php:58,63`), takže přímý import brána zamítne.
+   Cesta je kontrakt ve `Foundation/Contracts/` nebo měkký seam po vzoru
+   `Actions\Concerns\HasLifecycle::resolveNotificationManagerClass()`, **ne** další
+   řádek v `permittedCoreEdges()` — ten seznam smí zůstat stejný nebo se zkrátit.
+   A platí tu totéž, co si vynutil [`record-actions.md`](record-actions.md) §0 E:
+   paleta **nezakládá druhou execution pipeline**, resolvuje trigger na jméno
+   existující akce a předá ho tomu, kdo ji vlastní. U akce nad záznamem otevřeným ze
+   stránky resource to je ta stránka; **u globálního příkazu bez tabulky na obrazovce
+   ten vlastník dnes neexistuje** — to je jediná skutečně otevřená otázka celé
+   položky, ne detail k dopsání.
+
+**Pořadí, kdyby se to dělalo:** navigace první (levná, ověří druhý zdroj řádků i
+skupiny ve výsledcích na něčem, co nespouští nic), akce až po ní. **Čeká na
+rozhodnutí o bodu 3** — bez pojmenovaného vlastníka spouštění je to druhý slovník
+pro akce vedle toho, který už vlastní `Actions/`, přesně ta chyba, kterou
+§ kanonického vlastnictví v `CLAUDE.md` zakazuje. BC riziko nulové (aditivní);
+kandidát na V2.7 / V3, ne škrtnutá položka.
+
 ---
 
 ### V2.6 — Domain module axis ✅ **hotová (2026-09-03)**
