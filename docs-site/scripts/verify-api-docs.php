@@ -234,6 +234,15 @@ foreach ($pages as $page) {
         }
     }
 
+    // A guide can still own one class's whole API, and then it is that class's
+    // reference whatever its H1 says. `api_class:` in the front matter binds it.
+    // ActionHalt is the case this exists for: it has no page of its own, its
+    // vocabulary lives in the lifecycle guide, and nothing checked it — which is
+    // how `->body()` stayed in three examples across a rename.
+    if (preg_match('/^api_class:\s*["\']?([A-Za-z0-9_\\\\]+)["\']?\s*$/m', $md, $bound)) {
+        $fqcn = str_replace('\\\\', '\\', trim($bound[1]));
+    }
+
     if ($fqcn === null) {
         continue; // a guide, not an API reference
     }

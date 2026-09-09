@@ -1,5 +1,6 @@
 ---
 order: 47
+summary: Checkboxes, select-all, the bulk bar — and what selection means when the sweep and the keyboard reach it too.
 ---
 
 # Selecting Rows

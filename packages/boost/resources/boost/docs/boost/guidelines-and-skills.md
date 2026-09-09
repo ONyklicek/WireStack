@@ -36,6 +36,7 @@ when relevant, keeping context lean:
 | `wire-forms-development` | Building or changing a wire form. |
 | `wire-core-development` | Working with actions, modals, notifications, infolists, or widgets. |
 | `wire-sortable-development` | Adding drag & drop reordering to a table. |
+| `wire-v2-upgrade` | Migrating an application from wireStack 1.x to 2.0. |
 
 ## Customising
 

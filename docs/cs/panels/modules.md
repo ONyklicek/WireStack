@@ -1,17 +1,24 @@
 ---
-order: 96
-summary: Doménová osa — jedna business oblast deklarovaná na jednom místě, registrovaná jako plugin a rozvezená do registrů, které vlastní resources, dashboardy a menu.
+order: 70
+summary: Modul je manifest jedné business oblasti — resources, dashboardy a nadpis v menu, ze kterých se skládá — registrovaný jako plugin a rozvezený do registrů, které je vlastní.
 ---
 
-# Doménové moduly
+# Moduly
 
 Balíčky jsou technická osa tohohle frameworku: core, forms, table, sortable.
-**Doménový modul** je ta druhá — `billing` vedle `operations` vedle `crm` —
-a existuje proto, aby business oblast byla deklarovaná na jednom místě místo
-rozsypaná po provideru aplikace jako tři nesouvisející seznamy.
+**Modul** je ta druhá — `billing` vedle `operations` vedle `crm` — a existuje
+proto, aby business oblast byla deklarovaná na jednom místě místo rozsypaná
+po provideru aplikace jako tři nesouvisející seznamy.
 
 Modul nevlastní žádné primitivy a žádný neforkuje. Pojmenuje, z čeho se oblast
 skládá; vrstvy, které ty věci už vlastní, je vlastní dál.
+
+> **Je to manifest, ne doménová vrstva.** Tahle třída se dřív jmenovala
+> `DomainModule` a to slibovalo víc, než dělá: drží tři seznamy názvů tříd
+> a nadpis do menu. Není to bounded context, není to hranice agregátu a není to
+> místo, kde se cokoli modeluje — modul nemá žádné vlastní chování a nic tady
+> neizoluje kód jedné oblasti od druhé. Když tohle aplikace chce, chce to ve
+> vlastních namespacech a vlastních testech.
 
 ## Jak to funguje
 
@@ -25,12 +32,12 @@ rozhodnutí a je to ono, co drží lifecycle poctivý:
    modul, všechny moduly zaregistrované dřív, než se kterýkoli bootne, a
    závislost, která musí být zaregistrovaná první, jinak se registrace odmítne.
 3. `WireCoreServiceProvider` pak přečte, co který modul deklaruje, a naplní
-   [registr resources](resources.md), [registr dashboardů](widgets.md) a
-   [navigační skupiny](resources.md#navigace-a-workspace).
+   [registr resources](resources.md), [registr dashboardů](../core/widgets/index.md) a
+   [navigační skupiny](navigation.md).
 
-Oba registry jsou zdroje jednoho [`Catalog`u](resources.md#catalog-api), takže se
+Oba registry jsou zdroje jednoho [`Catalog`u](navigation.md#catalog-api), takže se
 resources a dashboardy modulu z téhle jediné deklarace dostanou do menu, do
-routeru i do palety globálního hledání — včetně [zón](resources.md#zony), které
+routeru i do palety globálního hledání — včetně [zón](routing.md#zony), které
 si ze stejného katalogu vybírají podle klíče.
 
 Krok 3 dělá provider, ne modul, a to schválně. Dashboard bydlí ve widgetové
@@ -46,10 +53,10 @@ codebase pořád odstraňuje.
 ## Jak se deklaruje
 
 ```php
-use NyonCode\WireCore\Core\Modules\DomainModule;   // [tl! focus:start]
+use NyonCode\WireCore\Core\Modules\Module;   // [tl! focus:start]
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 
-final class BillingModule extends DomainModule
+final class BillingModule extends Module
 {
     public function getId(): string
     {
@@ -90,7 +97,7 @@ zaregistrovaná první:
 ```php
 use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
 
-final class OperationsModule extends DomainModule implements HasDependencies
+final class OperationsModule extends Module implements HasDependencies
 {
     public function getId(): string
     {
@@ -147,7 +154,7 @@ final class BillingModuleServiceProvider extends ServiceProvider
 
 Registrace v `boot()` místo toho hodí výjimku — pravidlo o fázi a důvod, proč
 pozdní příchod nejde zachránit, je v
-[Registrace pluginů z balíčku](plugins.md#registrace-pluginu-z-balicku).
+[Registrace pluginů z balíčku](../core/plugins/registration.md#registrace-pluginu-z-balicku).
 
 Dvě cesty a co je čí:
 
@@ -159,7 +166,7 @@ Dvě cesty a co je čí:
 Obě končí ve stejném seznamu, takže modul z balíčku se rozprostře do registru
 resources, registru dashboardů a navigačních skupin přesně jako lokální a do
 menu, routeru i vyhledávací palety se dostane přes stejný
-[`Catalog`](resources.md#catalog-api).
+[`Catalog`](navigation.md#catalog-api).
 
 Všechno ostatní, co balíček s modulem nese — config, views, překlady, migrace
 a assety — je běžná práce balíčku a patří jeho vlastnímu service provideru.
@@ -182,15 +189,30 @@ $manager->hook(Hook::TableComposing, function (TableComposingPayload $payload) {
 }, for: 'invoices');   // klíč, pod kterým se modul zaregistroval
 ```
 
-[Hook](plugins.md#zuzeni-hooku-na-jednu-komponentu) dosáhne na list toho modulu
+[Hook](../core/plugins/hooks.md#zuzeni-hooku-na-jednu-komponentu) dosáhne na list toho modulu
 a na nic jiného, a přežije jeho další vydání — což fork ne. Podědit resource
 z modulu nefunguje: potomek si nese klíč rodiče a koliduje s ním.
+
+Ten samý klíč dosáhne i na ostatní plochy modulu — a právě to dělá z věty výše
+tvrzení o celém modulu, ne jen o jeho listu:
+
+| Změna | Hook |
+| --- | --- |
+| sloupec v jeho listu | `Hook::TableComposing` |
+| pole v jeho formuláři | `Hook::FormConfiguring` |
+| řádek v jeho detailu | `Hook::InfolistConfiguring` |
+| co obsahuje jeho export | `Hook::ExportConfiguring` |
+| co mapuje jeho import | `Hook::ImportConfiguring` |
+| s čím přijde pole ve formuláři | `Hook::FormFilling` |
+| co zapíše inline editace buňky | `Hook::CellUpdating` |
+| veřejný stav na její stránce při mountu | `Hook::PageMounting` |
+| jestli se vůbec objeví v menu | `Hook::NavigationBuilding` (zúžený zónou) |
 
 ## Co modul nedělá
 
 | Tohle ne | Protože |
 | --- | --- |
-| Registrovat workflow | Workflow má jednu skupinu konzumentů a nese ho resource, který vlastní entitu. Viz [Workflow a přechody](actions.md#workflow-a-prechody) |
+| Registrovat workflow | Workflow má jednu skupinu konzumentů a nese ho resource, který vlastní entitu. Viz [Workflow a přechody](../core/actions/workflow.md#workflow-a-prechody) |
 | Registrovat policies | Ty vlastní Laravelí `Gate` |
 | Vyjmenovávat workspaces | `Workspace` je služba nad registry, ne třída k vyjmenování |
 | Forkovat primitiv | Modul skládá `Table`, `Form`, `Widget` a `Resource` beze změny; je to doménová osa, ne druhá implementace |
@@ -206,7 +228,7 @@ describe-module              # každý registrovaný modul
 describe-module billing      # jeden, podle id
 ```
 
-## DomainModule API
+## Module API
 
 | Metoda | Vrací | K čemu |
 | --- | --- | --- |

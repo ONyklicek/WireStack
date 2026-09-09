@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: "Skutečné tlačítko v buňce: akce, potvrzení, stav načítání a varianty, které může mít."
 ---
 
 # ButtonColumn

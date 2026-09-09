@@ -1,3 +1,7 @@
+---
+summary: "Číselná hodnota volená tažením: minimum, maximum, krok a co ukazuje úchyt, když se hýbe."
+---
+
 # Slider
 
 Vizuální slider rozsahu pro číselné hodnoty s konfigurovatelným min, max a krokem.

@@ -1,5 +1,6 @@
 ---
 order: 48
+summary: A table that behaves like a desktop application — arrow keys, ranges, the drag sweep, the row menu, `?`, and the fill handle, each opt-in.
 ---
 
 # The Gesture Layer
@@ -67,7 +68,7 @@ never calls `gestures()` gets:
 | `keyboard` | **off** | Grid navigation: roving `tabindex`, arrows, `Home`/`End`, `PageUp`/`PageDown`, `Enter` / `Shift`+`Enter` for the primary and secondary record action, `Space` to toggle the selection, and every action's own `keyboardShortcut()` / `onKey()` against the active row. Also what makes the table an ARIA `grid`. |
 | `rangeSelection` | **off** | `Shift`+click, `mod`+click and `mod`+`Shift`+click on a row, plus `Shift`+arrow, `Shift`+`Home` and `Shift`+`End` from the keyboard. |
 | `dragSelect` | **off** | The mouse sweep: press in the checkbox column and drag to select a block of rows. |
-| `contextMenu` | on | The right-click row menu — both `rowContextMenu()` and any `onContextMenu()` record action. |
+| `contextMenu` | on | The right-click row menu, fed by any `onContextMenu()` record action. |
 | `shortcutHelp` | on¹ | The `?` shortcut help. |
 | `fillHandle` | on² | The Excel-style fill handle on editable cells. |
 

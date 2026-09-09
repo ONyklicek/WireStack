@@ -1,3 +1,7 @@
+---
+summary: Rozbalovací seznam nad statickými nebo dotazovanými možnostmi, s hledáním na serveru, vícenásobným výběrem a založením nové položky.
+---
+
 # Select
 
 Dropdown select se statickými nebo dynamickými options, hledáním a multi-selectem.
@@ -9,7 +13,7 @@ use NyonCode\WireForms\Components\Select;
 > **Mobil.** Dropdown/hledací panel se otevře jako bottom sheet pod
 > nakonfigurovaným breakpointem (searchable selecty zůstanou plovoucím panelem ve výchozím stavu,
 > aby vyhledávací box zůstal použitelný). Přepište per pole pomocí `->sheetOnMobile()` /
-> `->mobileBreakpoint('md')` — viz [mobilní prezentace](../../configuration.md#mobil).
+> `->mobileBreakpoint('md')` — viz [mobilní prezentace](../../start/configuration.md#mobil).
 
 ## Základní použití
 

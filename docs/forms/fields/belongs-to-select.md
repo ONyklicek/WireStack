@@ -1,3 +1,7 @@
+---
+summary: "A select over a `belongsTo` relationship: options from the related table, searched on the server and saved as the foreign key."
+---
+
 # BelongsToSelect
 
 `BelongsToSelect` is a relationship-aware select field for `belongsTo` associations.

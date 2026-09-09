@@ -1,3 +1,7 @@
+---
+summary: A single choice from a small set, rendered as buttons, cards or plain radios.
+---
+
 # Radio
 
 Radio button group for single-choice selection.

@@ -1,5 +1,6 @@
 ---
 order: 50
+summary: Všechna pole, která wire-forms veze — vstupní, layoutová, zobrazovací, relační a opakující se — a co které ukládá.
 ---
 
 # Pole formulářů
@@ -102,7 +103,7 @@ Výchozí hodnoty doplní jen klíče, které příchozí data nedodala, takže 
 uplatní při vytváření a u nových/virtuálních polí a **nikdy nepřepíšou uloženou
 hodnotu záznamu — ani záměrný `null`.** Pro předvyplnění z recordu nebo kontextu
 nad rámec výchozích hodnot použij `fillFormUsing()` na akci (viz
-[Akce](../../core/actions.md)).
+[Akce](../../core/actions/index.md)).
 
 #### Doplnění výchozí hodnoty i pro null
 
@@ -196,17 +197,17 @@ use NyonCode\WireForms\Components\Toggle;
 ### Seskupení polí do sekcí
 
 ```php
-use NyonCode\WireForms\Components\Layout\Grid;
-use NyonCode\WireForms\Components\Layout\Section;
+use NyonCode\WireCore\Foundation\Schema\Grid;
+use NyonCode\WireCore\Foundation\Schema\Section;
 
 ->schema([
-    Section::make('User')
+    Section::make('User')                          // [tl! focus:start]
         ->schema([
             Grid::make()->columns(2)->schema([
                 TextInput::make('name')->required(),
                 TextInput::make('email')->email()->required(),
             ]),
-        ]),
+        ]),                                        // [tl! focus:end]
 ])
 ```
 

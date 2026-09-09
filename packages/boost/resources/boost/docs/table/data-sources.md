@@ -1,5 +1,6 @@
 ---
 order: 70
+summary: Where a table's rows come from when they are not in a database — the source contract, and what a table still expects of it.
 ---
 
 # Data Sources

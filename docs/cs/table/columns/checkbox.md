@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Inline checkbox zapisující booleovskou hodnotu rovnou do záznamu — tam, kde se přepínač čte špatně nebo je tabulka moc hustá.
 ---
 
 # CheckboxColumn

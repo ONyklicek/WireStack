@@ -1,6 +1,7 @@
 ---
 title: Přizpůsobení
 order: 50
+summary: Třídy, úchyty a animace tažení — a jak kterýkoli z nich vyměnit.
 ---
 
 # Přizpůsobení

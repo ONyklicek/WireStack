@@ -1,5 +1,6 @@
 ---
-order: 40
+order: 30
+summary: Confirmation dialogs, slide-overs and multi-step wizards — the surfaces an action opens, and what each does with focus, state and a submit.
 ---
 
 # Modals
@@ -68,7 +69,16 @@ safe-area padding, a drag-to-dismiss grabber and a focus trap automatically.
 The breakpoint defaults to the global `wire-core.mobile.breakpoint` (`sm`, i.e.
 `< 640px`) and can be raised per action with `->mobileBreakpoint('md')` (`< 768px`,
 includes small tablets) or `'lg'` (`< 1024px`). See
-[Configuration → Mobile](../configuration.md#mobile) for the global default.
+[Configuration → Mobile](../start/configuration.md#mobile) for the global default.
+
+A `Modal` built directly takes one more: `->mobileWidth(string $width)` sets the
+width the panel uses below that breakpoint, for the case where neither a sheet
+nor a full screen is what you want.
+
+A **confirmation with nothing to confirm** — a message the user can only
+acknowledge — is `->informative()`: it drops the submit button and relabels the
+remaining one as *Close*, so a dialog that asks nothing does not offer to do
+anything either.
 
 ## Modal Config Objects
 
@@ -256,13 +266,13 @@ ModalStep::make(string $label)
 Action::make('process')
     ->before(function ($record, Action $action) {
         if ($record->has_warnings) {
-            $action->halt()
+            $action->halt()                                    // [tl! focus:start]
                 ->heading('Warnings Detected')
-                ->body('There are unresolved warnings. Continue anyway?')
+                ->description('There are unresolved warnings. Continue anyway?')
                 ->icon('exclamation', 'warning')
                 ->submitLabel('Continue')
                 ->cancelLabel('Cancel')
-                ->width('md');
+                ->width('md');                                 // [tl! focus:end]
         }
     })
     ->action(fn ($record) => $record->process());
@@ -270,15 +280,23 @@ Action::make('process')
 
 ### ActionHalt API
 
+A halt is a modal, so it takes the modal vocabulary — the same `heading()` and
+`description()` the classes on this page use:
+
 ```php
-->heading(string $heading)
-->body(string $body)
-->icon(string $icon, ?string $color)
-->submitLabel(string $label)
-->cancelLabel(string $label)
-->width(string $width)
-->validation(array $rules)          // validate form data before continue
+->heading(string|Closure|null $heading)
+->description(string|Closure|null $description)
+->icon(string|Icon|null $icon, string|Color|null $color = null)
+->submitLabel(?string $label)
+->cancelLabel(?string $label)
+->width(string|ModalWidth $width)
+->closeOnClickAway(bool $close = true)
+->closeOnEscape(bool $close = true)
+->validation(array $rules, ?array $messages = null, ?array $attributes = null)
 ```
+
+The full surface, and what a halt does with `before()` hooks on the confirmed
+pass, is in [Lifecycle And Queues](actions/lifecycle.md#the-halt-api).
 
 ## Blade Components
 

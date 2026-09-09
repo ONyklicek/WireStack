@@ -1,3 +1,7 @@
+---
+summary: Volné štítky potvrzované Enterem nebo čárkou, s návrhy, limity a relačním režimem.
+---
+
 # Tags
 
 Volný tag input. Uživatel napíše text a potvrdí ho jako chip stisknutím Enter nebo čárky. Podporuje předdefinované návrhy, limity a režim relace.

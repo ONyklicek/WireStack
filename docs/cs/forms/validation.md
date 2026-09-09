@@ -1,5 +1,6 @@
 ---
 order: 20
+summary: Pravidla na třech úrovních — pole, formulář a pipeline — a která z nich vyhrají, když se neshodnou.
 ---
 
 # Validace formulářů
@@ -32,20 +33,38 @@ Select::make('role')
     ->rules('in:admin,editor,viewer');
 ```
 
-### Vestavěné helpery pravidel
+### Typové helpery nejsou validace
 
-Některá pole poskytují fluent helpery mapující na Laravel pravidla:
+`->email()`, `->numeric()`, `->integer()`, `->url()` a `->tel()` jsou *typové*
+presety: nastaví HTML input typ a inputmode, což vybere klávesnici na telefonu a
+nechá prohlížeč nabídnout vlastní nápovědu. `->maxLength()` a `->minLength()`
+vykreslí atributy `maxlength` / `minlength`. Žádný z nich nepřidává Laravel
+pravidlo a žádný nepřežije request, který nepřišel z tvého formuláře — serveru
+se musí zvlášť říct, co přijme:
 
-| Metoda | Ekvivalentní pravidlo |
-|--------|-----------------|
-| `->required()` | `required` |
-| `->email()` | `email` |
-| `->numeric()` | `numeric` |
-| `->integer()` | `integer` |
-| `->maxLength(255)` | `max:255` |
-| `->minLength(3)` | `min:3` |
-| `->url()` | `url` |
-| `->tel()` | nastaví HTML input typ `tel` (žádné validační pravidlo) |
+| Metoda | Co doopravdy dělá | Pravidlo, které dopsat |
+|--------|-------------------|------------------------|
+| `->email()` | `type=email`, `inputmode=email` | `->rules(['email'])` |
+| `->numeric()` | `type=number`, `inputmode=decimal` | `->rules(['numeric'])` |
+| `->integer()` | `type=number`, `inputmode=numeric`, `step=1` | `->rules(['integer'])` |
+| `->url()` | `type=url` | `->rules(['url'])` |
+| `->tel()` | `type=tel` | `->rules(['regex:…'])`, nebo použij [PhoneInput](fields/phone-input.md) |
+| `->maxLength(255)` | `maxlength="255"` | `->rules(['max:255'])` |
+| `->minLength(3)` | `minlength="3"` | `->rules(['min:3'])` |
+
+Helpery, které pravidlem *jsou*: `->required()` (a `->requiredWith()`), který
+předřadí `required`, a [`->unique()`](#unikatni-hodnoty). Některá pole navíc nesou
+**implicitní** pravidla, která si přidají sama, protože jejich stav jinak
+zkontrolovat nejde: [`MoneyInput`](fields/money-input.md) validuje částku za
+formátovaným textem, [`PhoneInput`](fields/phone-input.md) číslo za předvolbou,
+[`FileUpload`](fields/file-upload.md) nakonfigurované mime typy a velikosti a pole
+s `options()` omezení `in:` nad vlastními klíči voleb (pokud sis žádné
+nedeklaroval).
+
+> **Vyprázdněné číselné pole nepotřebuje pravidlo, aby bylo bezpečné.** `<input
+> type=number>` po vymazání odešle `''` a `TextInput` z toho cestou k záznamu
+> udělá `null`, místo aby do číselného sloupce zapsal prázdný řetězec. Viz
+> [Prázdné hodnoty](fields/text-input.md#prazdne-hodnoty).
 
 ### Unikátní hodnoty
 

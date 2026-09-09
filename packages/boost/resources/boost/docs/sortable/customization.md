@@ -1,6 +1,7 @@
 ---
 title: Customization
 order: 50
+summary: The classes, handles and animation of a drag — and how to replace any of them.
 ---
 
 # Customization

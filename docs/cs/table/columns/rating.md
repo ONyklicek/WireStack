@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Číslo jako řada plných a prázdných hvězd — read-only protějšek hodnoticího pole.
 ---
 
 # RatingColumn

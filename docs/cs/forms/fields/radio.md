@@ -1,3 +1,7 @@
+---
+summary: Jedna volba z malé sady, vykreslená jako tlačítka, karty nebo prosté radiobuttony.
+---
+
 # Radio
 
 Skupina radio tlačítek pro výběr jedné možnosti.

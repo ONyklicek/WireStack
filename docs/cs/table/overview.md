@@ -1,5 +1,6 @@
 ---
 order: 10
+summary: "Tabulkový povrch: hostitelská traita, dotaz, který staví, a základní konfigurace, na které stojí každý sloupec, filtr i akce."
 ---
 
 # Wire Table
@@ -166,7 +167,7 @@ Ty se volají z Alpine.js nebo Livewire direktiv v Blade pohledech:
 | `selectAll()` | Přepnuto „vybrat vše" |
 | `deselectAll()` | Kliknuto „zrušit výběr" |
 | `expandRow($key)` | Rozbalení/sbalení řádku |
-| `toggleAllRowExpansion()` | Hromadné rozbalení/sbalení (`toggleFlattenMode()` je zastaralý alias) |
+| `toggleAllRowExpansion()` | Hromadné rozbalení/sbalení — posune výchozí stav rozbalení |
 | `executeAction($name, $key)` | Kliknuto tlačítko akce |
 | `executeBulkAction($name)` | Kliknuta hromadná akce |
 | `updateCell($column, $key, $value)` | Potvrzena inline editace |
@@ -224,7 +225,7 @@ $table->model(Order::class)->primaryKey('uuid');
 ->columns(array $columns)
 ```
 
-Všech 13 typů sloupců viz [Reference sloupců](columns/index.md).
+Všech 19 typů sloupců viz [Reference sloupců](columns/index.md).
 
 ### Filtry
 
@@ -288,7 +289,7 @@ skupiny, rozbalený panel podřádků, prázdný stav, řádek s celkovým souč
 ve sloupci akcí žádnou buňku, takže na něm není co připnout a jeho obsah stopou
 plochy projede.
 
-Kompletní API akcí viz [Akce](../core/actions.md).
+Kompletní API akcí viz [Akce](../core/actions/index.md).
 
 ### Hledání
 
@@ -427,7 +428,8 @@ přípustný člen řazení: `GROUP BY`, `DISTINCT` a sjednocení.
 ->perPage(int|string $perPage = 10) // [tl! focus:start]
 
 // Volby dropdownu počtu na stránku; velikostí smí být slovo 'all'
-->perPageOptions(array $options = [10, 25, 50, 100]) // [tl! focus:end]
+->perPageOptions(array $options = [10, 25, 50, 100])
+->perPageSelector(bool $show = true)   // vykreslit ovládání velikosti stránky // [tl! focus:end]
 
 // Jednoduché stránkování — bez COUNT(*) dotazu, jen Předchozí/Další
 ->simplePagination()
@@ -545,20 +547,27 @@ nepotřebuje nic od Tailwind extraktoru. Vypnutí přes `stickyHeader(false)` zv
 i strop, ať už byla zadaná jakákoli výška.
 
 **Okraje scrollu.** Oblast, která ořezává, to dělá potichu — `overflow` na hraně,
-kterou uřízne, nenakreslí nic. Na telefonu tak celý sloupec s akcemi sedí mimo
-obrazovku, aniž by cokoli naznačovalo, že tam je, a pod přišpendlenou hlavičkou
-je poslední viditelný řádek přeříznutý v půlce, aniž by cokoli řeklo, že
-pokračují další. Každá tabulka proto svou scroll oblast rámuje gradientem na
-každé hraně, za kterou je obsahu víc: vlevo, vpravo a dole. Objevují se a mizí
-podle scroll pozice té oblasti, v prohlížeči, a nepotřebují žádnou konfiguraci —
-tabulka, která se vejde, neukáže ani jeden.
+kterou uřízne, nenakreslí nic. Tabulka široká tři obrazovky tak v klidu vypadá
+přesně jako tabulka, která se vejde: celý sloupec s akcemi sedí mimo obrazovku,
+aniž by cokoli naznačovalo, že tam je, a pod přišpendlenou hlavičkou je poslední
+viditelný řádek přeříznutý v půlce, aniž by cokoli řeklo, že pokračují další.
 
-Na horní hraně gradient záměrně není. Neomezená oblast svisle scrollovat vůbec
-nemůže a omezená je omezená právě proto, že je tam připnutá hlavička: ta už sama
-je značkou toho, co je nad ní, a čtvrtý gradient by ji jen ztmavil.
+Že tam něco je, říká scrollbar té oblasti — a jediné, co s tím framework dělá, je
+že ho nenechá platformě schovat. macOS a iOS kreslí *překryvný* scrollbar, který
+vteřinu po posledním scrollu zmizí, takže tabulka, které se nikdo nedotkl,
+neukazuje vůbec nic — přesně ve chvíli, kdy je ta informace potřeba. Scroll
+oblast proto deklaruje `::-webkit-scrollbar`, což je to, co prvek z překryvného
+scrollbaru vyváže zpátky na klasický: vykreslený tak dlouho, dokud obsah
+přetéká, a nepřítomný, když ne. Nepotřebuje žádnou konfiguraci a tabulka, která
+se vejde, neukáže žádný.
 
-Tabulka useknutá na téhle ose si navíc může jeden sloupec podržet v zorném poli,
-ne jen označit řez — viz `stickyActions()` v sekci [Akce](#akce).
+Je to záměrně scrollbar, a ne stínování hran, které kreslily starší verze.
+Gradient řekne jen *je toho víc*; scrollbar řekne o kolik víc, kde v tom jste,
+a když ho táhnete, tabulkou pohne. A nic neztmavuje — ty tři překryvy ležely přes
+řádek hlavičky, linky mezi řádky a první písmena prvního sloupce.
+
+Tabulka useknutá na vodorovné ose si navíc může jeden sloupec podržet v zorném
+poli, ne jen označit řez — viz `stickyActions()` v sekci [Akce](#akce).
 
 **Podmíněná barva řádku.** `rowColor()` obarví celý řádek stejnou sémantickou
 paletou jako odznaky a všechny ostatní plochy (`success`, `warning`, `danger`,
@@ -602,6 +611,9 @@ kombinovat na téže tabulce:
 ### Responzivní layout
 
 ```php
+->layout(TableLayout|string $layout)   // 'table' (výchozí) | 'list' — řádky, nebo karty v každé šířce   // [tl! focus]
+->listHeading(?Closure $heading)        // fn ($record) => 'Dnes' — denní předěly pro list layout
+
 // Naskládat sloupce svisle na mobilu; 2. argument je breakpoint (výchozí 'md')
 ->stackedOnMobile(bool $stacked = true, string $breakpoint = 'md')   // 'sm','md','lg','xl'
 ->bulkMaxRecords(?int $max)                                          // kolik řádků smí načíst jedna hromadná akce (výchozí 1000, null = bez limitu)
@@ -790,8 +802,8 @@ use NyonCode\WireTable\Columns\ToggleColumn;
 
 $table->columns([
     TextInputColumn::make('name')
-        ->rules(['required', 'string', 'max:255'])
-        ->saveOnBlur(),
+        ->rules(['required', 'string', 'max:255'])   // [tl! focus:start]
+        ->saveOnBlur(),                              // [tl! focus:end]
 
     SelectColumn::make('status')
         ->options([
@@ -799,7 +811,7 @@ $table->columns([
             'review' => 'In Review',
             'published' => 'Published',
         ])
-        ->rules(['required', 'in:draft,review,published']),
+        ->editableRules(fn (): array => ['required', 'in:draft,review,published']),  // [tl! focus]
 
     ToggleColumn::make('is_featured')
         ->onColor('success')
@@ -930,11 +942,43 @@ class UserTable extends Component
 
 ---
 
+## Úprava tabulky, kterou nevlastníte
+
+Kolem tabulky se spouští čtyři plugin hooky a **který z nich chcete, závisí na
+tom, co měníte** — ta dvojice nahoře nejsou dvě jména pro jeden okamžik:
+
+| Hook | Běží nad | Sáhněte po něm, když chcete |
+|---|---|---|
+| `table.composing` | složenou instancí `Table`, jednou na hostitele | **přidat nebo odebrat sloupec či filtr** |
+| `table.configuring` | poli, která `TableQueryService` chystá plannerovi | ovlivnit, podle čeho se hledá a řadí |
+| `table.querying` | po sestavení plánu, před jeho během | vynutit řazení, prohlédnout si plán |
+| `table.queried` | po aplikaci všech pipes | pozorovat hotový dotaz |
+
+```php
+$manager->hook(Hook::TableComposing, function (TableComposingPayload $payload) {
+    $payload->columns = [...$payload->columns, TextColumn::make('internal_note')]; // [tl! focus]
+
+    return $payload;
+}, for: 'invoices');
+```
+
+**Sloupec přidaný přes `table.configuring` se nikdy nevykreslí.** Ten hook běží
+uvnitř query service nad plannerovou kopií, takže se podle sloupce hledá a řadí,
+ale nekreslí se — a přesně proto existuje `table.composing`. Ten běží nad
+instancí, kterou postavil hostitel, hned vedle řádku, který tabulce dává její
+komponentu, takže sloupec přidaný tam uživatel uvidí.
+
+`for:` zúží callback na jednu tabulku: registrovaný klíč resource, který stránka
+ukazuje, třída hostitelské komponenty, nebo model. Bez něj callback běží pro
+každou tabulku v aplikaci. Viz [Hooky](../core/plugins/hooks.md).
+
+---
+
 ## Související dokumentace
 
 | Dokument | Co pokrývá |
 |----------|---------------|
-| [Sloupce](columns/index.md) | Všech 13 typů sloupců — TextColumn, BadgeColumn, BooleanColumn, IconColumn, ImageColumn, ButtonColumn, ToggleColumn, SelectColumn, TextInputColumn, StackedColumn, SplitColumn, PollColumn |
+| [Sloupce](columns/index.md) | Všech 19 typů sloupců — TextColumn, BadgeColumn, BooleanColumn, IconColumn, ImageColumn, ButtonColumn, ToggleColumn, SelectColumn, TextInputColumn, CheckboxColumn, StackedColumn, SplitColumn, TagsColumn, ColorColumn, MoneyColumn, MetricColumn, PhoneColumn, RatingColumn, PollColumn |
 | [Filtry](filters/index.md) | SelectFilter, DateFilter, NumberRangeFilter, TernaryFilter, vlastní filtry, filtry na úrovni sloupce |
 | [Exporty](exports.md) | Exporty CSV, Excel a PDF pro aktuální dotaz tabulky |
 | [Importy](imports.md) | Importy CSV — mapování hlaviček, přetypování, validace po řádcích, updateExisting |
@@ -943,4 +987,4 @@ class UserTable extends Component
 | [Výběr řádků](selection.md) | Zaškrtávátka, „vybrat vše odpovídající" a výběrová gesta |
 | [Akce nad záznamem](record-actions.md) | Vazby na klik, dvojklik, pravý klik a klávesy celého řádku |
 | [Vrstva gest](gestures.md) | `gestures()` — opt-in klávesová/tažecí vrstva a fallback na tlačítka na mobilu |
-| [Akce](../core/actions.md) | Kompletní systém akcí — modály, formuláře, wizard kroky, životní cyklus |
+| [Akce](../core/actions/index.md) | Kompletní systém akcí — modály, formuláře, wizard kroky, životní cyklus |

@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: "Výchozí buňka: text s formátovacími presety, odkazy, kopírováním, popisky a tooltipy."
 ---
 
 # TextColumn
@@ -83,6 +83,29 @@ TextColumn::make('quote')
     ->fontFamily('serif')
 ```
 
+## Bohatý obsah se zmínkami
+
+Uložený obsah editoru, jehož zmínky se při každém renderu načtou znovu z
+databáze — přejmenovaný záznam je tak přejmenovaný i v tabulce:
+
+```php
+TextColumn::make('body')
+    ->richContent()              // implikuje ->html()
+    ->limit(120)
+```
+
+Implikuje [`html()`](index.md), protože rozbalené zmínky jsou markup — není to
+druhý přepínač na raw HTML, ale rozhodnutí, co s identitami, které takový markup
+nese. Bez toho zmínka ukáže jméno, se kterým byla napsána, což je tiše špatně,
+ne viditelně rozbité.
+
+> **Stojí to dotazy na řádek.** Buňka se renderuje sama za sebe, takže se zmínky
+> dávkují v rámci jedné buňky, ne napříč stránkou: dvacet pět řádků je dvacet pět
+> vyhledání. Vyplatí se to na úzké tabulce dokumentů; ne na výpisu, který ukazuje
+> jen prvních osmdesát znaků, kde `limit()` nad prostým textem řekne totéž zdarma.
+
+Viz [TiptapEditor · Zmínky](../../forms/fields/tiptap-editor.md#zminky).
+
 ## Kompletní API TextColumn
 
 ```php
@@ -92,6 +115,8 @@ TextColumn::make('quote')
 ->money(string $currency)            // formátování měny
 ->numeric(int $decimals = 0, ?string $decimalSeparator = ',', ?string $thousandsSeparator = ' ')
 ->fontFamily(string $family)         // 'sans', 'serif', 'mono'
+->richContent(bool $condition = true)  // rozbalí zmínky; implikuje ->html()
+->isRichContent(): bool
 ->isMoney(): bool
 ->getCurrency(): ?string
 ->isNumeric(): bool

@@ -1,6 +1,6 @@
 ---
 order: 31
-nav: false
+summary: A single date or a range, rendered as native date inputs, applied to a column or a query of your own.
 ---
 
 # DateFilter

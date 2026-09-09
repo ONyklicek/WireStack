@@ -1,5 +1,6 @@
 ---
 order: 52
+summary: "A CSV read back into the model: headers mapped, cells cast and validated per column, and failures collected rather than fatal."
 ---
 
 # Table Imports
@@ -168,6 +169,27 @@ success worth being told about.
 rows", which is right for a run the user is watching and a lie for a queued one:
 "imported 0 row(s), 0 failed" is indistinguishable from an empty file. A worker
 that cannot find the upload throws `ImportException` and retries.
+
+## Adjusting an import you do not own
+
+A table shipped by an installed [module](../panels/modules.md) declares its own
+mapping, and an application adds to it through the
+[`import.configuring` hook](../core/plugins/hooks.md) rather than by replacing the
+class:
+
+```php
+$manager->hook(Hook::ImportConfiguring, function (ImportConfiguringPayload $payload) {
+    $payload->columns = [...$payload->columns, ImportColumn::make('imported_by')]; // [tl! focus]
+    $payload->import->updateExisting(['email']);                                   // [tl! focus]
+
+    return $payload;
+}, for: 'users');
+```
+
+It runs **once per import, whichever way it is delivered** — a queued import
+re-enters through the same `importTable()` — and **after** the `ImportAction`'s
+authorization check, so `$payload->path` is a file the action has already agreed
+to open. The path is read-only for that reason.
 
 ## Related Docs
 

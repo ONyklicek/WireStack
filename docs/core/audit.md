@@ -1,5 +1,6 @@
 ---
-order: 70
+order: 85
+summary: The trail wire-core records for you — which events, on which models, with the before and after of every field that moved.
 ---
 
 # Audit Log
@@ -113,6 +114,18 @@ The action opens a slide-over with the record history.
 
 You can dispatch audit events manually for operations that do not go through an audited model event.
 
+Five events reach the logger, and the first three are what `HasAuditable` fires
+for you — dispatch one yourself when a write happened somewhere the model events
+did not see it (a raw query, an import, a state change made by a job):
+
+| Event | Constructor | Fired for you by |
+| --- | --- | --- |
+| `RecordCreated` | `(Model $record, array $newValues = [], array $metadata = [])` | `HasAuditable`, on create |
+| `RecordUpdated` | `(Model $record, array $oldValues = [], array $newValues = [], array $metadata = [])` | `HasAuditable`, on update |
+| `RecordDeleted` | `(Model $record, array $oldValues = [], array $metadata = [])` | `HasAuditable`, on delete |
+| `BulkActionExecuted` | `(string $actionName, string $modelType, array $recordIds, bool $success, array $metadata = [])` | nothing — yours to raise |
+| `InlineCellUpdated` | see below | the table's inline edit path |
+
 ```php
 use NyonCode\WireCore\Audit\Events\BulkActionExecuted;
 
@@ -192,4 +205,4 @@ prunes nothing. Programmatic pruning is still available via
 
 Supported event types are `created`, `updated`, `deleted`, `bulk_action`, and `cell_updated`.
 
-See [Configuration](../configuration.md) for the full config reference.
+See [Configuration](../start/configuration.md) for the full config reference.

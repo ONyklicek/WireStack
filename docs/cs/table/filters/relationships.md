@@ -1,6 +1,6 @@
 ---
 order: 32
-nav: false
+summary: Filtrování podle relace a podle obsahu podřádků — co která varianta udělá s dotazem a co stojí.
 ---
 
 # Filtry relací a podřádků

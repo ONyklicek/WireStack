@@ -1,5 +1,6 @@
 ---
 order: 50
+summary: Every field wire-forms ships — input, layout, display, relationship and repeating — with what each one stores.
 ---
 
 # Form Fields
@@ -101,7 +102,7 @@ Defaults fill only keys the incoming data does not provide, so they apply in
 create mode and to new/virtual fields, and **never overwrite a record's stored
 value — even an intentional `null`.** For record- or context-driven prefill on
 top of defaults, use `fillFormUsing()` on the action (see
-[Actions](../../core/actions.md)).
+[Actions](../../core/actions/index.md)).
 
 #### Filling defaults over null
 
@@ -195,17 +196,17 @@ use NyonCode\WireForms\Components\Toggle;
 ### Group fields into sections
 
 ```php
-use NyonCode\WireForms\Components\Layout\Grid;
-use NyonCode\WireForms\Components\Layout\Section;
+use NyonCode\WireCore\Foundation\Schema\Grid;
+use NyonCode\WireCore\Foundation\Schema\Section;
 
 ->schema([
-    Section::make('User')
+    Section::make('User')                          // [tl! focus:start]
         ->schema([
             Grid::make()->columns(2)->schema([
                 TextInput::make('name')->required(),
                 TextInput::make('email')->email()->required(),
             ]),
-        ]),
+        ]),                                        // [tl! focus:end]
 ])
 ```
 

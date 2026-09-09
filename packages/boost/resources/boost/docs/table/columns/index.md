@@ -1,10 +1,11 @@
 ---
 order: 20
+summary: Every column type, and the base API they all share — labels, visibility, authorization, sorting, formatting and inline editing.
 ---
 
 # Columns
 
-Wire Table provides **16 column types**. They all share the same base column API
+Wire Table provides **19 column types**. They all share the same base column API
 for labels, visibility, authorization, sorting, formatting, and inline editing —
 documented below. Pick a type for its cell rendering; reach for the shared API on
 any of them.
@@ -275,11 +276,30 @@ TextColumn::make('subtitle')
 ### Icons
 
 ```php
-->icon(string|Icon|null $icon, ?string $position = 'before')   // position: 'before' | 'after'
-->color(string|Color $color)           // static icon/text color (for per-row color use BadgeColumn/IconColumn colorUsing())
+->icon(string|Icon|Closure|null $icon, ?string $position = 'before')   // position: 'before' | 'after'
+->color(string|Color $color)           // the column's colour: text, and the icon when it has no colour of its own
+->iconColor(string|Color|Closure|null $color)   // the icon's colour, per record — a role, or a closure returning one
+->iconTile(bool $tile = true)           // seat the icon in a tinted tile — the list archetype's row anchor
 ```
 
+On a **list** (`layout('list')`) reach for `iconTile()` as well: a bare tinted
+glyph is enough on a grid of columns, where the row is already a line of aligned
+values, but where the record is a sentence the tile is what gives the rows a left
+edge for the eye to run down. Ground and ink come from the one role, so they
+cannot drift apart, and only the semantic roles get a tile — a raw hue makes no
+statement about *kind*, so it lands on the neutral one.
+
+`color()` is resolved once for the whole column, which is right for a text tint
+and wrong for a **status** icon whose whole job is to differ per row. That is
+what `iconColor()` is for: pass a role from the shared vocabulary, or a closure
+over the record. A closure gives up the column's static icon memo — the same
+cost a closure `icon()` already pays, and the reason neither is the default.
+
 ```php
+TextColumn::make('state')
+    ->icon(fn ($record) => $record->failed ? 'x-circle' : 'check-circle')      // [tl! focus:start]
+    ->iconColor(fn ($record) => $record->failed ? 'danger' : 'success')        // [tl! focus:end]
+
 TextColumn::make('email')
     ->icon('mail', 'before')
     ->color('primary')

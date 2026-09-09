@@ -1,3 +1,7 @@
+---
+summary: One field for date, month, time or both — the mode decides the calendar, the format and what is stored.
+---
+
 # DateTimePicker
 
 Unified date/time picker with date, month, time, and datetime modes.

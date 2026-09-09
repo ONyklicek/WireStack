@@ -1,6 +1,6 @@
 ---
 order: 31
-nav: false
+summary: A minimum and a maximum over a numeric column, with either end optional.
 ---
 
 # NumberRangeFilter

@@ -1,6 +1,6 @@
 ---
 order: 32
-nav: false
+summary: Filtering by a relationship and by sub-row content — what each one does to the query, and what it costs.
 ---
 
 # Relationship & Sub-Row Filters

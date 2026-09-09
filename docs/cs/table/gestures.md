@@ -1,5 +1,6 @@
 ---
 order: 48
+summary: Tabulka, která se chová jako desktopová aplikace — šipky, rozsahy, tažení výběru, řádkové menu, `?` a fill handle, každé zvlášť zapínatelné.
 ---
 
 # Vrstva gest
@@ -67,7 +68,7 @@ která `gestures()` nikdy nezavolá:
 | `keyboard` | **vyp** | Navigaci v mřížce: putovní `tabindex`, šipky, `Home`/`End`, `PageUp`/`PageDown`, `Enter` / `Shift`+`Enter` pro primární a sekundární record action, `Space` pro přepnutí výběru a každou vlastní `keyboardShortcut()` / `onKey()` proti aktivnímu řádku. Zároveň je to to, co z tabulky dělá ARIA `grid`. |
 | `rangeSelection` | **vyp** | `Shift`+klik, `mod`+klik a `mod`+`Shift`+klik na řádek, plus `Shift`+šipka, `Shift`+`Home` a `Shift`+`End` z klávesnice. |
 | `dragSelect` | **vyp** | Označování tažením: stisknout v checkboxovém sloupci a táhnout přes blok řádků. |
-| `contextMenu` | zap | Kontextové menu řádku pod pravým tlačítkem — jak `rowContextMenu()`, tak libovolnou `onContextMenu()` record action. |
+| `contextMenu` | zap | Kontextové menu řádku pod pravým tlačítkem, plněné libovolnou `onContextMenu()` record action. |
 | `shortcutHelp` | zap¹ | Nápovědu zkratek pod `?`. |
 | `fillHandle` | zap² | Fill handle nad editovatelnými buňkami ve stylu Excelu. |
 

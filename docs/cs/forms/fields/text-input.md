@@ -1,3 +1,7 @@
+---
+summary: Výchozí pole — text, e-mail, heslo, číslo, telefon nebo URL — s prefixy, maskami a pravidly, která každá varianta implikuje.
+---
+
 # TextInput
 
 Textové vstupní pole s variantami pro email, heslo, číslo, tel a URL.
@@ -58,6 +62,35 @@ TextInput::make('card')
 
 Pro částku sáhněte raději po [MoneyInput](money-input.md) — nastaví stejný druh
 masky podle měny a napsanou částku přečte zpět jako číslo.
+
+## Prázdné hodnoty
+
+Prohlížeč nemá jak odeslat „nic". Vymazaný `<input>` dorazí jako prázdný řetězec
+a co to má znamenat, závisí čistě na sloupci za ním:
+
+```php
+TextInput::make('price')->numeric()       // vymazáno -> null, bez ptaní
+TextInput::make('note')                   // vymazáno -> '', což je hodnota
+TextInput::make('reference')->nullable()  // vymazáno -> null, protože sis o to řekl
+```
+
+**Číselný input nulluje sám od sebe.** `''` není číslo: Postgres a MySQL ve
+strict módu ho na číselném sloupci odmítnou a SQLite tiše uloží prázdný řetězec
+vedle desetinných míst. Neexistuje čtení vymazaného pole `type=number`, ve kterém
+by autor myslel „prázdný řetězec", takže `numeric()`, `integer()` i přímé
+`type('number')` zapíšou `null`. Nula zůstane nedotčená — `0` je číslo, ne prázdná
+hodnota.
+
+**Každému jinému typu se to musí říct.** Na textovém sloupci je `''` naprosto
+platná hodnota a `NOT NULL` sloupec by `null` napsaný za autora odmítl, takže o něj
+říká `->nullable()`. Je to stejná metoda se stejným významem jako
+[`TextInputColumn::nullable()`](../../table/columns/text-input.md) v editovatelné
+buňce tabulky.
+
+Běží to cestou k záznamu, takže to platí všude, kam hodnota míří — u uloženého
+formuláře i u [action modalu](../../core/actions/index.md), který svá data předává
+callbacku. Toho, na co je navázaný prohlížeč, se to netýká: pole dál zobrazuje
+prázdný input, ne `null`.
 
 ## Dekorátory
 

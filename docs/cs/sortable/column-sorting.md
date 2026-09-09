@@ -1,6 +1,7 @@
 ---
 title: Řazení sloupců
 order: 40
+summary: Přerovnávání sloupců tažením za jejich hlavičky, zapamatované per uživatel a per tabulka.
 ---
 
 # Řazení sloupců

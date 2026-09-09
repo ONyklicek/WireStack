@@ -1,3 +1,7 @@
+---
+summary: Seznam, jehož každá položka si volí vlastní typ bloku a vlastní schéma — kde repeater opakuje jeden tvar, builder vybírá z několika.
+---
+
 # Builder
 
 Blokový editor pro heterogenní obsah: seznam položek, kde si každá volí vlastní
@@ -56,12 +60,26 @@ Builder::make('content')
     ->blocks([...])
     ->minItems(1)
     ->maxItems(20)
+    ->reorderable()
+    ->cloneable()
     ->collapsible()
+    ->expandLast()
+    ->itemLabel(fn (array $state) => $state['text'] ?? null)
     ->addButtonLabel('Přidat blok')
 ```
 
-Neplatí jen `relationship()`: smíšené typy bloků nemají jeden společný model,
-takže se builder ukládá jako pole, ne přes relaci.
+Všechno, co umí řádek repeateru, umí i blok: táhne se stejným controllerem,
+přesouvá stejnými klávesovými tlačítky, duplikuje stejným endpointem a skládá
+podle stejné politiky rozbalení. Dvě věci jsou Builderu vlastní — `itemLabel()`
+dostane obálku `data` bloku, ne položku, takže closure vidí vlastní pole bloku;
+a jméno se vykreslí *vedle* popisku bloku, ne místo něj, protože to, kterým
+blokem řádek je, zůstává první informací, kterou čtenář potřebuje.
+
+Dvě věci neplatí. `relationship()`: smíšené typy bloků nemají jeden společný
+model, takže se builder ukládá jako pole, ne přes relaci — a bez relace není co
+odstraňovat za klíč, takže duplikovaný blok je prostá kopie. A `table()`, které
+vyhodí výjimku: tabulka rozkládá do sloupců *jedno* schéma a položky builderu
+nesou každá jiné.
 
 ## Validace
 

@@ -1,3 +1,7 @@
+---
+summary: "The full editor on TipTap and ProseMirror: tables, images, mentions and alignment, stored as HTML or JSON."
+---
+
 # TiptapEditor
 
 Full-featured rich text editor built on [TipTap](https://tiptap.dev/) / ProseMirror. Configurable toolbar, optional extensions (tables, images, text align, highlight), and HTML or JSON output.
@@ -31,7 +35,7 @@ view relies on (Alpine ships with Livewire).
 > just this package's — and the editor emits those paths from then on, cache-buster
 > included. The publish mirrors `dist/` verbatim, so the entries keep resolving their
 > shared chunk relative to `vendor/wire-forms/tiptap/`. See
-> [Getting Started → JavaScript Assets](../../getting-started.md#javascript-assets).
+> [Getting Started → JavaScript Assets](../../start/getting-started.md#javascript-assets).
 
 > **Contributors.** The bundles are generated from
 > `packages/forms/resources/js/tiptap-editor.js` and `tiptap-editor-addons.js`, and
@@ -121,6 +125,187 @@ TiptapEditor::make('content')
 ```
 
 When an extension is enabled, its toolbar button is appended automatically.
+
+## Mentions
+
+A mention is stored as an **identity**, never as a name:
+
+```html
+<span data-type="mention" data-mention-trigger="#"
+      data-mention-type="article" data-id="12">#Price list 2026</span>
+```
+
+There is no `href` in there, and the text is a *fallback*. Every render looks the
+record up again, so renaming an article renames it in every document that ever
+mentioned it, and a link can never outlive the permission that granted it. The
+price is that stored content is no longer displayed by echoing it — see
+[Displaying content with mentions](#displaying-content-with-mentions) below.
+
+### One trigger, several models
+
+A trigger is not a model. `@` naming people and `#` naming anything the site
+publishes are the same feature, and the second one only works when one trigger
+can hold several sources:
+
+```php
+use Illuminate\Database\Eloquent\Builder;
+use NyonCode\WireForms\Components\Mention;
+use NyonCode\WireForms\Components\Mention\Source;
+
+TiptapEditor::make('body')
+    ->mentions(
+        Mention::make('@')->source(
+            Source::make(User::class)->titleAttribute('name')->label('People'),
+        ),
+        Mention::make('#')->sources([                                    // [tl! focus:start]
+            Source::make(Article::class)
+                ->titleAttribute('title')
+                ->label('Articles')
+                ->modifyOptionsQueryUsing(fn (Builder $query) => $query->published()),
+
+            Source::make(Page::class)->titleAttribute('title')->label('Pages'),
+        ]),                                                              // [tl! focus:end]
+    )
+```
+
+That is why the document stores a morph type beside the id: under one `#`, `12`
+alone would not say whether it means an article or a page.
+
+Each source is queried separately and the rows are grouped by source label — a
+`UNION` would cost the per-source scoping, which is the reason several sources
+share a trigger in the first place. Rows are **not** ranked against each other
+across sources: the list says which group a row came from rather than pretending
+to know that an article beats a page.
+
+### Scoping and authorisation
+
+`modifyOptionsQueryUsing()` decides what the **author** may insert:
+
+```php
+Source::make(Article::class)
+    ->titleAttribute('title')
+    ->modifyOptionsQueryUsing(fn (Builder $query) => $query->whereBelongsTo($team))
+```
+
+What a stored mention resolves to later is scoped again at render time, where the
+viewer may be somebody else entirely — see
+[`MentionRegistry`](#models-you-do-not-own).
+
+The suggestion endpoint never answers an empty search term: an unfiltered mention
+list is a user-enumeration endpoint, not a search.
+
+### Making a model mentionable
+
+The record itself is the one thing that always knows its own fresh name, so that
+is where the render-time facts live:
+
+```php
+use NyonCode\WireCore\Foundation\Mentions\Contracts\Mentionable;
+
+class Article extends Model implements Mentionable
+{
+    public function getMentionLabel(): string           // [tl! focus:start]
+    {
+        return $this->title;
+    }
+
+    public function getMentionUrl(): ?string
+    {
+        return $this->published ? route('articles.show', $this) : null;
+    }                                                   // [tl! focus:end]
+}
+```
+
+Returning `null` from `getMentionUrl()` is meant: the mention renders named but
+not clickable.
+
+### Models you do not own
+
+A package's `User`, a vendor's `Page` — register the same facts at boot instead:
+
+```php
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Mentions\MentionRegistry;
+
+public function boot(MentionRegistry $mentions): void
+{
+    $mentions->register(Page::class)
+        ->titleAttribute('title')                                        // [tl! focus:start]
+        ->url(fn (Model $page) => route('pages.show', $page))
+        // Viewer-scoped visibility belongs here: a record the query excludes is
+        // simply not found, and an unresolvable mention renders as plain text.
+        ->modifyQueryUsing(fn ($query) => $query->where('visibility', 'public')); // [tl! focus:end]
+}
+```
+
+Deleted and not-allowed-to-see take the same path deliberately. It is the one
+that leaks nothing — a fresh title pulled straight from the database is the leak.
+
+Without either the contract or a registration the mention still renders: it keeps
+the label the document was written with, which was correct at the time and not
+after.
+
+### Displaying content with mentions
+
+`{!! $post->body !!}` would print the identities and no links at all. Read the
+content back through the renderer instead:
+
+```blade
+{{-- Blade, and anywhere else --}}
+<x-wire::rich-content :html="$post->body" class="prose" />
+```
+
+```php
+// An infolist
+HtmlEntry::make('body')->label('Body')
+
+// A table cell — implies ->html()
+TextColumn::make('body')->richContent()
+```
+
+All three go through the same owner
+(`NyonCode\WireCore\Foundation\Mentions\MentionRenderer`), which an application
+can also call directly:
+
+```php
+use NyonCode\WireCore\Foundation\Mentions\MentionRenderer;
+
+$html = app(MentionRenderer::class)->render($post->body);
+
+// Just the identities — for a notification sweep, say.
+$mentioned = app(MentionRenderer::class)->extract($post->body);
+```
+
+A document naming twelve articles and three users costs **two** queries, not
+fifteen: references are grouped by stored type and fetched with one `whereKey()`
+each. Content holding no mentions is returned byte-for-byte and never reaches the
+DOM parser.
+
+> **A table cell is rendered on its own**, so those lookups batch within one cell
+> and not across the page: twenty-five rows with `richContent()` are twenty-five
+> lookups. Worth it on a narrow table of documents; not on a listing that only
+> shows the first eighty characters.
+
+### Typing across spaces
+
+Off by default. With `allowSpaces()` the suggestion has no way to know where the
+mention ended, so it keeps swallowing the sentence after it until something
+dismisses the list:
+
+```php
+Mention::make('#')->allowSpaces()
+```
+
+Titles are usually findable from their first word anyway — `#price` finds
+`Price list 2026`, because the matching happens on the server against the whole
+column.
+
+### Delivery
+
+The mention node and TipTap's suggestion engine ship as a **third** ESM entry
+(`tiptap-editor-mentions.js`), injected only for a field that declares mentions.
+An editor with tables and no mentions never downloads it, and the shared
+`@tiptap/core` chunk is not duplicated.
 
 ## Output Format
 
@@ -232,6 +417,7 @@ not words; the tooltip is what gets translated.
 | `withTables(bool)` | bool | Enable table extension + button |
 | `withTextAlign(bool)` | bool | Enable text-align extension + buttons |
 | `withHighlight(bool)` | bool | Enable highlight extension + button |
+| `mentions(Mention\|array ...)` | Mention | Mention triggers offered by the editor |
 | `minHeight(int)` | int | Minimum editor height in pixels (default `240`) |
 | `maxLength(int\|null)` | int | Character limit with live counter |
 | `disabled(bool\|Closure)` | bool | Disable the editor |
@@ -240,5 +426,26 @@ not words; the tooltip is what gets translated.
 | `placeholder(string\|Closure)` | string | Placeholder shown when empty |
 | `live()` | — | Trigger Livewire update on each change |
 | `debounce(int)` | ms | Debounce delay for `live()` |
+
+### `Mention`
+
+| Method | Type | Description |
+|--------|------|-------------|
+| `Mention::make(string)` | string | The trigger character — `@`, `#` |
+| `sources(array)` | array\<Source\> | The models this trigger offers |
+| `source(Source)` | Source | A trigger with exactly one model behind it |
+| `allowSpaces(bool)` | bool | Keep matching after a space (default `false`) |
+| `limit(int)` | int | Cap the whole list, however many sources feed it (default `15`) |
+
+### `Mention\Source`
+
+| Method | Type | Description |
+|--------|------|-------------|
+| `Source::make(string)` | class-string\<Model\> | The model this source offers |
+| `titleAttribute(string)` | string | The column shown in the suggestion list |
+| `searchAttribute(string)` | string | The column matched, when not the one displayed |
+| `label(string)` | string | The group heading rows sit under |
+| `limit(int)` | int | Rows this source contributes (default `5`) |
+| `modifyOptionsQueryUsing(Closure)` | Closure | Scope the suggestion query |
 
 See [Common Field API](index.md#common-field-api) for label, hint, tooltip, and other shared methods.

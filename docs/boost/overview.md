@@ -8,7 +8,7 @@ summary: AI tooling for the Wire ecosystem — an MCP server, AI guidelines, and
 
 Wire Boost is the wireStack equivalent of [Laravel Boost](https://github.com/laravel/boost). It helps
 AI coding agents (Claude Code, Cursor, Codex, Gemini CLI, GitHub Copilot, Junie) write high-quality
-applications with [wire-core](../core/foundation.md), [wire-forms](../forms/overview.md),
+applications with [wire-core](../core/foundation/index.md), [wire-forms](../forms/overview.md),
 [wire-table](../table/overview.md) and [wire-sortable](../sortable/overview.md).
 
 It ships three things:

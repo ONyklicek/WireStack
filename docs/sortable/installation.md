@@ -1,6 +1,7 @@
 ---
 title: Installation
 order: 20
+summary: What the sortable package needs, what it adds to a table, and the asset it puts on the page.
 ---
 
 # Installation
@@ -73,7 +74,7 @@ enough:
 - `@wireStackScripts` in your layout `<head>` emits it on every page.
 
 Add the directive if your app navigates with `wire:navigate` — see
-[Getting Started → JavaScript Assets](../getting-started.md#javascript-assets) for why
+[Getting Started → JavaScript Assets](../start/getting-started.md#javascript-assets) for why
 the layout placement is the one that survives the cached Back/Forward path.
 
 ### `sortablejs_cdn`

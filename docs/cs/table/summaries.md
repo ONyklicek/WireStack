@@ -1,5 +1,6 @@
 ---
 order: 55
+summary: Sloupec agregovaný do hodnoty v patičce — v hlavní tabulce, v podřádcích i přes relaci.
 ---
 
 # Souhrny

@@ -1,3 +1,7 @@
+---
+summary: A list whose every item picks its own block type and schema — where a repeater repeats one shape, a builder chooses among several.
+---
+
 # Builder
 
 Block builder for heterogeneous content: a list of items where each item picks
@@ -56,12 +60,27 @@ Builder::make('content')
     ->blocks([...])
     ->minItems(1)
     ->maxItems(20)
+    ->reorderable()
+    ->cloneable()
     ->collapsible()
+    ->expandLast()
+    ->itemLabel(fn (array $state) => $state['text'] ?? null)
     ->addButtonLabel('Add block')
 ```
 
-Only `relationship()` does not apply: mixed block types have no single related
-model, so a builder is stored as an array rather than saved through a relation.
+Everything a repeater row can do, a block can: it is dragged with the same
+controller, moved with the same keyboard buttons, duplicated by the same
+endpoint, and folded under the same expansion policy. Two details are the
+Builder's own — `itemLabel()` is handed the block's `data` envelope rather than
+the item, so the closure sees the block's own fields; and the name renders
+*beside* the block's label rather than instead of it, because which block a row
+is remains the first thing a reader needs.
+
+Two things do not apply. `relationship()`: mixed block types have no single
+related model, so a builder is stored as an array rather than saved through a
+relation — and with no relation there is no key to strip, so a duplicated block
+is a plain copy. And `table()`, which throws: a table lays *one* schema out as
+columns, and a builder's items each carry a different one.
 
 ## Validation
 

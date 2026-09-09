@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: "The default cell: text with formatting presets, links, copying, descriptions and tooltips."
 ---
 
 # TextColumn
@@ -83,6 +83,30 @@ TextColumn::make('quote')
     ->fontFamily('serif')
 ```
 
+## Rich Content with Mentions
+
+Stored editor content whose mentions are read back from the database on every
+render, so a renamed record reads renamed in the table too:
+
+```php
+TextColumn::make('body')
+    ->richContent()              // implies ->html()
+    ->limit(120)
+```
+
+Implies [`html()`](index.md), because resolved mentions are markup — this is not
+a second raw-HTML switch, it is what to do with the identities such markup holds.
+Without it a mention shows the name it was written with, which is quietly wrong
+rather than visibly broken.
+
+> **It costs queries per row.** A cell is rendered on its own, so mentions batch
+> within one cell and not across the page: twenty-five rows are twenty-five
+> lookups. Worth it on a narrow table of documents; not worth it on a listing
+> that only shows the first eighty characters, where `limit()` on plain text says
+> the same thing for free.
+
+See [TiptapEditor · Mentions](../../forms/fields/tiptap-editor.md#mentions).
+
 ## Complete TextColumn API
 
 ```php
@@ -92,6 +116,8 @@ TextColumn::make('quote')
 ->money(string $currency)            // currency formatting
 ->numeric(int $decimals = 0, ?string $decimalSeparator = ',', ?string $thousandsSeparator = ' ')
 ->fontFamily(string $family)         // 'sans', 'serif', 'mono'
+->richContent(bool $condition = true)  // resolve mentions; implies ->html()
+->isRichContent(): bool
 ->isMoney(): bool
 ->getCurrency(): ?string
 ->isNumeric(): bool

@@ -1,3 +1,7 @@
+---
+summary: The default field — text, e-mail, password, number, tel or URL — with affixes, masks and the rules each variant implies.
+---
+
 # TextInput
 
 Text input field with variants for email, password, numeric, tel, and URL.
@@ -58,6 +62,35 @@ TextInput::make('card')
 
 For an amount, reach for [MoneyInput](money-input.md) instead — it sets the same
 kind of mask from a currency, and reads the typed figure back as a number.
+
+## Empty Values
+
+A browser has no way to submit "nothing". A cleared `<input>` arrives as an empty
+string, and what that should mean depends entirely on the column behind it:
+
+```php
+TextInput::make('price')->numeric()       // cleared -> null, without being asked
+TextInput::make('note')                   // cleared -> '', which is a value
+TextInput::make('reference')->nullable()  // cleared -> null, because you said so
+```
+
+A **number input nullifies on its own**. `''` is not a figure: Postgres and
+strict-mode MySQL reject it on a numeric column, and SQLite quietly stores an
+empty string next to the decimals. There is no reading of an emptied
+`type=number` field where the author meant "the empty string", so `numeric()`,
+`integer()` and a direct `type('number')` all write `null`. A zero is untouched —
+`0` is a figure, not an empty value.
+
+**Every other type has to be told.** On a text column `''` is a perfectly good
+value, and a `NOT NULL` column would reject a `null` written on the author's
+behalf, so `->nullable()` is what asks for one. It is the same method, with the
+same meaning, as [`TextInputColumn::nullable()`](../../table/columns/text-input.md)
+in an editable table cell.
+
+This runs on the way to the record, so it applies wherever the value is going —
+a saved form, and an [action modal](../../core/actions/index.md) handing its data to a
+callback. What the browser is bound to is left alone: the field still shows an
+empty input, not a `null`.
 
 ## Decorators
 

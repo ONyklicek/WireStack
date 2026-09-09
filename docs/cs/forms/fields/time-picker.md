@@ -1,3 +1,7 @@
+---
+summary: Čas volený ze seznamu slotů v pevném intervalu, ne natáčený na stepperu.
+---
+
 # TimePicker
 
 Picker jen pro čas. Čas se vybírá ze **seznamu slotů** v pevném intervalu, ne

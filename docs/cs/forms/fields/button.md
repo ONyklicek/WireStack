@@ -1,3 +1,7 @@
+---
+summary: Tlačítko z design systému uvnitř formuláře, které na serveru spustí closure — podporovaná alternativa ručně psaného markupu.
+---
+
 # Button
 
 Interaktivní tlačítko stylované design-systémem, které spouští closuru na serveru — podporovaná

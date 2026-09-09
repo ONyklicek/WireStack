@@ -1,6 +1,6 @@
 ---
 order: 34
-nav: false
+summary: "Rozšíření základní třídy filtru: vlastní ovládací prvek, vlastní dotaz, použitelné napříč tabulkami."
 ---
 
 # Vlastní třída filtru

@@ -1,5 +1,6 @@
 ---
 order: 60
+summary: Related child records in an expandable panel under each row, for drilling into detail without leaving the table.
 ---
 
 # Sub-Rows
@@ -386,11 +387,11 @@ scanning where you want all detail visible together:
 This is only the starting point — the master chevron and the view menu move the
 baseline either way at runtime.
 
-> `flattenSubRows()` is a deprecated alias of `subRowsDefaultExpanded()`. Despite
-> the name it never rendered children as flat rows; it was a second flag with the
-> same visible effect, and having both meant "Collapse all" could not close what
-> flatten mode held open. `toggleFlattenMode()` still works and now calls
-> `toggleAllRowExpansion()`.
+> `flattenSubRows()` and `toggleFlattenMode()` were removed in 2.0. Despite the
+> name, flatten mode never rendered children as flat rows: it was a second flag
+> with the same visible effect, and having both meant "Collapse all" could not
+> close what it held open. The baseline above is what replaced it, and
+> `toggleAllRowExpansion()` is the toggle.
 
 ## Detail-Row Mode (No Relation)
 
@@ -453,7 +454,6 @@ active, since per-parent filtering falls back to a safe per-parent query.
 | `subRowsExpandable(bool)`                       | Allow expand/collapse toggle             |
 | `subRowsDefaultExpanded(bool)`                  | Start expanded                           |
 | `subRowsToggleLabel(?string)`                   | Label for the toggle column              |
-| `flattenSubRows(bool)`                          | Deprecated alias of `subRowsDefaultExpanded()` |
 | `subRowView(string)`                            | Custom child renderer                    |
 
 ## Related Docs

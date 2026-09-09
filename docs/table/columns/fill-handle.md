@@ -1,6 +1,6 @@
 ---
 order: 29
-nav: false
+summary: Dragging one value down over the rows below it, Excel-style — the whole range written in one request.
 ---
 
 # Fill Handle (Excel-style AutoFill)

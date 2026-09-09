@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: A number as a row of filled and empty stars — the read-only counterpart of the rating field.
 ---
 
 # RatingColumn

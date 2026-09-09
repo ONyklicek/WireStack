@@ -1,3 +1,7 @@
+---
+summary: Pole pro kód s neproporcionálním písmem, čísly řádků a odsazováním tabulátorem — ukládá prostý text a neveze žádnou knihovnu editoru.
+---
+
 # CodeEditor
 
 Editor kódu s monospace stylováním, čísly řádků a odsazením klávesou Tab. Bez externích závislostí — ukládá prostý text.

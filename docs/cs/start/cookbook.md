@@ -1,5 +1,6 @@
 ---
-order: 80
+order: 70
+summary: Samostatné receptury postavené na veřejném API — zkopíruj jednu do komponenty a uprav si ji.
 ---
 
 # Kuchařka
@@ -74,7 +75,7 @@ $form
 ```
 
 Pro aplikaci stejného pravidla na **každý** formulář v aplikaci použijte místo
-toho plugin hook `form.saving` — viz [Core Pluginy](core/plugins.md#hook-system).
+toho plugin hook `form.saving` — viz [Core Pluginy](../core/plugins/hooks.md#hook-system).
 
 ---
 
@@ -150,7 +151,7 @@ $form
     });
 ```
 
-Kompletní pořadí callbacků viz [Životní cyklus ukládání](forms/save-lifecycle.md).
+Kompletní pořadí callbacků viz [Životní cyklus ukládání](../forms/save-lifecycle.md).
 
 ---
 
@@ -174,7 +175,7 @@ public function table(Table $table): Table
 
 Pro aplikaci stejného zúžení napříč **mnoha** tabulkami ho přesuňte do query pipe
 pluginu nebo hooku `table.querying` — viz
-[Core Pluginy → Query Pipes](core/plugins.md#query-pipes).
+[Core Pluginy → Query Pipes](../core/plugins/extending.md#query-pipes).
 
 ---
 
@@ -201,8 +202,8 @@ editovaný záznam.
 
 ## Viz také
 
-- [Přehled formulářů](forms/overview.md) — kompletní Form API
-- [Životní cyklus ukládání](forms/save-lifecycle.md) — hooky v pořadí
-- [Rozšíření formulářů](forms/custom-fields.md) — když recept potřebuje nové pole
-- [Přehled tabulek](table/overview.md) — sloupce, filtry, akce
-- [Core Pluginy](core/plugins.md) — pravidla pro celou aplikaci přes hooky a pipes
+- [Přehled formulářů](../forms/overview.md) — kompletní Form API
+- [Životní cyklus ukládání](../forms/save-lifecycle.md) — hooky v pořadí
+- [Rozšíření formulářů](../forms/custom-fields.md) — když recept potřebuje nové pole
+- [Přehled tabulek](../table/overview.md) — sloupce, filtry, akce
+- [Core Pluginy](../core/plugins/index.md) — pravidla pro celou aplikaci přes hooky a pipes

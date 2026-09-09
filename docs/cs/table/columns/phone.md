@@ -1,4 +1,5 @@
 ---
+order: 23
 summary: Uložené telefonní číslo zapsané tak, jak se čte, a odkázané pro vytáčení.
 ---
 

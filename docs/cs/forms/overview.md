@@ -1,12 +1,13 @@
 ---
 order: 10
+summary: "Formulářový systém: schéma deklarované v PHP, navázané na Livewire hostitele nebo samostatné, a co se děje mezi odesláním a uloženým záznamem."
 ---
 
 # Wire Forms
 
 Samostatný systém formulářů pro Laravel Livewire. Funguje nezávisle nebo s Wire Table.
 
-> Potřebujete záznam **zobrazit** read-only místo editace? Viz [Infolisty](../core/infolists.md) — stejné schéma a layout, jen se zobrazovacími entries místo vstupních polí.
+> Potřebujete záznam **zobrazit** read-only místo editace? Viz [Infolisty](../core/infolists/index.md) — stejné schéma a layout, jen se zobrazovacími entries místo vstupních polí.
 
 ## Instalace
 
@@ -381,3 +382,32 @@ pak [Validace](validation.md#unikatni-hodnoty).
 
 Closury `visible()`, `hidden()`, `disabled()` a `afterStateUpdated()` dostávají live state
 accessory (`$get`, `$set`, `$state`). Viz [Reaktivní pole](reactive-fields.md).
+
+## Úprava formuláře, který nevlastníte
+
+Formulář z nainstalovaného [modulu](../panels/modules.md) se staví uvnitř kódu,
+který aplikace nemá, takže tři plugin hooky kolem něj jsou ta cesta dovnitř — jeden
+na každou fázi a nejsou zaměnitelné:
+
+| Hook | Kdy běží | Sáhněte po něm, když chcete |
+|---|---|---|
+| `form.configuring` | jednou, když se ze schématu stává config | **přidat nebo odebrat pole** |
+| `form.filling` | když `fill()` naváže hodnoty | změnit, s čím pole přijde |
+| `form.saving` | po validaci, před perzistencí | změnit, co dorazí do záznamu |
+
+```php
+$manager->hook(Hook::FormConfiguring, function (FormConfiguringPayload $payload) {
+    $payload->schema = [...$payload->schema, TextInput::make('crm_id')];   // [tl! focus]
+
+    return $payload;
+}, for: 'users');
+```
+
+`form.configuring` je protějšek `table.composing` u tabulky: běží na jediném místě,
+kde se ze schématu stává config, a ten je memoizovaný — takže se spustí jednou na
+formulář, ne jednou na render. `for:` zúží callback na jeden formulář — registrovaný
+klíč resource, který stránka ukazuje, třída hostitelské komponenty, nebo model — a
+bez něj callback běží pro každý formulář v aplikaci.
+
+Celý seznam je v [Hooky](../core/plugins/hooks.md), kde v pipeline sedí ty dva
+zbylé pak v [Životní cyklus uložení](save-lifecycle.md).

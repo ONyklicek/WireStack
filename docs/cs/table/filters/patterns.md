@@ -1,6 +1,6 @@
 ---
 order: 39
-nav: false
+summary: Hotové filtrovací lišty — kombinace, které aplikace pořád staví znovu, napsané jednou.
 ---
 
 # Vzory a recepty

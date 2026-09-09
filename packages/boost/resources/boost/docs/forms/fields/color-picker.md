@@ -1,3 +1,7 @@
+---
+summary: A colour field with a format to store in and optional swatches to pick from.
+---
+
 # ColorPicker
 
 Color picker with format selection and optional swatches.

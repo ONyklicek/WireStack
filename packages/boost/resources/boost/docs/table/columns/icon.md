@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: State mapped to an icon, with the colour and size that state implies.
 ---
 
 # IconColumn

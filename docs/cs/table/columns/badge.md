@@ -1,6 +1,5 @@
 ---
 order: 23
-nav: false
 summary: Vykreslí buňku jako barevnou pilulku, jejíž barva a ikona se odvozují ze stavu záznamu.
 ---
 
@@ -75,7 +74,7 @@ BadgeColumn::make('status')
 
 Stav, který mapa neuvádí, propadne žebříčkem výš. Hodnoty jde zapsat i enumem
 `Color` (`'active' => Color::Success`) a k dispozici je celá paleta Tailwindu —
-viz [Theming](../../theming.md).
+viz [Theming](../../start/theming.md).
 
 ## S ikonami
 
@@ -275,4 +274,4 @@ popsané v [Sloupce](index.md).
 - [Sloupce](index.md) — sdílené API sloupců, které dědí každý sloupec
 - [IconColumn](icon.md) — tentýž stavový žebříček vykreslený jako samotná ikona
 - [PollColumn](poll.md) — badge nad živě pollovanou hodnotou
-- [Theming](../../theming.md) — barevný slovník, ze kterého tyto mapy čerpají
+- [Theming](../../start/theming.md) — barevný slovník, ze kterého tyto mapy čerpají

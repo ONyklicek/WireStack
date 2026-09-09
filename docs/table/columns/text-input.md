@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: An inline text input that validates and saves on blur — the cell you type into.
 ---
 
 # TextInputColumn

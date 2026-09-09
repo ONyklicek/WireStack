@@ -1,5 +1,6 @@
 ---
 order: 1
+summary: "The shared vocabulary for arranging content: one ordered array of components that forms, infolists and action modals all consume."
 ---
 
 # Schema
@@ -53,6 +54,51 @@ TextInput::make('bio')->columnSpan(2);      // span two columns
 TextInput::make('notes')->columnSpanFull(); // span the full row
 ```
 
+## Common Layout API
+
+Every layout component — `Grid`, `Flex`, `Section`, `Fieldset`, `Tab`, `Step`,
+`Tabs`, `Wizard` — extends the same `LayoutComponent` base, so this surface is
+the same on all of them and the per-component pages list only what each one
+adds.
+
+`Component::make(?string $name = null)` builds one. The name is optional and is
+*not* a state path: a layout holds no value, so the name only names the thing.
+
+```php
+->label(string|Closure|null $label)      // heading text; falls back to Str::headline() of the name
+->hiddenLabel(bool $condition = true)    // keep the component, draw no heading
+->schema(array $components)              // the children, in render order
+->statePath(?string $path)               // re-root the state path for everything beneath
+->columnSpan(int|string $span)           // 2|3|4|'full' — how much of the PARENT grid this takes
+->columnSpanFull()                       // shorthand for 'full'
+->visible(bool|Closure $condition = true)
+->hidden(bool|Closure $condition = true)
+->visibleWhen(string $field, mixed $value = true)   // shown while another field equals $value
+->hiddenWhen(string $field, mixed $value = true)
+->disabled(bool|Closure $condition = true)          // disables every field beneath it
+->disabledWhen(string $field, mixed $value = true)
+->livewire(mixed $livewire)              // the host; set for you when a form prepares its children
+->getName(): string
+->getLabel(): ?string
+->getSchema(): array
+->getColumnSpan(): int|string|null
+->isVisible(): bool
+->isHidden(): bool
+->isDisabled(): bool
+```
+
+Three of these are worth a sentence each, because they are the ones people meet
+as surprises:
+
+- **`columnSpan()` is about the parent, not the child.** It says how much of the
+  grid *containing* this component it takes up. It understands `2`, `3`, `4` and
+  `'full'` and nothing else — `columnSpan(5)` silently means "one column".
+- **`visible()` takes a closure and is evaluated on every render**, so a layout
+  can appear and disappear as the form's state changes. `visibleWhen('type',
+  'company')` is the same thing written for the common case.
+- **`disabled()` cascades.** Disabling a section disables every field inside it,
+  which is one condition instead of the same one repeated on each field.
+
 ## Layout components
 
 | Component | Purpose |
@@ -78,10 +124,18 @@ Static, non-input components that display content:
 Because these components live in core `Foundation\Schema`, they are consumed by
 more than forms:
 
-- **Forms** build their body from a schema. `Grid`, `Section`, and `Fieldset`
-  also have thin `NyonCode\WireForms\Components\Layout\*` aliases (deprecated in
-  v2.0) that only swap in form-specific markup; every other schema component is
-  used directly.
+- **Forms** build their body from a schema, and from these classes directly. The
+  thin `NyonCode\WireForms\Components\Layout\*` subclasses that used to swap in
+  form-specific markup were removed in 2.0: their copies of the views had fallen
+  behind the originals, so a form section rendered less than an infolist section
+  built from the same class.
 - **Infolists** reuse the same layout vocabulary for read-only detail views.
 - **Action modals** use [Wizard](layout/wizard.md) for multi-step flows — see
   [Modals → Multi-Step Wizard](../modals.md#multi-step-wizard).
+
+## Related
+
+- [Forms](../../forms/overview.md) — the surface that builds its body from a schema
+- [Infolists](../infolists/index.md) — the same layouts, read-only
+- [Fields](../../forms/fields/index.md) — the components that do carry state
+- [Modals](../actions/modals.md) — action modals, which consume a schema too

@@ -1,5 +1,6 @@
 ---
 order: 30
+summary: Every built-in filter, the shared API they have in common, and where their state lives between requests.
 ---
 
 # Filters
@@ -226,4 +227,4 @@ $component->removeColumnFilter('name');         // clear one column filter
 The filter bar and column-toggle menu open as a bottom sheet on a phone.
 Configure globally via the `wire-core.mobile` block, or per component with
 `->sheetOnMobile()` / `->mobileBreakpoint()` — see
-[mobile presentation](../../configuration.md#mobile).
+[mobile presentation](../../start/configuration.md#mobile).

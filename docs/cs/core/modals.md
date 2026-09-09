@@ -1,5 +1,6 @@
 ---
-order: 40
+order: 30
+summary: Potvrzovací dialogy, slide-overy a vícekrokové wizardy — povrchy, které akce otevírá, a co každý z nich dělá s fokusem, stavem a odesláním.
 ---
 
 # Modaly
@@ -68,7 +69,15 @@ safe-area padding, úchyt pro zavření tažením a focus trap automaticky.
 Breakpoint je ve výchozím stavu globální `wire-core.mobile.breakpoint` (`sm`, tj.
 `< 640px`) a lze ho zvýšit per akce pomocí `->mobileBreakpoint('md')` (`< 768px`,
 zahrnuje malé tablety) nebo `'lg'` (`< 1024px`). Globální výchozí viz
-[Konfigurace → Mobil](../configuration.md#mobil).
+[Konfigurace → Mobil](../start/configuration.md#mobil).
+
+Modal postavený přímo bere ještě jedno: `->mobileWidth(string $width)` nastaví
+šířku, kterou panel použije pod tím breakpointem — pro případ, kdy nechceš ani
+sheet, ani celou obrazovku.
+
+**Potvrzení, kde není co potvrzovat** — hláška, kterou uživatel může jen vzít na
+vědomí — je `->informative()`: zahodí odesílací tlačítko a to zbylé přejmenuje na
+*Zavřít*, takže dialog, který se na nic neptá, ani nic nenabízí udělat.
 
 ## Modal config objekty
 
@@ -257,13 +266,13 @@ ModalStep::make(string $label)
 Action::make('process')
     ->before(function ($record, Action $action) {
         if ($record->has_warnings) {
-            $action->halt()
+            $action->halt()                                    // [tl! focus:start]
                 ->heading('Warnings Detected')
-                ->body('There are unresolved warnings. Continue anyway?')
+                ->description('There are unresolved warnings. Continue anyway?')
                 ->icon('exclamation', 'warning')
                 ->submitLabel('Continue')
                 ->cancelLabel('Cancel')
-                ->width('md');
+                ->width('md');                                 // [tl! focus:end]
         }
     })
     ->action(fn ($record) => $record->process());
@@ -271,15 +280,23 @@ Action::make('process')
 
 ### API ActionHalt
 
+Halt je modal, takže bere slovník modálů — tytéž `heading()` a `description()`,
+které používají třídy na této stránce:
+
 ```php
-->heading(string $heading)
-->body(string $body)
-->icon(string $icon, ?string $color)
-->submitLabel(string $label)
-->cancelLabel(string $label)
-->width(string $width)
-->validation(array $rules)          // zvalidovat data formuláře před pokračováním
+->heading(string|Closure|null $heading)
+->description(string|Closure|null $description)
+->icon(string|Icon|null $icon, string|Color|null $color = null)
+->submitLabel(?string $label)
+->cancelLabel(?string $label)
+->width(string|ModalWidth $width)
+->closeOnClickAway(bool $close = true)
+->closeOnEscape(bool $close = true)
+->validation(array $rules, ?array $messages = null, ?array $attributes = null)
 ```
+
+Celý povrch a to, co halt dělá s `before()` hooky při potvrzeném průchodu, najdeš
+v [Lifecycle a fronty](actions/lifecycle.md#api-haltu).
 
 ## Blade komponenty
 

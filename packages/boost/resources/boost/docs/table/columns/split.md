@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: One cell divided horizontally between several child columns, each keeping its own rendering.
 ---
 
 # SplitColumn

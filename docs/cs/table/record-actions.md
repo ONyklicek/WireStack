@@ -1,5 +1,6 @@
 ---
 order: 45
+summary: Celý řádek jako ovládací prvek — dvojklik otevře, pravé tlačítko ukáže menu, Enter spustí hlavní akci.
 ---
 
 # Celořádkové akce (Record Actions)
@@ -220,7 +221,7 @@ kontrast:
 
 ## Migrace z `rowContextMenu()`
 
-`Table::rowContextMenu([...])` je deprecated. Naváž místo toho trigger pravého
+`Table::rowContextMenu([...])` byl ve 2.0 odstraněn. Naváž místo toho trigger pravého
 tlačítka:
 
 ```php
@@ -233,6 +234,12 @@ tlačítka:
     Action::make('delete')->onContextMenu(),
 ])
 ```
+
+V tom seznamu se dřív dala předat `ActionGroup` a rozbalila se do položek; naváž
+místo toho každou akci zvlášť — je to totéž menu bez seskupovacího objektu
+uprostřed. Pozor: tabulka s akcemi nad záznamem je **grid**, takže její řádky
+nesou roli a tabindex, které klávesová vrstva potřebuje — menu je díky tomu
+dosažitelné i bez myši a každý řádek stojí zhruba o 260 bajtů víc než dřív.
 
 ## Související dokumentace
 

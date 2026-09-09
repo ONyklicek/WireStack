@@ -1,5 +1,6 @@
 ---
 order: 40
+summary: "Jak napsat pole, které balíček neveze: malá PHP třída, Blade view a stejná volání jako u vestavěného pole."
 ---
 
 # Rozšíření formulářů
@@ -50,6 +51,21 @@ ViewField::make('avatar_preview')
 `viewData()` přijímá pole nebo closuru (vyhodnocenou v čase renderu). `ViewField`
 použijte pro náhledy, callouty nebo na míru šité widgety, které nemusí být
 sdílenou pojmenovanou komponentou.
+
+### Dejte svému markupu hook
+
+Cokoli vykreslíte může nést jméno, kterým to aplikace ostyluje — stejně jako
+každý prvek, který tenhle framework dodává:
+
+```blade
+<img @wireEl('avatar-preview') src="{{ $url }}" class="h-16 w-16 rounded-full" alt="">
+```
+
+Vykreslí se `data-wire="avatar-preview"` a stylesheet se k tomu dostane přes
+`[data-wire="avatar-preview"] { … }` — žádné publikované view, nic k forkování.
+Co jméno slibuje, je ve [Vzhled → Stylovací hooky](../start/theming.md#stylovaci-hooky).
+Použijte **atribut, ne třídu**: druhý atribut `class` vedle toho, který už váš
+markup má, prohlížeč tiše zahodí i se všemi Tailwind třídami na tom prvku.
 
 ---
 
@@ -269,7 +285,7 @@ class StatBlock extends ViewComponent
 Když nepotřebujete novou komponentu, jen **preset** existujících fluent volání,
 máte dvě přesné možnosti. (Form pole nejsou `Macroable` — na rozdíl od `Table`
 a `Action`, které podporují `::macro()`; table/action makra viz
-[Core Pluginy → Přidávání tlačítek a akcí](../core/plugins.md#pridavani-tlacitek-a-akci).)
+[Core Pluginy → Přidávání tlačítek a akcí](../core/plugins/extending.md#pridavani-tlacitek-a-akci).)
 
 **Statická factory** drží preset na jednom místě a čte se čistě na místě volání:
 
@@ -390,6 +406,11 @@ Hostitelé vždy předávají původní stav, nikdy výsledek dřívějšího vo
 i transformace, která by se dvojím uplatněním rozbila, je v bezpečí. `$record` je
 `null`, když hostitel žádný nemá (create formulář); buňka tabulky ho má vždy.
 
+Hostitelé jsou tři, ne dva: uložení formuláře, editace buňky v tabulce a
+[action modal](../core/actions/index.md), který svá data předává callbacku. Tvoje pole
+dostane od všech tří stejnou otázku, takže transformaci piš proti hodnotě — ne
+proti domněnce „teď se ukládá".
+
 ---
 
 <a id="hooking-into-the-save-lifecycle"></a>
@@ -425,7 +446,7 @@ app(PluginManager::class)->hook('form.saving', function (array $payload): array 
 }, priority: -100);
 ```
 
-Priority, typované hooky a plný tvar payloadu viz [Core Pluginy → Hook systém](../core/plugins.md#hook-system).
+Priority, typované hooky a plný tvar payloadu viz [Core Pluginy → Hook systém](../core/plugins/hooks.md#hook-system).
 Per-form callback použijte pro jeden formulář; hook pro průřezové pravidlo.
 
 ---
@@ -452,7 +473,7 @@ Takže zprovoznění balíčkovaného pole se scvrkává přesně na dvě věci:
 2. **Pohled pole se resolvuje** — jeho `viewName()` musí mířit na pohled, který Laravel
    najde. V balíčku to znamená zaregistrovat **view namespace**.
 
-[Core plugin](../core/plugins.md) je vrstva navrch: je to místo, kde
+[Core plugin](../core/plugins/index.md) je vrstva navrch: je to místo, kde
 nainstalujete průřezové extra — **presety (makra), save hooky a výchozí
 konfiguraci** — takže je konzumenti dostanou registrací jedné třídy. Plugin je
 pro prosté pole volitelný a povinný až když dodáváte makra nebo hooky.
@@ -647,7 +668,7 @@ final class AcmeMoneyPlugin implements HasConfiguration, Plugin
 Plugin je automaticky zapojen callbackem `resolving()` service provideru v kroku 3,
 takže konzumenti dostanou pole, jeho pohledy a jeho hooky jen instalací
 balíčku. Registrační vzor a `has()` guard viz
-[Core Pluginy → Registrace pluginů z balíčku](../core/plugins.md#registrace-pluginu-z-balicku).
+[Core Pluginy → Registrace pluginů z balíčku](../core/plugins/registration.md#registrace-pluginu-z-balicku).
 
 ### 5. Konzumenti ho instalují
 
@@ -738,7 +759,7 @@ else document.addEventListener('alpine:init', register)
 
 Guard `registered` není obranný detail: bundle se legitimně může na jedné stránce
 vypsat dvakrát (per-surface include plus
-[`@wireStackScripts`](../getting-started.md#javascriptove-assety)) a prohlížeč ho
+[`@wireStackScripts`](../start/getting-started.md#javascriptove-assety)) a prohlížeč ho
 oba dva krát spustí.
 
 Pokud váš balíček dodává víc než občasné těžké pole, deklarujte bundle v
@@ -816,4 +837,4 @@ balíček testuje vestavěná pole. Spusťte je pomocí `composer test:forms`.
 - [Reference Form Fields](fields/index.md) — každé vestavěné pole
 - [Životní cyklus ukládání](save-lifecycle.md) — per-form save callbacky
 - [Validace](validation.md) — sběr pravidel a zprávy
-- [Core Pluginy](../core/plugins.md) — hooky, makra, registry typů, balíčkování
+- [Core Pluginy](../core/plugins/index.md) — hooky, makra, registry typů, balíčkování

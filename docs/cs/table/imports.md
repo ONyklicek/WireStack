@@ -1,5 +1,6 @@
 ---
 order: 52
+summary: "CSV načtené zpět do modelu: hlavičky namapované, buňky přetypované a zvalidované per sloupec a chyby posbírané místo fatálních."
 ---
 
 # Importy tabulky
@@ -169,6 +170,26 @@ přesně ten druh úspěchu, o kterém je lepší vědět.
 řádky", což je správně, když se uživatel dívá, a lež, když běží fronta:
 „naimportováno 0 řádků, 0 chyb" se nedá odlišit od prázdného souboru. Worker,
 který upload nenajde, vyhodí `ImportException` a zkusí to znovu.
+
+## Úprava importu, který nevlastníte
+
+Tabulka z nainstalovaného [modulu](../panels/modules.md) deklaruje svoje vlastní
+mapování a aplikace do něj přidá přes
+[hook `import.configuring`](../core/plugins/hooks.md), místo aby tu třídu
+nahradila:
+
+```php
+$manager->hook(Hook::ImportConfiguring, function (ImportConfiguringPayload $payload) {
+    $payload->columns = [...$payload->columns, ImportColumn::make('imported_by')]; // [tl! focus]
+    $payload->import->updateExisting(['email']);                                   // [tl! focus]
+
+    return $payload;
+}, for: 'users');
+```
+
+Běží **jednou na import, ať se doručí jakkoli** — zařazený import se vrací do
+stejného `importTable()` — a **až po** autorizační kontrole `ImportAction`, takže
+`$payload->path` je soubor, který akce už otevřít povolila. Proto je jen ke čtení.
 
 ## Související dokumentace
 

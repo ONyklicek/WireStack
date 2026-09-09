@@ -28,6 +28,8 @@ component vocabulary.
 | `describe-table` | Resolve a table's columns, filters, header/row/bulk actions, default sort, and searchability. |
 | `describe-form` | Resolve a form's flattened field schema (name, label, type, wrapping layout). |
 | `describe-infolist` | Resolve an infolist's entry schema. |
+| `describe-resource` | List the registered resources — key, model, labels, which surfaces each declares, and its navigation entry. |
+| `describe-module` | List the domain modules — id, dependencies, and the resources, dashboards and navigation group each declares. |
 | `validate-wire-component` | Build a component and report unknown colors, unregistered icons, and names the model cannot resolve. |
 | `list-component-types` | List the built-in types for a category: `columns`, `filters`, `fields`, `actions`, `infolist-entries`, `panel-entries`, `widgets`, `modals`, `layouts`. |
 | `describe-component-api` | List the public fluent API of a component type — signatures, defaults, and the values each parameter accepts (an FQCN or a short name like `badge-column`). |
@@ -70,7 +72,7 @@ Pass that `id` to `fetch-wire-doc` to read the section in full. Passing a docume
 outline plus targeted section fetches is cheaper and more accurate. Add `full: true` for the entire page.
 
 Filter by package with `package: wire-table` (the `wire-` prefix is optional). Add your own Markdown to the
-index with `wire-boost.docs.paths`; see [Configuration](../configuration.md).
+index with `wire-boost.docs.paths`; see [Configuration](../start/configuration.md).
 
 ## Validation
 
@@ -125,4 +127,4 @@ WIRE_BOOST_DATABASE_QUERY=true
 WIRE_BOOST_TINKER=true
 ```
 
-See [Configuration](../configuration.md) for the full `wire-boost` config reference.
+See [Configuration](../start/configuration.md) for the full `wire-boost` config reference.

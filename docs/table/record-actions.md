@@ -1,5 +1,6 @@
 ---
 order: 45
+summary: A whole row as an affordance — double-click to open, right-click for a menu, Enter for the primary action.
 ---
 
 # Record Actions
@@ -221,7 +222,7 @@ override owns its own contrast:
 
 ## Migrating from `rowContextMenu()`
 
-`Table::rowContextMenu([...])` is deprecated. Bind the right-click trigger
+`Table::rowContextMenu([...])` was removed in 2.0. Bind the right-click trigger
 instead:
 
 ```php
@@ -234,6 +235,12 @@ instead:
     Action::make('delete')->onContextMenu(),
 ])
 ```
+
+An `ActionGroup` used to be accepted in that list and flattened into the items;
+bind each action instead, which is the same menu without the grouping object in
+the middle. Note that a table with record actions is a **grid**: its rows carry
+the role and tabindex the keyboard layer needs, so the menu is reachable without
+a mouse — and each row costs about 260 bytes more than the mouse-only list did.
 
 ## Related docs
 

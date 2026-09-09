@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Vícehodnotový stav jako řada chipů, kreslených na stejném badge povrchu, takže se štítek a odznak nemůžou rozejít.
 ---
 
 # TagsColumn

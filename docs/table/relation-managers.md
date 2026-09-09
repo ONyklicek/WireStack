@@ -1,5 +1,6 @@
 ---
 order: 65
+summary: "A relationship-scoped table as a standalone component: the owner relation is named once, the table is written as usual."
 ---
 
 # Relation Managers

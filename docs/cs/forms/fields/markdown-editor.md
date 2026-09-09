@@ -1,3 +1,7 @@
+---
+summary: Pole pro Markdown se zkratkami v liště a volitelným živým náhledem — ukládá se prostý Markdown.
+---
+
 # MarkdownEditor
 
 Markdown editor s toolbarovými zkratkami a volitelným live náhledem. Ukládá prostý Markdown text.

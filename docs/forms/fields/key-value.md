@@ -1,3 +1,7 @@
+---
+summary: "An inline editor for map-shaped data: rows of key and value, added, renamed and reordered in place."
+---
+
 # KeyValue
 
 Inline key-value pair editor for dictionary / map-like data (environment variables, metadata, config options).

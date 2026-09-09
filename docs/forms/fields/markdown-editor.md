@@ -1,3 +1,7 @@
+---
+summary: A Markdown field with toolbar shortcuts and an optional live preview — plain Markdown is what gets stored.
+---
+
 # MarkdownEditor
 
 Markdown editor with toolbar shortcuts and optional live preview. Stores plain Markdown text.

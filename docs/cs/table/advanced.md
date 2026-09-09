@@ -1,5 +1,6 @@
 ---
 order: 80
+summary: "Polling, výkon a ladění: co tabulka stojí na jedno vykreslení a přepínače, které to mění."
 ---
 
 # Pokročilé funkce
@@ -15,7 +16,7 @@ order: 80
 5. [Optimalizace výkonu](#optimalizace-vykonu)
 6. [Debugging dotazů](#debugging-dotazu)
 7. [SQL debug](#sql-debug)
-8. [Responzivní layout](#responzivni-layout)
+8. [Layout](#layout)
 9. [Přepínání sloupců](#prepinani-sloupcu)
 10. [Uložené pohledy](#ulozene-pohledy)
 11. [Kontextové menu řádku](#kontextove-menu-radku)
@@ -65,8 +66,8 @@ sloupce s chevrony tento výchozí stav mění za běhu a volba přežije strán
 $table->subRowsDefaultExpanded()
 ```
 
-`flattenSubRows()` je zastaralý alias téhož — nikdy nic nezploštil, jen otevřel
-všechny řádky. `toggleFlattenMode()` dál funguje a volá `toggleAllRowExpansion()`.
+`flattenSubRows()` a `toggleFlattenMode()` byly názvy z 1.x pro totéž a ve 2.0
+byly odstraněny — flatten režim nikdy nic nezploštil, jen otevřel všechny řádky.
 
 ### Relace podřádků s eager loadingem
 
@@ -120,7 +121,7 @@ $table->subRowView('components.order-items-detail')
 | Vlastnost | Typ | Popis |
 |----------|------|-------------|
 | `$expandedRows` | `array` | Klíče rozbalených rodičovských záznamů |
-| `$flattenMode` | `bool\|null` | Výchozí stav rozbalení (zastaralý alias `rows.expandAll`) |
+| `$flattenMode` | `bool\|null` | Výchozí stav rozbalení — stavová cesta je `rows.expandAll` |
 
 ### API podřádků
 
@@ -133,7 +134,6 @@ $table->subRowView('components.order-items-detail')
 ->subRowsExpandable(bool $expandable = true)
 ->subRowsLimit(?int $limit)             // max podřádků před "zobrazit více"
 ->subRowsToggleLabel(?string $label)
-->flattenSubRows(bool $flatten = true)   // zastaralé: subRowsDefaultExpanded()
 ->hasSubRows(): bool
 ->getSubRowColumns(): array
 ```
@@ -500,7 +500,7 @@ odložená tabulka inicializuje.
 
 Vlastní `lazyPlaceholder()` mění jen viditelný skeleton — na to, co se načte,
 nemá vliv. A pokud váš layout nese
-[`@wireStackScripts`](../getting-started.md#javascriptove-assety), jsou sdílené
+[`@wireStackScripts`](../start/getting-started.md#javascriptove-assety), jsou sdílené
 controllery v dokumentu už od prvního vykreslení, což je přesně to, co chcete
 v aplikaci navigující přes `wire:navigate`.
 
@@ -733,6 +733,11 @@ Interně používá `chunkById()` pro konzistentní pořadí.
 <a id="query-debugging"></a>
 ## Debugging dotazů
 
+Nejrychlejší z nich je `$table->dumpColumns()`: vypíše u každého sloupce název,
+popisek, typ a příznaky sortable/searchable a **vrátí tabulku**, takže se dá
+vložit doprostřed řetězu, aniž bys definici rozebíral.
+
+
 ### Inspekce QueryPlan
 
 Získejte immutable `QueryPlan`, abyste přesně viděli, co engine udělá:
@@ -821,8 +826,77 @@ class UserTable extends Component
 
 ---
 
-<a id="responsive-layout"></a>
-## Responzivní layout
+## Layout
+
+### Seznam místo tabulky
+
+Některé plochy nejsou tabulka nikdy: schránka, feed aktivity, knihovna médií.
+Postavené jako tabulka se z ní vymlouvají sloupec po sloupci — složit tři sloupce
+do jednoho, smazat sloupec se stavem, nahradit badge vahou, schovat akce —
+a stejně vám zbude hlavička, kterou nejde vypnout.
+
+```php
+$table->layout('list')   // nebo TableLayout::List
+```
+
+Karty se vykreslí **v každé šířce** a žádná `<table>` do dokumentu nejde. To je
+rozdíl proti `stackedOnMobile()` níž a je to celý rozdíl: stohování dá do
+dokumentu dvě vykreslení každého záznamu a nechá vybrat CSS, protože tabulka,
+která musí přežít telefon, potřebuje obě. Plocha, která tabulka nikdy není,
+potřebuje jedno.
+
+**Všechno kolem záznamů zůstává**, a proto je to layout, ne jiná stránka —
+hledání, filtry, stránkování, výběr přeživší stránkování, hromadné akce nad ním,
+exporty. Označit dvanáct tisíc notifikací přečtenými je výběr, který přežije
+stránku, a nic ručně psaného per modul by ho nevypěstovalo.
+
+Dvě věci se posunou, protože seznam nemá hlavičku: řazení se objeví jako vlastní
+ovládání (stejné, jaké dostane stohovaná tabulka na telefonu) a tvar karty přijde
+ze slovníku slotů, ne z pořadí sloupců.
+
+```php
+$table
+    ->layout('list')                                        // [tl! focus]
+    ->columns([
+        TextColumn::make('subject')->mobileTitle(),         // [tl! focus:start]
+        TextColumn::make('sender')->mobileSubtitle(),
+        TextColumn::make('received_at')->since()->mobileMeta(), // [tl! focus:end]
+    ])
+    ->collapseActionsOnMobile(true, 1);   // slovesa řádku za jedním spouštěčem
+```
+
+Tři věci stojí za to vypnout spolu s tím, protože každá je ovládání, které dává
+smysl jen nad mřížkou sloupců — a dohromady jsou to ony, kvůli kterým se stránka
+hlásí jako tabulka, ať jsou záznamy nakreslené jakkoli:
+
+```php
+$table
+    ->layout('list')
+    ->selectable(false)             // žádný checkbox na kartě ani lišta „vybrat vše"
+    ->perPageSelector(false)        // stránkování zůstane, `Show [10] records` zmizí
+    ->columns([
+        TextColumn::make('subject')->toggleable(false)->mobileTitle(),   // není co skrývat
+    ]);
+```
+
+Seznam, který se má číst jako časová osa, říká *kdy* hlavičkami — sloupec na to
+nemá:
+
+```php
+->listHeading(fn ($record) => match (true) {
+    $record->created_at->isToday() => __('Dnes'),
+    $record->created_at->isYesterday() => __('Včera'),
+    default => __('Dříve'),
+})
+```
+
+Sousední záznamy se stejnou odpovědí sdílejí jednu hlavičku, takže to počítá
+s tím, že je seznam už seřazený tak, jak hlavičky běží. Jen kreslí — přeuspořádat
+umí `groupBy()`, a ten potřebuje skutečný sloupec, podle kterého řadit.
+
+Výběr je ten, nad kterým stojí za to přemýšlet, ne ho jen opsat: kupuje akci nad
+řádky zaškrtnutými *na téhle stránce*, a hlavičková akce nad celou filtrovanou
+množinou bývá silnější i tišší.
 
 ### Naskládané na mobilu
 
@@ -1121,7 +1195,7 @@ ignorován.
 |------------|-------------------------------------------------|-----------|
 | `null`     | Neukládá se (výchozí)                            | — |
 | `session`  | Session uživatele                               | žádné |
-| `database` | Řádek `table_preferences` na (uživatel, tabulka)| publish + migrace |
+| `database` | Řádek `wire_preferences` na (uživatel, plocha) | publish + migrace |
 
 ```php
 // config/wire-table.php
@@ -1132,16 +1206,28 @@ ignorován.
 ],
 ```
 
-Pro database driver publikuj a spusť migraci:
+Pro database driver publikuj a spusť migraci — ta je ve **wire-core**, protože
+úložiště je sdílené:
 
 ```bash
-php artisan vendor:publish --tag="wire-table::migrations"
+php artisan vendor:publish --tag="wire-core::migrations"
 php artisan migrate
 ```
 
+> **Úložiště se ve 2.0 přestěhovalo o patro níž.** Začalo tady jako
+> `TablePreferenceDriver` a tabulka `table_preferences`, protože skryté sloupce
+> tabulky byly první věc, kterou si někdo chtěl pamatovat. Layout dashboardu má
+> ale přesně týž tvar — JSON bag podle plochy a uživatele — a widgety žijí ve
+> `wire-core`, na kterém table závisí, takže se z widgetu na tohle úložiště
+> nedalo dosáhnout. Teď je to
+> `NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver`,
+> tabulka se jmenuje `wire_preferences` a sloupec `surface_key`. Na tom, jak se
+> konfiguruje *tabulka*, se nezměnilo nic: `config('wire-table.preferences')`
+> zůstává. Migrace existující instalaci tabulku přejmenuje, nenechá ji ležet.
+
 Driver lze přepsat pro jednu tabulku (např. vynutit databázi i když je globální
 výchozí `session`), nebo zapojit vlastní úložiště implementující
-`TablePreferenceDriver`:
+`PreferenceDriver`:
 
 ```php
 $table
@@ -1284,19 +1370,19 @@ $this->getTableViews(): array                 // jména, pro přepínač
 
 Nech pokročilé uživatele **kliknout pravým tlačítkem na řádek** a otevřít menu
 akcí u kurzoru — zkratka vedle sloupce s akcemi. Akce menu se definují
-**samostatně** přes `rowContextMenu([...])` (nejsou to akce z `->actions()`
-toolbaru), takže je menu explicitní, ne implicitní kopie tlačítek řádku — pokud
-je chceš stejné, předej stejné objekty. Používá stejný styl položek jako dropdown
-action-group.
+**samostatně** navázáním každé z nich na trigger pravého tlačítka (nejsou to akce
+z `->actions()` toolbaru), takže je menu explicitní, ne implicitní kopie tlačítek
+řádku — pokud je chceš stejné, předej stejné objekty. Používá stejný styl položek
+jako dropdown action-group.
 
 ```php
 $table
     ->columns([/* ... */])
     ->actions([EditAction::make()])            // toolbar řádku
-    ->rowContextMenu([                          // samostatné pravé menu
-        ViewAction::make(),
-        EditAction::make(),
-        DeleteAction::make(),
+    ->recordActions([                          // samostatné pravé menu
+        ViewAction::make()->onContextMenu(),
+        EditAction::make()->onContextMenu(),
+        DeleteAction::make()->onContextMenu(),
     ]);
 ```
 
@@ -1307,7 +1393,6 @@ $table
 - Je připnuté ke kurzoru a udrží se ve viewportu; zavře se kliknutím mimo,
   klávesou `Escape`, scrollem nebo po zvolení akce (ta se spustí normálně, např.
   otevře svůj modal).
-- Skupiny akcí se do menu zploští.
 - Jde o funkci pro **desktop ukazatel** — dotyková zařízení kontextové menu
   nemají, takže sloupec s akcemi zůstává hlavním ovládáním.
 

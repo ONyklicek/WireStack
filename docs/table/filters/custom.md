@@ -1,6 +1,6 @@
 ---
 order: 34
-nav: false
+summary: "Extending the base filter class: your own control, your own query, reusable across tables."
 ---
 
 # Custom Filter Class

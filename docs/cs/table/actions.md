@@ -1,5 +1,6 @@
 ---
 order: 40
+summary: Akce nad záznamem, hromadné a v liště — co která dostane a co smí otevřít.
 ---
 
 # Akce tabulky

@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Inline přepínač, který uloží v okamžiku kliknutí, a události, které kolem zápisu vyvolá.
 ---
 
 # ToggleColumn

@@ -1,6 +1,7 @@
 ---
 title: Úvod
 order: 10
+summary: Přerovnatelné řádky a sloupce pro wire-table — kde se každé pořadí ukládá a komu patří.
 ---
 
 # Wire Sortable

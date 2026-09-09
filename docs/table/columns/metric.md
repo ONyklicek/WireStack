@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: "A figure read as a measurement: the number, and optionally the trend behind it."
 ---
 
 # MetricColumn

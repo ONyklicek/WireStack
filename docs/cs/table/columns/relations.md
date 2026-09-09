@@ -1,6 +1,6 @@
 ---
 order: 21
-nav: false
+summary: Tečková notace přes relace, agregace, pivoty a morfy — a joiny, eager loady a poddotazy, na které se změní.
 ---
 
 # Cesty relací a tečková notace

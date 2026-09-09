@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Inline rozbalovací seznam, který uloží v okamžiku změny, s možnostmi a zápisovou cestou za ním.
 ---
 
 # SelectColumn

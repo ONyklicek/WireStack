@@ -1,6 +1,6 @@
 ---
 order: 29
-nav: false
+summary: Hotové receptury sloupců — buňky, které aplikace pořád staví znovu, napsané jednou.
 ---
 
 # Vzory a recepty

@@ -1,5 +1,6 @@
 ---
 order: 40
+summary: Record-level, bulk and toolbar commands on a table — what each one is handed, and what it may open.
 ---
 
 # Table Actions

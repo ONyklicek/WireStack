@@ -1,3 +1,7 @@
+---
+summary: Pole pro barvu s formátem, ve kterém se ukládá, a volitelnou paletou k výběru.
+---
+
 # ColorPicker
 
 Výběr barvy s volbou formátu a volitelnými vzorky.

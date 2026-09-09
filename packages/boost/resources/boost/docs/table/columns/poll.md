@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: "A cell that refreshes itself: state machines, progress, and the condition that decides when to stop asking."
 ---
 
 # PollColumn

@@ -1,6 +1,6 @@
 ---
 order: 29
-nav: false
+summary: Tažení jedné hodnoty dolů přes řádky pod ní, jako v Excelu — celý rozsah zapsaný jedním requestem.
 ---
 
 # Fill handle (vyplňování tažením jako v Excelu)

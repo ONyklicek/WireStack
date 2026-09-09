@@ -8,7 +8,7 @@ summary: AI nástroje pro ekosystém Wire — MCP server, AI guidelines a agent 
 
 Wire Boost je ekvivalent [Laravel Boost](https://github.com/laravel/boost) pro wireStack. Pomáhá
 AI kódovacím agentům (Claude Code, Cursor, Codex, Gemini CLI, GitHub Copilot, Junie) psát kvalitní
-aplikace s [wire-core](../core/foundation.md), [wire-forms](../forms/overview.md),
+aplikace s [wire-core](../core/foundation/index.md), [wire-forms](../forms/overview.md),
 [wire-table](../table/overview.md) a [wire-sortable](../sortable/overview.md).
 
 Dodává tři věci:

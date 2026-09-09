@@ -1,5 +1,6 @@
 ---
 order: 70
+summary: Odkud tabulka bere řádky, když nejsou v databázi — kontrakt zdroje a co od něj tabulka pořád očekává.
 ---
 
 # Zdroje dat

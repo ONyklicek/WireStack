@@ -1,5 +1,6 @@
 ---
 order: 47
+summary: Checkboxy, výběr všeho, hromadná lišta — a co výběr znamená, když se k němu dostane i tažení a klávesnice.
 ---
 
 # Výběr řádků

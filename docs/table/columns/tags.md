@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: A multi-value state as a row of chips, drawn on the same badge surface so a tag and a badge cannot drift apart.
 ---
 
 # TagsColumn

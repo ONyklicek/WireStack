@@ -1,5 +1,6 @@
 ---
 order: 40
+summary: "Writing a field the package does not ship: a small PHP class, a Blade view, and the same call sites as a first-party field."
 ---
 
 # Extending Forms
@@ -49,6 +50,22 @@ ViewField::make('avatar_preview')
 `viewData()` accepts an array or a closure (evaluated at render time). Use
 `ViewField` for previews, callouts, or bespoke widgets that do not need to be a
 shared, named component.
+
+### Give Your Markup a Hook
+
+Anything you render can carry a name an application styles it by, the same way
+every element this framework ships does:
+
+```blade
+<img @wireEl('avatar-preview') src="{{ $url }}" class="h-16 w-16 rounded-full" alt="">
+```
+
+That renders `data-wire="avatar-preview"`, and a stylesheet reaches it with
+`[data-wire="avatar-preview"] { … }` — no published view, nothing to fork. See
+[Theming → Styling hooks](../start/theming.md#styling-hooks) for what a name
+promises. Use an **attribute rather than a class**: a second `class` attribute
+beside one your markup already has is silently dropped by the browser, taking
+every Tailwind class on that element with it.
 
 ---
 
@@ -267,7 +284,7 @@ class StatBlock extends ViewComponent
 When you do not need a new component, only a **preset** of existing fluent calls,
 you have two accurate options. (Form fields are not `Macroable` — unlike `Table`
 and `Action`, which support `::macro()`; see
-[Core Plugins → Adding Buttons And Actions](../core/plugins.md#adding-buttons-and-actions)
+[Core Plugins → Adding Buttons And Actions](../core/plugins/extending.md#adding-buttons-and-actions)
 for table/action macros.)
 
 **A static factory** keeps the preset in one place and reads cleanly at the call
@@ -388,6 +405,11 @@ always pass the original state, never the result of an earlier call, so a
 transform that would break if applied twice is still safe. The `$record` is
 `null` when the host has none (a create form); a table cell always has one.
 
+There are three hosts, not two: a form save, a table cell edit, and an
+[action modal](../core/actions/index.md) handing its data to a callback. Your field is
+asked the same question by all three, so write the transform against the value —
+never against "we must be saving".
+
 ---
 
 ## Hooking Into the Save Lifecycle
@@ -422,7 +444,7 @@ app(PluginManager::class)->hook('form.saving', function (array $payload): array 
 }, priority: -100);
 ```
 
-See [Core Plugins → Hook System](../core/plugins.md#hook-system) for priorities,
+See [Core Plugins → Hook System](../core/plugins/hooks.md#hook-system) for priorities,
 typed hooks, and the full payload shape. Use a per-form callback for one form;
 use a hook for a cross-cutting rule.
 
@@ -449,7 +471,7 @@ helper. So making a packaged field usable comes down to exactly two things:
 2. **The field's view resolves** — its `viewName()` must point at a view Laravel
    can find. In a package that means registering a **view namespace**.
 
-The [core plugin](../core/plugins.md) is the layer on top: it is where you
+The [core plugin](../core/plugins/index.md) is the layer on top: it is where you
 install the cross-cutting extras — **presets (macros), save hooks, and default
 configuration** — so consumers get them by registering one class. The plugin is
 optional for a plain field, and required only once you ship macros or hooks.
@@ -644,7 +666,7 @@ final class AcmeMoneyPlugin implements HasConfiguration, Plugin
 The plugin is wired up automatically by the service provider's `resolving()`
 callback in step 3, so consumers get the field, its views, and its hooks just by
 installing the package. See
-[Core Plugins → Register Plugins From A Package](../core/plugins.md#register-plugins-from-a-package)
+[Core Plugins → Register Plugins From A Package](../core/plugins/registration.md#register-plugins-from-a-package)
 for the registration pattern and the `has()` guard.
 
 ### 5. Consumers install it
@@ -736,7 +758,7 @@ else document.addEventListener('alpine:init', register)
 
 The `registered` guard is not defensive detail: a bundle can legitimately be
 emitted twice on one page (a per-surface include plus
-[`@wireStackScripts`](../getting-started.md#javascript-assets)), and the browser
+[`@wireStackScripts`](../start/getting-started.md#javascript-assets)), and the browser
 will execute it both times.
 
 If your package ships more than an occasional heavy field, declare the bundle in
@@ -813,4 +835,4 @@ package tests the built-in fields. Run them with `composer test:forms`.
 - [Form Fields reference](fields/index.md) — every built-in field
 - [Save Lifecycle](save-lifecycle.md) — per-form save callbacks
 - [Validation](validation.md) — rule collection and messages
-- [Core Plugins](../core/plugins.md) — hooks, macros, type registries, packaging
+- [Core Plugins](../core/plugins/index.md) — hooks, macros, type registries, packaging

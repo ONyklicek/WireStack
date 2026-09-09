@@ -1,5 +1,6 @@
 ---
 order: 57
+summary: Řádky shromážděné pod hlavičkou podle hodnoty sloupce, s mezisoučty za skupinu nad obvyklou patičkou.
 ---
 
 # Seskupení řádků

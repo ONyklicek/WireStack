@@ -1,3 +1,7 @@
+---
+summary: Jedno pole pro datum, měsíc, čas nebo obojí — režim rozhoduje o kalendáři, formátu i o tom, co se uloží.
+---
+
 # DateTimePicker
 
 Jednotný date/time picker s režimy date, month, time a datetime.

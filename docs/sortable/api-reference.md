@@ -1,6 +1,7 @@
 ---
 title: API Reference
 order: 70
+summary: The complete surface of `SortableTable` and its trait — every method, typed, with what it persists.
 ---
 
 # API Reference

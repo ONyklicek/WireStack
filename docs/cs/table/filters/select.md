@@ -1,6 +1,6 @@
 ---
 order: 31
-nav: false
+summary: Rozbalovací seznam nad předdefinovanými možnostmi — filtr, po kterém většina tabulek sáhne první.
 ---
 
 # SelectFilter

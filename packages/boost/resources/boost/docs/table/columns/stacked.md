@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: An avatar, a primary line and a secondary one in a single cell — the shape a "user" column keeps wanting.
 ---
 
 # StackedColumn

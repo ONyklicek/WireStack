@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Pravda a nepravda jako barevné ikony, volitelně se slovy vedle nich.
 ---
 
 # BooleanColumn

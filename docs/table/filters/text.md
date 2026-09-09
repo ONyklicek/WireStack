@@ -1,6 +1,6 @@
 ---
 order: 31
-nav: false
+summary: Free text with a configurable SQL operator — a scoped search box for one column, and the engine behind a filterable header.
 ---
 
 # TextFilter

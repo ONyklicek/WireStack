@@ -1,5 +1,6 @@
 ---
 order: 50
+summary: Aktuální dotaz jako CSV, Excel nebo PDF — hledání, filtry, řazení i viditelné sloupce přesně tak, jak jsou vidět.
 ---
 
 # Exporty tabulky
@@ -246,7 +247,7 @@ public function exportInBackground(): void
 
 Uživatel dostane „export se připravuje" hned a druhou notifikaci se jménem
 souboru, až worker doběhne — přesně proto existuje
-[databázový driver notifikací](../core/notifications.md): než velký export
+[databázový driver notifikací](../core/notifications/index.md): než velký export
 skončí, není už kam blikat, žádný request nezbyl.
 
 **Stav cestuje s jobem.** Bez toho by worker namountoval čerstvou komponentu a
@@ -317,6 +318,27 @@ jménem a notifikace, že je export hotový — export na frontě nemá odpově�
 by si uživatel přečetl, takže „nezapsalo se nic" a „zapsal se soubor" jsou pro
 něj nerozlišitelné, pokud se selhání nevyhodí.
 
+## Úprava exportu, který nevlastníte
+
+Tabulka z nainstalovaného [modulu](../panels/modules.md) deklaruje svůj vlastní
+export a aplikace ho zúží přes
+[hook `export.configuring`](../core/plugins/hooks.md), místo aby tu třídu
+nahradila:
+
+```php
+$manager->hook(Hook::ExportConfiguring, function (ExportConfiguringPayload $payload) {
+    $payload->query->whereNotNull('approved_at');                                 // [tl! focus]
+    $payload->columns = array_filter($payload->columns, fn ($c) => $c->getName() !== 'cost'); // [tl! focus]
+
+    return $payload;
+}, for: 'invoices');
+```
+
+Běží uvnitř `buildTableExport()`, které volá `exportTable()` i
+`queueTableExport()`, takže stažení a zařazený soubor zůstanou jedním exportem, ne
+dvěma, které se dnes náhodou shodují. Viditelnost sloupců už je aplikovaná, takže
+callback dostane to, co by soubor obsahoval — ne všechno, co tabulka deklaruje.
+
 ## Související dokumentace
 
 | Dokument | Co pokrývá |
@@ -325,4 +347,4 @@ něj nerozlišitelné, pokud se selhání nevyhodí.
 | [Sloupce](columns/index.md) | Popisky sloupců, viditelnost a formátování |
 | [Filtry](filters/index.md) | Filtrované dotazy použité exportem |
 | [Souhrny](summaries.md) | Součty připojené k exportům |
-| [Autorizace](../authorization.md) | Omezení akcí exportu podle uživatele |
+| [Autorizace](../start/authorization.md) | Omezení akcí exportu podle uživatele |

@@ -1,3 +1,7 @@
+---
+summary: "Inline editor pro data tvaru mapy: řádky klíč a hodnota, přidávané, přejmenovávané a přerovnávané na místě."
+---
+
 # KeyValue
 
 Inline editor párů klíč-hodnota pro slovníková / map-like data (proměnné prostředí, metadata, config volby).

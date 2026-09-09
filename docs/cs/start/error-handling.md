@@ -1,5 +1,6 @@
 ---
-order: 55
+order: 80
+summary: "Wire selhává nahlas a chytatelně: jedna final třída výjimky na každé selhání, jedno značkovací rozhraní na balíček — chytáš tak široce, jak chceš."
 ---
 
 # Ošetření chyb
@@ -64,8 +65,9 @@ breaking change.
 | | `PluginRegistrationException` | id pluginu je obsazené, nebo závislost není registrovaná |
 | | `ModelNotRegisteredException` | jsou požadována metadata pro neregistrovaný model |
 | | `InvalidChartDataException` | chart widget dostal data nebo options, které neumí vyrenderovat |
+| | `InvalidWidgetDataException` | `items()` widgetu dostalo položku špatné třídy |
 | `wire-forms` | `FormConfigurationException` | formulář nemá model, nebo si jeho form metody protiřečí |
-| | `StaleModelException` | optimistic-lock kontrola zjistila, že se záznam mezitím změnil ([save lifecycle](forms/save-lifecycle.md)) |
+| | `StaleModelException` | optimistic-lock kontrola zjistila, že se záznam mezitím změnil ([save lifecycle](../forms/save-lifecycle.md)) |
 | `wire-table` | `TableHasNoDataSourceException` | tabulka je dotazovaná bez `model()` nebo `query()` |
 | | `TableConfigurationException` | poll interval, cesta v `groupBy()` nebo typ summary není platný |
 | | `RelationManagerException` | relation manager je špatně nakonfigurovaný, nebo vztah danou operaci nepodporuje |
@@ -93,11 +95,11 @@ Jeden případ stojí za zmínku, protože je tichý záměrně: **neznámá bar
 `->color('bleu')` se vyresolvuje na šedou, místo aby rozbila stránku. Je to vědomý kompromis — překlep
 nemá položit view — ale znamená to, že se špatně napsaná barva vyrenderuje potichu. Pokud to chcete
 zachytit, `Color::tryResolve()` vrací pro název, který není barvou, `null`, a nástroj
-`validate-wire-component` z [wire-boostu](boost/mcp-tools.md) to nahlásí — spolu s neregistrovanými
+`validate-wire-component` z [wire-boostu](../boost/mcp-tools.md) to nahlásí — spolu s neregistrovanými
 ikonami a názvy sloupců, které váš model neumí vyresolvovat.
 
 ## Související
 
-- [Save Lifecycle](forms/save-lifecycle.md) — kam zapadá `StaleModelException`
+- [Save Lifecycle](../forms/save-lifecycle.md) — kam zapadá `StaleModelException`
 - [Autorizace](authorization.md) — proč se zamítnutá komponenta skryje místo házení výjimky
-- [Wire Boost](boost/mcp-tools.md) — nástroje, které najdou selhání, jež zůstávají tichá
+- [Wire Boost](../boost/mcp-tools.md) — nástroje, které najdou selhání, jež zůstávají tichá

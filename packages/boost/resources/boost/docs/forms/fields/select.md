@@ -1,3 +1,7 @@
+---
+summary: A dropdown over static or queried options, with server-side search, multi-select and create-on-the-fly.
+---
+
 # Select
 
 Dropdown select with static or dynamic options, search, and multi-select.
@@ -9,7 +13,7 @@ use NyonCode\WireForms\Components\Select;
 > **Mobile.** The dropdown/search panel opens as a bottom sheet below the
 > configured breakpoint (searchable selects stay a floating panel by default so
 > the search box stays usable). Override per field with `->sheetOnMobile()` /
-> `->mobileBreakpoint('md')` — see [mobile presentation](../../configuration.md#mobile).
+> `->mobileBreakpoint('md')` — see [mobile presentation](../../start/configuration.md#mobile).
 
 ## Basic Usage
 

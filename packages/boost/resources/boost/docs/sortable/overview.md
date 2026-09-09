@@ -1,6 +1,7 @@
 ---
 title: Introduction
 order: 10
+summary: Reorderable rows and columns for wire-table — where each order is persisted, and who it belongs to.
 ---
 
 # Wire Sortable

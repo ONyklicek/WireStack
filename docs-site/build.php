@@ -258,12 +258,15 @@ $pagePreviews = [
     'docs/table/sub-rows.md' => ['table-subrows', 'table-subrows-limit', 'table-subrows-filter', 'table-subrows-flatten'],
     'docs/sortable/overview.md' => ['sortable-overview', 'sortable-detail'],
     'docs/sortable/row-sorting.md' => ['sortable-detail'],
-    'docs/core/actions.md' => ['core-overview', 'table-actions-quiet'],
-    'docs/core/foundation.md' => ['palette'],
+    'docs/core/actions/index.md' => ['core-overview'],
+    'docs/core/actions/appearance.md' => ['table-actions-quiet'],
+    'docs/core/foundation/colors.md' => ['palette'],
     'docs/core/modals.md' => ['core-modal'],
-    'docs/core/notifications.md' => ['core-toasts'],
-    'docs/core/widgets.md' => ['widgets-overview', 'widgets-chart', 'widgets-bar-chart'],
-    'docs/core/infolists.md' => ['infolists-overview', 'infolists-entries'],
+    'docs/core/notifications/toasts.md' => ['core-toasts'],
+    'docs/core/widgets/index.md' => ['widgets-overview'],
+    'docs/core/widgets/charts.md' => ['widgets-chart', 'widgets-bar-chart'],
+    'docs/core/infolists/index.md' => ['infolists-overview'],
+    'docs/core/infolists/entries.md' => ['infolists-entries'],
 ];
 
 // Extra variant previews appended after a field page's primary preview, so one
@@ -418,9 +421,21 @@ $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
         ],
         [
             'title' => 'Wire Core',
-            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/core/actions/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/core/foundation/index.html'),
             'copy' => 'Actions, widgets, modals, notifications, plugins, and shared foundations.',
             'image' => 'assets/previews/core-overview.png',
+        ],
+        [
+            'title' => 'Wire Panels',
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/panels/overview/index.html'),
+            'copy' => 'One entity declared once — its pages, its place in the menu, and its URLs.',
+            'image' => 'assets/previews/infolists-overview.png',
+        ],
+        [
+            'title' => 'Wire Admin',
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/admin/overview/index.html'),
+            'copy' => 'The optional shell: a layout and a sidebar over everything registered.',
+            'image' => 'assets/previews/core-preview.png',
         ],
     ],
     'galleryCards' => [
@@ -462,7 +477,7 @@ $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
         ],
         [
             'title' => 'Core Overview',
-            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/core/actions/index.html'),
+            'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/core/foundation/index.html'),
             'copy' => 'Stats and shared action primitives.',
             'image' => 'assets/previews/core-overview.png',
         ],
@@ -476,10 +491,12 @@ $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
     'stats' => [
         ['label' => 'Docs pages', 'value' => (string) count($pages)],
         ['label' => 'Preview states', 'value' => '8'],
-        ['label' => 'Core sections', 'value' => '5'],
+        // Counted, not typed: the section list is the package graph and it grew
+        // from five to nine in 2.0. A hardcoded number goes stale silently.
+        ['label' => 'Sections', 'value' => (string) count(array_unique(array_column($pages, 'section')))],
     ],
     'quickLinks' => [
-        ['label' => 'Getting Started', 'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/getting-started/index.html')],
+        ['label' => 'Getting Started', 'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/start/getting-started/index.html')],
         ['label' => 'Documentation Index', 'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/documentation/index.html')],
         ['label' => 'Forms', 'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/forms/overview/index.html')],
         ['label' => 'Table', 'href' => relativePageUrl($versionRoot.'/index.html', $versionRoot.'/table/overview/index.html')],
@@ -655,6 +672,8 @@ function pageManifest(string $root, array $overlayLocaleCodes, string $localeCod
         $document = parseMarkdownDocument($markdown, $sourceRelative);
         $frontMatter = $document['frontMatter'];
         $section = normalizeSection($frontMatter['section'] ?? inferSectionFromSource($sourceRelative));
+        $order = resolvePageOrder($frontMatter['order'] ?? null);
+        $group = resolveNavGroup($sourceRelative, $frontMatter['group'] ?? null, $order);
         $title = trim((string) (
             $frontMatter['nav_title']
             ?? $frontMatter['title']
@@ -667,8 +686,15 @@ function pageManifest(string $root, array $overlayLocaleCodes, string $localeCod
             'sourceRelative' => $sourceRelative,
             'section' => $section,
             'sectionWeight' => sectionSortWeight($section),
+            // A group renders as one collapsible entry inside its section, so a
+            // directory of 25 column pages costs the sidebar one line instead of
+            // 25. `groupWeight` places the whole group on the same axis as an
+            // ungrouped page's `order` — see resolveNavGroup().
+            'group' => $group['label'],
+            'groupKey' => $group['key'],
+            'groupWeight' => $group['weight'],
             'navTitle' => $title !== '' ? $title : guessTitleFromFilename($sourceRelative),
-            'order' => resolvePageOrder($frontMatter['order'] ?? null),
+            'order' => $order,
             // Pages can opt out of the sidebar with `nav: false` in front matter;
             // they are still built and reachable (e.g. from an index page's table).
             'nav' => ! in_array($frontMatter['nav'] ?? true, [false, 'false', 'no', 0], true),
@@ -680,13 +706,20 @@ function pageManifest(string $root, array $overlayLocaleCodes, string $localeCod
         ];
     }
 
+    // An ungrouped page's slot is its own `order`; every page of a group shares
+    // the group's weight, which is what keeps a group's members adjacent and lets
+    // the group sit *between* two loose pages rather than always after them.
     usort($pages, static fn (array $left, array $right): int => [
         $left['sectionWeight'],
+        $left['groupWeight'],
+        (string) $left['groupKey'],
         $left['order'],
         strtolower($left['navTitle']),
         $left['sourceRelative'],
     ] <=> [
         $right['sectionWeight'],
+        $right['groupWeight'],
+        (string) $right['groupKey'],
         $right['order'],
         strtolower($right['navTitle']),
         $right['sourceRelative'],
@@ -728,19 +761,108 @@ function extractFirstMarkdownHeading(string $markdown): ?string
     return trim((string) preg_replace('/[*_`]+/', '', $matches[1]));
 }
 
+/**
+ * The sidebar section a page belongs to, inferred from where it lives.
+ *
+ * One directory under docs/ is one section, and the set of them is the package
+ * graph a reader actually installs: the owner layer (`panels`), the optional
+ * shell (`admin`) and the ready-made areas (`modules`) are their own sections
+ * rather than 15 more entries under Core, which is what they were in v1 when
+ * none of those packages existed yet.
+ */
 function inferSectionFromSource(string $sourceRelative): string
 {
     return match (true) {
-        str_starts_with($sourceRelative, 'docs/forms/fields/') => 'Forms',
+        str_starts_with($sourceRelative, 'docs/start/') => 'Start Here',
         str_starts_with($sourceRelative, 'docs/forms/') => 'Forms',
         str_starts_with($sourceRelative, 'docs/table/') => 'Table',
-        str_starts_with($sourceRelative, 'docs/sortable/') => 'Sortable',
-        str_starts_with($sourceRelative, 'docs/core/schema/') => 'Schema',
         str_starts_with($sourceRelative, 'docs/core/') => 'Core',
+        str_starts_with($sourceRelative, 'docs/panels/') => 'Panels',
+        str_starts_with($sourceRelative, 'docs/admin/') => 'Admin',
+        str_starts_with($sourceRelative, 'docs/modules/') => 'Modules',
+        str_starts_with($sourceRelative, 'docs/sortable/') => 'Sortable',
         str_starts_with($sourceRelative, 'docs/boost/') => 'Boost',
         str_starts_with($sourceRelative, 'docs/') => 'Start Here',
         default => 'Start Here',
     };
+}
+
+/**
+ * Directories that collapse into one group inside their section.
+ *
+ * Keyed by the directory relative to docs/. `label` is the heading the sidebar
+ * shows; `weight` is the group's slot on the same numeric axis as an ungrouped
+ * page's front-matter `order`, so `table/columns` (20) lands between Overview
+ * (10) and Actions (40) instead of after every loose page in the section.
+ *
+ * Longest matching prefix wins, which is how a nested directory opts out of its
+ * parent's group — nothing does today, and `core/schema` deliberately swallows
+ * `core/schema/layout` rather than nesting a third level the sidebar would have
+ * to indent twice.
+ *
+ * @return array<string, array{label:string, weight:int}>
+ */
+function navGroupTable(): array
+{
+    return [
+        'forms/fields' => ['label' => 'Fields', 'weight' => 50],
+        'table/columns' => ['label' => 'Columns', 'weight' => 20],
+        'table/filters' => ['label' => 'Filters', 'weight' => 30],
+        'core/foundation' => ['label' => 'Foundation', 'weight' => 10],
+        'core/actions' => ['label' => 'Actions', 'weight' => 20],
+        'core/notifications' => ['label' => 'Notifications', 'weight' => 40],
+        'core/widgets' => ['label' => 'Widgets', 'weight' => 50],
+        'core/infolists' => ['label' => 'Infolists', 'weight' => 55],
+        'core/schema' => ['label' => 'Schema', 'weight' => 70],
+        'core/plugins' => ['label' => 'Plugins', 'weight' => 90],
+    ];
+}
+
+/**
+ * Resolve the group a page renders in.
+ *
+ * Front matter wins over the directory: a string names the group outright, and
+ * `group: false` pulls a page out of the group its directory would put it in —
+ * which is how a directory's own index page stays a loose entry above the group
+ * it introduces.
+ *
+ * @param  mixed  $override  Front-matter `group` value.
+ * @param  int  $order  The page's own order, used as its slot when it has no group.
+ * @return array{key:?string, label:?string, weight:int}
+ */
+function resolveNavGroup(string $sourceRelative, mixed $override, int $order): array
+{
+    if (in_array($override, [false, 'false', 'no', 'none'], true)) {
+        return ['key' => null, 'label' => null, 'weight' => $order];
+    }
+
+    $relative = str_starts_with($sourceRelative, 'docs/') ? substr($sourceRelative, strlen('docs/')) : $sourceRelative;
+    $directory = trim(dirname($relative), './');
+
+    $match = null;
+    foreach (navGroupTable() as $key => $group) {
+        if ($directory !== $key && ! str_starts_with($directory, $key.'/')) {
+            continue;
+        }
+
+        if ($match === null || strlen($key) > strlen($match)) {
+            $match = $key;
+        }
+    }
+
+    if ($match === null) {
+        return is_string($override) && $override !== ''
+            ? ['key' => 'custom:'.$override, 'label' => $override, 'weight' => $order]
+            : ['key' => null, 'label' => null, 'weight' => $order];
+    }
+
+    $group = navGroupTable()[$match];
+
+    return [
+        'key' => $match,
+        'label' => is_string($override) && $override !== '' ? $override : $group['label'],
+        'weight' => $group['weight'],
+    ];
 }
 
 function normalizeSection(string $section): string
@@ -748,13 +870,15 @@ function normalizeSection(string $section): string
     $normalized = strtolower(trim($section));
 
     return match ($normalized) {
-        'start here', 'start-here', 'start_here' => 'Start Here',
+        'start here', 'start-here', 'start_here', 'start' => 'Start Here',
         'forms' => 'Forms',
         'fields' => 'Forms',
         'table' => 'Table',
-        'sortable' => 'Sortable',
-        'schema' => 'Schema',
         'core' => 'Core',
+        'panels' => 'Panels',
+        'admin' => 'Admin',
+        'modules' => 'Modules',
+        'sortable' => 'Sortable',
         'boost' => 'Boost',
         default => ucwords(str_replace(['-', '_'], ' ', $section)),
     };
@@ -762,14 +886,18 @@ function normalizeSection(string $section): string
 
 function sectionSortWeight(string $section): int
 {
+    // Reading order, not alphabet: the two surfaces most people arrive for, then
+    // what they are both built out of, then the layers that assemble an admin.
     return match ($section) {
         'Start Here' => 10,
         'Forms' => 20,
-        'Table' => 40,
-        'Schema' => 45,
-        'Sortable' => 50,
-        'Core' => 60,
-        'Boost' => 70,
+        'Table' => 30,
+        'Core' => 40,
+        'Panels' => 50,
+        'Admin' => 60,
+        'Modules' => 70,
+        'Sortable' => 80,
+        'Boost' => 90,
         default => 999,
     };
 }
@@ -908,13 +1036,18 @@ function renderMarkdownPage(string $markdown, MarkdownConverter $converter, arra
 }
 
 /**
- * @param  array<int, array<string, string>>  $pages
- * @return array<int, array{title:string, items:array<int, array{title:string, href:string, active:bool}>}>
+ * Sidebar tree: section -> items, where an item is either a link or a group of
+ * links. A group is emitted at the position of its first member, which the sort
+ * in pageManifest() has already placed among the section's loose pages, so the
+ * order here is read off the page list rather than declared twice.
+ *
+ * @param  array<int, array<string, mixed>>  $pages
+ * @return array<int, array{title:string, items:array<int, array<string, mixed>>}>
  */
 function buildNavSections(array $pages, ?string $activeSource, string $distRoot): array
 {
     $sections = [];
-    $sectionOrder = [];
+    $groupPositions = [];
     $activeOutput = null;
 
     foreach ($pages as $page) {
@@ -932,23 +1065,77 @@ function buildNavSections(array $pages, ?string $activeSource, string $distRoot)
             continue;
         }
 
-        $sectionOrder[$page['section']] = true;
-        $sections[$page['section']][] = [
+        $section = $page['section'];
+        $sections[$section] ??= [];
+
+        $link = [
+            'type' => 'link',
             'title' => $page['navTitle'],
             'href' => relativePageUrl($fromFile, $distRoot.'/'.$page['output']),
             'active' => $page['source'] === $activeSource,
         ];
+
+        $groupKey = $page['groupKey'] ?? null;
+
+        if ($groupKey === null) {
+            $sections[$section][] = $link;
+
+            continue;
+        }
+
+        if (! isset($groupPositions[$section][$groupKey])) {
+            $groupPositions[$section][$groupKey] = count($sections[$section]);
+            $sections[$section][] = [
+                'type' => 'group',
+                'title' => (string) ($page['group'] ?? $groupKey),
+                // A group holding the current page renders open; every other one
+                // starts closed, so a section costs one line per group at rest.
+                'active' => false,
+                'items' => [],
+            ];
+        }
+
+        $position = $groupPositions[$section][$groupKey];
+        $sections[$section][$position]['items'][] = $link;
+        $sections[$section][$position]['active'] = $sections[$section][$position]['active'] || $link['active'];
     }
 
     $ordered = [];
-    foreach (array_keys($sectionOrder) as $title) {
+    foreach ($sections as $title => $items) {
         $ordered[] = [
             'title' => $title,
-            'items' => $sections[$title],
+            'items' => $items,
         ];
     }
 
     return $ordered;
+}
+
+/**
+ * Flatten a nav tree to the reading order the prev/next footer walks.
+ *
+ * @param  array<int, array{title:string, items:array<int, array<string, mixed>>}>  $navSections
+ * @return array<int, array<string, mixed>>
+ */
+function flattenNavSections(array $navSections): array
+{
+    $flat = [];
+
+    foreach ($navSections as $section) {
+        foreach ($section['items'] as $item) {
+            if (($item['type'] ?? 'link') === 'group') {
+                foreach ($item['items'] as $child) {
+                    $flat[] = $child + ['section' => $section['title'], 'group' => $item['title']];
+                }
+
+                continue;
+            }
+
+            $flat[] = $item + ['section' => $section['title']];
+        }
+    }
+
+    return $flat;
 }
 
 /**

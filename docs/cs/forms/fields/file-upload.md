@@ -1,3 +1,7 @@
+---
+summary: Uploady s náhledy, validací a zpracováním obrázků — kam soubor jde a co místo něj pole ukládá.
+---
+
 # FileUpload
 
 Upload souborů s náhledem, validací a zpracováním obrázků.

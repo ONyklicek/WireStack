@@ -1,12 +1,12 @@
 {
-    "_comment": "Canonical docs-site matrix of locales x versions. The deploy job owns ONE copy of this file and feeds it to every branch build (DOCS_VERSIONS_FILE), so the switchers never drift between the 1.x and 2.x branches. build.php falls back to the values baked here when no env override is set.",
+    "_comment": "Canonical docs-site matrix of locales x versions. The deploy job owns ONE copy of this file and feeds it to every branch build (DOCS_VERSIONS_FILE), so the switchers never drift between the 1.x and 2.x branches. build.php falls back to the values baked here when no env override is set. `branch` is the ref each version is built from — point v2.x at `2.x` once that long-lived branch exists, the way 1.x has one.",
     "baseUrl": "https://wirestack.nyoncode.cz",
     "locales": [
         { "code": "en", "label": "English", "path": "", "default": true },
         { "code": "cs", "label": "Čeština", "path": "cs" }
     ],
     "versions": [
-        { "label": "v1.x", "badge": "Latest", "path": "", "branch": "1.x", "available": true },
-        { "label": "v2.x", "badge": "Soon", "path": "v2", "branch": "2.x", "available": false }
+        { "label": "v2.x", "badge": "Latest", "path": "", "branch": "2.0.0", "available": true },
+        { "label": "v1.x", "badge": "LTS", "path": "v1", "branch": "1.x", "available": true }
     ]
 }

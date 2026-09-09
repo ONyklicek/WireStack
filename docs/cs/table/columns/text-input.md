@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Inline textový vstup, který validuje a ukládá při opuštění pole — buňka, do které se píše.
 ---
 
 # TextInputColumn

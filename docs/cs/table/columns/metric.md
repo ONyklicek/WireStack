@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: "Číslo čtené jako měření: hodnota a volitelně trend za ní."
 ---
 
 # MetricColumn

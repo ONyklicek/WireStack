@@ -1,12 +1,12 @@
 ---
-order: 95
+order: 80
 summary: Jedna příkazová paleta nad všemi registrovanými resources — přihlaste resource, připojte komponentu, a jeden výraz dosáhne na objednávky, zákazníky i faktury v jednom seznamu.
 ---
 
 # Globální hledání
 
 Jedno vyhledávací pole nad vším, co má aplikace registrované. Uživatel otevře
-paletu, píše a dostane záznamy z každého [resource](resources.md), který se
+paletu, píše a dostane záznamy z každého [resource](../panels/resources.md), který se
 přihlásil — seskupené po resourcech, s limitem na resource a profiltrované tím,
 co ten uživatel smí vidět.
 
@@ -20,7 +20,7 @@ v jakém pořadí:
 
 1. `GlobalSearchPalette` — komponenta, kterou připojíte — drží hledaný výraz,
    příznak otevření a klávesový kurzor, a žádný dotaz. Ptá se `GlobalSearch`.
-2. `GlobalSearch` čte [`ResourceRegistry`](resources.md) a přeskočí každý
+2. `GlobalSearch` čte [`ResourceRegistry`](../panels/resources.md) a přeskočí každý
    resource, který neimplementuje `GloballySearchable`. Identita a prohledávatelnost
    jsou oddělené přihlášky: resource, který prohledávatelný být nemá — audit log,
    spojovací tabulka, která dostala resource kvůli routování — to řekne tím, že
@@ -107,7 +107,7 @@ final class OrderResource implements DescribesResource, GloballySearchable
 
 **Všimni si, co příklad nepředává.** Řádek už obě půlky své URL nese — klíč
 resource a klíč záznamu — takže ji framework sestaví:
-`urlFor($resourceKey, 'view', ['record' => $recordKey])`, v [zóně](resources.md#zony),
+`urlFor($resourceKey, 'view', ['record' => $recordKey])`, v [zóně](../panels/routing.md#zony),
 ve které byla paleta otevřená. Napsat sem cestu znamená kopírovat to, co router
 už ví, a je to ta kopie, která zastará: než se URL začala odvozovat, měl tenhle
 repozitář ve vlastním workbenchi dvě natvrdo psané cesty a obě byly špatně —
@@ -121,6 +121,93 @@ URL vždycky vyhraje.
 na něm neudělá nic, místo aby navigoval někam vymyšleným. To je odpověď pro
 resource, který nedeklaruje stránky, i pro ten routovaný v jiné zóně, než ve které
 byla paleta otevřená.
+
+## Nejen záznamy: navigace a příkazy
+
+Paleta vypisuje čtyři druhy řádků a každý je samostatné přihlášení.
+
+**Záznamy** pocházejí z `GloballySearchable` výše. **Položky navigace** nepotřebují
+nic — co už je v menu, je i v paletě, filtrované tímtéž `isVisible()`, jaké používá
+sidebar, a namířené do téže zóny. **Příkazy** a **akce nad záznamem** dává jeden
+kontrakt:
+
+```php
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Foundation\Contracts\ProvidesCommands;
+
+final class InvoiceResource implements DescribesResource, ProvidesCommands
+{
+    public static function commands(?object $record = null): array
+    {
+        if ($record !== null) {
+            return [
+                Action::make('archive')                                    // [tl! focus:3]
+                    ->label('Archivovat fakturu')
+                    ->requiresConfirmation()
+                    ->action(fn (Invoice $record) => $record->archive()),
+            ];
+        }
+
+        return [
+            Action::make('recount')                                        // [tl! focus:2]
+                ->label('Přepočítat faktury')
+                ->action(fn () => Recount::dispatch()),
+        ];
+    }
+}
+```
+
+Jedna metoda, ne dvě. `$record` je null, když se paleta ptá, co stojí samo o sobě,
+a nese záznam, když se uživatel do nějakého zanořil — <kbd>→</kbd> na výsledku ukáže,
+co se s ním dá dělat, <kbd>←</kbd> vrátí zpátky.
+
+Akce se vypíše jen tehdy, když ji přihlášený uživatel smí spustit. To je
+`canExecute()` — viditelnost **a** `permission()` / `authorize()` / `authorizeUsing()` —
+a kontroluje se dřív, než řádek vznikne, ne až se na něj klikne: paleta, která
+vypíše popisek zakázané akce, ji tím už prozradila.
+
+### Klávesnice
+
+Fokus zůstává celou dobu ve vyhledávacím poli; šipky hýbou kurzorem, ne fokusem,
+a pole odečítači obrazovky říká, kde ten kurzor je, přes `aria-activedescendant`.
+
+| Klávesa | Co udělá |
+|---|---|
+| <kbd>↓</kbd> / <kbd>↑</kbd> | posune kurzor, na koncích přeteče |
+| <kbd>→</kbd> | ukáže akce aktivního záznamu |
+| <kbd>←</kbd> | zpět na výsledky, výraz zůstává |
+| <kbd>Enter</kbd> | následuje, spustí nebo předá řádek pod kurzorem |
+| <kbd>Tab</kbd> | přesune skutečný fokus na řádek; z dialogu nevypadne |
+| <kbd>Esc</kbd> | zavře |
+
+<kbd>Tab</kbd> a kurzor se rozejít smí a stane se vždy to, co jsi aktivoval —
+řádek se při kliknutí i po Tabu pojmenuje sám a jen <kbd>Enter</kbd> v poli se
+řídí kurzorem.
+
+### Co udělá Enter
+
+Paleta nevlastní modál, takže akci, která se potřebuje na něco zeptat, nikdy
+nespustí sama. Kterou ze tří věcí udělá, rozhoduje sama akce:
+
+| Akce | Co paleta udělá |
+|---|---|
+| nemá se na co ptát | spustí ji na místě a zavře se |
+| je o záznamu a má modál | přejde na stránku toho záznamu s `?action=` |
+| stojí sama a má modál | vyšle `wire-palette-action` hostovi na obrazovce |
+
+Prostřední řádek nepotřebuje zapojit: stránka zobrazující jeden záznam `?action=`
+po příchodu přečte a akci připojí — **pokud vlastní akční host**. Žádná dodávaná
+stránka ho nemá: `ListPage` skládá `WithTable`, formulářové stránky `WithForms`
+a `ViewPage` záměrně nesloží žádný host. Přidej na vlastní stránku
+[`WithActions`](actions/standalone.md) a odpoví na query parametr i na dispatch.
+
+Samostatný příkaz se nikam nenaviguje, protože ani index stránka akční host
+nevlastní — poslat tam uživatele kvůli modálu, který se neotevře, je horší než
+ho nikam neposílat.
+
+Pořadí skupin je dané a záleží na něm: **záznamy, pak navigace, pak příkazy**.
+Výraz, který sedí na záznam i na příkaz, patří záznamu — napsat `INV` má otevřít
+fakturu, ne spustit „Přepočítat faktury".
 
 ## Připojení palety
 
@@ -160,7 +247,7 @@ Dialog je teleportovaný do `<body>`, jako každý modál ve frameworku, takže 
 nikdy neořízne polohovaný předek.
 
 **V zónované aplikaci nepotřebuje žádnou konfiguraci.** Paleta si přečte svoji
-[zónu](resources.md#zony) ze stránky, na které se vykreslila, a drží si ji
+[zónu](../panels/routing.md#zony) ze stránky, na které se vykreslila, a drží si ji
 v public property, takže výsledky míří zpátky do zóny, ve které uživatel je —
 tentýž layout připojený pod `/admin` a `/business` odkazuje do každé z nich.
 Nastav ji výslovně jen tehdy, když paleta sedí v shellu, který sám resource routa
@@ -172,7 +259,7 @@ není:
 
 Musí to být property, ne dotaz: hledání běží na Livewire requestu, kde je aktuální
 routa Livewirový endpoint a na zónu už se není koho zeptat. Viz
-[Zóny](resources.md#zony).
+[Zóny](../panels/routing.md#zony).
 
 ## Autorizace a tenancy
 
@@ -240,16 +327,27 @@ GlobalSearch::PER_RESOURCE_LIMIT                                  // 5
 GlobalSearchResult::withUrl(?string $url): GlobalSearchResult     // tentýž řádek, namířený
 ```
 
-`search()` čte [`Catalog`](resources.md#catalog-api), takže paleta získá resource
+`search()` čte [`Catalog`](../panels/navigation.md#catalog-api), takže paleta získá resource
 ve chvíli, kdy je zaregistrovaný, a nikdy si nedrží vlastní seznam. Registrovaná
 věc, která se přihlásí k hledání a nemá model — dashboard — se přeskočí, místo aby
 se jí ptalo.
 
-Kontrakt, který resource implementuje:
+Kontrakty, které resource implementuje — každý zvlášť jako přihlášení:
 
 ```php
 static globallySearchableAttributes(): array          // jména obyčejných sloupců na modelu
 static toGlobalSearchResult(object $record): GlobalSearchResult
+
+static commands(?object $record = null): array        // ProvidesCommands; ActionContract[]
+```
+
+Dvě otázky, které se paleta na akci zeptá, než ji nabídne nebo spustí — odpovídá
+se přes kontejner, aby žádná plocha nemusela importovat modul Actions:
+
+```php
+ClassifiesComponentActions::needsPrompt(ActionContract $action): bool
+ClassifiesComponentActions::isRunnable(ActionContract $action, mixed $context = null): bool
+RunsComponentActions::runComponentAction(ActionContract $action, array $context = []): void
 ```
 
 Komponenta palety, pro vlastní trigger nebo pro test:
@@ -259,15 +357,42 @@ $palette->open(): void                 // navázané i na událost `open-global-
 $palette->close(): void                // vyčistí výraz, takže se příště otevře prázdná
 $palette->moveDown(): void
 $palette->moveUp(): void
-$palette->select(): mixed              // naviguje na aktivní řádek, nebo null
+$palette->select(): mixed              // následuje, spustí nebo předá aktivní řádek
 $palette->selectedUrl(): ?string       // kam aktivní řádek vede
+$palette->drillDown(): void            // ukáže akce aktivního záznamu // [tl! focus:2]
+$palette->drillUp(): void              // zpět na výsledky, výraz zůstává
+$palette->isDrilledDown(): bool
 $palette->flatResults(): array         // všechny řádky, v pořadí vykreslení
-$palette->groupLabels(): array         // [klíč resource => popisek v množném čísle]
+$palette->groupLabels(): array         // [klíč skupiny => nadpis]
 $palette->zone                         // ?string — zóna, ve které byla otevřená
+
+GlobalSearchPalette::ACTION_EVENT      // 'wire-palette-action'
+GlobalSearchPalette::ACTION_PARAMETER  // 'action'
 ```
+
+## Zúžení hledání jednoho resource
+
+Hledatelný resource z nainstalovaného [modulu](../panels/modules.md) deklaruje
+vlastní atributy a aplikace omezí, co paleta vypíše, přes
+[hook `search.querying`](plugins/hooks.md):
+
+```php
+$manager->hook(Hook::SearchQuerying, function (SearchQueryingPayload $payload) {
+    $payload->query->whereNull('archived_at');   // [tl! focus]
+
+    return $payload;
+}, for: 'invoices');
+```
+
+Spustí se **jednou za resource**, ne jednou za výraz — a právě to z něj dělá
+adresovatelný hook: `for:` pojmenuje katalogový klíč hledaného resource nebo jeho
+model, takže callback napsaný pro jeden modul neběží nad celou paletou.
+
+Běží před spuštěním dotazu a **před** kontrolou `canView()` nad každým záznamem,
+takže callback může řádky zúžit a nemůže se prohledat kolem policy.
 
 ## Související
 
-- [Resources](resources.md) — registr, který paleta čte, a kontrakt identity, který implementuje každý resource
-- [Autorizace](../authorization.md) — policies, tenancy a co scopované není
+- [Resources](../panels/resources.md) — registr, který paleta čte, a kontrakt identity, který implementuje každý resource
+- [Autorizace](../start/authorization.md) — policies, tenancy a co scopované není
 - [Modály](modals.md) — vzor teleportu do body, který dialog následuje

@@ -1,5 +1,6 @@
 ---
 order: 57
+summary: Rows gathered under a header by a column's value, with per-group subtotals on top of the usual footer.
 ---
 
 # Row Grouping

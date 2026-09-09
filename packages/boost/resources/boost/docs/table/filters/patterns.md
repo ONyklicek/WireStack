@@ -1,6 +1,6 @@
 ---
 order: 39
-nav: false
+summary: Ready-made filter bars — the combinations applications keep rebuilding, written once.
 ---
 
 # Patterns & Recipes

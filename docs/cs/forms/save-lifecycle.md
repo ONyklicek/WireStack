@@ -1,5 +1,6 @@
 ---
 order: 30
+summary: Devět kroků mezi `save()` a uloženým záznamem a hook, který sedí u každého z nich.
 ---
 
 # Životní cyklus ukládání
@@ -103,6 +104,26 @@ $form
 
 ---
 
+## Opačný směr: form.filling
+
+Tahle stránka je cesta *ven*. Cesta dovnitř má svůj vlastní hook: `Form::fill()`
+dispatchuje [`form.filling`](../core/plugins/hooks.md), takže nainstalovaný
+balíček může změnit, s čím pole přijde — protějšek kroku `form.saving` níže.
+
+```php
+$manager->hook(Hook::FormFilling, function (FormFillingPayload $payload) {
+    $payload->data['currency'] ??= auth()->user()->currency;   // [tl! focus]
+
+    return $payload;
+}, for: Invoice::class);
+```
+
+Vědomě se **nedispatchuje** z `getInitialState()`: to odpovídá na otázku, co
+potřebuje ovládací prvek, než se cokoli naváže, a edit stránka volá obojí — hook
+na obou by se spustil dvakrát na stránku.
+
+---
+
 ## Krok 3: Plugin hook — form.saving
 
 Vystřelí automaticky, když jsou registrované pluginy přes `PluginManager`. Pluginy mohou prohlédnout nebo upravit `$data` před perzistencí. Uživatelský kód s tímto krokem přímo neinteraguje.
@@ -187,6 +208,37 @@ rodičovského zápisu vypadnou a jdou vlastní cestou — není co nastavovat.
 Všechno vypadává **až u zápisu**. `mutateDataBeforeSave()`, hook `form.saving`
 i `beforeSave()` pořád vidí kompletní pole dat a stejně tak kaskáda relací
 v kroku 6.
+
+### Stejné transformace v action modalu
+
+Stav formuláře odchází dvěma dveřmi. `save()` ho zapíše do záznamu;
+[akce](../core/actions/index.md) s `->form()` ho místo toho předá callbacku:
+
+```php
+Action::make('publish')
+    ->form([
+        Select::make('status')->options(Status::class)->placeholder('None'),
+        TextInput::make('price')->numeric(),
+        DateTimePicker::make('published_at'),
+    ])
+    ->action(fn (array $data) => $record->update($data)); // [tl! focus]
+```
+
+Obojí dveře aplikují stejnou dehydrataci, takže `$data` tady drží přesně to, co
+by zapsalo uložení: `null` za vymazaný select i vyprázdněné číselné pole, storage
+formát a časovou zónu u data, uloženou cestu u uploadu a nakonec tvůj vlastní
+`dehydrateStateUsing()`. Kroky wizardu sdílejí jeden data bag a dehydratuje se
+každý z nich — ne jen ten, který je při odeslání na obrazovce.
+
+Proběhne to jednou, v místě předání, a až po validaci. Živý stav, na který je
+modal navázaný, si drží syrovou hodnotu — pole se pod otevřeným modalem nehne a
+opakované odeslání dehydratuje ze stejného výchozího bodu, ne z už
+transformovaného.
+
+Totéž platí pro třetí dveře — [halt](../core/actions/lifecycle.md#halt-vykonavani), který
+nese formulář: potvrzením se akce vykoná znovu a hodnoty, které halt posbíral,
+dehydratují pole jeho vlastního formuláře. Klíče, které si halt přinesl z prvního
+pokusu, zůstanou nedotčené — halt formuláři patří jen to, co sám deklaruje.
 
 ### Vlastní perzistence
 

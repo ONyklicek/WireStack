@@ -1,3 +1,7 @@
+---
+summary: "Plnohodnotný editor nad TipTapem a ProseMirrorem: tabulky, obrázky, zmínky a zarovnání, uložené jako HTML nebo JSON."
+---
+
 # TiptapEditor
 
 Plnohodnotný rich text editor postavený na [TipTap](https://tiptap.dev/) / ProseMirror. Konfigurovatelný toolbar, volitelná rozšíření (tabulky, obrázky, zarovnání textu, zvýraznění) a HTML nebo JSON výstup.
@@ -31,7 +35,7 @@ zapnutí tabulek nikdy neposílá druhou kopii jádra editoru. Script tagy
 > balíčku — a editor od té chvíle emituje tyhle cesty včetně cache-busteru. Publish
 > zrcadlí `dist/` doslova, takže si entry pointy dál resolvují sdílený chunk relativně
 > vůči `vendor/wire-forms/tiptap/`. Viz
-> [Začínáme → JavaScriptové assety](../../getting-started.md#javascriptove-assety).
+> [Začínáme → JavaScriptové assety](../../start/getting-started.md#javascriptove-assety).
 
 > **Přispěvatelé.** Bundly se generují z
 > `packages/forms/resources/js/tiptap-editor.js` a `tiptap-editor-addons.js` a
@@ -121,6 +125,183 @@ TiptapEditor::make('content')
 ```
 
 Když je rozšíření zapnuto, jeho toolbarové tlačítko se přidá automaticky.
+
+## Zmínky
+
+Zmínka se ukládá jako **identita**, nikdy jako jméno:
+
+```html
+<span data-type="mention" data-mention-trigger="#"
+      data-mention-type="article" data-id="12">#Ceník 2026</span>
+```
+
+Žádné `href` v tom není a text je *fallback*. Každý render si záznam vyhledá
+znovu, takže přejmenovaný článek se přejmenuje ve všech dokumentech, které ho kdy
+zmínily, a odkaz nemůže přežít oprávnění, které ho povolilo. Cenou je, že uložený
+obsah se už nezobrazuje vypsáním — viz
+[Zobrazení obsahu se zmínkami](#zobrazeni-obsahu-se-zminkami) níže.
+
+### Jeden trigger, více modelů
+
+Trigger není model. `@` pojmenovávající lidi a `#` pojmenovávající cokoli, co web
+publikuje, jsou tatáž funkce a ta druhá funguje jen tehdy, když jeden trigger
+unese víc zdrojů:
+
+```php
+use Illuminate\Database\Eloquent\Builder;
+use NyonCode\WireForms\Components\Mention;
+use NyonCode\WireForms\Components\Mention\Source;
+
+TiptapEditor::make('body')
+    ->mentions(
+        Mention::make('@')->source(
+            Source::make(User::class)->titleAttribute('name')->label('Lidé'),
+        ),
+        Mention::make('#')->sources([                                    // [tl! focus:start]
+            Source::make(Article::class)
+                ->titleAttribute('title')
+                ->label('Články')
+                ->modifyOptionsQueryUsing(fn (Builder $query) => $query->published()),
+
+            Source::make(Page::class)->titleAttribute('title')->label('Stránky'),
+        ]),                                                              // [tl! focus:end]
+    )
+```
+
+Právě proto dokument ukládá vedle id i morph typ: pod jedním `#` by `12` samo o
+sobě neřeklo, jestli jde o článek, nebo o stránku.
+
+Každý zdroj se dotazuje zvlášť a řádky se seskupí podle jeho popisku — `UNION` by
+stál per-source scopování, což je důvod, proč zdroje sdílejí jeden trigger. Řádky
+se napříč zdroji **neřadí** proti sobě: seznam říká, ze které skupiny řádek
+pochází, místo aby předstíral, že ví, že článek poráží stránku.
+
+### Scopování a autorizace
+
+`modifyOptionsQueryUsing()` rozhoduje, co smí vložit **autor**:
+
+```php
+Source::make(Article::class)
+    ->titleAttribute('title')
+    ->modifyOptionsQueryUsing(fn (Builder $query) => $query->whereBelongsTo($team))
+```
+
+Na co se uložená zmínka rozbalí později, se scopuje znovu při renderu, kde už
+může být čtenářem někdo úplně jiný — viz
+[`MentionRegistry`](#modely-ktere-nevlastnite).
+
+Vyhledávací endpoint nikdy neodpoví na prázdný dotaz: nefiltrovaný seznam zmínek
+není vyhledávání, ale enumerační endpoint nad uživateli.
+
+### Jak model udělat zmínitelným
+
+Záznam sám je to jediné, co vždycky zná své aktuální jméno, takže tam patří i
+render-time fakta:
+
+```php
+use NyonCode\WireCore\Foundation\Mentions\Contracts\Mentionable;
+
+class Article extends Model implements Mentionable
+{
+    public function getMentionLabel(): string           // [tl! focus:start]
+    {
+        return $this->title;
+    }
+
+    public function getMentionUrl(): ?string
+    {
+        return $this->published ? route('articles.show', $this) : null;
+    }                                                   // [tl! focus:end]
+}
+```
+
+Vrácené `null` z `getMentionUrl()` je záměr: zmínka se vykreslí pojmenovaná, ale
+neklikatelná.
+
+### Modely, které nevlastníte
+
+`User` z balíčku, `Page` od dodavatele — stejná fakta zaregistrujte při bootu:
+
+```php
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Foundation\Mentions\MentionRegistry;
+
+public function boot(MentionRegistry $mentions): void
+{
+    $mentions->register(Page::class)
+        ->titleAttribute('title')                                        // [tl! focus:start]
+        ->url(fn (Model $page) => route('pages.show', $page))
+        // Viditelnost podle čtenáře patří sem: záznam, který dotaz vyloučí, se
+        // prostě nenajde, a nerozbalená zmínka se vykreslí jako prostý text.
+        ->modifyQueryUsing(fn ($query) => $query->where('visibility', 'public')); // [tl! focus:end]
+}
+```
+
+Smazaný a neviditelný záznam jdou stejnou cestou záměrně. Je to ta jediná, která
+nic neprozradí — únikem je čerstvý titulek tažený rovnou z databáze.
+
+Bez kontraktu i bez registrace se zmínka pořád vykreslí: zůstane jí popisek, se
+kterým byl dokument napsán — správný tehdy, a už ne potom.
+
+### Zobrazení obsahu se zmínkami
+
+`{!! $post->body !!}` by vypsalo identity a žádné odkazy. Načtěte obsah zpět přes
+renderer:
+
+```blade
+{{-- Blade, a kdekoli jinde --}}
+<x-wire::rich-content :html="$post->body" class="prose" />
+```
+
+```php
+// Infolist
+HtmlEntry::make('body')->label('Tělo')
+
+// Buňka tabulky — implikuje ->html()
+TextColumn::make('body')->richContent()
+```
+
+Všechny tři vedou přes jednoho vlastníka
+(`NyonCode\WireCore\Foundation\Mentions\MentionRenderer`), kterého lze zavolat i
+přímo:
+
+```php
+use NyonCode\WireCore\Foundation\Mentions\MentionRenderer;
+
+$html = app(MentionRenderer::class)->render($post->body);
+
+// Jen identity — třeba pro rozeslání notifikací.
+$mentioned = app(MentionRenderer::class)->extract($post->body);
+```
+
+Dokument jmenující dvanáct článků a tři uživatele stojí **dva** dotazy, ne
+patnáct: reference se seskupí podle uloženého typu a načtou jedním `whereKey()`
+na typ. Obsah bez zmínek se vrací byte po bytu a k DOM parseru se vůbec
+nedostane.
+
+> **Buňka tabulky se renderuje sama za sebe**, takže se dotazy dávkují v rámci
+> jedné buňky, ne napříč stránkou: dvacet pět řádků s `richContent()` je dvacet
+> pět vyhledání. Vyplatí se to na úzké tabulce dokumentů; ne na výpisu, který
+> stejně ukazuje jen prvních osmdesát znaků.
+
+### Psaní přes mezery
+
+Ve výchozím stavu vypnuto. S `allowSpaces()` nemá suggestion jak poznat, kde
+zmínka skončila, takže polyká větu za ní, dokud seznam něco nezavře:
+
+```php
+Mention::make('#')->allowSpaces()
+```
+
+Titulky se stejně dají najít podle prvního slova — `#cenik` najde `Ceník 2026`,
+protože se matchuje na serveru proti celému sloupci.
+
+### Doručení
+
+Mention node a suggestion engine TipTapu se doručují jako **třetí** ESM entry
+(`tiptap-editor-mentions.js`), injektovaný jen pro pole, které zmínky deklaruje.
+Editor s tabulkami a bez zmínek si ho nikdy nestáhne a sdílený chunk
+`@tiptap/core` se neduplikuje.
 
 ## Formát výstupu
 
@@ -233,6 +414,7 @@ symboly, ne slova; překládá se tooltip.
 | `withTables(bool)` | bool | Zapnout rozšíření tabulek + tlačítko |
 | `withTextAlign(bool)` | bool | Zapnout rozšíření text-align + tlačítka |
 | `withHighlight(bool)` | bool | Zapnout rozšíření zvýraznění + tlačítko |
+| `mentions(Mention\|array ...)` | Mention | Triggery zmínek, které editor nabízí |
 | `minHeight(int)` | int | Minimální výška editoru v pixelech (výchozí `240`) |
 | `maxLength(int\|null)` | int | Limit znaků s živým počítadlem |
 | `disabled(bool\|Closure)` | bool | Znepřístupnit editor |
@@ -241,5 +423,26 @@ symboly, ne slova; překládá se tooltip.
 | `placeholder(string\|Closure)` | string | Placeholder zobrazený, když je prázdné |
 | `live()` | — | Spustit Livewire update při každé změně |
 | `debounce(int)` | ms | Debounce prodleva pro `live()` |
+
+### `Mention`
+
+| Metoda | Typ | Popis |
+|--------|-----|-------|
+| `Mention::make(string)` | string | Znak triggeru — `@`, `#` |
+| `sources(array)` | array\<Source\> | Modely, které tento trigger nabízí |
+| `source(Source)` | Source | Trigger s právě jedním modelem za sebou |
+| `allowSpaces(bool)` | bool | Matchovat i přes mezeru (výchozí `false`) |
+| `limit(int)` | int | Strop celého seznamu bez ohledu na počet zdrojů (výchozí `15`) |
+
+### `Mention\Source`
+
+| Metoda | Typ | Popis |
+|--------|-----|-------|
+| `Source::make(string)` | class-string\<Model\> | Model, který zdroj nabízí |
+| `titleAttribute(string)` | string | Sloupec zobrazený v nabídce |
+| `searchAttribute(string)` | string | Sloupec, proti kterému se matchuje, není-li to zobrazovaný |
+| `label(string)` | string | Nadpis skupiny, pod kterou řádky patří |
+| `limit(int)` | int | Kolik řádků zdroj přispěje (výchozí `5`) |
+| `modifyOptionsQueryUsing(Closure)` | Closure | Scopování dotazu nabídky |
 
 Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

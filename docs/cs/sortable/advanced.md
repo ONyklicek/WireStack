@@ -1,6 +1,7 @@
 ---
 title: Pokročilé použití
 order: 60
+summary: "Rozšiřovací body za drag & drop: vlastní perzistence, řazení v rámci scope a události, které řazení vyvolá."
 ---
 
 # Pokročilé použití

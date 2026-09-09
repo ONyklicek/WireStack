@@ -1,3 +1,7 @@
+---
+summary: "A numeric value chosen by dragging: min, max, step, and what the handle shows while it moves."
+---
+
 # Slider
 
 Visual range slider for numeric values with configurable min, max, and step.

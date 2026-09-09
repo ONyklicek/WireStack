@@ -1,5 +1,6 @@
 ---
-order: 100
+order: 95
+summary: Verzování, dvě živé linie, co změnila 2.0 a kroky, po kterých je upgrade nuda.
 ---
 
 # Návod k upgradu
@@ -10,21 +11,38 @@ Jak bezpečně přecházet mezi verzemi Wire a kde hledat breaking changes.
 
 ## Verzování
 
-Ekosystém Wire se dodává jako čtyři balíčky — `wire-core`, `wire-forms`,
-`wire-table`, `wire-sortable` — vydávané společně z jednoho monorepa, takže se
-jejich verze pohybují v zámku. Instalujte je a omezujte jako celek.
+Ekosystém Wire je jedno monorepo vydávané jako [čtrnáct
+balíčků](project-map.md#balicky), rozdělených z jednoho tagu. Jejich verze se
+pohybují v zámku, takže je instalujte a omezujte jako celek — `wire-table` z
+jednoho minoru vedle `wire-core` z jiného není kombinace, která se testuje.
 
-Wire je aktuálně ve větvi **`0.x`**. Podle běžné konvence před 1.0 mohou minor
-vydání obsahovat breaking changes, proto si připněte otestovanou verzi a před
-zvýšením si přečtěte changelog:
+Wire se od **1.0** drží sémantického verzování: breaking change počká na major,
+minor jen přidává. Živé jsou dvě linie:
+
+| Linie | Livewire | Stav |
+| --- | --- | --- |
+| `2.x` | 4.x | aktuální — sem přistávají novinky |
+| `1.x` | 3.x | udržovaná — jen opravy |
+
+Žádné vydání neběží na obou verzích Livewiru, a přesně proto je 2.0 major.
+Omezte caret na linii, na které jste:
 
 ```jsonc
 // composer.json
 "require": {
-    "nyoncode/wire-core":     "^0.1",
-    "nyoncode/wire-forms":    "^0.1",
-    "nyoncode/wire-table":    "^0.1",
-    "nyoncode/wire-sortable": "^0.1"
+    "nyoncode/wire-core":   "^2.0",
+    "nyoncode/wire-forms":  "^2.0",
+    "nyoncode/wire-table":  "^2.0",
+    "nyoncode/wire-panels": "^2.0"
+}
+```
+
+Nebo si vezměte celý stack jako jednu závislost, což je smyslem suite balíčku a
+co drží sadu v zámku bez čtyř řádků, na které je potřeba myslet:
+
+```jsonc
+"require": {
+    "nyoncode/wire-suite": "^2.0"
 }
 ```
 
@@ -37,7 +55,7 @@ zvýšením si přečtěte changelog:
 | PHP | 8.2, 8.3, 8.4 |
 | Laravel | 12.61+, 13.12+ |
 | Livewire | 4.x |
-| Tailwind CSS | 3.x nebo 4.x |
+| Tailwind CSS | 3.x nebo 4.x (témování poloměru a odsazení vyžaduje 4.x — viz [Vzhled → Rozsah](theming.md#rozsah)) |
 | `nyoncode/laravel-package-toolkit` | ^2.4 |
 
 Před upgradem ověřte, že je vaše aplikace splňuje.
@@ -141,32 +159,201 @@ by záznam pod aktuálním řazením posunula, ho nechá na místě až do dalš
 renderu. Na široké editovatelné mřížce je to ta správná výměna, a proto je to
 dobrovolné, ne zapnuté.
 
-Viz [Pokročilé → Řádkové partials](table/advanced.md#radkove-partials), kde je,
+Viz [Pokročilé → Řádkové partials](../table/advanced.md#radkove-partials), kde je,
 čím zápis odpoví u kterého tvaru tabulky, a jak tytéž kotvy slouží `poll()`
 a `live()`.
 
 ---
 
-## `Widget::lazy()` končí (2.0)
+## Per-user úložiště preferencí se přestěhovalo do wire-core (2.0)
 
-`Widget::lazy()` a `Widget::isLazy()` byly odstraněny. Nikdy nic neodkládaly:
-žádná view widgetu ten příznak nečetla — nestálo za ním `wire:init`, žádná
-intersect direktiva ani island — takže widget označený jako lazy se vykreslil
-celý jako kterýkoli jiný.
+`TablePreferenceDriver` a tabulka `table_preferences` jsou nově
+`Foundation\Preferences\Contracts\PreferenceDriver` a `wire_preferences`, ve
+**wire-core**.
 
 ```php
-StatsOverviewWidget::make()->lazy()   // [tl! --]
-StatsOverviewWidget::make()           // [tl! ++]
+use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;              // [tl! --]
+use NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver;        // [tl! ++]
+
+use NyonCode\WireTable\Preferences\Drivers\DatabasePreferenceDriver;             // [tl! --]
+use NyonCode\WireCore\Foundation\Preferences\Drivers\DatabasePreferenceDriver;  // [tl! ++]
 ```
 
-Smazání volání je celá migrace; předtím se nic nevykreslovalo jinak.
+**Proč se stěhovalo.** Layout dashboardu má týž tvar jako zapamatované sloupce
+tabulky — malý JSON bag podle plochy a uživatele — a widgety žijí ve `wire-core`,
+na kterém `wire-table` závisí, takže se z widgetu na tabulkové úložiště nedalo
+dosáhnout. Napsat druhé by byla druhá implementace jedné myšlenky.
 
-**Pokud odklad opravdu chcete**, odložte celou komponentu místo jednoho widgetu —
-dashboard je jedna Livewire komponenta a widget je markup uvnitř ní, ne vlastní
-komponenta. `<livewire:my-dashboard lazy />` odloží celý grid. Odklad po
-jednotlivých widgetech k dispozici není: vyžadoval by island na každý widget
-a `@island` uvnitř `@foreach` se nezkompiluje — Blade vytvoří jedno tělo islandu
-na jeden výskyt direktivy a to tělo proměnnou cyklu nikdy nedostane.
+**Na konfiguraci tabulky se nezměnilo nic.** `config('wire-table.preferences')`
+je pořád místo, kde se driver tabulky vybírá, se stejnými aliasy i stejným
+fallbackem pro hosty. Přesunuly se jen třídy, na které aliasy míří, a dodávaná
+konfigurace je upravená s nimi.
+
+**Tři věci k udělání**, a jen pokud jste se jich dotkli:
+
+1. **Publikujte migraci znovu.** Je teď ve wire-core:
+   `vendor:publish --tag="wire-core::migrations"`. Spuštění existující
+   `table_preferences` **přejmenuje** na `wire_preferences` a `table_key` na
+   `surface_key` — nikdo nepřijde o uložený layout — a na čisté instalaci tabulku
+   založí.
+2. **Vlastní úložiště** implementuje `PreferenceDriver` místo
+   `TablePreferenceDriver`. Ty čtyři metody se nezměnily; první argument je
+   `$surfaceKey` místo `$tableKey`, protože je to teď klíč tabulky *nebo*
+   dashboardu.
+3. **Publikovaný `config/wire-table.php`** míří aliasy `drivers` na staré
+   namespacy. Opravte tři `use` řádky.
+
+`Table::preferenceDriver()`, `rememberColumns()` i uložené pohledy zůstávají
+nedotčené a celá sada testů `wire-table` prochází beze změny — což je skutečný
+důkaz, že přesun zachoval chování.
+
+Jedna malá ztráta, jen u session úložiště: prefix session klíče je `wire.` místo
+`wire-table.`, takže layout, který měl uživatel v session neuložený, se jednou
+resetuje. Řádky v databázi migrace převede.
+
+---
+
+## `TableWidget` se přestěhoval do wire-table a začal kreslit (2.0)
+
+`WireCore\Widgets\TableWidget` je nově `WireTable\Widgets\TableWidget`.
+
+```php
+use NyonCode\WireCore\Widgets\TableWidget;    // [tl! --]
+use NyonCode\WireTable\Widgets\TableWidget;   // [tl! ++]
+```
+
+**Ten přesun je důvod, proč to funguje.** Stará třída si callback z `->table(...)`
+uložila a nikdy ho nezavolala: vykreslila kartu s nadpisem a prázdným `<div>` a
+jediný volající `getTableCallback()` v celém frameworku byl test ověřující
+getter. Nebyla to nedbalost, ale struktura — widgety žijí ve `wire-core`,
+tabulkový engine ve `wire-table`, a table na core závisí, takže se z core na
+engine nedalo dosáhnout.
+
+Teď kreslí sloupce a řádky, každou buňku přes `Column::renderCell()` a dotaz
+plánuje `TableQueryService`, takže badge, formáty měn i cesty přes relace
+vypadají přesně jako na plné tabulce.
+
+**Dvě věci si zkontrolujte u sebe.** Callback potřebuje zdroj dat, protože se
+teď opravdu spouští:
+
+```php
+TableWidget::make()
+    ->limit(5)                                    // [tl! ++]
+    ->table(fn (Table $table) => $table
+        ->model(Order::class)                     // [tl! ++]
+        ->columns([TextColumn::make('reference')]))
+```
+
+A karta kreslí **5 řádků**, pokud `->limit()` neřekne jinak — stránkování, které
+by zbytek zachytilo, tu není.
+
+**Co záměrně nemá**: toolbar, hledání, filtry, stránkování, hromadné ani řádkové
+akce. Dashboardová karta, které tohle naroste, je tabulka převlečená za widget;
+postavte za ni raději stránku s `WithTable`.
+
+---
+
+## `Widget::lazy()` teď něco odkládá (2.0)
+
+Metoda přežila; změnilo se, že dělá to, co říká. Před 2.0 žádná view widgetu ten
+příznak nečetla — nestálo za ním `wire:init`, žádná intersect direktiva ani
+island — takže widget označený jako lazy se vykreslil celý jako kterýkoli jiný.
+
+```php
+StatsOverviewWidget::make()->lazy()   // kreslilo se všechno hned
+StatsOverviewWidget::make()->lazy()   // nakreslí placeholder a pak se načte
+```
+
+**Není co měnit, ale zkontrolujte, co jste označili.** Volání, které bylo dřív
+bez účinku, je teď odklad: mřížka vykreslí skeleton kartu, `wire:init` zavolá na
+hostiteli `loadWidget()` a odpověď nese markup toho widgetu jako `wire:partial`
+oblast. Z widgetu, který ve skutečnosti pomalý není, volání smažte — pravidlo
+frameworku je udělat render levným, ne ho odložit, a eager HTML nestojí žádnou
+latenci při otevření.
+
+**Co to umožnilo.** Odklad po jednotlivých widgetech potřebuje oblast, kterou
+server umí pojmenovat, a `@island` jí uvnitř `@foreach` být nemůže: Blade vytvoří
+jedno tělo islandu na jeden výskyt direktivy a to tělo proměnnou cyklu nikdy
+nedostane. Partial je obyčejný atribut vybraný serverem — proto polling už uměl
+odpovědět na tik jednoho widgetu jedním widgetem. Odklad je stejný mechanismus s
+jiným spouštěčem.
+
+Lazy na úrovni komponenty dál funguje a pro celou mřížku je pořád ten správný
+nástroj: `<livewire:my-dashboard lazy />`.
+
+Viz [Widgety → Odložené vykreslení](../core/widgets/index.md#odlozene-vykresleni).
+
+---
+
+## `ChartWidget::filter()` se řeší na serveru a má ho každý widget (2.0)
+
+Dropdown filtru se dřív řešil v prohlížeči: `<select>` navázaný na Alpine
+property a `updateChart()`, který přiřadil `this.labels` a `this.datasets`
+zpátky na graf, se kterým byl sestaven. Změna výběru tedy překreslila identický
+graf a closure na datasety nikdy neběžela s ničím jiným než se svou výchozí
+hodnotou.
+
+Výběr teď putuje na hostitele, ten closury znovu vyřeší a odpoví jen tím jedním
+widgetem.
+
+```php
+ChartWidget::make()
+    ->filter(['week' => 'This week', 'month' => 'This month'])
+    ->datasets(fn (?string $filter) => $this->revenue($filter))   // teď se opravdu spustí znovu
+```
+
+**Ve vašem kódu není co měnit.** Dvě věci stojí za to znát:
+
+- Closure teď běží při Livewire requestu, ne jednou na render stránky, takže musí
+  být bezpečná při opakovaném volání — vždycky být měla, jen to nic nezkoušelo.
+- `filter()`, `activeFilter()`, `getFilterOptions()`, `hasFilter()` a
+  `getActiveFilter()` se přesunuly z `ChartWidget` na základní třídu widgetu
+  (`HasWidgetFilter`). Má je teď každý widget. Nic se nedostalo mimo dosah; graf
+  dál odpovídá na stejná volání.
+
+**Pokud jste přepsali `widgets/chart.blade.php`, publikujte ho znovu.** Změnily
+se v něm tři věci a pohled je místo, kde se všechny tři potkávají:
+
+- `<select>` je sdílený partial (`widgets.partials.widget-filter`);
+- obal nese `wire:key` obsahující aktivní filtr. Ten klíč je nosný — Alpine
+  nikdy znovu nevyhodnotí `x-data` na elementu, který už inicializoval, takže
+  bez něj morph atribut jen záplatuje a Chart.js kreslí dál starou sérii;
+- Alpine factory `wireChart` bere teď **čtyři** argumenty, ne šest.
+  `filterOptions` a `activeFilter` z ní zmizely, protože o filtru už v
+  prohlížeči nic nerozhoduje, a `updateChart()` odešlo s nimi — byla to ta
+  metoda, která přiřazovala tytéž dvě pole zpátky na graf.
+
+```blade
+x-data="wireChart(@js($type), @js($labels), @js($datasets), @js($filterOptions), @js($activeFilter), @js($options))"  {{-- [tl! --] --}}
+x-data="wireChart(@js($type), @js($labels), @js($datasets), @js($options))"  {{-- [tl! ++] --}}
+```
+
+Publikovaný pohled ponechaný na starém volání předá `$options` tam, kde factory
+teď čte `$filterOptions`, takže se graf postaví úplně bez options — vykreslí se,
+a vykreslí se špatně. Nic na to neupozorní, a právě proto to stojí za ty dvě
+minuty.
+
+---
+
+## `InvalidChartDataException::notChartItems()` je teď `InvalidWidgetDataException` (2.0)
+
+`items()` přestalo být vlastností grafu: bar charty, progress widgety i seznamové
+widgety berou sérii přes jednoho vlastníka (`HasWidgetItems`), a kdyby některý z
+nich házel výjimku pojmenovanou po grafech, byl by to název, který lže.
+
+```php
+catch (InvalidChartDataException $e)    // [tl! --]
+catch (InvalidWidgetDataException $e)   // [tl! ++]
+```
+
+Obě rozšiřují `InvalidArgumentException` a obě implementují `WireException`,
+takže `catch` na kterékoli z nich se to netýká. `InvalidChartDataException` dál
+existuje a dál se hází pro neznámý typ grafu, neznámou variantu a procento
+položky mimo rozsah.
+
+Spolu s přesunem vlastníka získalo `items()` na každém widgetu, který kreslí
+sérii, i tvar s closure — `->items(fn (?string $filter) => …)` — a právě to dává
+filtru na bar chartu smysl.
 
 ---
 
@@ -211,6 +398,98 @@ vyžádání. Každý převedený view navíc includuje
 [`@wireStackScripts`](getting-started.md#javascriptove-assety) je aditivní — aplikace,
 která direktivu nikdy nepřidá, musí controller dostat stejně, jinak se `x-data`
 vyhodnotí proti prázdnému registru a pole tiše nedělá nic.
+
+---
+
+## Odstraněno: každý shim označený pro 2.0 (2.0)
+
+Linie 1.x vezla sadu metod a tříd, kterým v docblocku stálo *„Will be removed in
+v2.0"*. Tohle je to vydání, takže jsou pryč — volání teď vyhodí
+`BadMethodCallException` (nebo třída nebude nalezena) místo zápisu deprecace.
+Náhrady existují po celou dobu linie 1.x a každá je jen přejmenování:
+
+| Odstraněno | Použij místo toho |
+| --- | --- |
+| `Action::hiddeLabel()` | `Action::hideLabel()` — starý název byl překlep |
+| `ActionHalt::modalHeading()` | `ActionHalt::heading()` |
+| `ActionHalt::modalDescription()` | `ActionHalt::description()` |
+| `ActionHalt::body()` | `ActionHalt::description()` — halt teď mluví slovníkem modalu |
+| `ActionHalt::modalIcon()` | `ActionHalt::icon()` |
+| `ActionHalt::modalSubmitLabel()` | `ActionHalt::submitLabel()` |
+| `ActionHalt::modalCancelLabel()` | `ActionHalt::cancelLabel()` |
+| `ActionHalt::modalWidth()` | `ActionHalt::width()` |
+| `ActionHalt::formValidation()` | `ActionHalt::validation()` |
+| `Table::polling()` | `Table::poll()` |
+| `TableNotification` | `Notification` |
+| `TableNotificationManager` | `NotificationManager` |
+| `confirmTableAction()`, `executeConfirmedAction()`, `closeConfirmationModal()`, `confirmBulkAction()`, `getConfirmationModalData()` | API halt modalu — viz [Lifecycle a fronty](../core/actions/lifecycle.md#halt-vykonavani) |
+| `WireForms\Components\Layout\{Section,Fieldset,Grid}` | `WireCore\Foundation\Schema\{Section,Fieldset,Grid}` |
+
+Dalších pět bylo deprecated během 1.x, aniž by pojmenovaly vydání, a jdou stejným
+tahem — každé je přejmenování se stejným chováním za sebou:
+
+| Odstraněno | Použij místo toho |
+| --- | --- |
+| `Table::rowContextMenu([...])` | `Table::recordActions([Action::make('edit')->onContextMenu(), …])` |
+| `TextInputColumn::formatForSave()` | `dehydrateState()` |
+| `TextInputColumn::formatAfterLoad()` | `hydrateState()` |
+| `Table::flattenSubRows()` / `isFlattenSubRows()` | `subRowsDefaultExpanded()` / `isSubRowsDefaultExpanded()` |
+| `toggleFlattenMode()` | `toggleAllRowExpansion()` |
+| legacy magické properties (`$this->tableSearch`, `$tableFilters`, `$flattenMode`, …) | `$this->tableState->get('search')` / `->set(...)`, nebo `Table::queryString()` pro stav v URL |
+| `TableQueryingPayload::$forceSortColumn` / `$forceSortDirection` | klíč `force_sort_column` na polním hooku `table.querying` |
+
+**Legacy properties jsou to, co je potřeba zkontrolovat.** `WithTable` dřív
+odpovídal na `$this->tableSearch` a dvacet sourozenců přes `__get`/`__set` a mapoval
+je na stavové cesty. Jsou pryč, takže komponenta, která některou čte, dostane od
+Livewiru „property does not exist" — včetně pole `$queryString`, které je jmenuje,
+což je přesně to, co dokumentace pro stav v URL dřív ukazovala. Podporovaná cesta
+je [`Table::queryString()`](../table/advanced.md#perzistence-stavu-v-url), která si
+načtené hodnoty i ověří:
+
+```php
+protected $queryString = ['tableSearch' => ['as' => 'q']];   // [tl! --]
+public function table(Table $table): Table                    // [tl! ++]
+{                                                             // [tl! ++]
+    return $table->queryString();                             // [tl! ++]
+}                                                             // [tl! ++]
+```
+
+**Navázání kontextového menu jako record action udělá z tabulky grid.** To je
+smyslem té náhrady — menu se stane dosažitelným z klávesnice — ale znamená to, že
+každý řádek nese roli a tabindex, které klávesová vrstva potřebuje, tedy zhruba
+o 260 bajtů na řádek víc než myší ovládaný seznam. `ActionGroup` už se v seznamu
+menu nepřijímá: naváž její akce po jedné, vykreslí se tytéž položky.
+
+**Řádky s `modal*()` se týkají `ActionHalt` a ničeho jiného.** *Akce* má
+`modalHeading()`, `modalDescription()`, `modalWidth()` i zbytek dál — ty jsou
+kanonické a nemění se. Aliasy vlastního kratšího slovníku nesl jen halt objekt:
+
+```php
+$action->halt()
+    ->modalHeading('Warnings detected')          // [tl! --]
+    ->modalDescription('Continue anyway?');      // [tl! --]
+    ->heading('Warnings detected')               // [tl! ++]
+    ->description('Continue anyway?');           // [tl! ++]
+```
+
+**Pět potvrzovacích metod už bylo prázdných.** Zapsaly deprecaci a vrátily se;
+halt modal běží přes `*WithData()` od chvíle, kdy přistál rámcový zásobník. Jejich
+odstranění nemůže změnit chování — jen z tichého nicnedělání dělá hlasitou chybu,
+což je přesně to, co si místo volání, které je pořád používá, zaslouží.
+
+**Podtřídy layoutu ve formulářích jsou jediné odstranění, které mění vykreslení** —
+a mění ho k lepšímu. `WireForms\Components\Layout\Section` existovala jen proto,
+aby vyměnila form-specifickou kopii view sekce, a ta kopie zaostala za kanonickou:
+žádné hlavičkové akce, žádné `aside()`, vlastní mapa sloupců. Sekce formuláře
+postavená z `Foundation\Schema\Section` dostane všechno tohle a k tomu pozadí
+plochy, které sekce v infolistu měla už dřív:
+
+```php
+use NyonCode\WireForms\Components\Layout\Section;   // [tl! --]
+use NyonCode\WireCore\Foundation\Schema\Section;    // [tl! ++]
+```
+
+Nic dalšího se nemění — stejná třída, stejné fluent API, stejné vnořování.
 
 ---
 
@@ -273,7 +552,7 @@ o něco, co odmítl, vyhodí `UnsupportedQueryAspectException` místo tichého v
 řádků, které ignorovaly půlku dotazu. U kolekce to znamená žádné raw SQL výrazy,
 žádné cesty přes relace, žádné agregace přes subquery a žádné cursor stránkování.
 
-Celá plocha je v [Zdrojích dat](table/data-sources.md). Pokud používáte jen
+Celá plocha je v [Zdrojích dat](../table/data-sources.md). Pokud používáte jen
 Eloquent tabulky, není co dělat.
 
 ---
@@ -342,7 +621,7 @@ případě ho `composer update "nyoncode/wire-*"` posune se vším ostatním a n
 ## Registrace, routing a menu
 
 Jeden seam nahradil tři přímá čtení: menu, router i ⌘K paleta teď čtou
-[`Catalog`](core/resources.md#catalog-api), takže jedna registrace obslouží
+[`Catalog`](../panels/navigation.md#catalog-api), takže jedna registrace obslouží
 všechny tři. Čtyři jména se s tím přesunula a žádné si nenechalo alias — tahle
 linie ještě nevyšla a compat vrstva pro přejmenování, na kterém nikdo nevisel,
 je náklad bez čtenáře.
@@ -384,7 +663,7 @@ konvence nedosáhne.
 **Routing je pořád opt-in** a `Route::wireResources()` ve tvém route souboru
 zůstává referenční cestou. Novinka vedle ní je
 [`wire-panels.routes`](configuration.md#panels) — tytéž argumenty skupiny předané
-jednou — a [zóny](core/resources.md#zony), víc mount pointů nad jedním katalogem.
+jednou — a [zóny](../panels/routing.md#zony), víc mount pointů nad jedním katalogem.
 Obojí je vypnuté, dokud to nezapneš.
 
 ---
@@ -392,7 +671,7 @@ Obojí je vypnuté, dokud to nezapneš.
 ## Výběr a klávesová gesta
 
 Z výběru v tabulce se stala plnohodnotná sada gest, ne jen sloupec zaškrtávátek
-(viz [Výběr řádků](table/selection.md)). Při upgradu zkontrolujte čtyři věci.
+(viz [Výběr řádků](../table/selection.md)). Při upgradu zkontrolujte čtyři věci.
 
 **1. Všechna gesta nad řádkem jsou opt-in — `->gestures()`.** Z výběru se stala
 plnohodnotná sada gest: `Shift`/`mod` kliky pro rozsahy, tažení po sloupci se
@@ -420,7 +699,7 @@ Co změna *neovlivní*: zaškrtávátka, oba ovladače „vybrat vše" i bulk ba
 beze změny a tabulka, která si o gesta neřekla, nemontuje delegovaný controller
 vůbec. Stejně tak kontextové menu pod pravým tlačítkem a fill handle — o oboje
 jste si stejně museli říct sami.
-Šest schopností a jak je kombinovat najdete ve [Vrstvě gest](table/gestures.md).
+Šest schopností a jak je kombinovat najdete ve [Vrstvě gest](../table/gestures.md).
 
 **2. `->onKey()` na navigační klávese nově vyhodí výjimku.** Dřív se tiše
 zahodila, takže akce prostě nikdy nevystřelila. Pokud takovou vazbu máte, byla

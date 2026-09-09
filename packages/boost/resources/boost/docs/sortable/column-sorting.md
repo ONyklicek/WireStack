@@ -1,6 +1,7 @@
 ---
 title: Column Reordering
 order: 40
+summary: Reordering columns by dragging their headers, remembered per user and per table.
 ---
 
 # Column Reordering

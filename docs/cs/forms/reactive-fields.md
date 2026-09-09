@@ -1,5 +1,6 @@
 ---
 order: 25
+summary: Pole, která na sebe reagují, aniž by opustila schéma — které closures vidí živý stav, kdy se přepočítají a co stojí každý round trip.
 ---
 
 # Reaktivní pole

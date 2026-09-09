@@ -1,5 +1,6 @@
 ---
 order: 20
+summary: Rules at three levels — the field, the form and the pipeline — and which of them wins when they disagree.
 ---
 
 # Form Validation
@@ -32,20 +33,38 @@ Select::make('role')
     ->rules('in:admin,editor,viewer');
 ```
 
-### Built-in Rule Helpers
+### Type Helpers Are Not Validation
 
-Some fields provide fluent helpers that map to Laravel rules:
+`->email()`, `->numeric()`, `->integer()`, `->url()` and `->tel()` are *type*
+presets: they set the HTML input type and inputmode, which picks the phone
+keyboard and lets the browser offer its own hint. `->maxLength()` and
+`->minLength()` render the `maxlength` / `minlength` attributes. None of them
+adds a Laravel rule, and none of them survives a request that did not come from
+your form — the server has to be told separately what it will accept:
 
-| Method | Equivalent Rule |
-|--------|-----------------|
-| `->required()` | `required` |
-| `->email()` | `email` |
-| `->numeric()` | `numeric` |
-| `->integer()` | `integer` |
-| `->maxLength(255)` | `max:255` |
-| `->minLength(3)` | `min:3` |
-| `->url()` | `url` |
-| `->tel()` | sets `tel` HTML input type (no validation rule) |
+| Method | What it actually does | The rule to add |
+|--------|-----------------------|-----------------|
+| `->email()` | `type=email`, `inputmode=email` | `->rules(['email'])` |
+| `->numeric()` | `type=number`, `inputmode=decimal` | `->rules(['numeric'])` |
+| `->integer()` | `type=number`, `inputmode=numeric`, `step=1` | `->rules(['integer'])` |
+| `->url()` | `type=url` | `->rules(['url'])` |
+| `->tel()` | `type=tel` | `->rules(['regex:…'])`, or use [PhoneInput](fields/phone-input.md) |
+| `->maxLength(255)` | `maxlength="255"` | `->rules(['max:255'])` |
+| `->minLength(3)` | `minlength="3"` | `->rules(['min:3'])` |
+
+The helpers that *are* rules are `->required()` (and `->requiredWith()`), which
+prepends `required`, and [`->unique()`](#unique-values). Some fields also carry
+**implicit** rules they add on their own, because their state cannot be checked
+any other way: [`MoneyInput`](fields/money-input.md) validates the amount behind
+its formatted text, [`PhoneInput`](fields/phone-input.md) the number behind its
+country prefix, [`FileUpload`](fields/file-upload.md) the mime types and sizes it
+was configured with, and a field with `options()` an `in:` constraint over its
+own option keys (unless you declared one yourself).
+
+> **A cleared numeric field does not need a rule to be safe.** A `<input
+> type=number>` submits `''` when it is emptied, and `TextInput` turns that into
+> `null` on the way to the record rather than writing an empty string to a
+> numeric column. See [Empty Values](fields/text-input.md#empty-values).
 
 ### Unique Values
 

@@ -1,6 +1,6 @@
 ---
 order: 28
-nav: false
+summary: Editing a value in the cell it is shown in, and filtering a column from its own header.
 ---
 
 # Editing & Column-Level Filters
@@ -139,3 +139,30 @@ all of this — text inputs, selects and toggles use it, so they behave consiste
 - **Server-side authorization.** The client `disabled()` state is only cosmetic — a per-record
   `disabled()` cell (and any column permission) is enforced again on the server in
   `updateTableCell`, so a forged request can't write to a locked cell.
+
+## Constraining An Edit You Do Not Own
+
+A column shipped by an installed [module](../../panels/modules.md) declares its
+own validation, and an application adds a rule of its own through the
+[`cell.updating` hook](../../core/plugins/hooks.md):
+
+```php
+$manager->hook(Hook::CellUpdating, function (CellUpdatingPayload $payload) {
+    if ($payload->record->approved_at !== null) {                 // [tl! focus]
+        $payload->refusal = 'Locked while the invoice is approved.'; // [tl! focus]
+    }                                                             // [tl! focus]
+
+    return $payload;
+}, for: Invoice::class);
+```
+
+`$payload->value` is the dehydrated value about to be written; changing it changes
+what lands. Setting `$payload->refusal` stops the write and reaches the browser as
+the cell's own error message — the same shape a failed validation produces.
+
+**Where it runs matters.** It is dispatched inside `CellEditPipeline::commit()`,
+after the column's permission check, the optimistic-lock check and its validation
+— so a callback narrows what is written and cannot widen past a guard the column
+declared. That is also the one point the inline editor and the
+[fill handle](fill-handle.md) share, so a rule written here cannot be escaped by
+dragging across the column.

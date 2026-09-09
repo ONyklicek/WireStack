@@ -1,14 +1,16 @@
 ---
 order: 10
+summary: Jedna vodorovná osa pro řádek prvků, které si dělí prostor a na malých obrazovkách se skládají pod sebe.
 ---
 
 # Flex
 
-Uspořádá dětské komponenty vedle sebe na jedné vodorovné (flexbox) ose,
-na malých obrazovkách je skládá svisle. Použijte ho, když chcete řadu ovládacích
-prvků nebo panelů, které rostou a sdílejí prostor, místo pevného sloupcového gridu.
+Jeden řádek, jehož děti si mezi sebou dělí prostor. Sáhni po `Flexu`, když je
+[`Grid`](grid.md) příliš tuhý — vyhledávací pole, které má zabrat, co zbude vedle
+tlačítka pevné šířky, toolbar, dvojice panelů s nestejnou váhou. Grid dá každému
+dítěti stejný díl; flexový řádek je nechá dohodnout se.
 
-> Nezaměňovat s table
+> Neplést s tabulkovým
 > [`SplitColumn`](../../../table/columns/split.md), který dělí prostor *uvnitř
 > jedné buňky tabulky*.
 
@@ -16,7 +18,42 @@ prvků nebo panelů, které rostou a sdílejí prostor, místo pevného sloupcov
 use NyonCode\WireCore\Foundation\Schema\Flex;
 ```
 
-## Použití
+## Jak to funguje
+
+Flexový řádek je **layoutová komponenta**: žádná hodnota, žádná state path, dá se
+přidat i odebrat bez dotyku na data.
+
+**Je to nejdřív sloupec a až potom řádek.** Vykreslený element je vždycky
+`flex flex-col` a vodorovným ho dělá až breakpoint z `from()` — ve výchozím stavu
+`md:flex-row`. Na telefonu se tedy děti skládají pod sebe, což je skoro vždycky
+to, co chceš, a není to nic, o co bys musel žádat.
+
+**Každé dítě je zabalené** do boxu s `min-w-0`, a dokud je zapnutý `grow()`
+(výchozí stav), i do `flex-1`. Dva důsledky, které stojí za to znát:
+
+- `min-w-0` je důvod, proč dlouhý nezalomitelný řetězec uvnitř dítěte nerozerve
+  řádek do šířky. Flexové položky se jinak odmítají zmenšit pod obsah; tohle je ta
+  oprava, udělaná za tebe.
+- `flex-1` je důvod, proč děti vyjdou **stejně velké bez ohledu na obsah**. Vypni
+  ho přes `grow(false)`, když chceš přirozené šířky — tlačítko velké jako tlačítko
+  vedle vstupu, který si vezme zbytek.
+
+**Tři setry mají uzavřený slovník a cokoli mimo něj se tiše ignoruje:**
+
+- `from()` rozumí `sm`, `md` a `lg`. **Cokoli jiného spadne na `md`** — `from('xl')`
+  neselže, jen se chová, jako bys ho nenapsal.
+- `justify()` rozumí `start`, `end`, `center`, `between`, `around`, `evenly`;
+  neznámá hodnota nevygeneruje žádnou třídu.
+- `align()` rozumí `start`, `end`, `center`, `stretch`, `baseline`, stejným
+  způsobem.
+
+`gap()` je krok na Tailwindí škále 0–12, výchozí `4`, a ořízne se do toho rozsahu
+místo aby se odmítl.
+
+Děti se před vykreslením filtrují vlastní podmínkou `visible()`, takže skryté dítě
+vrátí svůj prostor ostatním místo aby po něm zůstala díra.
+
+## Základní použití
 
 ```php
 Flex::make()->schema([
@@ -25,34 +62,105 @@ Flex::make()->schema([
 ])
 ```
 
-Ve výchozím stavu potomci rostou a sdílejí řádek rovnoměrně a řádek se stane
-vodorovným na breakpointu `md`, pod ním se skládá svisle.
+Dvě stejné poloviny od `md` nahoru, pod ním pod sebou. To je celý výchozí stav.
 
-## Řízení layoutu
+## Přirozené šířky místo stejných
 
 ```php
 Flex::make()
-    ->from('lg')          // vodorovně od breakpointu lg místo md
-    ->justify('between')  // rozdělit potomky podél hlavní osy
-    ->align('center')     // zarovnání na příčné ose
-    ->gap(6)              // mezera mezi potomky (Tailwind gap škála 0–12)
-    ->grow(false)         // zachovat přirozené šířky místo vyplnění řádku
-    ->wrap()              // povolit potomkům zalomit na více řádků
+    ->grow(false)          // [tl! focus]
+    ->align('end')
+    ->schema([
+        TextInput::make('search'),
+        Button::make('go')->label('Hledat'),
+    ])
+```
+
+S `grow(false)` si každé dítě vezme šířku, kterou opravdu potřebuje. `align('end')`
+zarovná tlačítko na spodní hranu vstupu místo na horní, což chceš vždycky, když
+jedno dítě má label a druhé ne.
+
+## Řízení řádku
+
+```php
+Flex::make()
+    ->from('lg')          // vodorovně od lg místo od md
+    ->justify('between')  // odtlačit děti od sebe podél řádku
+    ->align('center')     // vycentrovat je napříč řádkem
+    ->gap(6)              // širší mezera (Tailwindí škála 0–12)
+    ->wrap()              // nechat děti spadnout na druhý řádek
     ->schema([...])
 ```
 
-## Metody
+`wrap()` začne být důležitý, jakmile je zapnuté `grow(false)`: bez růstu si děti
+drží přirozené šířky a na úzké obrazovce by se jinak zmáčkly místo zalomily.
 
-| Metoda | Popis |
-|--------|-------------|
-| `from(string)` | Breakpoint, na kterém se potomci uspořádají vodorovně: `sm`, `md` (výchozí) nebo `lg` |
-| `justify(string)` | Rozdělení na hlavní ose: `start`, `end`, `center`, `between`, `around`, `evenly` |
-| `align(string)` | Zarovnání na příčné ose: `start`, `end`, `center`, `stretch`, `baseline` |
-| `gap(int)` | Mezera mezi potomky na Tailwind gap škále (0–12, výchozí 4) |
-| `grow(bool)` | Zda potomci rostou a vyplňují řádek rovnoměrně (výchozí `true`) |
-| `wrap(bool)` | Povolit potomkům zalomit na více řádků (výchozí `false`) |
+## Rozšířený příklad
 
-## Související dokumentace
+Filtrační lišta nad tabulkou ve skutečném Livewire hostu. Vstupy si dělí prostor,
+tlačítko si drží vlastní šířku:
 
-- [Grid](grid.md)
-- [Section](section.md)
+```php
+use Livewire\Component;
+use NyonCode\WireCore\Foundation\Schema\Flex;
+use NyonCode\WireForms\Components\DateTimePicker;
+use NyonCode\WireForms\Components\Select;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireForms\Forms\Form;
+use NyonCode\WireForms\Forms\WithForms;
+
+class OrderFilters extends Component
+{
+    use WithForms;
+
+    public ?array $data = [];
+
+    public function form(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Flex::make()                                   // [tl! focus:start]
+                    ->from('md')
+                    ->align('end')
+                    ->gap(3)
+                    ->schema([
+                        TextInput::make('search')->label('Hledat objednávky'),
+                        Select::make('status')->options([
+                            'open' => 'Otevřené',
+                            'shipped' => 'Odeslané',
+                        ]),
+                        DateTimePicker::make('placed_after')->asDate()->label('Vytvořeno po'),
+                    ]),                                         // [tl! focus:end]
+            ]);
+    }
+}
+```
+
+Tři prvky stejné šířky od `md` nahoru, na telefonu pod sebou, se spodními hranami
+zarovnanými, protože jeden z nich nese delší label než ostatní.
+
+## Flex API
+
+```php
+->from(string $breakpoint)     // 'sm'|'md'|'lg' — výchozí 'md'; cokoli jiného spadne na 'md'
+->justify(string $justify)     // 'start'|'end'|'center'|'between'|'around'|'evenly' — výchozí nenastaveno
+->align(string $align)         // 'start'|'end'|'center'|'stretch'|'baseline' — výchozí nenastaveno
+->gap(int $gap)                // Tailwindí krok 0–12 — výchozí 4
+->wrap(bool $condition = true)  // povolit druhý řádek — výchozí false
+->grow(bool $condition = true)  // děti vyplní řádek rovnoměrně — výchozí true
+->getFrom(): string
+->isWrap(): bool
+->isGrow(): bool
+```
+
+Všechno ostatní — `label()`, `schema()`, `visible()`, `columnSpan()` — je společný
+layoutový povrch. Viz
+[Společné API layoutů](../overview.md#spolecne-api-layoutu).
+
+## Související
+
+- [Schema](../overview.md) — slovník, do kterého tohle patří, a společný povrch
+- [Grid](grid.md) — stejné sloupce, když jsou děti opravdu rovnocenné
+- [Section](section.md) — nadpis a skládání kolem skupiny
+- [Fieldset](fieldset.md) — legenda, když seskupení nese význam

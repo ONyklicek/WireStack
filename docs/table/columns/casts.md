@@ -1,6 +1,6 @@
 ---
 order: 22
-nav: false
+summary: What a column does with an enum or an array cast — the raw value, normalised once, before anything renders it.
 ---
 
 # Enum & JSON Casts
@@ -124,4 +124,4 @@ TextColumn::make('meta')   // renders compact JSON: {"k":"v"} — never the lite
 The same normalization runs everywhere a cast value is shown or written: text/badge/icon/select
 columns, **exports** (CSV/Excel/PDF export the display label / compact JSON), **`groupBy()`**
 headers and **summaries**, **filter indicator chips**, and **infolist entries**. See
-[Foundation → Enums](../../core/foundation.md#enums) for the underlying `EnumResolver` and contracts.
+[Foundation → Enums](../../core/foundation/enums.md#enums) for the underlying `EnumResolver` and contracts.

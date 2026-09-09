@@ -1,5 +1,6 @@
 ---
-order: 40
+order: 30
+summary: Každý config soubor, který tyhle balíčky publikují, o čem který klíč rozhoduje a co dostaneš, když neřekneš nic.
 ---
 
 # Konfigurace
@@ -14,7 +15,16 @@ php artisan vendor:publish --tag=wire-forms::config
 php artisan vendor:publish --tag=wire-table::config
 php artisan vendor:publish --tag=wire-sortable::config
 php artisan vendor:publish --tag=wire-panels::config
+php artisan vendor:publish --tag=wire-admin::config
 php artisan vendor:publish --tag=wire-boost::config
+
+# Jeden na každý nainstalovaný modul
+php artisan vendor:publish --tag=wire-module-users::config
+php artisan vendor:publish --tag=wire-module-auth::config
+php artisan vendor:publish --tag=wire-module-settings::config
+php artisan vendor:publish --tag=wire-module-notifications::config
+php artisan vendor:publish --tag=wire-module-audit::config
+php artisan vendor:publish --tag=wire-module-media::config
 ```
 
 Potřebujete jen tagy balíčků, které jste nainstalovali.
@@ -78,7 +88,19 @@ return [
 
     'colors' => [
         'palette' => [],
+
+        // Role, ne barvy: každá plocha následuje to, na co ukazují. // [tl! focus:start]
+        'success' => 'emerald',
+        'danger' => 'red',
+        'warning' => 'amber',
+        'info' => 'cyan',
     ],
+
+    // 'normal' nebo 'compact' — viz Vzhled → Hustota.
+    'density' => env('WIRE_DENSITY', 'normal'),
+
+    // 'rounded' nebo 'sharp' — viz Vzhled → Tvar.
+    'shape' => env('WIRE_SHAPE', 'rounded'), // [tl! focus:end]
 
     'plugins' => [
         // App\Wire\Plugins\ExamplePlugin::class,
@@ -108,7 +130,7 @@ Vestavěné notifikační drivery jsou:
 WIRE_NOTIFICATIONS_DRIVER=livewire
 ```
 
-Příklady použití viz [Core Notifikace](core/notifications.md).
+Příklady použití viz [Core Notifikace](../core/notifications/index.md).
 
 ### Ikony
 
@@ -135,7 +157,7 @@ Příklady použití viz [Core Notifikace](core/notifications.md).
 
 Sady se používají společně s deterministickým, kolizím-odolným vyhodnocením.
 Kompletní API, model `prefix:name`, vlastní sady a přístupnost viz
-[Core → Foundation → Ikony](core/foundation.md#ikony).
+[Core → Foundation → Ikony](../core/foundation/icons.md#ikony).
 
 ### Pluginy
 
@@ -161,7 +183,7 @@ Pluginy implementující `HasConfiguration` mohou také číst sloučené volby 
 ],
 ```
 
-Třídy pluginů, životní cyklus, závislosti, makra, hooky, type registry, query pipes a konfiguraci pluginů viz [Core Pluginy](core/plugins.md).
+Třídy pluginů, životní cyklus, závislosti, makra, hooky, type registry, query pipes a konfiguraci pluginů viz [Core Pluginy](../core/plugins/index.md).
 
 ### Modály
 
@@ -176,7 +198,7 @@ Hodnoty šířky modalu jsou size tokeny ve stylu Tailwindu jako `sm`, `md`, `lg
 ],
 ```
 
-Modální akce a slide-overy viz [Core Modály](core/modals.md).
+Modální akce a slide-overy viz [Core Modály](../core/modals.md).
 
 <a id="mobile"></a>
 ### Mobil
@@ -257,8 +279,8 @@ return [
 ];
 ```
 
-`money` říká, jak [MoneyInput](forms/fields/money-input.md) zapíše částku, pokud pole neurčí jinak,
-a `phone` je nabídka [PhoneInputu](forms/fields/phone-input.md) — prázdný seznam `countries` nabídne
+`money` říká, jak [MoneyInput](../forms/fields/money-input.md) zapíše částku, pokud pole neurčí jinak,
+a `phone` je nabídka [PhoneInputu](../forms/fields/phone-input.md) — prázdný seznam `countries` nabídne
 celou tabulku předvoleb a seznam je zároveň validací.
 
 Pro přesun uploadů na jiný filesystem disk použijte `WIRE_FORMS_UPLOAD_DISK`:
@@ -267,7 +289,7 @@ Pro přesun uploadů na jiný filesystem disk použijte `WIRE_FORMS_UPLOAD_DISK`
 WIRE_FORMS_UPLOAD_DISK=s3
 ```
 
-Volby specifické pro pole viz [Reference polí](forms/fields/index.md).
+Volby specifické pro pole viz [Reference polí](../forms/fields/index.md).
 
 ## Table
 
@@ -297,7 +319,7 @@ return [
 
 `notification_driver` může zůstat jako `null`; tabulka pak použije core session driver. Nastavte ho jen když tabulka potřebuje jinou třídu driveru.
 
-Viz [Přehled tabulek](table/overview.md), [Sloupce](table/columns/index.md) a [Exporty](table/exports.md).
+Viz [Přehled tabulek](../table/overview.md), [Sloupce](../table/columns/index.md) a [Exporty](../table/exports.md).
 
 ## Sortable
 
@@ -321,7 +343,7 @@ controller používá zabundlovanou kopii tak jako tak.
 
 Nastavte `user_key_type` na `uuid` nebo `ulid` (před spuštěním migrace pořadí sloupců), když váš model uživatele používá neceločíselný primární klíč.
 
-Viz [Instalace Sortable](sortable/installation.md).
+Viz [Instalace Sortable](../sortable/installation.md).
 
 ## Panels
 
@@ -366,8 +388,8 @@ dostane dvě jména rout místo dvou rout, které se perou o jedno.
 ],
 ```
 
-Zóny viz [Resources](core/resources.md#zony), zbytek
-[Routování](core/resources.md#routovani).
+Zóny viz [Resources](../panels/routing.md#zony), zbytek
+[Routování](../panels/routing.md).
 
 ## Boost
 
@@ -398,7 +420,7 @@ return [
 ```
 
 Zapněte `database-query` a `tinker` jen když důvěřujete agentovi připojujícímu se k serveru. Viz
-[MCP Server a nástroje](boost/mcp-tools.md).
+[MCP Server a nástroje](../boost/mcp-tools.md).
 
 ## Audit
 
@@ -424,4 +446,55 @@ Nastavte `events` na pole, když chcete logovat jen vybrané typy událostí:
 'events' => ['created', 'updated', 'deleted'],
 ```
 
-Nastavení, použití modelu a prořezávání viz [Audit Log](core/audit.md).
+Nastavení, použití modelu a prořezávání viz [Audit Log](../core/audit.md).
+
+## Admin
+
+Shell publikuje jediný blok a je to brand — všechno ostatní kolem něj je markup,
+který si napíšeš (viz [Admin shell](../admin/overview.md)):
+
+```php
+// config/wire-admin.php
+'brand' => [
+    'name' => null,        // fallback je config('app.name')
+    'logo' => null,        // široké menu — cesta pod public/, nebo URL
+    'logo_dark' => null,   // tmavá varianta téhož
+    'mark' => null,        // 64pixelová lišta — fallback je iniciála aplikace
+    'height' => 28,        // vykreslená výška loga v pixelech
+    'url' => null,         // kam brand odkazuje — výchozí je kořen panelu
+],
+```
+
+Proč jsou podoby loga dvě a proč se volí dřív, než se stránka vykreslí:
+[Branding a motiv](../admin/branding.md#logo-v-liste).
+
+## Moduly
+
+Každý hotový modul publikuje vlastní config a jeho klíče jsou popsané na stránce
+modulu, ne tady — modul je celá oblast a jeho volby dávají smysl vedle obrazovek,
+které mění:
+
+| Soubor | Co konfiguruje | Stránka |
+| --- | --- | --- |
+| `wire-module-users.php` | Uživatelský model, resource, role a týmy, profilová obrazovka | [Uživatelé](../modules/users.md) |
+| `wire-module-auth.php` | Které obrazovky auth modul registruje a jaké routy si bere | [Přihlašování](../modules/auth.md) |
+| `wire-module-settings.php` | Tabulka nastavení, její cache a skupiny, které obrazovka ukazuje | [Nastavení](../modules/settings.md) |
+| `wire-module-notifications.php` | Zvoneček, jeho panel a tabulka uložených notifikací | [Notifikace](../modules/notifications.md) |
+| `wire-module-audit.php` | Auditní obrazovka nad stopou, kterou zapisuje `wire-core` | [Audit](../modules/audit.md) |
+| `wire-module-media.php` | Disky, konverze, povolené typy a picker | [Média](../modules/media.md) |
+
+## Zbytek `wire-core`
+
+Tři klíče v `config/wire-core.php` jsou deklarace, ne nastavení, a každý je
+popsaný tam, kde se vysvětluje věc, kterou deklaruje:
+
+| Klíč | Co drží | Stránka |
+| --- | --- | --- |
+| `resources` | Třídy resourců, které aplikace registruje | [Resources → Registrace](../panels/resources.md#registrace) |
+| `dashboards` | Třídy dashboardů, stejným způsobem | [Dashboardy](../core/widgets/dashboards.md) |
+| `tenancy` | `enabled` a `column`, na který se aplikuje tenant scope | [Autorizace](authorization.md) |
+
+`config/wire-table.php` má ještě jeden: `preferences` volí driver, do kterého se
+ukládá per-uživatelské pořadí sloupců, jejich viditelnost a velikost stránky
+(`null`, `session` nebo `database`, přičemž `guest` pojmenovává driver pro
+nepřihlášeného návštěvníka). Viz [Pokročilé funkce](../table/advanced.md).

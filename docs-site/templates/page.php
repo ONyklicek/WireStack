@@ -1,11 +1,6 @@
 <?php
 // Flatten the navigation to derive previous / next links.
-$flatNav = [];
-foreach ($navSections as $section) {
-    foreach ($section['items'] as $item) {
-        $flatNav[] = $item + ['section' => $section['title']];
-    }
-}
+$flatNav = flattenNavSections($navSections);
 $activeIndex = null;
 foreach ($flatNav as $i => $item) {
     if (! empty($item['active'])) {
@@ -88,22 +83,7 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
                 <?php include __DIR__.'/partials/version-switcher.php'; ?>
             </div>
 
-            <nav class="sidebar-nav">
-                <?php foreach ($navSections as $section) { ?>
-                    <section class="nav-section">
-                        <h2><?= htmlspecialchars($t($section['title']), ENT_QUOTES) ?></h2>
-                        <ul>
-                            <?php foreach ($section['items'] as $item) { ?>
-                                <li>
-                                    <a class="<?= $item['active'] ? 'is-active' : '' ?>" href="<?= htmlspecialchars($item['href'], ENT_QUOTES) ?>">
-                                        <?= htmlspecialchars($item['title'], ENT_QUOTES) ?>
-                                    </a>
-                                </li>
-                            <?php } ?>
-                        </ul>
-                    </section>
-                <?php } ?>
-            </nav>
+            <?php include __DIR__.'/partials/sidebar-nav.php'; ?>
         </aside>
 
         <div class="site-overlay" data-nav-close></div>

@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: An inline switch that saves the moment it is clicked, and the events it fires around the write.
 ---
 
 # ToggleColumn

@@ -1,3 +1,7 @@
+---
+summary: A code field with monospace text, line numbers and Tab indentation — plain text stored, no editor library shipped.
+---
+
 # CodeEditor
 
 Code editor with monospace styling, line numbers, and Tab-key indentation. No external dependencies — stores plain text.

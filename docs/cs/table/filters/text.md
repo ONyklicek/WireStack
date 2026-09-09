@@ -1,6 +1,6 @@
 ---
 order: 31
-nav: false
+summary: Volný text s konfigurovatelným SQL operátorem — vyhledávací pole pro jeden sloupec a motor za filtrovatelnou hlavičkou.
 ---
 
 # TextFilter

@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Obrázky a avatary v buňce a jak se vykreslí, když jich je pole.
 ---
 
 # ImageColumn

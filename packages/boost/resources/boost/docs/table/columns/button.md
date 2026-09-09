@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: "A real button in a cell: actions, confirmation, loading state and the variants it can take."
 ---
 
 # ButtonColumn

@@ -1,5 +1,6 @@
 ---
 order: 70
+summary: What the table says when an action finishes, fails, or hands work to a queue.
 ---
 
 # Table Notifications
@@ -109,10 +110,11 @@ Notification::success('User saved.')
     ->position('top-right')
 ```
 
-`TableNotification` still exists as a backwards-compatible alias, but new code should use `Notification`.
+`TableNotification` and `TableNotificationManager` were aliases of these two and
+were removed in 2.0 — see [Upgrade Guide](../start/upgrade.md#removed-every-shim-marked-for-20-20).
 
 ## Related Docs
 
-- [Getting Started](../getting-started.md)
+- [Getting Started](../start/getting-started.md)
 - [Table Actions](actions.md)
-- [Core Notifications](../core/notifications.md)
+- [Core Notifications](../core/notifications/index.md)

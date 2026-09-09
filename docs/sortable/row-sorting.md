@@ -1,6 +1,7 @@
 ---
 title: Row Reordering
 order: 30
+summary: Dragging rows into a new order, with a toggle mode and a position column written for you.
 ---
 
 # Row Reordering

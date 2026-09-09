@@ -100,22 +100,7 @@
                 <?php include __DIR__.'/partials/version-switcher.php'; ?>
             </div>
 
-            <nav class="sidebar-nav">
-                <?php foreach ($navSections as $section) { ?>
-                    <section class="nav-section">
-                        <h2><?= htmlspecialchars($t($section['title']), ENT_QUOTES) ?></h2>
-                        <ul>
-                            <?php foreach ($section['items'] as $item) { ?>
-                                <li>
-                                    <a href="<?= htmlspecialchars($item['href'], ENT_QUOTES) ?>">
-                                        <?= htmlspecialchars($item['title'], ENT_QUOTES) ?>
-                                    </a>
-                                </li>
-                            <?php } ?>
-                        </ul>
-                    </section>
-                <?php } ?>
-            </nav>
+            <?php include __DIR__.'/partials/sidebar-nav.php'; ?>
         </aside>
 
         <div class="site-overlay" data-nav-close></div>

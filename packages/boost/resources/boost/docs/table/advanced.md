@@ -1,5 +1,6 @@
 ---
 order: 80
+summary: "Polling, performance and debugging: what a table costs per render, and the switches that change it."
 ---
 
 # Advanced Features
@@ -15,7 +16,7 @@ order: 80
 5. [Performance Optimization](#performance-optimization)
 6. [Query Debugging](#query-debugging)
 7. [SQL Debug](#sql-debug)
-8. [Responsive Layout](#responsive-layout)
+8. [Layout](#layout)
 9. [Column Toggling](#column-toggling)
 10. [Saved Views](#saved-views)
 11. [Row Context Menu](#row-context-menu)
@@ -65,9 +66,8 @@ pagination:
 $table->subRowsDefaultExpanded()
 ```
 
-`flattenSubRows()` is a deprecated alias for the same thing — it never flattened
-anything, it only opened every row. `toggleFlattenMode()` still works and now
-calls `toggleAllRowExpansion()`.
+`flattenSubRows()` and `toggleFlattenMode()` were the 1.x names for this and were
+removed in 2.0 — flatten mode never flattened anything, it only opened every row.
 
 ### Sub-Row Relation with Eager Loading
 
@@ -121,7 +121,7 @@ $table->subRowView('components.order-items-detail')
 | Property | Type | Description |
 |----------|------|-------------|
 | `$expandedRows` | `array` | Keys of expanded parent records |
-| `$flattenMode` | `bool\|null` | Expansion baseline (deprecated alias of `rows.expandAll`) |
+| `$flattenMode` | `bool\|null` | Expansion baseline — the state path is `rows.expandAll` |
 
 ### Sub-Rows API
 
@@ -134,7 +134,6 @@ $table->subRowView('components.order-items-detail')
 ->subRowsExpandable(bool $expandable = true)
 ->subRowsLimit(?int $limit)             // max sub-rows before "show more"
 ->subRowsToggleLabel(?string $label)
-->flattenSubRows(bool $flatten = true)   // deprecated: subRowsDefaultExpanded()
 ->hasSubRows(): bool
 ->getSubRowColumns(): array
 ```
@@ -500,7 +499,7 @@ nothing. The factory therefore exists before the deferred table is initialised.
 
 A custom `lazyPlaceholder()` replaces the visible skeleton only — it never
 changes what loads. And if your layout carries
-[`@wireStackScripts`](../getting-started.md#javascript-assets), the shared
+[`@wireStackScripts`](../start/getting-started.md#javascript-assets), the shared
 controllers are in the document from the first paint anyway, which is what you
 want in an app that navigates with `wire:navigate`.
 
@@ -733,6 +732,11 @@ Uses `chunkById()` internally for consistent ordering.
 
 ## Query Debugging
 
+`$table->dumpColumns()` is the quickest of these: it dumps every column's name,
+label, type and sortable/searchable flags and **returns the table**, so it can be
+dropped into the middle of a chain without taking the definition apart.
+
+
 ### QueryPlan Inspection
 
 Get the immutable `QueryPlan` to see exactly what the engine will do:
@@ -820,7 +824,78 @@ class UserTable extends Component
 
 ---
 
-## Responsive Layout
+## Layout
+
+### A List Instead of a Table
+
+Some surfaces are never a table: an inbox, an activity feed, a media library.
+Built as one they get argued out of it a column at a time — collapse three
+columns into one, delete the state column, replace the badge with weight, hide
+the actions — and you are still left with a header row that cannot be turned off.
+
+```php
+$table->layout('list')   // or TableLayout::List
+```
+
+The cards render **at every width** and no `<table>` is emitted at all. That is
+the difference from `stackedOnMobile()` below, and the whole of it: stacking puts
+two renderings of every record in the document and lets CSS choose, because a
+table that has to survive a phone needs both. A surface that is never a table
+needs one.
+
+**Everything around the records stays**, which is why this is a layout and not a
+different page — the search, the filters, the pagination, the selection that
+survives paging, the bulk actions over it, the exports. Marking twelve thousand
+notifications read is a selection that outlives a page, and nothing hand-written
+per module would have grown one.
+
+Two things move because a list has no header row: sorting appears as its own
+control (the same one a stacked table gets on a phone), and the card's shape
+comes from the slot vocabulary rather than from column order.
+
+```php
+$table
+    ->layout('list')                                        // [tl! focus]
+    ->columns([
+        TextColumn::make('subject')->mobileTitle(),         // [tl! focus:start]
+        TextColumn::make('sender')->mobileSubtitle(),
+        TextColumn::make('received_at')->since()->mobileMeta(), // [tl! focus:end]
+    ])
+    ->collapseActionsOnMobile(true, 1);   // the row's verbs behind one trigger
+```
+
+Three things are worth turning off with it, because each is a control that only
+means something over a grid of columns — and together they are what makes a page
+announce itself as a table however the records are drawn:
+
+```php
+$table
+    ->layout('list')
+    ->selectable(false)             // no checkbox on every card, no select-all bar
+    ->perPageSelector(false)        // paging stays; `Show [10] records` goes
+    ->columns([
+        TextColumn::make('subject')->toggleable(false)->mobileTitle(),   // nothing to hide
+    ]);
+```
+
+A list that wants to be read as a timeline says *when* with headings, because
+it has no column to say it in:
+
+```php
+->listHeading(fn ($record) => match (true) {
+    $record->created_at->isToday() => __('Today'),
+    $record->created_at->isYesterday() => __('Yesterday'),
+    default => __('Earlier'),
+})
+```
+
+Consecutive records answering the same heading share one, so this assumes the
+list is already ordered the way the headings run. It draws only — `groupBy()` is
+the feature that **reorders**, and it needs a real column to order by.
+
+Selection is the one worth thinking about rather than copying: what it buys is
+acting on the rows ticked *on this page*, and a header action over the whole
+filtered set is usually both stronger and quieter.
 
 ### Stacked on Mobile
 
@@ -1119,7 +1194,7 @@ stored column that no longer exists (renamed/removed) is ignored on load.
 |------------|-----------------------------------------------|-------|
 | `null`     | Not persisted (default)                       | — |
 | `session`  | The user's session                            | none |
-| `database` | A `table_preferences` row per (user, table)   | publish + migrate |
+| `database` | A `wire_preferences` row per (user, surface)  | publish + migrate |
 
 ```php
 // config/wire-table.php
@@ -1130,16 +1205,28 @@ stored column that no longer exists (renamed/removed) is ignored on load.
 ],
 ```
 
-For the database driver, publish and run the migration:
+For the database driver, publish and run the migration — it ships with
+**wire-core**, because the store is shared:
 
 ```bash
-php artisan vendor:publish --tag="wire-table::migrations"
+php artisan vendor:publish --tag="wire-core::migrations"
 php artisan migrate
 ```
 
+> **The store moved down in 2.0.** It began here as `TablePreferenceDriver` and
+> a `table_preferences` table, because a table's hidden columns were the first
+> thing anyone wanted remembered. A dashboard layout is the same shape — a JSON
+> bag keyed by a surface and a user — and widgets live in `wire-core`, which
+> table depends on, so from a widget this store could not be reached. It is
+> `NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver` now,
+> the table is `wire_preferences`, and the column is `surface_key`. Nothing about
+> how a *table* is configured changed: `config('wire-table.preferences')` is
+> still the place. The migration renames an existing installation's table rather
+> than leaving it behind.
+
 Override the driver for a single table (e.g. force the database even when the
 global default is `session`), or plug in your own store implementing
-`TablePreferenceDriver`:
+`PreferenceDriver`:
 
 ```php
 $table
@@ -1277,19 +1364,19 @@ $this->getTableViews(): array                 // the names, for a switcher
 
 Let power users **right-click a row** to open a menu of actions at the cursor —
 a shortcut alongside the actions column. The menu's actions are declared
-**separately** with `rowContextMenu([...])` (they are *not* the `->actions()`
-toolbar), so the menu is explicit rather than an implicit mirror of the row
-buttons — pass the same action objects if you want them to match. It uses the
-same menu-item styling as the action-group dropdown.
+**separately** by binding each one to the right-click trigger (they are *not* the
+`->actions()` toolbar), so the menu is explicit rather than an implicit mirror of
+the row buttons — pass the same action objects if you want them to match. It uses
+the same menu-item styling as the action-group dropdown.
 
 ```php
 $table
     ->columns([/* ... */])
     ->actions([EditAction::make()])            // the row toolbar
-    ->rowContextMenu([                          // a separate right-click menu
-        ViewAction::make(),
-        EditAction::make(),
-        DeleteAction::make(),
+    ->recordActions([                          // a separate right-click menu
+        ViewAction::make()->onContextMenu(),
+        EditAction::make()->onContextMenu(),
+        DeleteAction::make()->onContextMenu(),
     ]);
 ```
 
@@ -1300,7 +1387,6 @@ $table
 - It is pinned at the pointer and clamped inside the viewport; it closes on
   outside click, `Escape`, scroll, or after choosing an action (which runs the
   action normally, e.g. opening its modal).
-- Action groups are flattened into the menu.
 - This is a **desktop pointer** feature — touch devices have no context menu, so
   the actions column remains the primary affordance.
 

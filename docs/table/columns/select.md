@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: An inline dropdown that saves the moment it changes, with the options and the write path behind it.
 ---
 
 # SelectColumn

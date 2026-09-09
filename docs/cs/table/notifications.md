@@ -1,5 +1,6 @@
 ---
 order: 70
+summary: Co tabulka řekne, když akce doběhne, selže nebo předá práci frontě.
 ---
 
 # Notifikace tabulky
@@ -109,10 +110,11 @@ Notification::success('User saved.')
     ->position('top-right')
 ```
 
-`TableNotification` stále existuje jako zpětně kompatibilní alias, ale nový kód by měl používat `Notification`.
+`TableNotification` a `TableNotificationManager` byly aliasy těchhle dvou a ve 2.0
+byly odstraněny — viz [Průvodce upgradem](../start/upgrade.md#odstraneno-kazdy-shim-oznaceny-pro-20-20).
 
 ## Související dokumentace
 
-- [Začínáme](../getting-started.md)
+- [Začínáme](../start/getting-started.md)
 - [Akce tabulky](actions.md)
-- [Core Notifikace](../core/notifications.md)
+- [Core Notifikace](../core/notifications/index.md)

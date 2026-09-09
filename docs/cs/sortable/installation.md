@@ -1,6 +1,7 @@
 ---
 title: Instalace
 order: 20
+summary: Co balíček sortable potřebuje, co přidá tabulce a jaký asset položí na stránku.
 ---
 
 # Instalace
@@ -74,7 +75,7 @@ kterákoli z nich:
 
 Direktivu přidejte, pokud vaše aplikace naviguje přes `wire:navigate` — proč je právě
 umístění v layoutu to, které přežije cestu cachovaného Zpět/Vpřed, vysvětluje
-[Začínáme → JavaScriptové assety](../getting-started.md#javascriptove-assety).
+[Začínáme → JavaScriptové assety](../start/getting-started.md#javascriptove-assety).
 
 ### `sortablejs_cdn`
 

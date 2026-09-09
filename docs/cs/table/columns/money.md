@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: "Částka podaná tak, jak se čísla čtou: u pravého okraje, číslicemi stejné šířky, na jednom řádku."
 ---
 
 # MoneyColumn

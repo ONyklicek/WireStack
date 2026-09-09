@@ -1,3 +1,7 @@
+---
+summary: Spousta checkboxů z jednoho pole možností, s hledáním, hromadnými přepínači a skupinami, když je seznam dlouhý.
+---
+
 # CheckboxList
 
 Více checkboxů z pole options.
@@ -55,6 +59,34 @@ CheckboxList::make('permissions')
     ->searchPrompt('Filter permissions...')
 ```
 
+## Co je vybrané
+
+`showSelected()` vypíše vybrané položky nad seznamem jako chipy, každý z nich
+odebratelný.
+
+```php
+CheckboxList::make('permissions')
+    ->options([...])
+    ->searchable()
+    ->showSelected()
+```
+
+Tohle je ta polovina, kterou zaškrtávací seznam oproti multi-selectu ztrácí.
+Dlouhý seznam ukáže jen řádky kolem místa, kam je odscrollovaný, a vyhledaný jen
+shody — takže v obou případech je odpověď na „co jsem vlastně vybral" mimo
+obrazovku. A kliknutí na chip je nejrychlejší způsob, jak vzít zpátky špatné
+zaškrtnutí, aniž byste ho hledali ve dvou stech řádcích.
+
+Chipy čtou **stav** pole, ne zaškrtnutá políčka — právě proto přežijí filtr,
+který ta políčka ze stránky odstraní. Drží pořadí, ve kterém byly možnosti
+deklarované, ne pořadí zaškrtávání: řádek chipů, který se přeskládá pokaždé, když
+někdo postupuje seznamem dolů, se čte hůř než seznam, který shrnuje. Když není
+vybrané nic, řádek tam není vůbec, a `disabled()` seznam nedostane tlačítka
+k odebrání.
+
+Ve výchozím stavu vypnuté — u seznamu pěti možností je to druhá kopie týchž pěti
+slov.
+
 ## Hromadné přepnutí
 
 ```php
@@ -63,6 +95,15 @@ CheckboxList::make('permissions')
     ->selectAllLabel('Select All')
     ->deselectAllLabel('Deselect All')
 ```
+
+**Obě tlačítka pracují s tím, co zbylo po hledání, a zbytku se nedotknou.**
+S napsaným `invoices` *Vybrat vše* přidá odpovídající možnosti k tomu, co už
+vybrané je, a *Zrušit výběr* odebere jen je — ovládací prvek, který působí mimo
+to, na co je namířený, je nejstarší způsob, jak se z hromadné akce stane nehoda,
+a u seznamu oprávnění je ta nehoda udělení nebo odebrání všeho.
+
+Když není napsané nic, jsou shodami všechny možnosti, takže nefiltrovaný seznam
+se chová přesně, jak čekáte: všechno, nebo nic.
 
 ## Seskupené options
 
@@ -76,7 +117,13 @@ CheckboxList::make('permissions')
     ])
 ```
 
-Volání `groups()` automaticky zapne seskupený layout. Můžete také zavolat `grouped()` explicitně.
+Volání `groups()` automaticky zapne seskupený layout — a prázdná mapa se vykreslí
+naplocho, takže *odmítnout* seskupení je totéž volání s ničím uvnitř. Můžete také
+zavolat `grouped()` explicitně.
+
+**Se `searchable()` odejde skupina spolu se svými položkami.** Filtrování skrývá
+každý řádek zvlášť; nadpis, který zůstane stát nad ničím, se čte jako skupina,
+která se nenačetla — proto nese tutéž podmínku jako jeho položky.
 
 ## Varianty s přepínacími tlačítky
 
@@ -110,6 +157,7 @@ sloupce jsou výbava seznamu a neuplatní se.
 | `columns(int)` | int | Počet sloupců (výchozí `1`) |
 | `searchable(bool)` | bool | Zapnout hledací box filtr-podle-labelu |
 | `searchPrompt(string\|null)` | string | Placeholder hledacího inputu |
+| `showSelected(bool)` | bool | Zobrazit vybrané položky nad seznamem jako odebratelné chipy |
 | `bulkToggleable(bool)` | bool | Zobrazit ovládání select-all / deselect-all |
 | `selectAllLabel(string\|null)` | string | Label tlačítka select-all |
 | `deselectAllLabel(string\|null)` | string | Label tlačítka deselect-all |

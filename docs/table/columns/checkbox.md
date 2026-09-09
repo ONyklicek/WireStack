@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: An inline checkbox writing a boolean straight to the record, for where a switch reads wrong or the table is too dense.
 ---
 
 # CheckboxColumn

@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: A stored CSS colour as a swatch beside its literal value — the table counterpart of the infolist's colour entry.
 ---
 
 # ColorColumn

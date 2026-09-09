@@ -1,5 +1,6 @@
 ---
-order: 50
+order: 40
+summary: Každé odmítnutí jde přes laravelí Gate — na co se ho ptá tabulka, formulář, akce a stránka, a kdy.
 ---
 
 # Autorizace
@@ -177,16 +178,16 @@ public function beforeRowsReordered(array $orderedIds): void
 }
 ```
 
-Lifecycle hooky viz [Sortable řazení řádků](sortable/row-sorting.md).
+Lifecycle hooky viz [Sortable řazení řádků](../sortable/row-sorting.md).
 
 ## Související dokumentace
 
 | Dokument | Co pokrývá |
 |----------|----------------|
-| [Core Akce](core/actions.md) | Řádkové, hromadné, hlavičkové akce a modální akce |
-| [Přehled tabulek](table/overview.md) | Nastavení tabulky a API na úrovni tabulky |
-| [Přehled formulářů](forms/overview.md) | Nastavení formuláře a chování ukládání |
-| [Audit Log](core/audit.md) | Záznam změn modelů po úspěšné autorizaci |
+| [Core Akce](../core/actions/index.md) | Řádkové, hromadné, hlavičkové akce a modální akce |
+| [Přehled tabulek](../table/overview.md) | Nastavení tabulky a API na úrovni tabulky |
+| [Přehled formulářů](../forms/overview.md) | Nastavení formuláře a chování ukládání |
+| [Audit Log](../core/audit.md) | Záznam změn modelů po úspěšné autorizaci |
 
 ## Multi-tenancy
 

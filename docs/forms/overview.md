@@ -1,12 +1,13 @@
 ---
 order: 10
+summary: "The form system: a schema declared in PHP, bound to a Livewire host or standalone, and what happens between a submit and a saved record."
 ---
 
 # Wire Forms
 
 Standalone form system for Laravel Livewire. Works independently or with Wire Table.
 
-> Need to **display** a record read-only instead of editing it? See [Infolists](../core/infolists.md) — the same schema and layout, with display entries instead of input fields.
+> Need to **display** a record read-only instead of editing it? See [Infolists](../core/infolists/index.md) — the same schema and layout, with display entries instead of input fields.
 
 ## Installation
 
@@ -380,3 +381,32 @@ writes, and [Validation](validation.md#unique-values) for `unique()`.
 
 `visible()`, `hidden()`, `disabled()` and `afterStateUpdated()` closures receive live state
 accessors (`$get`, `$set`, `$state`). See [Reactive Fields](reactive-fields.md).
+
+## Adjusting A Form You Do Not Own
+
+A form shipped by an installed [module](../panels/modules.md) is built inside code
+the application does not have, so the three plugin hooks around it are the way in
+— one per stage, and they are not interchangeable:
+
+| Hook | Runs | Reach for it to |
+|---|---|---|
+| `form.configuring` | once, when the schema becomes a config | **add or remove a field** |
+| `form.filling` | when `fill()` binds values | change what a field arrives holding |
+| `form.saving` | after validation, before persistence | change what reaches the record |
+
+```php
+$manager->hook(Hook::FormConfiguring, function (FormConfiguringPayload $payload) {
+    $payload->schema = [...$payload->schema, TextInput::make('crm_id')];   // [tl! focus]
+
+    return $payload;
+}, for: 'users');
+```
+
+`form.configuring` is the counterpart of a table's `table.composing`: it runs at the
+one place a schema becomes a config, and the config is memoized, so it fires once
+per form rather than once per render. `for:` narrows the callback to one form — the
+registered key of the resource a page shows, the host component's class, or the
+model — and without it the callback runs for every form in the application.
+
+See [Hooks](../core/plugins/hooks.md) for the full list and
+[Save Lifecycle](save-lifecycle.md) for where the last two sit in the pipeline.

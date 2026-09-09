@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Images and avatars in a cell, and what an array of them renders as.
 ---
 
 # ImageColumn

@@ -1,5 +1,6 @@
 ---
 order: 55
+summary: A column aggregated into a footer value — on the main table, on sub-rows, and over a relationship.
 ---
 
 # Summaries

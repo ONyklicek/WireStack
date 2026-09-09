@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: "Buňka, která se sama obnovuje: stavové automaty, průběh a podmínka, která rozhodne, kdy se přestat ptát."
 ---
 
 # PollColumn

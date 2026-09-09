@@ -1,6 +1,6 @@
 ---
 order: 29
-nav: false
+summary: Ready-made column recipes — the cells applications keep rebuilding, written once.
 ---
 
 # Patterns & Recipes

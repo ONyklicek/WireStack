@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Jedna buňka rozdělená vodorovně mezi několik podřízených sloupců, každý si drží vlastní vykreslení.
 ---
 
 # SplitColumn

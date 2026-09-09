@@ -1,6 +1,6 @@
 ---
 order: 28
-nav: false
+summary: Editace hodnoty přímo v buňce, ve které je vidět, a filtrování sloupce z jeho vlastní hlavičky.
 ---
 
 # Editace a filtry na úrovni sloupce
@@ -136,3 +136,31 @@ i toggly ji používají, takže se chovají konzistentně.
 - **Serverová autorizace.** Klientský `disabled()` stav je jen kosmetika — per-record `disabled()`
   buňka (i oprávnění sloupce) se znovu vynutí na serveru v `updateTableCell`, takže forged request
   nemůže zapsat do zamčené buňky.
+
+## Omezení editace, kterou nevlastníte
+
+Sloupec z nainstalovaného [modulu](../../panels/modules.md) deklaruje svoji
+vlastní validaci a aplikace k ní přidá vlastní pravidlo přes
+[hook `cell.updating`](../../core/plugins/hooks.md):
+
+```php
+$manager->hook(Hook::CellUpdating, function (CellUpdatingPayload $payload) {
+    if ($payload->record->approved_at !== null) {                 // [tl! focus]
+        $payload->refusal = 'Zamčeno, dokud je faktura schválená.'; // [tl! focus]
+    }                                                             // [tl! focus]
+
+    return $payload;
+}, for: Invoice::class);
+```
+
+`$payload->value` je dehydrovaná hodnota, která se chystá zapsat; její změna změní
+to, co doopravdy dopadne. Nastavení `$payload->refusal` zápis zastaví a do
+prohlížeče dorazí jako vlastní chybová hláška buňky — stejný tvar, jaký vyrobí
+neúspěšná validace.
+
+**Záleží na tom, kde běží.** Dispatchuje se uvnitř `CellEditPipeline::commit()`, po
+kontrole oprávnění sloupce, po kontrole optimistického zámku a po jeho validaci —
+takže callback zužuje, co se zapíše, a nemůže obejít stráž, kterou sloupec
+deklaroval. Je to zároveň jediné místo, které sdílí inline editor
+a [fill handle](fill-handle.md), takže pravidlu napsanému tady neuteče ani tažení
+přes sloupec.

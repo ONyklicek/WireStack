@@ -173,5 +173,5 @@ A co plátno odpoví samo o sobě:
 
 - [Formulářová pole](index.md) — sdílené API pole
 - [FileUpload](file-upload.md) — stejný tvar uložené cesty, pro soubory volené uživatelem
-- [Infolisty](../../core/infolists.md) — `ImageEntry` uložený podpis zobrazí
+- [Infolisty](../../core/infolists/index.md) — `ImageEntry` uložený podpis zobrazí
 - [Životní cyklus ukládání](../save-lifecycle.md) — kde během ukládání běží dehydratace

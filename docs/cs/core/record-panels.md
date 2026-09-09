@@ -1,10 +1,11 @@
 ---
-order: 56
+order: 60
+summary: "Infolist, který jde editovat: read-only entries vedle přepínačů, selectů a inputů, které zapisují rovnou do záznamu, každá změna zvlášť."
 ---
 
 # Editovatelné panely
 
-**Panel** je editovatelný „panel záznamu": vypadá jako [infolist](infolists.md) — stejné deklarativní schéma sekcí, gridů a entry — ale vedle read-only entry umí hostit **editovatelné** entry (switch, checkbox, select, textové pole), které zapisují **rovnou do záznamu**. Každá změna se odešle samostatně s optimistickým UI a optimistickým zámkem, stejnou cestou jako [editovatelné sloupce tabulky](../table/columns/editing.md) — žádné tlačítko Uložit, žádný buffer formuláře.
+**Panel** je editovatelný „panel záznamu": vypadá jako [infolist](infolists/index.md) — stejné deklarativní schéma sekcí, gridů a entry — ale vedle read-only entry umí hostit **editovatelné** entry (switch, checkbox, select, textové pole), které zapisují **rovnou do záznamu**. Každá změna se odešle samostatně s optimistickým UI a optimistickým zámkem, stejnou cestou jako [editovatelné sloupce tabulky](../table/columns/editing.md) — žádné tlačítko Uložit, žádný buffer formuláře.
 
 Infolisty zůstávají kontraktem read-only; panel je plocha pro „přečti *a* uprav tento jeden záznam na místě".
 
@@ -140,6 +141,14 @@ use NyonCode\WireCore\Panels\Components\TextInputEntry;
 TextInputEntry::make('name')->rules(['required', 'min:2']);
 TextInputEntry::make('price')->type('number')->rules(['numeric', 'min:0']);
 ```
+
+## Vlastní editovatelná entry
+
+Ty čtyři výše jsou potomci `EditableEntry` — a stejně tak ta tvoje: základní třída
+vlastní zápisovou cestu (optimistický zápis, kontrolu verze, rollback i sync uzel)
+a potomkovi nechává markup jeho ovládacího prvku a hodnotu, kterou čte zpět. Právě
+tohle dělení je důvod, proč vlastní entry dostane optimistický zámek zadarmo místo
+druhé implementace téhož.
 
 ## Validace
 

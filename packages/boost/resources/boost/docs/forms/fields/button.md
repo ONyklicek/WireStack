@@ -1,3 +1,7 @@
+---
+summary: A design-system button inside a form that runs a closure on the server — the supported alternative to hand-written markup.
+---
+
 # Button
 
 An interactive, design-system-styled button that runs a closure on the server — the supported

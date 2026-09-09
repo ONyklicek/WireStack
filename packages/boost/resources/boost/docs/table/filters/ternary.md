@@ -1,6 +1,6 @@
 ---
 order: 31
-nav: false
+summary: Yes, no, or all — for a boolean column and for "has" versus "does not have" relationships.
 ---
 
 # TernaryFilter

@@ -1,3 +1,7 @@
+---
+summary: A rich text field with a configurable toolbar, for HTML written by someone who is not writing HTML.
+---
+
 # RichEditor
 
 Rich text editor with configurable toolbar.

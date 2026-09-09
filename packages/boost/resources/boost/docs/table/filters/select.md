@@ -1,6 +1,6 @@
 ---
 order: 31
-nav: false
+summary: A dropdown over predefined options — the filter most tables reach for first.
 ---
 
 # SelectFilter

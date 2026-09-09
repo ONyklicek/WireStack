@@ -175,5 +175,5 @@ And what the pad answers about itself:
 
 - [Form Fields](index.md) — the shared field API
 - [FileUpload](file-upload.md) — the same stored-path shape, for files a user picks
-- [Infolists](../../core/infolists.md) — `ImageEntry` shows a stored signature
+- [Infolists](../../core/infolists/index.md) — `ImageEntry` shows a stored signature
 - [Save Lifecycle](../save-lifecycle.md) — where dehydration runs during a save

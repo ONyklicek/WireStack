@@ -1,3 +1,7 @@
+---
+summary: "Polymorfní vztah jako dva selecty: nejdřív typ, pak záznam uvnitř něj."
+---
+
 # MorphToSelect
 
 `MorphToSelect` vykresluje selektor typu plus selektor záznamu pro polymorfní relace.

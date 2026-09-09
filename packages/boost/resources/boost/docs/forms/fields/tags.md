@@ -1,3 +1,7 @@
+---
+summary: Free-form tags committed with Enter or a comma, with suggestions, limits and a relationship mode.
+---
+
 # Tags
 
 Free-form tag input. The user types text and commits it as a chip by pressing Enter or comma. Supports predefined suggestions, limits, and relationship mode.

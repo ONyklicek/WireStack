@@ -1,10 +1,11 @@
 ---
 order: 20
+summary: Všechny typy sloupců a základní API, které sdílejí — popisky, viditelnost, autorizace, řazení, formátování a inline editace.
 ---
 
 # Sloupce
 
-Wire Table poskytuje **16 typů sloupců**. Všechny sdílejí stejné základní API
+Wire Table poskytuje **19 typů sloupců**. Všechny sdílejí stejné základní API
 sloupce pro popisky, viditelnost, autorizaci, řazení, formátování a inline
 editaci — dokumentované níže. Typ vyberte podle vykreslení buňky; sdílené API
 sáhněte na kterýkoli z nich.
@@ -275,11 +276,30 @@ TextColumn::make('subtitle')
 ### Ikony
 
 ```php
-->icon(string|Icon|null $icon, ?string $position = 'before')   // pozice: 'before' | 'after'
-->color(string|Color $color)           // statická barva ikony/textu (pro barvu per řádek použijte BadgeColumn/IconColumn colorUsing())
+->icon(string|Icon|Closure|null $icon, ?string $position = 'before')   // pozice: 'before' | 'after'
+->color(string|Color $color)           // barva sloupce: text a ikona, pokud nemá vlastní
+->iconColor(string|Color|Closure|null $color)   // barva ikony, per záznam — role, nebo closure, která ji vrátí
+->iconTile(bool $tile = true)           // posadit ikonu do tónované dlaždice — kotva řádku v seznamu
 ```
 
+Na **seznamu** (`layout('list')`) sáhněte i po `iconTile()`: holá tónovaná ikona
+stačí na mřížce sloupců, kde je řádek už tak řada zarovnaných hodnot — ale tam,
+kde je záznam věta, dá teprve dlaždice řádkům levou hranu, po které oko sjíždí.
+Pozadí i ikona přicházejí z jedné role, takže se nemohou rozejít, a dlaždici
+dostanou jen sémantické role — surový odstín o *druhu* nic neříká, takže padne na
+neutrální.
+
+`color()` se resolvuje jednou pro celý sloupec, což je správně pro tón textu
+a špatně pro **stavovou** ikonu, jejímž celým úkolem je lišit se řádek od řádku.
+Na to je `iconColor()`: předejte roli ze sdíleného slovníku, nebo closure nad
+záznamem. Closure se vzdá statického mema ikony — stejná cena, jakou už platí
+closure v `icon()`, a důvod, proč ani jedno není výchozí.
+
 ```php
+TextColumn::make('state')
+    ->icon(fn ($record) => $record->failed ? 'x-circle' : 'check-circle')      // [tl! focus:start]
+    ->iconColor(fn ($record) => $record->failed ? 'danger' : 'success')        // [tl! focus:end]
+
 TextColumn::make('email')
     ->icon('mail', 'before')
     ->color('primary')

@@ -1,6 +1,6 @@
 ---
 order: 31
-nav: false
+summary: Jedno datum nebo rozsah, vykreslené jako nativní datumové vstupy a aplikované na sloupec nebo vlastní dotaz.
 ---
 
 # DateFilter

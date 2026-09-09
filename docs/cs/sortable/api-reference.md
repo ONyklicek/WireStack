@@ -1,6 +1,7 @@
 ---
 title: Reference API
 order: 70
+summary: Celý povrch `SortableTable` a jeho traity — každá metoda, otypovaná, i s tím, co ukládá.
 ---
 
 # Reference API

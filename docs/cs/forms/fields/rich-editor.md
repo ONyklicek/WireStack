@@ -1,3 +1,7 @@
+---
+summary: Pole pro formátovaný text s konfigurovatelnou lištou — pro HTML psané někým, kdo HTML nepíše.
+---
+
 # RichEditor
 
 Rich text editor s konfigurovatelným toolbarem.

@@ -1,5 +1,6 @@
 ---
-order: 70
+order: 85
+summary: Stopa, kterou wire-core zapisuje sám — které události, na kterých modelech a jak vypadala každá změněná hodnota před a po.
 ---
 
 # Audit Log
@@ -113,6 +114,18 @@ Akce otevře slide-over s historií záznamu.
 
 Audit události můžete odesílat ručně pro operace, které neprocházejí auditovanou událostí modelu.
 
+K loggeru vede pět událostí a první tři vyvolává `HasAuditable` za tebe — vlastní
+ruční odeslání má smysl tam, kde zápis proběhl mimo dohled modelových událostí
+(přímý dotaz, import, změna stavu z jobu):
+
+| Událost | Konstruktor | Kdo ji vyvolá za tebe |
+| --- | --- | --- |
+| `RecordCreated` | `(Model $record, array $newValues = [], array $metadata = [])` | `HasAuditable`, při vytvoření |
+| `RecordUpdated` | `(Model $record, array $oldValues = [], array $newValues = [], array $metadata = [])` | `HasAuditable`, při úpravě |
+| `RecordDeleted` | `(Model $record, array $oldValues = [], array $metadata = [])` | `HasAuditable`, při smazání |
+| `BulkActionExecuted` | `(string $actionName, string $modelType, array $recordIds, bool $success, array $metadata = [])` | nikdo — vyvoláš ji sám |
+| `InlineCellUpdated` | viz níže | inline editace v tabulce |
+
 ```php
 use NyonCode\WireCore\Audit\Events\BulkActionExecuted;
 
@@ -192,4 +205,4 @@ neprořeže nic. Programové prořezávání je stále dostupné přes
 
 Podporované typy událostí jsou `created`, `updated`, `deleted`, `bulk_action` a `cell_updated`.
 
-Kompletní referenci configu viz [Konfigurace](../configuration.md).
+Kompletní referenci configu viz [Konfigurace](../start/configuration.md).

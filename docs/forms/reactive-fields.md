@@ -1,5 +1,6 @@
 ---
 order: 25
+summary: Fields that react to each other without leaving the schema — which closures see live state, when they re-run, and what each round trip costs.
 ---
 
 # Reactive Fields

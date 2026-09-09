@@ -1,3 +1,7 @@
+---
+summary: "Select nad vztahem `belongsTo`: možnosti z navázané tabulky, hledané na serveru a ukládané jako cizí klíč."
+---
+
 # BelongsToSelect
 
 `BelongsToSelect` je select pole vědomé si relace pro `belongsTo` asociace.

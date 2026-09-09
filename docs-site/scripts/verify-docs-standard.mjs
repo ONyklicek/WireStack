@@ -6,7 +6,8 @@
  *   S1  A long PHP/Blade example must spotlight what it is about with
  *       Torchlight `[tl! focus]`. A 40-line block where everything is equally
  *       bright teaches nothing; the reader has to find the three lines the
- *       prose was talking about.
+ *       prose was talking about. An `## X API` signature list is not an example
+ *       and is exempt — see isSignatureList().
  *   S2  Focus markers must be well formed: every `focus:start` closed by a
  *       `focus:end` in the same block, no orphan end, and never every line of a
  *       block (focusing everything focuses nothing).
@@ -41,6 +42,23 @@ const BASELINE_FILE = join(REPO, 'docs-site/docs-standard-baseline.txt');
 const LONG_BLOCK_LINES = 12;
 const FOCUSABLE = new Set(['php', 'blade']);
 
+/**
+ * The `## ClassName API` block of a reference page: one method per line, each
+ * starting with `->` (AI_DOCS_STANDARD.md D3, and the form the API gate parses).
+ *
+ * Exempt from S1, because S1 is about *examples*. "Focus the answer, dim the
+ * scaffold" presupposes a scaffold — a class declaration, a `table()` method,
+ * imports — and a signature list has none: every line is the answer, and
+ * spotlighting an arbitrary few of them would tell the reader something untrue
+ * about which methods matter. Every long API block in the corpus was already
+ * exempt through the baseline; this says *why* rather than listing them.
+ */
+const isSignatureList = (body) => {
+  const lines = body.filter((line) => line.trim() !== '');
+
+  return lines.length > 0 && lines.every((line) => line.trimStart().startsWith('->'));
+};
+
 const failures = [];
 const fail = (msg) => failures.push(msg);
 
@@ -51,6 +69,33 @@ function walk(dir, out = []) {
     else if (path.endsWith('.md')) out.push(path);
   }
   return out;
+}
+
+/**
+ * The page's heading skeleton: one level per heading, code fences skipped.
+ *
+ * The text is translated, the shape is not — a mirror missing a section is
+ * missing it in the reader's language only. This exists because a Czech page
+ * lost its "Related" heading while keeping the list under it: every code block
+ * matched, so the parity check below saw nothing at all.
+ */
+function headingLevels(text) {
+  const levels = [];
+  let fenced = false;
+
+  for (const line of text.split('\n')) {
+    if (line.startsWith('```')) {
+      fenced = !fenced;
+      continue;
+    }
+
+    if (fenced) continue;
+
+    const heading = line.match(/^(#{1,6}) /);
+    if (heading) levels.push(heading[1].length);
+  }
+
+  return levels;
 }
 
 /** Fenced code blocks of one page: language, body lines, and where they start. */
@@ -104,7 +149,8 @@ for (const page of enPages) {
     const markers = focusMarkers(block.body);
 
     // S1 — a long example must say what it is about.
-    if (FOCUSABLE.has(block.lang) && block.body.length >= LONG_BLOCK_LINES && markers.length === 0) {
+    if (FOCUSABLE.has(block.lang) && block.body.length >= LONG_BLOCK_LINES && markers.length === 0
+      && ! isSignatureList(block.body)) {
       violations.push(`${blockKey(relPath, block.body)}  ${relPath}:${block.line} (${block.lang}, ${block.body.length} lines)`);
     }
 
@@ -134,7 +180,15 @@ for (const page of enPages) {
     continue;
   }
 
-  const csBlocks = codeBlocks(readFileSync(csPage, 'utf8'));
+  const csText = readFileSync(csPage, 'utf8');
+
+  const enHeadings = headingLevels(readFileSync(page, 'utf8'));
+  const csHeadings = headingLevels(csText);
+  if (enHeadings.join(' ') !== csHeadings.join(' ')) {
+    fail(`${relPath} — the Czech mirror has a different heading structure (${csHeadings.length} headings, this page has ${enHeadings.length})`);
+  }
+
+  const csBlocks = codeBlocks(csText);
   if (csBlocks.length !== blocks.length) {
     fail(`${relPath} — the Czech mirror has ${csBlocks.length} code blocks, this page has ${blocks.length}`);
     continue;

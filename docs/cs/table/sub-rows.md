@@ -1,5 +1,6 @@
 ---
 order: 60
+summary: Podřízené záznamy v rozbalovacím panelu pod každým řádkem — pro ponor do detailu bez opuštění tabulky.
 ---
 
 # Podřádky
@@ -385,10 +386,10 @@ procházení, kdy chcete vidět všechen detail pohromadě:
 Je to jen výchozí bod — master chevron a view menu tímto výchozím stavem za běhu
 pohnou na obě strany.
 
-> `flattenSubRows()` je zastaralý alias `subRowsDefaultExpanded()`. Navzdory názvu
-> nikdy nevykreslil děti jako ploché řádky; byl to druhý příznak se stejným
-> viditelným efektem a existence obou znamenala, že „Sbalit vše“ nedokázalo zavřít
-> to, co flatten režim držel otevřené. `toggleFlattenMode()` dál funguje a volá
+> `flattenSubRows()` a `toggleFlattenMode()` byly ve 2.0 odstraněny. Navzdory názvu
+> flatten režim nikdy nevykreslil děti jako ploché řádky: byl to druhý příznak se
+> stejným viditelným efektem a existence obou znamenala, že „Sbalit vše“ nedokázalo
+> zavřít to, co držel otevřené. Nahradil ho výchozí stav výše a přepínačem je
 > `toggleAllRowExpansion()`.
 
 ## Detail-řádkový režim (bez relace)
@@ -451,7 +452,6 @@ filtrování per rodič spadne zpět na bezpečný per-parent dotaz.
 | `subRowsExpandable(bool)`                       | Povolit přepínač rozbalit/sbalit         |
 | `subRowsDefaultExpanded(bool)`                  | Začít rozbalené                          |
 | `subRowsToggleLabel(?string)`                   | Popisek sloupce přepínače                |
-| `flattenSubRows(bool)`                          | Zastaralý alias `subRowsDefaultExpanded()` |
 | `subRowView(string)`                            | Vlastní renderer dětí                    |
 
 ## Související dokumentace

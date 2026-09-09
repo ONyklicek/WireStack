@@ -28,6 +28,8 @@ slovník komponent.
 | `describe-table` | Vyresolvovat sloupce tabulky, filtry, header/row/bulk akce, výchozí řazení a searchability. |
 | `describe-form` | Vyresolvovat zploštělé schéma polí formuláře (název, label, typ, obalující layout). |
 | `describe-infolist` | Vyresolvovat schéma entries infolistu. |
+| `describe-resource` | Vypíše zaregistrované resource — klíč, model, popisky, které povrchy který deklaruje, a jeho položku v navigaci. |
+| `describe-module` | Vypíše doménové moduly — id, závislosti a resource, dashboardy a navigační skupinu, které každý deklaruje. |
 | `validate-wire-component` | Postavit komponentu a nahlásit neznámé barvy, neregistrované ikony a názvy, které model neumí vyresolvovat. |
 | `list-component-types` | Vypsat vestavěné typy kategorie: `columns`, `filters`, `fields`, `actions`, `infolist-entries`, `panel-entries`, `widgets`, `modals`, `layouts`. |
 | `describe-component-api` | Vypsat veřejné fluent API typu komponenty — signatury, výchozí hodnoty a hodnoty, které každý parametr přijímá (FQCN nebo krátký název jako `badge-column`). |
@@ -70,7 +72,7 @@ To `id` předejte do `fetch-wire-doc` a přečtete si celou sekci. Předání id
 osnova plus cílené dotažení sekcí je levnější a přesnější. `full: true` vrátí celou stránku.
 
 Filtrovat podle balíčku lze přes `package: wire-table` (prefix `wire-` je volitelný). Vlastní Markdown
-přidáte do indexu přes `wire-boost.docs.paths`; viz [Konfigurace](../configuration.md).
+přidáte do indexu přes `wire-boost.docs.paths`; viz [Konfigurace](../start/configuration.md).
 
 ## Validace
 
@@ -125,4 +127,4 @@ WIRE_BOOST_DATABASE_QUERY=true
 WIRE_BOOST_TINKER=true
 ```
 
-Kompletní referenci `wire-boost` configu viz [Konfigurace](../configuration.md).
+Kompletní referenci `wire-boost` configu viz [Konfigurace](../start/configuration.md).

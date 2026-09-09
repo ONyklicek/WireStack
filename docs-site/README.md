@@ -21,8 +21,8 @@ written to its own folder under `dist/`:
 
 | Version           | `path` | Output folder       | URL        |
 |-------------------|--------|---------------------|------------|
-| latest (current)  | `''`   | `dist/`             | `/`        |
-| an older/newer one| `v2`   | `dist/v2/`          | `/v2/`     |
+| v2.x — latest     | `''`   | `dist/`             | `/`        |
+| v1.x — LTS        | `v1`   | `dist/v1/`          | `/v1/`     |
 
 ### 1. Configure the versions
 
@@ -38,8 +38,8 @@ can never drift between branches:
         { "code": "cs", "label": "Čeština", "path": "cs" }
     ],
     "versions": [
-        { "label": "v1.x", "badge": "Latest", "path": "", "branch": "1.x", "available": true },
-        { "label": "v2.x", "badge": "Soon", "path": "v2", "branch": "2.x", "available": false }
+        { "label": "v2.x", "badge": "Latest", "path": "", "branch": "2.0.0", "available": true },
+        { "label": "v1.x", "badge": "LTS", "path": "v1", "branch": "1.x", "available": true }
     ]
 }
 ```
@@ -48,6 +48,9 @@ can never drift between branches:
 - `badge`     — small tag next to the label (`Latest`, `Soon`, `LTS`, …).
 - `path`      — output sub-directory under `dist/` **and** the URL segment.
   Use `''` for the version served from the site root (the latest one).
+- `branch`    — the git ref the deploy builds that version from. v2 is built from
+  `2.0.0` until a long-lived `2.x` branch exists, the way 1.x has one; the deploy
+  warns and skips a version whose branch is missing rather than failing.
 - `available` — `true` once the version is actually built. `false` renders it as
   a disabled "coming soon" entry (cannot be clicked).
 
@@ -68,15 +71,15 @@ Build the latest version (served from the site root):
 ```bash
 php docs-site/build.php
 # or explicitly:
-DOCS_BUILD_VERSION=v1.x php docs-site/build.php
+DOCS_BUILD_VERSION=v2.x php docs-site/build.php
 ```
 
 Build another version into its sub-folder — typically from that version's branch
 or tag so `docs/` contains the right content:
 
 ```bash
-git worktree add ../wire-v2 v2.x        # or: git checkout v2.x
-DOCS_BUILD_VERSION=v2.x php docs-site/build.php
+git worktree add ../wire-v1 1.x         # or: git checkout 1.x
+DOCS_BUILD_VERSION=v1.x php docs-site/build.php
 ```
 
 Rebuilding one version **does not** wipe the others: the root build preserves the
@@ -84,22 +87,27 @@ sibling version folders, and a sub-folder build only recreates its own folder.
 A full publish just builds every version you want online:
 
 ```bash
-php docs-site/build.php                         # latest  -> dist/
-DOCS_BUILD_VERSION=v2.x php docs-site/build.php  # v2.x    -> dist/v2/
+php docs-site/build.php                          # v2.x (latest) -> dist/
+DOCS_BUILD_VERSION=v1.x php docs-site/build.php  # v1.x (LTS)    -> dist/v1/
 ```
 
-### 4. Promoting a new latest (when v2 ships)
+### 4. Promoting a new latest
 
-Move the previous latest into its own folder and make the new one the root:
+This has already happened once: **v2 is the root and v1 moved to `/v1`**. The move
+is two edits in `config.json` — swap which version has `path: ""` and which has a
+folder, and adjust the badges:
 
-```php
-$siteVersions = [
-    ['label' => 'v2.x', 'badge' => 'Latest', 'path' => '',   'available' => true],
-    ['label' => 'v1.x', 'badge' => 'LTS',    'path' => 'v1', 'available' => true],
-];
+```json
+"versions": [
+    { "label": "v3.x", "badge": "Latest", "path": "",   "branch": "3.x", "available": true },
+    { "label": "v2.x", "badge": "LTS",    "path": "v2", "branch": "2.x", "available": true }
+]
 ```
 
-Then build v2 from the new code (root) and v1 from the old branch into `dist/v1`.
+Old URLs do not redirect themselves. A page that lived at `/table/overview/` under
+the old latest keeps that address for the *new* latest, and the previous version's
+copy is now at `/v1/table/overview/` — which is why the switcher is computed from
+path depth rather than written down.
 
 ## Markdown Metadata
 
@@ -121,6 +129,10 @@ Supported keys:
 - `preview`: forces a preview bundle (`forms`, `table`, `sortable`, `core`) or disables previews with `none`
 - `summary` / `excerpt`: overrides the hero intro and search excerpt
 - `title` / `nav_title`: overrides the sidebar label before the Markdown H1 is parsed
+- `api_class`: binds a guide to one class for `docs:api`, for a class documented
+  inside a guide instead of on a reference page of its own (`ActionHalt` in
+  `core/actions/lifecycle.md`). The page then owes that class's full fluent API,
+  and anything it invents is a failure — the same contract a reference page has.
 
 ## Full Refresh
 
@@ -189,6 +201,7 @@ build never emits links pointing at a site it is not.
 npm run docs:check       # static: markdown integrity, links, anchors, a clean build per locale
 npm run docs:standard    # AI_DOCS_STANDARD.md: focus spotlights, marker syntax, EN/CS parity
 npm run docs:api         # docs vs the real public API, in both directions
+npm run docs:examples    # the code inside every example, vs the classes it is written on
 npm run docs:verify-ui   # browser: mobile search, language switching, ranking, head tags
 ```
 
@@ -198,6 +211,15 @@ in-context examples, Torchlight `[tl! focus]` on long examples, and a Czech
 mirror that matches structurally. `docs-site/docs-standard-baseline.txt` is the
 ledger of pages written before the standard; a block loses its exemption as soon
 as it is edited.
+
+`docs:examples` reads the code *inside* the examples: every `use NyonCode\…;`
+must resolve, and every fluent call in a chain must exist on the class it is
+written on. It boots a Testbench application first, because several fluent calls
+are provider macros rather than declared methods — `Action::make('edit')->onDoubleClick()`
+comes from `WireTableServiceProvider`, and a check that skips the boot reports a
+correct page as broken. Where it cannot be sure of the subject — a `$table->…`
+chain, a class the page never imported, a hand-written `__call` forwarder — it
+says nothing rather than guessing.
 
 `docs:verify-ui` builds every locale into a throwaway dir, serves it, and drives
 it in headless Chrome at phone and desktop metrics. It exists because the two

@@ -1,5 +1,6 @@
 ---
 order: 20
+summary: "Produkční setup: požadavky, instalační cesta pro každou vrstvu, zapojení Tailwindu a Livewiru, assety a první tabulka a formulář."
 ---
 
 # Začínáme
@@ -28,7 +29,21 @@ deklarované balíčky Wire, je verze Laravelu, proti které se instalace opravd
 
 ## Instalace
 
-### Celý ekosystém (table + forms + core)
+Nainstaluj si vrstvu, kterou potřebuješ. Každá si dotáhne to, na čem závisí, a nic
+nad sebou — celý seznam je v [Mapě projektu](project-map.md#balicky).
+
+### Celý stack, nastavený za tebe
+
+```bash
+composer require nyoncode/wire-suite
+php artisan wire:install
+```
+
+Interaktivní instalátor je nejkratší cesta z čistého Laravelu k funkčnímu adminu;
+co dělá a co záměrně nedělá, popisuje [Instalace Wire](installation.md). Všechno
+níž je ten samý stack, poskládaný ručně.
+
+### Tabulky (table + forms + core)
 
 ```bash
 composer require nyoncode/wire-table
@@ -44,6 +59,19 @@ composer require nyoncode/wire-forms
 
 ```bash
 composer require nyoncode/wire-core
+```
+
+### Resource a jejich stránky (panels + table + forms + core)
+
+```bash
+composer require nyoncode/wire-panels
+```
+
+### Admin shell (layout a sidebar)
+
+```bash
+composer require nyoncode/wire-admin
+php artisan wire-admin:install
 ```
 
 ### Balíček sortable (drag and drop řazení řádků)
@@ -106,7 +134,16 @@ module.exports = {
 <a id="primary-color"></a>
 ### Barva primary
 
-Komponenty Wire používají `primary` jako výchozí akcentovou barvu (tlačítka, badge, focus ringy atd.). Musíte ji definovat v konfiguraci Tailwindu:
+Komponenty Wire používají `primary` jako výchozí akcentovou barvu (tlačítka, badge, focus ringy atd.).
+
+**`php artisan wire-admin:install` ji zapíše za vás**, namapovanou na Tailwind
+blue, a aplikaci, která si `--color-primary-500` už definovala, nechá být. Modrá
+proto, že se čte jako *ta akce*, aniž by zároveň něco znamenala: zelená, jantarová
+a červená jsou zabrané pro success, warning a danger, a akcent, který koliduje se
+signálem, se musí vysvětlovat. Je to výchozí bod — jedna úprava a jde s ní celý
+stack.
+
+Když chcete vlastní, nebo si to nastavit ručně:
 
 **Tailwind 3** (`tailwind.config.js`):
 
@@ -369,7 +406,7 @@ class UserTable extends Component
 </div>
 ```
 
-Dále: [Sloupce](table/columns/index.md), [Filtry](table/filters/index.md), [Akce](table/actions.md)
+Dále: [Sloupce](../table/columns/index.md), [Filtry](../table/filters/index.md), [Akce](../table/actions.md)
 
 ---
 
@@ -424,7 +461,7 @@ class EditUser extends Component
 </form>
 ```
 
-Dále: [Reference polí](forms/fields/index.md), [Validace](forms/validation.md), [Životní cyklus ukládání](forms/save-lifecycle.md)
+Dále: [Reference polí](../forms/fields/index.md), [Validace](../forms/validation.md), [Životní cyklus ukládání](../forms/save-lifecycle.md)
 
 ## Řešení potíží
 
@@ -473,12 +510,12 @@ composer analyse       # PHPStan level 6
 
 ## Další kroky
 
-- [Sloupce tabulky](table/columns/index.md) — všech 13 typů sloupců
-- [Pole formulářů](forms/overview.md) — všechny typy polí a Form API
-- [Akce](core/actions.md) — řádkové, hromadné, hlavičkové akce
-- [Core pluginy](core/plugins.md) — znovupoužitelná rozšíření aplikace a balíčků
+- [Sloupce tabulky](../table/columns/index.md) — všech 19 typů sloupců
+- [Pole formulářů](../forms/overview.md) — všechny typy polí a Form API
+- [Akce](../core/actions/index.md) — řádkové, hromadné, hlavičkové akce
+- [Core pluginy](../core/plugins/index.md) — znovupoužitelná rozšíření aplikace a balíčků
 - [Konfigurace](configuration.md) — konfigurační soubory a proměnné prostředí
 - [Autorizace](authorization.md) — Gates, policies, oprávnění
-- [Exporty tabulky](table/exports.md) — stahování CSV, Excel, PDF
-- [Audit log](core/audit.md) — historie změn modelů
-- [Sortable řádky](sortable/overview.md) — drag & drop řazení řádků
+- [Exporty tabulky](../table/exports.md) — stahování CSV, Excel, PDF
+- [Audit log](../core/audit.md) — historie změn modelů
+- [Sortable řádky](../sortable/overview.md) — drag & drop řazení řádků

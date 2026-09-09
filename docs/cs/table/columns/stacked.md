@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Avatar, hlavní řádek a vedlejší v jedné buňce — tvar, který sloupec „uživatel" pořád chce.
 ---
 
 # StackedColumn

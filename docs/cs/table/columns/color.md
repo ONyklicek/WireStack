@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Uložená CSS barva jako vzorek vedle své doslovné hodnoty — tabulkový protějšek barevné entry v infolistu.
 ---
 
 # ColorColumn

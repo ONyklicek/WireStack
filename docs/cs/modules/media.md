@@ -1,5 +1,5 @@
 ---
-order: 101
+order: 80
 summary: Knihovna souborů — nahrání vytvoří záznam, smazání záznamu smaže soubor a náhledy jdou z disku, na kterém soubor leží.
 ---
 
@@ -480,5 +480,5 @@ pohodlí, které stahuje každé nahrání dvakrát, pohodlí není.
 ## Související
 
 - [Nahrávání souborů](../forms/fields/file-upload.md) — pole, které se tu používá
-- [Moduly](modules.md) — jak balíček dodává takovou oblast
+- [Moduly](../panels/modules.md) — jak balíček dodává takovou oblast
 

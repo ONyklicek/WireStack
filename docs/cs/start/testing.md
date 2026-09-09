@@ -1,5 +1,6 @@
 ---
-order: 70
+order: 60
+summary: Tři úrovně testu — čistý objekt, Livewire komponenta a vykreslená stránka — a která selhání každá z nich chytí.
 ---
 
 # Testování
@@ -198,7 +199,7 @@ Pokud assert neodpovídá, vypište komponentu pomocí `->dump()` a zkontrolujte
 
 ## Unit test vlastního pole
 
-Když píšete [vlastní pole](forms/custom-fields.md), otestujte jeho API a
+Když píšete [vlastní pole](../forms/custom-fields.md), otestujte jeho API a
 vykreslený výstup přímo — Livewire není potřeba.
 
 ```php
@@ -221,7 +222,7 @@ zavolejte jeho settery a asertujte na jeho gettery nebo `toHtml()`.
 ## Testování pluginů
 
 Instancujte `PluginManager` přímo pro test registrace, bootu a hooků. Kompletní
-vzor viz [Core Pluginy → Testování pluginů](core/plugins.md#testovani-pluginu).
+vzor viz [Core Pluginy → Testování pluginů](../core/plugins/examples.md#testovani-pluginu).
 
 ```php
 use NyonCode\WireCore\Core\Plugin\PluginManager;
@@ -259,6 +260,6 @@ nebo zapojení pluginů.
 
 ## Viz také
 
-- [Rozšíření formulářů](forms/custom-fields.md) — stavba polí, která testujete
-- [Životní cyklus ukládání](forms/save-lifecycle.md) — hooky, kterými `save()` prochází
-- [Core Pluginy](core/plugins.md) — testování hooků a pluginů
+- [Rozšíření formulářů](../forms/custom-fields.md) — stavba polí, která testujete
+- [Životní cyklus ukládání](../forms/save-lifecycle.md) — hooky, kterými `save()` prochází
+- [Core Pluginy](../core/plugins/index.md) — testování hooků a pluginů

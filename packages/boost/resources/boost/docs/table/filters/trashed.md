@@ -1,6 +1,6 @@
 ---
 order: 31
-nav: false
+summary: Switching the query between live records, soft-deleted ones, and all of them.
 ---
 
 # TrashedFilter

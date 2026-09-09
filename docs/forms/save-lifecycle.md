@@ -1,5 +1,6 @@
 ---
 order: 30
+summary: The nine steps between `save()` and a persisted record, and the hook that sits at each one.
 ---
 
 # Save Lifecycle
@@ -103,6 +104,27 @@ $form
 
 ---
 
+## The Other Direction: form.filling
+
+This page is the way *out*. The way in has a hook of its own: `Form::fill()`
+dispatches [`form.filling`](../core/plugins/hooks.md), so an installed package can
+change what a field arrives holding — the counterpart of the `form.saving` step
+below.
+
+```php
+$manager->hook(Hook::FormFilling, function (FormFillingPayload $payload) {
+    $payload->data['currency'] ??= auth()->user()->currency;   // [tl! focus]
+
+    return $payload;
+}, for: Invoice::class);
+```
+
+It is deliberately **not** dispatched from `getInitialState()`: that answers what a
+control needs before anything is bound, and an edit page calls both, so a hook on
+each would fire twice per page.
+
+---
+
 ## Step 3: Plugin Hook — form.saving
 
 Fires automatically when plugins are registered via `PluginManager`. Plugins may inspect or modify `$data` before persistence. User code does not interact with this step directly.
@@ -186,6 +208,39 @@ to configure.
 Everything is dropped **only at the write**. `mutateDataBeforeSave()`, the
 `form.saving` hook and `beforeSave()` all still see the full data array, and so
 does the relationship cascade in Step 6.
+
+### The Same Transforms In An Action Modal
+
+A form's state leaves through two doors. `save()` writes it to a record; an
+[action](../core/actions/index.md) with a `->form()` hands it to a callback instead:
+
+```php
+Action::make('publish')
+    ->form([
+        Select::make('status')->options(Status::class)->placeholder('None'),
+        TextInput::make('price')->numeric(),
+        DateTimePicker::make('published_at'),
+    ])
+    ->action(fn (array $data) => $record->update($data)); // [tl! focus]
+```
+
+Both doors apply the same dehydration, so `$data` here holds exactly what a save
+would have written: `null` for the cleared select and the emptied number field,
+the storage format and timezone for the date, a stored path for an upload, and
+your own `dehydrateStateUsing()` applied last. A wizard's steps share one data
+bag, and every step is dehydrated — not just the one on screen when it is
+submitted.
+
+It happens once, where the data is handed over, and after validation. The live
+state the modal is bound to keeps the raw value — a field does not move under an
+open modal, and a resubmit dehydrates from the same starting point rather than
+from an already-transformed one.
+
+The same holds for the third door, a [halt](../core/actions/lifecycle.md#halt-execution)
+that carries a form: confirming it re-executes the action, and the values the
+halt collected are dehydrated by that form's own fields on the way in. Keys the
+halt carried over from the first attempt are left alone — only what the halt
+form declares is its to shape.
 
 ### Custom Persistence
 

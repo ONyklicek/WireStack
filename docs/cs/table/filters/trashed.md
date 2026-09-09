@@ -1,6 +1,6 @@
 ---
 order: 31
-nav: false
+summary: Přepínání dotazu mezi živými záznamy, měkce smazanými a všemi.
 ---
 
 # TrashedFilter

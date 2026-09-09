@@ -1,6 +1,6 @@
 ---
 order: 31
-nav: false
+summary: Ano, ne, nebo vše — pro booleovský sloupec i pro relace ve smyslu „má" versus „nemá".
 ---
 
 # TernaryFilter

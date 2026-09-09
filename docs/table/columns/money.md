@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: "An amount presented the way a figure is read: against a right edge, in digits of equal width, on one line."
 ---
 
 # MoneyColumn

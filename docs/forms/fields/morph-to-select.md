@@ -1,3 +1,7 @@
+---
+summary: "A polymorphic relationship as two selects: the type first, then the record inside it."
+---
+
 # MorphToSelect
 
 `MorphToSelect` renders a type selector plus a record selector for polymorphic relationships.

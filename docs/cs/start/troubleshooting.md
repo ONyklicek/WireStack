@@ -1,5 +1,6 @@
 ---
 order: 90
+summary: Selhání, na která lidi opravdu narazí — většinou nesoulad konfigurace v hostitelské aplikaci — a oprava pro každé z nich.
 ---
 
 # Řešení potíží
@@ -202,7 +203,7 @@ netýká; drag controller používá zabundlovanou kopii.
 **Náprava:** Pokud váš kód globál potřebuje, řekněte si o něj — buď nastavte
 konfigurační klíč zpět na CDN URL, nebo si dejte `npm install sortablejs` a
 `window.Sortable` přiřaďte sami. Viz
-[Instalace Sortable → SortableJS](sortable/installation.md#sortablejs).
+[Instalace Sortable → SortableJS](../sortable/installation.md#sortablejs).
 
 ---
 
@@ -217,7 +218,7 @@ nespustí.
 **Náprava:** Načtěte skript pomocí direktivy `@assets` Livewire (vestavěný
 `TiptapEditor` to dělá). Pokud stavíte vlastní JS pole, následujte stejný
 vzor — viz
-[Rozšíření formulářů → JS-based pole](forms/custom-fields.md#js-based-pole).
+[Rozšíření formulářů → JS-based pole](../forms/custom-fields.md#js-based-pole).
 
 ---
 
@@ -231,7 +232,7 @@ co uložit.
 **Náprava:** Buď nastavte model (`->model(User::class)` pro create,
 `->model($user)` pro update), poskytněte vlastní perzistenci pomocí
 `->using(...)`, nebo místo toho zavolejte `->validate()`, když potřebujete jen
-data. Viz [Režimy modelu](forms/overview.md#rezimy-modelu).
+data. Viz [Režimy modelu](../forms/overview.md#rezimy-modelu).
 
 ---
 
@@ -248,7 +249,7 @@ data. Viz [Režimy modelu](forms/overview.md#rezimy-modelu).
 ```
 
 Layout viz [Začínáme](getting-started.md#sablona-layoutu) a
-[Core → Notifikace](core/notifications.md).
+[Core → Notifikace](../core/notifications/index.md).
 
 ---
 

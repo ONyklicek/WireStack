@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: True and false as coloured icons, with optional words beside them.
 ---
 
 # BooleanColumn

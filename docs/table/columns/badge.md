@@ -1,6 +1,5 @@
 ---
 order: 23
-nav: false
 summary: Renders a cell as a colored pill whose color and icon are derived from the record's state.
 ---
 
@@ -75,7 +74,7 @@ BadgeColumn::make('status')
 
 A state the map does not mention falls through the ladder above. Values may also
 be given as the `Color` enum (`'active' => Color::Success`), and the whole
-Tailwind palette is available — see [Theming](../../theming.md).
+Tailwind palette is available — see [Theming](../../start/theming.md).
 
 ## With Icons
 
@@ -277,4 +276,4 @@ documented in [Columns](index.md).
 - [Columns](index.md) — the shared column API every column inherits
 - [IconColumn](icon.md) — the same state ladder, rendered as an icon alone
 - [PollColumn](poll.md) — a badge over a live-polled value
-- [Theming](../../theming.md) — the colour vocabulary these maps draw from
+- [Theming](../../start/theming.md) — the colour vocabulary these maps draw from

@@ -36,6 +36,7 @@ když jsou relevantní, čímž drží kontext štíhlý:
 | `wire-forms-development` | Stavba nebo změna wire formuláře. |
 | `wire-core-development` | Práce s akcemi, modaly, notifikacemi, infolisty nebo widgety. |
 | `wire-sortable-development` | Přidání drag & drop řazení do tabulky. |
+| `wire-v2-upgrade` | Migrace aplikace z wireStacku 1.x na 2.0. |
 
 ## Přizpůsobení
 

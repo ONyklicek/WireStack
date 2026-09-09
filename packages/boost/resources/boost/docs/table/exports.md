@@ -1,5 +1,6 @@
 ---
 order: 50
+summary: The current query as CSV, Excel or PDF — the search, the filters, the sort and the visible columns, exactly as shown.
 ---
 
 # Table Exports
@@ -246,7 +247,7 @@ public function exportInBackground(): void
 
 The user gets "the export is being prepared" immediately, and a second
 notification with the file name when the worker finishes — which is why the
-[database notification driver](../core/notifications.md) exists: by the time a
+[database notification driver](../core/notifications/index.md) exists: by the time a
 large export completes there is no request left to flash into.
 
 **The state travels with the job.** Without it the worker would mount a fresh
@@ -317,6 +318,28 @@ the right name and a notification saying the export is ready — a queued export
 no response for the user to read, so "wrote nothing" and "wrote the file" are
 indistinguishable to them unless failure is thrown.
 
+## Adjusting an export you do not own
+
+A table shipped by an installed [module](../panels/modules.md) declares its own
+export, and an application narrows it through the
+[`export.configuring` hook](../core/plugins/hooks.md) rather than by replacing the
+class:
+
+```php
+$manager->hook(Hook::ExportConfiguring, function (ExportConfiguringPayload $payload) {
+    $payload->query->whereNotNull('approved_at');                                 // [tl! focus]
+    $payload->columns = array_filter($payload->columns, fn ($c) => $c->getName() !== 'cost'); // [tl! focus]
+
+    return $payload;
+}, for: 'invoices');
+```
+
+It runs inside `buildTableExport()`, which both `exportTable()` and
+`queueTableExport()` call, so a download and a queued file stay one export rather
+than two that happen to agree today. Column visibility has already been applied,
+so what a callback receives is what the file would contain — not everything the
+table declares.
+
 ## Related Docs
 
 | Document | What It Covers |
@@ -325,4 +348,4 @@ indistinguishable to them unless failure is thrown.
 | [Columns](columns/index.md) | Column labels, visibility, and formatting |
 | [Filters](filters/index.md) | Filtered queries used by export |
 | [Summaries](summaries.md) | The totals appended to exports |
-| [Authorization](../authorization.md) | Restricting export actions by user |
+| [Authorization](../start/authorization.md) | Restricting export actions by user |

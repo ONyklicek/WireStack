@@ -1,6 +1,7 @@
 ---
 title: Advanced Usage
 order: 60
+summary: "The extension points behind drag and drop: custom persistence, scoped ordering, and the events a sort fires."
 ---
 
 # Advanced Usage

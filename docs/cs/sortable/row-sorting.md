@@ -1,6 +1,7 @@
 ---
 title: Řazení řádků
 order: 30
+summary: Tažení řádků do nového pořadí, s přepínacím režimem a sloupcem pozice zapisovaným za tebe.
 ---
 
 # Řazení řádků

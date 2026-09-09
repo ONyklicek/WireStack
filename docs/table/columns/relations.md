@@ -1,6 +1,6 @@
 ---
 order: 21
-nav: false
+summary: Dot notation across relations, aggregates, pivots and morphs — and the joins, eager loads and subqueries it turns into.
 ---
 
 # Relation Paths & Dot Notation

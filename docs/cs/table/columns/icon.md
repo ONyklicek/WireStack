@@ -1,6 +1,6 @@
 ---
 order: 23
-nav: false
+summary: Stav namapovaný na ikonu, s barvou a velikostí, které z toho stavu plynou.
 ---
 
 # IconColumn

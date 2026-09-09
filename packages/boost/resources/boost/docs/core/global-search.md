@@ -1,12 +1,12 @@
 ---
-order: 95
+order: 80
 summary: One command palette over every registered resource — opt a resource in, mount the component, and a term reaches orders, customers and invoices in one list.
 ---
 
 # Global Search
 
 One search box over everything the application has registered. The user opens a
-palette, types, and gets records from every [resource](resources.md) that opted
+palette, types, and gets records from every [resource](../panels/resources.md) that opted
 in — grouped by resource, capped per resource, and filtered by what that user is
 allowed to see.
 
@@ -20,7 +20,7 @@ order:
 
 1. `GlobalSearchPalette` — the component you mount — holds the term, the open
    flag and the keyboard cursor, and no query at all. It asks `GlobalSearch`.
-2. `GlobalSearch` reads the [`ResourceRegistry`](resources.md) and skips every
+2. `GlobalSearch` reads the [`ResourceRegistry`](../panels/resources.md) and skips every
    resource that does not implement `GloballySearchable`. Identity and
    searchability are separate opt-ins: a resource that should not be searchable —
    an audit log, a join table given a resource for routing — says so by not
@@ -108,7 +108,7 @@ renders many rows at once and must never call back into a resource per row:
 **Note what the example does not pass.** A row already carries the two halves of
 its own URL — the resource key and the record key — so the framework builds it:
 `urlFor($resourceKey, 'view', ['record' => $recordKey])`, in the
-[zone](resources.md#zones) the palette was opened in. Writing a path here is
+[zone](../panels/routing.md#zones) the palette was opened in. Writing a path here is
 copying what the router already knows, and the copy is the one that goes stale:
 before this was derived, this repository's own workbench carried two literal
 paths and both were wrong — one pointed at a shell, the other at a page with no
@@ -122,6 +122,95 @@ A row with a `null` url still renders and is still arrowed through; Enter on it
 does nothing rather than navigating somewhere invented. That is the answer for a
 resource that declares no pages, and for one routed in a different zone than the
 palette was opened in.
+
+## Beyond Records: Navigation And Commands
+
+The palette lists four kinds of row, and each is a separate opt-in.
+
+**Records** come from `GloballySearchable`, above. **Navigation entries** need
+nothing at all — anything already in your menu is already in the palette, filtered
+by the same `isVisible()` the sidebar uses and pointed at the same zone. **Commands**
+and **record actions** come from one contract:
+
+```php
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Foundation\Contracts\ProvidesCommands;
+
+final class InvoiceResource implements DescribesResource, ProvidesCommands
+{
+    public static function commands(?object $record = null): array
+    {
+        if ($record !== null) {
+            return [
+                Action::make('archive')                                    // [tl! focus:3]
+                    ->label('Archive invoice')
+                    ->requiresConfirmation()
+                    ->action(fn (Invoice $record) => $record->archive()),
+            ];
+        }
+
+        return [
+            Action::make('recount')                                        // [tl! focus:2]
+                ->label('Recount invoices')
+                ->action(fn () => Recount::dispatch()),
+        ];
+    }
+}
+```
+
+One method, not two. `$record` is null when the palette is asking what stands on
+its own, and carries a record when the user has drilled into one — press <kbd>→</kbd>
+on a result to see what can be done with it, and <kbd>←</kbd> to come back.
+
+An action is listed only if the current user may run it. That is `canExecute()` —
+visibility **and** `permission()` / `authorize()` / `authorizeUsing()` — and it is
+checked before the row exists, not when it is clicked, because a palette that lists
+the label of a forbidden action has already leaked it.
+
+### Keyboard
+
+Focus stays in the search box the whole time; the arrow keys move a cursor, not
+the focus, and the box tells a screen reader where that cursor is through
+`aria-activedescendant`.
+
+| Key | What it does |
+|---|---|
+| <kbd>↓</kbd> / <kbd>↑</kbd> | move the cursor, wrapping at either end |
+| <kbd>→</kbd> | show the active record's actions |
+| <kbd>←</kbd> | back to the results, with the term intact |
+| <kbd>Enter</kbd> | follow, run or hand on the cursor's row |
+| <kbd>Tab</kbd> | move real focus onto a row; it stays inside the dialog |
+| <kbd>Esc</kbd> | close |
+
+<kbd>Tab</kbd> and the cursor are allowed to disagree, and what you activate is
+always what happens — a row names itself when it is clicked or tabbed to, and only
+<kbd>Enter</kbd> in the box defers to the cursor.
+
+### What Enter Does
+
+The palette owns no modal, so an action that has to ask something is never run by
+it. Which of three things happens is decided by the action itself:
+
+| The action | What the palette does |
+|---|---|
+| has nothing to ask | runs it where it stands, and closes |
+| is about a record, and has a modal | goes to the record's page with `?action=` |
+| stands alone, and has a modal | dispatches `wire-palette-action` for a host on screen |
+
+The middle row needs no wiring: a page showing one record reads `?action=` on
+arrival and mounts it — **if it owns an action host**. None of the shipped pages
+does: `ListPage` composes `WithTable`, the form pages compose `WithForms`, and
+`ViewPage` deliberately composes no host trait at all. Add
+[`WithActions`](actions/standalone.md) to your own page and both the query
+parameter and the dispatch are answered.
+
+A standalone command is not navigated anywhere, because an index page owns no
+action host either — sending you there for a modal that will not open is worse
+than not moving you.
+
+The order of the groups matters and is fixed: **records, then navigation, then
+commands**. A term that matches both a record and a command belongs to the record —
+typing `INV` should open the invoice, not run "Recount **inv**oices".
 
 ## Mounting The Palette
 
@@ -161,7 +250,7 @@ The dialog is teleported to `<body>`, like every modal in the framework, so it i
 never clipped by a positioned ancestor.
 
 **In a zoned application it needs no configuration.** The palette reads its
-[zone](resources.md#zones) from the page it was rendered on and keeps it in a
+[zone](../panels/routing.md#zones) from the page it was rendered on and keeps it in a
 public property, so results point back into the zone the user is in — the same
 layout mounted under `/admin` and `/business` links into each. Set it explicitly
 only when the palette sits in a shell that is not itself a resource route:
@@ -172,7 +261,7 @@ only when the palette sits in a shell that is not itself a resource route:
 
 It has to be a property rather than a lookup: the search runs on a Livewire
 request, where the current route is Livewire's own endpoint and the zone can no
-longer be asked for. See [Zones](resources.md#zones).
+longer be asked for. See [Zones](../panels/routing.md#zones).
 
 ## Authorization And Tenancy
 
@@ -242,16 +331,27 @@ GlobalSearch::PER_RESOURCE_LIMIT                                  // 5
 GlobalSearchResult::withUrl(?string $url): GlobalSearchResult     // the same row, pointed somewhere
 ```
 
-`search()` reads the [`Catalog`](resources.md#catalog-api), so the palette gains a
+`search()` reads the [`Catalog`](../panels/navigation.md#catalog-api), so the palette gains a
 resource the moment one is registered and never keeps a list of its own. A
 registered thing that opts into searching but has no model — a dashboard — is
 skipped rather than asked.
 
-The contract a resource implements:
+The contracts a resource implements — each one an opt-in on its own:
 
 ```php
 static globallySearchableAttributes(): array          // plain column names on the model
 static toGlobalSearchResult(object $record): GlobalSearchResult
+
+static commands(?object $record = null): array        // ProvidesCommands; ActionContract[]
+```
+
+The two questions the palette asks about an action before it offers or runs one,
+answered through the container so no surface has to import the Actions module:
+
+```php
+ClassifiesComponentActions::needsPrompt(ActionContract $action): bool
+ClassifiesComponentActions::isRunnable(ActionContract $action, mixed $context = null): bool
+RunsComponentActions::runComponentAction(ActionContract $action, array $context = []): void
 ```
 
 The palette component, for a custom trigger or a test:
@@ -261,15 +361,42 @@ $palette->open(): void                 // also bound to the `open-global-search`
 $palette->close(): void                // clears the term, so it opens empty next time
 $palette->moveDown(): void
 $palette->moveUp(): void
-$palette->select(): mixed              // navigates to the active row, or null
+$palette->select(): mixed              // follows, runs or hands on the active row
 $palette->selectedUrl(): ?string       // where the active row goes
+$palette->drillDown(): void            // show the active record's actions // [tl! focus:2]
+$palette->drillUp(): void              // back to the results, term intact
+$palette->isDrilledDown(): bool
 $palette->flatResults(): array         // every row, in render order
-$palette->groupLabels(): array         // [resource key => plural label]
+$palette->groupLabels(): array         // [group key => heading]
 $palette->zone                         // ?string — the zone it was opened in
+
+GlobalSearchPalette::ACTION_EVENT      // 'wire-palette-action'
+GlobalSearchPalette::ACTION_PARAMETER  // 'action'
 ```
+
+## Narrowing A Resource's Search
+
+A searchable resource shipped by an installed [module](../panels/modules.md)
+declares its own attributes, and an application constrains what the palette lists
+through the [`search.querying` hook](plugins/hooks.md):
+
+```php
+$manager->hook(Hook::SearchQuerying, function (SearchQueryingPayload $payload) {
+    $payload->query->whereNull('archived_at');   // [tl! focus]
+
+    return $payload;
+}, for: 'invoices');
+```
+
+It fires **once per resource**, not once per term — which is what makes it
+addressable: `for:` names the searched resource's catalogue key or its model, so a
+callback written for one module does not run against the whole palette.
+
+It runs before the query executes and **before** the per-record `canView()` check,
+so a callback can narrow the rows and cannot widen its way past a policy.
 
 ## Related
 
-- [Resources](resources.md) — the registry the palette reads, and the identity contract every resource implements
-- [Authorization](../authorization.md) — policies, tenancy, and what is not scoped
+- [Resources](../panels/resources.md) — the registry the palette reads, and the identity contract every resource implements
+- [Authorization](../start/authorization.md) — policies, tenancy, and what is not scoped
 - [Modals](modals.md) — the teleport-to-body pattern the dialog follows

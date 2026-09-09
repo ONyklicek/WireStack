@@ -1,6 +1,6 @@
 ---
 order: 31
-nav: false
+summary: Minimum a maximum nad číselným sloupcem, přičemž kterýkoli konec může chybět.
 ---
 
 # NumberRangeFilter

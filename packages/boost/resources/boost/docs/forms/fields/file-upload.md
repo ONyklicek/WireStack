@@ -1,3 +1,7 @@
+---
+summary: Uploads with previews, validation and image processing — where the file goes, and what the field stores instead of it.
+---
+
 # FileUpload
 
 File upload with preview, validation, and image processing.

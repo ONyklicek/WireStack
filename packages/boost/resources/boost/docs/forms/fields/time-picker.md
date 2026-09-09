@@ -1,3 +1,7 @@
+---
+summary: A time chosen from a list of slots at a fixed interval, rather than wound up on a stepper.
+---
+
 # TimePicker
 
 Time-only picker. The time is chosen from a **list of slots** at a fixed
