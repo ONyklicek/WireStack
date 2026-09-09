@@ -10,14 +10,23 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         package:
           - { local_path: 'packages/core', split_repository: 'wire-core' }
           - { local_path: 'packages/forms', split_repository: 'wire-forms' }
           - { local_path: 'packages/table', split_repository: 'wire-table' }
           - { local_path: 'packages/panels', split_repository: 'wire-panels' }
+          - { local_path: 'packages/admin', split_repository: 'wire-admin' }
           - { local_path: 'packages/sortable', split_repository: 'wire-sortable' }
           - { local_path: 'packages/boost', split_repository: 'wire-boost' }
+          - { local_path: 'packages/module-auth', split_repository: 'wire-module-auth' }
+          - { local_path: 'packages/module-users', split_repository: 'wire-module-users' }
+          - { local_path: 'packages/module-settings', split_repository: 'wire-module-settings' }
+          - { local_path: 'packages/module-audit', split_repository: 'wire-module-audit' }
+          - { local_path: 'packages/module-notifications', split_repository: 'wire-module-notifications' }
+          - { local_path: 'packages/module-media', split_repository: 'wire-module-media' }
+          - { local_path: 'packages/suite', split_repository: 'wire-suite' }
 
     name: Split ${{ matrix.package.split_repository }}
 

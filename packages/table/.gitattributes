@@ -1,0 +1,8 @@
+# Auto-detect text files
+* text=auto
+
+# Export ignores (not included in dist archives)
+/tests            export-ignore
+/phpunit.xml      export-ignore
+/.gitattributes   export-ignore
+/.github          export-ignore
