@@ -1,4 +1,5 @@
 @php
+    use NyonCode\WireCore\Foundation\View\Palette;
     // The tag itself belongs to the toolkit's renderer (`@packageScripts` below),
     // which owns delivery and the attributes the declaration carries. The path is
     // still needed here to choose the branch, and to read the source for the
@@ -53,6 +54,6 @@
     data-copy-feedback
     hidden
     aria-live="polite"
-    class="pointer-events-none fixed z-50 -translate-y-1/2 inline-flex items-center gap-1 rounded bg-white/90 dark:bg-gray-800/90 px-1.5 py-0.5 shadow-sm text-xs font-medium text-emerald-600 dark:text-emerald-400"
->{!! icon('check', 'w-4 h-4', 'text-emerald-500') !!}<span data-copy-feedback-text></span></span>
+    class="pointer-events-none fixed z-50 -translate-y-1/2 inline-flex items-center gap-1 rounded-sm bg-white/90 dark:bg-gray-800/90 px-1.5 py-0.5 shadow-sm text-xs font-medium {{ Palette::getModalIconTextClass('success') }}"
+>{!! icon('check', 'w-4 h-4', Palette::getModalIconTextClass('success')) !!}<span data-copy-feedback-text></span></span>
 @endonce

@@ -10,7 +10,7 @@
     :heading="__('wire-module-auth::messages.reset_heading')"
     :description="__('wire-module-auth::messages.reset_description')"
 >
-    <form method="POST" action="{{ route('password.update') }}" class="space-y-4" data-testid="auth-reset-form">
+    <form method="POST" action="{{ route('password.update') }}" class="space-y-4" data-testid="auth-reset-form" @wireEl('auth-reset-form')>
         @csrf
 
         <input type="hidden" name="token" value="{{ $request->route('token') }}">

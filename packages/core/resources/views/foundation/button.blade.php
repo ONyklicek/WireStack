@@ -3,6 +3,7 @@
 @endphp
 
 <{{ $tag }}
+    @wireEl('button')
     @if($href) href="{{ $href }}" @endif
     @if($tag === 'button') type="{{ $type }}" @endif
     @if($disabled) disabled @endif

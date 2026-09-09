@@ -35,8 +35,8 @@
         role="checkbox"
         :aria-checked="isSelected({!! $keyJs !!})"
         aria-label="{{ __('wire-table::messages.select_row') }}"
-        data-testid="table-row-select"
-        class="relative h-4 w-4 rounded border focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
+        data-testid="table-row-select" @wireEl('table-row-select')
+        class="relative h-4 w-4 rounded-sm border focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
         :class="isSelected({!! $keyJs !!}) ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-gray-400'"><span
             x-show="isSelected({!! $keyJs !!})"
             x-cloak>{!! $checkIcon !!}</span></button></div></td>

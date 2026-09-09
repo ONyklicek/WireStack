@@ -76,7 +76,7 @@
     }"
     x-effect="broadcast()"
     x-on:wire-wizard-navigate.window="if ($event.detail?.wizard === wizard) { $event.detail.direction === 'previous' ? prev() : next() }"
-    data-testid="wizard"
+    data-testid="wizard" @wireEl('wizard')
     class="space-y-6"
 >
     {{-- Sync carrier: x-init re-runs whenever a morph changes this expression
@@ -144,7 +144,7 @@
             type="button"
             x-show="step > 0"
             @click="prev()"
-            data-testid="wizard-back"
+            data-testid="wizard-back" @wireEl('wizard-back')
             class="inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
         >
             {!! icon('outline:chevron-left', 'w-4 h-4', 'w-4 h-4') !!}
@@ -157,7 +157,7 @@
             type="button"
             x-show="step < total - 1"
             @click="next()"
-            data-testid="wizard-next"
+            data-testid="wizard-next" @wireEl('wizard-next')
             :disabled="validating"
             class="inline-flex items-center gap-1 rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-wait transition-colors duration-150"
         >

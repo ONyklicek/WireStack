@@ -3,10 +3,10 @@
      A crumb with a URL is a link; the last one is the page you are on, and is
      marked `aria-current` rather than linked — a link to the page you are
      already on is noise for everyone and a trap for a screen reader. --}}
-<nav aria-label="{{ __('wire-core::messages.breadcrumbs') }}" data-testid="breadcrumbs" class="mb-3">
+<nav aria-label="{{ __('wire-core::messages.breadcrumbs') }}" data-testid="breadcrumbs" @wireEl('breadcrumbs') class="mb-3">
     <ol class="flex flex-wrap items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
         @foreach ($crumbs as $crumb)
-            <li class="flex items-center gap-1" data-testid="breadcrumb">
+            <li class="flex items-center gap-1" data-testid="breadcrumb" @wireEl('breadcrumb')>
                 @if ($crumb->getUrl() && ! $loop->last)
                     <a href="{{ $crumb->getUrl() }}" wire:navigate class="hover:text-gray-700 hover:underline dark:hover:text-gray-200">
                         {{ $crumb->getLabel() }}

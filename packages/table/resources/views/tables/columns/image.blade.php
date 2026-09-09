@@ -24,7 +24,7 @@
         @if($overflow > 0)
             {{-- Summarises the images stackLimit hid, sized to match the stack. --}}
             <span
-                data-testid="image-stack-overflow"
+                data-testid="image-stack-overflow" @wireEl('image-stack-overflow')
                 class="{{ $sizeClasses }} {{ $shapeClasses }} {{ $stackRing }} inline-flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-600 dark:text-gray-300"
             >+{{ $overflow }}</span>
         @endif

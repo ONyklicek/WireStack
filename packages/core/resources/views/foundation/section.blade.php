@@ -1,4 +1,5 @@
-<div {{ $attributes->class(['rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800']) }}>
+<div
+    @wireEl('section') {{ $attributes->class(['rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800']) }}>
     @if($heading || $description)
         <div class="border-b border-gray-200 dark:border-gray-700 px-4 py-4 sm:px-6">
             @if($heading)

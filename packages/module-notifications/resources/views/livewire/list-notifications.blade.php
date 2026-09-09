@@ -32,7 +32,7 @@
             <button
                 type="button"
                 wire:click="markAllAsRead"
-                data-testid="notification-mark-all"
+                data-testid="notification-mark-all" @wireEl('notification-mark-all')
                 class="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200"
             >{!! icon('outline:check', 'w-4 h-4') !!}{{ __('wire-module-notifications::messages.mark_all_read') }}</button>
         @endif
@@ -70,7 +70,7 @@
             <input
                 type="search"
                 wire:model.live.debounce.300ms="search"
-                data-testid="notification-search"
+                data-testid="notification-search" @wireEl('notification-search')
                 placeholder="{{ __('wire-table::messages.search') }}"
                 class="w-full border-0 bg-transparent p-0 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-0 dark:text-white"
             >

@@ -34,7 +34,7 @@
             data-testid="form-color-{{ $field->getStatePath() }}"
             x-model="hex"
             @if($field->isDisabled()) disabled @endif
-            class="h-10 w-14 rounded border-gray-300 p-1 cursor-pointer dark:border-gray-600 transition-colors duration-150"
+            class="h-10 w-14 rounded-sm border-gray-300 p-1 cursor-pointer dark:border-gray-600 transition-colors duration-150"
     />
     <input
             type="text"
@@ -53,7 +53,7 @@
                     type="button"
                     x-on:click="pick('{{ $swatch }}')" data-testid="form-color-{{ $field->getStatePath() }}-swatch-{{ $swatch }}" aria-label="{{ $swatch }}"
                     @if($field->isDisabled()) disabled @endif
-                    class="h-6 w-6 rounded border border-gray-300 dark:border-gray-600 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="h-6 w-6 rounded-sm border border-gray-300 dark:border-gray-600 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     style="background-color: {{ $swatch }}"
                     title="{{ $swatch }}"
                 ></button>

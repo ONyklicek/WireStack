@@ -33,7 +33,7 @@
             type="button"
             x-ref="trigger"
             @click="toggle()"
-            data-testid="action-group-trigger"
+            data-testid="action-group-trigger" @wireEl('action-group-trigger')
             :aria-expanded="open"
             aria-haspopup="menu"
             class="relative {{ $group->getTriggerClasses() }}"

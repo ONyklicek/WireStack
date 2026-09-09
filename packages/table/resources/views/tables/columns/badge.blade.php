@@ -7,6 +7,6 @@
     /** @var bool $isHtml whether the column opted into raw HTML via ->html() */
 @endphp
 
-<span class="inline-flex items-center {{ $sizeClasses }} {{ $colorClasses }} rounded-full font-medium">
+<span @wireEl('table-badge') class="inline-flex items-center {{ $sizeClasses }} {{ $colorClasses }} rounded-full font-medium">
     {!! $iconHtml !!}@if($isHtml ?? false){!! $displayValue !!}@else{{ $displayValue }}@endif
 </span>

@@ -15,7 +15,7 @@
             type="button"
             role="tab"
             wire:click="setTab('all')"
-            data-testid="notification-tab-all"
+            data-testid="notification-tab-all" @wireEl('notification-tab-all')
             aria-selected="{{ $tab === 'all' ? 'true' : 'false' }}"
             @class([
                 'rounded-md px-2.5 py-1 text-xs font-medium transition',
@@ -28,7 +28,7 @@
             type="button"
             role="tab"
             wire:click="setTab('unread')"
-            data-testid="notification-tab-unread"
+            data-testid="notification-tab-unread" @wireEl('notification-tab-unread')
             aria-selected="{{ $tab === 'unread' ? 'true' : 'false' }}"
             @class([
                 'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition',

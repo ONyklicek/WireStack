@@ -29,7 +29,7 @@
         <span>{{ $action->getLabel() }}</span>
         @if($shortcutLabel)
             <kbd
-                    class="hidden sm:inline-block ml-1 px-1 py-0.5 text-[10px] font-mono bg-white/20 rounded opacity-60">{{ $shortcutLabel }}</kbd>
+                    class="hidden sm:inline-block ml-1 px-1 py-0.5 text-[10px] font-mono bg-white/20 rounded-sm opacity-60">{{ $shortcutLabel }}</kbd>
         @endif
         {!! $action->getBadgeHtml() !!}
     </a>
@@ -74,7 +74,7 @@
             <span>{{ $action->getLabel() }}</span>
 
             @if($shortcutLabel)
-                <kbd class="hidden sm:inline-block ml-1 px-1 py-0.5 text-[10px] font-mono bg-white/20 rounded opacity-60">{{ $shortcutLabel }}</kbd>
+                <kbd class="hidden sm:inline-block ml-1 px-1 py-0.5 text-[10px] font-mono bg-white/20 rounded-sm opacity-60">{{ $shortcutLabel }}</kbd>
             @endif
         </span>
 

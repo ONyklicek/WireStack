@@ -4,7 +4,7 @@
      the moment the panel is opened, so a user who opened it and closed the tab
      has one and is protected by nothing. A card that showed "on" there would be
      telling them they are safe. --}}
-<div data-testid="profile-two-factor">
+<div data-testid="profile-two-factor" @wireEl('profile-two-factor')>
     <x-wire::section
         :heading="__('wire-module-users::messages.two_factor')"
         :description="__('wire-module-users::messages.two_factor_hint')"
@@ -34,7 +34,7 @@
 
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
                     @if ($qrCode)
-                        <div class="inline-block rounded-lg bg-white p-3" data-testid="two-factor-qr">
+                        <div class="inline-block rounded-lg bg-white p-3" data-testid="two-factor-qr" @wireEl('two-factor-qr')>
                             {!! $qrCode !!}
                         </div>
                     @endif
@@ -50,7 +50,7 @@
                             </p>
                             <code
                                 class="block break-all rounded-md bg-gray-100 px-3 py-2 font-mono text-sm dark:bg-gray-900"
-                                data-testid="two-factor-setup-key"
+                                data-testid="two-factor-setup-key" @wireEl('two-factor-setup-key')
                             >{{ $setupKey }}</code>
                         </div>
                     @endif
@@ -66,7 +66,7 @@
                         inputmode="numeric"
                         autocomplete="one-time-code"
                         wire:model="code"
-                        data-testid="two-factor-code"
+                        data-testid="two-factor-code" @wireEl('two-factor-code')
                         class="block w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
                     >
                     @error('code')
@@ -77,7 +77,7 @@
 
             {{-- ── Recovery codes ────────────────────────────────────────── --}}
             @if ($codes !== [])
-                <div class="space-y-2" data-testid="two-factor-recovery-codes">
+                <div class="space-y-2" data-testid="two-factor-recovery-codes" @wireEl('two-factor-recovery-codes')>
                     <p class="text-sm text-gray-600 dark:text-gray-300">
                         {{ __('wire-module-users::messages.recovery_codes_hint') }}
                     </p>

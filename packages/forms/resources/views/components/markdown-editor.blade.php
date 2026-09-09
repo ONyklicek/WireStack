@@ -35,22 +35,22 @@
     <div class="flex items-center gap-0.5 px-2 py-1.5 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
         @unless($field->isDisabled() || $field->isReadOnly())
             <button type="button" @click="insertAround('**', '**')" data-testid="form-editor-{{ $field->getStatePath() }}-bold" title="{{ $t('bold') }}"
-                class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-bold text-sm w-7 h-7 flex items-center justify-center">B</button>
+                class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-bold text-sm w-7 h-7 flex items-center justify-center">B</button>
             <button type="button" @click="insertAround('*', '*')" data-testid="form-editor-{{ $field->getStatePath() }}-italic" title="{{ $t('italic') }}"
-                class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors italic text-sm w-7 h-7 flex items-center justify-center">I</button>
+                class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors italic text-sm w-7 h-7 flex items-center justify-center">I</button>
             <button type="button" @click="insertAround('~~', '~~')" title="{{ $t('strike') }}"
-                class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors line-through text-sm w-7 h-7 flex items-center justify-center">S</button>
+                class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors line-through text-sm w-7 h-7 flex items-center justify-center">S</button>
             <button type="button" @click="insertAround('\`', '\`')" title="{{ $t('code') }}"
-                class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-mono text-sm w-7 h-7 flex items-center justify-center">&lt;/&gt;</button>
+                class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-mono text-sm w-7 h-7 flex items-center justify-center">&lt;/&gt;</button>
             <div class="w-px h-5 bg-gray-300 dark:bg-gray-500 mx-1"></div>
             <button type="button" @click="insertLine('## ')" data-testid="form-editor-{{ $field->getStatePath() }}-heading" title="{{ $t('heading', ['level' => 2]) }}"
-                class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-xs font-bold w-7 h-7 flex items-center justify-center">H</button>
+                class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-xs font-bold w-7 h-7 flex items-center justify-center">H</button>
             <button type="button" @click="insertLine('- ')" title="{{ $t('bullet_list') }}"
-                class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm w-7 h-7 flex items-center justify-center">
+                class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm w-7 h-7 flex items-center justify-center">
                 {!! icon('list-bullet', 'w-4 h-4', 'w-4 h-4') !!}
             </button>
             <button type="button" @click="insertLine('> ')" title="{{ $t('blockquote') }}"
-                class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm w-7 h-7 flex items-center justify-center">
+                class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm w-7 h-7 flex items-center justify-center">
                 {!! icon('forms:blockquote', 'w-4 h-4') !!}
             </button>
         @endunless

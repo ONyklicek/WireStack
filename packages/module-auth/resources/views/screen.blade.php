@@ -6,7 +6,7 @@
      leads into without this package owning a second layout. --}}
 <x-dynamic-component :component="$layout()" :title="$title">
     @if ($heading)
-        <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="auth-heading">{{ $heading }}</h1>
+        <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="auth-heading" @wireEl('auth-heading')>{{ $heading }}</h1>
     @endif
 
     @if ($description)
@@ -17,7 +17,7 @@
          a verification mail was re-sent, a password was changed. Above the form
          rather than below it, because it is the answer to what was just done. --}}
     @if (session('status'))
-        <div class="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-500/10 dark:text-green-300" data-testid="auth-status">
+        <div class="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-500/10 dark:text-green-300" data-testid="auth-status" @wireEl('auth-status')>
             {{ session('status') }}
         </div>
     @endif
@@ -27,7 +27,7 @@
          message drawn only under its own input is a message under the wrong
          one. The per-field messages stay too — this is the summary. --}}
     @if ($errors->any())
-        <div class="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-500/10 dark:text-red-300" data-testid="auth-errors">
+        <div class="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-500/10 dark:text-red-300" data-testid="auth-errors" @wireEl('auth-errors')>
             <ul class="space-y-1">
                 @foreach ($errors->all() as $message)
                     <li>{{ $message }}</li>

@@ -8,10 +8,10 @@
 
 <span class="inline-flex flex-wrap items-center gap-1">
     @foreach($chips as $chip)
-        <span class="inline-flex items-center {{ $sizeClasses }} {{ $chip['colorClasses'] }} rounded-full font-medium">{{ $chip['label'] }}</span>
+        <span @wireEl('table-tag') class="inline-flex items-center {{ $sizeClasses }} {{ $chip['colorClasses'] }} rounded-full font-medium">{{ $chip['label'] }}</span>
     @endforeach
 
     @if($overflow > 0)
-        <span class="inline-flex items-center {{ $sizeClasses }} {{ $overflowClasses }} rounded-full font-medium">+{{ $overflow }}</span>
+        <span @wireEl('table-tag-overflow') class="inline-flex items-center {{ $sizeClasses }} {{ $overflowClasses }} rounded-full font-medium">+{{ $overflow }}</span>
     @endif
 </span>

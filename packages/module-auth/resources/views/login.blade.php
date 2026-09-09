@@ -15,7 +15,7 @@
     :heading="__('wire-module-auth::messages.sign_in_heading')"
     :description="__('wire-module-auth::messages.sign_in_description')"
 >
-    <form method="POST" action="{{ route('login') }}" class="space-y-4" data-testid="auth-login-form">
+    <form method="POST" action="{{ route('login') }}" class="space-y-4" data-testid="auth-login-form" @wireEl('auth-login-form')>
         @csrf
 
         @include('wire-module-auth::partials.field', [
@@ -39,7 +39,7 @@
                     type="checkbox"
                     name="remember"
                     value="1"
-                    class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800"
+                    class="rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800"
                 />
                 {{ __('wire-module-auth::messages.remember_me') }}
             </label>
@@ -51,7 +51,7 @@
                 <a
                     href="{{ route('password.request') }}"
                     class="text-sm text-primary-600 hover:underline dark:text-primary-400"
-                    data-testid="auth-forgot-link"
+                    data-testid="auth-forgot-link" @wireEl('auth-forgot-link')
                 >{{ __('wire-module-auth::messages.forgot_password') }}</a>
             @endif
         </div>
@@ -62,7 +62,7 @@
 
         @if (\NyonCode\WireModuleAuth\Support\Screens::canRegister())
             <p class="text-center text-sm text-gray-500 dark:text-gray-400">
-                <a href="{{ route('register') }}" class="text-primary-600 hover:underline dark:text-primary-400" data-testid="auth-register-link">
+                <a href="{{ route('register') }}" class="text-primary-600 hover:underline dark:text-primary-400" data-testid="auth-register-link" @wireEl('auth-register-link')>
                     {{ __('wire-module-auth::messages.register') }}
                 </a>
             </p>

@@ -39,7 +39,7 @@
                     type="button"
                     @click="exec('bold')" data-testid="form-editor-{{ $field->getStatePath() }}-bold"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.bold }"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('bold') }}"
             >
                 {!! icon('bold', 'w-4 h-4', 'w-4 h-4') !!}
@@ -51,7 +51,7 @@
                     type="button"
                     @click="exec('italic')" data-testid="form-editor-{{ $field->getStatePath() }}-italic"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.italic }"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('italic') }}"
             >
                 {!! icon('italic', 'w-4 h-4', 'w-4 h-4') !!}
@@ -63,7 +63,7 @@
                     type="button"
                     @click="exec('underline')" data-testid="form-editor-{{ $field->getStatePath() }}-underline"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.underline }"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('underline') }}"
             >
                 {!! icon('underline', 'w-4 h-4', 'w-4 h-4') !!}
@@ -75,7 +75,7 @@
                     type="button"
                     @click="exec('strikeThrough')" data-testid="form-editor-{{ $field->getStatePath() }}-strikeThrough"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.strikeThrough }"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('strike') }}"
             >
                 {!! icon('strikethrough', 'w-4 h-4', 'w-4 h-4') !!}
@@ -92,7 +92,7 @@
             <button
                     type="button"
                     @click="exec('formatBlock', 'h2')"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('heading', ['level' => 2]) }}"
             >
                 {!! icon('forms:heading-2', 'w-4 h-4') !!}
@@ -103,7 +103,7 @@
             <button
                     type="button"
                     @click="exec('formatBlock', 'h3')"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('heading', ['level' => 3]) }}"
             >
                 {!! icon('forms:heading-3', 'w-4 h-4') !!}
@@ -115,7 +115,7 @@
                     type="button"
                     @click="exec('insertUnorderedList')" data-testid="form-editor-{{ $field->getStatePath() }}-insertUnorderedList"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.insertUnorderedList }"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('bullet_list') }}"
             >
                 {!! icon('list-bullet', 'w-4 h-4', 'w-4 h-4') !!}
@@ -127,7 +127,7 @@
                     type="button"
                     @click="exec('insertOrderedList')" data-testid="form-editor-{{ $field->getStatePath() }}-insertOrderedList"
                     :class="{ 'bg-gray-200 dark:bg-gray-600': activeFormats.insertOrderedList }"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('ordered_list') }}"
             >
                 {!! icon('numbered-list', 'w-4 h-4', 'w-4 h-4') !!}
@@ -138,7 +138,7 @@
             <button
                     type="button"
                     @click="exec('formatBlock', 'blockquote')"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('blockquote') }}"
             >
                 {!! icon('forms:blockquote', 'w-4 h-4') !!}
@@ -149,7 +149,7 @@
             <button
                     type="button"
                     @click="exec('formatBlock', 'pre')"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('code_block') }}"
             >
                 {!! icon('code-bracket', 'w-4 h-4', 'w-4 h-4') !!}
@@ -164,7 +164,7 @@
             <button
                     type="button"
                     @click="insertLink()"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('link') }}"
             >
                 {!! icon('link', 'w-4 h-4', 'w-4 h-4') !!}
@@ -179,7 +179,7 @@
             <button
                     type="button"
                     @click="exec('undo')" data-testid="form-editor-{{ $field->getStatePath() }}-undo"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('undo') }}"
             >
                 {!! icon('arrow-uturn-left', 'w-4 h-4', 'w-4 h-4') !!}
@@ -190,7 +190,7 @@
             <button
                     type="button"
                     @click="exec('redo')" data-testid="form-editor-{{ $field->getStatePath() }}-redo"
-                    class="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    class="p-1.5 rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
                     title="{{ $t('redo') }}"
             >
                 {!! icon('arrow-uturn-right', 'w-4 h-4', 'w-4 h-4') !!}

@@ -12,7 +12,7 @@
 @endphp
 <div
     x-data="{ mac: /Mac|iPhone|iPad|iPod/i.test(navigator.userAgentData?.platform ?? navigator.platform ?? '') }"
-    data-testid="shortcut-help"
+    data-testid="shortcut-help" @wireEl('shortcut-help')
     class="space-y-5"
 >
     @foreach($sections as $section)

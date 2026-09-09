@@ -53,13 +53,13 @@
         },
     }"
     x-on:wire-media-picker:picked.window="picked($event)"
-    data-testid="media-field"
+    data-testid="media-field" @wireEl('media-field')
     data-field="{{ $field->getName() }}"
 >
     @if ($selected)
         <ul class="mb-2 flex flex-wrap gap-2">
             @foreach ($selected as $media)
-                <li class="group relative" data-testid="media-field-item" data-media="{{ $media->id }}">
+                <li class="group relative" data-testid="media-field-item" @wireEl('media-field-item') data-media="{{ $media->id }}">
                     <div class="h-20 w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
                         <x-wire::file-thumb
                             :name="$media->name"
@@ -74,7 +74,7 @@
 
                     <button
                         type="button"
-                        data-testid="media-field-remove"
+                        data-testid="media-field-remove" @wireEl('media-field-remove')
                         x-on:click="
                             @if ($field->isMultiple())
                                 $wire.set(@js($field->getWireModelAttribute()), ($wire.get(@js($field->getWireModelAttribute())) ?? []).filter(id => parseInt(id) !== {{ $media->id }}))
@@ -94,7 +94,7 @@
         <button
             type="button"
             x-on:click="open()"
-            data-testid="media-field-open"
+            data-testid="media-field-open" @wireEl('media-field-open')
             class="inline-flex items-center gap-2 rounded-lg border border-gray-300 border-dashed px-3 py-2 text-sm text-gray-600 transition hover:border-gray-400 hover:text-gray-800 dark:border-gray-600 dark:text-gray-300"
         >
             {!! icon('outline:photo', 'h-4 w-4') !!}

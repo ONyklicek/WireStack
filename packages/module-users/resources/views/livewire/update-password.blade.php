@@ -1,7 +1,7 @@
 {{-- The password card. Its own form and its own button, because it asks a
      question the profile form does not: prove you are the person whose password
      this is. --}}
-<div data-testid="profile-password">
+<div data-testid="profile-password" @wireEl('profile-password')>
     <x-wire::section
         :heading="__('wire-module-users::messages.update_password')"
         :description="__('wire-module-users::messages.update_password_hint')"

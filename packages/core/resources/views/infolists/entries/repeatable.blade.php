@@ -15,7 +15,7 @@
     };
 @endphp
 
-<div class="{{ $spanClass }}">
+<div class="{{ $spanClass }}" @wireExtraAttributes($field)>
     @if($field->hasVisibleLabel())
         @include('wire-core::partials.entry-label', ['text' => $field->getLabel(), 'margin' => 'mb-2'])
     @endif

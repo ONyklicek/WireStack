@@ -18,7 +18,7 @@
         <div
                 class="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible"
                 style="scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 1.5rem),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 1.5rem),transparent);"
-                data-testid="filter-indicators"
+                data-testid="filter-indicators" @wireEl('filter-indicators')
         >
             @foreach($indicators as $filterName => $indicatorLabel)
                 <div class="shrink-0 sm:shrink">
@@ -49,7 +49,7 @@
             <button
                     type="button"
                     wire:click="resetTableFilters"
-                    data-testid="table-filter-reset"
+                    data-testid="table-filter-reset" @wireEl('table-filter-reset')
                     class="shrink-0 whitespace-nowrap text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
                 {{ __('wire-table::messages.filter_reset') }}

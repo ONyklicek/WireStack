@@ -29,7 +29,7 @@
                 type="button"
                 class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 title="{{ __('wire-table::messages.sort_by') }}"
-                data-testid="table-mobile-sort"
+                data-testid="table-mobile-sort" @wireEl('table-mobile-sort')
         >
             {!! icon('outline:bars-arrow-down', 'h-4 w-4 shrink-0') !!}
             {{-- The trigger names the active sort, so the current order is readable

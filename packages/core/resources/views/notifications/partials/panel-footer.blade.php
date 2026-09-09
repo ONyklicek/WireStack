@@ -12,7 +12,7 @@
             <button
                 type="button"
                 wire:click="markAllAsRead"
-                data-testid="notification-mark-all"
+                data-testid="notification-mark-all" @wireEl('notification-mark-all')
                 class="text-sm font-medium text-primary-600 hover:underline dark:text-primary-400"
             >{{ __('wire-core::messages.mark_all_read') }}</button>
         @endif
@@ -21,7 +21,7 @@
             <button
                 type="button"
                 wire:click="clearRead"
-                data-testid="notification-clear-read"
+                data-testid="notification-clear-read" @wireEl('notification-clear-read')
                 class="text-sm font-medium text-gray-500 hover:underline dark:text-gray-400"
             >{{ __('wire-core::messages.clear_read') }}</button>
         @endif
@@ -31,7 +31,7 @@
         <a
             href="{{ $indexUrl }}"
             wire:navigate
-            data-testid="notification-view-all"
+            data-testid="notification-view-all" @wireEl('notification-view-all')
             class="inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
         >
             {{ __('wire-core::messages.view_all_notifications') }}

@@ -35,14 +35,14 @@
                 this.$nextTick(() => requestAnimationFrame(() => document.getElementById(id)?.focus()));
             },
         }"
-        data-testid="auth-two-factor"
+        data-testid="auth-two-factor" @wireEl('auth-two-factor')
     >
         <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
             <span x-show="! recovery">{{ __('wire-module-auth::messages.two_factor_description') }}</span>
             <span x-show="recovery" x-cloak>{{ __('wire-module-auth::messages.two_factor_recovery_description') }}</span>
         </p>
 
-        <form method="POST" action="{{ route('two-factor.login') }}" class="space-y-4" data-testid="auth-two-factor-form">
+        <form method="POST" action="{{ route('two-factor.login') }}" class="space-y-4" data-testid="auth-two-factor-form" @wireEl('auth-two-factor-form')>
             @csrf
 
             <div x-show="! recovery">
@@ -75,7 +75,7 @@
                     type="button"
                     x-on:click="toggle()"
                     class="text-sm text-primary-600 hover:underline dark:text-primary-400"
-                    data-testid="auth-two-factor-toggle"
+                    data-testid="auth-two-factor-toggle" @wireEl('auth-two-factor-toggle')
                 >
                     <span x-show="! recovery">{{ __('wire-module-auth::messages.use_recovery_code') }}</span>
                     <span x-show="recovery" x-cloak>{{ __('wire-module-auth::messages.use_authentication_code') }}</span>

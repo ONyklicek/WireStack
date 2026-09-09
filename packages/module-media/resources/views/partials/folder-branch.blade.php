@@ -35,7 +35,7 @@
                 else if (file) $wire.moveTo({{ $node->id }}, parseInt(file));
                 else if (folder && parseInt(folder) !== {{ $node->id }}) $wire.moveFolder(parseInt(folder), {{ $node->id }});
             "
-            data-testid="media-folder"
+            data-testid="media-folder" @wireEl('media-folder')
             data-folder="{{ $node->id }}"
             @class([
                 'group flex items-center gap-1 rounded-lg pe-1 text-sm transition',
@@ -48,8 +48,8 @@
                 <button
                     type="button"
                     x-on:click="toggle({{ $node->id }})"
-                    data-testid="media-folder-twisty"
-                    class="shrink-0 rounded p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                    data-testid="media-folder-twisty" @wireEl('media-folder-twisty')
+                    class="shrink-0 rounded-sm p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                     :aria-expanded="isOpen({{ $node->id }}) ? 'true' : 'false'"
                 >
                     <span class="sr-only">{{ $node->name }}</span>
@@ -65,7 +65,7 @@
             <button
                 type="button"
                 wire:click="openFolder({{ $node->id }})"
-                data-testid="media-folder-open"
+                data-testid="media-folder-open" @wireEl('media-folder-open')
                 class="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-start"
             >
                 {!! icon($current === $node->id ? 'outline:folder-open' : 'outline:folder', 'h-4 w-4 shrink-0 text-gray-400') !!}
@@ -99,16 +99,16 @@
                             const name = window.prompt(@js(__('wire-module-media::messages.folder_name')), @js($node->name));
                             if (name) $wire.renameFolder({{ $node->id }}, name);
                         "
-                        data-testid="media-folder-rename"
-                        class="rounded p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                        data-testid="media-folder-rename" @wireEl('media-folder-rename')
+                        class="rounded-sm p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                         title="{{ __('wire-module-media::messages.rename') }}"
                     >{!! icon('outline:pencil-square', 'h-3.5 w-3.5') !!}</button>
 
                     <button
                         type="button"
                         wire:click="deleteFolder({{ $node->id }})"
-                        data-testid="media-folder-delete"
-                        class="rounded p-1 text-gray-400 hover:text-red-600"
+                        data-testid="media-folder-delete" @wireEl('media-folder-delete')
+                        class="rounded-sm p-1 text-gray-400 hover:text-red-600"
                         title="{{ __('wire-module-media::messages.delete') }}"
                     >{!! icon('outline:trash', 'h-3.5 w-3.5') !!}</button>
                 </span>

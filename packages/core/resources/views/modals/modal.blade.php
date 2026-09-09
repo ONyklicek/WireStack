@@ -109,7 +109,7 @@
                         <button
                             type="button"
                             @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}"
-                            data-testid="modal-close"
+                            data-testid="modal-close" @wireEl('modal-close')
                             aria-label="{{ __('Close') }}"
             {{-- Larger tap target on mobile (p-2.5 ≈ 40px), back to the compact
                              desktop size from sm up. --}}

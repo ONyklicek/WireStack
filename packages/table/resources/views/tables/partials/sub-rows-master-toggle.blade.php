@@ -9,11 +9,11 @@
 <button
     type="button"
     wire:click="toggleAllRowExpansion"
-    data-testid="subrows-master-toggle"
+    data-testid="subrows-master-toggle" @wireEl('subrows-master-toggle')
     aria-expanded="{{ $allRowsExpanded ? 'true' : 'false' }}"
     aria-label="{{ $title }}"
     title="{{ $title }}{{ $label ? ' — '.$label : '' }}"
-    class="inline-flex items-center justify-center w-6 h-6 rounded transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+    class="inline-flex items-center justify-center w-6 h-6 rounded-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
 >
     {!! icon(
         $allRowsExpanded ? 'outline:chevron-double-down' : 'outline:chevron-double-right',

@@ -9,7 +9,7 @@
 @endphp
 <div class="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
-        <button type="button" wire:click="closeActionModal" data-testid="modal-cancel" class="{{ $secondaryClasses }}">
+        <button type="button" wire:click="closeActionModal" data-testid="modal-cancel" @wireEl('modal-cancel') class="{{ $secondaryClasses }}">
             {{ $modalData['cancelLabel'] }}
         </button>
         @include('wire-table::tables.partials.modal-footer-actions', [
@@ -27,7 +27,7 @@
         @unless($isFirstStep)
             <button
                 type="button"
-                wire:click="prevActionModalStep" data-testid="wizard-back"
+                wire:click="prevActionModalStep" data-testid="wizard-back" @wireEl('wizard-back')
                 wire:loading.attr="disabled"
                 wire:target="prevActionModalStep"
                 class="{{ $secondaryClasses }}"
@@ -39,7 +39,7 @@
         @if($isLastStep)
             <button
                 type="button"
-                wire:click="submitActionModal" data-testid="modal-submit"
+                wire:click="submitActionModal" data-testid="modal-submit" @wireEl('modal-submit')
                 wire:loading.attr="disabled"
                 wire:target="submitActionModal"
                 class="{{ $primaryClasses }}"
@@ -51,7 +51,7 @@
         @else
             <button
                 type="button"
-                wire:click="nextActionModalStep" data-testid="wizard-next"
+                wire:click="nextActionModalStep" data-testid="wizard-next" @wireEl('wizard-next')
                 wire:loading.attr="disabled"
                 wire:target="nextActionModalStep"
                 class="{{ $primaryClasses }}"

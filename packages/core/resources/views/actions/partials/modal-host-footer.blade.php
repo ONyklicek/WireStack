@@ -17,20 +17,20 @@
     @endforeach
 
     {{-- Cancel --}}
-    <button type="button" wire:click="{{ $closeAction }}" data-testid="modal-cancel" class="{{ $secondaryButtonClasses }}">
+    <button type="button" wire:click="{{ $closeAction }}" data-testid="modal-cancel" @wireEl('modal-cancel') class="{{ $secondaryButtonClasses }}">
         {{ $modalData['cancelLabel'] }}
     </button>
 
     {{-- Wizard back --}}
     @if($isWizard && $currentStep > 0)
-        <button type="button" wire:click="{{ $prevStepAction }}" data-testid="modal-back" class="{{ $secondaryButtonClasses }}">
+        <button type="button" wire:click="{{ $prevStepAction }}" data-testid="modal-back" @wireEl('modal-back') class="{{ $secondaryButtonClasses }}">
             {{ $modalData['backLabel'] ?? __('Back') }}
         </button>
     @endif
 
     {{-- Wizard next --}}
     @if($isWizard && ! $isLastStep)
-        <button type="button" wire:click="{{ $nextStepAction }}" data-testid="modal-next" class="{{ $primaryButtonClasses }}">
+        <button type="button" wire:click="{{ $nextStepAction }}" data-testid="modal-next" @wireEl('modal-next') class="{{ $primaryButtonClasses }}">
             {{ $modalData['nextLabel'] ?? __('Next') }}
         </button>
     @elseif(! $hasInfolist)                                                                                                                                                                                                {{-- Submit (single-step form, wizard last step, or confirmation-in-shell) --}}
@@ -39,7 +39,7 @@
             wire:click="{{ $submitAction }}"
             wire:loading.attr="disabled"
             wire:target="{{ $submitAction }}"
-            data-testid="modal-submit"
+            data-testid="modal-submit" @wireEl('modal-submit')
             @class(['inline-flex items-center gap-2', $primaryButtonClasses])
         >
             @include('wire-core::partials.spinner', ['wireTarget' => $submitAction, 'class' => 'h-4 w-4'])

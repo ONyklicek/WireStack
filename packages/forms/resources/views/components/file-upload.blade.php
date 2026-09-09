@@ -19,7 +19,7 @@
     $processesImages = $field->processesImages();
     // An avatar is shown round — that is what makes it read as an avatar rather
     // than a thumbnail. The 1:1 crop that goes with it is applied on upload.
-    $thumbShape = $field->isAvatar() ? 'rounded-full' : 'rounded';
+    $thumbShape = $field->isAvatar() ? 'rounded-full' : 'rounded-sm';
     $imageConfig = $field->getImageProcessingConfig();
     $assetVersion = @filemtime(WireFormsServiceProvider::ASSETS_PATH.'/wire-forms-image.js') ?: null;
     $assetUrl = $processesImages
@@ -181,7 +181,7 @@
                 <p id="crop-title-{{ $field->getStatePath() }}" class="mb-3 text-sm font-medium text-gray-900 dark:text-white">{{ __('Choose the visible area') }}</p>
 
                 <div
-                        class="relative select-none overflow-hidden rounded"
+                        class="relative select-none overflow-hidden rounded-sm"
                         @pointermove="onDrag($event)"
                         @pointerup.window="endDrag()"
                         @pointercancel.window="endDrag()"

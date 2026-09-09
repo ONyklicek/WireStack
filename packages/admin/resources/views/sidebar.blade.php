@@ -27,12 +27,12 @@
     x-transition:leave-start="opacity-100"
     x-transition:leave-end="opacity-0"
     x-on:click="$store.wireAdmin.closeMobile()"
-    data-testid="admin-sidebar-overlay"
+    data-testid="admin-sidebar-overlay" @wireEl('admin-sidebar-overlay')
     class="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-[1px] lg:hidden"
 ></div>
 
 <aside
-    data-testid="admin-sidebar"
+    data-testid="admin-sidebar" @wireEl('admin-sidebar')
     x-data
     x-on:keydown.escape.window="$store.wireAdmin.closeMobile()"
     x-bind:class="$store.wireAdmin?.mobile ? 'translate-x-0 shadow-2xl' : '-translate-x-full'"
@@ -54,7 +54,7 @@
         <button
             type="button"
             x-on:click="$store.wireAdmin.closeMobile()"
-            data-testid="admin-sidebar-close"
+            data-testid="admin-sidebar-close" @wireEl('admin-sidebar-close')
             class="me-3 shrink-0 rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 lg:hidden dark:hover:bg-gray-800 dark:hover:text-gray-300"
         >
             <span class="sr-only">{{ __('wire-admin::messages.close_menu') }}</span>
@@ -75,7 +75,7 @@
                  fold. --}}
             <div
                 class="mb-5 last:mb-0"
-                data-testid="admin-nav-group"
+                data-testid="admin-nav-group" @wireEl('admin-nav-group')
                 data-group="{{ $group->getKey() }}"
                 @if ($group->isCollapsible())
                     x-data="{
@@ -100,7 +100,7 @@
                     <div
                         data-rail-only
                         aria-hidden="true"
-                        data-testid="admin-nav-rail-divider"
+                        data-testid="admin-nav-rail-divider" @wireEl('admin-nav-rail-divider')
                         class="mx-auto mb-3 h-px w-8 bg-gray-200 dark:bg-gray-700"
                     ></div>
                 @endunless
@@ -117,7 +117,7 @@
                             x-on:click="open = ! open"
                             x-bind:aria-expanded="open ? 'true' : 'false'"
                             aria-controls="wire-admin-group-{{ $group->getKey() }}"
-                            data-testid="admin-nav-heading"
+                            data-testid="admin-nav-heading" @wireEl('admin-nav-heading')
                             data-collapsible="true"
                             class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-semibold tracking-wider text-gray-400 uppercase transition hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                         >
@@ -129,7 +129,7 @@
                         </button>
                     @else
                         <p
-                            data-testid="admin-nav-heading"
+                            data-testid="admin-nav-heading" @wireEl('admin-nav-heading')
                             class="flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500"
                         >
                             @if ($group->getIcon())
@@ -163,9 +163,11 @@
         @empty
             {{-- Nothing registered. An empty column reads as a broken menu, so it
                  says which of the two it is. --}}
-            <p data-testid="admin-nav-empty" class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">
+            <p data-testid="admin-nav-empty" @wireEl('admin-nav-empty') class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">
                 {{ __('wire-admin::messages.empty') }}
             </p>
         @endforelse
     </nav>
+
+    @wireRenderHook('admin.sidebar.end')
 </aside>

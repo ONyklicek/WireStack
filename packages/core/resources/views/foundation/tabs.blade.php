@@ -1,6 +1,7 @@
 @include('wire-core::partials.floating-assets')
 
-<div x-data="wireTabs({{ (int) $active }})" {{ $attributes }}>
+<div
+    @wireEl('tabs') x-data="wireTabs({{ (int) $active }})" {{ $attributes }}>
     <div class="flex flex-wrap gap-1 border-b border-gray-200 dark:border-gray-700" role="tablist">
         <template x-for="(label, i) in tabs" :key="i">
             <button

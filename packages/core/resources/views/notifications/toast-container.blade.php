@@ -1,3 +1,21 @@
+@php
+    use NyonCode\WireCore\Foundation\View\Palette;
+
+    // The toast's types are palette roles under this surface's own names:
+    // `error` is what a notification calls `danger`. Resolved in PHP so an application
+    // that re-points a role moves the toast with everything else — the map is
+    // static per request, so Alpine still receives plain strings.
+    $toastRoles = [
+        'success' => 'success',
+        'error' => 'danger',
+        'warning' => 'warning',
+        'info' => 'info',
+        'primary' => 'primary',
+        'gray' => 'gray',
+    ];
+    $toastAccent = array_map(Palette::getModalIconTextClass(...), $toastRoles);
+    $toastBar = array_map(Palette::getAccentBgClass(...), $toastRoles);
+@endphp
 {{-- Toast Notification Container --}}
 {{-- Listens for Livewire events and renders toast notifications with a per-card --}}
 {{-- countdown bar, hover-to-pause, action buttons, an optional collapsible stack, --}}
@@ -73,14 +91,7 @@
         },
         // Semantic accent for an action button (falls back to the toast type).
         actionColor(action, toast) {
-            const map = {
-                success: 'text-emerald-600 dark:text-emerald-400',
-                error: 'text-red-600 dark:text-red-400',
-                warning: 'text-amber-600 dark:text-amber-400',
-                info: 'text-blue-600 dark:text-blue-400',
-                primary: 'text-indigo-600 dark:text-indigo-400',
-                gray: 'text-gray-600 dark:text-gray-300',
-            };
+            const map = @js($toastAccent);
             return map[action.color] ?? map[toast.type] ?? 'text-gray-900 dark:text-white';
         },
         handleAction(toast, action) {
@@ -177,16 +188,16 @@
                         {{-- Icon --}}
                         <div class="flex-shrink-0">
                             <template x-if="toast.type === 'success'">
-                                {!! icon('outline:check-circle', 'h-5 w-5', 'text-emerald-500') !!}
+                                {!! icon('outline:check-circle', 'h-5 w-5', $toastAccent['success']) !!}
                             </template>
                             <template x-if="toast.type === 'error'">
-                                {!! icon('outline:exclamation-circle', 'h-5 w-5', 'text-red-500') !!}
+                                {!! icon('outline:exclamation-circle', 'h-5 w-5', $toastAccent['error']) !!}
                             </template>
                             <template x-if="toast.type === 'warning'">
-                                {!! icon('outline:exclamation-triangle', 'h-5 w-5', 'text-amber-500') !!}
+                                {!! icon('outline:exclamation-triangle', 'h-5 w-5', $toastAccent['warning']) !!}
                             </template>
                             <template x-if="toast.type === 'info'">
-                                {!! icon('outline:information-circle', 'h-5 w-5', 'text-blue-500') !!}
+                                {!! icon('outline:information-circle', 'h-5 w-5', $toastAccent['info']) !!}
                             </template>
                         </div>
 
@@ -216,7 +227,7 @@
                         <button
                             type="button"
                             @click="remove(toast.id)"
-                            data-testid="toast-dismiss"
+                            data-testid="toast-dismiss" @wireEl('toast-dismiss')
                             aria-label="{{ __('Close') }}"
                             class="flex-shrink-0 rounded-lg p-1 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
                         >
@@ -231,12 +242,7 @@
                     <div class="h-1 w-full bg-gray-100 dark:bg-white/5">
                         <div
                             class="h-full"
-                            :class="{
-                                'bg-emerald-500': toast.type === 'success',
-                                'bg-red-500': toast.type === 'error',
-                                'bg-amber-500': toast.type === 'warning',
-                                'bg-blue-500': toast.type === 'info',
-                            }"
+                            :class="@js($toastBar)[toast.type] ?? ''"
                             :style="`width:${barWidth(toast)}%`"
                         ></div>
                     </div>
@@ -249,7 +255,7 @@
             <button
                 type="button"
                 @click="showAll = true"
-                data-testid="toast-expand"
+                data-testid="toast-expand" @wireEl('toast-expand')
                 class="pointer-events-auto self-center rounded-full bg-gray-900/80 px-3 py-1 text-xs font-medium text-white shadow-lg backdrop-blur hover:bg-gray-900 focus:outline-none dark:bg-white/15 dark:hover:bg-white/25"
                 x-text="'+' + hiddenCount() + ' {{ __('more') }}'"
             ></button>

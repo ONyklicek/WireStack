@@ -1,6 +1,6 @@
 @php /** @var \NyonCode\WireForms\Components\Display\Placeholder $field */ @endphp
 
-<div class="wire-field">
+<div class="wire-field" @wireExtraAttributes($field)>
     @if($field->getLabel())
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {{ $field->getLabel() }}

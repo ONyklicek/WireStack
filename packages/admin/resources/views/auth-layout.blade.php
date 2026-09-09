@@ -6,13 +6,19 @@
      a user exists. What stays is the head (so the theme, the assets and the
      interaction layer are the same ones the admin uses) and a card. --}}
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full"
+      data-density="{{ \NyonCode\WireCore\Foundation\Enums\Density::configured()->value }}"
+      data-shape="{{ \NyonCode\WireCore\Foundation\Enums\Shape::configured()->value }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? config('app.name') }}</title>
 
     @include('wire-admin::partials.theme')
+
+    {{-- The spacing scale, keyed on the attribute above. --}}
+    @include('wire-core::partials.density')
+    @include('wire-core::partials.shape')
 
     {{ $head ?? '' }}
 
@@ -21,8 +27,8 @@
     @wireStackScripts
 </head>
 <body class="flex min-h-full items-center justify-center bg-gray-50 p-4 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
-    <div class="w-full max-w-sm" data-testid="admin-auth">
-        <div class="mb-6 text-center text-lg font-semibold" data-testid="admin-auth-brand">
+    <div class="w-full max-w-sm" data-testid="admin-auth" @wireEl('admin-auth')>
+        <div class="mb-6 text-center text-lg font-semibold" data-testid="admin-auth-brand" @wireEl('admin-auth-brand')>
             {{ $brand ?? config('app.name') }}
         </div>
 

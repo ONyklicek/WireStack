@@ -32,7 +32,7 @@
     <button
         type="button"
         wire:click="$set('panelOpen', true)"
-        data-testid="notification-bell"
+        data-testid="notification-bell" @wireEl('notification-bell')
         aria-haspopup="dialog"
         @class([
             'relative inline-flex items-center rounded-md p-2 transition-colors',
@@ -62,7 +62,7 @@
                  to define, and the installer writes that one. --}}
             <span
                 aria-hidden="true"
-                data-testid="notification-bell-count"
+                data-testid="notification-bell-count" @wireEl('notification-bell-count')
                 class="absolute -top-0.5 -right-0.5 inline-flex min-w-[1.125rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-[1.125rem] text-white ring-2 ring-white dark:bg-red-500 dark:ring-gray-800"
             >{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
         @elseif($hasAny)
@@ -70,7 +70,7 @@
                  to say what is waiting, and "0" is a number nobody needs. --}}
             <span
                 aria-hidden="true"
-                data-testid="notification-bell-dot"
+                data-testid="notification-bell-dot" @wireEl('notification-bell-dot')
                 class="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-gray-300 ring-2 ring-white dark:bg-gray-600 dark:ring-gray-800"
             ></span>
         @endif

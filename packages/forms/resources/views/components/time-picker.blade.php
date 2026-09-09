@@ -189,7 +189,7 @@
                                 'opacity-40 cursor-not-allowed': slot.disabled,
                                 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700': ! slot.disabled && ! isSelected(slot.value),
                             }"
-                            class="block w-full text-left px-3 py-1.5 text-sm rounded transition-colors duration-150 tabular-nums"
+                            class="block w-full text-left px-3 py-1.5 text-sm rounded-sm transition-colors duration-150 tabular-nums"
                             x-text="slot.label"
                     ></button>
                 </template>

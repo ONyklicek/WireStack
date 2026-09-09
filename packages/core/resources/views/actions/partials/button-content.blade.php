@@ -7,5 +7,5 @@
     {!! $data['iconHtml'] ?? '' !!}<span>{{ $data['label'] ?? '' }}</span>
 @endif
 @if(($data['shortcutLabel'] ?? null) && !($data['hideLabel'] ?? false))
-    <kbd class="hidden sm:inline-block ml-1 px-1 py-0.5 text-[10px] font-mono bg-white/20 rounded opacity-60">{{ $data['shortcutLabel'] }}</kbd>
+    <kbd class="hidden sm:inline-block ml-1 px-1 py-0.5 text-[10px] font-mono bg-white/20 rounded-sm opacity-60">{{ $data['shortcutLabel'] }}</kbd>
 @endif

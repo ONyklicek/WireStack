@@ -7,6 +7,7 @@
 @php($tag = $href ? 'a' : 'button')
 
 <{{ $tag }}
+    @wireEl('menu-item')
     @if ($href)
         href="{{ $href }}"
     @else

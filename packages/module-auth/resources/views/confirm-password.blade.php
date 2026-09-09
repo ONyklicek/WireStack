@@ -9,7 +9,7 @@
     :heading="__('wire-module-auth::messages.confirm_heading')"
     :description="__('wire-module-auth::messages.confirm_description')"
 >
-    <form method="POST" action="{{ route('password.confirm') }}" class="space-y-4" data-testid="auth-confirm-form">
+    <form method="POST" action="{{ route('password.confirm') }}" class="space-y-4" data-testid="auth-confirm-form" @wireEl('auth-confirm-form')>
         @csrf
 
         @include('wire-module-auth::partials.field', [

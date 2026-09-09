@@ -22,7 +22,7 @@
         href="{{ $url }}"
         @if($openInNewTab) target="_blank" rel="noopener noreferrer" @endif
         class="{{ $classes }}"
-        data-testid="column-button"
+        data-testid="column-button" @wireEl('column-button')
         @if($buttonLabel) aria-label="{{ $buttonLabel }}" @endif
         @foreach($extraAttributes as $key => $value) {{ $key }}="{{ $value }}" @endforeach
         @if($disabledTooltip) title="{{ $disabledTooltip }}" @endif
@@ -44,7 +44,7 @@
         type="button"
         class="{{ $classes }}"
         {!! $wireClick !!}
-        data-testid="column-button"
+        data-testid="column-button" @wireEl('column-button')
         @if($buttonLabel) aria-label="{{ $buttonLabel }}" @endif
         @if($isDisabled) disabled @endif
         @foreach($extraAttributes as $key => $value) {{ $key }}="{{ $value }}" @endforeach

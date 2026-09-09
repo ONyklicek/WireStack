@@ -3,12 +3,12 @@
      In the top bar rather than on a settings page, because it scopes everything
      on every page: a person who cannot see which team they are in is a person
      who will eventually edit the wrong one. --}}
-<div data-testid="team-switcher">
+<div data-testid="team-switcher" @wireEl('team-switcher')>
     <x-wire::dropdown position="bottom-end" width="w-56" sheet-on-mobile>
         <x-slot:trigger>
             <button
                 type="button"
-                data-testid="team-switcher-trigger"
+                data-testid="team-switcher-trigger" @wireEl('team-switcher-trigger')
                 class="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1.5 text-sm text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
             >
                 {!! icon('outline:user-group', 'h-4 w-4 shrink-0') !!}
@@ -25,7 +25,7 @@
             <button
                 type="button"
                 wire:click="switchTo('{{ $teamId }}')"
-                data-testid="team-switcher-option"
+                data-testid="team-switcher-option" @wireEl('team-switcher-option')
                 data-team="{{ $teamId }}"
                 data-current="{{ $teamId == $current ? 'true' : 'false' }}"
                 @class([

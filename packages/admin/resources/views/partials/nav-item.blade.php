@@ -88,7 +88,7 @@
                  opens on focus, so a plain close is a close and an immediate
                  reopen, and the key reads as doing nothing. --}}
             x-on:keydown.escape="open && (dismiss(), $refs.trigger?.focus())"
-            data-testid="admin-nav-row"
+            data-testid="admin-nav-row" @wireEl('admin-nav-row')
         @endif
         class="relative"
     >
@@ -125,10 +125,10 @@
             aria-label="{{ $item->getLabel() }}"
         @endif
         @if (isset($itemKey))
-            data-testid="admin-nav-item"
+            data-testid="admin-nav-item" @wireEl('admin-nav-item')
             data-resource="{{ $itemKey }}"
         @else
-            data-testid="admin-nav-child"
+            data-testid="admin-nav-child" @wireEl('admin-nav-child')
         @endif
         @if ($isActive || $hasActiveChild) data-active="true" @endif
         @if ($isActive) aria-current="page" @endif
@@ -152,7 +152,7 @@
         @if (($isActive || $hasActiveChild) && ! $isChild)
             <span
                 aria-hidden="true"
-                data-testid="admin-nav-active-mark"
+                data-testid="admin-nav-active-mark" @wireEl('admin-nav-active-mark')
                 class="bg-primary-600 dark:bg-primary-400 absolute inset-y-1.5 -start-3 w-1 rounded-e-full"
             ></span>
         @endif
@@ -172,7 +172,7 @@
                     {!! icon($item->getIcon(), 'h-5 w-5 '.($isActive ? 'text-primary-600 dark:text-primary-300' : 'text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300')) !!}
                 @else
                     <span @class([
-                        'flex h-5 w-5 items-center justify-center rounded text-[10px] font-semibold',
+                        'flex h-5 w-5 items-center justify-center rounded-sm text-[10px] font-semibold',
                         'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200' => $isActive,
                         'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' => ! $isActive,
                     ])>{{ mb_strtoupper(mb_substr((string) $item->getLabel(), 0, 1)) }}</span>
@@ -186,7 +186,7 @@
                          colour is the only thing a dot this small still says. --}}
                     <span
                         data-rail-only
-                        data-testid="admin-nav-badge-dot"
+                        data-testid="admin-nav-badge-dot" @wireEl('admin-nav-badge-dot')
                         class="{{ Badge::getSolidBgClass($badgeColor) }} absolute -end-1.5 -top-1.5 min-w-[1rem] rounded-full px-1 text-center text-[10px] leading-4 font-semibold text-white ring-2 ring-white dark:ring-gray-900"
                     >{{ $item->getBadge() }}</span>
                 @endif
@@ -196,7 +196,7 @@
         <span
             @if (! $isChild) data-rail-hide @endif
             class="flex-1 truncate text-start"
-            data-testid="admin-nav-label"
+            data-testid="admin-nav-label" @wireEl('admin-nav-label')
         >{{ $item->getLabel() }}</span>
 
         @if ($item->getBadge())
@@ -276,7 +276,7 @@
                                     wire:navigate
                                     x-on:click="close()"
                                 @endif
-                                data-testid="admin-nav-flyout-label"
+                                data-testid="admin-nav-flyout-label" @wireEl('admin-nav-flyout-label')
                                 @class([
                                     'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold tracking-wider uppercase',
                                     'text-gray-400 dark:text-gray-500' => ! $isActive,

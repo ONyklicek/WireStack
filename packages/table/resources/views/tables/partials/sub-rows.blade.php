@@ -74,7 +74,7 @@
 ) !!}</div>@endif @endforeach @if($hasActiveSubRowFilter)<button
     type="button"
     wire:click="resetSubRowFilters"
-    data-testid="subrows-reset-filters"
+    data-testid="subrows-reset-filters" @wireEl('subrows-reset-filters')
     class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
 >✕ {{ __('wire-table::messages.reset') }}</button>@endif</div>@endif{{-- Sub-rows table --}}<table class="w-full text-sm"><thead><tr class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{-- Indent spacer --}}<th class="w-8"></th>@foreach($visibleSubRowColumns as $subCol)@php $colSortable = $isSortable && $table->isSubRowColumnSortable($subCol->getName()); @endphp<th class="px-3 py-2 font-medium">@if($colSortable)@php $isActive = $activeSort && $activeSort['column'] === $subCol->getName(); @endphp<button
     type="button"
@@ -87,7 +87,7 @@
 @if($remaining > 0)<tr wire:key="sub-rows-more-{{ $recordKey }}"><td colspan="{{ $totalColCount }}" class="px-3 py-2 text-center"><button
     type="button"
     wire:click="showAllSubRows('{{ $recordKey }}')"
-    data-testid="subrows-show-more"
+    data-testid="subrows-show-more" @wireEl('subrows-show-more')
     class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
 >{{ __('wire-table::messages.show_more_count', ['count' => $remaining]) }}</button></td></tr>@endif</tbody>{{-- Sub-row summaries --}}
 @if($showSubSummaries)<tfoot class="border-t-2 border-gray-200 dark:border-gray-600">@for($i = 0; $i < $maxRows; $i++)<tr class="text-xs font-medium text-gray-600 dark:text-gray-400"><td class="w-8"></td>@foreach($visibleSubRowColumns as $subCol)@php

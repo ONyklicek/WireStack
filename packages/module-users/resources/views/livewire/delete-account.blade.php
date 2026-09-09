@@ -1,7 +1,7 @@
 {{-- Closing the account. Two gates for something with no undo: a dialog that
      has to be opened deliberately, and the account's own password typed into
      it. --}}
-<div data-testid="profile-delete-account">
+<div data-testid="profile-delete-account" @wireEl('profile-delete-account')>
     <x-wire::section
         :heading="__('wire-module-users::messages.delete_account')"
         :description="__('wire-module-users::messages.delete_account_hint')"

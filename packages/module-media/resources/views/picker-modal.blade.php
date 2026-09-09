@@ -88,7 +88,7 @@
     x-on:wire-media-picker:open.window="opened($event)"
     x-on:wire-media-picked.window="picked($event)"
     x-on:keydown.escape.window="open = false"
-    data-testid="media-picker"
+    data-testid="media-picker" @wireEl('media-picker')
 >
     <div
         x-show="open"
@@ -107,7 +107,7 @@
                 <button
                     type="button"
                     x-on:click="open = false"
-                    data-testid="media-picker-close"
+                    data-testid="media-picker-close" @wireEl('media-picker-close')
                     class="rounded-lg p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 >{!! icon('outline:x-mark', 'h-5 w-5') !!}</button>
             </div>

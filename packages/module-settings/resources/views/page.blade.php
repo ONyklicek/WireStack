@@ -13,13 +13,13 @@
 
     @if (count($groups) > 1)
         {{-- One group is not a choice, so it is not drawn as one. --}}
-        <nav class="flex flex-wrap gap-2" data-testid="settings-groups" aria-label="{{ __('wire-module-settings::messages.settings') }}">
+        <nav class="flex flex-wrap gap-2" data-testid="settings-groups" @wireEl('settings-groups') aria-label="{{ __('wire-module-settings::messages.settings') }}">
             @foreach ($groups as $key => $class)
                 @php($icon = \NyonCode\WireModuleSettings\Support\SettingsGroups::icon($class))
                 <a
                     href="{{ \NyonCode\WireModuleSettings\Resources\SettingsResource::urlForGroup($key) ?? '#' }}"
                     wire:navigate
-                    data-testid="settings-group-link"
+                    data-testid="settings-group-link" @wireEl('settings-group-link')
                     data-group="{{ $key }}"
                     @if ($key === $current) aria-current="page" @endif
                     @class([
@@ -44,14 +44,14 @@
         {{-- Wrapped rather than attributed: the shared empty state renders a
              partial with named variables and forwards no arbitrary attributes,
              so the test hook goes on a container of our own. --}}
-        <div data-testid="settings-empty">
+        <div data-testid="settings-empty" @wireEl('settings-empty')>
             <x-wire::empty-state
                 :heading="__('wire-module-settings::messages.empty_heading')"
                 :description="__('wire-module-settings::messages.empty_description')"
             />
         </div>
     @else
-        <form wire:submit="save" class="space-y-4 sm:space-y-6" data-testid="settings-form">
+        <form wire:submit="save" class="space-y-4 sm:space-y-6" data-testid="settings-form" @wireEl('settings-form')>
             {{-- A card, unless the group brought its own layout. A flat schema
                  rendered bare is the one screen in a panel where inputs sit
                  directly on the page background; a card around a group that

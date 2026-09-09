@@ -18,6 +18,7 @@
 @endphp
 
 <div class="flex flex-col items-center gap-3 text-center">
+    @wireEl('empty-state')
     @if($icon)
         <div class="rounded-full bg-gray-100 dark:bg-gray-700 p-3">
             {!! icon($icon, $iconSize, 'text-gray-400') !!}

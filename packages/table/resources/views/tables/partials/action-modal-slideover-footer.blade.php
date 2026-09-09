@@ -18,7 +18,7 @@
     ])
     <button
         type="button"
-        wire:click="closeActionModal" data-testid="modal-cancel"
+        wire:click="closeActionModal" data-testid="modal-cancel" @wireEl('modal-cancel')
         class="rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600"
     >
         {{ $modalData['cancelLabel'] }}
@@ -26,7 +26,7 @@
     @unless($hasInfolist)
     <button
         type="button"
-        wire:click="submitActionModal" data-testid="modal-submit"
+        wire:click="submitActionModal" data-testid="modal-submit" @wireEl('modal-submit')
         wire:loading.attr="disabled"
         wire:target="submitActionModal"
         @class([

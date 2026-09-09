@@ -21,7 +21,7 @@
                 {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
                 value="{{ $value }}"
                 @if($field->isDisabled()) disabled @endif
-                class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500 transition-colors duration-150 dark:bg-gray-800 dark:border-gray-600"
+                class="rounded-sm border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500 transition-colors duration-150 dark:bg-gray-800 dark:border-gray-600"
             />
             <label for="{{ $field->getId() }}-{{ $value }}" class="text-sm text-gray-700 dark:text-gray-300">
                 {{ $label }}

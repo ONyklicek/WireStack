@@ -47,7 +47,7 @@
         <button
             type="button"
             wire:click="toggleRowExpansion('{{ $recordKey }}')"
-            data-testid="table-card-subrows-toggle"
+            data-testid="table-card-subrows-toggle" @wireEl('table-card-subrows-toggle')
             aria-expanded="true"
             class="flex w-full items-center gap-2 border-t border-gray-100 dark:border-gray-700/50 px-4 py-2.5 text-left text-sm text-gray-500 dark:text-gray-400"
         >
@@ -62,7 +62,7 @@
         @forelse($subRows as $subRow)
             <div class="flex items-baseline gap-3 border-b border-gray-100 dark:border-gray-700/50 px-4 py-2.5"
                  wire:key="card-sub-row-{{ $recordKey }}-{{ $subRow->getKey() }}"
-                 data-testid="table-card-sub-row">
+                 data-testid="table-card-sub-row" @wireEl('table-card-sub-row')>
                 <div class="min-w-0 flex-1">
                     @if($childTitle)
                         <div class="truncate text-sm text-gray-900 dark:text-white">
@@ -106,7 +106,7 @@
             <button
                 type="button"
                 wire:click="showAllSubRows('{{ $recordKey }}')"
-                data-testid="table-card-subrows-more"
+                data-testid="table-card-subrows-more" @wireEl('table-card-subrows-more')
                 class="w-full border-b border-gray-100 dark:border-gray-700/50 px-4 py-2.5 text-sm font-medium text-primary-600 dark:text-primary-400"
             >
                 {{ __('wire-table::messages.show_more_count', ['count' => $remaining]) }}
@@ -118,7 +118,7 @@
             @foreach($subRowSummaries as $columnName => $entries)
                 @foreach($entries as $entry)
                     <div class="flex items-baseline gap-3 px-4 py-2 text-sm"
-                         data-testid="table-card-subrows-summary">
+                         data-testid="table-card-subrows-summary" @wireEl('table-card-subrows-summary')>
                         <span class="flex-1 font-semibold text-gray-700 dark:text-gray-200">{{ $entry['label'] }}</span>
                         <span class="font-semibold tabular-nums text-gray-900 dark:text-white">{{ $entry['value'] }}</span>
                         {{-- Mirrors the overflow column above, so the total lands on the
@@ -137,7 +137,7 @@
     <button
         type="button"
         wire:click="toggleRowExpansion('{{ $recordKey }}')"
-        data-testid="table-card-subrows-toggle"
+        data-testid="table-card-subrows-toggle" @wireEl('table-card-subrows-toggle')
         aria-expanded="false"
         class="flex w-full items-center gap-2 border-t border-gray-100 dark:border-gray-700/50 px-4 py-2.5 text-left text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
     >

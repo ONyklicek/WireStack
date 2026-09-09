@@ -28,7 +28,7 @@
 
 @if($rows !== [])
     <div{!! $partialAnchor ?? '' !!} class="border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50"
-         data-testid="table-card-summary">
+         data-testid="table-card-summary" @wireEl('table-card-summary')>
         @if($showScopeToggle)
             <div class="flex items-center justify-between gap-2 border-b border-gray-200 dark:border-gray-700 px-4 py-2.5">
                 <span class="text-xs text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.summary_scope_label') }}</span>

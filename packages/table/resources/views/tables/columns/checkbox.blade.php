@@ -35,7 +35,7 @@
         @if($disabled) disabled @else @change="commit($event.target.checked)" :disabled="saving" @endif
         :class="{ 'ring-2 ring-red-500': error }"
         @class([
-            'h-4 w-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 focus:ring-primary-500',
+            'h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 dark:bg-gray-800 focus:ring-primary-500',
             $accentColorClass,
             'cursor-not-allowed opacity-50' => $disabled,
             'cursor-pointer' => ! $disabled,

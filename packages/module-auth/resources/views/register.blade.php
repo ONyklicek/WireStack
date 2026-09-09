@@ -7,7 +7,7 @@
     :heading="__('wire-module-auth::messages.register_heading')"
     :description="__('wire-module-auth::messages.register_description')"
 >
-    <form method="POST" action="{{ route('register') }}" class="space-y-4" data-testid="auth-register-form">
+    <form method="POST" action="{{ route('register') }}" class="space-y-4" data-testid="auth-register-form" @wireEl('auth-register-form')>
         @csrf
 
         @include('wire-module-auth::partials.field', [

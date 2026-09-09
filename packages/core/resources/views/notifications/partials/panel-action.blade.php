@@ -13,7 +13,7 @@
 @if(! empty($action['url']))
     <a
         href="{{ $action['url'] }}"
-        data-testid="notification-action"
+        data-testid="notification-action" @wireEl('notification-action')
         class="{{ $action['classes'] }}"
     >{{ $action['label'] }}</a>
 @elseif(! empty($action['event']))
@@ -23,7 +23,7 @@
     <button
         type="button"
         x-on:click="window.Livewire.dispatch(@js($action['event']), @js($action['payload'] ?? []))"
-        data-testid="notification-action"
+        data-testid="notification-action" @wireEl('notification-action')
         class="{{ $action['classes'] }}"
     >{{ $action['label'] }}</button>
 @endif

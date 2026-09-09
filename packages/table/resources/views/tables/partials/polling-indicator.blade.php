@@ -1,3 +1,6 @@
+@php
+    use NyonCode\WireCore\Foundation\View\Palette;
+@endphp
 {{-- Polling Indicator --}}
 @php
     $pollingConfig = $component->getTablePollingConfig();
@@ -8,8 +11,8 @@
         @if($pollingConfig['active'] ?? false)
             {{-- Active indicator --}}
             <span class="relative flex h-2 w-2">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full {{ Palette::getAccentBgClass('success') }} opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 {{ Palette::getAccentBgClass('success') }}"></span>
             </span>
             <span>Auto {{ $pollingConfig['interval'] ?? '5s' }}</span>
         @else
@@ -22,7 +25,7 @@
 
         <button
             type="button"
-            wire:click="toggleTablePolling" data-testid="polling-toggle"
+            wire:click="toggleTablePolling" data-testid="polling-toggle" @wireEl('polling-toggle')
             class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline decoration-dotted underline-offset-2"
         >
             {{ ($pollingConfig['active'] ?? false) ? __('wire-table::messages.stop') : __('wire-table::messages.start') }}

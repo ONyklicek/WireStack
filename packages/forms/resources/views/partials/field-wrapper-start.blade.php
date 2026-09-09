@@ -2,10 +2,6 @@
     $statePath = $field->getStatePath();
     $hasError = $errors->has($statePath);
     $columnSpan = $field->getColumnSpan();
-    // extraAttributes() is declared by every field through HasExtraAttributes but
-    // was rendered by nothing, so the setter did not do what it says. The outer
-    // element is this wrapper, so it belongs here — once, for every field type.
-    $extraAttributes = method_exists($field, 'getExtraAttributes') ? $field->getExtraAttributes() : [];
 @endphp
 
 <div
@@ -16,15 +12,14 @@
          will never send one should not carry it. --}}
     @if($fieldPartials ?? false) wire:partial="field-{{ $statePath }}" @endif
     data-testid="form-field-{{ $statePath }}"
+    @wireEl('form-field')
     data-field="{{ $statePath }}"
     @class([
         'wire-field relative',
         'sm:col-span-1' => $columnSpan === 1,
         'sm:col-span-2 md:col-span-2' => $columnSpan === 2 || $columnSpan === 'full',
     ])
-    @foreach($extraAttributes as $attribute => $value)
-        {{ $attribute }}="{{ $value }}"
-    @endforeach
+    @wireExtraAttributes($field)
 >
 
     {{-- $hideLabel is this wrapper's own override (a layout that already names the

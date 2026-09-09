@@ -9,7 +9,9 @@
      read safe: inside a Livewire update the current route name is
      `livewire.update` and every zone-derived answer would be null (ADR 0027). --}}
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full"
+      data-density="{{ \NyonCode\WireCore\Foundation\Enums\Density::configured()->value }}"
+      data-shape="{{ \NyonCode\WireCore\Foundation\Enums\Shape::configured()->value }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -20,6 +22,10 @@
          painted, and a blocking script above it is a white page waiting to
          happen. Same order as the auth layout. --}}
     @include('wire-admin::partials.theme')
+
+    {{-- The spacing scale, keyed on the attribute above. --}}
+    @include('wire-core::partials.density')
+    @include('wire-core::partials.shape')
 
     {{-- And the menu's width, for the same reason and one frame earlier than
          Alpine can manage it. Only this layout includes it: the auth frame has
@@ -59,6 +65,11 @@
                 // that put the class on the document, so the switch cannot show
                 // one thing while the page shows another.
                 theme: window.wireAdminTheme.get(),
+
+                // Same arrangement as the theme: read from the owner that put
+                // the attribute on the document, so the switch cannot show one
+                // thing while the page shows another.
+                density: window.wireDensity.get(),
 
                 // Never restored from storage, unlike the rail: a phone menu that
                 // reopened itself on every page would be covering the page it just
@@ -128,6 +139,11 @@
                 // Storing the choice and turning it into a class is one rule and
                 // lives in one place — see partials/theme.blade.php. This is the
                 // switch, not a second copy of what the switch means.
+                /** Choose a density for this browser. The default stays the config's. */
+                setDensity(density) {
+                    this.density = window.wireDensity.set(density);
+                },
+
                 setTheme(theme) {
                     this.theme = window.wireAdminTheme.set(theme);
                 },
@@ -146,7 +162,7 @@
         <x-wire-admin::sidebar :linked-only="$linkedOnly" />
 
         <div class="min-w-0 flex-1">
-            <header class="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-gray-200 bg-white/90 px-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/90">
+            <header class="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-gray-200 bg-white/90 px-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/90" @wireEl('admin-topbar')>
                 {{-- The phone handle. It lives in the top bar rather than inside
                      the drawer it opens, which is the whole fix: the old one was
                      a button stacked above the menu, so on a phone the page began
@@ -157,7 +173,7 @@
                     x-on:click="$store.wireAdmin.openMobile()"
                     x-bind:aria-expanded="$store.wireAdmin.mobile ? 'true' : 'false'"
                     aria-controls="wire-admin-nav"
-                    data-testid="admin-sidebar-toggle"
+                    data-testid="admin-sidebar-toggle" @wireEl('admin-sidebar-toggle')
                     class="-ms-1 inline-flex rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 lg:hidden dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
                 >
                     <span class="sr-only">{{ __('wire-admin::messages.menu') }}</span>
@@ -191,7 +207,7 @@
                     x-bind:title="($store.wireAdmin.rail
                         ? '{{ __('wire-admin::messages.expand_menu') }}'
                         : '{{ __('wire-admin::messages.collapse_menu') }}') + ' (' + $store.wireAdmin.modKey + 'B)'"
-                    data-testid="admin-rail-toggle"
+                    data-testid="admin-rail-toggle" @wireEl('admin-rail-toggle')
                     title="{{ __('wire-admin::messages.collapse_menu') }}"
                     class="-ms-1 hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 lg:inline-flex dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
                 >
@@ -207,7 +223,7 @@
                      the top bar, and one that passes nothing gets no duplicate of
                      the logo it just set. --}}
                 @isset ($brand)
-                    <span class="truncate font-semibold" data-testid="admin-brand">{{ $brand }}</span>
+                    <span class="truncate font-semibold" data-testid="admin-brand" @wireEl('admin-brand')>{{ $brand }}</span>
                 @endisset
 
                 {{-- The palette trigger, in the chrome rather than on a page,
@@ -219,12 +235,12 @@
                     type="button"
                     x-data
                     x-on:click="$dispatch('open-global-search')"
-                    data-testid="global-search-trigger"
-                    class="ms-auto inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 py-1.5 ps-3 pe-2 text-sm text-gray-500 transition hover:border-gray-300 hover:bg-white sm:w-64 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-400 dark:hover:border-gray-600"
+                    data-testid="global-search-trigger" @wireEl('global-search-trigger')
+                    class="ms-auto inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 py-1.5 ps-3 pe-2 text-sm text-gray-500 transition hover:border-gray-300 hover:bg-white sm:w-64 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-700"
                 >
                     {!! icon('outline:magnifying-glass', 'h-4 w-4 shrink-0') !!}
                     <span class="hidden flex-1 text-start sm:block">{{ __('wire-admin::messages.search') }}</span>
-                    <kbd class="hidden rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] sm:block dark:border-gray-700 dark:bg-gray-900">⌘K</kbd>
+                    <kbd class="hidden rounded-sm border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] sm:block dark:border-gray-700 dark:bg-gray-900">⌘K</kbd>
                 </button>
 
                 {{ $topbar ?? '' }}
@@ -255,7 +271,7 @@
                     x-data
                     role="radiogroup"
                     aria-label="{{ __('wire-admin::messages.theme') }}"
-                    data-testid="admin-theme"
+                    data-testid="admin-theme" @wireEl('admin-theme')
                     class="inline-flex items-center gap-0.5 rounded-full border border-gray-200 p-0.5 dark:border-gray-700"
                 >
                     @foreach (\NyonCode\WireCore\Foundation\Enums\Theme::cases() as $themeOption)
@@ -277,6 +293,35 @@
                     @endforeach
                 </div>
 
+                {{-- The same shape as the theme switch beside it, and for the
+                     same reason: a person's own answer to a question the
+                     application only set a default for. --}}
+                <div
+                    x-data
+                    role="radiogroup"
+                    aria-label="{{ __('wire-core::messages.density') }}"
+                    data-testid="admin-density" @wireEl('admin-density')
+                    class="inline-flex items-center gap-0.5 rounded-full border border-gray-200 p-0.5 dark:border-gray-700"
+                >
+                    @foreach (\NyonCode\WireCore\Foundation\Enums\Density::cases() as $densityOption)
+                        <button
+                            type="button"
+                            role="radio"
+                            x-on:click="$store.wireAdmin.setDensity('{{ $densityOption->value }}')"
+                            x-bind:aria-checked="$store.wireAdmin.density === '{{ $densityOption->value }}' ? 'true' : 'false'"
+                            x-bind:class="$store.wireAdmin.density === '{{ $densityOption->value }}'
+                                ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-50'
+                                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
+                            data-testid="admin-density-{{ $densityOption->value }}"
+                            title="{{ $densityOption->label() }}"
+                            class="inline-flex items-center rounded-full p-1.5 transition"
+                        >
+                            <span class="sr-only">{{ $densityOption->label() }}</span>
+                            {!! icon($densityOption->icon(), 'h-4 w-4') !!}
+                        </button>
+                    @endforeach
+                </div>
+
                 {{-- The application's own menu, and a name when it has not written
                      one: an admin whose top bar cannot say who is signed in reads
                      as unfinished, and this is the smallest honest default. --}}
@@ -291,7 +336,7 @@
                         <x-slot:trigger>
                             <button
                                 type="button"
-                                data-testid="admin-user"
+                                data-testid="admin-user" @wireEl('admin-user')
                                 class="flex items-center gap-2 rounded-full p-1 ps-1 transition hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
                                 <x-wire-admin::avatar :user="auth()->user()" class="h-8 w-8" />
@@ -327,9 +372,10 @@
                         @endforeach
                     </x-wire::dropdown>
                 @endif
+                @wireRenderHook('admin.topbar.end')
             </header>
 
-            <main id="wire-admin-main" class="p-4" data-testid="admin-content">
+            <main id="wire-admin-main" class="p-4" data-testid="admin-content" @wireEl('admin-content')>
                 {{ $slot }}
             </main>
         </div>

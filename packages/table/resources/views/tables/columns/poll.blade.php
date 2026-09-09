@@ -31,7 +31,7 @@
     /** @var string $pollDirective wire:poll attribute (only when polling) */
     /** @var string $wireKey */
 @endphp
-@if($shouldPoll && $isBadge)<span {!! $pollDirective !!} wire:key="{{ $wireKey }}" class="inline-flex items-center rounded-full font-medium">@elseif($shouldPoll)<div {!! $pollDirective !!} wire:key="{{ $wireKey }}">@endif{{--
+@if($shouldPoll && $isBadge)<span @wireEl('table-badge') {!! $pollDirective !!} wire:key="{{ $wireKey }}" class="inline-flex items-center rounded-full font-medium">@elseif($shouldPoll)<div {!! $pollDirective !!} wire:key="{{ $wireKey }}">@endif{{--
 --}}@if($showLoadingIndicator)<span class="inline-flex items-center gap-0">@endif{{--
 --}}@if($showLoadingIndicator && $position === 'before')<span wire:loading>{!! $loadingIndicator !!}</span>@endif{{--
 --}}@if($showLoadingIndicator && ! $keepContentWhileLoading)<span wire:loading.remove>@endif{{--

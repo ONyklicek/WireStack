@@ -10,7 +10,7 @@
     :heading="__('wire-module-auth::messages.forgot_heading')"
     :description="__('wire-module-auth::messages.forgot_description')"
 >
-    <form method="POST" action="{{ route('password.request') }}" class="space-y-4" data-testid="auth-forgot-form">
+    <form method="POST" action="{{ route('password.request') }}" class="space-y-4" data-testid="auth-forgot-form" @wireEl('auth-forgot-form')>
         @csrf
 
         @include('wire-module-auth::partials.field', [
@@ -26,7 +26,7 @@
         </x-wire::button>
 
         <p class="text-center text-sm">
-            <a href="{{ route('login') }}" class="text-primary-600 hover:underline dark:text-primary-400" data-testid="auth-back-link">
+            <a href="{{ route('login') }}" class="text-primary-600 hover:underline dark:text-primary-400" data-testid="auth-back-link" @wireEl('auth-back-link')>
                 {{ __('wire-module-auth::messages.back_to_sign_in') }}
             </a>
         </p>

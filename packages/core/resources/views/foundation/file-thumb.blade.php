@@ -2,6 +2,7 @@
      Fills whatever box the caller gives it; `size` scales the contents. --}}
 @if ($showsImage)
     <img
+        @wireEl('file-thumb')
         src="{{ $url }}"
         @if ($srcset) srcset="{{ $srcset }}" @endif
         alt="{{ $alt ?? $name }}"

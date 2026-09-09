@@ -18,7 +18,7 @@
      canonical PHP owner via icon(), never as inline <svg>. --}}
 <button
     type="button"
-    data-testid="table-fill-handle"
+    data-testid="table-fill-handle" @wireEl('table-fill-handle')
     data-fill-handle
     aria-label="{{ __('wire-table::messages.fill_handle') }}"
     title="{{ __('wire-table::messages.fill_handle') }}"
@@ -29,7 +29,7 @@
 {{-- The dragged range outline. aria-hidden: the range is announced through the
      handle, and a decorative rectangle would only add noise. --}}
 <div
-    data-testid="table-fill-overlay"
+    data-testid="table-fill-overlay" @wireEl('table-fill-overlay')
     data-fill-overlay
     aria-hidden="true"
     class="wire-fill-overlay pointer-events-none absolute z-10 border-2 border-primary-500 dark:border-primary-400"

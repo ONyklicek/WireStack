@@ -197,14 +197,14 @@
                     <button type="button" @click="prevMonth()" :disabled="!canGoPrev"
                             :class="canGoPrev ? 'hover:bg-gray-100 dark:hover:bg-gray-700' : 'opacity-40 cursor-not-allowed'"
                             data-testid="form-datetime-{{ $field->getStatePath() }}-prev-month" aria-label="Previous month"
-                            class="p-1 rounded text-gray-600 dark:text-gray-300 transition-colors duration-150">
+                            class="p-1 rounded-sm text-gray-600 dark:text-gray-300 transition-colors duration-150">
                         {!! icon('chevron-left', 'w-4 h-4', 'h-4 w-4') !!}
                     </button>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="monthYearLabel"></span>
                     <button type="button" @click="nextMonth()" :disabled="!canGoNext"
                             :class="canGoNext ? 'hover:bg-gray-100 dark:hover:bg-gray-700' : 'opacity-40 cursor-not-allowed'"
                             data-testid="form-datetime-{{ $field->getStatePath() }}-next-month" aria-label="Next month"
-                            class="p-1 rounded text-gray-600 dark:text-gray-300 transition-colors duration-150">
+                            class="p-1 rounded-sm text-gray-600 dark:text-gray-300 transition-colors duration-150">
                         {!! icon('chevron-right', 'w-4 h-4', 'h-4 w-4') !!}
                     </button>
                 </div>

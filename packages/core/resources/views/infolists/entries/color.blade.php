@@ -8,7 +8,7 @@
     $swatch = $field->getSwatch();
 @endphp
 
-<div class="{{ $spanClass }}">
+<div class="{{ $spanClass }}" @wireExtraAttributes($field)>
     @if($field->hasVisibleLabel())
         @include('wire-core::partials.entry-label', ['text' => $field->getLabel()])
     @endif
@@ -19,7 +19,7 @@
                  cell use: one button, one document listener, no Alpine per entry. --}}
             <span class="inline-flex items-center gap-2 group">
                 @if($swatch !== null)
-                    <span class="w-5 h-5 rounded ring-1 ring-gray-200 dark:ring-gray-700"
+                    <span class="w-5 h-5 rounded-sm ring-1 ring-gray-200 dark:ring-gray-700"
                           @style(['background-color: '.$swatch])></span>
                 @endif
                 <span class="font-mono text-gray-700 dark:text-gray-300">{{ $value }}</span>

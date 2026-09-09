@@ -1,3 +1,6 @@
+@php
+    use NyonCode\WireCore\Foundation\View\Palette;
+@endphp
 {{-- A before-and-after diff, as a table.
 
      One markup for the two places this stack draws a change: the audit trail
@@ -30,17 +33,17 @@
                 <tr>
                     <td class="px-3 py-1.5 font-medium break-all text-gray-700 dark:text-gray-300">{{ $row['field'] }}</td>
 
-                    <td class="px-3 py-1.5 break-all text-red-600 dark:text-red-400">
+                    <td class="px-3 py-1.5 break-all {{ Palette::getTextColorClasses('danger') }}">
                         @if ($row['before'] !== null)
-                            <span class="rounded bg-red-50 px-1 dark:bg-red-900/20">{{ $row['before'] }}</span>
+                            <span class="rounded-sm px-1 {{ Palette::getSoftTintClasses('danger') }}">{{ $row['before'] }}</span>
                         @else
                             <span class="text-gray-400 italic">{{ __('wire-core::audit.empty') }}</span>
                         @endif
                     </td>
 
-                    <td class="px-3 py-1.5 break-all text-emerald-600 dark:text-emerald-400">
+                    <td class="px-3 py-1.5 break-all {{ Palette::getTextColorClasses('success') }}">
                         @if ($row['after'] !== null)
-                            <span class="rounded bg-emerald-50 px-1 dark:bg-emerald-900/20">{{ $row['after'] }}</span>
+                            <span class="rounded-sm px-1 {{ Palette::getSoftTintClasses('success') }}">{{ $row['after'] }}</span>
                         @else
                             <span class="text-gray-400 italic">{{ __('wire-core::audit.empty') }}</span>
                         @endif

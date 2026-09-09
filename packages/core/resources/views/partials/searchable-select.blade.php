@@ -86,7 +86,7 @@
     <button
         type="button"
         id="{{ $selectId }}"
-        data-testid="select-trigger"
+        data-testid="select-trigger" @wireEl('select-trigger')
         {!! $extraInputAttributes ?? '' !!}
         x-ref="trigger"
         @click="open = !open"
@@ -165,7 +165,7 @@
                     @keydown.escape="open = false; activeIndex = -1"
                     placeholder="{{ $searchPrompt }}"
                     aria-label="{{ $searchPrompt }}"
-                    data-testid="select-search"
+                    data-testid="select-search" @wireEl('select-search')
                     class="w-full rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:border-primary-500 focus:ring-primary-500 transition-colors duration-150"
                     x-ref="searchInput"
                 />
@@ -178,7 +178,7 @@
                         <button
                             type="button"
                             @click="clear()"
-                            data-testid="select-clear"
+                            data-testid="select-clear" @wireEl('select-clear')
                             class="w-full px-3 py-2 text-left text-sm text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
                         >
                             {{ $placeholder }}

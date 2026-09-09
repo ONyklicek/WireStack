@@ -1,4 +1,7 @@
 {{-- Audit Trail Timeline --}}
+@php
+    use NyonCode\WireCore\Audit\AuditEventStyle;
+@endphp
 @props([
     'entries' => [],
     'emptyMessage' => __('wire-core::audit.no_entries'),
@@ -14,33 +17,21 @@
 
             {{-- Event icon --}}
             <div class="relative flex h-6 w-6 flex-none items-center justify-center">
-                @switch($entry->event)
-                    @case('created')
-                        <div class="h-5 w-5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                            {!! icon('outline:plus', 'h-3 w-3', 'text-emerald-600 dark:text-emerald-400') !!}
-                        </div>
-                        @break
-                    @case('updated')
-                    @case('cell_updated')
-                        <div class="h-5 w-5 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                            {!! icon('outline:pencil', 'h-3 w-3', 'text-blue-600 dark:text-blue-400') !!}
-                        </div>
-                        @break
-                    @case('deleted')
-                        <div class="h-5 w-5 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
-                            {!! icon('outline:trash', 'h-3 w-3', 'text-red-600 dark:text-red-400') !!}
-                        </div>
-                        @break
-                    @case('bulk_action')
-                        <div class="h-5 w-5 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-                            {!! icon('outline:queue-list', 'h-3 w-3', 'text-amber-600 dark:text-amber-400') !!}
-                        </div>
-                        @break
-                    @default
-                        <div class="h-5 w-5 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                            <div class="h-1.5 w-1.5 rounded-full bg-gray-400"></div>
-                        </div>
-                @endswitch
+                @php
+                    // Role and glyph from the canonical map, and the tinted-circle
+                    // chrome from the canonical resolvers — so an application that
+                    // re-points `success` moves the timeline with everything else.
+                    $eventIcon = AuditEventStyle::icon($entry->event);
+                @endphp
+                @if($eventIcon)
+                    <div class="h-5 w-5 rounded-full {{ AuditEventStyle::iconBgClass($entry->event) }} flex items-center justify-center">
+                        {!! icon($eventIcon, 'h-3 w-3', AuditEventStyle::iconTextClass($entry->event)) !!}
+                    </div>
+                @else
+                    <div class="h-5 w-5 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                        <div class="h-1.5 w-1.5 rounded-full bg-gray-400"></div>
+                    </div>
+                @endif
             </div>
 
             {{-- Event content --}}

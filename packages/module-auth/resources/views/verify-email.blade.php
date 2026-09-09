@@ -10,13 +10,13 @@
     :description="__('wire-module-auth::messages.verify_description')"
 >
     @if (session('status') === 'verification-link-sent')
-        <p class="mb-4 text-sm text-green-700 dark:text-green-300" data-testid="auth-verify-sent">
+        <p class="mb-4 text-sm text-green-700 dark:text-green-300" data-testid="auth-verify-sent" @wireEl('auth-verify-sent')>
             {{ __('wire-module-auth::messages.verify_sent') }}
         </p>
     @endif
 
     <div class="flex items-center justify-between gap-3">
-        <form method="POST" action="{{ route('verification.send') }}" data-testid="auth-verify-form">
+        <form method="POST" action="{{ route('verification.send') }}" data-testid="auth-verify-form" @wireEl('auth-verify-form')>
             @csrf
 
             <x-wire::button type="submit" data-testid="auth-submit">
@@ -28,7 +28,7 @@
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
 
-                <button type="submit" class="text-sm text-gray-500 hover:underline dark:text-gray-400" data-testid="auth-sign-out">
+                <button type="submit" class="text-sm text-gray-500 hover:underline dark:text-gray-400" data-testid="auth-sign-out" @wireEl('auth-sign-out')>
                     {{ __('wire-module-auth::messages.sign_out') }}
                 </button>
             </form>

@@ -18,9 +18,14 @@
 @endphp
 
 <div
+    @wireEl('callout')
     @if($dismissible) x-data="{ show: true }" x-show="show" x-transition @endif
     class="rounded-md border p-4 {{ $colorClasses }}"
     role="alert"
+    {{-- Optional: the component this callout is rendering for, when it has one.
+         The schema `Callout` is a layout element with no attributes to carry;
+         the forms `Alert` is a component with `extraAttributes()`. --}}
+    @isset($component) @wireExtraAttributes($component) @endisset
 >
     <div class="flex">
         @if($icon)
@@ -40,7 +45,7 @@
             <button
                 type="button"
                 @click="show = false"
-                data-testid="callout-dismiss"
+                data-testid="callout-dismiss" @wireEl('callout-dismiss')
                 aria-label="{{ __('Dismiss') }}"
                 class="ml-3 shrink-0 -mt-1 -mr-1 p-1 rounded-md hover:opacity-75 focus:outline-none"
             >

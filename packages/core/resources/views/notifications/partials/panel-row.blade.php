@@ -3,7 +3,7 @@
      read. --}}
 <div
     wire:key="notification-{{ $item['id'] }}"
-    data-testid="notification-item"
+    data-testid="notification-item" @wireEl('notification-item')
     @class([
         'group relative flex items-start gap-3 px-4 py-3 transition-colors sm:px-6',
         'hover:bg-gray-50 dark:hover:bg-gray-700/30' => $item['read'],
@@ -22,8 +22,8 @@
             <a
                 href="{{ $item['url'] }}"
                 wire:click.prevent="open('{{ $item['id'] }}')"
-                data-testid="notification-open"
-                class="block rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                data-testid="notification-open" @wireEl('notification-open')
+                class="block rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             >
                 @include('wire-core::notifications.partials.panel-item', ['item' => $item])
             </a>
@@ -47,7 +47,7 @@
     @unless($item['read'])
         <span
             aria-hidden="true"
-            data-testid="notification-unread-dot"
+            data-testid="notification-unread-dot" @wireEl('notification-unread-dot')
             class="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary-500 transition-opacity group-hover:opacity-0 group-focus-within:opacity-0 dark:bg-primary-400"
         ></span>
         <span class="sr-only">{{ __('wire-core::messages.notifications_unread') }}</span>
@@ -64,16 +64,16 @@
             <button
                 type="button"
                 wire:click="markAsUnread('{{ $item['id'] }}')"
-                data-testid="notification-mark-unread"
-                class="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                data-testid="notification-mark-unread" @wireEl('notification-mark-unread')
+                class="rounded-sm p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
                 aria-label="{{ __('wire-core::messages.mark_unread') }}"
             >{!! icon('outline:arrow-uturn-left', 'w-4 h-4') !!}</button>
         @else
             <button
                 type="button"
                 wire:click="markAsRead('{{ $item['id'] }}')"
-                data-testid="notification-mark-read"
-                class="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                data-testid="notification-mark-read" @wireEl('notification-mark-read')
+                class="rounded-sm p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
                 aria-label="{{ __('wire-core::messages.mark_read') }}"
             >{!! icon('outline:check', 'w-4 h-4') !!}</button>
         @endif
@@ -81,8 +81,8 @@
         <button
             type="button"
             wire:click="delete('{{ $item['id'] }}')"
-            data-testid="notification-delete"
-            class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+            data-testid="notification-delete" @wireEl('notification-delete')
+            class="rounded-sm p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
             aria-label="{{ __('wire-core::messages.delete_notification') }}"
         >{!! icon('outline:trash', 'w-4 h-4') !!}</button>
     </div>

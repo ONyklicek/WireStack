@@ -9,7 +9,7 @@
             <button
                     wire:click="previousPage"
                     wire:loading.attr="disabled"
-                    data-testid="table-page-prev"
+                    data-testid="table-page-prev" @wireEl('table-page-prev')
                     aria-label="{{ __('wire-table::messages.pagination_previous') }}"
                     class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
@@ -59,7 +59,7 @@
             <button
                     wire:click="nextPage"
                     wire:loading.attr="disabled"
-                    data-testid="table-page-next"
+                    data-testid="table-page-next" @wireEl('table-page-next')
                     aria-label="{{ __('wire-table::messages.pagination_next') }}"
                     class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >

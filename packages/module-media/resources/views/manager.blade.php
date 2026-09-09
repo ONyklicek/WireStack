@@ -1,3 +1,6 @@
+@php
+    use NyonCode\WireCore\Foundation\View\Palette;
+@endphp
 {{-- The media library, from NyonCode\WireModuleMedia\Livewire\MediaManager.
 
      Three columns: the tree, what is in the open folder, and — when one is
@@ -26,7 +29,7 @@
      what it means everywhere else on the web. --}}
 <div
     class="flex flex-col gap-4 lg:flex-row"
-    data-testid="media-manager"
+    data-testid="media-manager" @wireEl('media-manager')
     x-data
     x-on:keydown.window="
         const el = $event.target;
@@ -53,7 +56,7 @@
             'lg:w-[var(--wire-media-rail)]' => ! $picking,
             'lg:w-48' => $picking,
         ])
-        data-testid="media-rail"
+        data-testid="media-rail" @wireEl('media-rail')
         x-data="{
             width: 224,
             drag: null,
@@ -106,7 +109,7 @@
                 'absolute inset-y-0 -end-2 z-10 hidden w-3 cursor-col-resize',
                 'lg:block' => ! $picking,
             ])
-            data-testid="media-rail-handle"
+            data-testid="media-rail-handle" @wireEl('media-rail-handle')
             role="separator"
             aria-orientation="vertical"
             x-on:pointerdown="start($event)"
@@ -125,7 +128,7 @@
             x-cloak
             x-on:click="folders = ! folders"
             :aria-expanded="folders ? 'true' : 'false'"
-            data-testid="media-folder-toggle"
+            data-testid="media-folder-toggle" @wireEl('media-folder-toggle')
             class="mb-2 flex w-full items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-800 dark:bg-gray-900"
         >
             {!! icon('outline:folder', 'h-4 w-4 shrink-0 text-gray-400') !!}
@@ -155,7 +158,7 @@
                 <button
                     type="button"
                     wire:click="$toggle('creatingFolder')"
-                    data-testid="media-new-folder"
+                    data-testid="media-new-folder" @wireEl('media-new-folder')
                     class="focus-visible:ring-primary-500 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 focus-visible:ring-2 focus-visible:outline-none dark:hover:bg-gray-800"
                     title="{{ __('wire-module-media::messages.new_folder') }}"
                 >
@@ -169,7 +172,7 @@
                     <input
                         type="text"
                         wire:model="newFolderName"
-                        data-testid="media-new-folder-name"
+                        data-testid="media-new-folder-name" @wireEl('media-new-folder-name')
                         placeholder="{{ __('wire-module-media::messages.folder_name') }}"
                         autofocus
                         class="min-w-0 flex-1 rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
@@ -187,7 +190,7 @@
                  accessor itself. --}}
             <ul
                 class="space-y-0.5"
-                data-testid="media-tree"
+                data-testid="media-tree" @wireEl('media-tree')
                 x-data="{
                     open: [],
                     hover: null,
@@ -230,7 +233,7 @@
                             else if (file) $wire.moveTo(null, parseInt(file));
                             else if (folderId) $wire.moveFolder(parseInt(folderId), null);
                         "
-                        data-testid="media-folder-root"
+                        data-testid="media-folder-root" @wireEl('media-folder-root')
                         @class([
                             'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-start text-sm transition',
                             'bg-primary-50 text-primary-700 dark:bg-primary-950/60 dark:text-primary-200' => $folder === null,
@@ -271,7 +274,13 @@
         x-on:dragleave="isDragging = false"
         x-on:drop.prevent="handleDrop($event)"
     >
-        <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+        {{-- `overflow-clip`, so the radius is kept by what is inside it too. The
+             list rows run to both edges and the last one's hover paints a
+             rectangle into the bottom corners; the toolbar below reaches the top
+             ones, which is why it was carrying a `rounded-t-xl` of its own. Clip
+             and not `overflow-hidden`: that toolbar is `sticky top-0` against the
+             PAGE, and a scroll container here would leave it in flow. --}}
+        <div class="overflow-clip rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
 
             {{-- The toolbar stops scrolling with the files. Where you are, what
                  you are looking for and how it is shown are the three things you
@@ -291,7 +300,7 @@
                     'min-w-0 flex-1 items-center gap-1 text-sm',
                     'flex' => ! $picking,
                     'hidden lg:flex' => $picking,
-                ]) data-testid="media-breadcrumb">
+                ]) data-testid="media-breadcrumb" @wireEl('media-breadcrumb')>
                     @foreach ([null, ...$crumbs->all()] as $crumb)
                         @if (! $loop->first)
                             <span class="text-gray-300">/</span>
@@ -300,11 +309,11 @@
                         <button
                             type="button"
                             wire:click="openFolder({{ $crumb?->id ?? 'null' }})"
-                            data-testid="media-crumb"
-                            x-on:dragover.prevent="$el.classList.add('ring-2','ring-primary-400','rounded')"
-                            x-on:dragleave="$el.classList.remove('ring-2','ring-primary-400','rounded')"
+                            data-testid="media-crumb" @wireEl('media-crumb')
+                            x-on:dragover.prevent="$el.classList.add('ring-2','ring-primary-400','rounded-sm')"
+                            x-on:dragleave="$el.classList.remove('ring-2','ring-primary-400','rounded-sm')"
                             x-on:drop.prevent="
-                                $el.classList.remove('ring-2','ring-primary-400','rounded');
+                                $el.classList.remove('ring-2','ring-primary-400','rounded-sm');
                                 const file = $event.dataTransfer.getData('wire/media');
                                 const folder = $event.dataTransfer.getData('wire/folder');
                                 const into = {{ $crumb?->id ?? 'null' }};
@@ -324,14 +333,14 @@
                 <input
                     type="search"
                     wire:model.live.debounce.300ms="search"
-                    data-testid="media-search"
+                    data-testid="media-search" @wireEl('media-search')
                     placeholder="{{ __('wire-module-media::messages.search') }}"
                     class="w-40 rounded-lg border border-gray-200 px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
                 >
 
                 <select
                     wire:model.live="type"
-                    data-testid="media-type"
+                    data-testid="media-type" @wireEl('media-type')
                     aria-label="{{ __('wire-module-media::messages.type') }}"
                     class="rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
                 >
@@ -345,7 +354,7 @@
 
                 <select
                     wire:model.live="sort"
-                    data-testid="media-sort"
+                    data-testid="media-sort" @wireEl('media-sort')
                     aria-label="{{ __('wire-module-media::messages.sort') }}"
                     class="rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
                 >
@@ -366,7 +375,7 @@
                 <button
                     type="button"
                     wire:click="toggleView"
-                    data-testid="media-view-toggle"
+                    data-testid="media-view-toggle" @wireEl('media-view-toggle')
                     @class([
                         'focus-visible:ring-primary-500 rounded-lg p-2 text-gray-500 hover:bg-gray-100 focus-visible:ring-2 focus-visible:outline-none dark:hover:bg-gray-800',
                         'hidden lg:block' => $picking,
@@ -379,7 +388,7 @@
 
                 <label
                     class="bg-primary-600 hover:bg-primary-700 inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-white"
-                    data-testid="media-upload"
+                    data-testid="media-upload" @wireEl('media-upload')
                 >
                     {!! icon('outline:arrow-up-tray', 'h-4 w-4') !!}
                     {{ __('wire-module-media::messages.upload') }}
@@ -401,7 +410,7 @@
                      drag is a decision this screen should not make quietly. --}}
                 <label
                     class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                    data-testid="media-upload-folder"
+                    data-testid="media-upload-folder" @wireEl('media-upload-folder')
                     title="{{ __('wire-module-media::messages.upload_folder') }}"
                 >
                     {!! icon('outline:folder-plus', 'h-4 w-4') !!}
@@ -421,7 +430,7 @@
                  more than one file may be chosen. A single-file picker needs no
                  bar: the click is the answer. --}}
             @if ($picking && $multiple && $selected)
-                <div class="bg-primary-50 dark:bg-primary-950/40 flex items-center gap-2 px-3 py-2 text-sm" data-testid="media-pick-bar">
+                <div class="bg-primary-50 dark:bg-primary-950/40 flex items-center gap-2 px-3 py-2 text-sm" data-testid="media-pick-bar" @wireEl('media-pick-bar')>
                     <span class="text-primary-800 dark:text-primary-200">
                         {{ trans_choice('wire-module-media::messages.selected', count($selected), ['count' => count($selected)]) }}
                     </span>
@@ -429,7 +438,7 @@
                     <button
                         type="button"
                         wire:click="confirmPick"
-                        data-testid="media-pick-confirm"
+                        data-testid="media-pick-confirm" @wireEl('media-pick-confirm')
                         class="bg-primary-600 hover:bg-primary-700 ms-auto rounded-lg px-3 py-1 font-medium text-white"
                     >{{ __('wire-module-media::messages.use_selected') }}</button>
                 </div>
@@ -460,7 +469,7 @@
                 </div>
 
                 @if ($files->isEmpty())
-                    <div class="p-8 text-center" data-testid="media-empty">
+                    <div class="p-8 text-center" data-testid="media-empty" @wireEl('media-empty')>
                         {!! icon('outline:photo', 'mx-auto mb-3 h-10 w-10 text-gray-300') !!}
                         <p class="text-sm text-gray-500">{{ __('wire-module-media::messages.empty') }}</p>
                         <p class="mt-1 text-xs text-gray-400">{{ __('wire-module-media::messages.drop_hint') }}</p>
@@ -478,8 +487,8 @@
                                 type="checkbox"
                                 wire:click="toggleAll({{ Js::from($pageIds) }})"
                                 @checked($this->allSelected($pageIds))
-                                data-testid="media-select-all"
-                                class="text-primary-600 h-4 w-4 rounded border-gray-300"
+                                data-testid="media-select-all" @wireEl('media-select-all')
+                                class="text-primary-600 h-4 w-4 rounded-sm border-gray-300"
                             >
                             {{ __('wire-module-media::messages.select_all') }}
                         </label>
@@ -532,7 +541,7 @@
                              copy. First in the grid because that is where they
                              will land: the list is newest first. --}}
                         <template x-for="item in pending" :key="item.name">
-                            <li class="border-primary-300 relative overflow-hidden rounded-xl border border-dashed" data-testid="media-pending">
+                            <li class="border-primary-300 relative overflow-hidden rounded-xl border border-dashed" data-testid="media-pending" @wireEl('media-pending')>
                                 <div class="flex aspect-square items-center justify-center bg-gray-50 dark:bg-gray-800">
                                     <img x-show="item.url" x-bind:src="item.url" alt="" class="h-full w-full object-cover opacity-60">
                                     <span x-show="! item.url">{!! icon('outline:document', 'h-10 w-10 text-gray-300') !!}</span>
@@ -553,7 +562,7 @@
                                      twelve is not what anybody who made that
                                      selection meant. --}}
                                 x-on:dragstart="$event.dataTransfer.setData('wire/media', '{{ in_array($file->id, $selected, true) ? 'selection' : $file->id }}')"
-                                data-testid="media-tile"
+                                data-testid="media-tile" @wireEl('media-tile')
                                 data-media="{{ $file->id }}"
                                 @class([
                                     'group relative cursor-grab overflow-hidden rounded-xl border transition active:cursor-grabbing',
@@ -568,8 +577,8 @@
                                             type="checkbox"
                                             wire:model.live="selected"
                                             value="{{ $file->id }}"
-                                            data-testid="media-select"
-                                            class="text-primary-600 h-4 w-4 rounded border-gray-300"
+                                            data-testid="media-select" @wireEl('media-select')
+                                            class="text-primary-600 h-4 w-4 rounded-sm border-gray-300"
                                         >
                                     </label>
                                 @endunless
@@ -581,7 +590,7 @@
                                 <button
                                     type="button"
                                     wire:click="{{ $picking ? 'pick('.$file->id.')' : 'showDetail('.$file->id.')' }}"
-                                    data-testid="media-open"
+                                    data-testid="media-open" @wireEl('media-open')
                                     class="block w-full"
                                 >
                                     {{-- The scaled copy where there is one — a
@@ -612,9 +621,9 @@
                                             <input
                                                 type="text"
                                                 wire:model="renamingName"
-                                                data-testid="media-rename-input"
+                                                data-testid="media-rename-input" @wireEl('media-rename-input')
                                                 autofocus
-                                                class="w-full rounded border border-gray-200 px-1 py-0.5 text-xs dark:border-gray-700 dark:bg-gray-800"
+                                                class="w-full rounded-sm border border-gray-200 px-1 py-0.5 text-xs dark:border-gray-700 dark:bg-gray-800"
                                             >
                                         </form>
                                     @else
@@ -628,8 +637,8 @@
                                         <button
                                             type="button"
                                             wire:click="startRenaming({{ $file->id }})"
-                                            data-testid="media-rename"
-                                            class="rounded p-1 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                                            data-testid="media-rename" @wireEl('media-rename')
+                                            class="rounded-sm p-1 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                                             title="{{ __('wire-module-media::messages.rename') }}"
                                         >
                                             <span class="sr-only">{{ __('wire-module-media::messages.rename') }} {{ $file->name }}</span>
@@ -645,8 +654,8 @@
                                                  through, "this is in 3 records"
                                                  is read (ADR 0034). --}}
                                             wire:confirm="{{ $this->deleteWarning($usageCounts[$file->id] ?? 0) }}"
-                                            data-testid="media-delete"
-                                            class="rounded p-1 text-gray-500 hover:text-red-600"
+                                            data-testid="media-delete" @wireEl('media-delete')
+                                            class="rounded-sm p-1 text-gray-500 hover:text-red-600"
                                             title="{{ __('wire-module-media::messages.delete') }}"
                                         >
                                             <span class="sr-only">{{ __('wire-module-media::messages.delete') }} {{ $file->name }}</span>
@@ -715,18 +724,18 @@
                                          selection of twelve is not what anybody
                                          who made that selection meant. --}}
                                     x-on:dragstart="$event.dataTransfer.setData('wire/media', '{{ in_array($file->id, $selected, true) ? 'selection' : $file->id }}')"
-                                    data-testid="media-row"
+                                    data-testid="media-row" @wireEl('media-row')
                                     data-media="{{ $file->id }}"
                                     class="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/60"
                                 >
                                     @unless ($choosingOne)
                                         <td class="w-8 ps-2">
-                                            <input type="checkbox" wire:model.live="selected" value="{{ $file->id }}" data-testid="media-select" class="text-primary-600 h-4 w-4 rounded border-gray-300">
+                                            <input type="checkbox" wire:model.live="selected" value="{{ $file->id }}" data-testid="media-select" @wireEl('media-select') class="text-primary-600 h-4 w-4 rounded-sm border-gray-300">
                                         </td>
                                     @endunless
                                     <td class="w-10 py-2">
-                                        <button type="button" wire:click="{{ $picking ? 'pick('.$file->id.')' : 'showDetail('.$file->id.')' }}" data-testid="media-open">
-                                            <span class="flex h-8 w-8 items-center justify-center overflow-hidden rounded">
+                                        <button type="button" wire:click="{{ $picking ? 'pick('.$file->id.')' : 'showDetail('.$file->id.')' }}" data-testid="media-open" @wireEl('media-open')>
+                                            <span class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-sm">
                                                 <x-wire::file-thumb
                                                     :name="$file->name"
                                                     :mime="$file->mime_type"
@@ -753,8 +762,8 @@
                                     <td class="py-2 pe-2 font-mono text-xs text-gray-500 tabular-nums dark:text-gray-400">{{ $file->created_at?->isoFormat('L') }}</td>
                                     @unless ($picking)
                                         <td class="w-20 py-2 pe-2 text-end">
-                                            <button type="button" wire:click="startRenaming({{ $file->id }})" data-testid="media-rename" class="rounded p-1 text-gray-400 hover:text-gray-700">{!! icon('outline:pencil-square', 'h-4 w-4') !!}</button>
-                                            <button type="button" wire:click="deleteOne({{ $file->id }})" wire:confirm="{{ $this->deleteWarning($usageCounts[$file->id] ?? 0) }}" data-testid="media-delete" class="rounded p-1 text-gray-400 hover:text-red-600">{!! icon('outline:trash', 'h-4 w-4') !!}</button>
+                                            <button type="button" wire:click="startRenaming({{ $file->id }})" data-testid="media-rename" @wireEl('media-rename') class="rounded-sm p-1 text-gray-400 hover:text-gray-700">{!! icon('outline:pencil-square', 'h-4 w-4') !!}</button>
+                                            <button type="button" wire:click="deleteOne({{ $file->id }})" wire:confirm="{{ $this->deleteWarning($usageCounts[$file->id] ?? 0) }}" data-testid="media-delete" @wireEl('media-delete') class="rounded-sm p-1 text-gray-400 hover:text-red-600">{!! icon('outline:trash', 'h-4 w-4') !!}</button>
                                         </td>
                                     @endunless
                                 </tr>
@@ -775,14 +784,14 @@
                  files, and a bar at the top is a bar you have to scroll back to
                  in order to act on what you just chose. --}}
             @if ($selected && ! $picking)
-                <div class="border-primary-200 bg-primary-50 dark:border-primary-900 dark:bg-primary-950/60 sticky bottom-0 z-20 flex flex-wrap items-center gap-2 border-t px-3 py-2 text-sm shadow-[0_-2px_8px_rgba(15,23,42,.06)]" data-testid="media-selection-bar">
+                <div class="border-primary-200 bg-primary-50 dark:border-primary-900 dark:bg-primary-950/60 sticky bottom-0 z-20 flex flex-wrap items-center gap-2 border-t px-3 py-2 text-sm shadow-[0_-2px_8px_rgba(15,23,42,.06)]" data-testid="media-selection-bar" @wireEl('media-selection-bar')>
                     <span class="text-primary-800 dark:text-primary-200">
                         {{ trans_choice('wire-module-media::messages.selected', count($selected), ['count' => count($selected)]) }}
                     </span>
 
                     <select
                         wire:change="moveSelectedTo($event.target.value)"
-                        data-testid="media-move-select"
+                        data-testid="media-move-select" @wireEl('media-move-select')
                         class="ms-auto rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
                     >
                         <option value="__">{{ __('wire-module-media::messages.move_to') }}</option>
@@ -799,7 +808,7 @@
                              delete is where a file nobody remembers publishing
                              disappears from a page nobody is looking at. --}}
                         wire:confirm="{{ $this->deleteWarning(collect($selected)->sum(fn ($id) => $usageCounts[$id] ?? 0)) }}"
-                        data-testid="media-delete-selected"
+                        data-testid="media-delete-selected" @wireEl('media-delete-selected')
                         class="rounded-lg bg-red-600 px-3 py-1 text-white hover:bg-red-700"
                     >{{ __('wire-module-media::messages.delete') }}</button>
                 </div>
@@ -815,7 +824,7 @@
 
             <aside
                 class="fixed end-4 bottom-4 z-40 w-72 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
-                data-testid="media-tray"
+                data-testid="media-tray" @wireEl('media-tray')
                 x-data="{ open: true }"
             >
                 <div class="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-800/60">
@@ -824,13 +833,13 @@
                         {{ trans_choice('wire-module-media::messages.tray_title', count($tray), ['count' => count($tray)]) }}
                     </span>
 
-                    <button type="button" x-on:click="open = ! open" class="rounded p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                    <button type="button" x-on:click="open = ! open" class="rounded-sm p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
                         <span class="sr-only">{{ __('wire-module-media::messages.tray_collapse') }}</span>
                         <span x-show="open">{!! icon('outline:minus', 'h-3.5 w-3.5') !!}</span>
                         <span x-show="! open" x-cloak>{!! icon('outline:plus', 'h-3.5 w-3.5') !!}</span>
                     </button>
 
-                    <button type="button" wire:click="dismissTray" data-testid="media-tray-dismiss" class="rounded p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                    <button type="button" wire:click="dismissTray" data-testid="media-tray-dismiss" @wireEl('media-tray-dismiss') class="rounded-sm p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
                         <span class="sr-only">{{ __('wire-module-media::messages.close') }}</span>
                         {!! icon('outline:x-mark', 'h-3.5 w-3.5') !!}
                     </button>
@@ -838,15 +847,15 @@
 
                 <ul x-show="open" class="max-h-56 divide-y divide-gray-100 overflow-y-auto dark:divide-gray-800">
                     @foreach ($tray as $entry)
-                        <li class="px-3 py-2" data-testid="media-tray-row">
+                        <li class="px-3 py-2" data-testid="media-tray-row" @wireEl('media-tray-row')>
                             <div class="flex items-center gap-2">
                                 <span class="min-w-0 flex-1 truncate text-xs" title="{{ $entry['name'] }}">{{ $entry['name'] }}</span>
 
                                 <span @class([
                                     'shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[10px]',
-                                    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' => $entry['state'] === 'stored',
-                                    'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' => $entry['state'] === 'duplicate',
-                                    'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' => $entry['state'] === 'failed',
+                                    Palette::getBadgeColorClasses('success') => $entry['state'] === 'stored',
+                                    Palette::getBadgeColorClasses('warning') => $entry['state'] === 'duplicate',
+                                    Palette::getBadgeColorClasses('danger') => $entry['state'] === 'failed',
                                 ])>{{ __('wire-module-media::messages.tray_'.$entry['state']) }}</span>
                             </div>
 
@@ -867,7 +876,7 @@
                                          could not do this — it never received it. --}}
                                     <button
                                         type="button"
-                                        data-testid="media-tray-retry"
+                                        data-testid="media-tray-retry" @wireEl('media-tray-retry')
                                         x-on:click="
                                             if (! retry(@js($entry['name']))) return;
                                             $wire.forgetTrayEntry(@js($entry['name']));
@@ -902,7 +911,7 @@
              here — one owner for what a sheet is. --}}
         <div
             class="w-full shrink-0 lg:w-72"
-            data-testid="media-detail"
+            data-testid="media-detail" @wireEl('media-detail')
             x-data
             x-on:keydown.escape.window="$wire.closeDetail()"
         >
@@ -911,7 +920,7 @@
                      because tapping beside a sheet is how a sheet is dismissed. --}}
                 class="{{ \NyonCode\WireCore\Foundation\Support\MobileSheet::backdropHide('lg') }} fixed inset-0 z-30 bg-gray-900/40"
                 wire:click="closeDetail"
-                data-testid="media-detail-backdrop"
+                data-testid="media-detail-backdrop" @wireEl('media-detail-backdrop')
             ></div>
 
             <div class="{{ \NyonCode\WireCore\Foundation\Support\MobileSheet::panel('lg') }} relative z-40 rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
@@ -923,8 +932,8 @@
                     <button
                         type="button"
                         wire:click="closeDetail"
-                        data-testid="media-detail-close"
-                        class="rounded p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                        data-testid="media-detail-close" @wireEl('media-detail-close')
+                        class="rounded-sm p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                     >
                         <span class="sr-only">{{ __('wire-module-media::messages.close') }}</span>
                         {!! icon('outline:x-mark', 'h-4 w-4') !!}
@@ -940,7 +949,7 @@
                             <img
                                 src="{{ $detail->previewUrl('preview') }}"
                                 alt="{{ $detail->altText() }}"
-                                class="max-h-40 rounded object-contain"
+                                class="max-h-40 rounded-sm object-contain"
                                 @if ($detail->placeholder) style="background-color: {{ $detail->placeholder }}" @endif
                                 decoding="async"
                             >
@@ -949,7 +958,7 @@
                                 :name="$detail->name"
                                 :mime="$detail->mime_type"
                                 size="lg"
-                                class="max-h-40 rounded"
+                                class="max-h-40 rounded-sm"
                             />
                         @endif
                     </div>
@@ -964,7 +973,7 @@
                             <input
                                 type="text"
                                 wire:model="detailAlt"
-                                data-testid="media-detail-alt"
+                                data-testid="media-detail-alt" @wireEl('media-detail-alt')
                                 class="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
                             >
                         </label>
@@ -974,14 +983,14 @@
                             <input
                                 type="text"
                                 wire:model="detailTitle"
-                                data-testid="media-detail-title"
+                                data-testid="media-detail-title" @wireEl('media-detail-title')
                                 class="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
                             >
                         </label>
 
                         <button
                             type="submit"
-                            data-testid="media-detail-save"
+                            data-testid="media-detail-save" @wireEl('media-detail-save')
                             class="bg-primary-600 hover:bg-primary-700 w-full rounded-lg px-3 py-1.5 text-sm font-medium text-white"
                         >{{ __('wire-module-media::messages.save') }}</button>
                     </form>
@@ -1013,7 +1022,7 @@
                          somebody pasted in by hand is invisible to this and
                          always will be, which is why the count is presented as a
                          floor rather than as an answer (ADR 0034). --}}
-                    <div class="mt-4" data-testid="media-usage">
+                    <div class="mt-4" data-testid="media-usage" @wireEl('media-usage')>
                         <p class="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">
                             {{ trans_choice('wire-module-media::messages.known_uses', count($detailUsages), ['count' => count($detailUsages)]) }}
                         </p>
@@ -1024,7 +1033,7 @@
                             <ul class="mt-1 space-y-1 text-xs">
                                 @foreach ($detailUsages as $use)
                                     <li class="flex items-center gap-2">
-                                        <span class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">{{ $use['collection'] }}</span>
+                                        <span class="rounded-sm bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">{{ $use['collection'] }}</span>
 
                                         @if ($use['url'])
                                             <a href="{{ $use['url'] }}" class="text-primary-600 dark:text-primary-400 truncate hover:underline">{{ $use['label'] }}</a>
@@ -1043,7 +1052,7 @@
                         <button
                             type="button"
                             wire:click="openEditor({{ $detail->id }})"
-                            data-testid="media-edit"
+                            data-testid="media-edit" @wireEl('media-edit')
                             class="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                         >
                             {!! icon('outline:pencil-square', 'h-4 w-4') !!}
@@ -1055,7 +1064,7 @@
                         {{-- Which file this was cut from, or what has been cut
                              from it. Visible rather than implied by a name, so a
                              crop can be traced back to its original. --}}
-                        <div class="mt-4" data-testid="media-derivatives">
+                        <div class="mt-4" data-testid="media-derivatives" @wireEl('media-derivatives')>
                             @if ($detail->derivedFrom)
                                 <p class="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">{{ __('wire-module-media::messages.derived_from') }}</p>
                                 <button type="button" wire:click="showDetail({{ $detail->derivedFrom->id }})" class="text-primary-600 dark:text-primary-400 mt-1 block max-w-full truncate text-xs hover:underline">{{ $detail->derivedFrom->name }}</button>
@@ -1080,7 +1089,7 @@
                                 href="{{ $detail->url() }}"
                                 target="_blank"
                                 rel="noopener"
-                                data-testid="media-open-url"
+                                data-testid="media-open-url" @wireEl('media-open-url')
                                 class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                             >
                                 {!! icon('outline:arrow-top-right-on-square', 'h-4 w-4') !!}
@@ -1094,7 +1103,7 @@
                                      that does nothing. --}}
                                 href="{{ $detail->downloadUrl() }}"
                                 download="{{ $detail->name }}"
-                                data-testid="media-download"
+                                data-testid="media-download" @wireEl('media-download')
                                 class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                             >
                                 {!! icon('outline:arrow-down-tray', 'h-4 w-4') !!}

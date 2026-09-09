@@ -1,6 +1,7 @@
 @include('wire-core::partials.floating-assets')
 
-<div x-data="wireWizard({{ (int) $current }})" {{ $attributes }}>
+<div
+    @wireEl('wizard') x-data="wireWizard({{ (int) $current }})" {{ $attributes }}>
     <ol class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
         <template x-for="(label, i) in steps" :key="i">
             <li class="flex items-center gap-2">

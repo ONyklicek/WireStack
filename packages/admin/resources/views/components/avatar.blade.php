@@ -28,12 +28,12 @@
     <img
         src="{{ $avatarUrl }}"
         alt="{{ $avatarLabel }}"
-        data-testid="admin-avatar"
+        data-testid="admin-avatar" @wireEl('admin-avatar')
         {{ $attributes->class(['shrink-0 rounded-full object-cover']) }}
     >
 @else
     <span
-        data-testid="admin-avatar"
+        data-testid="admin-avatar" @wireEl('admin-avatar')
         aria-hidden="true"
         {{ $attributes->class(['bg-primary-600 inline-flex shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white']) }}
     >{{ $avatarInitial }}</span>

@@ -35,7 +35,7 @@
             'mb-4' => (! $isCollapsible || ! $isCollapsed) && ! $isAside,
             'mb-4 md:mb-0' => $isAside,
             'cursor-pointer' => $isCollapsible,
-        ]) @if($isCollapsible) @click="open = !open" data-testid="section-toggle" role="button" :aria-expanded="open" tabindex="0" @endif>
+        ]) @if($isCollapsible) @click="open = !open" data-testid="section-toggle" @wireEl('section-toggle') role="button" :aria-expanded="open" tabindex="0" @endif>
             <div>
                 @if($layout->getLabel())
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">

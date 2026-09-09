@@ -23,7 +23,7 @@
 <a
     href="{{ $url() }}"
     wire:navigate
-    data-testid="admin-brand-mark"
+    data-testid="admin-brand-mark" @wireEl('admin-brand-mark')
     data-rail-row
     class="flex h-16 min-w-0 flex-1 items-center gap-2.5 overflow-hidden px-4"
 >

@@ -143,27 +143,27 @@
 
                         {{-- Table header skeleton --}}
                         <div class="flex gap-4 py-3">
-                            <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-                            <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-                            <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-                            <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+                            <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/4"></div>
+                            <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/4"></div>
+                            <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/4"></div>
+                            <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/4"></div>
                         </div>
 
                         {{-- Row skeletons --}}
                         @for($i = 0; $i < 5; $i++)
                             <div class="flex gap-4 py-4 border-t border-gray-100 dark:border-gray-700/50">
-                                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-                                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-                                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-                                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+                                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/4"></div>
+                                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/4"></div>
+                                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/4"></div>
+                                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/4"></div>
                             </div>
                         @endfor
 
                         {{-- Footer skeleton --}}
                         <div
                                 class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
-                            <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48"></div>
+                            <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded-sm w-32"></div>
+                            <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded-sm w-48"></div>
                         </div>
                     </div>
 
@@ -225,7 +225,7 @@
                             class="sr-only"
                             aria-live="polite"
                             aria-atomic="true"
-                            data-testid="selection-live"
+                            data-testid="selection-live" @wireEl('selection-live')
                             x-text="announcement"
                     ></div>
 
@@ -236,10 +236,30 @@
                         @include('wire-table::tables.partials.selection-assets')
                     @endonce
                 @endif
-                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+                {{-- `overflow-clip`, because the radius on this element is a promise
+                     nothing inside it keeps on its own. A selected last row paints a
+                     rectangle to the card's bottom edge and squares off the corner the
+                     border is still curving around; the scroll-edge gradients do the
+                     same at all four; a stripe, a hover tint and a row colour do it
+                     the moment the row is the last one. Every one of those is a
+                     background on a `<tr>` or on a full-height overlay, and neither
+                     can be given a corner of its own — a `<tr>` has no border-box to
+                     round, and an overlay does not know which of its ends is at the
+                     card's edge.
+
+                     Clip and not `overflow-hidden`: hidden makes this a scroll
+                     container, and the nearest scroll container is what a
+                     `position: sticky` descendant sticks inside. The pinned header
+                     and the pinned actions column are safe either way — their
+                     scroller is nearer — but the stacked cards' group headings
+                     (`sticky top-0` in the data region) stick against the VIEWPORT,
+                     and a scroll container here would silently leave them in flow on
+                     a phone. `overflow: clip` clips without becoming one, so nothing
+                     above it in the sticky chain changes. --}}
+                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-clip">
 
                     {{-- Header --}}
-                    <div class="px-4 lg:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <div class="px-4 lg:px-6 py-4 border-b border-gray-200 dark:border-gray-700" @wireEl('table-toolbar')>
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             {{-- Left side: Search & Filters --}}
                             <div class="flex flex-1 items-center gap-3">
@@ -255,11 +275,13 @@
                                                 wire:model.live.debounce.300ms="tableState.search"
                                                 placeholder="{{ __('wire-table::messages.search') }}..."
                                                 aria-label="{{ __('wire-table::messages.search') }}"
-                                                data-testid="table-search"
+                                                data-testid="table-search" @wireEl('table-search')
                                                 class="block w-full rounded-lg border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 pl-9 pr-3 py-2 text-sm placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 dark:text-white dark:placeholder-gray-500"
                                         >
                                     </div>
                                 @endif
+
+                                @wireRenderHook('table.toolbar.end')
 
                                 {{-- Filters Toggle --}}
                                 @if($hasFilters)
@@ -270,7 +292,7 @@
                                                 x-ref="trigger"
                                                 @click="toggle()"
                                                 type="button"
-                                                data-testid="table-filters-trigger"
+                                                data-testid="table-filters-trigger" @wireEl('table-filters-trigger')
                                                 aria-label="{{ __('wire-table::messages.filters') }}"
                                                 class="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
                                         >
@@ -392,7 +414,7 @@
                                             @include('wire-table::tables.partials.header-actions', ['headerActions' => $headerActions])
                                         </div>
 
-                                        <div class="{{ $table->getMobileHeaderActionsVisibleClass() }}" data-testid="table-header-actions-mobile">
+                                        <div class="{{ $table->getMobileHeaderActionsVisibleClass() }}" data-testid="table-header-actions-mobile" @wireEl('table-header-actions-mobile')>
                                             {!! $mobileHeaderActionGroup->render(null, $headerActionClick) !!}
                                         </div>
                                     @else
@@ -419,7 +441,7 @@
                                                 class="inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
                                                 title="{{ $viewMenuLabel }}"
                                                 aria-label="{{ $viewMenuLabel }}"
-                                                data-testid="table-column-toggle"
+                                                data-testid="table-column-toggle" @wireEl('table-column-toggle')
                                         >
                                             {!! icon('outline:view-columns', 'h-5 w-5') !!}
                                         </button>
@@ -504,7 +526,7 @@
                                                     <button
                                                             type="button"
                                                             x-on:click="$wire.saveTableView(window.prompt(@js(__('wire-table::messages.save_view_prompt'))) ?? '')"
-                                                            data-testid="table-view-save"
+                                                            data-testid="table-view-save" @wireEl('table-view-save')
                                                             @class([
                                                                 'mt-1 flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg',
                                                                 'border-t border-gray-100 dark:border-gray-700' => $savedViews !== [],
@@ -535,7 +557,7 @@
                                                                     @endif
                                                                     @checked($isVisible)
                                                                     @disabled($isLastVisible)
-                                                                    class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700 {{ $isLastVisible ? 'cursor-not-allowed' : 'cursor-pointer' }}"
+                                                                    class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700 {{ $isLastVisible ? 'cursor-not-allowed' : 'cursor-pointer' }}"
                                                             >
                                                         </div>
                                                         <span
@@ -556,8 +578,8 @@
                                                                     type="checkbox"
                                                                     wire:click="toggleAllRowExpansion"
                                                                     @checked($allRowsExpanded)
-                                                                    data-testid="subrows-expand-all-rows"
-                                                                    class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700 cursor-pointer"
+                                                                    data-testid="subrows-expand-all-rows" @wireEl('subrows-expand-all-rows')
+                                                                    class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700 cursor-pointer"
                                                             >
                                                         </div>
                                                         <span class="text-sm text-gray-700 dark:text-gray-300">
@@ -597,7 +619,7 @@
                         <div
                                 x-show="selectedCount > 0"
                                 x-cloak
-                                data-testid="table-bulk-bar"
+                                data-testid="table-bulk-bar" @wireEl('table-bulk-bar')
                                 class="px-4 lg:px-6 py-3 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-primary-800/30">
                             {{-- Stacks on mobile so multiple bulk-action buttons wrap instead of overflowing. --}}
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -629,7 +651,7 @@
                                     <button
                                             type="button"
                                             x-on:click="deselectAll()"
-                                            data-testid="table-deselect"
+                                            data-testid="table-deselect" @wireEl('table-deselect')
                                             aria-label="{{ __('wire-table::messages.deselect') }}"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200 hover:bg-primary-100 dark:hover:bg-primary-800/50 rounded-lg transition-colors"
                                     >
@@ -644,7 +666,7 @@
                                  never a surprise the user has to discover. --}}
                             @if($recordCount > count($pageRecordKeys))
                                 <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-primary-700 dark:text-primary-300"
-                                     data-testid="table-selection-scope">
+                                     data-testid="table-selection-scope" @wireEl('table-selection-scope')>
                                     <template x-if="selectsAll">
                                         <span>{{ __('wire-table::messages.selection_all_matching', ['count' => $recordCount]) }}</span>
                                     </template>
@@ -656,7 +678,7 @@
                                             type="button"
                                             x-show="!selectsAll"
                                             x-on:click="selectAllMatching()"
-                                            data-testid="table-select-all-matching"
+                                            data-testid="table-select-all-matching" @wireEl('table-select-all-matching')
                                             class="font-semibold underline underline-offset-2 hover:no-underline"
                                     >
                                         {{ __('wire-table::messages.selection_select_all_matching', ['count' => $recordCount]) }}
@@ -666,7 +688,7 @@
                                             x-show="selectsAll"
                                             x-cloak
                                             x-on:click="selectOnlyPage()"
-                                            data-testid="table-select-only-page"
+                                            data-testid="table-select-only-page" @wireEl('table-select-only-page')
                                             class="font-semibold underline underline-offset-2 hover:no-underline"
                                     >
                                         {{ __('wire-table::messages.selection_only_this_page') }}

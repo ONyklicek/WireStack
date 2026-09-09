@@ -28,5 +28,7 @@
                 {{ $title }}
             </h1>
         @endif
+
+        @wireRenderHook('panels.page.header.end', ['title' => $title, 'breadcrumbs' => $breadcrumbs ?? []])
     </div>
 @endif
