@@ -74,6 +74,26 @@ abstract class Dashboard implements HasWidgets
     }
 
     /**
+     * Whether a user may rearrange this dashboard.
+     *
+     * False, and that is the whole of the opt-in: a dashboard says nothing and
+     * behaves exactly as every dashboard behaves today — the declaration below
+     * is the layout, no store is consulted, and nothing about the rendered grid
+     * changes. Saying `true` makes {@see key()} the key a user's layout is
+     * stored under.
+     *
+     * Opt-in rather than opt-out because the two are not symmetric. A dashboard
+     * that quietly became rearrangeable would start reading a store an
+     * application never configured, and — worse — would let a user hide a widget
+     * the application put there on purpose. Where that is wanted, it is a
+     * sentence to write.
+     */
+    public function customisable(): bool
+    {
+        return false;
+    }
+
+    /**
      * A stable identity, unique among everything a menu lists.
      *
      * Derived from the class name with a trailing "Dashboard" dropped, for the

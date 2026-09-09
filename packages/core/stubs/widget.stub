@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use NyonCode\WireCore\Widgets\Widget;
+
+class {{ class }} extends Widget
+{
+    /**
+     * The Blade view this widget renders. Its data comes from getViewData()
+     * below; $widget is always in scope.
+     */
+    protected function viewName(): string
+    {
+        return '{{ view }}';
+    }
+
+    /**
+     * What the view is handed. Resolve every value here rather than in the
+     * template: a widget is the source of truth and Blade is presentation only.
+     *
+     * @return array<string, mixed>
+     */
+    protected function getViewData(): array
+    {
+        return [
+            'value' => 0,
+        ];
+    }
+}

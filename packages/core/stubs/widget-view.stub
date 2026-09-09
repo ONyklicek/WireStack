@@ -1,0 +1,11 @@
+{{-- Variables: $widget, plus everything the widget's getViewData() returns. --}}
+<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    @if($widget->getHeading())
+        <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ $widget->getHeading() }}</h3>
+    @endif
+    @if($widget->getDescription())
+        <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{{ $widget->getDescription() }}</p>
+    @endif
+
+    <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $value }}</p>
+</div>

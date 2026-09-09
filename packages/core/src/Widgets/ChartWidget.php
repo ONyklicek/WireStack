@@ -16,11 +16,6 @@ class ChartWidget extends Widget
     /** @var array<int, string> */
     protected array $labels = [];
 
-    /** @var array<string, string>|null Filter options (key => label) */
-    protected ?array $filterOptions = null;
-
-    protected ?string $activeFilter = null;
-
     protected ?Closure $datasetsCallback = null;
 
     protected ?Closure $labelsCallback = null;
@@ -102,45 +97,6 @@ class ChartWidget extends Widget
     }
 
     /**
-     * Add a filter dropdown whose selection drives the dataset/label closures.
-     *
-     * @param  array<string, string>  $options  key => label pairs
-     */
-    public function filter(array $options, ?string $default = null): static
-    {
-        $this->filterOptions = $options;
-        $this->activeFilter = $default ?? array_key_first($options);
-
-        return $this;
-    }
-
-    /**
-     * @return array<string, string>|null
-     */
-    public function getFilterOptions(): ?array
-    {
-        return $this->filterOptions;
-    }
-
-    public function hasFilter(): bool
-    {
-        return $this->filterOptions !== null;
-    }
-
-    public function getActiveFilter(): ?string
-    {
-        return $this->activeFilter;
-    }
-
-    /** Set the currently selected filter key. */
-    public function activeFilter(?string $filter): static
-    {
-        $this->activeFilter = $filter;
-
-        return $this;
-    }
-
-    /**
      * Override the Chart.js options. Merged over the type's default options, so
      * callers only specify what they want to change.
      *
@@ -194,6 +150,7 @@ class ChartWidget extends Widget
             'labels' => $this->getLabels(),
             'filterOptions' => $this->filterOptions,
             'activeFilter' => $this->activeFilter,
+            'filterExpression' => $this->getFilterExpression(),
             'options' => $this->getOptions(),
         ];
     }

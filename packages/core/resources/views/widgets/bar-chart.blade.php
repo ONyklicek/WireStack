@@ -1,5 +1,5 @@
 <div class="wire-bar-chart-widget {{ $widget->getCardRadiusClass() }} border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-    @if($widget->getHeading() || $widget->getDescription() || $showMenu)
+    @if($widget->getHeading() || $widget->getDescription() || $showMenu || $widget->hasRenderableActions())
         <div class="mb-6 flex items-start justify-between gap-4">
             <div>
                 @if($widget->getHeading())
@@ -9,6 +9,8 @@
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $widget->getDescription() }}</p>
                 @endif
             </div>
+
+            @include('wire-core::widgets.partials.widget-actions', ['widget' => $widget])
 
             @if($showMenu)
                 @include('wire-core::partials.floating-assets')

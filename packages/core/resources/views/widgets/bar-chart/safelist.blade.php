@@ -6,7 +6,7 @@
     packages/core/src/Foundation/Concerns/HasColor.php. Those literal class
     strings live only in PHP source.
 
-    docs/getting-started.md tells a consuming app to scan BOTH the package
+    docs/start/getting-started.md tells a consuming app to scan BOTH the package
     *src* (where these HasColor literals live) and its *views*. This file is the
     safety net for a consumer that scans only *views* (not *src*): without it,
     the gradient/text utilities a bar can use would never be emitted into that
