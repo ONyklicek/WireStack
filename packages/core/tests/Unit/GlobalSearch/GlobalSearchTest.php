@@ -9,16 +9,28 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Core\Plugin\Hooks\SearchQueryingPayload;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Contracts\ClassifiesComponentActions;
+use NyonCode\WireCore\Foundation\Contracts\ProvidesCommands;
+use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
+use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
 use NyonCode\WireCore\GlobalSearch\Contracts\GloballySearchable;
 use NyonCode\WireCore\GlobalSearch\GlobalSearch;
 use NyonCode\WireCore\GlobalSearch\GlobalSearchPalette;
 use NyonCode\WireCore\GlobalSearch\GlobalSearchResult;
+use NyonCode\WireCore\GlobalSearch\PaletteCommands;
+use NyonCode\WireCore\GlobalSearch\PaletteNavigation;
+use NyonCode\WireCore\GlobalSearch\PaletteRowKind;
 
 class GsOrder extends Model
 {
@@ -520,4 +532,537 @@ it('leaves a result unlinked when nothing owns routing', function () {
     DB::table('gs_orders')->insert(['reference' => 'INV-7', 'status' => 'open']);
 
     expect(gsSearch([GsUrllessResource::class])->search('INV-7')['gs-orders'][0]->url)->toBeNull();
+});
+
+// ─── search.querying ─────────────────────────────────────────────────────────
+
+/*
+ * The palette, narrowable by something that did not write the resource.
+ *
+ * ADR 0030 §6 held this back until something asked for it. What asks is the same
+ * thing every other hook here answers to: a module ships a searchable resource,
+ * and the application that installed it wants its own rule over the rows —
+ * archived records kept out of the palette, a scope the module never declared.
+ */
+
+it('lets a hook narrow one resource query before it runs', function () {
+    app(PluginManager::class)->hook(
+        Hook::SearchQuerying,
+        function (SearchQueryingPayload $payload): SearchQueryingPayload {
+            $payload->query->where('status', 'paid');
+
+            return $payload;
+        },
+    );
+
+    $results = gsSearch()->search('INV-100');
+
+    expect($results['gs-orders'])->toHaveCount(1)
+        ->and($results['gs-orders'][0]->title)->toBe('INV-1001');
+});
+
+it('hands the hook the term and the resource it is searching', function () {
+    $seen = null;
+
+    app(PluginManager::class)->hook(
+        Hook::SearchQuerying,
+        function (SearchQueryingPayload $payload) use (&$seen): SearchQueryingPayload {
+            $seen = [$payload->term, $payload->resource];
+
+            return $payload;
+        },
+    );
+
+    gsSearch()->search('  INV-100  ');
+
+    // Trimmed, because that is the term the query was built from — a callback
+    // told otherwise would filter on something the palette never searched for.
+    expect($seen)->toBe(['INV-100', GsOrderResource::class]);
+});
+
+it('scopes a search hook by the catalogue key and by the model', function (string $scope) {
+    // The catalogue's key, not the class's own: the two are the same only by
+    // agreement, and it is the catalogue's that every other surface addresses a
+    // resource by.
+    app(PluginManager::class)->hook(
+        Hook::SearchQuerying,
+        function (SearchQueryingPayload $payload): SearchQueryingPayload {
+            $payload->query->where('status', 'nothing-is-this');
+
+            return $payload;
+        },
+        for: $scope,
+    );
+
+    expect(gsSearch()->search('INV-100'))->toBe([]);
+})->with([
+    'the catalogue key' => 'gs-orders',
+    'the model' => GsOrder::class,
+]);
+
+it('leaves a resource a scoped hook does not name alone', function () {
+    app(PluginManager::class)->hook(
+        Hook::SearchQuerying,
+        function (SearchQueryingPayload $payload): SearchQueryingPayload {
+            $payload->query->where('status', 'nothing-is-this');
+
+            return $payload;
+        },
+        for: 'some-other-resource',
+    );
+
+    expect(gsSearch()->search('INV-100')['gs-orders'])->toHaveCount(2);
+});
+
+it('runs before authorization, so a hook cannot widen past a policy', function () {
+    // The hook holds the builder; the policy runs per record afterwards. A
+    // callback that removed every `where` would still not list a row the user
+    // may not open — which is the property the dispatch site was placed for.
+    Gate::policy(GsOrder::class, GsOrderPolicy::class);
+    $this->actingAs(new GsUser);
+
+    app(PluginManager::class)->hook(
+        Hook::SearchQuerying,
+        function (SearchQueryingPayload $payload): SearchQueryingPayload {
+            // Every constraint dropped, the term included.
+            $payload->query = GsOrder::query()->limit(10);
+
+            return $payload;
+        },
+    );
+
+    $results = gsSearch()->search('INV-100');
+
+    // Three rows come back from the widened query and the policy drops the
+    // overdue one — so the hook reached the builder and never reached the check.
+    expect($results['gs-orders'])->toHaveCount(2)
+        ->and(array_map(fn ($r) => $r->title, $results['gs-orders']))->toBe(['INV-1001', 'REF-2001']);
+});
+
+// ─── The palette's other three row kinds ───────────────────────────────────────
+//
+// Records were the whole palette until now. Navigation entries, standalone
+// commands and a record's own actions are the other three, and each carries a
+// rule the record path does not: the menu is filtered by `isVisible()` rather
+// than a policy, a command is filtered by `canExecute()`, and an action that has
+// to ask something must never be run by a surface that cannot ask.
+
+class GsCommandResource implements DescribesResource, GloballySearchable, ProvidesCommands, ProvidesNavigation
+{
+    use DescribesRecords;
+
+    /** Set by the runnable command, so a test can see it actually ran. */
+    public static mixed $ran = null;
+
+    public static function modelClass(): ?string
+    {
+        return GsOrder::class;
+    }
+
+    /**
+     * Named rather than derived. `DescribesRecords` builds the key from the
+     * *model*, so sharing `GsOrder` with `GsOrderResource` would give both the
+     * key `gs-orders` — and the catalogue refuses two classes under one key.
+     */
+    public static function key(): string
+    {
+        return 'gs-commands';
+    }
+
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make('Sales Orders')->icon('outline:banknotes');
+    }
+
+    public static function globallySearchableAttributes(): array
+    {
+        return ['reference'];
+    }
+
+    public static function toGlobalSearchResult(object $record): GlobalSearchResult
+    {
+        return new GlobalSearchResult(
+            resourceKey: static::key(),
+            recordKey: $record->getKey(),
+            title: $record->reference,
+            url: '/commands/'.$record->getKey(),
+        );
+    }
+
+    public static function commands(?object $record = null): array
+    {
+        if ($record !== null) {
+            return [
+                Action::make('cancel')->label('Cancel order')->requiresConfirmation(),
+                Action::make('touch')->label('Touch order')->action(function () use ($record) {
+                    static::$ran = $record->getKey();
+                }),
+                Action::make('forbidden')->label('Forbidden order thing')->hidden(),
+            ];
+        }
+
+        return [
+            Action::make('recount')->label('Recount stock')->action(function () {
+                static::$ran = 'recount';
+            }),
+            Action::make('export')->label('Export orders')->action(function () {
+                static::$ran = 'export';
+            }),
+            Action::make('import')->label('Import records')->requiresConfirmation(),
+            Action::make('secret')->label('Recount secrets')->hidden(),
+        ];
+    }
+}
+
+/** Registered, in the menu, and offering nothing — the control. */
+class GsHiddenNavResource implements DescribesResource, ProvidesNavigation
+{
+    use DescribesRecords;
+
+    public static function modelClass(): ?string
+    {
+        return null;
+    }
+
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make('Hidden Orders')->hidden();
+    }
+}
+
+function gsRegister(array $resources): void
+{
+    $registry = new ResourceRegistry;
+    $registry->registerMany($resources);
+
+    app()->instance(ResourceRegistry::class, $registry);
+}
+
+/** Routes every key, so navigation and record pages have somewhere to point. */
+function gsRouted(): void
+{
+    app()->instance(ResolvesPageUrls::class, new class implements ResolvesPageUrls
+    {
+        public function urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
+        {
+            $suffix = isset($parameters['record']) ? '/'.$parameters['record'] : '';
+
+            return '/'.($zone === null ? '' : $zone.'/').$key.$suffix;
+        }
+    });
+}
+
+beforeEach(function () {
+    GsCommandResource::$ran = null;
+});
+
+it('offers menu entries whose label matches, as their own group', function () {
+    gsRegister([GsCommandResource::class]);
+    gsRouted();
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'Sales')
+        ->assertSee('Sales Orders')
+        ->assertSee(__('wire-core::global-search.navigation'));
+});
+
+it('matches a menu entry on its label and never on its registry key', function () {
+    // The key is an identifier the user has never been shown. Matching it would
+    // surface a row for a string that appears nowhere on screen.
+    gsRegister([GsCommandResource::class]);
+    gsRouted();
+
+    $rows = app(PaletteNavigation::class)->search('gs-command');
+
+    expect($rows)->toBe([]);
+});
+
+it('does not offer a menu entry the menu itself hides', function () {
+    // Visibility here is `isVisible()`, not a policy over a record — the palette
+    // must not re-answer a question the menu has already answered.
+    gsRegister([GsCommandResource::class, GsHiddenNavResource::class]);
+    gsRouted();
+
+    $rows = app(PaletteNavigation::class)->search('Orders');
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]->title)->toBe('Sales Orders');
+});
+
+it('drops a menu entry this zone cannot reach', function () {
+    // A menu draws a URL-less entry perfectly well; a palette cannot, because
+    // every row in it is something Enter does.
+    gsRegister([GsCommandResource::class]);
+
+    // No ResolvesPageUrls binding, so nothing routes anything.
+    app()->instance(ResolvesPageUrls::class, new UnroutedPageUrls);
+
+    expect(app(PaletteNavigation::class)->search('Sales'))->toBe([]);
+});
+
+it('points a menu row into the zone the palette was opened in', function () {
+    gsRegister([GsCommandResource::class]);
+    gsRouted();
+
+    $rows = app(PaletteNavigation::class)->search('Sales', 'admin');
+
+    expect($rows[0]->url)->toBe('/admin/gs-commands');
+});
+
+it('offers commands that match, and hides the ones the user may not run', function () {
+    // `Recount stock` and `Recount secrets` both match; only one is runnable, and
+    // listing the label of the other would leak it whether or not the click were
+    // refused afterwards.
+    gsRegister([GsCommandResource::class]);
+
+    $rows = app(PaletteCommands::class)->search('Recount');
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]->title)->toBe('Recount stock')
+        ->and($rows[0]->kind)->toBe(PaletteRowKind::Command)
+        ->and($rows[0]->actionName)->toBe('recount');
+});
+
+it('still offers a command that has to ask, because someone else can ask', function () {
+    // Filtering these out at listing time would make the offer depend on which
+    // page ⌘K was opened over.
+    gsRegister([GsCommandResource::class]);
+
+    expect(array_map(fn ($row) => $row->actionName, app(PaletteCommands::class)->search('Import')))
+        ->toBe(['import']);
+});
+
+it('runs a command that has nothing to ask, and closes', function () {
+    gsRegister([GsCommandResource::class]);
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'Recount')
+        ->call('select')
+        ->assertSet('open', false)
+        ->assertNoRedirect();
+
+    expect(GsCommandResource::$ran)->toBe('recount');
+});
+
+it('hands a standalone command that has to ask to a host on screen', function () {
+    // Not navigated, even though the owner has an index page: an index owns no
+    // action host, so sending the user there for a modal that will not open is
+    // worse than not moving them. A host already on screen is the only thing that
+    // could answer, so it is asked.
+    gsRegister([GsCommandResource::class]);
+    gsRouted();
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'Import')
+        ->call('select')
+        ->assertNoRedirect()
+        ->assertDispatched('wire-palette-action', name: 'import', arguments: []);
+
+    expect(GsCommandResource::$ran)->toBeNull();
+});
+
+it('hands it on the same way when nothing routes a page at all', function () {
+    gsRegister([GsCommandResource::class]);
+    app()->instance(ResolvesPageUrls::class, new UnroutedPageUrls);
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'Import')
+        ->call('select')
+        ->assertNoRedirect()
+        ->assertDispatched('wire-palette-action', name: 'import', arguments: []);
+});
+
+it('checks again that the action may run, rather than trusting the row', function () {
+    // A round trip happened between building the list and pressing Enter. An
+    // action that became forbidden in between must not run because a stale row
+    // said it could.
+    gsRegister([GsCommandResource::class]);
+
+    $component = Livewire::test(GlobalSearchPalette::class)->set('term', 'Recount');
+
+    Gate::define('nope', fn (): bool => false);
+    GsCommandResource::$ran = null;
+
+    // Same name, now gated: the palette resolves the action from its owner again,
+    // so a definition that changed under it is the one that decides.
+    app()->bind(ClassifiesComponentActions::class, fn () => new class implements ClassifiesComponentActions
+    {
+        public function needsPrompt($action): bool
+        {
+            return false;
+        }
+
+        public function isRunnable($action, mixed $context = null): bool
+        {
+            return false;
+        }
+    });
+
+    $component->call('select');
+
+    expect(GsCommandResource::$ran)->toBeNull();
+});
+
+it('drills into a record to show what can be done with it', function () {
+    gsRegister([GsCommandResource::class]);
+    gsRouted();
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'INV-1001')
+        ->call('drillDown')
+        ->assertSet('active', 0)
+        ->assertSee('Cancel order')
+        ->assertSee('Touch order')
+        ->assertDontSee('Forbidden order thing')
+        ->assertSee(__('wire-core::global-search.record_actions'));
+});
+
+it('gives a record action the record it was drilled into', function () {
+    // The whole point of the second level: `commands($record)` and the runnable
+    // check both have to be about the row the user picked, not about nothing.
+    gsRegister([GsCommandResource::class]);
+    gsRouted();
+
+    $order = GsOrder::where('reference', 'INV-1002')->firstOrFail();
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'INV-1002')
+        ->call('drillDown')
+        ->call('moveDown')      // past `cancel`, onto `touch`
+        ->call('select');
+
+    expect(GsCommandResource::$ran)->toBe($order->getKey());
+});
+
+it('sends a record action that asks to the record page, which reads it', function () {
+    // The one navigating branch, and it navigates because the far end exists:
+    // `ResolvesOneRecord` reads `?action=` on arrival.
+    gsRegister([GsCommandResource::class]);
+    gsRouted();
+
+    $order = GsOrder::where('reference', 'INV-1001')->firstOrFail();
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'INV-1001')
+        ->call('drillDown')
+        ->call('select')
+        ->assertRedirect('/gs-commands/'.$order->getKey().'?action=cancel');
+});
+
+it('does not drill into a row whose owner offers nothing', function () {
+    // Otherwise the key opens an empty list and the user has lost their results.
+    gsRegister([GsOrderResource::class]);
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'INV-1001')
+        ->call('drillDown')
+        ->assertSet('drilldown', null);
+});
+
+it('backs out of a drill-down without losing the search', function () {
+    gsRegister([GsCommandResource::class]);
+    gsRouted();
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'INV-1001')
+        ->call('drillDown')
+        ->call('drillUp')
+        ->assertSet('drilldown', null)
+        ->assertSet('term', 'INV-1001')
+        ->assertSee('INV-1001');
+});
+
+it('leaves a drill-down as soon as the term changes', function () {
+    // The actions on screen belong to a record the new term may not even match.
+    gsRegister([GsCommandResource::class]);
+    gsRouted();
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'INV-1001')
+        ->call('drillDown')
+        ->assertSet('drilldown', ['gs-commands', 1])
+        ->set('term', 'REF')
+        ->assertSet('drilldown', null);
+});
+
+it('draws records first, then navigation, then commands', function () {
+    // Not taste, and not arbitrary: a term that matches both a record and a
+    // command belongs to the record, because that is what the user was looking
+    // for. Commands on top made Enter on "INV" run "Recount invoices" instead of
+    // opening the invoice — caught by the browser driver, by nothing else.
+    gsRegister([GsCommandResource::class]);
+    gsRouted();
+
+    $component = Livewire::test(GlobalSearchPalette::class)->set('term', 'Orders');
+
+    $kinds = array_map(
+        fn (GlobalSearchResult $row): string => $row->kind->value,
+        $component->instance()->flatResults(),
+    );
+
+    expect($kinds)->toBe(['navigation', 'command']);
+});
+
+it('carries the kind and the action through withUrl', function () {
+    // It used to copy its fields positionally, which is one argument away from
+    // silently turning a command back into a record.
+    $row = new GlobalSearchResult(
+        resourceKey: 'k',
+        recordKey: null,
+        title: 't',
+        kind: PaletteRowKind::Command,
+        actionName: 'recount',
+    );
+
+    expect($row->withUrl('/x'))
+        ->kind->toBe(PaletteRowKind::Command)
+        ->actionName->toBe('recount')
+        ->url->toBe('/x');
+});
+
+it('adds no query per keystroke for navigation or commands', function () {
+    // Both read declarations, not tables. If either ever reaches for the database
+    // it does so once per keystroke per resource, which is what this pins.
+    gsRegister([GsCommandResource::class]);
+    gsRouted();
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    Livewire::test(GlobalSearchPalette::class)->set('term', 'Orders');
+
+    $queries = count(DB::getQueryLog());
+
+    DB::disableQueryLog();
+
+    // 'Orders' matches the menu entry and a command label, and no record.
+    expect($queries)->toBe(1);
+});
+
+it('acts on the row that was activated, not on wherever the cursor sat', function () {
+    // Measured in a browser before it was a test: Tab puts real focus on a row
+    // without moving the keyboard cursor, so activating it opened a different
+    // record — three rows away. A tap did the same, because a touch device fires
+    // no `mouseenter` for the hover binding that used to keep the two in step.
+    gsRegister([GsOrderResource::class]);
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'INV-100')
+        ->assertSet('active', 0)
+        // The redirect is the proof: row 0 is INV-1001 and row 1 is INV-1002, and
+        // the cursor never moved. `active` is not asserted after — `close()` has
+        // reset it by then, which is what closing is supposed to do.
+        ->call('select', 1)
+        ->assertRedirect('/orders/2');
+});
+
+it('still follows the cursor when the input is what was pressed', function () {
+    // Enter in the search box names no row, because the cursor is the row.
+    gsRegister([GsOrderResource::class]);
+
+    Livewire::test(GlobalSearchPalette::class)
+        ->set('term', 'INV-100')
+        ->call('moveDown')
+        ->call('select')
+        ->assertRedirect('/orders/2');
 });
