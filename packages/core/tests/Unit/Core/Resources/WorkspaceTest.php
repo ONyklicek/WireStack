@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use NyonCode\WireCore\Core\Plugin\Hooks\NavigationBuildingPayload;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
@@ -11,6 +13,7 @@ use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Core\Resources\Workspace;
 use NyonCode\WireCore\Exceptions\ResourceRegistrationException;
+use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
@@ -523,4 +526,78 @@ it('reads sources in the order it was given them', function () {
     // Sales first because the extra source came first: group order is
     // first-appearance, and that is now a property of the source order.
     expect(array_keys($workspace->navigation()))->toBe(['Sales', '']);
+});
+
+// ─── navigation.building ─────────────────────────────────────────────────────
+
+/*
+ * The menu, adjustable by something that did not register it.
+ *
+ * ADR 0029 says an installed module may only add, and ADR 0030 §6 held this hook
+ * back until something asked. Five module packages later, "installing the media
+ * module put a row in my sidebar I do not want there" is that ask — and hiding it
+ * had no answer short of not installing the module.
+ */
+
+it('lets a hook add and drop menu entries, and shows the same list both ways', function () {
+    // Both ways matters: `navigation()` groups the list and `items()` flattens
+    // it, and a hook that fired in only one of them would let a sidebar and a
+    // command palette disagree about what is in the menu.
+    app(PluginManager::class)->hook(
+        Hook::NavigationBuilding,
+        function (NavigationBuildingPayload $payload): NavigationBuildingPayload {
+            unset($payload->items['ws-settings']);
+
+            // `sort()` on the item is what orders it. Sorting the array here
+            // would be wasted work — the steps after this one re-sort whatever
+            // the hook leaves.
+            $payload->items['docs'] = NavigationItem::make('Docs')->url('/docs')->sort(90);
+
+            return $payload;
+        },
+    );
+
+    $workspace = wsWorkspace(WsOrderResource::class, WsSettingResource::class);
+
+    expect(array_keys($workspace->items()))->toBe(['orders', 'docs'])
+        ->and(array_keys($workspace->navigation()['']->getItems()))->toBe(['docs']);
+});
+
+it('hands the hook the zone the menu is being built for', function () {
+    $seen = [];
+
+    app(PluginManager::class)->hook(
+        Hook::NavigationBuilding,
+        function (NavigationBuildingPayload $payload) use (&$seen): NavigationBuildingPayload {
+            $seen[] = $payload->zone;
+
+            return $payload;
+        },
+    );
+
+    $workspace = wsWorkspace(WsOrderResource::class);
+    $workspace->items();
+    $workspace->items(zone: 'business');
+
+    expect($seen)->toBe([null, 'business']);
+});
+
+it('scopes a navigation hook to one zone', function () {
+    // The only identity a menu has: it belongs to no component and shows no
+    // single registered class, so the zone is what `for:` can name.
+    app(PluginManager::class)->hook(
+        Hook::NavigationBuilding,
+        function (NavigationBuildingPayload $payload): NavigationBuildingPayload {
+            $payload->items['docs'] = NavigationItem::make('Docs')->url('/docs')->sort(90);
+
+            return $payload;
+        },
+        for: 'business',
+    );
+
+    $workspace = wsWorkspace(WsOrderResource::class);
+
+    expect(array_keys($workspace->items(zone: 'business')))->toBe(['orders', 'docs'])
+        ->and(array_keys($workspace->items(zone: 'admin')))->toBe(['orders'])
+        ->and(array_keys($workspace->items()))->toBe(['orders']);
 });

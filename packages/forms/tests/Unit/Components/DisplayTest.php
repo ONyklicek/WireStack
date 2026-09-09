@@ -49,7 +49,10 @@ test('alert color classes resolve through the canonical palette', function () {
     expect(Alert::make('a')->success()->getColorClasses())->toContain('bg-emerald-50')
         ->and(Alert::make('a')->warning()->getColorClasses())->toContain('bg-amber-50')
         ->and(Alert::make('a')->danger()->getColorClasses())->toContain('bg-red-50')
-        ->and(Alert::make('a')->info()->getColorClasses())->toContain('bg-blue-50');
+        // Cyan, like the role renders everywhere else. The neutral blue is now
+        // only what a colour the alert does not own falls to.
+        ->and(Alert::make('a')->info()->getColorClasses())->toContain('bg-cyan-50')
+        ->and(Alert::make('a')->color('purple')->getColorClasses())->toContain('bg-blue-50');
 });
 
 test('alert title and icon', function () {
@@ -135,4 +138,25 @@ test('view field with content', function () {
 
     expect($field->getContent())->toBe('Plain text')
         ->and($field->isHtmlContent())->toBeFalse();
+});
+
+// ─── extraAttributes reaching the markup ────────────────────────
+
+/**
+ * The setter is on every component through `Component`, and until now it landed
+ * on the markup only where `field-wrapper-start` rendered it — which these four
+ * do not use. Each returned `$this` and did nothing.
+ */
+test('display components render extraAttributes onto their root', function (Closure $make) {
+    expect($make()->extraAttributes(['data-probe' => 'yes'])->toHtml())
+        ->toContain('data-probe="yes"');
+})->with([
+    'html' => fn () => Html::make('h')->content('<b>x</b>'),
+    'placeholder' => fn () => Placeholder::make('p')->content('text'),
+    'view-field' => fn () => ViewField::make('v')->view('wire-forms::components.placeholder'),
+    'alert' => fn () => Alert::make('a')->content('careful'),
+]);
+
+test('a display component adds nothing when given no attributes', function () {
+    expect(Placeholder::make('p')->content('text')->toHtml())->not->toContain('data-probe');
 });

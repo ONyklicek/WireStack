@@ -121,9 +121,7 @@ class HooksRichComponent extends Component
             ->headerActions([
                 HeaderAction::make('create')->label('New'),
             ])
-            ->rowContextMenu([
-                Action::make('duplicate')->label('Duplicate'),
-            ]);
+            ->recordAction(Action::make('duplicate')->label('Duplicate')->onContextMenu());
     }
 
     public function render()

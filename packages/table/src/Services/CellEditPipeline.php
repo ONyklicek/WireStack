@@ -6,9 +6,13 @@ namespace NyonCode\WireTable\Services;
 
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Events\CellUpdated;
+use NyonCode\WireCore\Core\Plugin\HookDispatch;
+use NyonCode\WireCore\Core\Plugin\Hooks\CellUpdatingPayload;
+use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Contracts\HydratesState;
+use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Support\CellEditOutcome;
@@ -218,6 +222,32 @@ final class CellEditPipeline
                     $validation['errors'],
                 );
             }
+        }
+
+        // The one seam an inline edit had none of. Last, deliberately: the
+        // column's own permission check, the optimistic-lock check and its
+        // validation have all run, so a callback narrows what is written and
+        // cannot widen past a guard the column declared — the ordering
+        // `search.querying` follows around its policy check.
+        //
+        // Here rather than in the two callers: the inline editor and the fill
+        // handle both funnel through this method, and a hook on one of them would
+        // be a rule that a drag across a column quietly escapes.
+        $payload = HookDispatch::typed(Hook::CellUpdating, fn () => new CellUpdatingPayload(
+            column: $column,
+            columnName: $columnName,
+            record: $record,
+            value: $value,
+            oldValue: $oldValue,
+            target: HookTarget::for('cell', null, $record),
+        ));
+
+        if ($payload !== null) {
+            if ($payload->refusal !== null) {
+                return CellEditOutcome::rejected($payload->refusal);
+            }
+
+            $value = $payload->value;
         }
 
         $record = $this->writer->write($column, $record, $columnName, $value);

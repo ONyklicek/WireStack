@@ -11,4 +11,5 @@
     'heading' => $field->getTitle(),
     'body' => $field->getContent() !== null ? e($field->getContent()) : '',
     'dismissible' => $field->isDismissible(),
+    'component' => $field,
 ])

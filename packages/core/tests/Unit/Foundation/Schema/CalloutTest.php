@@ -20,7 +20,9 @@ it('exposes a fluent color / icon / heading / dismissible API', function () {
 });
 
 it('maps the color shorthands to the canonical alert palette', function () {
-    expect(Callout::make()->info()->getColorClasses())->toContain('bg-blue-50')
+    // `info` is cyan like every other surface gives it — it used to be the
+    // alert's neutral blue here, which was one role wearing two colours.
+    expect(Callout::make()->info()->getColorClasses())->toContain('bg-cyan-50')
         ->and(Callout::make()->success()->getColorClasses())->toContain('bg-emerald-50')
         ->and(Callout::make()->warning()->getColorClasses())->toContain('bg-amber-50')
         ->and(Callout::make()->danger()->getColorClasses())->toContain('bg-red-50');

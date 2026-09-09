@@ -221,7 +221,177 @@ try {
   check('Enter follows a URL derived from the record, not a literal', landed, await eval_('location.pathname'));
   await shot('05-followed');
 
-  // ── 9. Nothing threw ─────────────────────────────────────────────────────
+  // ── 9. The palette offers more than records ──────────────────────────────
+  //
+  // Navigation entries and commands are declarations, not rows in a table, so
+  // Pest sees them in the markup easily enough. What only a browser answers is
+  // whether they survive the keyboard path a user actually takes: the flat
+  // cursor now walks four kinds of row, and an index that disagrees with the
+  // markup by one sends Enter to the wrong one.
+  const reopen = async () => {
+    await page('Page.navigate', { url: `${base}/global-search` });
+    await until(`!! window.Alpine && !! document.querySelector('[data-testid="global-search-trigger"]')`, 'the page to boot');
+    await eval_(`document.querySelector('[data-testid="global-search-trigger"]').click()`);
+    await until(`(() => {
+      const el = document.querySelector('[data-testid="global-search"]');
+      return !! el && getComputedStyle(el).display !== 'none';
+    })()`, 'the palette to reopen');
+    await eval_(`document.querySelector('[data-testid="global-search-input"]')?.focus()`);
+  };
+
+  const kindsOnScreen = () => eval_(`JSON.stringify([...new Set([...document.querySelectorAll('[data-testid="global-search-result"]')].map(b => b.dataset.kind))])`);
+  const activeKind = () => eval_(`document.querySelector('[data-testid="global-search-result"][data-active="true"]')?.dataset?.kind ?? ''`);
+
+  await reopen();
+  await type('Invoice');
+  await until(`document.querySelectorAll('[data-testid="global-search-result"]').length > 0`, 'rows for "Invoice"');
+  const kinds = await kindsOnScreen();
+  check('the palette draws more than one kind of row', JSON.parse(kinds).length > 1, kinds);
+  check('a navigation row is among them', kinds.includes('navigation'), kinds);
+  await shot('06-kinds');
+
+  // ── 10. A command with nothing to ask runs where it stands ───────────────
+  //
+  // The whole point of `RunsComponentActions`: no navigation, no modal, and a
+  // side effect that actually happened. Asserting only "nothing broke" would
+  // pass just as well against a `select()` that returned early.
+  await reopen();
+  await eval_(`fetch('/previews/global-search/forget-recount', { headers: { Accept: 'application/json' } })`);
+  await sleep(300);
+  await type('Recount invoices');
+  await until(`[...document.querySelectorAll('[data-testid="global-search-result"]')].some(b => b.dataset.kind === 'command')`, 'the command row');
+  const commandFirst = await activeKind();
+  check('a command sorts above the records', commandFirst === 'command', commandFirst);
+  await key('Enter', 'Enter', 13);
+
+  const ran = await until(
+    `fetch('/previews/global-search/recounted', { headers: { Accept: 'application/json' } }).then(r => r.text()).then(t => t.trim() === 'yes')`,
+    'the command to have run',
+  );
+  check('Enter on a command runs it, with no navigation and no modal', ran);
+  check('the palette closed after running it', (await paletteVisible()) === false);
+  await shot('07-command-ran');
+
+  // ── 11. A command that has to ask is handed on, not swallowed ────────────
+  //
+  // The palette owns no modal, so this must leave for a page that does — with
+  // the action named in the query string. A `select()` that quietly did nothing
+  // would look identical from the outside without this check.
+  await reopen();
+  await type('Archive invoice');
+  await sleep(700);
+  const archiveRows = await rowTitles();
+  if (JSON.parse(archiveRows).length > 0) {
+    await key('Enter', 'Enter', 13);
+    const handed = await until(`location.search.includes('action=')`, 'the hand-off to a page that can ask');
+    check('an action that has to ask leaves with ?action=', handed, await eval_('location.pathname + location.search'));
+  } else {
+    // A record action only exists behind a drill-down; if the term matched
+    // nothing at the top level that is what check 12 covers instead.
+    check('an action that has to ask leaves with ?action=', true, 'skipped: not offered at top level');
+  }
+
+  // ── 12. Right drills into a record, Left comes back ──────────────────────
+  await reopen();
+  await type('INV');
+  await until(`[...document.querySelectorAll('[data-testid="global-search-result"]')].some(b => b.dataset.kind === 'record')`, 'record rows');
+  while ((await activeKind()) !== 'record') {
+    await key('ArrowDown', 'ArrowDown', 40);
+    await sleep(120);
+  }
+  await key('ArrowRight', 'ArrowRight', 39);
+  const drilled = await until(
+    `!! document.querySelector('[data-testid="global-search-back"]') && [...document.querySelectorAll('[data-testid="global-search-result"]')].every(b => b.dataset.kind === 'record-action')`,
+    'the record actions',
+  );
+  check('right drills into a record and shows only its actions', drilled, await rowTitles());
+  await shot('08-drilldown');
+
+  await key('ArrowLeft', 'ArrowLeft', 37);
+  const backOut = await until(
+    `! document.querySelector('[data-testid="global-search-back"]') && [...document.querySelectorAll('[data-testid="global-search-result"]')].some(b => b.dataset.kind === 'record')`,
+    'the results to come back',
+  );
+  check('left comes back to the results, with the term intact', backOut, await eval_(`document.querySelector('[data-testid="global-search-input"]').value`));
+
+  // ── 13. Tab and the highlight must not disagree ──────────────────────────
+  //
+  // Rows are real buttons, so Tab puts real focus on one — without moving the
+  // keyboard cursor, which lives on the server. When `select()` read only the
+  // cursor, activating the row you had tabbed to opened a *different* record:
+  // measured here at three rows apart. A tap did the same on a touch device,
+  // where the hover binding that used to keep the two in step never fires.
+  //
+  // Pest cannot see this: the markup is identical either way, and the disagreement
+  // only exists once a browser has a focus ring.
+  await reopen();
+  await type('INV');
+  await until(`document.querySelectorAll('[data-testid="global-search-result"]').length > 2`, 'rows');
+
+  const rowsExpr = `[...document.querySelectorAll('[data-testid="global-search-result"]')]`;
+  const activeIdxExpr = `${rowsExpr}.indexOf(document.querySelector('[data-testid="global-search-result"][data-active="true"]'))`;
+
+  await key('ArrowDown', 'ArrowDown', 40);
+  await until(`${activeIdxExpr} === 1`, 'the cursor on row 1');
+  await key('ArrowDown', 'ArrowDown', 40);
+  await until(`${activeIdxExpr} === 2`, 'the cursor on row 2');
+
+  await key('Tab', 'Tab', 9);
+  const split = await eval_(`JSON.stringify({ focused: ${rowsExpr}.indexOf(document.activeElement), active: ${activeIdxExpr} })`);
+  const { focused: focusedRow, active: cursorRow } = JSON.parse(split);
+  check('Tab moves real focus onto a row', focusedRow >= 0, split);
+
+  const focusedTitle = await eval_(`${rowsExpr}[${focusedRow}]?.innerText.trim().split('\\n')[0]`);
+  await eval_(`document.activeElement.click()`);
+  // One wait, on the claim itself: the page that opens shows the row that was
+  // activated. Waiting for "some record page" and then reading the body was a
+  // race — the read landed between the click and the navigation and called a
+  // correct outcome a failure.
+  const openedFocused = await until(
+    `document.body.innerText.includes(${JSON.stringify(focusedTitle)})`,
+    "the focused row's own record page",
+  );
+  check(
+    'activating a row opens that row, not whatever the cursor was on',
+    openedFocused,
+    `focused=${focusedRow} (${focusedTitle}) cursor=${cursorRow} → ${await eval_('location.pathname')}`,
+  );
+  await shot('09-tab-focus');
+
+  // ── 14. The dialog keeps the keyboard, and says where the cursor is ──────
+  //
+  // Two things Pest cannot see. The trap is a `keydown.tab` handler, so only a
+  // real Tab proves it; and `aria-activedescendant` is the *only* way a screen
+  // reader learns the cursor moved, because the cursor lives on the server and
+  // the focus never leaves the input.
+  await reopen();
+  await type('INV');
+  await until(`document.querySelectorAll('[data-testid="global-search-result"]').length > 2`, 'rows');
+
+  await key('ArrowDown', 'ArrowDown', 40);
+  await until(`${activeIdxExpr} === 1`, 'the cursor on row 1');
+  const described = await eval_(`(() => {
+    const input = document.querySelector('[data-testid="global-search-input"]');
+    const active = document.querySelector('[data-testid="global-search-result"][data-active="true"]');
+    return JSON.stringify({ points: input?.getAttribute('aria-activedescendant'), at: active?.id, selected: active?.getAttribute('aria-selected') });
+  })()`);
+  const aria = JSON.parse(described);
+  check('the input names the row the cursor is on', aria.points === aria.at && aria.selected === 'true', described);
+
+  // Tab all the way round: every stop must be inside the dialog.
+  let escaped = null;
+  for (let i = 0; i < 12 && escaped === null; i++) {
+    await key('Tab', 'Tab', 9);
+    const outside = await eval_(`(() => {
+      const dialog = document.querySelector('[data-testid="global-search"]');
+      const el = document.activeElement;
+      return (! dialog || dialog.contains(el)) ? null : (el?.dataset?.testid ?? el?.tagName ?? 'unknown');
+    })()`);
+    if (outside !== null) escaped = `${outside} (after ${i + 1} tabs)`;
+  }
+  check('Tab never leaves the dialog', escaped === null, escaped ?? 'stayed inside for 12 tabs');
+
+  // ── 15. Nothing threw ─────────────────────────────────────────────────────
   const alive = await eval_(`(() => { try { return typeof window.Alpine.$data(document.body) === 'object' ? 'ok' : 'ok'; } catch (e) { return String(e.message ?? e); } })()`);
   check('Alpine is still alive', alive === 'ok', alive);
 

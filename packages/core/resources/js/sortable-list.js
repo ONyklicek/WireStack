@@ -14,9 +14,30 @@
  * **Why core, and why its own bundle.** Forms is below table in the package
  * graph, so it cannot borrow `wire-sortable`; core is the lowest layer that can
  * own the behaviour, and a future consumer (an infolist, a panel widget list)
- * gets it for free. It ships separately from `wire-core-dropdown.js` because
- * SortableJS is ~45 kB and only a reorderable list needs it — the same argument
- * that moved `wireFillHandle` out of the dropdown bundle (ADR 0025 § step 10).
+ * gets it for free.
+ *
+ * ## It does not ship SortableJS any more — Livewire already does
+ *
+ * This bundle used to compile the library in, and weighed 39 564 B for a
+ * controller of about two hundred lines. Livewire 4 bundles the Alpine Sort
+ * plugin, and that plugin bundles SortableJS (1.15.2, against the 1.15.7 here)
+ * — so a page with a repeater downloaded the same library twice, in two
+ * versions.
+ *
+ * The library is not on `window`; it lives inside Livewire's module scope. What
+ * *is* reachable is the directive that constructs it, so the view carries
+ * `x-sort` and hands this controller's option set over through
+ * `x-sort:config` — the documented way to pass raw SortableJS options. Alpine
+ * builds the instance and owns its lifecycle; everything about how the drag
+ * behaves is still decided here.
+ *
+ * **The option set is complete on purpose.** `x-sort:config` is merged *over*
+ * Alpine's own options, so the ones below replace its defaults rather than
+ * joining them: its `filter` (which drags nothing that is not marked
+ * `x-sort:item`, and our items are marked `data-sortable-item`), its `onSort`
+ * (which evaluates the `x-sort` expression — deliberately empty here), and its
+ * `onStart`/`onEnd`, whose body-class and ghost handling this controller does
+ * its own way. Read the four handlers below as the whole of it.
  *
  * **Relationship to `wire-sortable`.** That package's `wireSortable` is the
  * *table* controller: two Sortable instances, injected handle cells, column
@@ -34,13 +55,16 @@
  * it removes the disagreement: the server is the only thing that decides order.
  */
 
-import Sortable from 'sortablejs';
-
-// One pair of morph hooks per document, not one per controller: Livewire's
-// hook() has no off switch, so registering inside init() stacks a fresh pair for
-// every repeater on the page, every wire:navigate and every lazily loaded modal
-// — and each stacked copy keeps running against a component that is gone. Same
-// reasoning, and the same element-keyed registry, as wire-sortable's.
+// One morph hook per document, not one per controller: Livewire's hook() has no
+// off switch, so registering inside init() stacks a fresh one for every repeater
+// on the page, every wire:navigate and every lazily loaded modal — and each
+// stacked copy keeps running against a component that is gone. Same reasoning,
+// and the same element-keyed registry, as wire-sortable's.
+//
+// There used to be a `morph.updated` half as well, which rebound the Sortable
+// when a morph replaced the container element outright. Alpine owns the
+// instance now, and re-initialises `x-sort` on a replaced element by itself, so
+// the rebind would be a second answer to a question already answered.
 const controllers = new Map();
 let morphGuardsInstalled = false;
 
@@ -64,23 +88,15 @@ const installMorphGuards = () => {
         eachController((controller) => controller.onMorphUpdating(el, skip));
     });
 
-    window.Livewire.hook('morph.updated', ({ el }) => {
-        eachController((controller) => controller.onMorphUpdated(el));
-    });
 };
 
 export function wireSortableList(config = {}) {
     return {
-        instance: null,
         isDragging: false,
         /** Where the dragged node has to go back to — captured before it moves. */
         origin: null,
 
         config: {
-            // Selector for the element that holds the items, resolved inside the
-            // component root. A card repeater drags the root's own children; a
-            // table repeater drags `<tbody>`'s.
-            container: config.container ?? null,
             // One attribute name, read two ways: as the `draggable` selector and
             // as the place an item's declared index is written. Deriving the
             // selector from the name keeps them from drifting apart.
@@ -90,16 +106,12 @@ export function wireSortableList(config = {}) {
         },
 
         init() {
-            this.$nextTick(() => this.bind());
-
             controllers.set(this.$root, this);
             installMorphGuards();
         },
 
         destroy() {
             controllers.delete(this.$root);
-            this.instance?.destroy();
-            this.instance = null;
         },
 
         /** The selector matching one item, built from the index attribute. */
@@ -107,23 +119,23 @@ export function wireSortableList(config = {}) {
             return `[${this.config.indexAttribute}]`;
         },
 
-        /** The element whose direct children are the sortable items. */
-        container() {
-            if (this.config.container === null) return this.$root;
-
-            return this.$root.querySelector(this.config.container);
-        },
-
-        bind() {
-            const container = this.container();
-            if (!container) return;
-
-            this.instance?.destroy();
-
-            this.instance = new Sortable(container, {
+        /**
+         * The SortableJS options, handed to `x-sort:config` in the view.
+         *
+         * Evaluated once, when Alpine initialises the directive — so this is a
+         * description of the drag, not a per-drag decision. Everything Alpine
+         * would have decided is named here; see the header for why the set is
+         * complete rather than partial.
+         */
+        sortableConfig() {
+            return {
                 draggable: this.itemSelector(),
                 handle: this.config.handle,
                 animation: this.config.animation,
+                // Alpine's own filter refuses to drag anything outside an
+                // `x-sort:item`, and these items are marked with the index
+                // attribute instead. `draggable` above is already the restriction.
+                filter: null,
                 ghostClass: 'wire-sortable-list-ghost',
                 chosenClass: 'wire-sortable-list-chosen',
                 dragClass: 'wire-sortable-list-drag',
@@ -156,7 +168,11 @@ export function wireSortableList(config = {}) {
 
                     if (event.oldIndex === event.newIndex) return;
 
-                    const order = this.currentOrder(container);
+                    // From the event rather than from a configured selector: the
+                    // container is whichever element the view put `x-sort` on,
+                    // which is the one thing that cannot drift from where the
+                    // items actually are.
+                    const order = this.currentOrder(event.to);
 
                     // Put the node back before asking: see the header comment —
                     // the server's re-render is what places it, in both layouts.
@@ -168,7 +184,7 @@ export function wireSortableList(config = {}) {
                         );
                     }
                 },
-            });
+            };
         },
 
         /**
@@ -242,18 +258,6 @@ export function wireSortableList(config = {}) {
             skip();
         },
 
-        /**
-         * Rebind if the morph replaced the container element itself. Livewire
-         * patches children in place, so this is normally a no-op; a container
-         * that arrived with a `wire:key` change is the case it catches.
-         */
-        onMorphUpdated(el) {
-            if (this.isDragging || !this.$root.contains(el)) return;
-
-            if (this.instance && this.instance.el?.isConnected) return;
-
-            this.$nextTick(() => this.bind());
-        },
     };
 }
 

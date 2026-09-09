@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Modals;
 
+use NyonCode\WireCore\Foundation\Concerns\HasModalProperties;
 use NyonCode\WireCore\Foundation\Contracts\WizardStep;
 use NyonCode\WireCore\Modals\Concerns\HasFooterActions;
 use NyonCode\WireCore\Modals\Concerns\HasModalIcon;
-use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
 use NyonCode\WireCore\Modals\Contracts\ModalContract;
 
 /**

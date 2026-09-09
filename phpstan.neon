@@ -34,6 +34,7 @@ parameters:
         # Public-API traits meant for consumer code, not analyzed internally
         - { identifier: trait.unused, path: packages/core/src/Actions/Concerns/HasButtonStyles.php }
         - { identifier: trait.unused, path: packages/core/src/Actions/Concerns/InteractsWithActions.php }
+        - { identifier: trait.unused, path: packages/core/src/Actions/Concerns/InteractsWithHalt.php }
         - { identifier: trait.unused, path: packages/core/src/Audit/Concerns/HasAuditable.php }
         - { identifier: trait.unused, path: packages/core/src/Foundation/Concerns/HasLivewire.php }
         - { identifier: trait.unused, path: packages/core/src/Infolists/Concerns/WithInfolists.php }

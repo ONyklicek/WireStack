@@ -368,3 +368,29 @@ it('formats values through the base Column::formatValue', function () {
         ->and(Column::make('a')->limit(4)->formatValue('hello world', $record))->toContain('...')
         ->and(Column::make('a')->prefix('[')->suffix(']')->formatValue('x', $record))->toBe('[x]');
 });
+
+// ─── extraAttributes: the array form ────────────────────────────
+
+it('takes the array form every other component takes, and escapes it', function () {
+    // The cell renders this with `{!! !!}`, so before the array form the only
+    // way to add an attribute was to hand-build markup and escape it yourself.
+    $column = TextColumn::make('name')->extraAttributes([
+        'data-id' => '7',
+        'title' => '"><script>alert(1)</script>',
+    ]);
+
+    expect($column->getExtraAttributes())
+        ->toContain('data-id="7"')
+        ->not->toContain('<script>');
+});
+
+it('still takes the raw string it always did', function () {
+    expect(TextColumn::make('name')->extraAttributes('data-x="1"')->getExtraAttributes())
+        ->toBe('data-x="1"');
+});
+
+it('has no attributes to render when given nothing', function () {
+    expect(TextColumn::make('name')->getExtraAttributes())->toBeNull()
+        ->and(TextColumn::make('name')->extraAttributes([])->getExtraAttributes())->toBeNull()
+        ->and(TextColumn::make('name')->extraAttributes('')->getExtraAttributes())->toBeNull();
+});

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Actions\Concerns;
 
+use Closure;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionHalt;
 use NyonCode\WireCore\Actions\BaseAction;
@@ -12,18 +13,20 @@ use NyonCode\WireCore\Actions\Contracts\ModalForm;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Actions\Jobs\RunActionJob;
 use NyonCode\WireCore\Actions\ModalFooterAction;
+use NyonCode\WireCore\Actions\Support\ActionCallbackInvoker;
 use NyonCode\WireCore\Core\Actions\ActionContext;
 use NyonCode\WireCore\Core\Actions\ActionPipeline;
 use NyonCode\WireCore\Core\Actions\ActionResult;
 use NyonCode\WireCore\Core\Events\ActionExecuted;
 use NyonCode\WireCore\Core\Events\ActionExecuting;
+use NyonCode\WireCore\Core\Plugin\HookDispatch;
 use NyonCode\WireCore\Core\Plugin\Hooks\ActionExecutedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\ActionExecutingPayload;
 use NyonCode\WireCore\Core\Plugin\HookTarget;
-use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
+use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Schema\Section;
 use NyonCode\WireCore\Infolists\Components\Entry;
 use NyonCode\WireCore\Infolists\Components\RepeatableEntry;
@@ -31,7 +34,6 @@ use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WireCore\Modals\ModalStack;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationManager;
-use ReflectionFunction;
 
 /**
  * Canonical, form-agnostic action runtime shared by every action host
@@ -115,6 +117,32 @@ trait InteractsWithActions
      * Write a value into the halt-modal meta bag.
      */
     abstract protected function setHaltModalState(string $key, mixed $value): void;
+
+    /**
+     * Whether the confirmed pass still runs the action's `before()` hooks.
+     *
+     * Per request, not per component: the host sets it from the halt's own
+     * `skipBeforeOnConfirm()` immediately before re-executing a confirmed
+     * action, and the value dies with the request that read it.
+     */
+    protected bool $runBeforeCallbacksOnConfirm = false;
+
+    /**
+     * Re-run a confirmed action, honouring what the halt asked for its before
+     * hooks. Hosts call this instead of reaching for the flag themselves.
+     *
+     * @param  array<string, mixed>  $haltContext  The halt's stored `context` bag.
+     */
+    protected function withHaltConfirmContext(array $haltContext, Closure $execute): void
+    {
+        $this->runBeforeCallbacksOnConfirm = ($haltContext['skipBeforeOnConfirm'] ?? true) === false;
+
+        try {
+            $execute();
+        } finally {
+            $this->runBeforeCallbacksOnConfirm = false;
+        }
+    }
 
     // ==========================================
     // Top-frame convenience (the active modal)
@@ -460,20 +488,11 @@ trait InteractsWithActions
      */
     protected function invokeActionCallback(callable $callback, array $payload): mixed
     {
-        $reflection = new ReflectionFunction($callback);
-        $arguments = [];
-
-        foreach ($reflection->getParameters() as $parameter) {
-            $name = $parameter->getName();
-
-            if (array_key_exists($name, $payload)) {
-                $arguments[] = $payload[$name];
-            } elseif ($parameter->isDefaultValueAvailable()) {
-                $arguments[] = $parameter->getDefaultValue();
-            }
-        }
-
-        return $reflection->invokeArgs($arguments);
+        // Delegated rather than kept: `ComponentActionRunner` runs action
+        // callbacks for surfaces that cannot reach this trait (a widget's header
+        // button), and a second copy of one calling convention diverges — with
+        // the copy being the one nobody has exercised.
+        return app(ActionCallbackInvoker::class)->invoke($callback, $payload);
     }
 
     /**
@@ -541,9 +560,14 @@ trait InteractsWithActions
         $recordIds = $this->resolveActionRecordIds($payload);
 
         // Plugin hook: action.executing (hooks modify before event reports)
-        if (app()->bound(PluginManager::class)) {
-            $manager = app(PluginManager::class);
+        //
+        // One of the seven legacy names, so both dispatchers run. The guard is
+        // HookDispatch's, and with it the `hasHook()` short-circuit this site
+        // never had: it used to build two payloads and a context on every action
+        // in an application that registered no callback at all.
+        $manager = HookDispatch::manager(Hook::ActionExecuting);
 
+        if ($manager !== null) {
             // The host is this component, which is what a scoped callback is
             // addressed by — its class, or the registry key it declares.
             $hookTarget = HookTarget::for('action', $this);
@@ -590,15 +614,27 @@ trait InteractsWithActions
         $context->set('haltKey', $haltKey);
         $context->set('component', $this);
 
-        // Wrap before callbacks as adapter closures
-        if (! $confirmed && $action->hasBeforeCallbacks()) {
+        // Wrap before callbacks as adapter closures.
+        //
+        // The confirmed pass skips them by default because a halt is normally
+        // raised *in* a before hook: re-running it would raise the same halt
+        // again and the confirmation would never get past itself. A hook that
+        // guards its own halt with `$confirmed` can ask for the other behaviour
+        // with `ActionHalt::skipBeforeOnConfirm(false)`, which is what the host
+        // reads off the halt context into the flag below before re-executing.
+        if ((! $confirmed || $this->runBeforeCallbacksOnConfirm) && $action->hasBeforeCallbacks()) {
             $wrappedBefore = [];
             foreach ($action->getBeforeCallbacks() as $i => $beforeCallback) {
                 $wrappedBefore[] = function (ActionContext $ctx) use ($action, $beforeCallback, $i): mixed {
                     $this->invokeActionCallback($beforeCallback, array_merge(
                         $this->actionCallbackBindings(),
                         $this->contextToPayload($ctx),
-                        ['action' => $action, 'confirmed' => false],
+                        // Read from the context, not hardcoded: a before hook only
+                        // ever ran on the first pass, so `false` was true by
+                        // construction — and stayed wrong the moment a halt asked
+                        // for these hooks on the confirmed pass, where a hook that
+                        // guards its halt with `$confirmed` would halt again.
+                        ['action' => $action, 'confirmed' => $ctx->get('confirmed', false)],
                     ));
 
                     $pendingHalt = $action->consumePendingHalt();
@@ -716,9 +752,9 @@ trait InteractsWithActions
         $this->handleActionSuccess($action, $payload['record'] ?? $payload['records'] ?? null);
 
         // Plugin hook: action.executed
-        if (app()->bound(PluginManager::class)) {
-            $manager = app(PluginManager::class);
+        $manager = HookDispatch::manager(Hook::ActionExecuted);
 
+        if ($manager !== null) {
             $hookTarget = HookTarget::for('action', $this);
 
             $manager->runHook('action.executed', [

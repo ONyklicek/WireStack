@@ -60,7 +60,7 @@ for newly injected `<head>` scripts, so only a bundle that was already in the do
 safe from that race. `@wireStackScripts('wire-core')` narrows the output to one package.
 
 Packages declare their bundles with the canonical `Foundation\Assets\AssetManager`; see
-[JavaScript Assets](../../docs/getting-started.md#javascript-assets).
+[JavaScript Assets](../../docs/start/getting-started.md#javascript-assets).
 
 ## What's Included
 
@@ -143,14 +143,14 @@ php artisan migrate
 
 | Document | Description |
 |----------|-------------|
-| [Core Foundation](../../docs/core/foundation.md) | Shared traits, icons, colors, and Blade helpers |
-| [Actions](../../docs/core/actions.md) | Row, bulk, header actions, and action groups |
-| [Notifications](../../docs/core/notifications.md) | Notification value objects and drivers |
+| [Core Foundation](../../docs/core/foundation/index.md) | Shared traits, icons, colors, and Blade helpers |
+| [Actions](../../docs/core/actions/index.md) | Row, bulk, header actions, and action groups |
+| [Notifications](../../docs/core/notifications/index.md) | Notification value objects and drivers |
 | [Modals](../../docs/core/modals.md) | Confirmations, slide-overs, and wizards |
-| [Widgets](../../docs/core/widgets.md) | Dashboard widgets |
-| [Plugins](../../docs/core/plugins.md) | App and package extension points |
+| [Widgets](../../docs/core/widgets/index.md) | Dashboard widgets |
+| [Plugins](../../docs/core/plugins/index.md) | App and package extension points |
 | [Audit Log](../../docs/core/audit.md) | Audit setup and usage |
-| [Configuration](../../docs/configuration.md) | Config files and environment variables |
+| [Configuration](../../docs/start/configuration.md) | Config files and environment variables |
 
 ## License
 

@@ -1,9 +1,9 @@
 <?php
 
 declare(strict_types=1);
-use NyonCode\WireTable\Preferences\Drivers\DatabasePreferenceDriver;
-use NyonCode\WireTable\Preferences\Drivers\NullPreferenceDriver;
-use NyonCode\WireTable\Preferences\Drivers\SessionPreferenceDriver;
+use NyonCode\WireCore\Foundation\Preferences\Drivers\DatabasePreferenceDriver;
+use NyonCode\WireCore\Foundation\Preferences\Drivers\NullPreferenceDriver;
+use NyonCode\WireCore\Foundation\Preferences\Drivers\SessionPreferenceDriver;
 
 return [
 
@@ -76,8 +76,8 @@ return [
     | Built-in drivers:
     |   - null     : do not persist (column toggles last only for the request)
     |   - session  : store in the session (no migration needed)
-    |   - database : store in the `table_preferences` table (publish + run the
-    |                migration: vendor:publish --tag="wire-table::migrations")
+    |   - database : store in the `wire_preferences` table (publish + run the
+    |                migration: vendor:publish --tag="wire-core::migrations")
     |
     | Point an alias at your own class to use a custom store.
     |

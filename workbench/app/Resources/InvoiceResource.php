@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Workbench\App\Resources;
 
+use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\TransitionAction;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Workflow\WorkflowState;
+use NyonCode\WireCore\Foundation\Contracts\ActionContract;
+use NyonCode\WireCore\Foundation\Contracts\ProvidesCommands;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ConfiguresRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
@@ -50,7 +53,7 @@ use Workbench\App\Models\Invoice;
  * case most likely to expose a clash between them, and the previews render it
  * through the real pages rather than through anything the workbench invents.
  */
-final class InvoiceResource implements ConfiguresRoutes, DescribesResource, GloballySearchable, ProvidesNavigation, ProvidesPages, ProvidesRelationManagers, ProvidesResourceForm, ProvidesResourceInfolist, ProvidesResourceTable
+final class InvoiceResource implements ConfiguresRoutes, DescribesResource, GloballySearchable, ProvidesCommands, ProvidesNavigation, ProvidesPages, ProvidesRelationManagers, ProvidesResourceForm, ProvidesResourceInfolist, ProvidesResourceTable
 {
     use DescribesRecords;
 
@@ -107,6 +110,43 @@ final class InvoiceResource implements ConfiguresRoutes, DescribesResource, Glob
      * status — a palette that answered "overdue" with every overdue invoice is a
      * report, not a jump-to.
      */
+    /**
+     * What the command palette may offer for invoices.
+     *
+     * Both shapes on purpose, because the palette treats them differently and
+     * the browser driver has to see both: `mark-seen` has nothing to ask and is
+     * run where it stands, while `archive` carries a confirmation and therefore
+     * has to be handed to a page that owns a modal.
+     *
+     * The runnable one writes to the cache rather than to the invoice, so the
+     * driver can assert that it *ran* without depending on a column that other
+     * previews also write.
+     *
+     * @return array<int, ActionContract>
+     */
+    public static function commands(?object $record = null): array
+    {
+        if ($record !== null) {
+            return [
+                Action::make('mark-seen')
+                    ->label('Mark invoice seen')
+                    ->icon('outline:eye')
+                    ->action(fn () => cache()->put('workbench.invoice.seen', $record->getKey(), 60)),
+                Action::make('archive')
+                    ->label('Archive invoice')
+                    ->icon('outline:archive-box')
+                    ->requiresConfirmation(),
+            ];
+        }
+
+        return [
+            Action::make('recount-invoices')
+                ->label('Recount invoices')
+                ->icon('outline:calculator')
+                ->action(fn () => cache()->put('workbench.invoices.recounted', true, 60)),
+        ];
+    }
+
     public static function globallySearchableAttributes(): array
     {
         return ['number', 'customer'];

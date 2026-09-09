@@ -118,7 +118,7 @@ it('can consume pending halt', function () {
     $halt = $action->consumePendingHalt();
 
     expect($halt)->toBeInstanceOf(ActionHalt::class)
-        ->and($halt->getModalHeading())->toBe('Stop')
+        ->and($halt->getHeading())->toBe('Stop')
         ->and($action->hasPendingHalt())->toBeFalse();
 });
 

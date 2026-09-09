@@ -46,8 +46,8 @@ Fortify or Breeze. `wire-admin` ships the card they render inside.
 
 ## Documentation
 
-Full docs: [`docs/core/users-module.md`](../../docs/core/users-module.md)
-([česky](../../docs/cs/core/users-module.md)).
+Full docs: [`docs/modules/users.md`](../../docs/modules/users.md)
+([česky](../../docs/cs/modules/users.md)).
 
 ## License
 

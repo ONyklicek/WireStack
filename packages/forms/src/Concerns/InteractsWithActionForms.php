@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use NyonCode\WireCore\Actions\Action;
@@ -53,6 +54,45 @@ trait InteractsWithActionForms
     protected function haltModalFormStatePath(): string
     {
         return 'actionModalHaltData';
+    }
+
+    /**
+     * Where this component parks its halt form between requests.
+     *
+     * The **cache**, not the session, and keyed by the Livewire component id.
+     * Two things were wrong with the session before 2.0. It was one global key
+     * (`wire.halt_form_instance`), so two tables on a page — or the same page in
+     * two tabs — restored each other's schema into their own halt modal. And on
+     * the `cookie` session driver a serialized schema does not fit in the 4 KB a
+     * cookie holds, so it was dropped in silence and the halt came back as a
+     * heading with no fields. A cache entry is server-side, has no such ceiling,
+     * and expires on its own if the user simply walks away.
+     */
+    protected function haltFormCacheKey(): string
+    {
+        return 'wire.halt_form.'.$this->getId();
+    }
+
+    /**
+     * Drop the parked copy, tolerating a cache store that cannot answer.
+     */
+    protected function forgetHaltForm(): void
+    {
+        try {
+            Cache::forget($this->haltFormCacheKey());
+        } catch (Throwable) {
+            // Nothing to forget if the store is not there.
+        }
+    }
+
+    /**
+     * How long a parked halt form stays readable. Long enough for someone to
+     * think about the question, short enough that an abandoned modal does not
+     * hold a schema in the cache all day.
+     */
+    protected function haltFormTtl(): int
+    {
+        return 1800;
     }
 
     /**
@@ -388,21 +428,86 @@ trait InteractsWithActionForms
         // still cannot be serialized, and that is what the catch is for: the
         // modal stays open and submits from the first render.
         try {
-            session()->put('wire.halt_form_instance', serialize($formInstance));
-        } catch (Throwable) {
-            // Non-serializable form — session fallback unavailable.
+            // The cache store is the application's, and it may be missing its
+            // table, its server, or be `array` in a test — none of which is this
+            // modal's business to die of. A parked form is an optimisation for
+            // the *next* request; this one already has the instance.
+            Cache::put($this->haltFormCacheKey(), serialize($formInstance), $this->haltFormTtl());
+        } catch (Throwable $e) {
+            // A schema holding a Closure cannot be serialized, and the modal is
+            // still usable: it renders from the instance this request already
+            // has, and its declared rules live in state. What it loses is the
+            // *next* render — a failed validation comes back without fields — so
+            // this is written down rather than swallowed.
+            logger()->warning('wire: a halt form could not be kept for the next request, so its fields will not survive a failed validation. Give the halt a schema without closures, or validate through the halt\'s own rules.', [
+                'component' => static::class,
+                'reason' => $e->getMessage(),
+            ]);
         }
 
         $formInstance->livewire($this);
         $this->haltModalFormInstance = $formInstance;
+
+        $this->seedHaltModalFormState($formInstance);
+    }
+
+    /**
+     * Give the host a chance to fill the bag the halt form's fields bind to.
+     *
+     * A field entangles a *path*, and Livewire refuses one that does not exist:
+     * an empty bag makes the browser throw `cannot be found on component` and the
+     * field never binds. A host whose halt data lives in a state container gets
+     * its slots from the container; one holding a plain public array has to seed
+     * it, which is what this seam is for.
+     */
+    protected function seedHaltModalFormState(Form $form): void
+    {
+        // No-op by default.
     }
 
     /**
      * Get the resolved Form instance for the halt modal, if any.
+     *
+     * Restored from the parked copy on any request that did not raise the halt —
+     * a failed validation, a poll tick, a live field. Without it the modal comes
+     * back as a heading and two buttons: the config still says it has a form,
+     * and there is no instance left to render the fields from.
+     *
+     * The restore lives here rather than in a host because both hosts need it
+     * and only one had it: a halt in a table survived a failed validation, the
+     * same halt on a standalone component came back empty.
      */
     public function getHaltModalFormInstance(): ?Form
     {
-        return $this->haltModalFormInstance;
+        if ($this->haltModalFormInstance !== null) {
+            return $this->haltModalFormInstance;
+        }
+
+        if (! $this->isHaltModalVisible()) {
+            return null;
+        }
+
+        $key = $this->haltFormCacheKey();
+
+        try {
+            $parked = Cache::get($key);
+            $restored = is_string($parked) ? unserialize($parked) : null;
+        } catch (Throwable) {
+            // A cache store that cannot answer is the same as one with nothing
+            // in it: the modal renders without fields rather than throwing on a
+            // page that is only trying to draw a confirmation.
+            return null;
+        }
+
+        if (! $restored instanceof Form) {
+            $this->forgetHaltForm();
+
+            return null;
+        }
+
+        $restored->livewire($this);
+
+        return $this->haltModalFormInstance = $restored;
     }
 
     /**

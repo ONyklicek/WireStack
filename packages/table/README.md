@@ -99,7 +99,7 @@ Your layout needs Vite assets, Livewire, `@wireStackScripts`, and the toast noti
 > without it a table first reached through `wire:navigate` can come up dead
 > (`wireRecordSelection is not defined`), because Livewire's cached Back/Forward path does
 > not wait for newly injected `<head>` scripts. See
-> [JavaScript Assets](../../docs/getting-started.md#javascript-assets).
+> [JavaScript Assets](../../docs/start/getting-started.md#javascript-assets).
 
 ### Publish Config (optional)
 
@@ -117,7 +117,7 @@ php artisan vendor:publish --tag=wire-forms-views
 php artisan vendor:publish --tag=wire-core-views
 ```
 
-For the full installation guide including Vite setup and troubleshooting, see [Installation](docs/installation.md).
+For the full installation guide including Vite setup and troubleshooting, see [Installation](../../docs/start/getting-started.md).
 
 ## Quick Start
 
@@ -205,17 +205,17 @@ class UserTable extends Component
 
 | Section | Description |
 |---------|-------------|
-| [Installation](docs/installation.md) | Requirements, setup, configuration |
-| [Tables](docs/tables.md) | Table configuration, queries, styling |
-| [Columns](docs/columns.md) | All 13 column types and their options |
-| [Actions](docs/actions.md) | Row, bulk, header actions and action groups |
-| [Filters](docs/filters.md) | Select, date, number range, ternary filters |
-| [Exports](docs/exports.md) | CSV, Excel, and PDF exports |
-| [Forms](docs/forms.md) | Modal form fields for action dialogs |
-| [Sub-Rows](docs/sub-rows.md) | Expandable child records, flatten mode, filtering |
-| [Notifications](docs/notifications.md) | Notification drivers and customization |
-| [Advanced](docs/advanced.md) | Polling, lazy loading, debugging, keyboard shortcuts |
-| [Authorization](../../docs/authorization.md) | Gates, policies, permissions, and callbacks |
+| [Installation](../../docs/start/getting-started.md) | Requirements, setup, configuration |
+| [Tables](../../docs/table/overview.md) | Table configuration, queries, styling |
+| [Columns](../../docs/table/columns/index.md) | Every column type and the base API they share |
+| [Actions](../../docs/table/actions.md) | Row, bulk, header actions and action groups |
+| [Filters](../../docs/table/filters/index.md) | Select, date, number range, ternary filters |
+| [Exports](../../docs/table/exports.md) | CSV, Excel, and PDF exports |
+| [Forms](../../docs/forms/overview.md) | Modal form fields for action dialogs |
+| [Sub-Rows](../../docs/table/sub-rows.md) | Expandable child records, flatten mode, filtering |
+| [Notifications](../../docs/table/notifications.md) | Notification drivers and customization |
+| [Advanced](../../docs/table/advanced.md) | Polling, lazy loading, debugging, keyboard shortcuts |
+| [Authorization](../../docs/start/authorization.md) | Gates, policies, permissions, and callbacks |
 
 ## License
 

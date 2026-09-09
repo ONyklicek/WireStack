@@ -23,6 +23,12 @@ class DocsCorpus
         'table' => 'wire-table',
         'forms' => 'wire-forms',
         'core' => 'wire-core',
+        'panels' => 'wire-panels',
+        'admin' => 'wire-admin',
+        // Six packages under one prefix. The label is the grouping a caller can
+        // filter by, not a composer name — `docs/modules/` is where every
+        // ready-made area is documented, and no one of them owns the directory.
+        'modules' => 'wire-modules',
         'sortable' => 'wire-sortable',
         'boost' => 'wire-boost',
     ];

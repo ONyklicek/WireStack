@@ -47,8 +47,8 @@ goes into a config file.
 
 ## Documentation
 
-Full docs: [`docs/core/installation.md`](../../docs/core/installation.md)
-([česky](../../docs/cs/core/installation.md)).
+Full docs: [`docs/start/installation.md`](../../docs/start/installation.md)
+([česky](../../docs/cs/start/installation.md)).
 
 ## License
 

@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Resources;
 
+use NyonCode\WireCore\Core\Plugin\HookDispatch;
+use NyonCode\WireCore\Core\Plugin\Hooks\NavigationBuildingPayload;
+use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
@@ -213,7 +217,42 @@ final readonly class Workspace
             $items[$key] = $item;
         }
 
-        return $items;
+        return $this->throughPlugins($items, $zone);
+    }
+
+    /**
+     * Let anything installed change the menu before it is grouped and ordered.
+     *
+     * Here rather than in `navigation()`, and that placement is the point: the
+     * grouped menu and the flat one are two readings of this list, so a hook that
+     * fired in only one of them would let a sidebar and a command palette
+     * disagree about what is in the menu.
+     *
+     * Scoped by **zone**, which is the only identity a menu has: it belongs to no
+     * component and shows no single registered class, so `HookTarget` is built
+     * here rather than through `for()` — there is no host to ask. A menu built
+     * for no zone carries no key, and a scoped callback sits it out by the rule
+     * every targetless dispatch follows.
+     *
+     * @param  array<string, NavigationItem>  $items
+     * @return array<string, NavigationItem>
+     */
+    private function throughPlugins(array $items, ?string $zone): array
+    {
+        $payload = HookDispatch::typed(Hook::NavigationBuilding, fn () => new NavigationBuildingPayload(
+            items: $items,
+            zone: $zone,
+            target: new HookTarget(surface: 'navigation', key: $zone),
+        ));
+
+        if ($payload === null) {
+            return $items;
+        }
+
+        /** @var array<string, NavigationItem> $built */
+        $built = $payload->items;
+
+        return $built;
     }
 
     private function groupIsVisible(NavigationItem $item): bool

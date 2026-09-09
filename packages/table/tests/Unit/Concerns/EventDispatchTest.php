@@ -34,7 +34,11 @@ class EventTestComponent
 
     public function __construct()
     {
-        $this->tableReady = true;
+        // The state container is what the component reads through; mounting is
+        // what fills it. (Before 2.0 a write to the legacy `$tableReady`
+        // property created it as a side effect.)
+        $this->mountWithTable();
+        $this->tableState->set('ready', true);
     }
 
     public function table(Table $table): Table
@@ -105,7 +109,7 @@ it('dispatches TableSearching and TableSearched when search is active', function
     Event::fake([TableSearching::class, TableSearched::class]);
 
     $component = new EventTestComponent;
-    $component->tableSearch = 'alice';
+    $component->tableState->set('search', 'alice');
     $component->callBuildTableQuery();
 
     Event::assertDispatched(TableSearching::class, function (TableSearching $event) {
@@ -123,7 +127,7 @@ it('does not dispatch search events when search is empty', function () {
     Event::fake([TableSearching::class, TableSearched::class]);
 
     $component = new EventTestComponent;
-    $component->tableSearch = '';
+    $component->tableState->set('search', '');
     $component->callBuildTableQuery();
 
     Event::assertNotDispatched(TableSearching::class);
@@ -136,7 +140,7 @@ it('dispatches TableFiltering and TableFiltered when filters are active', functi
     Event::fake([TableFiltering::class, TableFiltered::class]);
 
     $component = new EventTestComponent;
-    $component->tableFilters = ['status' => 'active'];
+    $component->tableState->set('filters', ['status' => 'active']);
     $component->callBuildTableQuery();
 
     Event::assertDispatched(TableFiltering::class, function (TableFiltering $event) {
@@ -154,7 +158,7 @@ it('does not dispatch filter events when no filters are active', function () {
     Event::fake([TableFiltering::class, TableFiltered::class]);
 
     $component = new EventTestComponent;
-    $component->tableFilters = [];
+    $component->tableState->set('filters', []);
     $component->callBuildTableQuery();
 
     Event::assertNotDispatched(TableFiltering::class);

@@ -99,7 +99,7 @@ key keep working unchanged.
 As with every Wire package, `@wireStackScripts` in the layout `<head>` puts the
 bundle in the initial document — the placement that survives a `wire:navigate`
 visit; the sortable view's own include remains a fallback. See
-[JavaScript Assets](../../docs/getting-started.md#javascript-assets).
+[JavaScript Assets](../../docs/start/getting-started.md#javascript-assets).
 
 ## Documentation
 
@@ -110,7 +110,7 @@ visit; the sortable view's own include remains a fallback. See
 | [Row Reordering](../../docs/sortable/row-sorting.md) | Persistent row order |
 | [Column Reordering](../../docs/sortable/column-sorting.md) | Per-user column order |
 | [API Reference](../../docs/sortable/api-reference.md) | Sortable table and trait API |
-| [Configuration](../../docs/configuration.md) | Package config reference |
+| [Configuration](../../docs/start/configuration.md) | Package config reference |
 
 ## License
 

@@ -194,7 +194,12 @@ test('a variant carries per-option icons and colors', function () {
     );
 
     expect($html)->toContain('<svg')
-        ->and($html)->toContain('peer-checked:bg-red-600');
+        ->and($html)->toContain('peer-checked:bg-red-600')
+        // A selected face darkens its own accent rather than being repainted by
+        // the grey hover it ties with on specificity.
+        ->and($html)->toContain('peer-checked:hover:bg-red-700')
+        ->and($html)->toContain('hover:bg-gray-100')
+        ->and($html)->toContain('dark:hover:bg-gray-700');
 });
 
 test('variants keep the field disabled state', function () {

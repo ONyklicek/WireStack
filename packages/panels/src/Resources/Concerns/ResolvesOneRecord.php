@@ -31,6 +31,50 @@ trait ResolvesOneRecord
         $this->record = $record;
 
         $this->mountedRecord();
+
+        $this->mountActionFromRequest();
+    }
+
+    /**
+     * Open the action the command palette sent this page here to open.
+     *
+     * The palette cannot host a modal — it sits in a module that may not import
+     * the Actions one — so an action that has to ask something is answered by
+     * navigating to the page that owns the record, with the action named in the
+     * query string. This is the far end of that.
+     *
+     * Here rather than in `BelongsToResource`, which every resource page composes,
+     * because only the pages that resolve a record can supply one — and a version
+     * that asked `method_exists($this, 'resolveRecord')` was a duck-type over a
+     * question the type system already answers.
+     *
+     * Last in the mount, after `mountedRecord()`, so the edit page has seeded its
+     * form before an action is asked whether it may run against the record.
+     *
+     * A page composing no action host does nothing, which is the honest answer for
+     * a URL pasted at a page that cannot run actions — and so is an unknown name:
+     * `mountAction()` resolves nothing and returns, leaving the user on the page
+     * they asked for rather than on an error about a link they did not write.
+     */
+    private function mountActionFromRequest(): void
+    {
+        if (! method_exists($this, 'mountAction')) {
+            return;
+        }
+
+        $name = request()->query('action');
+
+        if (! is_string($name) || $name === '') {
+            return;
+        }
+
+        $record = $this->resolveRecord();
+
+        if ($record instanceof RecordContract) {
+            $record = $record->unwrap();
+        }
+
+        $this->mountAction($name, $record instanceof Model ? ['record' => $record] : []);
     }
 
     /**

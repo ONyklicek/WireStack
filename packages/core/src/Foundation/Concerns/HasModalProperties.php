@@ -2,15 +2,24 @@
 
 declare(strict_types=1);
 
-namespace NyonCode\WireCore\Modals\Concerns;
+namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Closure;
 use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 
 /**
- * Shared modal properties: heading, description, width, close behavior.
+ * Shared modal properties: heading, description, width, close behaviour.
  *
- * Used by Modal, ConfirmationDialog, SlideOver, Wizard.
+ * Foundation rather than Modals, because two L2 modules need it: the modal
+ * classes themselves (Modal, ConfirmationDialog, SlideOver, Wizard) and
+ * `Actions\ActionHalt`, which *is* a modal raised from the action pipeline. A
+ * copy in each is what the vocabulary rule exists to prevent, and an import
+ * across two L2 modules is what the layer gate refuses — so the owner moved
+ * down to the layer both may see.
+ *
+ * The names are the canonical ones: a thing that IS a modal says `heading()`
+ * and `description()`; a thing that HAS one — an action, whose own `icon()` and
+ * `color()` belong to its button — prefixes them as `modalHeading()`.
  */
 trait HasModalProperties
 {

@@ -7,4 +7,8 @@ return [
     'placeholder' => 'Hledat všude…',
     'prompt' => 'Začněte psát.',
     'empty' => 'Nic nenalezeno.',
+    'commands' => 'Příkazy',
+    'navigation' => 'Přejít na',
+    'record_actions' => 'Akce',
+    'back' => 'Zpět na výsledky',
 ];

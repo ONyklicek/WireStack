@@ -48,6 +48,6 @@ key whose user is gone reads as *Unknown user* with the key beside it.
 
 ## Documentation
 
-Full docs: [`docs/core/audit-module.md`](../../docs/core/audit-module.md)
-([česky](../../docs/cs/core/audit-module.md)) — and
+Full docs: [`docs/modules/audit.md`](../../docs/modules/audit.md)
+([česky](../../docs/cs/modules/audit.md)) — and
 [`docs/core/audit.md`](../../docs/core/audit.md) for the engine underneath.

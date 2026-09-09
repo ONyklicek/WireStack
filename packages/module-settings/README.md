@@ -85,4 +85,4 @@ re-resolve.
 - **A group saves whole or not at all.**
 - **A group is a URL**, so `settings/mail` opens mail settings.
 
-Full documentation: [`docs/core/settings-module.md`](../../docs/core/settings-module.md).
+Full documentation: [`docs/modules/settings.md`](../../docs/modules/settings.md).

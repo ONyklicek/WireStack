@@ -50,8 +50,8 @@ application; `:linked-only="true"` drops those rows instead.
 
 ## Documentation
 
-Full docs: [`docs/core/admin-shell.md`](../../docs/core/admin-shell.md)
-([česky](../../docs/cs/core/admin-shell.md)).
+Full docs: [`docs/admin/overview.md`](../../docs/admin/overview.md)
+([česky](../../docs/cs/admin/overview.md)).
 
 ## License
 

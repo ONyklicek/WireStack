@@ -249,21 +249,22 @@ it('returns correct modal icon bg classes', function () {
     expect(TestColorClass::getModalIconBgClass('danger'))->toContain('bg-red-100')
         ->and(TestColorClass::getModalIconBgClass('warning'))->toContain('bg-amber-100')
         ->and(TestColorClass::getModalIconBgClass('success'))->toContain('bg-emerald-100')
-        ->and(TestColorClass::getModalIconBgClass('info'))->toContain('bg-blue-100');
+        ->and(TestColorClass::getModalIconBgClass('info'))->toContain('bg-cyan-100');
 });
 
 it('returns correct modal icon text classes', function () {
     expect(TestColorClass::getModalIconTextClass('danger'))->toContain('text-red-600')
         ->and(TestColorClass::getModalIconTextClass('warning'))->toContain('text-amber-600')
         ->and(TestColorClass::getModalIconTextClass('success'))->toContain('text-emerald-600')
-        ->and(TestColorClass::getModalIconTextClass('info'))->toContain('text-blue-600');
+        ->and(TestColorClass::getModalIconTextClass('info'))->toContain('text-cyan-600');
 });
 
 it('returns correct alert color classes per semantic hue', function () {
     expect(TestColorClass::getAlertColorClasses('success'))->toContain('bg-emerald-50')
         ->and(TestColorClass::getAlertColorClasses('warning'))->toContain('bg-amber-50')
         ->and(TestColorClass::getAlertColorClasses('danger'))->toContain('bg-red-50')
-        ->and(TestColorClass::getAlertColorClasses('info'))->toContain('bg-blue-50')
+        ->and(TestColorClass::getAlertColorClasses('info'))->toContain('bg-cyan-50')
+        // …and the neutral blue stays what an *unowned* colour falls to.
         ->and(TestColorClass::getAlertColorClasses('nonexistent'))->toContain('bg-blue-50');
 });
 
@@ -357,6 +358,28 @@ it('resolves the achromatic endpoints on every surface, never through the defaul
     }
 });
 
+it('gives every choice hue a filled-button hover of its own', function () {
+    // The `buttons` variant paints an unselected face grey on hover. A selected
+    // one must answer with its own accent instead — and it only can because
+    // `peer-checked:hover:` outranks the plain `hover:` it would otherwise tie
+    // with. A hue whose `solid` arm forgets the pair does not merely look flat:
+    // its selected button turns grey under its own white label.
+    $hues = [...rawHues(), 'primary', 'success', 'danger', 'warning', 'info',
+        'gray', 'secondary', 'emerald', 'amber', 'black', 'white', 'not-a-color'];
+
+    foreach ($hues as $hue) {
+        $solid = TestColorClass::getChoiceColorClasses($hue)['solid'];
+
+        $this->assertStringContainsString('peer-checked:hover:bg-', $solid, "[{$hue}] has no hover for its filled button.");
+        $this->assertStringContainsString('peer-checked:hover:border-', $solid, "[{$hue}] hovers its filled button without moving its border.");
+
+        // The hover step has to be a different shade, or it is not a hover.
+        preg_match('/peer-checked:bg-(\S+)/', $solid, $rest);
+        preg_match('/peer-checked:hover:bg-(\S+)/', $solid, $over);
+        $this->assertNotSame($rest[1], $over[1], "[{$hue}] hovers its filled button to the shade it already had.");
+    }
+});
+
 it('maps every semantic alias to its role, on every surface', function () {
     // emerald/amber/secondary are the only true aliases left: they must be
     // indistinguishable from the role they stand for, everywhere.
@@ -406,17 +429,19 @@ it('keeps the alert surface deliberately semantic-only', function () {
     // Alerts carry meaning, not decoration: only the semantic roles (and the
     // achromatic endpoints) get their own look, and everything else falls to the
     // informational blue. That is the documented contract, pinned here so it does
-    // not read as a gap in the sweeps above.
+    // not read as a gap in the sweeps above. `info` is no longer among them: it
+    // is a role like the other three and renders as the hue `wire-core.colors`
+    // gives it.
     $blue = TestColorClass::getAlertColorClasses('not-a-color');
 
     expect($blue)->toContain('bg-blue-50')
         ->and(TestColorClass::getAlertColorClasses('purple'))->toBe($blue)
-        ->and(TestColorClass::getAlertColorClasses('info'))->toBe($blue)
         ->and(TestColorClass::getAlertColorClasses('gray'))->toBe($blue)
         // …while the roles it does own stay distinct.
         ->and(TestColorClass::getAlertColorClasses('danger'))->not->toBe($blue)
         ->and(TestColorClass::getAlertColorClasses('success'))->not->toBe($blue)
-        ->and(TestColorClass::getAlertColorClasses('warning'))->not->toBe($blue);
+        ->and(TestColorClass::getAlertColorClasses('warning'))->not->toBe($blue)
+        ->and(TestColorClass::getAlertColorClasses('info'))->not->toBe($blue);
 });
 
 // ─── Row hover (the clickable-row tint) ──────────────────────────────
@@ -447,4 +472,44 @@ it('gives black and white a neutral row hover, and falls back to gray', function
         ->and(TestColorClass::getRowHoverClasses('white'))->toBe('hover:bg-gray-50 dark:hover:bg-gray-800')
         ->and(TestColorClass::getRowHoverClasses('gray'))->toBe('hover:bg-gray-50 dark:hover:bg-gray-700/30')
         ->and(TestColorClass::getRowHoverClasses('not-a-colour'))->toBe('hover:bg-gray-50 dark:hover:bg-gray-700/30');
+});
+
+// ─── The surfaces that used to have no owner ─────────────────────────
+
+it('gives a soft tint with no hover on it', function () {
+    // A diff cell wants the wash a clickable row rests at and wants nothing to
+    // happen when the pointer crosses it.
+    expect(TestColorClass::getSoftTintClasses('success'))->toBe('bg-emerald-50 dark:bg-emerald-900/20')
+        ->and(TestColorClass::getSoftTintClasses('danger'))->not->toContain('hover:');
+});
+
+it('builds the row tint from the soft tint, so the two cannot drift', function () {
+    foreach (['success', 'danger', 'warning', 'info', 'primary', 'teal'] as $color) {
+        expect(TestColorClass::getRowTintClasses($color))
+            ->toStartWith(TestColorClass::getSoftTintClasses($color));
+    }
+});
+
+it('owns the bright accent step no other resolver had', function () {
+    // A live dot, a progress bar, a filled star — three surfaces that each
+    // carried their own literal because `-500` belonged to nobody.
+    expect(TestColorClass::getAccentBgClass('success'))->toBe('bg-emerald-500')
+        ->and(TestColorClass::getAccentBgClass('danger'))->toBe('bg-red-500')
+        // …and it is a step brighter than the fill behind white text.
+        ->and(TestColorClass::getAccentBgClass('success'))
+        ->not->toBe(TestColorClass::getSolidBgClass('success'));
+});
+
+it('exposes the outlined vocabulary to a caller that is not a component', function () {
+    // The instance resolver reads `$this`, so a Blade file could never ask it.
+    expect(TestColorClass::getOutlinedClasses('warning'))->toContain('border-amber-600')
+        ->and(TestColorClass::getOutlinedClasses('success'))->toContain('border-emerald-600');
+});
+
+it('follows a re-pointed role on every one of the new surfaces', function () {
+    config()->set('wire-core.colors.success', 'teal');
+
+    expect(TestColorClass::getSoftTintClasses('success'))->toBe('bg-teal-50 dark:bg-teal-900/20')
+        ->and(TestColorClass::getAccentBgClass('success'))->toBe('bg-teal-500')
+        ->and(TestColorClass::getOutlinedClasses('success'))->toContain('border-teal-600');
 });

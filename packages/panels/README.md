@@ -87,8 +87,8 @@ menu. What renders any of it is the application's.
 
 ## Documentation
 
-Full docs: [`docs/core/resources.md`](../../docs/core/resources.md)
-([česky](../../docs/cs/core/resources.md)).
+Full docs: [`docs/panels/resources.md`](../../docs/panels/resources.md)
+([česky](../../docs/cs/panels/resources.md)).
 
 ## License
 

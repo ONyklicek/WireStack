@@ -24,8 +24,8 @@ use NyonCode\WireCore\Actions\ActionHalt;
  *       ->before(function ($record, $action) {
  *           if ($record->is_locked) {
  *               $action->halt()
- *                   ->modalHeading('Záznam je uzamčen')
- *                   ->modalDescription('Tento záznam nelze schválit, protože je uzamčen.')
+ *                   ->heading('Záznam je uzamčen')
+ *                   ->description('Tento záznam nelze schválit, protože je uzamčen.')
  *                   ->informative();
  *           }
  *       })
@@ -88,7 +88,7 @@ trait HasLifecycle
      *   - $component (mixed) - the Livewire component
      *
      * To halt execution, call $action->halt() which returns an ActionHalt instance:
-     *   $action->halt()->modalHeading('Stop!')->danger();
+     *   $action->halt()->heading('Stop!')->danger();
      */
     public function before(Closure $callback): static
     {
@@ -158,7 +158,7 @@ trait HasLifecycle
      * Halt the action pipeline and return an ActionHalt for modal configuration.
      *
      * Usage inside before/after hooks:
-     *   $action->halt()->modalHeading('Pozor!')->danger();
+     *   $action->halt()->heading('Pozor!')->danger();
      */
     public function halt(): ActionHalt
     {

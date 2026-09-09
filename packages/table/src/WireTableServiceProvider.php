@@ -57,13 +57,22 @@ class WireTableServiceProvider extends PackageServiceProvider
                 Bundle::make('wire-table-fill.js'),
             ])
             ->hasAssetFallback(Bundle::servedByRoute('wire-table'))
-            ->hasMigrations()
+            // No `hasMigrations()`: this package has no tables of its own any
+            // more. `table_preferences` was the only one, and it moved to
+            // wire-core as `wire_preferences` when the per-user store came down
+            // to where a dashboard could reach it too. Left declared, the tag
+            // survived over an empty directory and answered a publish with "No
+            // publishable resources" — which reads as a broken install rather
+            // than as a thing that moved.
             ->hasTranslations()
             ->hasAbout()
             ->hasInstallCommand(function (InstallCommand $command) {
                 $command
                     ->publishConfig()
-                    ->publishMigrations()
+                    // No migrations to publish; see `hasMigrations()` above.
+                    // The per-user preference table is wire-core's now, and an
+                    // install that offered to publish nothing would be offering
+                    // the user a decision with no consequence.
                     ->publishViews()
                     ->publishTranslations();
             });

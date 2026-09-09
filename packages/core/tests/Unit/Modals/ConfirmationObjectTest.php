@@ -150,3 +150,39 @@ it('renders full-screen on mobile when fullScreenOnMobile is set', function () {
         ->assertSeeHtml('translate-y-full sm:translate-y-0')
         ->assertSeeHtml('items-stretch');
 });
+
+class ConfirmationMaxHeightHost extends Component
+{
+    public bool $show = true;
+
+    public ?string $maxHeight = null;
+
+    public function render(): string
+    {
+        return <<<'BLADE'
+            <div>
+                {!! new \NyonCode\WireCore\Modals\Html\Confirmation(
+                    heading: 'Why?',
+                    maxHeight: $maxHeight,
+                    wireModel: 'show',
+                    body: '<div id="halt-body">eight questions</div>',
+                ) !!}
+            </div>
+        BLADE;
+    }
+}
+
+it('caps the body and lets it scroll when maxHeight is set', function () {
+    // The dialog exposed maxHeight() through the shared modal vocabulary — and
+    // through ActionHalt and Action::modalMaxHeight() with it — while every
+    // render path dropped the value: it was documented, serialized and ignored.
+    Livewire::test(ConfirmationMaxHeightHost::class, ['maxHeight' => '24rem'])
+        ->assertSeeHtml('style="max-height: 24rem"')
+        ->assertSeeHtml('overflow-y-auto overscroll-contain');
+});
+
+it('leaves the body uncapped when no maxHeight is given', function () {
+    Livewire::test(ConfirmationMaxHeightHost::class)
+        ->assertDontSeeHtml('max-height:')
+        ->assertDontSeeHtml('overscroll-contain');
+});

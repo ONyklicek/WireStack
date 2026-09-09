@@ -11,13 +11,16 @@
      `registered` guard makes a second execution a no-op.
 
      Not `@packageScripts`: that renders a *declared* entry, and every declared
-     entry is also rendered by `@wireStackScripts` — which would put 38 kB of
-     compiled SortableJS in the <head> of every page of every wire-core app.
-     The bundle is served by `Bundle::serve('wire-core', …)`'s route instead, so
-     it reaches only the pages that include this partial.
+     entry is also rendered by `@wireStackScripts` — which would put this in the
+     <head> of every page of every wire-core app. The bundle is served by
+     `Bundle::serve('wire-core', …)`'s route instead, so it reaches only the
+     pages that include this partial.
 
-     No inline-source fallback (unlike `copy-assets`): this bundle compiles
-     SortableJS in, so there is no single file to read back. --}}
+     The bundle is 2 kB now. It used to be 39 564 B, because it compiled
+     SortableJS in — the same library Livewire 4 already ships inside its own
+     Alpine Sort plugin, so a page with a repeater downloaded it twice. The
+     controller borrows Livewire's copy through `x-sort:config`; see
+     `wireSortableList`'s header for how. --}}
 @php
     // Cache-bust by the bundle's mtime so a rebuild is picked up without a manual
     // version bump; no query string when the file has not been built yet.

@@ -613,19 +613,3 @@ it('keeps the server selection state authoritative for bulk flows', function () 
     expect($component->getSelectedRecordKeys())->toBe(['1', '2'])
         ->and($component->getSelectedRecords()->pluck('number')->sort()->values()->all())->toBe(['A', 'B']);
 });
-
-// ─── Legacy magic properties keep working ────────────────────────────────────
-
-it('still resolves legacy magic properties through the state container', function () {
-    $component = new WtperfSelectableComponent;
-    $component->mountWithTable();
-
-    $component->tableState->set('search', 'abc');
-    expect($component->tableSearch)->toBe('abc');
-
-    $component->tableSearch = 'def';
-    expect($component->tableState->get('search'))->toBe('def');
-
-    $component->tableState->set('rows.expandAll', true);
-    expect($component->flattenMode)->toBeTrue();
-});

@@ -261,7 +261,7 @@ class WithActionsAdvancedHost extends Component
             // the polling fallback throws and is swallowed — exercising that path.
             Action::make('haltWithForm')
                 ->action(fn ($halt) => $halt()
-                    ->modalHeading('Why?')
+                    ->heading('Why?')
                     ->form([TextInput::make('reason')->required()->visible(fn () => true)])),
         ];
     }
@@ -439,4 +439,43 @@ it('does not run an action that became hidden before submit', function () {
         ->set('available', false)
         ->call('callMountedAction')
         ->assertSet('log', '');
+});
+
+/*
+ * The command palette's other hand-off.
+ *
+ * The palette resolves a row to an action name and stops there — it is in a
+ * sibling module that may not import the Actions one, and it owns no modal. When
+ * the action's owner routes no page there is nowhere to navigate to, so the name
+ * is dispatched instead and any host composing this trait answers it.
+ */
+it('opens an action the palette dispatched by name', function () {
+    Livewire::test(WithActionsHost::class)
+        ->dispatch('wire-palette-action', name: 'confirmDelete')
+        ->assertSet('actionModalOpen', true)
+        ->assertSet('log', '');
+});
+
+it('runs a dispatched action that has nothing to ask', function () {
+    // Same entry point either way: the palette runs these itself when it can, and
+    // a host reached by dispatch must not answer differently.
+    Livewire::test(WithActionsHost::class)
+        ->dispatch('wire-palette-action', name: 'greet')
+        ->assertSet('log', 'greeted');
+});
+
+it('ignores a dispatched name no action answers to', function () {
+    Livewire::test(WithActionsHost::class)
+        ->dispatch('wire-palette-action', name: 'nonsense')
+        ->assertSet('log', '')
+        ->assertSet('actionModalOpen', false);
+});
+
+it('drops a record key the host is not showing', function () {
+    // The event crosses a round trip, so what arrives is a key. Loading whatever
+    // it names would let the sender pick a record this page was never showing —
+    // an authorization decision made by the caller instead of by the action.
+    Livewire::test(WithActionsHost::class)
+        ->dispatch('wire-palette-action', name: 'greet', arguments: ['record' => 999])
+        ->assertSet('log', 'greeted');
 });

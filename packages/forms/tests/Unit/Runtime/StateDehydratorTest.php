@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use NyonCode\WireForms\Components\Layout\Section;
+use NyonCode\WireCore\Foundation\Schema\Section;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;

@@ -51,6 +51,11 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
   `Actions\Concerns\InteractsWithActions` (form-agnostic, here in wire-core) and the wire-forms
   form bridge; `WithTable` composes the same engine. Extend it rather than reimplementing action
   handling on a component.
+- **A halt needs none of that.** `Actions\Concerns\InteractsWithHalt` is "stop, ask, continue" on its own:
+  `$this->halt($halt, then: 'method', arguments: [...])` from any method, plus
+  @verbatim`<x-wire-actions::halt-host />`@endverbatim (a host rendering the modal host already draws it).
+  The resume is a **method name and scalars**, never a closure — a halt is answered on a later request than
+  the one that raised it. Without wire-forms a halt has no fields; its declared rules are still checked.
 
 ### Modals
 
@@ -142,8 +147,9 @@ registries. **Never make a module reach for `DashboardRegistry` itself**: a dash
 contract is L1, so naming classes is what keeps the layer test green. Not a module's job: workflows (the
 resource carries one), policies (Laravel's Gate), workspaces (a service over the registries). `describe-module`
 reports what each declares. **A package adds, it never overwrites**: two classes on one key are refused, so an
-application adjusts a shipped module through a **`table.composing`** / **`form.configuring`** hook scoped with
-`for: '<key>'`, never by subclassing its resource (a subclass keeps the parent's key).
+application adjusts a shipped module through a **`table.composing`** / **`form.configuring`** /
+**`infolist.configuring`** hook scoped with `for: '<key>'`, never by subclassing its resource (a subclass keeps
+the parent's key).
 
 ### Plugins and hooks
 
@@ -163,9 +169,17 @@ returning an array replaces the payload, anything else leaves it unchanged. Name
 (strings still accepted). **`table.composing` ≠ `table.configuring`**: composing runs once on the table instance
 the host built (a column added there renders), configuring runs in `TableQueryService` on arrays the planner
 consumes (a column added there is searched and sorted on and never drawn). `form.configuring` is the form's
-composing hook. Both new ones are **typed-only** — no array counterpart, and new hooks stay that way.
-`hook(..., for: 'invoices' | Model::class | Page::class)` scopes a callback to one component through the
-payload's `HookTarget`; a scoped callback is skipped when a dispatch carries no target.
+composing hook, `infolist.configuring` the detail page's. Eight hooks are **typed-only** — those three plus
+`widget.configuring` (before widget keys are stamped and before visibility filters), `export.configuring` (in
+`buildTableExport()`, so a download and a queued file are one export), `navigation.building` (the flat entry
+list, before grouping), `page.mounting` (last in a resource page's mount, so the record is resolved) and
+`search.querying` (per resource, before `get()` and before the policy check). No array counterpart, and new
+hooks stay that way. `hook(..., for: 'invoices' | Model::class | Page::class)` scopes a callback to one
+component through the payload's `HookTarget`; a scoped callback is skipped when a dispatch carries no target.
+Two hooks belong to no component and name something else: `navigation.building` takes a **zone**,
+`search.querying` the searched resource's catalogue key. **Never write the container/`hasHook()` guard by
+hand** — `HookDispatch::typed($hook, fn () => new …Payload(…))` owns it, and its `null` means "nobody
+listened", never "nothing changed" (folding the two with `??` undoes a callback that emptied the array).
 
 **The rule that cost this repo a defect: the first parameter's type hint decides which dispatcher a callback
 belongs to.** Every built-in lifecycle point (`table.configuring|querying|queried`, `form.saving|saved`,

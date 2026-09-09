@@ -62,6 +62,12 @@
         class="space-y-2"
         @if($field->isReorderable())
             x-data="wireSortableList()"
+            {{-- Livewire's own Alpine plugin builds the Sortable; this controller
+                 hands it the whole option set. The library is in Livewire's
+                 bundle already, so shipping a second copy was 39 kB of the same
+                 code twice. See `wireSortableList`'s header. --}}
+            x-sort
+            x-sort:config="sortableConfig()"
             x-on:sorted="$wire.reorderRepeaterItems('{{ $statePath }}', $event.detail.order)"
         @endif
     >

@@ -75,7 +75,7 @@ Your layout must include Vite assets, Livewire (which provides Alpine.js), and `
 `@wireStackScripts` emits every installed Wire package's Alpine controllers into the initial
 document — the placement that survives a `wire:navigate` visit and the cached Back/Forward
 path. It is additive: each field still loads its own bundle as a fallback. See
-[JavaScript Assets](../../docs/getting-started.md#javascript-assets).
+[JavaScript Assets](../../docs/start/getting-started.md#javascript-assets).
 
 ### Publish Config (optional)
 
@@ -96,7 +96,7 @@ use Livewire\Component;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\Toggle;
-use NyonCode\WireForms\Components\Layout\Section;
+use NyonCode\WireCore\Foundation\Schema\Section;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
 
@@ -343,8 +343,8 @@ php artisan vendor:publish --tag=wire-forms-config
 | [Field Reference](../../docs/forms/fields/index.md) | Built-in field components |
 | [Validation](../../docs/forms/validation.md) | Rules, messages, and validation behavior |
 | [Save Lifecycle](../../docs/forms/save-lifecycle.md) | Mutation, persistence, hooks, and notifications |
-| [Authorization](../../docs/authorization.md) | Policy and callback authorization |
-| [Configuration](../../docs/configuration.md) | Date formats, uploads, and rich editor config |
+| [Authorization](../../docs/start/authorization.md) | Policy and callback authorization |
+| [Configuration](../../docs/start/configuration.md) | Date formats, uploads, and rich editor config |
 
 ## License
 

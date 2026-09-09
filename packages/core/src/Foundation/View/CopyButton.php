@@ -29,7 +29,7 @@ use NyonCode\WireCore\Foundation\Icons\IconManager;
 class CopyButton
 {
     /** Default button chrome: invisible until the row or entry is hovered. */
-    public const DEFAULT_CLASS = 'opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700';
+    public const DEFAULT_CLASS = 'opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700';
 
     /** @var array<string, Skeleton> one compiled button per shape */
     private array $skeletons = [];

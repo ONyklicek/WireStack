@@ -118,21 +118,63 @@ it('honours a named cap', function () {
         ->assertDontSee('max-height: '.Table::DEFAULT_STICKY_MAX_HEIGHT, escape: false);
 });
 
-it('frames the scroll region with an edge shadow for each edge there is more past', function () {
-    // All three are in the document at every size; Alpine decides which show,
-    // from the scroller's own scroll offsets. The server only guarantees they
-    // are there and that they cannot swallow a tap meant for the rows beneath.
+it('marks a clipped region with its own scrollbar, not with an overlay', function () {
+    // A region that clips does it in silence, and the sign that there is more
+    // used to be three gradients over the edges — kept in sync with the
+    // scroller's offsets by an Alpine component, a scroll listener and a
+    // ResizeObserver. A scrollbar says the same thing, says how much more, and
+    // answers a drag; it is a property of the box, so there is no state to be
+    // wrong after a morph. The server's whole part in it is the class and the
+    // stylesheet that opts the element off the platform's auto-hiding overlay
+    // scrollbar — whether one is actually painted is a browser question, and
+    // `verify-table-header-chrome.mjs` measures it there.
     $html = Livewire::test(HeaderChromeHost::class)->html();
 
-    expect($html)->toContain('data-testid="table-scroll-shadow-start"')
-        ->and($html)->toContain('data-testid="table-scroll-shadow-end"')
-        ->and($html)->toContain('data-testid="table-scroll-shadow-bottom"')
-        // Three, not four: the top edge is where a sticky header already sits,
-        // and an uncapped region cannot scroll vertically at all.
-        ->and(substr_count($html, 'data-testid="table-scroll-shadow-'))->toBe(3)
-        ->and($html)->not->toContain('table-scroll-shadow-top')
-        // Decoration only: they must not swallow a tap meant for the rows
-        // beneath, and a screen reader has the table itself.
-        ->and(substr_count($html, 'pointer-events-none absolute'))->toBeGreaterThanOrEqual(3)
-        ->and(substr_count($html, 'aria-hidden="true"'))->toBeGreaterThanOrEqual(3);
+    expect($html)->toContain('overflow-x-auto wire-scroller')
+        // And nothing is laid over the rows any more.
+        ->and($html)->not->toContain('table-scroll-shadow');
+});
+
+test('the scrollbar rules ship with the class, and keep the guard that makes them work', function () {
+    // Read from the file rather than from a render: `@assets` hoists its body
+    // into the page's head through Livewire's asset registry, so a component's
+    // own `html()` carries the id of the block and not one line of the CSS.
+    //
+    // wire-core's, not this package's: a table's region, a table widget's card
+    // and a repeater wider than its field are the same box with the same
+    // silence, and wire-forms sits below wire-table in the graph.
+    $partial = dirname(__DIR__, 3).'/core/resources/views/partials/scroller-assets.blade.php';
+
+    expect(is_file($partial))->toBeTrue()
+        ->and(file_get_contents($partial))
+        ->toContain('.wire-scroller::-webkit-scrollbar')
+        // Declaring the pseudo-element is the whole mechanism: it is what opts an
+        // element out of the platform's auto-hiding overlay scrollbar.
+        ->toContain('-webkit-appearance: none')
+        // The guard is load-bearing, not tidiness. Chrome 121+ ignores every
+        // `::-webkit-scrollbar` rule on an element that also sets `scrollbar-width`
+        // or `scrollbar-color`, so writing both unconditionally would hand Chrome
+        // back the overlay scrollbar this file exists to defeat. Firefox does not
+        // support `selector()`, which is what makes the query pick out exactly the
+        // engine that needs the standard properties.
+        ->toContain('@supports not selector(::-webkit-scrollbar)')
+        ->toContain('scrollbar-color');
+});
+
+it('clips the card to its own radius, so nothing inside squares off the corner', function () {
+    // The card is rounded; a `<tr>` background is not, and neither is a
+    // full-height edge gradient. A selected, striped, hovered or row-coloured
+    // LAST row paints a rectangle to the card's bottom edge, and without a clip
+    // it fills the corner the border is still curving around. Neither can carry
+    // a radius of its own — a `<tr>` has no border box to round, and an overlay
+    // does not know which of its ends is at the card's edge — so the clip has to
+    // live on the element that owns the radius.
+    $html = Livewire::test(HeaderChromeHost::class)->html();
+
+    expect($html)->toContain('rounded-2xl border border-gray-200 dark:border-gray-700 overflow-clip')
+        // `clip`, never `hidden`: hidden makes the card a scroll container, and
+        // that is what a `position: sticky` descendant sticks inside. The
+        // stacked cards' group headings stick against the viewport, and would
+        // silently stop on a phone. See index.blade.php for the whole argument.
+        ->and($html)->not->toContain('rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden');
 });

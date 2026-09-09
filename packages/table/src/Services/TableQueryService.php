@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Metadata\RelationMetadata;
+use NyonCode\WireCore\Core\Plugin\HookDispatch;
 use NyonCode\WireCore\Core\Plugin\Hooks\TableConfiguringPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\TableQueriedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\TableQueryingPayload;
@@ -25,6 +26,7 @@ use NyonCode\WireCore\Core\Query\QueryPlanner;
 use NyonCode\WireCore\Core\Query\Search\SearchTermParser;
 use NyonCode\WireCore\Core\Query\SortDefinition;
 use NyonCode\WireCore\Core\Query\StableOrder;
+use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
@@ -79,6 +81,9 @@ final class TableQueryService
         $modelClass = get_class($baseQuery->getModel());
         $this->currentModelClass = $modelClass;
         $this->registry = $this->buildMetadataRegistry($baseQuery, $modelClass, $table);
+
+        // Not a hook and therefore not asked for by name: the query pipes are a
+        // registry on the manager, so this one is resolved the plain way.
         $pluginManager = $this->resolvePluginManager();
 
         // Built once and handed to every dispatch below: it is what lets a
@@ -90,8 +95,16 @@ final class TableQueryService
         $filters = $table->getFilters();
 
         // ── 0. Plugin hook: table.configuring ──
-        if ($pluginManager !== null) {
-            $payload = $pluginManager->runHook('table.configuring', [
+        //
+        // One of the seven legacy names, so both dispatchers run. Asked per hook
+        // rather than once for the method: each name gets its own `hasHook()`
+        // short-circuit that way, and this one runs per table per render. The
+        // shared `resolvePluginManager()` below stays for the query pipes, which
+        // are not a hook and have no name to ask about.
+        $configuringManager = HookDispatch::manager(Hook::TableConfiguring);
+
+        if ($configuringManager !== null) {
+            $payload = $configuringManager->runHook('table.configuring', [
                 'table' => $table,
                 'columns' => $columns,
                 'filters' => $filters,
@@ -100,7 +113,7 @@ final class TableQueryService
             $filters = $payload['filters'] ?? $filters;
 
             // Typed hook (parallel API — both array and typed hooks run)
-            $typedPayload = $pluginManager->runTypedHook(
+            $typedPayload = $configuringManager->runTypedHook(
                 'table.configuring',
                 new TableConfiguringPayload($table, $columns, $filters, target: $hookTarget),
             );
@@ -214,8 +227,10 @@ final class TableQueryService
             : null;
 
         // ── 2.5 Plugin hook: table.querying (pre-plan, can force sort override) ──
-        if ($pluginManager !== null) {
-            $queryingPayload = $pluginManager->runHook('table.querying', [
+        $queryingManager = HookDispatch::manager(Hook::TableQuerying);
+
+        if ($queryingManager !== null) {
+            $queryingPayload = $queryingManager->runHook('table.querying', [
                 'table' => $table,
                 'columns' => $columns,
                 'filters' => $filters,
@@ -248,14 +263,15 @@ final class TableQueryService
 
         // ── 3.5 Typed plugin hook: table.querying (post-plan, pre-execute) ──
         // Plugins that only need to observe the finished plan (e.g. for logging or
-        // read-only inspection) may use this typed hook.
+        // read-only inspection) may use this typed hook. Its result is not read
+        // back, and that is the whole contract: the plan exists by now, so any
+        // change to it would mean planning the query a second time.
         //
-        // NOTE: Do NOT use forceSortColumn here. Sort overrides must go through the
-        // array-based table.querying hook (step 2.5 above) so they are applied
-        // BEFORE the first plan() call. Setting forceSortColumn in the typed hook
-        // would require re-running the full planner a second time.
-        if ($pluginManager !== null) {
-            $pluginManager->runTypedHook(
+        // A sort override therefore goes on the array hook at step 2.5, which runs
+        // before the planner. The typed payload used to carry forceSortColumn for
+        // it — filled by nothing, read by nothing — and that was removed in 2.0.
+        if ($queryingManager !== null) {
+            $queryingManager->runTypedHook(
                 'table.querying',
                 new TableQueryingPayload($table, $this->lastPlan, $baseQuery, target: $hookTarget),
             );
@@ -365,14 +381,16 @@ final class TableQueryService
         app(StableOrder::class)->apply($query);
 
         // ── 6. Plugin hook: table.queried (post-execution observation) ──
-        if ($pluginManager !== null) {
-            $pluginManager->runHook('table.queried', [
+        $queriedManager = HookDispatch::manager(Hook::TableQueried);
+
+        if ($queriedManager !== null) {
+            $queriedManager->runHook('table.queried', [
                 'table' => $table,
                 'query' => $query,
                 'plan' => $this->lastPlan,
             ], $hookTarget);
 
-            $pluginManager->runTypedHook(
+            $queriedManager->runTypedHook(
                 'table.queried',
                 new TableQueriedPayload($table, $query, $this->lastPlan, target: $hookTarget),
             );

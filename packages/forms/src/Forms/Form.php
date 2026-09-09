@@ -9,12 +9,14 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Traits\Macroable;
 use Livewire\Component;
 use Livewire\Drawer\Utils;
 use NyonCode\WireCore\Actions\Contracts\ModalForm;
+use NyonCode\WireCore\Core\Plugin\HookDispatch;
 use NyonCode\WireCore\Core\Plugin\Hooks\FormConfiguringPayload;
+use NyonCode\WireCore\Core\Plugin\Hooks\FormFillingPayload;
 use NyonCode\WireCore\Core\Plugin\HookTarget;
-use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Schema\Wizard;
 use NyonCode\WireForms\Forms\Config\ConfigBuilder;
@@ -33,6 +35,15 @@ use NyonCode\WireForms\Validation\FormValidationResolver;
  */
 class Form implements Htmlable, ModalForm
 {
+    /**
+     * Macroable, for the reason `Table` and `BaseAction` already are: an
+     * application or a package adds vocabulary to a class it does not own,
+     * applied where the component is built. ADR 0030 named this as the missing
+     * half of the extension story — the second-best path was absent everywhere
+     * the first one was.
+     */
+    use Macroable;
+
     private ConfigBuilder $configBuilder;
 
     private ?FormConfig $config = null;
@@ -125,11 +136,33 @@ class Form implements Htmlable, ModalForm
     }
 
     /**
+     * Bind values to the fields, after anything installed has had its say.
+     *
+     * The way *in*, which forms had no seam for: `form.saving` shapes what
+     * reaches the record, and nothing shaped what reaches the fields — so an
+     * application could add a field to a module's form and could not change what
+     * an existing one arrives holding.
+     *
+     * Here and not in `getInitialState()`: that answers the different question of
+     * what a control needs before anything is bound, and an edit page calls both,
+     * so a hook on each would fire twice per page — which is how a callback that
+     * appends ends up appending twice.
+     *
      * @param  array<string, mixed>  $data
      */
     public function fill(array $data): static
     {
-        $this->getRuntime()->fill($data);
+        $payload = HookDispatch::typed(Hook::FormFilling, fn () => new FormFillingPayload(
+            form: $this,
+            data: $data,
+            target: HookTarget::for(
+                'form',
+                $this->stateManager->getLivewire(),
+                $this->configBuilder->getModel(),
+            ),
+        ));
+
+        $this->getRuntime()->fill($payload !== null ? $payload->data : $data);
 
         return $this;
     }
@@ -532,22 +565,20 @@ class Form implements Htmlable, ModalForm
     {
         $schema = $this->configBuilder->getSchema();
 
-        if (! app()->bound(PluginManager::class)) {
-            return $schema;
-        }
-
-        return app(PluginManager::class)->runTypedHook(
-            Hook::FormConfiguring,
-            new FormConfiguringPayload(
-                form: $this,
-                schema: $schema,
-                target: HookTarget::for(
-                    'form',
-                    $this->stateManager->getLivewire(),
-                    $this->configBuilder->getModel(),
-                ),
+        $payload = HookDispatch::typed(Hook::FormConfiguring, fn () => new FormConfiguringPayload(
+            form: $this,
+            schema: $schema,
+            target: HookTarget::for(
+                'form',
+                $this->stateManager->getLivewire(),
+                $this->configBuilder->getModel(),
             ),
-        )->schema;
+        ));
+
+        // Against null, not `?? $schema`: a callback that filters every field out
+        // leaves an empty array, and the null-coalescing form would quietly put
+        // the fields back.
+        return $payload !== null ? $payload->schema : $schema;
     }
 
     private function getRuntime(): FormRuntime

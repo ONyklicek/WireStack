@@ -11,7 +11,12 @@
  *    the table's wrapper is already one (`overflow-x: auto` computes the other
  *    axis to `auto`). Whether the header actually stays put is a question about
  *    scroll positions, not classes.
- *  - **the edge gradients** — they are drawn from `scrollLeft`, in Alpine.
+ *  - **the scrollbar** — the sign that a clipped region has more in it. macOS
+ *    and iOS draw an OVERLAY scrollbar that fades out after the last scroll, so
+ *    a table nobody has touched shows nothing; declaring `::-webkit-scrollbar`
+ *    is what opts an element back onto a classic, always-present one. Whether
+ *    that worked is a question about laid-out pixels: a classic scrollbar takes
+ *    a gutter out of the element's client box, an overlay one takes none.
  */
 
 import { openPage, checker, until } from './lib/cdp.mjs';
@@ -19,7 +24,11 @@ import { openPage, checker, until } from './lib/cdp.mjs';
 const url = process.env.PREVIEW_URL ?? 'http://127.0.0.1:8085/previews/table-sticky-header';
 
 const { eval_, waitFor, shot, shotDir, consoleErrors, badResponses, close } =
-  await openPage({ url, shotPrefix: 'table-header-chrome', width: 900, height: 900 });
+  // `showScrollbars`, because the default `--hide-scrollbars` makes the whole
+  // second half of this file untestable: with it Chrome reports a zero gutter on
+  // every element, styled or not, so a check over the scrollbar rules would pass
+  // on a stylesheet that had never been applied.
+  await openPage({ url, shotPrefix: 'table-header-chrome', width: 900, height: 900, showScrollbars: true });
 const { check, finish } = checker();
 
 try {
@@ -45,7 +54,7 @@ try {
   await shot('01-headers');
 
   // ── Pinning ───────────────────────────────────────────────────────────────
-  const scroller = 'document.querySelector("[data-testid=table-scroll-shadow-end]").parentElement.querySelector(".overflow-x-auto")';
+  const scroller = 'document.querySelector(".wire-scroller")';
 
   const capped = await eval_(`(() => {
     const el = ${scroller}
@@ -53,21 +62,33 @@ try {
   })()`);
   check('the scroll region is capped, so it can scroll at all', JSON.parse(capped).scrollable, capped);
 
-  // Whether an edge gradient is on screen. Used by both halves below.
-  const shown = (id) => `(() => {
-    const el = document.querySelector('[data-testid=table-scroll-shadow-${id}]')
-    return el && getComputedStyle(el).display !== 'none'
-  })()`;
+  // The gutter a scrollbar takes out of the element's client box. An overlay
+  // scrollbar — the macOS default, and what an unstyled element still gets —
+  // is painted over the content and takes none, which is the whole difference
+  // this measures.
+  const gutter = (axis) => eval_(`(() => {
+    const el = ${scroller}
+    return ${axis === 'y' ? 'el.offsetWidth - el.clientWidth' : 'el.offsetHeight - el.clientHeight'}
+  })()`);
 
-  // Before anything is scrolled: the capped region already has rows below the
-  // fold, and the sliced last row is exactly what the gradient exists to explain.
-  check('the bottom edge is shadowed before the region is scrolled', await eval_(shown('bottom')));
+  // Before anything is scrolled or hovered: the capped region already has rows
+  // below the fold, and the scrollbar is what says so.
+  const vertical = await gutter('y');
+  check('the vertical scrollbar is laid out before anything is scrolled', vertical > 0, `${vertical}px`);
+  check('and it is the styled 10px one, not the platform default', vertical === 10, `${vertical}px`);
 
-  // Shown is not the same as drawn: a `bg-gradient-*` utility that missed the
-  // consumer's Tailwind build leaves an element that is present, sized, and
-  // displayed — and completely invisible.
-  const bottomPaint = await eval_(`getComputedStyle(document.querySelector('[data-testid=table-scroll-shadow-bottom]')).backgroundImage`);
-  check('and it actually paints a gradient', bottomPaint.startsWith('linear-gradient'), bottomPaint);
+  // The comparison that makes the number mean something: an element with the
+  // same overflow and no stylesheet gets the overlay scrollbar back.
+  const unstyled = await eval_(`(() => {
+    const d = document.createElement('div')
+    d.style.cssText = 'width:200px;height:100px;overflow:auto;position:absolute;top:-9999px'
+    d.innerHTML = '<div style="width:900px;height:900px"></div>'
+    document.body.appendChild(d)
+    const g = d.offsetWidth - d.clientWidth
+    d.remove()
+    return g
+  })()`);
+  check('an unstyled scroller beside it gets none — so the rules are doing it', unstyled === 0, `${unstyled}px`);
 
   const pinned = await eval_(`(() => {
     const el = ${scroller}
@@ -90,47 +111,39 @@ try {
   const opaque = await eval_(`getComputedStyle(document.querySelector('thead')).backgroundColor`);
   check('and it is opaque', ! /rgba\\([^)]*,\\s*0?\\.\\d+\\)/.test(opaque), opaque);
 
-  check('and still shadowed part-way down', await eval_(shown('bottom')));
-
   await shot('02-pinned');
 
-  // At the very bottom there is nothing more to promise, so the gradient goes.
-  await eval_(`(() => { const el = ${scroller}; el.scrollTop = el.scrollHeight })()`);
-  await until(async () => (await eval_(shown('bottom'))) === false);
-  check('and gone once the last row is reached', (await eval_(shown('bottom'))) === false);
-
-  // The top edge is deliberately unshadowed: the pinned header is already the
-  // marker for what is above, and a fourth gradient would only dim it.
-  check('no top gradient is rendered at all', (await eval_(`!! document.querySelector('[data-testid=table-scroll-shadow-top]')`)) === false);
+  // Nothing is laid over the rows any more. The three gradients that used to be
+  // here dimmed the pinned header row, the rules between rows and the first
+  // characters of the first column, and a stale one after a morph was a grey
+  // band on a table that fitted.
+  check('and nothing is overlaid on the rows', (await eval_(`document.querySelectorAll('[data-testid^=table-scroll-shadow]').length`)) === 0);
 
   await eval_(`(() => { ${scroller}.scrollTop = 0 })()`);
 
-  // ── Horizontal edges ──────────────────────────────────────────────────────
+  // ── The horizontal axis ───────────────────────────────────────────────────
   // Widen the table past its region rather than shipping a fixture wide enough
-  // to overflow at every width a driver might run at. That also puts the wiring
-  // itself under test: nothing is scrolled here and no `scroll` event fires, so
-  // the gradient can only appear if the ResizeObserver on the table noticed.
+  // to overflow at every width a driver might run at. A gutter that appears
+  // from this alone — nothing scrolled, no `scroll` event — is the point: it is
+  // the box reporting its own state, where the gradients needed a ResizeObserver
+  // to notice the same thing.
+  const before = await gutter('x');
+  check('a table that fits shows no horizontal scrollbar', before === 0, `${before}px`);
+
   await eval_(`(() => { ${scroller}.querySelector('table').style.minWidth = '1600px' })()`);
 
   const overflows = await until(() => eval_(`(() => { const el = ${scroller}; return el.scrollWidth > el.clientWidth + 1 })()`));
   check('the table is now wider than the region', overflows === true, String(overflows));
 
-  await until(() => eval_(shown('end')));
-  check('the end edge is shadowed while there is more table to the right', await eval_(shown('end')));
+  await until(async () => (await gutter('x')) > 0);
+  const horizontal = await gutter('x');
+  check('and the horizontal scrollbar is there without anything being scrolled', horizontal > 0, `${horizontal}px`);
+  check('at the same styled height', horizontal === 10, `${horizontal}px`);
 
-  // Shown is not the same as drawn. `bg-gradient-to-l` and its `from-` stop have
-  // to survive the consumer's Tailwind build; when they do not, the element is
-  // still there, still sized, still displayed — and completely invisible.
-  const painted = await eval_(`getComputedStyle(document.querySelector('[data-testid=table-scroll-shadow-end]')).backgroundImage`);
-  check('and it actually paints a gradient', painted.startsWith('linear-gradient'), painted);
-
-  check('the start edge is not, at scrollLeft 0', (await eval_(shown('start'))) === false);
-
-  await eval_(`(() => { const el = ${scroller}; el.scrollLeft = el.scrollWidth; el.dispatchEvent(new Event('scroll')) })()`);
-  await until(() => eval_(shown('start')));
-
-  check('scrolled to the far side, the start edge is shadowed', await eval_(shown('start')));
-  check('and the end edge is not', (await eval_(shown('end'))) === false);
+  // A scrollbar says how far, which is the half a gradient could not: the thumb
+  // is a fraction of the track, and the fraction is what is on screen.
+  const proportion = await eval_(`(() => { const el = ${scroller}; return Math.round(100 * el.clientWidth / el.scrollWidth) })()`);
+  check('and it says how much of the table is on screen', proportion > 0 && proportion < 100, `${proportion}%`);
 
   await shot('03-scrolled-across');
 } finally {

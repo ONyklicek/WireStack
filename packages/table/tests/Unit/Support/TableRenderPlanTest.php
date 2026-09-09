@@ -676,7 +676,7 @@ class TrpGestureComponent extends Component
         $table->model(TrpRow::class)->selectable()->columns([TextColumn::make('name')]);
 
         return match ($this->mode) {
-            'full' => $table->gestures()->rowContextMenu([Action::make('ctxOpen')]),
+            'full' => $table->gestures()->recordAction(Action::make('ctxOpen')->onContextMenu()),
             // all()->shortcutHelp(false), not a closure: the closure form is handed
             // the CURRENT gestures object, which is "none" until something turns
             // them on — so it would leave the layer off rather than trim it.

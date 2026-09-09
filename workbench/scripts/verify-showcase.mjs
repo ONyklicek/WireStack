@@ -27,7 +27,16 @@ const { page, eval_, waitFor, shot, shotDir, consoleErrors, badResponses, close 
 async function visit(path) {
   await eval_(`window.location.href = ${JSON.stringify(base + path)}`);
   await waitFor(`location.pathname === ${JSON.stringify(new URL(base + path).pathname)}`, 15000);
-  await waitFor(`!! window.Alpine && !! document.querySelector('[data-testid="admin-sidebar"]')`, 15000);
+  // Waits for the *store*, not for `window.Alpine`. The two are not the same
+  // moment: the bundle sets `window.Alpine` and only then fires `alpine:init`,
+  // which is where the layout registers `wireAdmin`. Waiting on the earlier one
+  // let `theme()` run against a store that did not exist yet — green in
+  // isolation, red once a full sweep put the machine under load, which is the
+  // worst shape a driver failure has.
+  await waitFor(`(() => {
+    try { return !! Alpine.store('wireAdmin') && !! document.querySelector('[data-testid="admin-sidebar"]'); }
+    catch { return false; }
+  })()`, 15000);
 }
 
 /**
@@ -51,7 +60,16 @@ try {
   await eval_(`window.localStorage.removeItem('wire-admin.theme')`);
   await eval_(`window.location.reload()`);
 
-  await waitFor(`!! window.Alpine && !! document.querySelector('[data-testid="admin-sidebar"]')`, 15000);
+  // Waits for the *store*, not for `window.Alpine`. The two are not the same
+  // moment: the bundle sets `window.Alpine` and only then fires `alpine:init`,
+  // which is where the layout registers `wireAdmin`. Waiting on the earlier one
+  // let `theme()` run against a store that did not exist yet — green in
+  // isolation, red once a full sweep put the machine under load, which is the
+  // worst shape a driver failure has.
+  await waitFor(`(() => {
+    try { return !! Alpine.store('wireAdmin') && !! document.querySelector('[data-testid="admin-sidebar"]'); }
+    catch { return false; }
+  })()`, 15000);
   await theme('light');
 
   // ── The shell ────────────────────────────────────────────────────────────
