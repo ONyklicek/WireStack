@@ -70,8 +70,8 @@ To znamená, že ownership business use-casu končí převážně v Livewire kom
 
 Aktuální doporučené cesty jsou:
 - ruční `where('tenant_id', ...)` v query, viz [docs/table/overview.md](../../docs/table/overview.md)
-- custom tenant plugin / macro, viz [docs/core/plugins.md](../../docs/core/plugins.md)
-- per-record authorize closure, viz [docs/authorization.md](../../docs/authorization.md)
+- custom tenant plugin / macro, viz [docs/core/plugins/index.md](../../docs/core/plugins/index.md)
+- per-record authorize closure, viz [docs/start/authorization.md](../../docs/start/authorization.md)
 
 To je flexibilní, ale ne dostatečně bezpečné jako výchozí model pro business
 software, kde tenant scope patří mezi systémové invarianty.
@@ -86,7 +86,7 @@ software, kde tenant scope patří mezi systémové invarianty.
 
 Akce, modaly a tabulky existují, ale vestavěný workflow model ne. V docs je
 `workflow` zmiňován jen jako příklad custom action type přes plugin registry,
-viz [docs/core/plugins.md](../../docs/core/plugins.md).
+viz [docs/core/plugins/index.md](../../docs/core/plugins/index.md).
 
 Není vestavěné:
 - transition model

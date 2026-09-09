@@ -20,7 +20,10 @@
         "build:sortable-assets": "esbuild packages/sortable/resources/js/sortable.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/sortable/dist/wire-sortable.js",
         "build:table-assets": "esbuild packages/table/resources/js/record-actions.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/table/dist/wire-table-records.js && esbuild packages/table/resources/js/record-selection.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/table/dist/wire-table-selection.js && esbuild packages/table/resources/js/record-live.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/table/dist/wire-table-live.js && esbuild packages/table/resources/js/record-fill.js --bundle --minify --format=iife --legal-comments=none --outfile=packages/table/dist/wire-table-fill.js",
         "build:workbench-echo": "esbuild workbench/resources/js/echo-bootstrap.js --bundle --format=iife --outfile=workbench/resources/dist/echo-bootstrap.js",
-        "docs:api": "php docs-site/scripts/verify-api-docs.php ."
+        "docs:api": "php docs-site/scripts/verify-api-docs.php .",
+        "hooks:verify": "node scripts/verify-hook-names.mjs .",
+        "hooks:names": "node scripts/verify-hook-names.mjs . --update-ledger",
+        "docs:examples": "php docs-site/scripts/verify-doc-examples.php ."
     },
     "dependencies": {
         "@floating-ui/dom": "^1.8",

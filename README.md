@@ -28,7 +28,7 @@ Monorepo for the Wire ecosystem – enterprise-grade Livewire components for Lar
 - Node.js & npm (for Vite)
 
 `nyoncode/laravel-package-toolkit` `^2.4` comes with the packages and sets that
-Laravel floor — see [Getting Started → Requirements](docs/getting-started.md#requirements).
+Laravel floor — see [Getting Started → Requirements](docs/start/getting-started.md#requirements).
 
 ## Installation
 
@@ -40,7 +40,7 @@ composer require nyoncode/wire-table
 composer require nyoncode/wire-forms
 ```
 
-After installing, configure Tailwind CSS to scan Wire package views. See the [Getting Started guide](docs/getting-started.md) for Vite setup, Tailwind content paths, layout template, and troubleshooting.
+After installing, configure Tailwind CSS to scan Wire package views. See the [Getting Started guide](docs/start/getting-started.md) for Vite setup, Tailwind content paths, layout template, and troubleshooting.
 
 ## Development
 
@@ -80,15 +80,18 @@ composer analyse
 
 | Section | Description |
 |---------|-------------|
-| [Core: Foundation](docs/core/foundation.md) | Shared traits, icons, colors, base classes |
-| [Core: Actions](docs/core/actions.md) | Row, bulk, header actions, action groups |
-| [Core: Notifications](docs/core/notifications.md) | Notification drivers and customization |
+| [Documentation Index](docs/index.md) | The map of every section, in reading order |
+| [Installing Wire](docs/start/installation.md) | The whole stack in one require, and one interactive command |
+| [Core: Overview](docs/core/overview.md) | What lives in core and how its modules are layered |
+| [Core: Foundation](docs/core/foundation/index.md) | Shared traits, icons, colors, base classes |
+| [Core: Actions](docs/core/actions/index.md) | Row, bulk, header actions, action groups |
+| [Core: Notifications](docs/core/notifications/index.md) | Notification drivers and customization |
 | [Core: Modals](docs/core/modals.md) | Modals, confirmations, slide-overs, wizards |
-| [Core: Plugins](docs/core/plugins.md) | App and package extension points |
+| [Core: Plugins](docs/core/plugins/index.md) | App and package extension points |
 | [Core: Audit Log](docs/core/audit.md) | Audit model changes and table-related events |
-| [Project Map](docs/project-map.md) | Package overview, install paths, source layout |
-| [Configuration](docs/configuration.md) | Published config files and environment variables |
-| [Authorization](docs/authorization.md) | Gates, policies, permissions, and callbacks |
+| [Project Map](docs/start/project-map.md) | Package overview, install paths, source layout |
+| [Configuration](docs/start/configuration.md) | Published config files and environment variables |
+| [Authorization](docs/start/authorization.md) | Gates, policies, permissions, and callbacks |
 | [Forms: Overview](docs/forms/overview.md) | Form setup, WithForms trait, save lifecycle |
 | [Forms: Field Reference](docs/forms/fields/index.md) | Per-field documentation for built-in form components |
 | [Table: Overview](docs/table/overview.md) | Table features and configuration |
@@ -97,6 +100,9 @@ composer analyse
 | [Table: Notifications](docs/table/notifications.md) | User feedback and notification drivers |
 | [Table: Sub-Rows](docs/table/sub-rows.md) | Child rows and grouped detail views |
 | [Sortable: Overview](docs/sortable/overview.md) | Drag and drop sorting for rows and columns |
+| [Panels: Overview](docs/panels/overview.md) | Resources, their pages, the menu, and routing |
+| [Admin: The Shell](docs/admin/overview.md) | The optional layout and sidebar over everything registered |
+| [Ready-Made Modules](docs/modules/index.md) | Users, auth, settings, notifications, audit, media |
 
 ## License
 

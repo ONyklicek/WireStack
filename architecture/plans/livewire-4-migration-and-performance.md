@@ -197,7 +197,7 @@ record the v4 numbers next to the v3 ones, do not just bump the numbers.
 
 Derived from `APP_KEY`. wireStack's own asset fallback is a separate route
 (`Bundle::servedByRoute('wire-table')` etc.), so nothing in the packages breaks —
-but `docs/getting-started.md` § JavaScript Assets and any deployment guidance
+but `docs/start/getting-started.md` § JavaScript Assets and any deployment guidance
 mentioning firewall/CDN rules for `/livewire/*` needs a v4 note.
 
 ---

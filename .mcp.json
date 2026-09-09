@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "phpstorm": {
+      "url": "http://127.0.0.1:64442/stream",
+      "type": "http"
+    },
+    "laravel-package-toolkit": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "vendor/nyoncode/laravel-package-toolkit/ai/mcp/server.mjs"
+      ]
+    },
+    "laravel-boost": {
+      "type": "stdio",
+      "command": "vendor/bin/testbench",
+      "args": [
+        "boost:mcp"
+      ],
+      "env": {
+        "APP_ENV": "local",
+        "APP_DEBUG": "true"
+      }
+    }
+  }
+}

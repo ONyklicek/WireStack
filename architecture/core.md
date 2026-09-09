@@ -256,7 +256,9 @@ Modal value objects describe a modal's chrome; views render it. All expose a flu
 | `SlideOver` | `icon()`, `color()`, `position('right'\|'left')`, `mobileOnly()` |
 | `Wizard` | `steps([...])`, `skippable()`, `getTotalSteps()`, `getStepsConfig($context)` |
 
-Shared concerns: `Modals/Concerns/HasModalProperties.php`, `Modals/Concerns/HasFooterActions.php`.
+Shared concerns: `Foundation/Concerns/HasModalProperties.php` (Foundation, because
+`Actions\ActionHalt` is a modal too and two L2 modules may not import each other),
+`Modals/Concerns/HasFooterActions.php`.
 
 Views live under `packages/core/resources/views/modals/`. View-class components (`Modals/View/`): `ModalComponent`, `ConfirmationComponent`, `SlideOverComponent` (the `wire-modals` namespace, plus the universal `wire::modal` alias).
 
@@ -304,7 +306,8 @@ All implement `Contracts\NotificationDriver::send(Notification $notification, mi
 
 ### `Widgets/`
 
-Dashboard-style pieces. `Widget` is the base (`heading()`, `description()`, `lazy()`, `render(): View`, `toHtml()`).
+Dashboard-style pieces. `Widget` is the base (`heading()`, `description()`,
+`key()`, `lazy()`, `filter()`, `render(): View`, `toHtml()`).
 
 | Widget | Purpose | Key API |
 |--------|---------|---------|
@@ -313,10 +316,60 @@ Dashboard-style pieces. `Widget` is the base (`heading()`, `description()`, `laz
 | `ChartWidget` | full chart (JS / Chart.js) | `type()` (line\|bar\|pie\|doughnut), `datasets()` / `labels()` (`array\|Closure`), `filter($options, $default)`, `activeFilter()` |
 | `BarChartWidget` | pure-CSS bar chart (no JS) | `type()` (vertical\|horizontal), `variant()` (finance\|system\|default), `items([ChartItem, …])`, `showGrid()`, `showMenu()`, `maxValue()`, `height()`, `rounded()` |
 | `ChartItem` | one bar in `BarChartWidget` | `ChartItem::make($label)`, `value()`, `formattedValue()`, `color()`, `percentage(0–100)`, `icon()` |
+| `ProgressWidget` | pure-CSS progress rows (no JS) | `items([ProgressItem, …]\|Closure)`, `showValues()`, `emptyState()` |
+| `ProgressItem` | one row in `ProgressWidget` | `ProgressItem::make($label)`, `value()`, `target()`, `formattedValue()`, `description()`, `icon()`, `color()`; `getPercentage()` clamps 0–100 and reads `target <= 0` as 0 |
+| `ListWidget` | pure-CSS feed of records/events | `items([ListItem, …]\|Closure)`, `dividers()`, `emptyState()` |
+| `ListItem` | one entry in `ListWidget` | `ListItem::make($title)`, `description()`, `meta()`, `icon()`, `color()` (tints the icon disc), `url()`, `newTab()` |
 | `TableWidget` | embed a wire-table | wraps a table component |
 | `CustomWidget` | arbitrary view | render any Blade view as a widget |
 
-Concerns: `Widgets/Concerns/HasPolling.php` (live refresh), `Widgets/Concerns/WithWidgets.php` (host trait). Contract: `Widgets/Contracts/HasWidgets.php`.
+Concerns: `Widgets/Concerns/HasPolling.php` (live refresh),
+`Widgets/Concerns/CanBeLazy.php` (deferred first render),
+`Widgets/Concerns/HasWidgetFilter.php` (the canonical filter vocabulary, on the
+base — a chart's filter was the only one before 2.0, and it resolved in the
+browser, which meant it resolved nothing),
+`Widgets/Concerns/HasWidgetItems.php` (one owner for "a series, or a closure
+resolving one" — bar chart, progress and list all delegate to it, and it throws
+`Exceptions/InvalidWidgetDataException`),
+`Widgets/Concerns/WithWidgets.php` (host trait). Contract:
+`Widgets/Contracts/HasWidgets.php`. Generators:
+`Widgets/Console/MakeDashboardCommand.php`, `Widgets/Console/MakeWidgetCommand.php`
+(class + Blade view, both from publishable stubs).
+
+**Four triggers, one region.** A poll tick (`refreshWidget`), a filter change
+(`filterWidget`), a deferred first render (`loadWidget`) and a header action
+(`callWidgetAction`) each answer with one widget's `wire:partial` region, queued
+by the same private owner in `WithWidgets`. The state they need — which filter each widget is showing, which
+deferred widgets have been fetched — lives on the *host* as public properties and
+is pushed back into the widgets in `getVisibleWidgets()`, after keys are stamped
+and before visibility is asked. A widget is rebuilt from the declaration every
+request and can hold nothing itself. `Widget::usesPartialAnchor()` is what the
+grid asks before emitting an anchor.
+
+**Header actions cross a boundary they may not import over.** A widget carries
+actions through the canonical `Foundation\Concerns\HasActions` — the same owner
+an infolist entry and a schema section header use — so `Widget` is a
+`HasFieldActions` and answers with `Foundation\Contracts\ActionContract`.
+Running one is the Actions module's job, reached through
+`Foundation\Contracts\RunsComponentActions` (bound in the provider to
+`Actions\Support\ComponentActionRunner`, which invokes the callback through the
+extracted `Actions\Support\ActionCallbackInvoker` that `InteractsWithActions`
+now delegates to). No `Widgets → Actions` edge exists, which is the route ADR
+0025 prescribes: *write a contract in `Foundation/Contracts/`*.
+
+The callback only — no modal, no confirmation, no form, exactly as
+`callInfolistAction` runs an infolist entry's actions. `callWidgetAction` also
+**rebuilds the declaration** before re-rendering: the widget it ran the action on
+was built before the action, so re-rendering that object shows the state from
+before the click. Found by `verify-widget-interaction`, with a correct response
+and an empty console.
+
+Islands cannot serve any of the four: an `@island` name is re-evaluated inside
+its own compiled view file, which never sees the enclosing loop's variable
+(`IslandSemanticsTest`). That is why `Widget::lazy()` was deleted in 2.0 as an
+unimplementable promise and why it is back now — the partials route the plan
+named (`architecture/plans/forms-and-surfaces-performance.md` step 4) is the one
+that works.
 
 ```php
 StatsOverviewWidget::make()

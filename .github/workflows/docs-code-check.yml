@@ -1,0 +1,66 @@
+name: Docs vs Code
+
+# The two gates that compare the docs against the real classes, kept apart from
+# docs-check.yml for one reason: these are the only docs gates a change in
+# `packages/` can break. A renamed method, a moved class or a deleted fluent
+# setter makes a page wrong without anybody touching docs/, so this workflow
+# triggers on source changes too — while the docs *build* gate, including the
+# slow browser pass, stays on docs-only triggers.
+#
+# Both need dev dependencies: verify-doc-examples.php boots a Testbench
+# application so service-provider macros are registered before anything is
+# reflected. Without that boot, `Action::make('edit')->onDoubleClick()` — a macro
+# from WireTableServiceProvider — reads as a typo and the gate reports a correct
+# page as broken.
+
+on:
+  push:
+    branches: [1.x, 2.x, 2.0.0]
+    paths:
+      - 'docs/**'
+      - 'packages/*/src/**'
+      - 'docs-site/scripts/verify-doc-examples.php'
+      - 'docs-site/scripts/verify-api-docs.php'
+      - '.github/workflows/docs-code-check.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'packages/*/src/**'
+      - 'docs-site/scripts/verify-doc-examples.php'
+      - 'docs-site/scripts/verify-api-docs.php'
+      - '.github/workflows/docs-code-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-vs-code:
+    name: Verify docs against the code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo
+          coverage: none
+
+      # WITH dev dependencies — orchestra/testbench is one, and the example gate
+      # cannot register provider macros without booting an application.
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      # Docs vs the public API, both directions: an undocumented fluent setter
+      # and a documented method that does not exist both fail.
+      - name: Verify documented API matches the code
+        run: php docs-site/scripts/verify-api-docs.php "$GITHUB_WORKSPACE"
+
+      # The examples themselves: every import resolves and every fluent call in a
+      # chain exists on the class it is written on.
+      - name: Verify example code against the classes
+        run: php docs-site/scripts/verify-doc-examples.php "$GITHUB_WORKSPACE"

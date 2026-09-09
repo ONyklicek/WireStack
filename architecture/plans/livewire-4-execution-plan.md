@@ -152,11 +152,11 @@ on this branch already, with `TableStateSynthesizerRegistrationTest` pinning it.
 | File | Line | Says |
 |---|---|---|
 | `README.md` | 26 | "Livewire 3.x" |
-| `docs/getting-started.md` | 61, 171 | "Livewire 3 is installed", "Livewire 3 already ships it" |
-| `docs/troubleshooting.md` | 103 | "Livewire 3 already ships" |
+| `docs/start/getting-started.md` | 61, 171 | "Livewire 3 is installed", "Livewire 3 already ships it" |
+| `docs/start/troubleshooting.md` | 103 | "Livewire 3 already ships" |
 | `docs/sortable/overview.md` | 22 | "Livewire 3 compatible" |
-| `docs/cs/getting-started.md` | 61, 173 | Czech mirror |
-| `docs/cs/troubleshooting.md` | 102 | Czech mirror |
+| `docs/cs/start/getting-started.md` | 61, 173 | Czech mirror |
+| `docs/cs/start/troubleshooting.md` | 102 | Czech mirror |
 | `docs/cs/sortable/overview.md` | 22 | Czech mirror |
 
 `AI_DOCS_STANDARD.md` is binding: the Czech mirror moves in the same commit.

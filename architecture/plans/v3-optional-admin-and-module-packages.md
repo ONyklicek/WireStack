@@ -73,7 +73,7 @@ ADR 0029, body 1 a 2. Co skutečně vzniklo:
    `afterResolving`, kde se čte config.
 4. **Docs.** `docs/panels/modules.md` + CS mirror: sekce „Modul jako balíček"
    (obě cesty, tabulka „kdo kterou používá", podsekce „Balíček přidává,
-   nepřepisuje"). `docs/core/plugins.md` + CS: tabulka toho, co config přijme
+   nepřepisuje"). `docs/core/plugins/index.md` + CS: tabulka toho, co config přijme
    a co odmítne, pravidlo o fázi u vzoru z balíčku, a věta o tom, že `boot()`
    registraci uzavírá. Guidelines pro boost přepsané, `boost:sync-docs` proběhl.
 
@@ -81,7 +81,7 @@ Brány: `composer test` 6345 ✅, `composer analyse` ✅, `composer lint` ✅,
 `docs:check` / `docs:standard` / `docs:api` ✅.
 
 Co si z toho odnést: **oprava zadání.** ADR 0029 první verze tvrdila, že
-samoregistrace balíčku není nikde zdokumentovaná — `docs/core/plugins.md` §
+samoregistrace balíčku není nikde zdokumentovaná — `docs/core/plugins/index.md` §
 „Register Plugins From A Package" ji popisuje. Nenapsané bylo, že tudy jde
 i *modul*, a pravidlo o fázi. ADR je opravená.
 
@@ -125,9 +125,89 @@ Konzument, který to drží poctivé: `packages/panels/tests/Unit/ScopedHookTest
 jen jedné z nich. Právě on odhalil bod výše — a taky to, že chybějící `use`
 v `WithTable` PHPStan neohlásil.
 
-Nedodáno vědomě: `infolist.configuring`, `navigation.building`, `page.mounting`,
-`search.querying`, `export.configuring`, `widget.configuring`. Pojmenované
-v ADR 0030 §6, čekají na konzumenta — a symetrie konzument není.
+Nedodáno vědomě (stav 2026-09-05): `infolist.configuring`, `navigation.building`,
+`page.mounting`, `search.querying`, `export.configuring`, `widget.configuring`.
+Pojmenované v ADR 0030 §6, čekají na konzumenta — a symetrie konzument není.
+
+### 2.1 Fáze B2 — zbylých šest hooků ✅ HOTOVO 2026-09-08
+
+Zadání vlastníka: *„zlepšení systému hooks napříč celým systémem"*. Ratchet
+z ADR 0030 §6 se tím vědomě utratil — ADR je o tom amendovaná, včetně toho,
+u kterého z těch šesti konzument měřitelně vznikl a u kterých ne.
+
+Jeden **měřitelně vznikl**: `infolist.configuring`. Čtyři modulové balíčky mezitím
+poslaly pět resources s detailem (`UserResource`, `RoleResource`, `AuditResource`,
+`MediaResource`, `NotificationResource`, všechny přes `ViewPage`), takže „přidej
+pole do formuláře uživatelů" šlo napsat a „přidej řádek do jeho detailu" ne — přesně
+ta asymetrie, kvůli které ADR 0030 vznikla.
+
+Co vzniklo:
+
+1. **`Core/Plugin/HookDispatch.php`** — stráž, kterou osm typed dispatch míst
+   sdílí (je manager v containeru, poslouchá někdo, a **teprve pak** payload).
+   Dvě místa si ji psala ručně a šest dalších se chystalo. Payload chodí jako
+   **closure**, takže aplikace bez pluginu nezaplatí za přečtení sloupců tabulky
+   ani widgetů dashboardu nic. `WithTable` a `Form` na ni delegují — extrakce
+   s delegací podle `AI_CODING_STANDARD.md` § Adapters, ne druhá kopie.
+2. **Šest případů v `Hook`** a šest typed-only payloadů.
+3. **Umístění dispatche rozhodlo měření**, ne symetrie — tři ze šesti se po prvním
+   měření posunuly: `widget.configuring` před razítkování klíčů (widget přidaný
+   později klíč nemá, nebo si vezme cizí), `export.configuring` do
+   `buildTableExport()` místo `exportTable()` (jinak zůstane zařazený export
+   nepokrytý a je to druhý export, který se od staženého liší), a
+   `navigation.building` do `entries()` místo `navigation()` (jinak se seskupené
+   a ploché menu neshodnou na tom, co v menu je).
+4. **`DashboardPage` implementuje `IdentifiesHookTarget`** — `for: 'sales'` míří na
+   klíč dashboardu. Navigace a hledání hostitele nemají, takže se zužují zónou
+   a katalogovým klíčem resource.
+
+Zamítnuto při implementaci: **čtvrtý parametr `GlobalSearch::searchResource()`**.
+Je to dokumentovaný přepisovací bod a PHP odmítne podtřídu s méně parametry —
+přidaný argument je fatální chyba už při deklaraci třídy v každé aplikaci, která
+ho kdy přepsala. Klíč se místo toho dohledá v katalogu uvnitř payload closure,
+takže bez registrovaného callbacku nestojí nic.
+
+Zbytek pěti hooků konzumenta mimo vlastní testy nemá a ADR to vede jako zbytkové
+riziko: první modul nebo aplikace, která některý použije, je to měření, a dispatch
+se má posunout, když nesedí.
+
+Brány: `composer test` 7621 ✅, `analyse` ✅, `lint` ✅, `coverage:verify` ✅
+(podlahy beze změny), docs gates ✅.
+
+### 2.2 Fáze B3 — forms a table, změřené zvlášť ✅ HOTOVO 2026-09-08
+
+Fáze B2 dodala pokrytí *napříč* systémem a dva nejstarší balíčky nechala, jak
+byly. Měření po ní našlo čtyři věci a vlastník vzal všechny.
+
+1. **`import.configuring`** — asymetrie, kterou vyrobila fáze B2 sama:
+   `export.configuring` dostal háček a import ne, přitom se obojí deklaruje
+   stejně v `headerActions()`. Stálo to jeden dispatch — `RunImportJob` mountuje
+   hostitele a volá `importTable()`, takže obě doručení už jednou cestou šla.
+2. **`cell.updating`** — jediná zapisovací cesta v tabulce bez mutujícího seamu:
+   `CellUpdating`/`CellUpdated` jsou **eventy**, tedy podle ADR 0030 §1 jen
+   pozorování. Dispatch v `CellEditPipeline::commit()` (jediné hrdlo inline
+   editoru i fill handle), po kontrolách sloupce — a s `refusal`, které vrátí
+   `CellEditOutcome::rejected()`.
+3. **`form.filling`** — formuláře se daly zachytit na cestě ven a ne dovnitř.
+   V `Form::fill()`, vědomě ne v `getInitialState()`: edit stránka volá obojí.
+4. **Makra** — `Form`, `Column`, `Field`, `Filter` jsou `Macroable`. `Infolist`
+   vědomě ne: je to renderer se čtyřmi settery a nikdo po slovníku nad ním
+   nesáhl.
+
+**Dluh 2.x:** `HookDispatch::manager()` vlastní stráž legacy dvojice a čtyři
+místa na ni delegují (`TableQueryService`, `SaveHandler`, `InteractsWithActions`).
+Přineslo to `hasHook()` short-circuit, který tam nikdy nebyl — a hned na něj byl
+účet: `wire-module-settings` spadl pod podlahu, protože `SettingsPage::hookKey()`
+byl krytý jen **mimochodem** (`Form::configuredSchema()` stavěl `HookTarget` při
+každém configu formuláře, ať někdo poslouchal nebo ne). Metoda má teď vlastní test.
+
+Zamítnuto při implementaci: zúžit `$pluginManager` v `TableQueryService` na jedno
+jméno hooku. Krmí totiž i **query pipes**, což hook není — zúžení by je tiše
+vyprázdnilo pokaždé, když `table.configuring` nemá callback. Každý blok dostal
+vlastní pojmenovanou stráž a `resolvePluginManager()` zůstal pipám.
+
+Brány: `composer test` 7656 ✅, `analyse` ✅, `lint` ✅, `coverage:verify` ✅
+(podlahy beze změny), docs gates ✅.
 
 Zbývá z původního plánu fáze B: **`modules.except`** (aplikační skip list
 registrovaných klíčů). Pořád platí, že se přidá s prvním modulem, který ho

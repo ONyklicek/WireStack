@@ -78,7 +78,7 @@ drží, mění se čísla, jména a jeden návrh.
 | V2.3/V2.4/V2.5 greenfield | **potvrzeno**: `Resource`, `ResourceRegistry`, `Workspace`, `NavigationItem`, `Tenancy`, `StateMachine`, `WorkflowState`, `SavedView`, `GlobalSearch` = 0 výskytů v `packages/*/src` | beze změny |
 | V2.1(B) chybí ERP typy sloupců | **potvrzeno**: žádný `StatusColumn`, `MoneyColumn`, `RelationColumn`, `MetricColumn` | beze změny |
 | V2.5 grouping hotový | potvrzeno (`HasGrouping`); saved views, presety i virtual scroll dál 0 | beze změny |
-| Pre-V2 **N6** shim removal | **hotovo 2026-08-26** — devět `class_alias` traitů pryč, migrace v `docs/upgrade.md`. Druhá půlka N6 (`Modals\Wizard` orphaned) byla už dřív uzavřena jako neplatná (`ddd-enterprise-roadmap.md:130`) | **vstupní brána do V2 je volná** |
+| Pre-V2 **N6** shim removal | **hotovo 2026-08-26** — devět `class_alias` traitů pryč, migrace v `docs/start/upgrade.md`. Druhá půlka N6 (`Modals\Wizard` orphaned) byla už dřív uzavřena jako neplatná (`ddd-enterprise-roadmap.md:130`) | **vstupní brána do V2 je volná** |
 
 ### Co z toho plyne pro V2.1
 
@@ -171,7 +171,7 @@ shim removalu (seznam BC breaků pro 2.0). F1 je 1.9, neblokuje V2.
 - **Deprecation-first:** staré API žije celý 2.x cyklus s `@deprecated` +
   `Core\Support\Deprecation`; tvrdé odstranění až v 3.0.
 - **BC breaky rozložené:** shim removal (`core/src/Concerns/*`) — **hotovo
-  2026-08-26**, devět `class_alias` traitů pryč, migrace v `docs/upgrade.md`;
+  2026-08-26**, devět `class_alias` traitů pryč, migrace v `docs/start/upgrade.md`;
   orphaned API a raw-property přístupy padnou rovněž v **2.0**; vše ostatní je
   aditivní přes 2.x.
 - **Každá fáze = zelené CI:** PHPStan čistý, Pint čistý, nový kód 100% coverage
@@ -415,11 +415,30 @@ selection/sort.
 **Otevřené po V2.5 — z palety záznamů udělat command palette (zapsáno 2026-09-08):**
 ⌘K dnes hledá jen *záznamy*. `GloballySearchable` má dvě metody a obě jsou nad
 záznamem modelu; `GlobalSearch::search()` přeskočí vše, co není `DescribesResource`
-s modelem (`GlobalSearch.php:85`), takže dashboard ani jiný bezzáznamový zdroj se do
+s modelem (`GlobalSearch.php:89`), takže dashboard ani jiný bezzáznamový zdroj se do
 výsledků nedostane; `GlobalSearchResult` je plochý readonly řádek
 `title`/`subtitle`/`url`/`icon` (`GlobalSearchResult.php:25–31`); a
 `GlobalSearchPalette::select()` proto umí jedinou věc — `redirect($url, navigate: true)`
 (`GlobalSearchPalette.php:137`), s `url === null` nedělá nic.
+
+**Jedna rozšiřovací cesta dovnitř už vede, a na tohle neodpovídá.**
+`Hook::SearchQuerying` se dispatchuje **per resource** na dotazu, který se chystá
+běžet — před `get()` a před `canView()`, takže callback smí dotaz zúžit a nesmí se
+jím protáhnout kolem policy (`GlobalSearch.php:158`). `for: 'invoices'` zaměří
+callback na řádky jednoho modulu. Je to ale hook nad **`Builder`em**: umí změnit,
+*které záznamy* se najdou, ne *jaké druhy řádků* paleta zná. Pro navigaci ani pro
+příkazy tedy neplatí jako řešení — platí jako důkaz, že rozšiřitelnost palety už má
+zavedený tvar (typed payload, `HookTarget`, `for:`), který má nový zdroj řádků
+následovat, ne obcházet.
+
+> **Stav ověřen proti HEAD (2026-09-08, `a5783df9`):** oba hooky jsou commitnuté
+> a čtyři tvrzení, na kterých tenhle blok stojí, platí — `SearchQuerying` se
+> dispatchuje na řádku 158, `get()` až na 171 a `canView()` na 176, takže pořadí
+> „před authorizací" drží; `NavigationBuildingPayload::$items` je `public array`,
+> **ne** `readonly`, takže vkládání řádků je opravdu možné; scoping přes `Zone`
+> sedí (`Workspace.php:245`); a filtr viditelnosti běží na řádku 173, tedy
+> **před** dispatchem na 242 — varování o nefiltrované vložené položce platí.
+> Kontext: ADR [0030](../decisions/0030-hook-surface.md).
 
 **Zadání vlastníka 2026-09-08:** paleta má nabízet **čtyři druhy řádků** — záznamy
 (hotové), **položky navigace**, **globální příkazy** („Nový zákazník") a **akce nad
@@ -427,24 +446,47 @@ nalezeným záznamem** („Objednávka #412 → Stornovat"). Nejsou to čtyři v
 práce; dělí se na dvě poloviny s velmi různou cenou.
 
 **Levná polovina — navigace.** Zdroj už existuje a nic nového nepotřebuje:
-`Workspace::items($zone, $linkedOnly)` (`Workspace.php:119`) vrací ploché, seřazené,
+`Workspace::items($zone, $linkedOnly)` (`Workspace.php:123`) vrací ploché, seřazené,
 už resolvované `NavigationItem` — label doplněný z `pluralLabel()`, ikona, URL
 vyplněná přes `ResolvesPageUrls` pro dané `Zone`, a **viditelnost i skryté skupiny
-už odfiltrované** (`Workspace.php:167`). `Core/Resources/` je L1, takže `GlobalSearch/`
+už odfiltrované** (`Workspace.php:173`). `Core/Resources/` je L1, takže `GlobalSearch/`
 (L2) na něj smí. Navigační řádek je navíc *URL řádek*, takže dnešní `select()` ho
 odbaví beze změny. Zbývá jen: druhý zdroj řádků vedle resources v `search()`, vlastní
 skupina ve výsledcích, a rozhodnutí o pořadí skupin (navigace nad záznamy, nebo pod).
 Autorizace je tu jiná otázka než u záznamů — menu filtruje `isVisible()`, ne policy
 nad instancí, takže se **nesmí** recyklovat `canView()`.
 
+**A ten zdroj je od 2026-09-08 rozšiřitelný, což mění bod 1 níž.** `Workspace`
+dispatchuje `Hook::NavigationBuilding` na ploché keyované mapě položek, po
+viditelnosti a po doplnění labelu/URL, před seskupením a řazením
+(`Workspace.php:242`) — jeden dispatch site pro `navigation()` i `items()`, aby se
+seskupené a ploché menu neneshodlo na tom, co v menu je. Payload je
+**modifikovatelný a smí do mapy přidávat**:
+
+    unset($payload->items['media']);
+    $payload->items['docs'] = NavigationItem::make('Docs')->url('/docs')->sort(90);
+
+Takže mechanismus „plugin vloží pojmenovaný, ikonovaný, řaditelný řádek do seznamu,
+který paleta čte" **už existuje**, je scoped přes `Zone` (což paleta drží), a
+navigační řádky by ho zdědily zadarmo. Dvě věci si to žádá zapsat: položka přidaná
+callbackem **neprošla** `isVisible()` (hook běží až po filtru), což není defekt
+palety ani menu, ale platí to o obou; a `sort()` uvnitř callbacku je marná práce,
+řadí se až za ním.
+
 **Drahá polovina — akce.** Ta stojí na třech rozhodnutích, ne na třech řádcích kódu:
 
-1. **Zdroj příkazů.** Kontrakt typu `ProvidesCommands`, čtený z `Catalog` stejně jako
-   dnes `GloballySearchable`, aby příkaz nemusel viset na `DescribesResource` — jinak
-   se globální příkaz musí předstírat jako resource. Umístění podle zavedeného vzoru
+1. **Zdroj příkazů — a nejdřív otázka, jestli je vůbec nový.** Nabízí se kontrakt
+   typu `ProvidesCommands`, čtený z `Catalog` stejně jako dnes `GloballySearchable`,
+   aby příkaz nemusel viset na `DescribesResource`; umístění podle zavedeného vzoru
    (`ProvidesResourceForm` ve forms, `ProvidesResourceInfolist` v core/Infolists,
-   `ProvidesResourceTable` v panels) → vlastníkem je surface, tedy `Actions/`. **Což
-   je přesně ta past, viz bod 3.**
+   `ProvidesResourceTable` v panels) → vlastníkem je surface, tedy `Actions/`, **což
+   je přesně ta past z bodu 3**. Jenže `NavigationBuildingPayload` výš už umí to
+   samé — vložit pojmenovaný řádek do seznamu, který paleta čte — a liší se jedinou
+   věcí: `NavigationItem` ukazuje na URL a neumí spustit akci. **Než vznikne druhý
+   slovník pro „pojmenovaný řádek v seznamu", musí padnout rozhodnutí, jestli
+   příkazový řádek není `NavigationItem`, který smí ukazovat i jinam než na URL.**
+   To je přesně ta otázka, kterou § kanonického vlastnictví v `CLAUDE.md` chce
+   položit dřív, ne po.
 2. **Tvar řádku.** Alternativa k `url` na výsledku — jméno akce + payload,
    **serializovatelné**, ne closure: řádek je `readonly` a plochý záměrně, protože se
    jich renderuje mnoho najednou a paleta nesmí volat zpátky do resource na řádek.
@@ -462,12 +504,45 @@ nad instancí, takže se **nesmí** recyklovat `canView()`.
    ten vlastník dnes neexistuje** — to je jediná skutečně otevřená otázka celé
    položky, ne detail k dopsání.
 
-**Pořadí, kdyby se to dělalo:** navigace první (levná, ověří druhý zdroj řádků i
-skupiny ve výsledcích na něčem, co nespouští nic), akce až po ní. **Čeká na
-rozhodnutí o bodu 3** — bez pojmenovaného vlastníka spouštění je to druhý slovník
-pro akce vedle toho, který už vlastní `Actions/`, přesně ta chyba, kterou
-§ kanonického vlastnictví v `CLAUDE.md` zakazuje. BC riziko nulové (aditivní);
-kandidát na V2.7 / V3, ne škrtnutá položka.
+**Hotovo 2026-09-08.** Bod 3 se vyřešil sám tím, že do stromu mezitím přistál
+`Foundation/Contracts/RunsComponentActions` — kontrakt v L0, v kontejneru navázaný
+na `ComponentActionRunner`, postavený na identický problém (widget musí spustit
+akci, `Widgets/` na `Actions/` nevidí). Vedle něj vznikl
+`ClassifiesComponentActions` se dvěma otázkami, které runner záměrně neklade
+(`canExecute()`, `hasModal()`), takže paleta ví, co smí spustit a co se chce ptát,
+aniž by `Actions/` jmenovala. **Do `permittedCoreEdges()` ani `coreLayerDebt()`
+nepřibyl řádek.**
+
+A bod 1 dopadl jinak, než plán čekal: `ProvidesCommands` **nemusel** vzniknout v
+`Actions/`, protože jmenuje `ActionContract`, a ten je Foundation. Takže pravidlo
+o vlastníkovi se dodrželo, ne ohnulo — L0 je opravdu nejnižší vrstva, která ten
+podpis unese. Otázka „není příkazový řádek `NavigationItem`?" se tím zodpověděla
+záporně: `NavigationItem` je místo, příkaz je věc, a sdílet by musely jen label
+a ikonu.
+
+Co měření cestou opravilo proti tomuhle zápisu:
+
+| Plán psal | Realita |
+|---|---|
+| pořadí skupin **příkazy → navigace → záznamy** | **obráceně.** Termín `INV` matchuje i příkaz „Recount **inv**oices", ten se řadil první a Enter přestal otevírat fakturu. Chytil to browser driver, nic jiného. Vyhrává hledaná věc: záznamy → navigace → příkazy |
+| akce s modálem → naviguj na stránku vlastníka | jen **akce nad záznamem**. Samostatný příkaz se nenaviguje: index stránka akční host nevlastní, takže by uživatel skončil jinde a modál by se stejně neotevřel |
+| „každá resource stránka `?action=` přečte" | **žádná dodávaná stránka akční host nemá** — `ListPage` má `WithTable`, formulářové `WithForms`, `ViewPage` záměrně nic (ADR 0020 Q2). Seam je skutečný a aplikace, která si na stránku přidá `WithActions`, ho dostane; na stock stránce je parametr nečinný **záměrně**, a nese to test |
+| `?action=` číst v `BelongsToResource` | v `ResolvesOneRecord` — jen tam záznam existuje. Verze v `BelongsToResource` byla duck-type (`method_exists`) nad otázkou, kterou typy zodpoví, a PHPStan to řekl |
+
+**A jeden ostrý defekt, který byl v paletě od začátku.** `select()` četl jen
+klávesový kurzor, jenže řádky jsou `<button>` a dialog neměl focus trap: Tab tedy
+přesunul skutečný fokus, kurzor zůstal, a aktivace fokusovaného řádku otevřela
+**jiný záznam** — naměřeno tři řádky vedle. Totéž na dotyku, kde `mouseenter`, který
+ty dva držel v páru, nikdy nepřijde. Vratné to bylo, dokud šlo jen o navigaci; s
+akcemi by to spustilo něco jiného, než na co uživatel ukázal. Opraveno tím, že se
+řádek při aktivaci pojmenuje (`select(?int $index)`), a paleta dostala kanonický
+`modals.partials.focus-trap` a combobox ARIA (`aria-activedescendant`), protože
+kurzor žije na serveru a odečítač obrazovky se o něm jinak nedozví. Obojí hlídá
+driver a obě kontroly byly ověřeny, že bez opravy padnou.
+
+**Zbývá otevřené:** dodávané resource stránky akční host nevlastní, takže prostřední
+větev je dnes k dispozici jen aplikaci, která si ho přidá. Dát ho `ViewPage` je
+rozhodnutí proti ADR 0020 Q2, ne dodělávka — a patří vlastníkovi repa.
 
 ---
 

@@ -158,6 +158,10 @@ Before changing shared behavior, ask:
   `architecture/plans/v3-optional-admin-and-module-packages.md`, then ADRs
   `architecture/decisions/0028-optional-panel-shell.md`,
   `0029-modules-as-installable-packages.md` and `0030-hook-surface.md`
+- Letting an application change how any of this looks **without publishing a
+  Blade view** — scoping a theme to the admin through the `$head` slot, the
+  token tiers, the `wire-*` hook classes, and the render hooks that do not yet
+  exist: `architecture/plans/theming-and-customisation.md`
 - Full analysis, inconsistency review, bug-hunting, or audit:
   `architecture/audit.md`
 - Writing or changing any page under `docs/`:
@@ -272,12 +276,24 @@ php docs-site/build.php
 npm run docs:changed -- --dry-run
 npm run docs:refresh
 
+# Hook-name gate. `@wireEl('…')` names are public API an application styles by
+# (`[data-wire="…"]`), so this holds the promise the docs make about them: a
+# documented name exists, every name is kebab-case, and a name that shipped
+# keeps shipping. Ledger in scripts/hook-names.json — it may grow, not shrink.
+npm run hooks:verify
+npm run hooks:verify -- --verbose
+npm run hooks:names                  # record names you added
+
 # Docs gates. docs:check is markdown/link/build integrity; docs:standard is
 # AI_DOCS_STANDARD.md (focus spotlights, EN/CS parity); docs:api is docs vs the
-# real public API; docs:verify-ui drives the built site in a browser.
+# real public API; docs:examples is the code INSIDE the examples vs the classes
+# (it boots Testbench, so it needs dev dependencies); docs:verify-ui drives the
+# built site in a browser. The last two also run from .github/workflows/docs-code-check.yml,
+# which triggers on packages/*/src/** too — those are the gates a code change breaks.
 npm run docs:check
 npm run docs:standard
 npm run docs:api
+npm run docs:examples
 npm run docs:verify-ui
 ```
 

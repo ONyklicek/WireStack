@@ -45,7 +45,7 @@ Committed IIFE bundles under each package's `dist/`, built with esbuild:
 | core | `wire-core-dropdown.js` | `resources/js/dropdown.js` (+ `editable/`, `support/`) |
 | core | `wire-core-chart.js` | `resources/js/chart.js` |
 | core | `wire-core-copy.js` | `resources/js/copy.js` |
-| core | `wire-core-sortable-list.js` | `resources/js/sortable-list.js` (SortableJS bundled in) |
+| core | `wire-core-sortable-list.js` | `resources/js/sortable-list.js` (2 kB — borrows Livewire's SortableJS) |
 | core | `wire-core-notifications.js` | `resources/js/notification-live.js` |
 | forms | `wire-forms-image.js` | `resources/js/image-processor.js` |
 | forms | `wire-forms-fields.js` | `resources/js/fields.js` (+ `fields/`) |
@@ -105,7 +105,7 @@ receives it, and nothing on the page changes — no error, no warning, and only
 
 `wire-core-sortable-list.js` is the one bundle that is **declared nowhere**, and
 that is deliberate. `@wireStackScripts` renders every entry a package declares
-through `hasAssets()`, so declaring it would put 38 kB of compiled SortableJS in
+through `hasAssets()`, so declaring it would put it in
 the `<head>` of every page of every wire-core application — which is exactly the
 cost giving it its own bundle avoids. It reaches the browser through
 `Bundle::serve('wire-core', …)`'s route, emitted by
@@ -114,6 +114,39 @@ Repeater table or Builder includes. The toolkit has no "declared but not
 aggregated" flag — `loadedOnRequest()` went away with the old registry — so the
 route is the whole mechanism, and `SortableListAssetTest` asserts both halves:
 that the route serves it, and that the aggregate does not.
+
+**It no longer ships SortableJS.** It used to weigh 39 564 B for a controller of
+about two hundred lines, because the library was compiled in — and Livewire 4
+bundles the Alpine Sort plugin, which bundles SortableJS itself, so a page with a
+repeater downloaded the same library twice, in two versions (1.15.7 against
+Livewire's 1.15.2). The library is not on `window`; what is reachable is the
+directive that builds it, so the three views carry `x-sort` and hand the
+controller's full option set over through `x-sort:config`. Alpine owns the
+instance, the controller still owns how the drag behaves, and the bundle is
+2 103 B.
+
+**`wire-sortable.js` keeps its own copy (44 669 B), and that is a decision
+rather than a leftover.** The same trick is not available there, for two
+structural reasons, both checked rather than assumed:
+
+- **It does not own the markup.** `wire-sortable::tables.index` wraps
+  `wire-table::tables.index` in a `<div x-data="wireSortable(…)">` and the rows
+  live in wire-table's `<tbody>`. The plugin only builds an instance on an
+  element carrying the directive, and a package that decorates a table cannot
+  put an attribute on a view it does not render — nor should wire-table grow a
+  hook naming a package it must not know exists.
+- **The row instance is created and destroyed by state.** `init()` watches
+  `isReordering` and rebuilds the sortable each time it flips
+  (`sortable.js:93`). `x-sort` binds once and Alpine owns the lifetime, so
+  matching that would mean re-rendering the whole `<tbody>` on every toggle of
+  reorder mode — replacing every row on the page to save bytes, which is the
+  wrong trade.
+
+The route that would work is a generic attribute pass-through on
+`wire-table::tables.index` (a `$tbodyAttributes` variable, naming no package)
+plus always-bound-and-disabled instead of created-and-destroyed. That is a real
+change to a shipped table view and to how reorder mode works, for a payload win;
+it wants its own decision, not a footnote to this one.
 
 Its controller, `wireSortableList`, lives in core rather than in forms because
 forms is below table in the graph and cannot borrow `wire-sortable`, and core is

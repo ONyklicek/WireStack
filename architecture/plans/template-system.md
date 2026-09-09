@@ -9,7 +9,7 @@ related:
   - architecture/plans/render-engine-htmlable-first.md
   - architecture/decisions/0005-tailwind-4-support.md
   - architecture/decisions/0022-exception-strategy.md
-  - docs/theming.md, docs/cs/theming.md
+  - docs/start/theming.md, docs/cs/start/theming.md
 ---
 
 # Template system
@@ -279,7 +279,7 @@ Publish tagy se neruší ani nezužují — jen se z nich stává poslední mož
 
 Riziko je užší, než vypadá, ale není nulové:
 
-- **Package PHP je už dnes v globech.** `docs/getting-started.md:79-89` předepisuje
+- **Package PHP je už dnes v globech.** `docs/start/getting-started.md:79-89` předepisuje
   `./vendor/nyoncode/wire-*/src/**/*.php` pro všechny čtyři balíčky a workbench
   `resources/css/app.css` má `@source` na `packages/*/src`. Třídy přesunuté z
   views do `Foundation/Theme/Surfaces/*.php` tedy u uživatele podle docs

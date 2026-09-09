@@ -205,7 +205,7 @@ posledním řádkem menu je viditelná chyba.
   trigger vycentrovaný a panel se vysune přes obsah, sbalení funguje z patičky a
   `⌘B` funguje taky, a účet je dosažitelný ze šuplíku na šířce telefonu.
 
-**Dokumentace:** `docs/admin/overview.md` a `docs/cs/core/admin-shell.md`
+**Dokumentace:** `docs/admin/overview.md` a `docs/cs/admin/overview.md`
 strukturálně shodné (AI_DOCS_STANDARD.md) — nová sekce mezi *Who Is Signed In*
 a *Slots*, tabulka kombinací, past č. 3 (telefon) a č. 7 (vlastní trigger)
 napsané, ne zamlčené; `docs/start/configuration.md` dostane klíč `layout`.

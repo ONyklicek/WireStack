@@ -239,11 +239,18 @@ rule, not what you just wrote.
 npm run docs:check       # markdown integrity, links, anchors, a clean build per locale
 npm run docs:standard    # S1–S3: focus spotlights, marker syntax, EN/CS parity
 npm run docs:api         # docs vs the real public API, both directions
+npm run docs:examples    # every import and fluent call inside an example, vs the classes
 npm run docs:verify-ui   # the built site in a browser (search, language, head tags)
 ```
 
-The first three are cheap and run on every docs change. All four run in CI
-(`.github/workflows/docs-check.yml`).
+The first three are cheap and run on every docs change. They run in CI from
+[`docs-check.yml`](.github/workflows/docs-check.yml), together with the browser
+pass. `docs:api` and `docs:examples` live in
+[`docs-code-check.yml`](.github/workflows/docs-code-check.yml) instead, because
+they are the two a change in `packages/` can break: that workflow triggers on
+source as well as on docs, and installs dev dependencies, since `docs:examples`
+boots a Testbench application so provider macros are registered before anything
+is reflected.
 
 ## Canonical Examples
 
@@ -252,7 +259,7 @@ Copy the shape from these rather than inventing one:
 - **Reference page** — `docs/table/columns/badge.md`: mechanism first
   (resolution order and fallbacks), capability sections, one extended example in
   a real component, complete typed API, related links.
-- **Focus in a quick start** — `docs/table/overview.md`, `docs/getting-started.md`:
+- **Focus in a quick start** — `docs/table/overview.md`, `docs/start/getting-started.md`:
   the full component is shown, the table definition is what glows.
 - **Multi-range focus** — `docs/forms/overview.md`: two schemas spotlighted in
   one block.
@@ -271,4 +278,4 @@ New or rewritten reference page:
 - [ ] every PHP/Blade block ≥ 12 lines carries a focus spotlight
 - [ ] `summary` front matter written
 - [ ] Czech mirror updated: prose translated, code and focus identical
-- [ ] `npm run docs:check && npm run docs:standard && npm run docs:api` pass
+- [ ] `npm run docs:check && npm run docs:standard && npm run docs:api && npm run docs:examples` pass

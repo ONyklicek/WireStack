@@ -568,7 +568,7 @@ step's.
 **What it gives up.** Nothing, unless someone is relying on `hiddenLabel()` being a
 no-op, which nothing in the repo is.
 
-### Step 4 — Resolve `Widget::lazy()`: delete it — **DONE**
+### Step 4 — Resolve `Widget::lazy()`: delete it — **DONE, then reinstated over partials**
 
 **Landed.** `lazy()`, `isLazy()` and the `$lazy` property are gone from
 `Widget.php`. `WidgetBaseTest`'s two cases became one asserting the methods do not
@@ -583,8 +583,8 @@ work. `npm run docs:api`, `docs:check` and `docs:standard` all pass.
 view mentions lazy, intersect, `wire:init` or island;
 `widget-grid.blade.php:10-14` renders `{{ $widget }}` with no lazy branch. The
 public API promises deferral and delivers nothing. Six doc lines advertise it:
-`docs/core/widgets.md:56,666-667`, the CS mirror at `:57,671-672`, and
-`packages/boost/resources/boost/docs/core/widgets.md:56,666-667` — the boost copy
+`docs/core/widgets/index.md:56,666-667`, the CS mirror at `:57,671-672`, and
+`packages/boost/resources/boost/docs/core/widgets/index.md:56,666-667` — the boost copy
 is shipped to agents as guidance, so deleting only the `docs/` lines leaves the
 claim in place.
 
@@ -599,6 +599,18 @@ one-liner, and nothing has asked for it.
 
 **The gate.** `composer test:core`, `npm run docs:api` (which exists to catch docs
 that disagree with the real public API), `npm run docs:standard` for EN/CS parity.
+
+**Reinstated (widget expansion).** `lazy()` is back, over the second route this
+step named — "a nested `<livewire:… lazy>` per widget **or the partials route**".
+The partials route needed no new mechanism: `WithWidgets::loadWidget()` queues the
+same `wire:partial` region a poll tick queues, `wire:init` on the grid wrapper
+triggers it, and `widget-cell` draws a skeleton until the host records the widget
+as loaded. Every reason this step gave for deleting the old `lazy()` still holds —
+the old one read the flag nowhere, and islands still cannot be per-widget. What
+changed is that something asked for deferral, so the feature was built rather than
+the method left lying. Both upgrade guides and the boost mirror were rewritten from
+"is gone" to "defers something now"; `WidgetBaseTest`'s absence assertion became
+`WidgetLazyTest`.
 
 **What it gives up.** A public method disappears. That is a 2.0 change and the
 branch is `2.0.0`, so the timing is right; it needs an upgrade-guide line.

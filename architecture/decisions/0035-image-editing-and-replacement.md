@@ -15,7 +15,7 @@ rests on is a lie until the library knows where a file is used. Phase 8 of
 
 ## Context
 
-`docs/core/media-module.md` states the current position:
+`docs/modules/media.md` states the current position:
 
 > **Editing a file is deliberately absent.** Replacing the bytes under a path
 > other records already point at is how a library quietly changes what a

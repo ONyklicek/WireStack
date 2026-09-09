@@ -381,7 +381,7 @@ a stěhuje s sebou i `moveActive:199-210`, `anchorFor:234-247`,
 Dotkne se `verify-record-active-row.mjs:245` a `verify-record-actions.mjs:157`.
 
 **Zároveň zavést `data-selection-version` do markupu.** `wire-table::views` je
-dokumentovaný publish tag (`docs/theming.md:126`): JS se veze s balíčkem
+dokumentovaný publish tag (`docs/start/theming.md:126`): JS se veze s balíčkem
 a aktualizuje se, publikovaný Blade ne. Od tohohle kroku dál čte dodávaný
 `record-actions.js` stav, který poskytuje jen nová komponenta — a protože
 `[data-selection-root]` pořád existuje a pořád vrátí objekt, **nespadne nic, jen
@@ -622,7 +622,7 @@ klikatelná plocha ≥ 24×24.
 - `docs/table/record-actions.md` + `docs/cs/…` — EN i CZ v synchronu
 - **`CHANGELOG.md`** — nové veřejné API, změna chování u každé selectable tabulky
   (6, 7), obrácené chování v `all` módu (15), rezervované klávesy (5)
-- **`docs/upgrade.md` + `docs/cs/upgrade.md`** — kroky 5, 6, 7, 15 a seznam kroků,
+- **`docs/start/upgrade.md` + `docs/cs/start/upgrade.md`** — kroky 5, 6, 7, 15 a seznam kroků,
   po kterých je nutné přepublikovat view
 - **i18n** — `packages/table/lang/{en,cs}/messages.php`: klíče pro `?` modal
   (krok 25) a hlášení live regionu (krok 26)

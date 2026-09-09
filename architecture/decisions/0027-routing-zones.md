@@ -257,7 +257,7 @@ rather than as a fifth method.
   no unit test can see, and precisely where the rejected mechanism would have
   failed. Plus `previews/zones`, both zones in both menu modes, which is where
   open question 2 was decided.
-- **27.d** — docs: the zone recipe in `docs/core/resources.md` § Routing, both
+- **27.d** — docs: the zone recipe in `docs/panels/resources.md` § Routing, both
   locales, and a line in `configuration.md` saying zones need a route file.
 
 ## How it gets verified

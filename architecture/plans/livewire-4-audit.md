@@ -156,15 +156,15 @@ user who believes the README installs a package that will not resolve.
 
 ### 3.2 Two docs pages still cite the old Livewire endpoint
 
-`docs/upgrade.md:76-77` correctly documents the v4 move to `/livewire-{hash}/…`.
+`docs/start/upgrade.md:76-77` correctly documents the v4 move to `/livewire-{hash}/…`.
 But two pages still name the old concrete path as a live example:
 
 | File | Line |
 |---|---|
-| `docs/getting-started.md` | 253 — "breaks Livewire's own `/livewire/livewire.js`" |
-| `docs/troubleshooting.md` | 158 — "the same block 404s Livewire's own `/livewire/livewire.js`" |
-| `docs/cs/getting-started.md` | 256 — Czech mirror |
-| `docs/cs/troubleshooting.md` | 159 — Czech mirror |
+| `docs/start/getting-started.md` | 253 — "breaks Livewire's own `/livewire/livewire.js`" |
+| `docs/start/troubleshooting.md` | 158 — "the same block 404s Livewire's own `/livewire/livewire.js`" |
+| `docs/cs/start/getting-started.md` | 256 — Czech mirror |
+| `docs/cs/start/troubleshooting.md` | 159 — Czech mirror |
 
 The *argument* both passages make (a `try_files` block breaks route-served
 assets, which is why the packages ship a real file) is still exactly right. Only

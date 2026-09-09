@@ -129,7 +129,7 @@ without being asked, and nothing is lost by declining to delete an image.
   exactly as today, and nothing breaks by upgrading.
 - Extraction on save is a regex over HTML the application just wrote — cheap, and
   only where the concern is applied.
-- `docs/core/media-module.md` gains a section, with its CS pair; the "Attaching
+- `docs/modules/media.md` gains a section, with its CS pair; the "Attaching
   files to any record" section is where it belongs, because that is where a
   reader learns what a link row is.
 

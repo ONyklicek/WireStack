@@ -7,7 +7,7 @@ that. It names the seven places where the screen stops behaving like a media
 manager and starts behaving like a page with files on it, and what each one
 should become.
 
-Read `docs/core/media-module.md` first — the decisions that hold (a folder is a
+Read `docs/modules/media.md` first — the decisions that hold (a folder is a
 row, the disk is part of the address, every refusal comes from the model) are
 load-bearing here and none of them change.
 
@@ -246,7 +246,7 @@ which stays a borrowing rather than a dependency.
   (memory: *CDP drivers*, *morph markers are load-bearing*). New drivers under
   `workbench/scripts/` for: a batch upload's tray states, dragging a selection
   onto a folder, and a crop that produces a derivative.
-- `docs/core/media-module.md` and its CS pair move together, per
+- `docs/modules/media.md` and its CS pair move together, per
   `AI_DOCS_STANDARD.md`, and the ADR for the derivative rule in §6 goes in
   `architecture/decisions/` — it is a data-model promise, not a screen detail.
 
@@ -342,7 +342,7 @@ Two bugs and one bad test, all in things Pest cannot see:
 
 `composer test:module-media` — 185. Five browser drivers over this screen:
 `media-library` (23), `media-picker` (15), `media-detail` (17), `media-editor`
-(14), `media-frame` (14). `docs/core/media-module.md` and its CS pair move
+(14), `media-frame` (14). `docs/modules/media.md` and its CS pair move
 together.
 
 **A driver gets 180 seconds in the sweep**, and launching a browser costs more

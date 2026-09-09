@@ -31,10 +31,10 @@ and install command are the toolkit's job and need nothing new.
 
 ### Edge 1 — a package can already self-register; the module page does not say so
 
-`docs/core/plugins.md` **does** document this, under "Register Plugins From A
+`docs/core/plugins/index.md` **does** document this, under "Register Plugins From A
 Package" — the correction to this ADR's first draft, which claimed it was
 undocumented. What no page connected was the *module* to that path:
-`docs/core/modules.md` documents exactly one, "list the class in
+`docs/panels/modules.md` documents exactly one, "list the class in
 `config('wire-core.plugins')`", which is an application's path. A package cannot
 edit an application's config, and does not have to:
 
@@ -89,9 +89,9 @@ resource an application does not want — has nothing.
 
 ### 1. `resolving(PluginManager::class)` is the documented way a package ships a module
 
-No new API. `docs/core/modules.md` and `docs/cs/core/modules.md` gain a "shipping
+No new API. `docs/panels/modules.md` and `docs/cs/panels/modules.md` gain a "shipping
 a module as a package" section that states the phase (`register`, never `boot`),
-the `has()` guard, and why both matter, and `docs/core/plugins.md` gains the
+the `has()` guard, and why both matter, and `docs/core/plugins/index.md` gains the
 phase rule beside the pattern it already showed. The sortable provider is the
 reference implementation and is named as one.
 

@@ -595,10 +595,10 @@ v docs mají první parametr otypovaný, takže na ten případ nikdo nesáhl.
 Oprava je jeden predikát a jeho negace, protože to **je** rozklad, ne dvě otázky.
 Nehintovaný callback padá na **array** stranu — tedy na tu deprecated. To je
 záměr: kdo psal callback bez hintu, psal ho v době, kdy array payload byl jediný
-(a `docs/core/plugins.md` to tvrdilo), takže poslat mu DTO by rozbilo přesně ty
+(a `docs/core/plugins/index.md` to tvrdilo), takže poslat mu DTO by rozbilo přesně ty
 pluginy, které 2.x BC slib chrání.
 
-**A ta docs věta byla lež, která ten defekt vyráběla.** `docs/core/plugins.md`
+**A ta docs věta byla lež, která ten defekt vyráběla.** `docs/core/plugins/index.md`
 psalo: *„The current runtime hooks use array payloads, so these DTOs are most
 useful when building your own typed extension points."* Runtime přitom DTO
 dispatchuje na **každém** vestavěném bodě. Čtenář tedy neotypoval — a spadl do
@@ -1345,7 +1345,7 @@ vnější projev.
 | ~~Systematické hledání duplicitních abstrakcí napříč V2~~ | **uzavřeno 2026-09-03.** Neudělalo se čtením — sken tokenizuje `src/` a seskupí identická těla metod, což trvá vteřiny a je opakovatelné (skript v §2). Deset skupin: čtyři sloučené, pět zamítnutých s důvodem, dvě čekají na rozhodnutí (§4). `DataSourceCapabilities` už neexistuje. Sken má zapsaný limit: vidí jen *identická* těla | §2, §4 |
 | `ShellRenderPlan`, `InteractionRenderPlan` — host pořád `mixed` | Polling, live kanál, readiness, přístup ke stavu nemají pojmenovaný kontrakt | [`v2.1-…`](v2.1-monolith-split-implementation.md) §0a |
 | ~~`resolveActionType()` — public static, nula volajících v src~~ | **rozhodnuto 2026-09-01: ponechat.** Měření našlo, že to není jedna metoda, ale **tři** — `resolveColumnType()`, `resolveFilterType()` i `resolveActionType()`, identický tvar, všechny s nula volajícími. A nejsou to zapomenuté zbytky: vytvořilo je zapsané doporučení v [`v2-deferred-items.md`](v2-deferred-items.md) §7A.5 („ponechat registry pro introspekci, přidat `resolveColumnType()` / `resolveFilterType()` metody na Table pro budoucí config-driven use-case"). Nula volajících je tedy záměr. Smazat jednu ze tří by navíc rozbilo souměrnost plugin API. **Není to stejná otázka jako `Dehydrator::dehydrateAttribute()`** — tam jde o nedosažitelnou větev uvnitř používané metody, tady o nepoužitou, ale záměrně přidanou trojici | `Table.php:1780–1830` |
-| Tenancy nekryje non-Eloquent `DataSource` | Globální Eloquent scope nemá co scopovat u `CollectionDataSource` ani u zdroje nad API. Zdokumentované v `docs/authorization.md` jako „co scopované není"; správné místo je dekorátor nad `DataSource` (T-4 tak, jak ho plán psal). **Dokud to nevznikne, tenancy nezapínej nad non-Eloquent zdrojem** | [`v2.4-…`](v2.4-erp-execution-implementation.md) T-4 |
+| Tenancy nekryje non-Eloquent `DataSource` | Globální Eloquent scope nemá co scopovat u `CollectionDataSource` ani u zdroje nad API. Zdokumentované v `docs/start/authorization.md` jako „co scopované není"; správné místo je dekorátor nad `DataSource` (T-4 tak, jak ho plán psal). **Dokud to nevznikne, tenancy nezapínej nad non-Eloquent zdrojem** | [`v2.4-…`](v2.4-erp-execution-implementation.md) T-4 |
 | `Core\Hydration\MutationPipeline` — nula volajících, **zůstává jako stavební blok** | Nález S3. Sourozenec `Hydrator` byl smazán (nula volajících, žádný plán); `MutationPipeline` ne — vlastník repa 2026-08-30 rozhodl nechat. **Od 2026-08-30 už to ale není nedodělaný krok:** §3.2 měření zamítlo (tvar callbacku není převoditelný, per-atributového vlastníka má `dehydrateState()`, třída nemá API na registraci) — viz §2 | [`v2-deferred-items.md`](v2-deferred-items.md) §3.2 |
 | ~~`Core\Hydration\Dehydrator` — dot-notation větev je nedosažitelná~~ | **uzavřeno 2026-09-02: smazáno** rozhodnutím vlastníka repa. `dehydrateAttribute()` i privátní `dehydrateRelation()` jsou pryč, skalární půlka těla se přesunula do `dehydrate()`. Měření cestou opravilo zadání dvakrát a odhalilo, že třída neměla **jediný přímý test** — viz §2 | §2 |
 | ~~Export: optional-library cesty nikdy nespustil žádný test~~ | **uzavřeno 2026-09-01.** `openspout ^4.0` a `barryvdh/laravel-dompdf ^3.0` jsou v `require-dev` (root i balíček) a v `suggest`; `ExporterLibraryTest` testuje `writeTo()` obou proti reálnému souboru (xlsx čte přes `ZipArchive`, PDF přes `%PDF-`). `verify-coverage --diff=origin/1.x` je **poprvé od Q-3 zelená**, pokrytí table 91,8 % → 92,9 %, floor 91 → 92. Měření cestou opravilo tři věci, viz §2. Dvě poznámky k prostředí: obě knihovny potřebují PHP rozšíření, která workflow nejmenovaly (`fileinfo`, `xmlreader` pro openspout), a composer bez nich odmítne nainstalovat cokoli — doplněno do `tests`, `coverage`, `database-tests` i `static-analysis`. A `openspout` v4.32 chce PHP `~8.3`, což je v pořádku jen proto, že `composer.lock` je v `.gitignore` — každé prostředí si resolvuje sám, takže na 8.2 spadne constraint `^4.0` na starší 4.x. Kdyby se lock někdy začal commitovat, tohle je první věc, která se o tom dozví | §2 |
@@ -1390,7 +1390,7 @@ vlastníka repa nebo na jmenovaného konzumenta:
 | `ShellRenderPlan` / `InteractionRenderPlan` — host pořád `mixed` | polling, live kanál a readiness nemají pojmenovaný kontrakt |
 | `Filter` má vlastní kopii viditelnosti z akční vrstvy | tři mechanismy na jednu otázku (Foundation `evaluate()`, Actions kontext+arita, Filtrova kopie druhého). Sjednocení je rozhodnutí o vlastníkovi, ne mechanická de-duplikace — viz §4 níž |
 | Opt-in discovery modulů | `config('wire-core.plugins')` stačí a discovery nemá konzumenta; přidat, až někdo bude chtít moduly hledat skenováním (§10 plánu V2.6 ji jmenuje) |
-| Paleta ⌘K zná jen záznamy — chybí navigace a akce | rozhodnutí, **kdo globální příkaz spustí**. Zadání vlastníka 2026-09-08: čtyři druhy řádků (záznamy · navigace · globální příkazy · akce nad záznamem). Navigace je levná — `Workspace::items()` (`Workspace.php:119`) vrací už resolvované a odfiltrované položky a je v L1, takže na ni `GlobalSearch/` smí. Akce ne: `GlobalSearch/` i `Actions/` jsou obojí L2, a u globálního příkazu bez tabulky na obrazovce dnes žádný vlastník spouštění neexistuje. Rozepsané v [`v2-master-plan.md`](v2-master-plan.md) § V2.5 |
+| ~~Paleta ⌘K zná jen záznamy~~ | **hotovo 2026-09-08.** Čtyři druhy řádků: záznamy, navigace (`Workspace::items()`), samostatné příkazy a akce nad záznamem přes drill-down. Vlastník spouštění se našel — `RunsComponentActions` (L0) plus nový `ClassifiesComponentActions`, takže do `coreLayerDebt()` nepřibyl řádek. Měření opravilo čtyři věci proti zadání, mimo jiné pořadí skupin (driver chytil, že `INV` přestalo otevírat fakturu) a to, že **žádná dodávaná stránka akční host nemá**. Rozepsané v [`v2-master-plan.md`](v2-master-plan.md) § V2.5 |
 
 **Zadání vlastníka 2026-09-05 → V3, zatím jako návrh:** volitelná administrace
 a hotové části jako balíčky. Změřeno a rozepsané v
@@ -1638,7 +1638,7 @@ vidí — diagnostika stála deset řádků a odpověděla na první pokus.
 má vlastní sekci *Plugins and hooks* — lifecycle, `dependencies()` kontrolované
 při registraci, a hlavně pravidlo, které tenhle repo stálo defekt: **typový hint
 prvního parametru rozhoduje, kterému dispatcheru callback patří**, a nehintovaný
-padá na array stranu. Dřív to bylo jen v `docs/core/plugins.md`, takže agent
+padá na array stranu. Dřív to bylo jen v `docs/core/plugins/index.md`, takže agent
 píšící plugin na to spadl znovu.
 
 ### Co je uzavřené a nemá se otevírat
