@@ -1,0 +1,104 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\View;
+use NyonCode\WireCore\Foundation\Enums\Density;
+use NyonCode\WireCore\Foundation\Enums\Shape;
+
+/**
+ * Through a request rather than `Blade::render()`, for the reason LayoutTest
+ * records: rendering a slotted layout by hand leaks an output buffer per slot.
+ */
+function densityHtml(): string
+{
+    View::addLocation(__DIR__.'/../fixtures/views');
+    Route::get('/density-probe', fn () => view('bare'));
+
+    return test()->get('/density-probe')->getContent();
+}
+
+/**
+ * The fixed half of compact: a config value reaching the document.
+ *
+ * The rules themselves are CSS and only a browser can judge them —
+ * `workbench/scripts/verify-density.mjs` measures a table row tightening and the
+ * top bar holding. What is checkable here is the wiring: that the attribute the
+ * rules key on says what the application asked for, and that the rules are on
+ * the page at all.
+ */
+it('resolves the shipped spacing when nothing is configured', function () {
+    expect(Density::configured())->toBe(Density::Normal);
+});
+
+it('resolves what the application asked for', function () {
+    config()->set('wire-core.density', 'compact');
+
+    expect(Density::configured())->toBe(Density::Compact);
+});
+
+it('falls back to normal for a value nobody recognises', function () {
+    // A typo must not leave the page in an unnamed state.
+    config()->set('wire-core.density', 'cozy');
+
+    expect(Density::configured())->toBe(Density::Normal)
+        ->and(Density::resolve(null))->toBe(Density::Normal);
+});
+
+it('puts the choice on the document, where the rules key on it', function () {
+    config()->set('wire-core.density', 'compact');
+
+    expect(densityHtml())->toContain('data-density="compact"');
+});
+
+it('carries the rules themselves, not only the attribute', function () {
+    // An attribute with no stylesheet behind it is a page that says it is
+    // compact and is not.
+    $html = densityHtml();
+
+    expect($html)->toContain('data-wire-density')
+        ->and($html)->toContain('--spacing');
+});
+
+it('leaves type alone, which is the one thing compact must not touch', function () {
+    $style = substr(densityHtml(), strpos(densityHtml(), '<style data-wire-density'), 1400);
+
+    expect($style)->not->toContain('font-size')
+        ->and($style)->not->toContain('--text-');
+});
+
+// ─── Shape ──────────────────────────────────────────────────────
+
+it('resolves the shipped corners when nothing is configured', function () {
+    expect(Shape::configured())->toBe(Shape::Rounded);
+});
+
+it('resolves the shape the application asked for', function () {
+    config()->set('wire-core.shape', 'sharp');
+
+    expect(Shape::configured())->toBe(Shape::Sharp)
+        ->and(Shape::resolve('square'))->toBe(Shape::Rounded)
+        ->and(Shape::resolve(null))->toBe(Shape::Rounded);
+});
+
+it('puts the shape on the document and carries its rules', function () {
+    config()->set('wire-core.shape', 'sharp');
+
+    $html = densityHtml();
+
+    expect($html)->toContain('data-shape="sharp"')
+        ->and($html)->toContain('data-wire-shape')
+        ->and($html)->toContain('--radius-lg: 0');
+});
+
+it('squares the pills a token cannot reach, and not the avatar', function () {
+    // `rounded-full` compiles to calc(infinity * 1px) and reads no token, so the
+    // badges are named. The avatar is deliberately not among them: a sharp theme
+    // that squares the faces reads as broken rather than sharp.
+    $style = substr(densityHtml(), strpos(densityHtml(), '<style data-wire-shape'), 1400);
+
+    expect($style)->toContain('[data-wire="table-badge"]')
+        ->and($style)->toContain('[data-wire="table-tag"]')
+        ->and($style)->not->toContain('admin-avatar');
+});
