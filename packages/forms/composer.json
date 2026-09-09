@@ -1,6 +1,18 @@
 {
     "name": "nyoncode/wire-forms",
     "description": "Standalone form system for the Wire ecosystem – fields, validation, layout, standalone Livewire form support.",
+    "keywords": [
+        "laravel",
+        "livewire",
+        "wire",
+        "wirestack",
+        "nyoncode",
+        "forms",
+        "form-builder",
+        "fields",
+        "validation"
+    ],
+    "homepage": "https://wirestack.nyoncode.cz",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -9,6 +21,11 @@
             "role": "Developer"
         }
     ],
+    "support": {
+        "issues": "https://github.com/ONyklicek/WireStack/issues",
+        "source": "https://github.com/NyonCode/wire-forms",
+        "docs": "https://wirestack.nyoncode.cz"
+    },
     "require": {
         "php": "^8.2",
         "nyoncode/wire-core": "self.version",

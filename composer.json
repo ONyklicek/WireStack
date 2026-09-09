@@ -1,14 +1,31 @@
 {
     "name": "nyoncode/wire",
-    "description": "Wire ecosystem monorepo \u2013 wire-core, wire-forms, wire-table.",
+    "description": "WireStack monorepo – a Livewire admin framework for Laravel: core, forms, tables, panels, the admin shell and its ready-made modules.",
+    "keywords": [
+        "laravel",
+        "livewire",
+        "wire",
+        "wirestack",
+        "nyoncode",
+        "admin-panel",
+        "table",
+        "forms",
+        "monorepo"
+    ],
+    "homepage": "https://wirestack.nyoncode.cz",
     "type": "project",
     "license": "MIT",
     "authors": [
         {
-            "name": "Ond\u0159ej Nykl\u00ed\u010dek",
+            "name": "Ondřej Nyklíček",
             "role": "Developer"
         }
     ],
+    "support": {
+        "issues": "https://github.com/ONyklicek/WireStack/issues",
+        "source": "https://github.com/ONyklicek/WireStack",
+        "docs": "https://wirestack.nyoncode.cz"
+    },
     "require": {
         "php": "^8.2",
         "nyoncode/wire-suite": "@dev",
@@ -159,7 +176,7 @@
             "NyonCode\\WireModuleSettings\\Tests\\": "packages/module-settings/tests/",
             "NyonCode\\WireModuleNotifications\\Tests\\": "packages/module-notifications/tests/",
             "NyonCode\\WireModuleAudit\\Tests\\": "packages/module-audit/tests/",
-        "NyonCode\\WireSortable\\Tests\\": "packages/sortable/tests/",
+            "NyonCode\\WireSortable\\Tests\\": "packages/sortable/tests/",
             "NyonCode\\WireBoost\\Tests\\": "packages/boost/tests/"
         }
     },

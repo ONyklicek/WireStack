@@ -1,6 +1,19 @@
 {
     "name": "nyoncode/wire-core",
     "description": "Shared foundation for the Wire ecosystem – traits, actions, modals, notifications, icons, colors.",
+    "keywords": [
+        "laravel",
+        "livewire",
+        "wire",
+        "wirestack",
+        "nyoncode",
+        "actions",
+        "modals",
+        "notifications",
+        "icons",
+        "foundation"
+    ],
+    "homepage": "https://wirestack.nyoncode.cz",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -9,6 +22,11 @@
             "role": "Developer"
         }
     ],
+    "support": {
+        "issues": "https://github.com/ONyklicek/WireStack/issues",
+        "source": "https://github.com/NyonCode/wire-core",
+        "docs": "https://wirestack.nyoncode.cz"
+    },
     "require": {
         "php": "^8.2",
         "illuminate/support": "^12.0|^13.0",

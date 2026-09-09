@@ -1,6 +1,19 @@
 {
     "name": "nyoncode/wire-admin",
     "description": "The optional admin shell for wire: a layout and a sidebar over the registered catalogue.",
+    "keywords": [
+        "laravel",
+        "livewire",
+        "wire",
+        "wirestack",
+        "nyoncode",
+        "admin",
+        "admin-panel",
+        "dashboard",
+        "layout",
+        "sidebar"
+    ],
+    "homepage": "https://wirestack.nyoncode.cz",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -9,6 +22,11 @@
             "role": "Developer"
         }
     ],
+    "support": {
+        "issues": "https://github.com/ONyklicek/WireStack/issues",
+        "source": "https://github.com/NyonCode/wire-admin",
+        "docs": "https://wirestack.nyoncode.cz"
+    },
     "require": {
         "php": "^8.2",
         "nyoncode/wire-core": "self.version",

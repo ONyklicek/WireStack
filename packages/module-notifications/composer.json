@@ -1,6 +1,17 @@
 {
     "name": "nyoncode/wire-module-notifications",
     "description": "Stored notifications for wire: the history behind the bell, as a resource.",
+    "keywords": [
+        "laravel",
+        "livewire",
+        "wire",
+        "wirestack",
+        "nyoncode",
+        "notifications",
+        "inbox",
+        "database-notifications"
+    ],
+    "homepage": "https://wirestack.nyoncode.cz",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -9,6 +20,11 @@
             "role": "Developer"
         }
     ],
+    "support": {
+        "issues": "https://github.com/ONyklicek/WireStack/issues",
+        "source": "https://github.com/NyonCode/wire-module-notifications",
+        "docs": "https://wirestack.nyoncode.cz"
+    },
     "require": {
         "php": "^8.2",
         "nyoncode/wire-core": "self.version",

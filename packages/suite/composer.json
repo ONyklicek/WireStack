@@ -1,6 +1,18 @@
 {
     "name": "nyoncode/wire-suite",
     "description": "The whole wire stack in one require, with an interactive installer.",
+    "keywords": [
+        "laravel",
+        "livewire",
+        "wire",
+        "wirestack",
+        "nyoncode",
+        "suite",
+        "installer",
+        "admin-panel",
+        "meta-package"
+    ],
+    "homepage": "https://wirestack.nyoncode.cz",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -9,6 +21,11 @@
             "role": "Developer"
         }
     ],
+    "support": {
+        "issues": "https://github.com/ONyklicek/WireStack/issues",
+        "source": "https://github.com/NyonCode/wire-suite",
+        "docs": "https://wirestack.nyoncode.cz"
+    },
     "require": {
         "php": "^8.2",
         "nyoncode/wire-core": "self.version",

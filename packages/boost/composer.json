@@ -1,6 +1,19 @@
 {
     "name": "nyoncode/wire-boost",
     "description": "AI tooling for the Wire ecosystem – an MCP server, AI guidelines and agent skills for wire-core, wire-forms, wire-table and wire-sortable.",
+    "keywords": [
+        "laravel",
+        "livewire",
+        "wire",
+        "wirestack",
+        "nyoncode",
+        "ai",
+        "mcp",
+        "mcp-server",
+        "agent-skills",
+        "laravel-boost"
+    ],
+    "homepage": "https://wirestack.nyoncode.cz",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -9,6 +22,11 @@
             "role": "Developer"
         }
     ],
+    "support": {
+        "issues": "https://github.com/ONyklicek/WireStack/issues",
+        "source": "https://github.com/NyonCode/wire-boost",
+        "docs": "https://wirestack.nyoncode.cz"
+    },
     "require": {
         "php": "^8.2",
         "nyoncode/wire-core": "self.version",
