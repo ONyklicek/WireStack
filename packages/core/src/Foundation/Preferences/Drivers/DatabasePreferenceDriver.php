@@ -2,33 +2,33 @@
 
 declare(strict_types=1);
 
-namespace NyonCode\WireTable\Preferences\Drivers;
+namespace NyonCode\WireCore\Foundation\Preferences\Drivers;
 
 use Illuminate\Contracts\Auth\Authenticatable;
-use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
-use NyonCode\WireTable\Preferences\Models\TablePreference;
+use NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver;
+use NyonCode\WireCore\Foundation\Preferences\Models\Preference;
 
 /**
- * Database-backed preferences: one `table_preferences` row per (user, table).
+ * Database-backed preferences: one `wire_preferences` row per (user, surface, view).
  *
  * The reference persistent driver — publish and run the
- * `create_table_preferences_table` migration, set
- * `config('wire-table.preferences.default')` to `database`, and every user's
- * column layout is remembered across sessions and devices. Scales to any number
- * of tables (`table_key`) and users (`user_id`) via the composite unique index.
+ * `create_wire_preferences_table` migration, point the surface's configured
+ * driver at `database`, and every user's layout is remembered across sessions
+ * and devices. Scales to any number of surfaces (`surface_key`) and users
+ * (`user_id`) via the composite unique index.
  *
  * Guests (no identifier) collapse onto a shared `null` user_id row, so for
  * per-guest memory keep the guest driver on `session` (the default).
  */
-class DatabasePreferenceDriver implements TablePreferenceDriver
+class DatabasePreferenceDriver implements PreferenceDriver
 {
     /** The stored spelling of "no name": see {@see viewName()}. */
     private const CURRENT_LAYOUT = '';
 
-    public function load(string $tableKey, ?Authenticatable $user, ?string $view = null): array
+    public function load(string $surfaceKey, ?Authenticatable $user, ?string $view = null): array
     {
-        $record = TablePreference::query()
-            ->where('table_key', $tableKey)
+        $record = Preference::query()
+            ->where('surface_key', $surfaceKey)
             ->where('user_id', $this->userId($user))
             ->where('view', $this->viewName($view))
             ->first();
@@ -38,27 +38,27 @@ class DatabasePreferenceDriver implements TablePreferenceDriver
         return is_array($preferences) ? $preferences : [];
     }
 
-    public function save(string $tableKey, ?Authenticatable $user, array $preferences, ?string $view = null): void
+    public function save(string $surfaceKey, ?Authenticatable $user, array $preferences, ?string $view = null): void
     {
-        TablePreference::query()->updateOrCreate(
-            ['table_key' => $tableKey, 'user_id' => $this->userId($user), 'view' => $this->viewName($view)],
+        Preference::query()->updateOrCreate(
+            ['surface_key' => $surfaceKey, 'user_id' => $this->userId($user), 'view' => $this->viewName($view)],
             ['preferences' => $preferences],
         );
     }
 
-    public function forget(string $tableKey, ?Authenticatable $user, ?string $view = null): void
+    public function forget(string $surfaceKey, ?Authenticatable $user, ?string $view = null): void
     {
-        TablePreference::query()
-            ->where('table_key', $tableKey)
+        Preference::query()
+            ->where('surface_key', $surfaceKey)
             ->where('user_id', $this->userId($user))
             ->where('view', $this->viewName($view))
             ->delete();
     }
 
-    public function views(string $tableKey, ?Authenticatable $user): array
+    public function views(string $surfaceKey, ?Authenticatable $user): array
     {
-        return TablePreference::query()
-            ->where('table_key', $tableKey)
+        return Preference::query()
+            ->where('surface_key', $surfaceKey)
             ->where('user_id', $this->userId($user))
             ->where('view', '!=', self::CURRENT_LAYOUT)
             ->pluck('view')
