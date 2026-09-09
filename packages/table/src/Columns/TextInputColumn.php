@@ -490,6 +490,16 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         return $this;
     }
 
+    /**
+     * @deprecated Renamed to dehydrateState() when ADR 0021 gave the save path a
+     *             named seam. Kept because, unlike native(), this method works —
+     *             removing it would break real behaviour, not a fiction.
+     */
+    public function formatForSave(mixed $value, ?Model $record): mixed
+    {
+        return $this->dehydrateState($value, $record);
+    }
+
     public function dehydrateState(mixed $value, ?Model $record = null): mixed
     {
         if ($this->trim && is_string($value)) {
@@ -605,13 +615,21 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState
         }
 
         $state = $this->getState($record);
-        $state = $this->hydrateState($state, $record);
+        $state = $this->formatAfterLoad($state, $record);
 
         if (! $this->canEdit($record)) {
             return $this->renderReadonlyCell($state, $record);
         }
 
         return $this->renderEditableCell($state, $record);
+    }
+
+    /**
+     * @deprecated Renamed to hydrateState() — see formatForSave().
+     */
+    public function formatAfterLoad(mixed $value, Model $record): mixed
+    {
+        return $this->hydrateState($value, $record);
     }
 
     public function hydrateState(mixed $value, ?Model $record = null): mixed

@@ -12,30 +12,30 @@ it('can be created via make()', function () {
 it('supports fluent configuration', function () {
     $halt = ActionHalt::make()
         ->heading('Test')
-        ->description('Description')
+        ->body('Description')
         ->icon('check', 'success')
         ->submitLabel('OK')
         ->cancelLabel('Cancel')
         ->width('lg')
         ->danger();
 
-    expect($halt->getHeading())->toBe('Test')
-        ->and($halt->getDescription())->toBe('Description')
+    expect($halt->getModalHeading())->toBe('Test')
+        ->and($halt->getModalDescription())->toBe('Description')
         ->and($halt->getModalIcon())->toBe('check')
         ->and($halt->getModalIconColor())->toBe('success')
         ->and($halt->getModalSubmitLabel())->toBe('OK')
         ->and($halt->getModalCancelLabel())->toBe('Cancel')
-        ->and($halt->getWidth())->toBe('lg')
+        ->and($halt->getModalWidth())->toBe('lg')
         ->and($halt->isDanger())->toBeTrue();
 });
 
 it('has correct defaults', function () {
     $halt = ActionHalt::make();
 
-    expect($halt->getHeading())->toBeNull()
+    expect($halt->getModalHeading())->toBeNull()
         ->and($halt->getModalSubmitLabel())->toBe('Confirm')
         ->and($halt->getModalCancelLabel())->toBe('Cancel')
-        ->and($halt->getWidth())->toBe('md')
+        ->and($halt->getModalWidth())->toBe('md')
         ->and($halt->isDanger())->toBeFalse()
         ->and($halt->isInformative())->toBeFalse();
 });
@@ -54,8 +54,8 @@ it('informative mode clears form and submit', function () {
 it('has confirmDelete preset', function () {
     $halt = ActionHalt::confirmDelete('Test Record');
 
-    expect($halt->getHeading())->toBe('Delete record')
-        ->and($halt->getDescription())->toBe('Are you sure you want to delete "Test Record"? This action is irreversible.')
+    expect($halt->getModalHeading())->toBe('Delete record')
+        ->and($halt->getModalDescription())->toBe('Are you sure you want to delete "Test Record"? This action is irreversible.')
         ->and($halt->isDanger())->toBeTrue();
 });
 

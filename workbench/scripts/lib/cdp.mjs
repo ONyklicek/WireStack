@@ -86,7 +86,7 @@ export async function until(probe, { timeout = 10000, interval = 100 } = {}) {
  *   init — `window.Echo` is the one this exists for: the socket belongs to the
  *   application, so what a driver can verify is the bridge to it.
  */
-export async function openPage({ url, shotPrefix, width = 1200, height = 1200, mobile = false, settle = 3000, preload = null, showScrollbars = false }) {
+export async function openPage({ url, shotPrefix, width = 1200, height = 1200, mobile = false, settle = 3000, preload = null }) {
   const chromeBin = process.env.CHROME_BIN
     ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
   const devtoolsPort = Number(process.env.CHROME_PORT ?? 9335);
@@ -96,13 +96,7 @@ export async function openPage({ url, shotPrefix, width = 1200, height = 1200, m
   const userDataDir = join(tmpdir(), `wire-${shotPrefix}-${Date.now()}`);
   const chrome = spawn(chromeBin, [
     '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-    // Off by default because a scrollbar is 15px of the screenshot every visual
-    // driver would otherwise have to allow for. `showScrollbars: true` is for the
-    // one thing this flag makes untestable: whether a scrollbar is drawn at all.
-    // With it Chrome reports no scrollbar anywhere — every element measures a zero
-    // gutter, styled or not — so a check over `::-webkit-scrollbar` written against
-    // the default flags passes on a rule that was never applied.
-    ...(showScrollbars ? [] : ['--hide-scrollbars']),
+    '--hide-scrollbars',
     // Headless Chrome backgrounds a window it never shows and throttles the renderer.
     // Without these, requestAnimationFrame barely runs: an Alpine enter/leave
     // transition never finishes, so a modal that has already been told to close sits

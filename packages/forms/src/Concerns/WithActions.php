@@ -7,9 +7,7 @@ namespace NyonCode\WireForms\Concerns;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
-use NyonCode\WireCore\Actions\Concerns\InteractsWithHalt;
 use NyonCode\WireCore\Notifications\Concerns\InteractsWithNotifications;
-use NyonCode\WireForms\Forms\Form;
 
 /**
  * Public host trait that lets any Livewire component declare and fully run
@@ -51,20 +49,12 @@ trait WithActions
     use InteractsWithActionForms, InteractsWithActions {
         InteractsWithActionForms::validateMountedActionForm insteadof InteractsWithActions;
         InteractsWithActionForms::dehydrateMountedActionFormData insteadof InteractsWithActions;
-        InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions, InteractsWithHalt;
+        InteractsWithActionForms::resolveHaltModalForm insteadof InteractsWithActions;
         InteractsWithActionForms::getActionModalFormInstance insteadof InteractsWithActions;
         InteractsWithActionForms::getActionModalFormInstanceForDepth insteadof InteractsWithActions;
     }
-
     use InteractsWithFieldActions;
     use InteractsWithFileUploads;
-    // A halt is not an action feature — `InteractsWithHalt` is the whole of
-    // "stop, ask, continue" and works on a component with no actions at all.
-    // This host keeps only what is genuinely its own: a confirmed halt resumes
-    // into the action that raised it rather than into a named method.
-    use InteractsWithHalt {
-        resumeHalt as protected resumeHaltByName;
-    }
     use InteractsWithNotifications;
     use InteractsWithRepeaters;
     use InteractsWithSelectCreation;
@@ -106,6 +96,13 @@ trait WithActions
      * @var array<string, mixed>
      */
     public array $actionModalHaltData = [];
+
+    /**
+     * Halt-modal meta bag.
+     *
+     * @var array<string, mixed>
+     */
+    public array $mountedHalt = [];
 
     // ==========================================
     // Action registry
@@ -241,7 +238,7 @@ trait WithActions
      * @param  array<string, mixed>  $data
      * @param  array<string, mixed>  $arguments
      */
-    protected function runStandaloneAction(Action $action, ?Model $record, array $data, array $arguments = [], bool $confirmed = false): void
+    protected function runStandaloneAction(Action $action, ?Model $record, array $data, array $arguments = []): void
     {
         if (! $action->canExecute($record)) {
             return;
@@ -263,98 +260,10 @@ trait WithActions
                 $payload,
                 $haltKey,
                 $record instanceof Model ? 'row' : 'header',
-                $confirmed,
             );
         } finally {
             $this->currentActionArguments = [];
-
-            // A halt only carries a record *key*, which is not enough to run the
-            // action again: the standalone host has no query to look a bare key up
-            // in. So what raised the halt is remembered beside it, in the same
-            // {class, key} shape a mounted frame stores.
-            if (($this->mountedHalt['show'] ?? false) && ! array_key_exists('record', $this->mountedHalt)) {
-                $this->mountedHalt['record'] = $this->describeFrameRecord($record);
-                $this->mountedHalt['arguments'] = $arguments;
-            }
         }
-    }
-
-    // ==========================================
-    // Halt modal
-    // ==========================================
-
-    /**
-     * What a confirmed halt resumes into on this host.
-     *
-     * A halt raised inside the pipeline resumes into the *action* that raised
-     * it, not into a named method: it is re-executed with `$confirmed` true and
-     * the halt's data merged in. A halt raised by
-     * {@see InteractsWithHalt::halt()} on the same component carries a method
-     * name instead, and falls through to the shared behaviour.
-     *
-     * A halt only carries a record *key*, which is not enough here — the
-     * standalone host has no query to look a bare key up in — so the record and
-     * the arguments the action was called with travel beside it.
-     *
-     * @param  array<string, mixed>  $resume
-     * @param  array<string, mixed>  $data
-     */
-    protected function resumeHalt(array $resume, array $data): void
-    {
-        $name = $resume['actionName'] ?? null;
-        $action = is_string($name) ? $this->resolveAction($name) : null;
-
-        if ($action === null) {
-            $this->resumeHaltByName($resume, $data);
-
-            return;
-        }
-
-        $record = $this->resolveFrameRecord($resume['record'] ?? null);
-        $arguments = (array) ($resume['arguments'] ?? []);
-
-        // The halt's own skipBeforeOnConfirm() decides whether the action's
-        // before() hooks run on this pass.
-        $this->withHaltConfirmContext((array) ($resume['context'] ?? []), function () use ($action, $record, $data, $arguments): void {
-            $this->runStandaloneAction($action, $record, $data, $arguments, confirmed: true);
-        });
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    protected function haltResumeState(): array
-    {
-        return [
-            'then' => $this->getHaltModalState('then'),
-            'arguments' => (array) $this->getHaltModalState('arguments', []),
-            'actionName' => $this->getHaltModalState('actionName'),
-            'record' => $this->getHaltModalState('record'),
-            'context' => (array) $this->getHaltModalState('context', []),
-        ];
-    }
-
-    /**
-     * The halt form's fields bind to this bag, so it — not the seed the halt was
-     * raised with — is their live state.
-     *
-     * @return array<string, mixed>
-     */
-    protected function getHaltFormData(): array
-    {
-        return $this->actionModalHaltData;
-    }
-
-    protected function resolveHaltRecord(): ?Model
-    {
-        $record = $this->resolveFrameRecord($this->getHaltModalState('record'));
-
-        return $record instanceof Model ? $record : null;
-    }
-
-    protected function afterHaltClosed(): void
-    {
-        $this->actionModalHaltData = [];
     }
 
     // ==========================================
@@ -469,25 +378,6 @@ trait WithActions
     protected function setHaltModalState(string $key, mixed $value): void
     {
         $this->mountedHalt[$key] = $value;
-
-        // Whatever the halt pre-filled is the starting state of the bag its
-        // fields bind to; seedHaltModalFormState() then adds a slot for every
-        // field that declared no default.
-        if ($key === 'formData') {
-            $this->actionModalHaltData = is_array($value) ? $value : [];
-        }
-    }
-
-    /**
-     * A slot per declared field, under what the halt already filled in.
-     *
-     * `Form::getInitialState()` is the same seed an action modal opens with, so
-     * a halt form starts where an action form would — and, more to the point,
-     * every field has a path to entangle against.
-     */
-    protected function seedHaltModalFormState(Form $form): void
-    {
-        $this->actionModalHaltData = array_merge($form->getInitialState(), $this->actionModalHaltData);
     }
 
     /**

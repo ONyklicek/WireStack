@@ -267,7 +267,7 @@ it('merges a referenced onContextMenu action with the dedicated menu', function 
     $edit = Action::make('edit');
     $table = Table::make()
         ->actions([$edit])
-        ->recordAction(Action::make('archive')->onContextMenu())
+        ->rowContextMenu([Action::make('archive')])
         ->recordAction(RecordAction::make('edit')->onContextMenu());
 
     $actions = $table->getContextMenuActions();
@@ -366,6 +366,16 @@ it('lets a tinted row keep its tint hover but still be clickable', function () {
         ->toContain('cursor-pointer')
         ->not->toContain('hover:bg-primary-50');
 });
+
+// ─── rowContextMenu is a deprecated alias ────────────────────────
+
+it('keeps rowContextMenu working as an alias into the context menu', function () {
+    $table = Table::make()->rowContextMenu([Action::make('archive')->label('Archive')]);
+
+    expect($table->hasRowContextMenu())->toBeTrue()
+        ->and($table->getContextMenuActions())->toHaveCount(1);
+});
+
 // ─── Keyboard navigation config (F5) ─────────────────────────────
 
 it('picks the double-click action as the keyboard primary, click as secondary', function () {

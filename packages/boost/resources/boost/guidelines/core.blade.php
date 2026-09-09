@@ -41,22 +41,3 @@ Dependency graph (each depends only on those to its right):
 - `validate-wire-component` — **run this after writing or editing a component.** An unknown color renders
   gray, an unregistered icon renders nothing, and a name the model cannot resolve renders an empty cell.
   None of the three throws, so a passing render test does not rule any of them out.
-
-### Versions and the 1.x → 2.0 upgrade
-
-The current line is **2.0**: it needs **Livewire 4**, PHP 8.2+, Laravel 12.61+ / 13.12+. The 1.x line stays
-on Livewire 3 and no release runs on both, so Livewire is upgraded first.
-
-When moving an application across, read the guide before changing any constraint — `fetch-wire-doc` with
-`docs/start/upgrade.md`, and `search-wire-docs` for any symbol that stopped resolving. What breaks loudest:
-
-- The nine `NyonCode\WireCore\Concerns\*` trait shims are gone — import from `Actions\Concerns\*`
-  (`Foundation\Concerns\HasColor` for colors). So is `WireTable\Concerns\TableQueryService` (now `Services\`).
-- `Widget::lazy()` / `isLazy()` are gone and never deferred anything; defer the component instead.
-- The registration and routing contracts were renamed with no aliases: `NavigationSource` →
-  `Foundation\Registration\Contracts\RegistrySource`, and `ProvidesResourcePages` /
-  `ConfiguresResourceRoutes` / `RoutePage` → `WireCore\Foundation\Routing\…`.
-
-And what breaks silently: table and field views published from 1.x keep working while missing the new row
-markup, the gesture markup and the `Alpine.data()` field controllers — re-publish them
-(`--tag=wire-table::views --force`) and add `@@wireStackScripts` to the layout `<head>`.

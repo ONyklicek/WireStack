@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Concerns;
 
 use Closure;
+use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireTable\Events\TableRecordsChanged;
 use NyonCode\WireTable\Support\PollingConfig;
 use NyonCode\WireTable\Table;
@@ -27,6 +28,16 @@ use NyonCode\WireTable\Table;
 trait HasPolling
 {
     protected ?PollingConfig $polling = null;
+
+    /**
+     * @deprecated Use poll() instead. Will be removed in v2.0.
+     */
+    public function polling(string $interval = '5s'): static
+    {
+        Deprecation::method('polling', 'poll');
+
+        return $this->poll($interval);
+    }
 
     /**
      * Enable polling with specified interval.

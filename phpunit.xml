@@ -119,11 +119,7 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
-        <!-- Both keys: CACHE_DRIVER is what Laravel 10 read, CACHE_STORE what 11
-             reads, and testbench's own .env sets the latter to `database` —
-             whose table this suite has no reason to migrate. -->
         <env name="CACHE_DRIVER" value="array"/>
-        <env name="CACHE_STORE" value="array"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="QUEUE_DRIVER" value="sync"/>
         <env name="DB_CONNECTION" value="sqlite"/>

@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Livewire\Component as LivewireComponent;
-use NyonCode\WireCore\Foundation\Schema\Fieldset;
-use NyonCode\WireCore\Foundation\Schema\Grid;
-use NyonCode\WireCore\Foundation\Schema\Section;
+use NyonCode\WireForms\Components\Layout\Fieldset;
+use NyonCode\WireForms\Components\Layout\Grid;
+use NyonCode\WireForms\Components\Layout\Section;
 use NyonCode\WireForms\Components\TextInput;
 
 /**
@@ -116,16 +116,12 @@ test('section columns', function () {
     expect($section->getColumns())->toBe(3);
 });
 
-// ─── One layout, one view ───────────────────────────────────────
+// ─── Form-specific view names ───────────────────────────────────
 
-test('a form layout renders the canonical schema view', function () {
-    // The wire-forms subclasses that swapped in their own copies of these views
-    // were removed in 2.0: the copies had fallen behind the originals (no header
-    // actions, no aside(), a local column map), so a form section rendered less
-    // than an infolist section built from the same class.
-    expect(Grid::make()->render()->name())->toBe('wire-core::schema.grid')
-        ->and(Section::make('S')->render()->name())->toBe('wire-core::schema.section')
-        ->and(Fieldset::make('F')->render()->name())->toBe('wire-core::schema.fieldset');
+test('layout subclasses swap in the form blade views', function () {
+    expect(Grid::make()->render()->name())->toBe('wire-forms::layouts.grid')
+        ->and(Section::make('S')->render()->name())->toBe('wire-forms::layouts.section')
+        ->and(Fieldset::make('F')->render()->name())->toBe('wire-forms::layouts.fieldset');
 });
 
 // ─── Reactive state accessors ($get / $set) ─────────────────────

@@ -2,15 +2,7 @@
 
 ## Status
 
-ACCEPTED — 2026-09-05, implemented the same day. **Amended twice on 2026-09-08:
-§6's ratchet was spent, deliberately — first the six remaining hooks, then three
-more in forms and table plus the macro coverage §6 had parked.** Eighteen names,
-eleven of them typed-only. See
-[§6 as amended](#6-coverage-grows-by-named-consumer-never-by-symmetry) — the rule
-still reads the way it did, because the reasoning is still right and the decision
-to override it was the repo owner's, taken in the open. What that section now
-records is which of the six arrived with a consumer and which arrived on the
-owner's judgement, so the next person can tell the two apart.
+ACCEPTED — 2026-09-05, implemented the same day.
 
 One measurement changed the decision after it was written, and it is the reason
 this ADR is worth re-reading rather than skimming: **`table.configuring` cannot
@@ -136,14 +128,6 @@ reads and `IdentifiesHookTarget` as the one a host implements to be addressable
 by its registered key — which every `wire-panels` resource page now does through
 `BelongsToResource`.
 
-*2026-09-08: fifteen payloads, and `DashboardPage` implements
-`IdentifiesHookTarget` too, answering with the key of the dashboard it shows. Two
-of the six new hooks belong to no component and are therefore targeted by
-something else: `navigation.building` by the **zone** the menu is built for, and
-`search.querying` by the searched resource's catalogue key. Both build the
-`HookTarget` directly rather than through `for()`, because there is no host to ask
-— which is the case that method's signature could not express.*
-
 A shared, typed target on every hook payload:
 
 ```php
@@ -176,7 +160,7 @@ package defines for itself — but the shipped vocabulary becomes discoverable,
 typo-proof and greppable, which is what `Foundation/Enums/` already does for
 size, color, placement and alignment.
 
-### 5. New hooks are typed-only (implemented — all eleven new hooks are)
+### 5. New hooks are typed-only (implemented — both new hooks are)
 
 The array dispatch is **frozen at the seven legacy names**. A new hook ships one
 payload class and one dispatch. Doubling every new lifecycle point to keep a
@@ -199,150 +183,18 @@ and `WithTable::getTable()` — and both are exercised by a test that renders:
 page's list through the key its resource registered under, and asserts the page
 beside it is untouched.
 
-`infolist.configuring` was **not** shipped on 2026-09-05. It had no consumer, which
-is the bar this section sets, and shipping it to complete a grid is what the
-section exists to prevent.
+`infolist.configuring` is **not** shipped. It has no consumer yet, which is the
+bar §6 sets, and shipping it to complete a grid is what this section exists to
+prevent.
 
-#### Amendment, 2026-09-08 — the remaining six shipped
+Named, specified, and **not shipped** until something asks: `navigation.building`,
+`page.mounting`, `search.querying`, `export.configuring`, `widget.configuring`.
+The bar is this repo's own and it has held all through V2: an extension point
+with no consumer is an untested promise, and V2.6 found four live defects in
+exactly the code that had never had one.
 
-Three days and five shipped module packages later, the bar had moved under one of them
-and the owner spent the ratchet on the rest. Both halves of that are worth
-recording, because they are different kinds of decision:
-
-**`infolist.configuring` met the bar as written.** Four of the module packages —
-`wire-module-users`, `-audit`, `-media`, `-notifications` — ship five resources
-with a detail page between them: `UserResource`, `RoleResource`, `AuditResource`,
-`MediaResource`, `NotificationResource`, all rendered by
-`WirePanels\Resources\Pages\ViewPage`. So "add a field to the users form" was
-writable and "add a row to its detail" was not, on the same resources, which is
-precisely the asymmetry this ADR was written about.
-
-**The other five shipped on the owner's call, not on a measured consumer.**
-`navigation.building`, `page.mounting`, `search.querying`, `export.configuring`
-and `widget.configuring` were requested together, as coverage: *"zlepšení systému
-hooks napříč celým systémem"*. That overrides §6, and the override is the
-decision — not a re-reading of the rule. Two things were done to keep the cost
-honest rather than to argue the rule away:
-
-1. **Every one arrived with a test that exercises it through the surface it
-   belongs to**, not through the dispatcher: a rendered page for the infolist,
-   widget and page hooks, a real builder for search and export, both `navigation()`
-   and `items()` for the menu. The bar §6 defends is "an extension point with no
-   consumer is an untested promise"; a test is not a consumer, but it is the half
-   of one that catches a promise that never worked.
-2. **Each dispatch site was placed by what it can actually change**, which is the
-   `table.configuring` lesson applied five more times. Three of the six moved
-   after the first measurement: `widget.configuring` before key stamping rather
-   than after (a widget added late gets no key, or a borrowed one),
-   `export.configuring` into `buildTableExport()` rather than `exportTable()` (or
-   the queued file would have been a second, uncovered export), and
-   `navigation.building` into `entries()` rather than `navigation()` (or the
-   grouped menu and the flat one would disagree about what is in the menu).
-
-Two designs were **rejected** during implementation, and both were rejected by a
-measurement rather than by taste. `page.mounting` was going to write a title back
-to the page: `$title` is protected on `BelongsToResource`, Livewire's snapshot
-carries public properties only, and a page mounts once — so the heading would have
-been right on the first paint and gone on every update after, which is the failure
-`$breadcrumbZone` on that same trait already exists to avoid. The payload's title
-is read-only; what a callback changes is the page's public surface, where a
-seeded form state bag does survive.
-
-`search.querying` cost the other: the catalogue key was going to
-travel as a fourth argument to `GlobalSearch::searchResource()`. That method is a
-documented override point, and PHP rejects a subclass declaring fewer parameters
-— so the added argument was a fatal error at class-declaration time in every
-application that had ever overridden it. It is looked up from the catalogue
-inside the payload closure instead, which costs nothing when no callback is
-registered.
-
-**What did not ship in that pass:** macro coverage. See the second amendment
-below — it shipped a few hours later, on the same call.
-
-**The residual risk is the one §6 named**, and it is now real rather than
-hypothetical: five of these have no consumer outside their own tests. If one of
-them turns out to be dispatched at the wrong moment, nothing in the repository
-will notice. The mitigation is the same as the diagnosis — the first module or
-application that uses one should be treated as the measurement, and the dispatch
-site is expected to move if it disagrees.
-
-#### Second amendment, 2026-09-08 — forms and table, measured on their own
-
-The first amendment shipped coverage *across* the system and left the two oldest
-packages as they were. Measuring them afterwards found four things, and the owner
-took all four.
-
-**One of them this ADR had just created.** `export.configuring` shipped hours
-earlier and `import.configuring` did not — and the two are declared the same way,
-as an `ExportAction` and an `ImportAction` in one `headerActions()`. That is the
-sharpest kind of asymmetry there is: not one the code grew into, one this document
-put there. It cost a single dispatch, because unlike its counterpart the import
-needed no composition point invented for it — `RunImportJob` mounts the host and
-calls `importTable()`, so streamed and queued were already one path.
-
-**One was a real hole rather than an asymmetry.** An inline cell edit is a save,
-and it was the only write path in the table with nothing that could change it:
-`CellUpdating` and `CellUpdated` are Laravel **events**, which by §1's own rule may
-watch a value change and never alter it. A form save had `form.saving`; the cell
-beside it had neither. `Hook::CellUpdating` dispatches inside
-`CellEditPipeline::commit()` — the one point the inline editor and the fill handle
-both funnel through — after the column's permission, conflict and validation
-checks, so a callback narrows and cannot widen. It can also refuse: a `refusal` on
-the payload returns `CellEditOutcome::rejected()`, which is a shape the pipeline
-already had.
-
-**One was an axis, not a point.** Forms could be intercepted on the way *out* and
-not on the way *in*. `Hook::FormFilling` sits in `Form::fill()` and deliberately
-not in `getInitialState()`: an edit page calls both, so a hook on each would fire
-twice per page.
-
-**And the macro rule was spent.** `Form`, `Column`, `Field` and `Filter` are now
-`Macroable`, joining `Table` and `BaseAction`. §6 said "when a module needs it, not
-to complete a grid", and no module asked — this is the owner overriding that, the
-same way and in the same session as the five hooks above. `Infolist` is
-deliberately **not** macroable: it is a renderer with four setters, and nothing has
-wanted vocabulary on it.
-
-Rejected during this pass, again by measurement: narrowing `TableQueryService`'s
-`$pluginManager` to one hook name. It also feeds the **query pipes**, which are a
-registry on the manager and not a hook at all, so a name-scoped resolve would have
-silently emptied them whenever `table.configuring` had no callback. Each hook block
-got its own named guard instead, and `resolvePluginManager()` stayed for the pipes.
-
-### The guard became a class
-
-Eight typed dispatch sites need the same three steps: is a `PluginManager` bound,
-is anything listening, and only then pay for a payload. Two sites wrote it out by
-hand and six more were about to, so it is `Core/Plugin/HookDispatch.php` and the
-two originals delegate to it — the extract-and-delegate move
-`AI_CODING_STANDARD.md` § Adapters requires, not a second copy.
-
-The payload arrives as a **closure**, which is the part that matters: building one
-means reading a table's columns, a menu's entries or a dashboard's widgets, and an
-application that installs no plugin should pay for none of it. `Form::configuredSchema()`
-gained the `hasHook()` check it never had by moving.
-
-`HookDispatch::manager()` is the legacy half, added in the second amendment. The
-seven double-dispatched names cannot use `typed()` — what each site does with the
-two results genuinely differs — so it hands back the manager instead of inventing
-a shape that fits none of the four call sites. What it *does* add is the
-`hasHook()` short-circuit they never had: `TableQueryService`, `SaveHandler` and
-`InteractsWithActions` used to build both payloads whenever a manager was bound,
-which on `table.configuring` is once per table per render in an application that
-registered nothing.
-
-That optimisation has a measured receipt. It dropped `wire-module-settings` below
-its coverage floor, because `SettingsPage::hookKey()` had only ever been exercised
-*incidentally* — `Form::configuredSchema()` built a `HookTarget` on every form
-config whether or not anything was listening, and building one asks the host for
-its key. The method now has a test of its own, which is where a public method's
-coverage should have come from in the first place.
-
-One trap the class documents rather than allows: **null means nobody listened, not
-"nothing changed"**. A caller folding the two together with `?? $original` would
-silently restore its own value whenever a callback emptied the array — and
-emptying it is a legitimate answer, which is how a filter that removes every
-column would have looked like a no-op.
+Macro coverage follows the same rule: make `Form` and `Infolist` macroable when a
+module needs it, not to complete a grid.
 
 ## Consequences
 

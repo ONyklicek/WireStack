@@ -10,29 +10,13 @@
  * Chart.js itself is NOT shipped by this package. The consuming app includes it
  * (CDN or its own bundle); without it the widget degrades to an empty canvas and
  * one console warning, and never throws.
- *
- * ## There is no update path here, deliberately
- *
- * This controller builds a chart and tears it down. It used to carry the filter
- * as well — `filterOptions`, `activeFilter` and an `updateChart()` bound to a
- * `<select>` — and that was the bug rather than the feature: `updateChart()`
- * assigned `this.labels` and `this.datasets` back onto the chart it had just
- * been constructed with, the same two arrays, so changing the selection redrew
- * an identical chart and the server-side dataset closure never ran with
- * anything but its default.
- *
- * A filter is resolved on the server now, where the closure is, and the answer
- * arrives as this widget's `wire:partial` region. New data therefore means a new
- * element: the wrapper's `wire:key` carries the active filter, so the morph
- * replaces rather than patches, `destroy()` below tears the old chart down and
- * `init()` builds one over the new data. Alpine never re-evaluates `x-data` on
- * an element it has already initialised, which is exactly why patching could
- * never have worked.
  */
-const wireChart = (type, labels, datasets, options) => ({
+const wireChart = (type, labels, datasets, filterOptions, activeFilter, options) => ({
     type,
     labels,
     datasets,
+    filterOptions,
+    activeFilter,
     options,
     chart: null,
 
@@ -59,6 +43,14 @@ const wireChart = (type, labels, datasets, options) => ({
         // in use".
         this.chart?.destroy()
         this.chart = null
+    },
+
+    updateChart() {
+        if (! this.chart) return
+
+        this.chart.data.labels = this.labels
+        this.chart.data.datasets = this.datasets
+        this.chart.update()
     },
 })
 

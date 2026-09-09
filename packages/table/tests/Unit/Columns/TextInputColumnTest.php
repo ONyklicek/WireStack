@@ -242,17 +242,17 @@ it('denies when the user has no authorization methods', function () {
 it('trims and nullifies empty values on save', function () {
     $column = TextInputColumn::make('name')->nullable();
 
-    expect($column->dehydrateState('  hi  ', ticRecord()))->toBe('hi')
-        ->and($column->dehydrateState('   ', ticRecord()))->toBeNull();
+    expect($column->formatForSave('  hi  ', ticRecord()))->toBe('hi')
+        ->and($column->formatForSave('   ', ticRecord()))->toBeNull();
 
-    expect(TextInputColumn::make('name')->trim(false)->dehydrateState(' keep ', ticRecord()))->toBe(' keep ');
+    expect(TextInputColumn::make('name')->trim(false)->formatForSave(' keep ', ticRecord()))->toBe(' keep ');
 });
 
 it('parses formatted numbers back to floats on save', function () {
     $column = TextInputColumn::make('price')->money(2, ' ', ',');
 
-    expect($column->dehydrateState('1 234,50', ticRecord()))->toBe(1234.5)
-        ->and($column->dehydrateState('', ticRecord()))->toBe('');
+    expect($column->formatForSave('1 234,50', ticRecord()))->toBe(1234.5)
+        ->and($column->formatForSave('', ticRecord()))->toBe('');
 });
 
 it('reads an amount grouped the other way round', function () {
@@ -261,11 +261,11 @@ it('reads an amount grouped the other way round', function () {
     // thousandfold loss, on the value a paste from a spreadsheet produces.
     $column = TextInputColumn::make('price')->money(2, ' ', ',');
 
-    expect($column->dehydrateState('1.234,50', ticRecord()))->toBe(1234.5)
+    expect($column->formatForSave('1.234,50', ticRecord()))->toBe(1234.5)
         // A lone dot in a comma format is the decimal point — the numeric keypad.
-        ->and($column->dehydrateState('1234.50', ticRecord()))->toBe(1234.5)
-        ->and($column->dehydrateState('-1 234,50', ticRecord()))->toBe(-1234.5)
-        ->and($column->dehydrateState('nonsense', ticRecord()))->toBeNull();
+        ->and($column->formatForSave('1234.50', ticRecord()))->toBe(1234.5)
+        ->and($column->formatForSave('-1 234,50', ticRecord()))->toBe(-1234.5)
+        ->and($column->formatForSave('nonsense', ticRecord()))->toBeNull();
 });
 
 it('writes the same figure whether the cell is editable or read-only', function () {
@@ -274,21 +274,21 @@ it('writes the same figure whether the cell is editable or read-only', function 
     $column = TextInputColumn::make('price')->money(2, ' ', ',');
 
     expect($column->formatForDisplay(1234.5, ticRecord()))
-        ->toBe($column->hydrateState(1234.5, ticRecord()));
+        ->toBe($column->formatAfterLoad(1234.5, ticRecord()));
 });
 
 it('applies case transforms and before-save formatter', function () {
-    expect(TextInputColumn::make('a')->uppercase()->dehydrateState('abc', ticRecord()))->toBe('ABC')
-        ->and(TextInputColumn::make('a')->lowercase()->dehydrateState('ABC', ticRecord()))->toBe('abc')
-        ->and(TextInputColumn::make('a')->beforeSave(fn ($v) => $v.'!')->dehydrateState('x', ticRecord()))->toBe('x!');
+    expect(TextInputColumn::make('a')->uppercase()->formatForSave('abc', ticRecord()))->toBe('ABC')
+        ->and(TextInputColumn::make('a')->lowercase()->formatForSave('ABC', ticRecord()))->toBe('abc')
+        ->and(TextInputColumn::make('a')->beforeSave(fn ($v) => $v.'!')->formatForSave('x', ticRecord()))->toBe('x!');
 });
 
 it('formats numbers and runs the after-load formatter on load', function () {
     $column = TextInputColumn::make('price')->money(2, ' ', ',');
-    expect($column->hydrateState(1234.5, ticRecord()))->toBe('1 234,50');
+    expect($column->formatAfterLoad(1234.5, ticRecord()))->toBe('1 234,50');
 
     $custom = TextInputColumn::make('name')->afterLoad(fn ($v) => strtoupper((string) $v));
-    expect($custom->hydrateState('hi', ticRecord()))->toBe('HI');
+    expect($custom->formatAfterLoad('hi', ticRecord()))->toBe('HI');
 });
 
 it('formats values for readonly display', function () {

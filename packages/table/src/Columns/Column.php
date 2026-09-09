@@ -9,7 +9,6 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Str;
-use Illuminate\Support\Traits\Macroable;
 use NyonCode\WireCore\Core\Components\DataComponent;
 use NyonCode\WireCore\Core\Query\Contracts\HasSearchColumns;
 use NyonCode\WireCore\Core\Query\Contracts\HasSearchValueType;
@@ -77,15 +76,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     use HasView;
     use HasVisibility;
     use HasWidth;
-
-    /**
-     * Macroable, for the reason `Table` and `BaseAction` already are: an
-     * application or a package adds vocabulary to a class it does not own,
-     * applied where the component is built. ADR 0030 named this as the missing
-     * half of the extension story — the second-best path was absent everywhere
-     * the first one was.
-     */
-    use Macroable;
 
     // Note: $sortable and $searchable booleans removed in v2. Capabilities are the
     // single source of truth, read through CanBeSorted / CanBeSearchable.

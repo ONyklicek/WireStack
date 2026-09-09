@@ -268,8 +268,8 @@ it('takes the full render, because the setting is shown outside the island', fun
     expect($instance->shouldSkipRender())->toBeFalse();
 });
 
-it('moves the expansion baseline with the master toggle', function () {
-    $test = Livewire::test(CeSubRowsComponent::class)->call('toggleAllRowExpansion');
+it('keeps toggleFlattenMode working as an alias of the master toggle', function () {
+    $test = Livewire::test(CeSubRowsComponent::class)->call('toggleFlattenMode');
 
     expect($test->instance()->expandsSubRowsByDefault())->toBeTrue()
         ->and($test->instance()->isRowExpanded('1'))->toBeTrue();

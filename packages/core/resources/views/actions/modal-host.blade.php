@@ -73,7 +73,6 @@
                 color: $modalData['actionColor'] ?? 'primary',
                 closeOnClickAway: $modalData['closeOnClickAway'] ?? true,
                 closeOnEscape: $modalData['closeOnEscape'] ?? true,
-                maxHeight: $modalData['maxHeight'] ?? null,
                 fullScreenOnMobile: $isFullScreenMobile,
                 slideOverOnMobile: $isSlideOverOnMobile,
                 breakpoint: $modalData['mobileBreakpoint'] ?? null,
@@ -133,18 +132,3 @@
         @endif
     @endif
 @endif
-
-{{-- A halted action, waiting on the user. Rendered outside the block above
-     because a halt outlives the modal that raised it — and because an action
-     with no modal at all can raise one, as can a component with no actions. One
-     owner for all three: the halt host. --}}
-@include('wire-core::actions.halt-host', [
-    'component' => $component,
-    // Named in full on purpose: @include inherits the *parent's* scope, and this
-    // view already has a $submitAction and a $closeAction — the action modal's.
-    // Left to the include's own defaults, a halt's Confirm button called
-    // callMountedAction() and the dialog never closed.
-    'showModel' => 'mountedHalt.show',
-    'submitAction' => 'submitHaltModal',
-    'closeAction' => 'closeHaltModal',
-])

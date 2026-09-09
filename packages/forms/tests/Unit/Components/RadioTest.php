@@ -160,12 +160,7 @@ test('buttons variant renders separate buttons filled on selection, stacked by d
         ->and($html)->toContain('flex-col')          // stacked (pod sebou)
         ->and($html)->toContain('rounded-lg')         // each button independently rounded
         ->and($html)->not->toContain('-ml-px')        // not a joined group
-        ->and($html)->toContain('<svg')
-        // Hover has to be spelled for both themes: `dark:` is a
-        // zero-specificity :where() variant, so a lone light-mode hover wins in
-        // the dark too and flashes the face near-white.
-        ->and($html)->toContain('hover:bg-gray-100')
-        ->and($html)->toContain('dark:hover:bg-gray-700');
+        ->and($html)->toContain('<svg');
 });
 
 test('inline buttons flow in a row', function () {

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
-use NyonCode\WireCore\Foundation\Schema\Grid;
-use NyonCode\WireCore\Foundation\Schema\Section;
 use NyonCode\WireForms\Components\CheckboxList;
+use NyonCode\WireForms\Components\Layout\Grid;
+use NyonCode\WireForms\Components\Layout\Section;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;

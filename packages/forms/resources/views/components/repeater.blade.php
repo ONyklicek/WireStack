@@ -76,10 +76,6 @@
                  lives in wire-core, where a non-forms list can reach it), and an
                  Alpine child scope still sees `isCollapsed` from the parent. --}}
             x-data="wireSortableList()"
-            {{-- See the builder's copy of these two lines: Livewire's plugin owns
-                 the Sortable instance, this controller owns how it behaves. --}}
-            x-sort
-            x-sort:config="sortableConfig()"
             x-on:sorted="$wire.reorderRepeaterItems('{{ $statePath }}', $event.detail.order)"
         @endif
     >

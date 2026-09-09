@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Workbench\App\Livewire\Previews;
 
 use Livewire\Component;
-use NyonCode\WireCore\Foundation\Schema\Grid;
-use NyonCode\WireCore\Foundation\Schema\Section;
 use NyonCode\WireCore\Foundation\Schema\Step;
 use NyonCode\WireCore\Foundation\Schema\Tab;
 use NyonCode\WireCore\Foundation\Schema\Tabs;
 use NyonCode\WireCore\Foundation\Schema\Wizard;
 use NyonCode\WireForms\Components\Block;
 use NyonCode\WireForms\Components\Builder;
+use NyonCode\WireForms\Components\Layout\Grid;
+use NyonCode\WireForms\Components\Layout\Section;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\Textarea;

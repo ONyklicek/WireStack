@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace NyonCode\WireForms\Components;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Traits\Macroable;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Concerns\CanBeDehydrated;
 use NyonCode\WireCore\Foundation\Concerns\CanBeLive;
@@ -50,15 +49,6 @@ abstract class Field extends Component implements CanBeDehydratedContract, HasFi
     use HasPrefixAndSuffix;
     use HasTooltip;
     use InteractsWithFormState;
-
-    /**
-     * Macroable, for the reason `Table` and `BaseAction` already are: an
-     * application or a package adds vocabulary to a class it does not own,
-     * applied where the component is built. ADR 0030 named this as the missing
-     * half of the extension story — the second-best path was absent everywhere
-     * the first one was.
-     */
-    use Macroable;
 
     /**
      * Default debounce for live text fields (ms) — prevents DOM morph from

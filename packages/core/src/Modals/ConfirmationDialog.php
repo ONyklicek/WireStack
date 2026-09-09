@@ -6,10 +6,10 @@ namespace NyonCode\WireCore\Modals;
 
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
-use NyonCode\WireCore\Foundation\Concerns\HasModalProperties;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Modals\Concerns\HasFooterActions;
+use NyonCode\WireCore\Modals\Concerns\HasModalProperties;
 use NyonCode\WireCore\Modals\Contracts\ModalContract;
 
 /**

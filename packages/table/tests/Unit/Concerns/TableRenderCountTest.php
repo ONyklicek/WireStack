@@ -117,7 +117,7 @@ class RcComponent extends Component
         }
 
         if ($this->contextMenu) {
-            $table->gestures()->recordAction(Action::make('edit')->label('Edit')->onContextMenu());
+            $table->gestures()->rowContextMenu([Action::make('edit')->label('Edit')]);
         }
 
         if ($this->subRows) {

@@ -88,3 +88,10 @@ it('hands the view the shape it has always had', function () {
 it('rejects an interval Livewire could not parse', function () {
     Table::make()->poll('soon');
 })->throws(TableConfigurationException::class);
+
+it('still answers to the deprecated polling() name', function () {
+    $table = @Table::make()->polling('15s');
+
+    expect($table->isPolling())->toBeTrue()
+        ->and($table->getPollingInterval())->toBe('15s');
+});

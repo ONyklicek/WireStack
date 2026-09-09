@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\File;
 
 afterEach(function () {
     File::deleteDirectory(app_path('Dashboards'));
-    File::deleteDirectory(base_path('stubs/wire-core'));
     File::delete(base_path('stubs/dashboard.stub'));
 });
 
@@ -47,11 +46,8 @@ it('adds the suffix so the derived key is the one the docs describe', function (
 it('prefers a published stub over the package one', function () {
     // The whole point of shipping the template as a publishable stub: an
     // application changes what the generator produces without forking anything.
-    // `stubs/wire-core/`, because that is where `vendor:publish` puts them.
-    // This wrote to `stubs/` and passed, which is why nobody noticed the
-    // generator was reading a path the publish never wrote to.
-    File::ensureDirectoryExists(base_path('stubs/wire-core'));
-    File::put(base_path('stubs/wire-core/dashboard.stub'), "<?php\n\nnamespace {{ namespace }};\n\nclass {{ class }} {}\n");
+    File::ensureDirectoryExists(base_path('stubs'));
+    File::put(base_path('stubs/dashboard.stub'), "<?php\n\nnamespace {{ namespace }};\n\nclass {{ class }} {}\n");
 
     $this->artisan('make:wire-dashboard', ['name' => 'Custom'])->assertSuccessful();
 

@@ -42,8 +42,6 @@ final class Confirmation implements Htmlable
         public bool $isInformative = false,
         public bool $closeOnClickAway = true,
         public bool $closeOnEscape = true,
-        /** A CSS length capping the body block, which then scrolls on its own. */
-        public ?string $maxHeight = null,
         public bool $fullScreenOnMobile = false,
         public bool $slideOverOnMobile = false,
         public ?string $breakpoint = null,
@@ -84,7 +82,6 @@ final class Confirmation implements Htmlable
             'cancelLabel' => $this->cancelLabel,
             'closeOnClickAway' => $this->closeOnClickAway,
             'closeOnEscape' => $this->closeOnEscape,
-            'maxHeight' => $this->maxHeight,
             'id' => $this->id,
             'closeAction' => $this->closeAction,
             'zIndex' => $this->zIndex,

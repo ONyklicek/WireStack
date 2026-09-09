@@ -79,7 +79,7 @@ class TafdComponent extends Component
                     ->action(function (bool $confirmed, array $data, callable $halt) {
                         if (! $confirmed) {
                             return $halt()
-                                ->heading('Why?')
+                                ->modalHeading('Why?')
                                 ->form([
                                     Select::make('status')->options(TafdStatus::class)->placeholder('None'),
                                     TextInput::make('quota')->integer(),
@@ -94,7 +94,7 @@ class TafdComponent extends Component
                     ->action(function (bool $confirmed, array $data, callable $halt) {
                         if (! $confirmed) {
                             return $halt()
-                                ->heading('Why?')
+                                ->modalHeading('Why?')
                                 ->form([TextInput::make('reason')->required()]);
                         }
 
@@ -106,7 +106,7 @@ class TafdComponent extends Component
                     ->action(function (bool $confirmed, array $data, callable $halt) {
                         if (! $confirmed) {
                             return $halt()
-                                ->heading('To whom?')
+                                ->modalHeading('To whom?')
                                 ->form([TextInput::make('assignee')])
                                 ->validation(
                                     ['assignee' => 'required|min:3'],
@@ -121,7 +121,7 @@ class TafdComponent extends Component
                 Action::make('purge')
                     ->action(function (bool $confirmed, array $data, callable $halt) {
                         if (! $confirmed) {
-                            return $halt()->heading('Sure?');
+                            return $halt()->modalHeading('Sure?');
                         }
 
                         $this->seen = array_merge(['ran' => true], $data);

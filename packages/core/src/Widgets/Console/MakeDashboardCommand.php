@@ -15,9 +15,9 @@ use Symfony\Component\Console\Attribute\AsCommand;
  * A generator rather than a class shipped in the package, because a dashboard is
  * application code: it counts the application's own rows. What the package can
  * usefully own is the *shape*, and that is the stub — publishable with
- * `vendor:publish --tag=wire-core::stubs`, after which the published copy wins
- * over the package's ({@see resolveStubPath()} for where it is looked for). It
- * is why the stub is not a
+ * `vendor:publish --tag=wire-core::stubs`, after which
+ * `base_path('stubs/dashboard.stub')` wins over the package's copy. That is
+ * Laravel's own convention for `stub:publish`, and it is why the stub is not a
  * `.php` file inside the package: a template referencing classes that exist only
  * after installation should not be loaded by the test suite, analysed by PHPStan
  * or counted by coverage.
@@ -36,27 +36,12 @@ class MakeDashboardCommand extends GeneratorCommand
         return $this->resolveStubPath('/../../../stubs/dashboard.stub');
     }
 
-    /**
-     * A published stub wins, so an application can change what this produces.
-     *
-     * `stubs/wire-core/` first: that is where
-     * `vendor:publish --tag=wire-core::stubs` puts them, the toolkit namespacing
-     * published stubs by package so two packages shipping a `dashboard.stub`
-     * cannot overwrite each other. Looking only in `stubs/` — which this did —
-     * meant publishing the stub and editing it changed nothing, silently.
-     *
-     * `stubs/` stays as a second place to look: Laravel's own `stub:publish`
-     * convention, and where a file put there by hand belongs.
-     */
+    /** A published stub wins, so an application can change what this produces. */
     protected function resolveStubPath(string $stub): string
     {
-        foreach ([base_path('stubs/wire-core/dashboard.stub'), base_path('stubs/dashboard.stub')] as $published) {
-            if (file_exists($published)) {
-                return $published;
-            }
-        }
+        $published = base_path('stubs/dashboard.stub');
 
-        return __DIR__.$stub;
+        return file_exists($published) ? $published : __DIR__.$stub;
     }
 
     protected function getDefaultNamespace($rootNamespace): string

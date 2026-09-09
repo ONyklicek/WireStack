@@ -87,7 +87,6 @@
                 color: $modalData['actionColor'] ?? 'primary',
                 closeOnClickAway: $modalData['closeOnClickAway'] ?? true,
                 closeOnEscape: $modalData['closeOnEscape'] ?? true,
-                maxHeight: $modalData['maxHeight'] ?? null,
                 fullScreenOnMobile: $isFullScreenMobile,
                 slideOverOnMobile: $isSlideOverOnMobile,
                 breakpoint: $modalData['mobileBreakpoint'] ?? null,

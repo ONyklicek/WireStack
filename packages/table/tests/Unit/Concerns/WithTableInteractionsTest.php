@@ -450,7 +450,7 @@ it('toggles row expansion state', function () {
     // No sub-rows configured: expand/collapse-all are safe no-ops.
     $c->expandAllRows();
     $c->collapseAllRows();
-    $c->toggleAllRowExpansion();
+    $c->toggleFlattenMode();
 
     expect($c->isRowExpanded('1'))->toBeFalse();
 });

@@ -70,7 +70,9 @@ class FaContextMenuComponent extends Component
             ->paginated(false)
             ->columns([TextColumn::make('name')])
             // A per-row right-click menu also pulls floating-assets into the row loop.
-            ->recordAction(Action::make('edit')->action(fn () => null)->onContextMenu());
+            ->rowContextMenu([
+                Action::make('edit')->action(fn () => null),
+            ]);
     }
 
     public function render()

@@ -222,12 +222,3 @@ it('leaves a group that brought its own layout alone', function () {
 
     expect(Livewire::test(SettingsPage::class)->instance()->needsSurface())->toBeFalse();
 });
-
-it('answers with the key a plugin hook addresses this screen by', function () {
-    // Pinned directly rather than left to whatever happens to build a form on
-    // this page: it used to be covered only incidentally, because every form
-    // config built a HookTarget whether or not anything was listening. It no
-    // longer does, and the key is the handle an application has on the settings
-    // screen — `hook(Hook::FormConfiguring, $cb, for: 'settings')`.
-    expect((new SettingsPage)->hookKey())->toBe('settings');
-});

@@ -37,12 +37,6 @@
                 @endforeach
             </div>
 
-            <p data-testid="halt-answer" class="mt-4 text-[13px] text-slate-500">
-                @if ($haltAnswer !== '')
-                    Archived · reason: <span class="font-semibold text-slate-900">{{ $haltAnswer }}</span>
-                @endif
-            </p>
-
             <p class="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] leading-relaxed text-slate-600">
                 <span class="font-semibold text-slate-800">Try it:</span>
                 open <span class="font-semibold">Create &amp; select</span>, click <span class="font-semibold">+ New customer</span>,

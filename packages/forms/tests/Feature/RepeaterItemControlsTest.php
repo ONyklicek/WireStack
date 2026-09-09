@@ -192,13 +192,9 @@ it('ships no drag controller to a repeater that cannot be reordered', function (
 it('wires the table layout to drag its tbody rows', function () {
     $html = Livewire::test(RepeaterControlsComponent::class, ['asTable' => true])->html();
 
-    // The rows are not the wrapper's own children there, so the scope sits on
-    // the wrapper and the drag is bound down on the <tbody>. It used to be a
-    // `container: 'tbody'` selector the controller resolved; the directive goes
-    // straight on the element now, which is one fewer thing that can point at
-    // the wrong node.
-    expect($html)->toContain('x-data="wireSortableList()"')
-        ->and($html)->toMatch('/<tbody[^>]*x-sort x-sort:config="sortableConfig\(\)"/')
+    // The rows are not the wrapper's own children there, so the controller is
+    // told where to look.
+    expect($html)->toContain("wireSortableList({ container: 'tbody' })")
         ->and($html)->toContain('data-sortable-item="0"');
 });
 

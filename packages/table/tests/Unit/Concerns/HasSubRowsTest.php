@@ -187,14 +187,14 @@ it('enables sub-rows when only a custom view is set, with no relation', function
         ->and($table->getSubRowView())->toBe('components.detail');
 });
 
-// ─── Default-expanded config ─────────────────────────────────────────────────
+// ─── Flatten config ──────────────────────────────────────────────────────────
 
-it('starts collapsed by default', function () {
-    expect(subRowTable()->isSubRowsDefaultExpanded())->toBeFalse();
+it('is not flattened by default', function () {
+    expect(subRowTable()->isFlattenSubRows())->toBeFalse();
 });
 
-it('can start every row expanded via config', function () {
-    expect(subRowTable()->subRowsDefaultExpanded()->isSubRowsDefaultExpanded())->toBeTrue();
+it('can flatten sub-rows via config', function () {
+    expect(subRowTable()->flattenSubRows()->isFlattenSubRows())->toBeTrue();
 });
 
 // ─── Audit follow-ups ────────────────────────────────────────────────────────

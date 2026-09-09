@@ -236,27 +236,7 @@
                         @include('wire-table::tables.partials.selection-assets')
                     @endonce
                 @endif
-                {{-- `overflow-clip`, because the radius on this element is a promise
-                     nothing inside it keeps on its own. A selected last row paints a
-                     rectangle to the card's bottom edge and squares off the corner the
-                     border is still curving around; the scroll-edge gradients do the
-                     same at all four; a stripe, a hover tint and a row colour do it
-                     the moment the row is the last one. Every one of those is a
-                     background on a `<tr>` or on a full-height overlay, and neither
-                     can be given a corner of its own — a `<tr>` has no border-box to
-                     round, and an overlay does not know which of its ends is at the
-                     card's edge.
-
-                     Clip and not `overflow-hidden`: hidden makes this a scroll
-                     container, and the nearest scroll container is what a
-                     `position: sticky` descendant sticks inside. The pinned header
-                     and the pinned actions column are safe either way — their
-                     scroller is nearer — but the stacked cards' group headings
-                     (`sticky top-0` in the data region) stick against the VIEWPORT,
-                     and a scroll container here would silently leave them in flow on
-                     a phone. `overflow: clip` clips without becoming one, so nothing
-                     above it in the sticky chain changes. --}}
-                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-clip">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
 
                     {{-- Header --}}
                     <div class="px-4 lg:px-6 py-4 border-b border-gray-200 dark:border-gray-700">

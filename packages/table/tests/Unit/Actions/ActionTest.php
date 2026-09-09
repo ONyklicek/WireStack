@@ -78,3 +78,7 @@ it('can hide label', function () {
 it('onlyIcon is an alias for hideLabel', function () {
     expect(Action::make('test')->onlyIcon()->isHideLabel())->toBeTrue();
 });
+
+it('deprecated hiddeLabel works', function () {
+    expect(Action::make('test')->hiddeLabel()->isHideLabel())->toBeTrue();
+});

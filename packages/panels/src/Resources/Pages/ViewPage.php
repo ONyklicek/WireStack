@@ -57,14 +57,7 @@ abstract class ViewPage extends Component implements IdentifiesHookTarget, Provi
     {
         $resource = $this->requireResource(ProvidesResourceInfolist::class);
 
-        $infolist = $resource->infolist(Infolist::make()->record($this->resolveRecord()));
-
-        // Bound after the resource has spoken, not before: a resource is free to
-        // return an infolist of its own rather than the one it was handed, and a
-        // host bound on the way in would be lost with it. Nothing has read the
-        // schema yet, so the hook still sees the binding — which is what lets
-        // `infolist.configuring` be scoped to the resource this page shows.
-        return $infolist->livewireComponent($this);
+        return $resource->infolist(Infolist::make()->record($this->resolveRecord()));
     }
 
     /** A view page is titled by the singular. */

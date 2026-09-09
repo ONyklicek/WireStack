@@ -6,7 +6,6 @@ namespace NyonCode\WireCore\Widgets;
 
 use NyonCode\WireCore\Exceptions\InvalidChartDataException;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
-use NyonCode\WireCore\Widgets\Concerns\HasWidgetItems;
 
 /**
  * Pure-CSS bar chart widget (no JS/Chart.js dependency).
@@ -26,7 +25,6 @@ use NyonCode\WireCore\Widgets\Concerns\HasWidgetItems;
 class BarChartWidget extends Widget
 {
     use HasColor;
-    use HasWidgetItems;
 
     public const TYPES = ['vertical', 'horizontal'];
 
@@ -35,6 +33,9 @@ class BarChartWidget extends Widget
     protected string $type = 'vertical';
 
     protected string $variant = 'default';
+
+    /** @var array<int, ChartItem> */
+    protected array $items = [];
 
     protected bool $showGrid = false;
 
@@ -99,17 +100,32 @@ class BarChartWidget extends Widget
     }
 
     /**
-     * The class every entry in this chart's series has to be.
+     * Set the chart's data series.
      *
-     * `items()` itself lives in {@see HasWidgetItems}, which owns taking a
-     * series, refusing the wrong class and resolving a closure against the
-     * active filter for every widget that draws one.
+     * Validates untrusted runtime input: every entry must be a {@see ChartItem},
+     * so the parameter is intentionally typed as a loose array and narrowed here.
      *
-     * @return class-string<ChartItem>
+     * @param  array<array-key, mixed>  $items
      */
-    protected function itemClass(): string
+    public function items(array $items): static
     {
-        return ChartItem::class;
+        foreach ($items as $item) {
+            if (! $item instanceof ChartItem) {
+                throw InvalidChartDataException::notChartItems(ChartItem::class);
+            }
+        }
+
+        $this->items = array_values($items);
+
+        return $this;
+    }
+
+    /**
+     * @return array<int, ChartItem>
+     */
+    public function getItems(): array
+    {
+        return $this->items;
     }
 
     /** Show background grid lines behind the bars. */
@@ -256,10 +272,7 @@ class BarChartWidget extends Widget
      */
     public function resolveAutoMax(): float
     {
-        /** @var array<int, ChartItem> $items */
-        $items = $this->getItems();
-
-        $values = array_map(static fn (ChartItem $item): float => $item->getValue(), $items);
+        $values = array_map(static fn (ChartItem $item): float => $item->getValue(), $this->items);
 
         return max(1.0, ...($values === [] ? [1.0] : $values));
     }
@@ -305,7 +318,7 @@ class BarChartWidget extends Widget
         return [
             'type' => $this->type,
             'variant' => $this->variant,
-            'items' => $this->getItems(),
+            'items' => $this->items,
             'showGrid' => $this->showGrid,
             'showMenu' => $this->showMenu,
             'height' => $this->height,

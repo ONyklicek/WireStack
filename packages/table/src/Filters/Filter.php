@@ -9,7 +9,6 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
-use Illuminate\Support\Traits\Macroable;
 use NyonCode\WireCore\Core\Query\FilterDefinition;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
@@ -20,15 +19,6 @@ use NyonCode\WireForms\Components\TextInput;
 class Filter implements Htmlable
 {
     use HasAuthorization;
-
-    /**
-     * Macroable, for the reason `Table` and `BaseAction` already are: an
-     * application or a package adds vocabulary to a class it does not own,
-     * applied where the component is built. ADR 0030 named this as the missing
-     * half of the extension story — the second-best path was absent everywhere
-     * the first one was.
-     */
-    use Macroable;
 
     public string $name;
 

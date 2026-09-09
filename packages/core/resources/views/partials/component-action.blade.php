@@ -1,17 +1,9 @@
-{{-- Action button for infolist entries, schema section headers and widget
-     headers.
+{{-- Action button for infolist entries and schema section headers.
 
      An action carrying `url()` renders as a link; every other one dispatches to
-     the host by action name.
-
-     `$clickExpression` is how a surface that is not an infolist gets its own
-     dispatch without a second copy of this button: a widget header passes
-     `callWidgetAction('key', 'name')` and everything below stays the one
-     markup. Absent, the infolist resolver answers as it always did — which is
-     what keeps every existing caller byte-identical.
-
-     Expects: $action (NyonCode\WireCore\Actions\Action).
-     Optional: $rowKey (int), $clickExpression (string), $testidPrefix (string). --}}
+     the host's callInfolistAction() by action name, optionally with a repeatable
+     row index.
+     Expects: $action (NyonCode\WireCore\Actions\Action). Optional: $rowKey (int). --}}
 @php
     $actionIcon = $action->getIcon();
     $actionLabel = $action->getLabel();
@@ -31,17 +23,14 @@
     // click on one action disabled and span every infolist button on the page,
     // and on a repeatable entry that is one per row. Same discipline as
     // `wire-core::actions.button`, which gates its spinner on the exact click.
-    $actionClick = $clickExpression
-        ?? (new \NyonCode\WireCore\Actions\Support\InfolistActionClickResolver($actionRowKey))
-            ->clickHandler($action, null);
-
-    $actionTestid = ($testidPrefix ?? 'infolist-action').'-'.$action->getName();
+    $actionClick = (new \NyonCode\WireCore\Actions\Support\InfolistActionClickResolver($actionRowKey))
+        ->clickHandler($action, null);
 @endphp
 @if($actionUrl)
     <a
         href="{{ $actionUrl }}"
         @if($action->shouldOpenUrlInNewTab()) target="_blank" rel="noopener" @endif
-        data-testid="{{ $actionTestid }}"
+        data-testid="infolist-action-{{ $action->getName() }}"
         @if($actionLabel) aria-label="{{ $actionLabel }}" @endif
         @if($action->getTooltip()) title="{{ $action->getTooltip() }}" @endif
         @foreach($action->getExtraAttributes() as $attribute => $value)
@@ -65,7 +54,7 @@
         wire:click="{{ $actionClick }}"
         wire:loading.attr="disabled"
         wire:target="{{ $actionClick }}"
-        data-testid="{{ $actionTestid }}"
+        data-testid="infolist-action-{{ $action->getName() }}"
         @if($actionLabel) aria-label="{{ $actionLabel }}" @endif
         @if($action->getTooltip()) title="{{ $action->getTooltip() }}" @endif
         @class([

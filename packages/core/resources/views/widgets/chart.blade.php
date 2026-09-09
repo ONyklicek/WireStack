@@ -1,17 +1,8 @@
-{{-- The `wire:key` carries the active filter, and that is load-bearing rather
-     than hygiene. A filter change answers with this widget's region and the
-     response morphs it in — but Alpine never re-evaluates `x-data` on an element
-     it has already initialised, so the new labels and datasets baked into the
-     attribute would be read by nobody and the chart would keep drawing the old
-     series. A changed key makes the morph replace the element instead of
-     patching it, which tears the old Chart.js instance down through the
-     controller's `destroy()` and builds a new one over the new data. --}}
 <div class="wire-chart-widget rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
-     wire:key="wire-chart-{{ $widget->getKey() }}-{{ $activeFilter }}"
-     x-data="wireChart(@js($type), @js($labels), @js($datasets), @js($options))">
+     x-data="wireChart(@js($type), @js($labels), @js($datasets), @js($filterOptions), @js($activeFilter), @js($options))">
 
-    @if($widget->getHeading() || $widget->hasFilter() || $widget->hasRenderableActions())
-        <div class="mb-4 flex items-center justify-between gap-4">
+    @if($widget->getHeading() || $widget->hasFilter())
+        <div class="mb-4 flex items-center justify-between">
             <div>
                 @if($widget->getHeading())
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ $widget->getHeading() }}</h3>
@@ -21,15 +12,14 @@
                 @endif
             </div>
 
-            @include('wire-core::widgets.partials.widget-actions', ['widget' => $widget])
-
             @if($filterOptions)
-                @include('wire-core::widgets.partials.widget-filter', [
-                    'widget' => $widget,
-                    'filterOptions' => $filterOptions,
-                    'activeFilter' => $activeFilter,
-                    'filterExpression' => $filterExpression,
-                ])
+                <select x-model="activeFilter" x-on:change="updateChart()"
+                        data-testid="chart-filter"
+                        class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                    @foreach($filterOptions as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </select>
             @endif
         </div>
     @endif

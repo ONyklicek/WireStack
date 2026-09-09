@@ -87,19 +87,10 @@
                         @disabled($disabled)
                         class="peer sr-only"
                 />
-                {{-- Grey hover belongs to the unselected face only; a selected one
-                     darkens its own accent, which $cc['solid'] carries as a
-                     `peer-checked:hover:` pair. Both halves are load-bearing:
-                     `dark:` is a zero-specificity :where() variant and
-                     `peer-checked:` ties with `hover:`, so a lone light-mode
-                     `hover:bg-gray-50` used to win in the dark *and* over the
-                     accent — repainting a selected button near-white under its
-                     own white label. --}}
                 <span @class([
                         'flex items-center rounded-lg border border-gray-300 bg-white font-medium text-gray-700 transition-colors duration-150',
                         $sizeClasses,
-                        'hover:border-gray-400 hover:bg-gray-100' => !$disabled,
-                        'dark:hover:border-gray-500 dark:hover:bg-gray-700' => !$disabled,
+                        'hover:bg-gray-50' => !$disabled,
                         $cc['solid'],
                         'dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300',
                     ])>

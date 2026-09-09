@@ -6,7 +6,6 @@ namespace NyonCode\WirePanels\Resources\Pages;
 
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
-use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Widgets\Concerns\WithWidgets;
 use NyonCode\WireCore\Widgets\Dashboard;
 use NyonCode\WireCore\Widgets\Widget;
@@ -35,7 +34,7 @@ use NyonCode\WirePanels\Exceptions\ResourcePageException;
  * mounts wherever it likes; the registry holds no URL shell, and this holds none
  * either.
  */
-abstract class DashboardPage extends Component implements IdentifiesHookTarget
+abstract class DashboardPage extends Component
 {
     // Aliased, not `parent::`: `getWidgetColumns()` comes from the trait, and
     // the parent of this class is Livewire\Component, which has no such method —
@@ -56,72 +55,10 @@ abstract class DashboardPage extends Component implements IdentifiesHookTarget
     /** Optional heading; falls back to the dashboard's label. */
     protected ?string $title = null;
 
-    /**
-     * The key a *standalone* page's widget layout is stored under.
-     *
-     * Null, so a page that declares its own widgets is not customisable until
-     * somebody says what to call it. The dashboard path needs none of this — a
-     * registered dashboard already has a key that survives its class being
-     * renamed, which is exactly what a stored layout has to be addressed by.
-     *
-     * A page declaring its widgets inline has no such key, and deriving one from
-     * the class name would tie a user's saved layout to a class they do not
-     * control: rename the page and every layout is orphaned, with no error to
-     * say so. So it is named here or it does not exist.
-     */
-    protected static ?string $layoutKey = null;
-
     /** @return class-string<Dashboard>|null */
     public static function dashboardClass(): ?string
     {
         return static::$dashboard;
-    }
-
-    /**
-     * The registered key a plugin hook can address this page's widgets by.
-     *
-     * What turns `hook(Hook::WidgetConfiguring, $cb, for: 'sales')` into
-     * something an application can write: the widgets on this page are declared
-     * inside a dashboard the application may not own, so the key that dashboard
-     * registered under is the handle it has on them.
-     *
-     * Tolerant of a page that declares nothing, for the reason the resource
-     * pages' `BelongsToResource::hookKey()` gives — a page rendering its own
-     * widgets is scoped by class, and throwing here would turn a hook's absence
-     * of scope into a render failure.
-     */
-    public function hookKey(): ?string
-    {
-        $dashboard = static::$dashboard;
-
-        return $dashboard !== null && is_subclass_of($dashboard, Dashboard::class)
-            ? $dashboard::key()
-            : null;
-    }
-
-    /**
-     * The key this page's widget layout is stored under, or null.
-     *
-     * The same bridge `hookKey()` above builds, and built the same way for the
-     * same reason: the widgets are declared inside a dashboard the application
-     * may not own, so the key that dashboard registered under is the handle
-     * anything outside has on them.
-     *
-     * A page taking the standalone path — its own `getWidgets()`, no declared
-     * dashboard — answers with whatever {@see $layoutKey} names, which is
-     * nothing until somebody names it.
-     */
-    protected function widgetLayoutKey(): ?string
-    {
-        $dashboard = static::$dashboard;
-
-        // The standalone path: no dashboard to ask, so the page says so itself
-        // or stays uncustomisable. See {@see $layoutKey}.
-        if ($dashboard === null || ! is_subclass_of($dashboard, Dashboard::class)) {
-            return static::$layoutKey;
-        }
-
-        return $this->requireDashboard()->customisable() ? $dashboard::key() : null;
     }
 
     /**
@@ -161,10 +98,11 @@ abstract class DashboardPage extends Component implements IdentifiesHookTarget
 
     public function render(): View
     {
-        return view('wire-panels::pages.dashboard-page', array_merge(
-            $this->widgetGridData($this->getWidgetColumns()),
-            ['title' => $this->getTitle()],
-        ));
+        return view('wire-panels::pages.dashboard-page', [
+            'title' => $this->getTitle(),
+            'widgets' => $this->getVisibleWidgets(),
+            'columns' => $this->getWidgetColumns(),
+        ]);
     }
 
     /**

@@ -261,7 +261,7 @@ class WithActionsAdvancedHost extends Component
             // the polling fallback throws and is swallowed — exercising that path.
             Action::make('haltWithForm')
                 ->action(fn ($halt) => $halt()
-                    ->heading('Why?')
+                    ->modalHeading('Why?')
                     ->form([TextInput::make('reason')->required()->visible(fn () => true)])),
         ];
     }

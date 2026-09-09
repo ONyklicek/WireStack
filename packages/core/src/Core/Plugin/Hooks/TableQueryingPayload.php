@@ -13,17 +13,12 @@ use NyonCode\WireCore\Core\Query\QueryPlan;
 /**
  * Typed payload for the 'table.querying' hook.
  *
- * Dispatched after the QueryPlan is built but before the QueryExecutor runs, so
- * this is the hook for reading a finished plan — logging, metrics, assertions.
+ * Dispatched after the QueryPlan is built but before the QueryExecutor runs.
+ * Use this hook for read-only plan inspection or observation (e.g. logging, metrics).
  *
- * **A sort override does not belong here and cannot be made to.** It goes on the
- * array-based 'table.querying' hook, which runs *before* QueryPlanner and is
- * applied in the same planning pass; by the time this payload exists the plan is
- * built, and honouring an override would mean planning the query twice. Until
- * 2.0 this class carried `$forceSortColumn` / `$forceSortDirection` for that —
- * two properties nothing ever filled and nothing ever read, so a plugin setting
- * one watched its sort be ignored in silence. They are gone; the array hook's
- * `force_sort_column` key is the whole of it.
+ * To force a sort override, use the array-based 'table.querying' hook instead
+ * and set 'force_sort_column' in the returned payload. That hook runs before
+ * QueryPlanner, so the sort is applied in a single planning pass.
  */
 final class TableQueryingPayload implements HasHookTarget
 {
@@ -31,11 +26,16 @@ final class TableQueryingPayload implements HasHookTarget
      * @param  object  $table  The table configuration object
      * @param  QueryPlan  $plan  The compiled query plan
      * @param  Builder<Model>  $query  The base Eloquent builder
+     * @param  string|null  $forceSortColumn  @deprecated Not consumed by the built-in pipeline.
+     *                                        Use the array hook's 'force_sort_column' key instead.
+     * @param  string|null  $forceSortDirection  @deprecated See $forceSortColumn.
      */
     public function __construct(
         public readonly object $table,
         public readonly QueryPlan $plan,
         public readonly Builder $query,
+        public ?string $forceSortColumn = null,
+        public ?string $forceSortDirection = null,
         public readonly ?HookTarget $target = null,
     ) {}
 
@@ -48,6 +48,8 @@ final class TableQueryingPayload implements HasHookTarget
             'table' => $this->table,
             'plan' => $this->plan,
             'query' => $this->query,
+            'force_sort_column' => $this->forceSortColumn,
+            'force_sort_direction' => $this->forceSortDirection,
         ];
     }
 

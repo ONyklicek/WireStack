@@ -16,12 +16,12 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Query\Search\SearchConfig;
+use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
-use NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver;
 use NyonCode\WireCore\Foundation\Support\IslandViewScope;
 use NyonCode\WireCore\Foundation\ValueObjects\ShortcutHint;
 use NyonCode\WireCore\Foundation\View\Skeleton;
@@ -35,6 +35,7 @@ use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Exceptions\TableHasNoHostException;
 use NyonCode\WireTable\Exceptions\TableIntrospectionException;
 use NyonCode\WireTable\Filters\Filter;
+use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Preferences\TableViewPayload;
 use NyonCode\WireTable\Services\TableIntrospector;
 use NyonCode\WireTable\Support\ColumnSet;
@@ -201,9 +202,10 @@ class Table implements Htmlable
     /** Saved-views key; null = off, '' = opted in with nothing to key on. */
     protected ?string $savedViewsKey = null;
 
-    protected ?PreferenceDriver $preferenceDriver = null;
+    protected ?TablePreferenceDriver $preferenceDriver = null;
 
     /** @var array<int, Action|ActionGroup> Dedicated actions for the row right-click menu. */
+    protected array $rowContextMenuActions = [];
 
     /** Extra class(es) for the keyboard-active row (null keeps the built-in active style). */
     protected ?string $activeRowClass = null;
@@ -1351,7 +1353,7 @@ class Table implements Htmlable
      *
      * When set, the table loads the user's saved hidden-column set on mount and
      * persists it whenever a column is toggled, via the configured
-     * {@see PreferenceDriver} (see `config('wire-table.preferences')`). The
+     * {@see TablePreferenceDriver} (see `config('wire-table.preferences')`). The
      * key identifies this table across the app — use a distinct, stable string
      * per table (e.g. `'users-index'`). Different users are scoped by the driver,
      * so one key serves everyone.
@@ -1409,7 +1411,7 @@ class Table implements Htmlable
      * Persist this table's preferences through a specific driver, overriding the
      * configured default (e.g. force the database driver for one critical table).
      */
-    public function preferenceDriver(?PreferenceDriver $driver): static
+    public function preferenceDriver(?TablePreferenceDriver $driver): static
     {
         $this->preferenceDriver = $driver;
 
@@ -1419,9 +1421,28 @@ class Table implements Htmlable
     /**
      * The per-table preference driver override, if any.
      */
-    public function getPreferenceDriver(): ?PreferenceDriver
+    public function getPreferenceDriver(): ?TablePreferenceDriver
     {
         return $this->preferenceDriver;
+    }
+
+    /**
+     * Define a dedicated right-click context menu for each row.
+     *
+     * @deprecated Superseded by record actions. Bind an action to the right-click
+     *             trigger instead: `->recordAction(Action::make('edit')->onContextMenu())`.
+     *             Kept as a thin alias — it still populates the same context menu
+     *             (see {@see getContextMenuActions()}) — and will be removed in v2.0.
+     *
+     * @param  array<int, Action|ActionGroup>  $actions
+     */
+    public function rowContextMenu(array $actions): static
+    {
+        Deprecation::method('rowContextMenu', 'recordAction()->onContextMenu', '2.0');
+
+        $this->rowContextMenuActions = $actions;
+
+        return $this;
     }
 
     /**

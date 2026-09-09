@@ -147,6 +147,15 @@ trait CanExpandSubRows
     }
 
     /**
+     * @deprecated Flatten mode is now the expansion baseline — use
+     *             {@see toggleAllRowExpansion()}.
+     */
+    public function toggleFlattenMode(): void
+    {
+        $this->toggleAllRowExpansion();
+    }
+
+    /**
      * Get sub-rows for a parent record.
      * Applies sub-row filters if enabled.
      * When no relation is set, returns the record itself as a single-item collection.

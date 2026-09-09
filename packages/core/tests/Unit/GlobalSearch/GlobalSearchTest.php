@@ -9,12 +9,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
-use NyonCode\WireCore\Core\Plugin\Hooks\SearchQueryingPayload;
-use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
-use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
@@ -523,109 +520,4 @@ it('leaves a result unlinked when nothing owns routing', function () {
     DB::table('gs_orders')->insert(['reference' => 'INV-7', 'status' => 'open']);
 
     expect(gsSearch([GsUrllessResource::class])->search('INV-7')['gs-orders'][0]->url)->toBeNull();
-});
-
-// ─── search.querying ─────────────────────────────────────────────────────────
-
-/*
- * The palette, narrowable by something that did not write the resource.
- *
- * ADR 0030 §6 held this back until something asked for it. What asks is the same
- * thing every other hook here answers to: a module ships a searchable resource,
- * and the application that installed it wants its own rule over the rows —
- * archived records kept out of the palette, a scope the module never declared.
- */
-
-it('lets a hook narrow one resource query before it runs', function () {
-    app(PluginManager::class)->hook(
-        Hook::SearchQuerying,
-        function (SearchQueryingPayload $payload): SearchQueryingPayload {
-            $payload->query->where('status', 'paid');
-
-            return $payload;
-        },
-    );
-
-    $results = gsSearch()->search('INV-100');
-
-    expect($results['gs-orders'])->toHaveCount(1)
-        ->and($results['gs-orders'][0]->title)->toBe('INV-1001');
-});
-
-it('hands the hook the term and the resource it is searching', function () {
-    $seen = null;
-
-    app(PluginManager::class)->hook(
-        Hook::SearchQuerying,
-        function (SearchQueryingPayload $payload) use (&$seen): SearchQueryingPayload {
-            $seen = [$payload->term, $payload->resource];
-
-            return $payload;
-        },
-    );
-
-    gsSearch()->search('  INV-100  ');
-
-    // Trimmed, because that is the term the query was built from — a callback
-    // told otherwise would filter on something the palette never searched for.
-    expect($seen)->toBe(['INV-100', GsOrderResource::class]);
-});
-
-it('scopes a search hook by the catalogue key and by the model', function (string $scope) {
-    // The catalogue's key, not the class's own: the two are the same only by
-    // agreement, and it is the catalogue's that every other surface addresses a
-    // resource by.
-    app(PluginManager::class)->hook(
-        Hook::SearchQuerying,
-        function (SearchQueryingPayload $payload): SearchQueryingPayload {
-            $payload->query->where('status', 'nothing-is-this');
-
-            return $payload;
-        },
-        for: $scope,
-    );
-
-    expect(gsSearch()->search('INV-100'))->toBe([]);
-})->with([
-    'the catalogue key' => 'gs-orders',
-    'the model' => GsOrder::class,
-]);
-
-it('leaves a resource a scoped hook does not name alone', function () {
-    app(PluginManager::class)->hook(
-        Hook::SearchQuerying,
-        function (SearchQueryingPayload $payload): SearchQueryingPayload {
-            $payload->query->where('status', 'nothing-is-this');
-
-            return $payload;
-        },
-        for: 'some-other-resource',
-    );
-
-    expect(gsSearch()->search('INV-100')['gs-orders'])->toHaveCount(2);
-});
-
-it('runs before authorization, so a hook cannot widen past a policy', function () {
-    // The hook holds the builder; the policy runs per record afterwards. A
-    // callback that removed every `where` would still not list a row the user
-    // may not open — which is the property the dispatch site was placed for.
-    Gate::policy(GsOrder::class, GsOrderPolicy::class);
-    $this->actingAs(new GsUser);
-
-    app(PluginManager::class)->hook(
-        Hook::SearchQuerying,
-        function (SearchQueryingPayload $payload): SearchQueryingPayload {
-            // Every constraint dropped, the term included.
-            $payload->query = GsOrder::query()->limit(10);
-
-            return $payload;
-        },
-    );
-
-    $results = gsSearch()->search('INV-100');
-
-    // Three rows come back from the widened query and the policy drops the
-    // overdue one — so the hook reached the builder and never reached the check.
-    expect($results['gs-orders'])->toHaveCount(2)
-        ->and(array_map(fn ($r) => $r->title, $results['gs-orders']))->toBe(['INV-1001', 'REF-2001']);
 });

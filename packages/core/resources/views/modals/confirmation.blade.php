@@ -99,27 +99,17 @@
 
                     {{-- Extra body content: a component slot (consumer tag), an
                          @include'd partial ($bodyView), or a pre-rendered Htmlable
-                         ($body) from the Confirmation object (Rule 5).
-
-                         $maxHeight caps this block rather than the panel, so a
-                         halt asking eight questions scrolls its fields while the
-                         heading and the two buttons stay where the eye left them.
-                         The general modal caps the panel instead, because there
-                         the header and footer are sticky rows of their own. --}}
-                    @php
-                        $bodyMaxHeight = ($maxHeight ?? null) ?: null;
-                        $bodyClasses = 'mt-4'.($bodyMaxHeight ? ' overflow-y-auto overscroll-contain' : '');
-                    @endphp
+                         ($body) from the Confirmation object (Rule 5). --}}
                     @if(isset($bodyView))
-                        <div class="{{ $bodyClasses }}" @if($bodyMaxHeight) style="max-height: {{ $bodyMaxHeight }}" @endif>
+                        <div class="mt-4">
                             @include($bodyView, $bodyData ?? [])
                         </div>
                     @elseif(! empty($body))
-                        <div class="{{ $bodyClasses }}" @if($bodyMaxHeight) style="max-height: {{ $bodyMaxHeight }}" @endif>
+                        <div class="mt-4">
                             {!! $body !!}
                         </div>
                     @elseif(isset($slot) && $slot->isNotEmpty())
-                        <div class="{{ $bodyClasses }}" @if($bodyMaxHeight) style="max-height: {{ $bodyMaxHeight }}" @endif>
+                        <div class="mt-4">
                             {{ $slot }}
                         </div>
                     @endif

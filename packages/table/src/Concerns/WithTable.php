@@ -23,17 +23,15 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
 use NyonCode\WireCore\Core\Data\PagingRequest;
 use NyonCode\WireCore\Core\Events\CellUpdating;
-use NyonCode\WireCore\Core\Plugin\HookDispatch;
-use NyonCode\WireCore\Core\Plugin\Hooks\ExportConfiguringPayload;
-use NyonCode\WireCore\Core\Plugin\Hooks\ImportConfiguringPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\TableComposingPayload;
 use NyonCode\WireCore\Core\Plugin\HookTarget;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\State\StateContainer;
+use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithPartials;
 use NyonCode\WireCore\Foundation\Enums\Hook;
-use NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithActionForms;
@@ -52,10 +50,10 @@ use NyonCode\WireTable\Export\Jobs\RunExportJob;
 use NyonCode\WireTable\Export\TableExport;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Import\ImportAction;
-use NyonCode\WireTable\Import\ImportColumn;
 use NyonCode\WireTable\Import\ImportResult;
 use NyonCode\WireTable\Import\Jobs\RunImportJob;
 use NyonCode\WireTable\Import\TableImport;
+use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
 use NyonCode\WireTable\Preferences\TablePreferenceManager;
 use NyonCode\WireTable\Preferences\TableViewPayload;
 use NyonCode\WireTable\Services\CellEditPipeline;
@@ -224,6 +222,80 @@ trait WithTable
         $this->initializeTableQueryString($table);
     }
 
+    // ==========================================
+    // Backward Compatibility (Deprecated Properties)
+    // ==========================================
+
+    /**
+     * Magic getter for backward compatibility with legacy property names.
+     *
+     * @deprecated Access state via $this->tableState->get() instead.
+     */
+    public function __get($name): mixed
+    {
+        $map = TableStateSchema::legacyPropertyMap();
+
+        if (isset($map[$name]) && isset($this->tableState)) {
+            Deprecation::property(static::class, $name, "tableState->get('{$map[$name]}')");
+
+            return $this->tableState->get($map[$name]);
+        }
+
+        // Let parent __get handle it (Livewire trait magic)
+        if (is_subclass_of(static::class, Component::class)) {
+            return parent::__get($name);
+        }
+
+        return null;
+    }
+
+    /**
+     * Magic setter for backward compatibility with legacy property names.
+     *
+     * @deprecated Access state via $this->tableState->set() instead.
+     */
+    public function __set($name, $value): void
+    {
+        $map = TableStateSchema::legacyPropertyMap();
+
+        if (isset($map[$name])) {
+            if (! isset($this->tableState)) {
+                // tableState not yet initialised — mountWithTable() hasn't run.
+                // This write will be overwritten when mount runs (filter/sort/pagination
+                // defaults are applied there). Move legacy writes into mountWithTable().
+                $this->tableState = new StateContainer(TableStateSchema::defaults());
+            }
+
+            Deprecation::property(static::class, $name, "tableState->set('{$map[$name]}', \$value)");
+            $this->tableState->set($map[$name], $value);
+
+            return;
+        }
+
+        // Let parent __set handle it (Livewire trait magic)
+        if (is_subclass_of(static::class, Component::class) && method_exists(get_parent_class(static::class), '__set')) {
+            parent::__set($name, $value);
+        }
+    }
+
+    /**
+     * Magic isset for backward compatibility with legacy property names.
+     */
+    public function __isset($name): bool
+    {
+        $map = TableStateSchema::legacyPropertyMap();
+
+        if (isset($map[$name])) {
+            return $this->tableState->has($map[$name]);
+        }
+
+        if (is_subclass_of(static::class, Component::class)) {
+            return parent::__isset($name);
+        }
+
+        return false;
+    }
+
     /**
      * Livewire lifecycle hook for StateContainer property updates.
      *
@@ -363,23 +435,26 @@ trait WithTable
      *
      * Guarded by `hasHook()` rather than by the payload's own early return: the
      * two setters below would otherwise re-wrap the column set on every table in
-     * an application that installs no plugins at all. That guard is
-     * {@see HookDispatch}'s since the surface grew to eight hooks — the check was
-     * being written out at each new dispatch site, which is how one of them ends
-     * up missing it.
+     * an application that installs no plugins at all.
      */
     private function composeTableThroughPlugins(Table $table): void
     {
-        $payload = HookDispatch::typed(Hook::TableComposing, fn () => new TableComposingPayload(
+        if (! app()->bound(PluginManager::class)) {
+            return;
+        }
+
+        $manager = app(PluginManager::class);
+
+        if (! $manager->hasHook(Hook::TableComposing)) {
+            return;
+        }
+
+        $payload = $manager->runTypedHook(Hook::TableComposing, new TableComposingPayload(
             table: $table,
             columns: $table->getColumns(),
             filters: $table->getFilters(),
             target: HookTarget::for('table', $this, $table->getModelClass()),
         ));
-
-        if ($payload === null) {
-            return;
-        }
 
         $table->columns($payload->columns)->filters($payload->filters);
     }
@@ -1966,7 +2041,7 @@ trait WithTable
      * Resolve the preference driver for this table (per-table override > global
      * config), picking the guest driver when no user is authenticated.
      */
-    protected function resolvePreferenceDriver(Table $table): PreferenceDriver
+    protected function resolvePreferenceDriver(Table $table): TablePreferenceDriver
     {
         return TablePreferenceManager::resolve(
             $table->getPreferenceDriver(),
@@ -1995,14 +2070,30 @@ trait WithTable
     }
 
     /**
-     * Whether a halted action is waiting on the user.
-     *
-     * The seam the shared bridge restores the halt form through — one owner for
-     * "is a halt open", one for "get its form back".
+     * Get the resolved Form instance for the halt modal.
+     * Re-hydrates from session since it's not serialized between Livewire requests.
      */
-    public function isHaltModalVisible(): bool
+    public function getHaltModalFormInstance(): ?Form
     {
-        return (bool) $this->tableState->get('modal.halt.show');
+        if ($this->haltModalFormInstance !== null) {
+            return $this->haltModalFormInstance;
+        }
+
+        if ($this->tableState->get('modal.halt.show') && session()->has('wire.halt_form_instance')) {
+            try {
+                $restored = unserialize(session()->get('wire.halt_form_instance'));
+                if ($restored instanceof Form) {
+                    $restored->livewire($this);
+                    $this->haltModalFormInstance = $restored;
+                }
+            } catch (Throwable) {
+                // Corrupt or non-restorable session data — close the modal cleanly
+                $this->tableState->set('modal.halt.show', false);
+                session()->forget('wire.halt_form_instance');
+            }
+        }
+
+        return $this->haltModalFormInstance;
     }
 
     /**
@@ -2042,7 +2133,7 @@ trait WithTable
         // Then let the halt form's fields shape what they collected — the same
         // transform a save or an action modal applies, so a halted action is
         // handed the value it would have been handed anywhere else. Read before
-        // closeHaltModal(), which drops the form instance and its parked copy.
+        // closeHaltModal(), which drops the form instance and its session copy.
         $data = $this->dehydrateHaltModalFormData($haltData, $this->haltModalRecord($recordKey));
 
         $actionType = $this->tableState->get('modal.halt.actionType') ?? 'row';
@@ -2051,19 +2142,14 @@ trait WithTable
 
         $this->closeHaltModal();
 
-        // Re-execute via correct method based on action type. Wrapped so the
-        // halt's own skipBeforeOnConfirm() decides whether the action's before()
-        // hooks run on this pass — the default skips them, because a halt raised
-        // in a before hook would otherwise raise itself again.
-        $this->withHaltConfirmContext($haltContext, function () use ($actionType, $actionName, $data, $recordKey): void {
-            match ($actionType) {
-                'bulk' => $this->executeBulkActionWithData($actionName, $data, confirmed: true),
-                'header' => $this->executeHeaderActionWithData($actionName, $data, confirmed: true),
-                default => $recordKey !== null
-                    ? $this->executeTableActionWithData($recordKey, $actionName, $data, confirmed: true)
-                    : null,
-            };
-        });
+        // Re-execute via correct method based on action type
+        match ($actionType) {
+            'bulk' => $this->executeBulkActionWithData($actionName, $data, confirmed: true),
+            'header' => $this->executeHeaderActionWithData($actionName, $data, confirmed: true),
+            default => $recordKey !== null
+                ? $this->executeTableActionWithData($recordKey, $actionName, $data, confirmed: true)
+                : null,
+        };
 
         // Redirect after successful confirm
         if ($redirectAfterConfirm) {
@@ -2100,12 +2186,20 @@ trait WithTable
         $this->tableState->set('modal.halt.config', []);
         $this->tableState->set('modal.halt.formData', []);
         $this->haltModalFormInstance = null;
-        $this->forgetHaltForm();
+        session()->forget('wire.halt_form_instance');
         $this->tableState->set('modal.halt.actionType', null);
         $this->tableState->set('modal.halt.context', []);
 
         // Invalidate table cache so next render fetches fresh data
         $this->invalidateTable();
+    }
+
+    /**
+     * @deprecated Use halt modal system instead. Will be removed in v2.0.
+     */
+    public function confirmBulkAction(string $actionName): void
+    {
+        Deprecation::method('confirmBulkAction', 'executeBulkAction with halt');
     }
 
     /**
@@ -2347,6 +2441,21 @@ trait WithTable
         return app(CellEditPipeline::class)->validateAgainstRecord($column, $columnName, $value, $record);
     }
 
+    /**
+     * @deprecated Use halt modal system instead. Will be removed in v2.0.
+     */
+    public function getConfirmationModalData(): array
+    {
+        Deprecation::method('getConfirmationModalData', 'getHaltModalData');
+
+        return [
+            'title' => __('wire-table::messages.confirm_heading'),
+            'description' => __('wire-table::messages.confirm_description'),
+            'confirmLabel' => __('wire-table::messages.confirm_submit'),
+            'cancelLabel' => __('wire-table::messages.confirm_cancel'),
+        ];
+    }
+
     // ==========================================
     // Debug & SQL Inspection
     // ==========================================
@@ -2541,28 +2650,6 @@ trait WithTable
             fn (Column $col) => $col->canView() && ! in_array($col->getName(), $this->tableState->get('columns.hidden', []), true),
         ));
 
-        // Here, and therefore once for both deliveries. A hook on `exportTable()`
-        // would leave `queueTableExport()` uncovered, and the two would produce
-        // different files for the same table — which nobody would see until they
-        // compared a download against the queued copy.
-        //
-        // After the visibility filter on purpose: what a callback receives is
-        // what the file would contain, not everything the table declares.
-        $payload = HookDispatch::typed(Hook::ExportConfiguring, fn () => new ExportConfiguringPayload(
-            export: $export,
-            query: $query,
-            columns: $columns,
-            target: HookTarget::for('export', $this, $table->getModelClass()),
-        ));
-
-        if ($payload !== null) {
-            /** @var Builder<Model> $query */
-            $query = $payload->query;
-
-            /** @var array<int, Column> $columns */
-            $columns = $payload->columns;
-        }
-
         return [$export, $query, $columns];
     }
 
@@ -2616,10 +2703,8 @@ trait WithTable
      */
     public function importTable(string $filePath): ImportResult
     {
-        $table = $this->getTable();
-
         $importAction = null;
-        foreach ($table->getHeaderActions() as $action) {
+        foreach ($this->getTable()->getHeaderActions() as $action) {
             if ($action instanceof ImportAction) {
                 $importAction = $action;
                 break;
@@ -2634,30 +2719,7 @@ trait WithTable
             return new ImportResult;
         }
 
-        $import = $importAction?->getImportConfig() ?? TableImport::make();
-
-        // The other half of `export.configuring`, and it costs one dispatch
-        // rather than a composition point: a queued import re-enters through this
-        // very method (`RunImportJob` mounts the host and calls it), so streamed
-        // and queued are already one path.
-        //
-        // After the authorization check above, never before — the path a callback
-        // can read is one the action has already agreed to open.
-        $payload = HookDispatch::typed(Hook::ImportConfiguring, fn () => new ImportConfiguringPayload(
-            import: $import,
-            columns: $import->getColumns(),
-            path: $filePath,
-            target: HookTarget::for('import', $this, $table->getModelClass()),
-        ));
-
-        if ($payload !== null) {
-            /** @var array<int, ImportColumn> $columns */
-            $columns = $payload->columns;
-
-            $import->columns($columns);
-        }
-
-        $result = $import->import($filePath);
+        $result = ($importAction?->getImportConfig() ?? TableImport::make())->import($filePath);
 
         // New rows changed the dataset — drop cached records/partitions so the
         // next render reflects the import.

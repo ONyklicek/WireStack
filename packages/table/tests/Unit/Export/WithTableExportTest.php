@@ -83,12 +83,11 @@ afterEach(function () {
 
 it('exports the current filtered sorted table query using visible columns', function () {
     $component = new WithTableExportComponent;
-    $component->mountWithTable();
-    $component->tableState->set('search', 'example.com');
-    $component->tableState->set('filters', ['active' => true]);
-    $component->tableState->set('sort.column', 'name');
-    $component->tableState->set('sort.direction', 'desc');
-    $component->tableState->set('columns.hidden', ['secret']);
+    $component->tableSearch = 'example.com';
+    $component->tableFilters = ['active' => true];
+    $component->tableSortColumn = 'name';
+    $component->tableSortDirection = 'desc';
+    $component->hiddenColumns = ['secret'];
 
     $response = $component->exportTable();
     $output = captureWithTableExportResponse($response);

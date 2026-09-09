@@ -34,22 +34,13 @@
         </label>
     @endif
 
-    {{-- `wire-scroller` for the reason wire-table's data region carries it: a
-         repeater wider than its field clips in silence on macOS and iOS, whose
-         overlay scrollbar fades a second after the last scroll — so a set of
-         fields nobody has touched shows no sign that more of them are to the
-         right. The rules are wire-core's, which is why this can use them at
-         all: wire-forms sits below wire-table in the graph. --}}
-    @include('wire-core::partials.scroller-assets')
     <div
-        class="overflow-x-auto wire-scroller rounded-lg border border-gray-200 dark:border-gray-600"
+        class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-600"
         @if($field->isReorderable())
             {{-- The rows live in <tbody>, not among this element's own children,
-                 so the scope sits here and the drag is bound down there. It used
-                 to be a `container: 'tbody'` selector the controller resolved;
-                 the directive goes straight on the element now, which is one
-                 fewer thing that can point at the wrong node. --}}
-            x-data="wireSortableList()"
+                 so the controller is told where to look rather than being wrapped
+                 around a <tbody> that cannot hold the scroll container. --}}
+            x-data="wireSortableList({ container: 'tbody' })"
             x-on:sorted="$wire.reorderRepeaterItems('{{ $statePath }}', $event.detail.order)"
         @endif
     >
@@ -86,8 +77,7 @@
                 </tr>
             </thead>
 
-            <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-600 dark:bg-gray-800"
-                   @if($field->isReorderable()) x-sort x-sort:config="sortableConfig()" @endif>
+            <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-600 dark:bg-gray-800">
                 @foreach($items as $index => $item)
                     <tr @if($field->isReorderable()) data-sortable-item="{{ $index }}" @endif>
                         @if($field->isReorderable())

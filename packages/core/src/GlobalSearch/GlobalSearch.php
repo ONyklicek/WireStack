@@ -8,11 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
-use NyonCode\WireCore\Core\Plugin\HookDispatch;
-use NyonCode\WireCore\Core\Plugin\Hooks\SearchQueryingPayload;
-use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
-use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
@@ -144,31 +140,11 @@ class GlobalSearch
         }
 
         /** @var class-string<Model> $model */
-        $query = $model::query()
-            ->where(fn (Builder $query) => $this->matchAny($query, $attributes, $term))
-            ->limit($perResource);
-
-        // Per resource rather than per term, which is what makes the hook
-        // addressable: `for: 'invoices'` narrows a callback to one module's rows.
-        // A term-level payload would hand every callback the whole palette and
-        // leave the `if` to be hand-written once per installed module.
-        //
-        // Before `get()` and before `canView()`, so a callback narrows the query
-        // and cannot widen its way past the policy check below.
-        $payload = HookDispatch::typed(Hook::SearchQuerying, fn () => new SearchQueryingPayload(
-            query: $query,
-            term: $term,
-            resource: $resource,
-            target: new HookTarget(surface: 'search', model: $model, key: $this->keyFor($resource)),
-        ));
-
-        if ($payload !== null) {
-            /** @var Builder<Model> $query */
-            $query = $payload->query;
-        }
-
         /** @var Collection<int, Model> $records */
-        $records = $query->get();
+        $records = $model::query()
+            ->where(fn (Builder $query) => $this->matchAny($query, $attributes, $term))
+            ->limit($perResource)
+            ->get();
 
         $results = [];
 
@@ -181,29 +157,6 @@ class GlobalSearch
         }
 
         return $results;
-    }
-
-    /**
-     * The catalogue key this resource is registered under, if it is.
-     *
-     * Asked here rather than passed down from `search()`, which already holds it:
-     * this method is a documented override point, and a subclass that overrides
-     * it declaring three parameters is every subclass written before now. An
-     * added argument would be a fatal error at class-declaration time, which is
-     * a strange way for a new hook to arrive.
-     *
-     * The catalogue's key, not `$resource::key()` — the two are only ever the
-     * same by agreement, and it is the catalogue's that every other surface
-     * addresses a resource by. Called from inside the payload closure, so an
-     * application with no callback registered never runs it.
-     *
-     * @param  class-string  $resource
-     */
-    private function keyFor(string $resource): ?string
-    {
-        $key = array_search($resource, $this->catalog->all(), true);
-
-        return $key === false ? null : $key;
     }
 
     /**

@@ -220,7 +220,7 @@
                     x-data
                     x-on:click="$dispatch('open-global-search')"
                     data-testid="global-search-trigger"
-                    class="ms-auto inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 py-1.5 ps-3 pe-2 text-sm text-gray-500 transition hover:border-gray-300 hover:bg-white sm:w-64 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-700"
+                    class="ms-auto inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 py-1.5 ps-3 pe-2 text-sm text-gray-500 transition hover:border-gray-300 hover:bg-white sm:w-64 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-400 dark:hover:border-gray-600"
                 >
                     {!! icon('outline:magnifying-glass', 'h-4 w-4 shrink-0') !!}
                     <span class="hidden flex-1 text-start sm:block">{{ __('wire-admin::messages.search') }}</span>

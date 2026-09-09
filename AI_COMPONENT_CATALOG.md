@@ -183,17 +183,15 @@ Action concerns:
 - `Infolists\Components\HtmlEntry` — stored rich text printed as markup, with its mentions resolved through `Foundation\Mentions\MentionRenderer`. Its own entry rather than a flag on `TextEntry`, because a text entry escapes and must keep escaping; never render-memoised, since a resolved mention belongs to the row it was looked up for
 - `Infolists\Components\ChangesEntry` — a before/after diff as **one** table, a row per field, over `Foundation\ValueObjects\ChangeSet`. Takes either the `{old, new}` map an audit entry produces or rows already shaped `{field, before, after}`; `dense()` for a diff inside a slide-over. Never draw a diff as a `RepeatableEntry` of labelled cards — that repeats three headings per row
 - `Actions\Concerns\InteractsWithActions` — canonical, form-agnostic action runtime (payload resolver, pipeline, halt/notification/redirect, infolist actions). Composed by `WithTable` and by the standalone `WithActions` host.
-- `Actions\Concerns\InteractsWithHalt` — "stop, ask, continue" on its own, for a component with no actions at all: the halt state bag, `halt($halt, then: 'method')`, `submitHaltModal()`, `closeHaltModal()`, and a resume that is a method name because a closure does not cross a request. Composed by `WithActions`, which overrides only the resume (a halted *action* is re-run instead). Rendered by `<x-wire-actions::halt-host>`, which the action modal host includes.
 
 Action views/components:
 
-- `Actions\View\ButtonComponent`, `BulkButtonComponent`, `GroupComponent`, `ModalHostComponent`, `HaltHostComponent`
+- `Actions\View\ButtonComponent`, `BulkButtonComponent`, `GroupComponent`, `ModalHostComponent`
 - `packages/core/resources/views/actions/button.blade.php`
 - `packages/core/resources/views/actions/bulk-button.blade.php`
 - `packages/core/resources/views/actions/group.blade.php`
 - `packages/core/resources/views/actions/dropdown-item.blade.php`
 - `packages/core/resources/views/actions/modal-host.blade.php` (+ `partials/modal-host-*`)
-- `packages/core/resources/views/actions/halt-host.blade.php` (+ `partials/halt-modal.blade.php`)
 - `packages/core/resources/views/actions/partials/button-content.blade.php`
 
 ## Core Modals
@@ -210,7 +208,7 @@ Objects:
 Concerns:
 
 - `Modals\Concerns\HasFooterActions`
-- `Foundation\Concerns\HasModalProperties` (used by Modals *and* `Actions\ActionHalt`)
+- `Modals\Concerns\HasModalProperties`
 
 Views:
 
@@ -291,19 +289,9 @@ Widgets:
 - `CustomWidget`
 - `Stat`
 - `StatsOverviewWidget`
-- `ProgressWidget` (pure-CSS progress rows)
-- `ProgressItem` (row entry for `ProgressWidget`)
-- `ListWidget` (pure-CSS feed of records/events)
-- `ListItem` (entry for `ListWidget`)
 - `TableWidget`
 - `Widgets\Concerns\HasPolling`
-- `Widgets\Concerns\CanBeLazy`
-- `Widgets\Concerns\HasWidgetFilter`
-- `Widgets\Concerns\HasWidgetItems`
 - `Widgets\Concerns\WithWidgets`
-- `Widgets\Console\MakeDashboardCommand`, `Widgets\Console\MakeWidgetCommand`
-- `Foundation\Contracts\RunsComponentActions` (the Widgets↔Actions seam)
-- `Actions\Support\ComponentActionRunner`, `Actions\Support\ActionCallbackInvoker`
 
 Widget views:
 
@@ -314,16 +302,8 @@ Widget views:
 - `packages/core/resources/views/widgets/bar-chart/horizontal-system.blade.php`
 - `packages/core/resources/views/widgets/custom.blade.php`
 - `packages/core/resources/views/widgets/stats-overview.blade.php`
-- `packages/core/resources/views/widgets/progress.blade.php`
-- `packages/core/resources/views/widgets/list.blade.php`
 - `packages/core/resources/views/widgets/table.blade.php`
 - `packages/core/resources/views/widgets/widget-grid.blade.php`
-- `packages/core/resources/views/widgets/widget-cell.blade.php`
-- `packages/core/resources/views/widgets/partials/widget-header.blade.php`
-- `packages/core/resources/views/widgets/partials/widget-filter.blade.php`
-- `packages/core/resources/views/widgets/partials/widget-actions.blade.php`
-- `packages/core/resources/views/widgets/partials/widget-placeholder.blade.php`
-- `packages/core/resources/views/widgets/partials/list-item.blade.php`
 
 Audit:
 

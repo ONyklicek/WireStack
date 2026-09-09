@@ -10,42 +10,42 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Session;
 use Livewire\Component;
 use Livewire\Livewire;
-use NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver;
-use NyonCode\WireCore\Foundation\Preferences\Drivers\DatabasePreferenceDriver;
-use NyonCode\WireCore\Foundation\Preferences\Drivers\NullPreferenceDriver;
-use NyonCode\WireCore\Foundation\Preferences\Drivers\SessionPreferenceDriver;
-use NyonCode\WireCore\Foundation\Preferences\Models\Preference;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Preferences\Contracts\TablePreferenceDriver;
+use NyonCode\WireTable\Preferences\Drivers\DatabasePreferenceDriver;
+use NyonCode\WireTable\Preferences\Drivers\NullPreferenceDriver;
+use NyonCode\WireTable\Preferences\Drivers\SessionPreferenceDriver;
+use NyonCode\WireTable\Preferences\Models\TablePreference;
 use NyonCode\WireTable\Preferences\TablePreferenceManager;
 use NyonCode\WireTable\Table;
 
 // ─── Fakes ───────────────────────────────────────────────────────
 
 /** In-memory driver so integration tests don't need a store. */
-class ArrayPreferenceDriver implements PreferenceDriver
+class ArrayPreferenceDriver implements TablePreferenceDriver
 {
     /** @var array<string, array<string, mixed>> */
     public array $store = [];
 
-    public function load(string $surfaceKey, ?Authenticatable $user, ?string $view = null): array
+    public function load(string $tableKey, ?Authenticatable $user, ?string $view = null): array
     {
-        return $this->store[$this->composeKey($surfaceKey, $user, $view)] ?? [];
+        return $this->store[$this->composeKey($tableKey, $user, $view)] ?? [];
     }
 
-    public function save(string $surfaceKey, ?Authenticatable $user, array $preferences, ?string $view = null): void
+    public function save(string $tableKey, ?Authenticatable $user, array $preferences, ?string $view = null): void
     {
-        $this->store[$this->composeKey($surfaceKey, $user, $view)] = $preferences;
+        $this->store[$this->composeKey($tableKey, $user, $view)] = $preferences;
     }
 
-    public function forget(string $surfaceKey, ?Authenticatable $user, ?string $view = null): void
+    public function forget(string $tableKey, ?Authenticatable $user, ?string $view = null): void
     {
-        unset($this->store[$this->composeKey($surfaceKey, $user, $view)]);
+        unset($this->store[$this->composeKey($tableKey, $user, $view)]);
     }
 
-    public function views(string $surfaceKey, ?Authenticatable $user): array
+    public function views(string $tableKey, ?Authenticatable $user): array
     {
-        $prefix = $this->composeKey($surfaceKey, $user, '');
+        $prefix = $this->composeKey($tableKey, $user, '');
 
         $names = [];
         foreach (array_keys($this->store) as $key) {
@@ -57,9 +57,9 @@ class ArrayPreferenceDriver implements PreferenceDriver
         return $names;
     }
 
-    private function composeKey(string $surfaceKey, ?Authenticatable $user, ?string $view = null): string
+    private function composeKey(string $tableKey, ?Authenticatable $user, ?string $view = null): string
     {
-        return ($user?->getAuthIdentifier() ?? 'guest').'|'.$surfaceKey.'|'.($view ?? '');
+        return ($user?->getAuthIdentifier() ?? 'guest').'|'.$tableKey.'|'.($view ?? '');
     }
 }
 
@@ -230,7 +230,7 @@ afterEach(function () {
     TablePreferenceManager::swap(null);
     Schema::dropIfExists('pref_rows');
     Schema::dropIfExists('pref_users');
-    Schema::dropIfExists('wire_preferences');
+    Schema::dropIfExists('table_preferences');
 });
 
 // ─── Table fluent API ────────────────────────────────────────────
@@ -324,7 +324,7 @@ it('the session driver ignores a non-array stored value', function () {
  */
 function createTablePreferencesSchema(): void
 {
-    (require __DIR__.'/../../../../core/database/migrations/create_wire_preferences_table.php')->up();
+    (require __DIR__.'/../../../database/migrations/create_table_preferences_table.php')->up();
 }
 
 // ─── Database driver ─────────────────────────────────────────────
@@ -343,7 +343,7 @@ it('the database driver persists per (user, table) and is scoped', function () {
 
     expect($driver->load('orders', $alice))->toBe(['columns' => ['hidden' => ['email', 'role']]])
         ->and($driver->load('orders', $bob))->toBe(['columns' => ['hidden' => ['role']]])
-        ->and(Preference::count())->toBe(2);
+        ->and(TablePreference::count())->toBe(2);
 
     $driver->forget('orders', $alice);
     expect($driver->load('orders', $alice))->toBe([])

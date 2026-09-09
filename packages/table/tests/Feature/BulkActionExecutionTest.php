@@ -183,3 +183,17 @@ it('resolves a record by key and returns null for a null key', function () {
     expect($component->getRecord('2')?->getKey())->toBe(2)
         ->and($component->getRecord(null))->toBeNull();
 });
+
+// ─── Deprecated BC shims ──────────────────────────────────────
+
+it('keeps the deprecated confirmation methods callable as no-ops', function () {
+    // Renamed to the halt-modal system; they survive as deprecation-emitting
+    // shims until 2.0 and must not fatal.
+    $component = Livewire::test(BaeComponent::class)->instance();
+
+    $component->confirmTableAction('1', 'touch');
+    $component->executeConfirmedAction();
+    $component->closeConfirmationModal();
+
+    expect($component->received)->toBe([]);
+});

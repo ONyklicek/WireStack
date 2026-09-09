@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Actions;
 
-use Closure;
 use NyonCode\WireCore\Actions\Concerns\HasIcons;
 use NyonCode\WireCore\Actions\Contracts\ModalForm;
 use NyonCode\WireCore\Actions\Support\ModalForms;
+use NyonCode\WireCore\Core\Support\Deprecation;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
-use NyonCode\WireCore\Foundation\Concerns\HasModalProperties;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithColor;
+use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 
 /**
  * ActionHalt – stops execution pipeline and shows a dynamic modal.
  *
  * Halt can be triggered from:
- *   1. action() callback:  return $halt()->heading('...');
- *   2. before() hook:      $action->halt()->heading('...');
- *   3. after() hook:       $action->halt()->heading('...');
+ *   1. action() callback:  return $halt()->modalHeading('...');
+ *   2. before() hook:      $action->halt()->modalHeading('...');
+ *   3. after() hook:       $action->halt()->modalHeading('...');
  *
  * After user confirms the halt modal, the pipeline resumes with confirmed=true.
  * Before hooks can check $confirmed to skip their checks on re-execution.
@@ -29,7 +29,7 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
  *   // Simple confirmation
  *   return $halt()->danger()
  *       ->heading('Smazat?')
- *       ->description('Tato akce je nevratná.');
+ *       ->body('Tato akce je nevratná.');
  *
  *   // With form
  *   return $halt()
@@ -57,25 +57,11 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
 final class ActionHalt
 {
     use HasIcons;
-
-    /*
-     * A halt *is* a modal, so it speaks the modal vocabulary the framework
-     * already owns — `heading()`, `description()`, `width()`, `closeOnEscape()`
-     * — rather than a private copy of it. An **action** prefixes the same
-     * settings (`modalHeading()`, `modalWidth()`) because an action is a button
-     * that *has* a modal: unprefixed `icon()` and `color()` there are the
-     * button's own. That is the whole rule behind what used to look like two
-     * spellings of one thing.
-     *
-     * A closure heading is resolved at declaration rather than at render: a
-     * halt is serialized into component state the moment it is raised, and the
-     * scope that could answer the closure is gone by the time the modal draws.
-     */
-    use HasModalProperties {
-        heading as private setHeading;
-        description as private setDescription;
-    }
     use InteractsWithColor;
+
+    protected ?string $modalHeading = null;
+
+    protected ?string $modalDescription = null;
 
     protected ?string $modalIcon = null;
 
@@ -84,6 +70,8 @@ final class ActionHalt
     protected ?string $modalSubmitLabel = null;
 
     protected ?string $modalCancelLabel = null;
+
+    protected ?string $modalWidth = 'md';
 
     protected bool $isDanger = false;
 
@@ -134,7 +122,7 @@ final class ActionHalt
 
         return static::make()
             ->heading(Trans::get('wire-core::actions.delete_heading'))
-            ->description($description)
+            ->body($description)
             ->icon('trash', Color::Danger)
             ->submitLabel(Trans::get('wire-core::actions.delete_submit'))
             ->danger();
@@ -147,7 +135,7 @@ final class ActionHalt
     {
         return static::make()
             ->heading($heading)
-            ->description($description)
+            ->body($description)
             ->icon('warning', Color::Danger)
             ->danger();
     }
@@ -159,7 +147,7 @@ final class ActionHalt
     {
         return static::make()
             ->heading($heading)
-            ->description($description)
+            ->body($description)
             ->icon('warning', Color::Warning);
     }
 
@@ -170,7 +158,7 @@ final class ActionHalt
     {
         return static::make()
             ->heading($heading)
-            ->description($description)
+            ->body($description)
             ->icon('info', Color::Info)
             ->informative();
     }
@@ -182,21 +170,25 @@ final class ActionHalt
     {
         return static::make()
             ->heading($heading)
-            ->description($description)
+            ->body($description)
             ->icon('check-circle', Color::Success)
             ->informative();
     }
 
     // ─── Fluent setters (compact) ───────────────────────────────
 
-    public function heading(string|Closure|null $heading): static
+    public function heading(?string $heading): static
     {
-        return $this->setHeading($heading instanceof Closure ? $heading() : $heading);
+        $this->modalHeading = $heading;
+
+        return $this;
     }
 
-    public function description(string|Closure|null $description): static
+    public function body(?string $description): static
     {
-        return $this->setDescription($description instanceof Closure ? $description() : $description);
+        $this->modalDescription = $description;
+
+        return $this;
     }
 
     public function icon(string|Icon|null $icon, string|Color|null $color = null): static
@@ -221,6 +213,61 @@ final class ActionHalt
         return $this;
     }
 
+    public function width(string|ModalWidth|null $width): static
+    {
+        $this->modalWidth = $width instanceof ModalWidth ? $width->value : $width;
+
+        return $this;
+    }
+
+    /** @deprecated Use heading() instead. Will be removed in v2.0. */
+    public function modalHeading(?string $heading): static
+    {
+        Deprecation::method('modalHeading', 'heading');
+
+        return $this->heading($heading);
+    }
+
+    /** @deprecated Use body() instead. Will be removed in v2.0. */
+    public function modalDescription(?string $description): static
+    {
+        Deprecation::method('modalDescription', 'body');
+
+        return $this->body($description);
+    }
+
+    /** @deprecated Use icon() instead. Will be removed in v2.0. */
+    public function modalIcon(string|Icon|null $icon, string|Color|null $color = null): static
+    {
+        Deprecation::method('modalIcon', 'icon');
+
+        return $this->icon($icon, $color);
+    }
+
+    /** @deprecated Use submitLabel() instead. Will be removed in v2.0. */
+    public function modalSubmitLabel(?string $label): static
+    {
+        Deprecation::method('modalSubmitLabel', 'submitLabel');
+
+        return $this->submitLabel($label);
+    }
+
+    /** @deprecated Use cancelLabel() instead. Will be removed in v2.0. */
+    public function modalCancelLabel(?string $label): static
+    {
+        Deprecation::method('modalCancelLabel', 'cancelLabel');
+
+        return $this->cancelLabel($label);
+    }
+
+    /** @deprecated Use width() instead. Will be removed in v2.0. */
+    public function modalWidth(string|ModalWidth|null $width): static
+    {
+        Deprecation::method('modalWidth', 'width');
+
+        return $this->width($width);
+    }
+
     public function danger(bool $danger = true): static
     {
         $this->isDanger = $danger;
@@ -238,26 +285,13 @@ final class ActionHalt
         return $this;
     }
 
-    /**
-     * A halt with nothing to confirm: no submit button, no form, no rules — one
-     * way out. The action is not re-executed, because there is nothing to
-     * re-execute it for.
-     *
-     * Whatever a form declared is dropped here, and declaring one afterwards
-     * takes the halt back out of informative: whichever was said last is what
-     * the modal does.
-     */
     public function informative(bool $informative = true): static
     {
         $this->isInformative = $informative;
-
         if ($informative) {
             $this->modalSubmitLabel = null;
             $this->formInstance = null;
             $this->formValidation = null;
-            $this->formValidationMessages = null;
-            $this->formValidationAttributes = null;
-            $this->formData = null;
         }
 
         return $this;
@@ -269,20 +303,15 @@ final class ActionHalt
     }
 
     /**
-     * Fields the halt collects before the action is re-executed.
-     *
-     * Asking for a form is asking for a submit, so this undoes `informative()`
-     * rather than being quietly overruled by it. Before 2.0 the two were
-     * order-dependent: `->informative()->form([...])` left `hasForm()` false and
-     * dropped the fields on the floor, while still serializing the instance the
-     * modal would never render.
-     *
      * @param  array<int, mixed>|ModalForm  $fields
      */
     public function form(array|ModalForm $fields): static
     {
-        $this->formInstance = $fields instanceof ModalForm ? $fields : ModalForms::make($fields);
-        $this->isInformative = false;
+        if ($fields instanceof ModalForm) {
+            $this->formInstance = $fields;
+        } else {
+            $this->formInstance = ModalForms::make($fields);
+        }
 
         return $this;
     }
@@ -302,6 +331,20 @@ final class ActionHalt
     }
 
     /**
+     * @deprecated Use validation() instead. Will be removed in v2.0.
+     *
+     * @param  array<string, mixed>  $rules
+     * @param  array<string, string>|null  $messages
+     * @param  array<string, string>|null  $attributes
+     */
+    public function formValidation(array $rules, ?array $messages = null, ?array $attributes = null): static
+    {
+        Deprecation::method('formValidation', 'validation');
+
+        return $this->validation($rules, $messages, $attributes);
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     public function fillForm(array $data): static
@@ -312,14 +355,6 @@ final class ActionHalt
     }
 
     // Context
-
-    /**
-     * Where in the pipeline this halt was raised — `before`, `after` or
-     * `action`, plus the hook's index.
-     *
-     * @docs-ignore Written by the pipeline, never by a call site: the halt is
-     * already returned from the place that would have had something to say.
-     */
     public function source(string $source, int $index = 0): static
     {
         $this->haltSource = $source;
@@ -344,6 +379,16 @@ final class ActionHalt
 
     // ─── Getters ────────────────────────────────────────────────
 
+    public function getModalHeading(): ?string
+    {
+        return $this->modalHeading;
+    }
+
+    public function getModalDescription(): ?string
+    {
+        return $this->modalDescription;
+    }
+
     public function getModalIcon(): ?string
     {
         return $this->modalIcon;
@@ -362,6 +407,11 @@ final class ActionHalt
     public function getModalCancelLabel(): string
     {
         return $this->modalCancelLabel ?? ($this->isInformative ? Trans::get('wire-core::actions.confirm_close') : Trans::get('wire-core::actions.confirm_cancel'));
+    }
+
+    public function getModalWidth(): string
+    {
+        return $this->modalWidth ?? 'md';
     }
 
     public function isDanger(): bool
@@ -448,17 +498,13 @@ final class ActionHalt
         return [
             'halt' => true,
             'modal' => [
-                'heading' => $this->getHeading(),
-                'description' => $this->getDescription(),
+                'heading' => $this->modalHeading,
+                'description' => $this->modalDescription,
                 'icon' => $this->modalIcon,
                 'iconColor' => $this->getModalIconColor(),
                 'submitLabel' => $this->getModalSubmitLabel(),
                 'cancelLabel' => $this->getModalCancelLabel(),
-                'width' => $this->getWidth(),
-                'closeOnClickAway' => $this->shouldCloseOnClickAway(),
-                'closeOnEscape' => $this->shouldCloseOnEscape(),
-                'maxHeight' => $this->getMaxHeight(),
-                'id' => $this->getId(),
+                'width' => $this->modalWidth,
                 'color' => $this->color,
                 'danger' => $this->isDanger,
                 'informative' => $this->isInformative,

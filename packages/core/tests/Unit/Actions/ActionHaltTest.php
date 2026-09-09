@@ -17,7 +17,7 @@ it('can be created via make()', function () {
 it('supports fluent configuration', function () {
     $halt = ActionHalt::make()
         ->heading('Smazat?')
-        ->description('Opravdu chcete smazat?')
+        ->body('Opravdu chcete smazat?')
         ->icon('trash', 'danger')
         ->submitLabel('Smazat')
         ->cancelLabel('Ne')
@@ -25,13 +25,13 @@ it('supports fluent configuration', function () {
         ->color('danger')
         ->danger();
 
-    expect($halt->getHeading())->toBe('Smazat?')
-        ->and($halt->getDescription())->toBe('Opravdu chcete smazat?')
+    expect($halt->getModalHeading())->toBe('Smazat?')
+        ->and($halt->getModalDescription())->toBe('Opravdu chcete smazat?')
         ->and($halt->getModalIcon())->toBe('trash')
         ->and($halt->getModalIconColor())->toBe('danger')
         ->and($halt->getModalSubmitLabel())->toBe('Smazat')
         ->and($halt->getModalCancelLabel())->toBe('Ne')
-        ->and($halt->getWidth())->toBe('lg')
+        ->and($halt->getModalWidth())->toBe('lg')
         ->and($halt->getColor())->toBe('danger')
         ->and($halt->isDanger())->toBeTrue();
 });
@@ -41,12 +41,12 @@ it('supports fluent configuration', function () {
 it('has correct defaults', function () {
     $halt = ActionHalt::make();
 
-    expect($halt->getHeading())->toBeNull()
-        ->and($halt->getDescription())->toBeNull()
+    expect($halt->getModalHeading())->toBeNull()
+        ->and($halt->getModalDescription())->toBeNull()
         ->and($halt->getModalIcon())->toBeNull()
         ->and($halt->getModalSubmitLabel())->toBe('Confirm')
         ->and($halt->getModalCancelLabel())->toBe('Cancel')
-        ->and($halt->getWidth())->toBe('md')
+        ->and($halt->getModalWidth())->toBe('md')
         ->and($halt->isDanger())->toBeFalse()
         ->and($halt->isInformative())->toBeFalse()
         ->and($halt->hasForm())->toBeFalse();
@@ -148,8 +148,8 @@ it('can set redirect after confirm', function () {
 it('has confirmDelete preset', function () {
     $halt = ActionHalt::confirmDelete('Test Record');
 
-    expect($halt->getHeading())->toBe('Delete record')
-        ->and($halt->getDescription())->toBe('Are you sure you want to delete "Test Record"? This action is irreversible.')
+    expect($halt->getModalHeading())->toBe('Delete record')
+        ->and($halt->getModalDescription())->toBe('Are you sure you want to delete "Test Record"? This action is irreversible.')
         ->and($halt->isDanger())->toBeTrue()
         ->and($halt->getModalIcon())->toBe('trash');
 });
@@ -157,21 +157,21 @@ it('has confirmDelete preset', function () {
 it('has confirmDelete preset without name', function () {
     $halt = ActionHalt::confirmDelete();
 
-    expect($halt->getDescription())->toBe('Are you sure you want to delete this record? This action is irreversible.');
+    expect($halt->getModalDescription())->toBe('Are you sure you want to delete this record? This action is irreversible.');
 });
 
 it('has confirmDanger preset', function () {
     $halt = ActionHalt::confirmDanger('Opravdu?', 'Toto nelze vrátit.');
 
-    expect($halt->getHeading())->toBe('Opravdu?')
-        ->and($halt->getDescription())->toBe('Toto nelze vrátit.')
+    expect($halt->getModalHeading())->toBe('Opravdu?')
+        ->and($halt->getModalDescription())->toBe('Toto nelze vrátit.')
         ->and($halt->isDanger())->toBeTrue();
 });
 
 it('has confirmWarning preset', function () {
     $halt = ActionHalt::confirmWarning('Pozor', 'Budete přesměrováni.');
 
-    expect($halt->getHeading())->toBe('Pozor')
+    expect($halt->getModalHeading())->toBe('Pozor')
         ->and($halt->getModalIcon())->toBe('warning');
 });
 
@@ -179,7 +179,7 @@ it('has info preset', function () {
     $halt = ActionHalt::info('Hotovo', 'Operace proběhla.');
 
     expect($halt->isInformative())->toBeTrue()
-        ->and($halt->getHeading())->toBe('Hotovo')
+        ->and($halt->getModalHeading())->toBe('Hotovo')
         ->and($halt->getModalIcon())->toBe('info');
 });
 
@@ -195,7 +195,7 @@ it('has success preset', function () {
 it('can serialize to array', function () {
     $halt = ActionHalt::make()
         ->heading('Test')
-        ->description('Description')
+        ->body('Description')
         ->danger()
         ->source('action', 0);
 
@@ -207,65 +207,25 @@ it('can serialize to array', function () {
         ->and($array['modal']['danger'])->toBeTrue()
         ->and($array['context']['source'])->toBe('action');
 });
-it('speaks the canonical modal vocabulary, and serializes what the view can honour', function () {
-    // A halt IS a modal, so it composes Foundation's HasModalProperties rather
-    // than keeping a private copy of heading/description/width — and with it come
-    // three settings the halt modal could never express before.
-    $halt = ActionHalt::make()
-        ->heading('Archive it?')
-        ->description('This cannot be undone.')
-        ->width('lg')
-        ->closeOnEscape(false)
-        ->closeOnClickAway(false)
-        ->id('archive-halt')
-        ->danger();
 
-    $modal = $halt->toArray()['modal'];
+// ─── Deprecated Methods ─────────────���───────────────────────────────────────
 
-    expect($modal['heading'])->toBe('Archive it?')
-        ->and($modal['description'])->toBe('This cannot be undone.')
-        ->and($modal['width'])->toBe('lg')
-        ->and($modal['closeOnEscape'])->toBeFalse()
-        ->and($modal['closeOnClickAway'])->toBeFalse()
-        ->and($modal['id'])->toBe('archive-halt')
-        ->and($modal['danger'])->toBeTrue();
+it('deprecated modalHeading works as alias for heading', function () {
+    $halt = ActionHalt::make()->modalHeading('Test');
+
+    expect($halt->getModalHeading())->toBe('Test');
 });
 
-it('resolves a closure heading while the caller is still there', function () {
-    // The trait keeps closures for a render that can pass a context. A halt has
-    // no such moment: it is serialized into component state the instant it is
-    // raised, so the closure is called now or never.
-    $halt = ActionHalt::make()
-        ->heading(fn (): string => 'Computed')
-        ->description(fn (): string => 'Also computed');
+it('deprecated modalDescription works as alias for body', function () {
+    $halt = ActionHalt::make()->modalDescription('Desc');
 
-    expect($halt->getHeading())->toBe('Computed')
-        ->and($halt->getDescription())->toBe('Also computed')
-        ->and($halt->toArray()['modal']['heading'])->toBe('Computed');
+    expect($halt->getModalDescription())->toBe('Desc');
 });
 
-it('lets a form and informative() overrule each other, whichever came last', function () {
-    // Before 2.0 this was order-dependent and silent: informative() cleared the
-    // form, and a form() after it set the instance while hasForm() stayed false —
-    // so the fields never rendered and the instance was still serialized for a
-    // modal that had nowhere to put them.
-    $formLast = ActionHalt::make()
-        ->informative()
-        ->form([TextInput::make('reason')]);
+it('deprecated formValidation works as alias for validation', function () {
+    $halt = ActionHalt::make()->formValidation(['name' => 'required']);
 
-    expect($formLast->hasForm())->toBeTrue()
-        ->and($formLast->isInformative())->toBeFalse()
-        ->and($formLast->getModalSubmitLabel())->not->toBeNull();
-
-    $informativeLast = ActionHalt::make()
-        ->form([TextInput::make('reason')])
-        ->validation(['reason' => 'required'])
-        ->informative();
-
-    expect($informativeLast->hasForm())->toBeFalse()
-        ->and($informativeLast->getFormInstance())->toBeNull()
-        ->and($informativeLast->getModalFormValidation())->toBeNull()
-        ->and($informativeLast->getModalSubmitLabel())->toBeNull();
+    expect($halt->getModalFormValidation())->toBe(['name' => 'required']);
 });
 
 it('lets danger fill the colour slot, and lets an explicit colour keep it', function () {

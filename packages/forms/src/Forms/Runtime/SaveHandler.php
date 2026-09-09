@@ -11,13 +11,12 @@ use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use NyonCode\WireCore\Core\Hydration\CastResolver;
 use NyonCode\WireCore\Core\Hydration\Dehydrator;
 use NyonCode\WireCore\Core\Hydration\ValueTransformer;
-use NyonCode\WireCore\Core\Plugin\HookDispatch;
 use NyonCode\WireCore\Core\Plugin\Hooks\FormSavedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\FormSavingPayload;
 use NyonCode\WireCore\Core\Plugin\HookTarget;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Foundation\Contracts\CanBeDehydrated;
-use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Components\MorphToSelect;
 use NyonCode\WireForms\Components\Repeater;
@@ -68,14 +67,9 @@ final class SaveHandler
         $data = $this->dehydrateFields($data);
 
         // 3. Plugin hook: form.saving (can modify data)
-        //
-        // One of the seven legacy names, so both dispatchers run — see
-        // `PluginManager::callbackExpectsArray()`. The guard is HookDispatch's,
-        // which is also where the `hasHook()` short-circuit comes from: this used
-        // to build both payloads whenever a manager was bound at all.
-        $manager = HookDispatch::manager(Hook::FormSaving);
+        if (app()->bound(PluginManager::class)) {
+            $manager = app(PluginManager::class);
 
-        if ($manager !== null) {
             $target = $this->hookTarget();
 
             $payload = $manager->runHook('form.saving', [
@@ -129,9 +123,9 @@ final class SaveHandler
         }
 
         // 8. Plugin hook: form.saved (observation)
-        $manager = HookDispatch::manager(Hook::FormSaved);
+        if (app()->bound(PluginManager::class)) {
+            $manager = app(PluginManager::class);
 
-        if ($manager !== null) {
             $target = $this->hookTarget();
 
             $manager->runHook('form.saved', [

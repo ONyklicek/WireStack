@@ -17,7 +17,7 @@ import { openPage, checker, sleep } from './lib/cdp.mjs';
 
 const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085'}/previews/field-checkbox-list-choices`;
 
-const { page, eval_, shot, shotDir, consoleErrors, badResponses, close } =
+const { eval_, shot, shotDir, consoleErrors, badResponses, close } =
   await openPage({ url, shotPrefix: 'choice-variants' });
 
 const { check, finish } = checker();
@@ -104,80 +104,6 @@ try {
   const skills = await eval_(`checkedValues('${SKILLS}').join(',')`);
   check('the buttons variant is multiple choice too', skills === 'php,js', `checked=${skills}`);
   await shot('03-buttons-selected');
-
-  // ── Hover, in both themes ─────────────────────────────────────────────
-  // Pest sees `hover:bg-…` in the markup and calls it a day. What it cannot see
-  // is that the rule loses, or wins where it should not: `dark:` compiles to a
-  // zero-specificity `:where()` variant and `peer-checked:` only ties with
-  // `hover:`, so one careless light-mode hover repaints the *dark* face
-  // near-white and wipes the accent off a *selected* one. Only a browser, with
-  // a real pointer over the element, can say which declaration actually landed.
-  const bgOf = (value) => eval_(
-    "getComputedStyle(faceOf('" + SKILLS + "', '" + value + "')).backgroundColor"
-  );
-
-  const boxOf = (value) => eval_(
-    "(() => { const r = faceOf('" + SKILLS + "', '" + value + "').getBoundingClientRect();"
-    + " return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()"
-  );
-
-  const pointAt = async (x, y) => {
-    await page('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, buttons: 0 });
-    await sleep(300);
-  };
-
-  const setTheme = async (theme) => {
-    await eval_("document.documentElement.classList.toggle('dark', " + (theme === 'dark') + "); true");
-    await sleep(200);
-  };
-
-  // Computed colors arrive as `oklch(L C H)` (Tailwind v4) or `rgb(…)`. L says
-  // whether the face moved and which side of the theme it stayed on; C
-  // separates a live accent from a grey.
-  const lc = (css) => {
-    const ok = css.match(/^oklch\(([\d.]+) ([\d.]+)/);
-    if (ok) return { l: Number(ok[1]), c: Number(ok[2]) };
-    const rgb = css.match(/rgba?\((\d+), (\d+), (\d+)/);
-    if (! rgb) return { l: NaN, c: NaN };
-    const [r, g, b] = rgb.slice(1).map(Number);
-    const grey = Math.max(r, g, b) === Math.min(r, g, b);
-    return { l: (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255, c: grey ? 0 : 1 };
-  };
-
-  // `php` is selected and carries ->colors(['php' => 'danger']); `css` is not.
-  const measure = async (value) => {
-    const rest = lc(await bgOf(value));
-    const at = await boxOf(value);
-    await pointAt(at.x, at.y);
-    const over = lc(await bgOf(value));
-    await pointAt(2, 2);
-    return { rest, over };
-  };
-
-  for (const theme of ['light', 'dark']) {
-    await setTheme(theme);
-
-    const unselected = await measure('css');
-    // The bug this block exists for: gray-50 over white moved L by 0.015, which
-    // a person reads as "nothing happened".
-    check(`[${theme}] hovering an unselected button visibly repaints it`,
-      Math.abs(unselected.over.l - unselected.rest.l) >= 0.03,
-      `rest L=${unselected.rest.l} hover L=${unselected.over.l}`);
-    check(`[${theme}] the hovered face stays on its own side of the theme`,
-      theme === 'dark' ? unselected.over.l < 0.5 : unselected.over.l > 0.5,
-      `hover L=${unselected.over.l}`);
-
-    const selected = await measure('php');
-    check(`[${theme}] hovering a selected button keeps its accent`,
-      selected.over.c > 0.05, `hover C=${selected.over.c}`);
-    check(`[${theme}] hovering a selected button still answers`,
-      Math.abs(selected.over.l - selected.rest.l) >= 0.02,
-      `rest L=${selected.rest.l} hover L=${selected.over.l}`);
-
-    await shot(`04-hover-${theme}`);
-  }
-
-  await setTheme('light');
 
   finish({ consoleErrors, badResponses, shotDir });
 } catch (e) {

@@ -5,12 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WirePanels\Resources\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
-use NyonCode\WireCore\Core\Plugin\HookDispatch;
-use NyonCode\WireCore\Core\Plugin\Hooks\PageMountingPayload;
-use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
-use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
@@ -45,45 +41,10 @@ trait BelongsToResource
      */
     public ?string $breadcrumbZone = null;
 
-    /** Livewire calls this for the trait, on mount, after the page's own. */
+    /** Livewire calls this for the trait, on mount, before the page's own. */
     public function mountBelongsToResource(): void
     {
         $this->breadcrumbZone = Zone::current();
-
-        $this->mountedThroughPlugins();
-    }
-
-    /**
-     * Let anything installed have a say once the page has mounted.
-     *
-     * One dispatch site for four pages, because this is the one thing all four
-     * compose — and it runs **last**, which is a measurement rather than a
-     * preference: Livewire calls a component's own `mount()` before the
-     * `mount{Trait}` hooks (`SupportLifecycleHooks`), so by the time this runs the
-     * edit page has resolved its record and seeded its form. A hook dispatched
-     * from `mount()` would see neither, and the callback that wanted to add a key
-     * to the state bag would be overwritten by the seed that followed it.
-     *
-     * The page itself is the whole of what a callback changes, and the payload
-     * says so: it is mounted, so whatever the page makes **public** is reachable
-     * and survives the round trip. Nothing is written back from the payload,
-     * because the one thing that looked writable — the heading — is a protected
-     * property here, and Livewire's snapshot carries public ones only. A hook
-     * that set it would have been right on the first paint and wrong on every
-     * update after, which is the failure `$breadcrumbZone` above exists to avoid.
-     *
-     * A dashboard page composes none of this and is deliberately not covered: it
-     * shows no resource, so there would be no key to scope a callback by. Its
-     * widgets are addressable through `widget.configuring` instead.
-     */
-    private function mountedThroughPlugins(): void
-    {
-        HookDispatch::typed(Hook::PageMounting, fn () => new PageMountingPayload(
-            page: $this,
-            title: $this->getTitle(),
-            zone: $this->breadcrumbZone,
-            target: HookTarget::for('page', $this),
-        ));
     }
 
     /**
