@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use NyonCode\WireCore\Audit\AuditEntry;
 use NyonCode\WireCore\Foundation\Icons\DefaultIconSet;
+use NyonCode\WireCore\Foundation\Preferences\Drivers\DatabasePreferenceDriver;
+use NyonCode\WireCore\Foundation\Preferences\Drivers\NullPreferenceDriver;
+use NyonCode\WireCore\Foundation\Preferences\Drivers\SessionPreferenceDriver;
 
 return [
     'notifications' => [
@@ -119,9 +122,35 @@ return [
         'warn_missing' => env('WIRE_ICONS_WARN_MISSING', false),
     ],
 
-    // Colors
+    /*
+    |--------------------------------------------------------------------------
+    | Colours
+    |--------------------------------------------------------------------------
+    |
+    | `success`, `danger`, `warning` and `info` are roles, not colours: what each
+    | renders as is the hue named here, and every surface follows it — buttons,
+    | badges, alerts, modal icons, toasts, table row tints, the audit timeline.
+    |
+    | The value is a Tailwind hue this framework already ships classes for, never
+    | a class and never a CSS variable. A class named in a config file is not a
+    | file Tailwind scans, so it would silently never compile; a variable would
+    | need Tailwind 4 plus a token your application remembers to define. A hue
+    | lands in a `match` arm whose class strings are already literal, so this
+    | works on Tailwind 3 and 4 alike.
+    |
+    | An unrecognised hue keeps the shipped default rather than rendering grey.
+    |
+    | `primary` is not here: re-point `--color-primary-*` in your own `@theme`
+    | block, which is a different and older mechanism.
+    |
+    */
     'colors' => [
         'palette' => [],
+
+        'success' => 'emerald',
+        'danger' => 'red',
+        'warning' => 'amber',
+        'info' => 'cyan',
     ],
 
     // Plugins
@@ -278,4 +307,80 @@ return [
         // Auto-prune entries older than N days (null = no pruning)
         'retention_days' => null,
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Preferences
+    |--------------------------------------------------------------------------
+    |
+    | Where "what this user did to this surface" is kept — a customisable
+    | dashboard's widget layout today. The same store wire-table uses for a
+    | user's column layout, configured separately because whether a dashboard
+    | layout is worth a database row is its own question.
+    |
+    |   - null     : not persisted (default). A dashboard can still be marked
+    |                customisable; the arrangement simply lives for the page.
+    |   - session  : the user's session. No migration.
+    |   - database : the `wire_preferences` table (publish + run the migration:
+    |                vendor:publish --tag="wire-core::migrations")
+    |
+    | Point an alias at your own class to use a custom store; it implements
+    | Foundation\Preferences\Contracts\PreferenceDriver.
+    |
+    */
+    'preferences' => [
+        'default' => env('WIRE_PREFERENCES_DRIVER', 'null'),
+        'guest' => env('WIRE_PREFERENCES_GUEST_DRIVER', 'session'),
+        'drivers' => [
+            'null' => NullPreferenceDriver::class,
+            'session' => SessionPreferenceDriver::class,
+            'database' => DatabasePreferenceDriver::class,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Density
+    |--------------------------------------------------------------------------
+    |
+    | How much room the interface gives itself: `normal` (the shipped spacing)
+    | or `compact`.
+    |
+    | Compact is three changes, not one, and the second and third exist because
+    | the first over- and under-reaches. `--spacing` drives `h-16` and `w-4` as
+    | surely as `px-3`, so the top bar and the icons are pinned back to their
+    | shipped sizes; and `@tailwindcss/forms` writes control padding as a literal
+    | that no token can reach, so it is addressed by name. All of it is in
+    | `wire-core::partials.density`, which the shell puts in the head.
+    |
+    | Type is untouched — font size reads its own tokens — so this tightens the
+    | chrome and leaves the words alone.
+    |
+    | Requires Tailwind 4: on 3 the utilities are compiled values with no
+    | variable to move, so this sets a property nothing reads.
+    |
+    */
+    'density' => env('WIRE_DENSITY', 'normal'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Shape
+    |--------------------------------------------------------------------------
+    |
+    | How the corners are cut: `rounded` (the shipped corners) or `sharp`.
+    |
+    | Unlike density, this has no per-person switch. Density is a working
+    | preference — one person wants more rows on screen than another. Shape is
+    | identity, and an admin that is round for one colleague and square for the
+    | next is two products rather than one respected preference.
+    |
+    | Sharp is two rules: the radius tokens go to zero, and the pills are squared
+    | by name because `rounded-full` reads no token. Avatars stay round on
+    | purpose — see `wire-core::partials.shape`.
+    |
+    | Requires Tailwind 4, for the same reason density does.
+    |
+    */
+    'shape' => env('WIRE_SHAPE', 'rounded'),
+
 ];

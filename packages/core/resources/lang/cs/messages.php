@@ -46,6 +46,12 @@ return [
     'theme_system' => 'Systém',
     'theme_dark' => 'Tmavý',
 
+    'shape_rounded' => 'Zaoblený',
+    'shape_sharp' => 'Hranatý',
+    'density' => 'Hustota',
+    'density_normal' => 'Normální',
+    'density_compact' => 'Kompaktní',
+
     // Čím soubor je — rodina, ne formát ({@see Foundation\Enums\FileKind}).
     // Ukáže se tam, kde soubor nemá náhled a jeho název nemá příponu, kterou by
     // šlo vypsat místo toho.
@@ -60,4 +66,24 @@ return [
         'code' => 'Kód',
         'other' => 'Soubor',
     ],
+
+    // Mřížka dashboardu ({@see Widgets\Widget}). `widget_loading` se oznamuje
+    // odečítači obrazovky, dokud se odložený widget načítá; prázdný stav je to,
+    // co ukáže seznamový widget, když se dotaz vrátil bez záznamů.
+    'widget_loading' => 'Načítání…',
+    'widget_filter' => 'Filtr',
+    'widget_empty' => 'Není co zobrazit.',
+    'widget_reorder' => 'Přetažením změníte pořadí',
+    'widget_tray' => 'Dostupné widgety',
+    'widget_tray_empty' => 'Všechno je na dashboardu.',
+    'widget_add' => 'Přidat na dashboard',
+    'widget_remove' => 'Odebrat z dashboardu',
+    'widget_wider' => 'Širší',
+    'widget_narrower' => 'Užší',
+    'widget_taller' => 'Vyšší',
+    'widget_shorter' => 'Nižší',
+    'widget_customise' => 'Upravit',
+    'widget_save_layout' => 'Uložit rozložení',
+    'widget_cancel_layout' => 'Zrušit',
+    'widget_reset_layout' => 'Zpět na výchozí',
 ];

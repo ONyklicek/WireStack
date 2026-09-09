@@ -6,6 +6,7 @@ namespace NyonCode\WireModuleAudit\Support;
 
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Audit\AuditEventStyle;
 
 /**
  * What kind of thing happened — named once, for every surface that shows it.
@@ -18,11 +19,11 @@ use Illuminate\Support\Str;
  * which left `bulk_action` and `cell_updated` rows with no colour, no filter and
  * their raw database string on screen.
  *
- * **The colours are core's.** The trail slide-over
- * (`wire-core::audit.trail`) already draws created green, updated and
- * cell_updated blue, deleted red and a bulk action amber. The same event shown
- * in two places in two colours is worse than either colour alone, so this maps
- * to the palette names that render as those.
+ * **The colours are core's**, and now literally so: they are read from
+ * {@see AuditEventStyle}, which is what the trail
+ * slide-over draws from too. This used to be a second copy of that map kept in
+ * step by hand — the same event shown in two places in two colours is worse
+ * than either colour alone, and a copy is how that happens.
  *
  * The labels are not core's, and that is deliberate too: core's
  * `wire-core::audit.event_*` are sentence fragments for a timeline ("updated
@@ -42,15 +43,6 @@ final class AuditEvents
         'deleted',
         'bulk_action',
         'cell_updated',
-    ];
-
-    /** @var array<string, string> type → palette name */
-    private const COLORS = [
-        'created' => 'success',
-        'updated' => 'info',
-        'cell_updated' => 'info',
-        'deleted' => 'danger',
-        'bulk_action' => 'warning',
     ];
 
     /**
@@ -98,16 +90,16 @@ final class AuditEvents
     {
         $colors = [];
 
-        foreach (self::COLORS as $type => $color) {
+        foreach (AuditEventStyle::colors() as $type => $color) {
             $colors[self::label($type)] = $color;
         }
 
         return $colors;
     }
 
-    /** The colour for one type; grey for a type this module does not know. */
+    /** The colour for one type; grey for a type nobody mapped. */
     public static function color(string $type): string
     {
-        return self::COLORS[$type] ?? 'gray';
+        return AuditEventStyle::color($type);
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Plugin;
 
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Contracts\View\View;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasConfiguration;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasDependencies;
 use NyonCode\WireCore\Core\Plugin\Contracts\HasHookTarget;
@@ -322,6 +324,59 @@ final class PluginManager
     }
 
     /**
+     * Collect the markup every callback for a render hook returns.
+     *
+     * The third dispatcher, and the only one that produces something rather than
+     * steering something: {@see self::runHook()} and {@see self::runTypedHook()}
+     * exist so a plugin can change what happens, this one so it can change what
+     * is *on the page*. Before it, "put a badge after every page title" had one
+     * answer — publish the view — which is a fork that renders last release's
+     * markup for ever, and the reason ADR 0029 §3 pointed at hooks in the first
+     * place.
+     *
+     * **What a callback may return, and what happens to it:**
+     *
+     *   `View` / `Htmlable`  rendered as-is. This is the shape to use, and the
+     *                        one the repository already prefers (Rule 5).
+     *   `string`             escaped. Text goes in as text; markup has to be a
+     *                        view or an explicit `HtmlString`, so nobody injects
+     *                        a tag by accident from a value they did not write.
+     *   anything else        ignored, including null — a callback that decides
+     *                        it has nothing to add says so by returning nothing.
+     *
+     * Callbacks run in priority order and their output concatenates in that
+     * order, so two plugins adding to one position keep a defined sequence.
+     *
+     * @param  array<string, mixed>  $scope  What the position knows about itself.
+     */
+    public function runRenderHook(string $name, array $scope = [], ?HookTarget $target = null): string
+    {
+        $hooks = $this->hooks[$name] ?? [];
+
+        if ($hooks === []) {
+            return '';
+        }
+
+        $html = '';
+
+        foreach ($hooks as $hook) {
+            if ($this->outOfScope($hook['for'], $target)) {
+                continue;
+            }
+
+            $result = ($hook['callback'])($scope);
+
+            if ($result instanceof View || $result instanceof Htmlable) {
+                $html .= $result->toHtml();
+            } elseif (is_string($result)) {
+                $html .= e($result);
+            }
+        }
+
+        return $html;
+    }
+
+    /**
      * Run a typed hook with a payload DTO.
      *
      * Each callback receives the payload object and may return a modified instance.
@@ -412,7 +467,7 @@ final class PluginManager
      *
      * It resolves to the **array** side, which is the deprecated one, and that is
      * deliberate rather than a concession. A callback written without a hint was
-     * written when the array payload was the only payload — `docs/core/plugins.md`
+     * written when the array payload was the only payload — `docs/core/plugins/index.md`
      * said so — so handing it a DTO would break the very plugins the 2.x BC
      * promise covers. A callback that wants the typed payload names its type, and
      * naming it is what every documented example already does.

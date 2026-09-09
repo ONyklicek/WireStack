@@ -9,6 +9,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Str;
+use Illuminate\Support\Traits\Macroable;
 use NyonCode\WireCore\Core\Components\DataComponent;
 use NyonCode\WireCore\Core\Query\Contracts\HasSearchColumns;
 use NyonCode\WireCore\Core\Query\Contracts\HasSearchValueType;
@@ -28,6 +29,7 @@ use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\View\ExtraAttributes;
 use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireTable\Concerns\CanBeEdited;
 use NyonCode\WireTable\Concerns\CanBeFiltered;
@@ -77,6 +79,15 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     use HasVisibility;
     use HasWidth;
 
+    /**
+     * Macroable, for the reason `Table` and `BaseAction` already are: an
+     * application or a package adds vocabulary to a class it does not own,
+     * applied where the component is built. ADR 0030 named this as the missing
+     * half of the extension story — the second-best path was absent everywhere
+     * the first one was.
+     */
+    use Macroable;
+
     // Note: $sortable and $searchable booleans removed in v2. Capabilities are the
     // single source of truth, read through CanBeSorted / CanBeSearchable.
 
@@ -102,7 +113,8 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     protected ?string $copyMessage = null;
 
     /** @var string|null Additional HTML attributes for the cell */
-    protected ?string $extraAttributes = null;
+    /** @var array<string, mixed>|string|null */
+    protected array|string|null $extraAttributes = null;
 
     /** @var array<string, string> Additional HTML attributes for the column header */
     protected array $extraHeaderAttributes = [];
@@ -808,17 +820,39 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         return $this->copyMessage;
     }
 
-    /** Add extra HTML attributes to the cell (a raw attribute string). */
-    public function extraAttributes(string $attributes): static
+    /**
+     * Add extra HTML attributes to the cell.
+     *
+     * Prefer the array form, which is what every other component takes and what
+     * gets **escaped**: the cell renders this with `{!! !!}`, so a raw string is
+     * author-supplied markup and anything interpolated into it is trusted
+     * blindly. The string form still works — it predates the array one and
+     * nothing should break for saying so — but it is the form to move off.
+     *
+     *     ->extraAttributes(['data-id' => $record->id])   // escaped
+     *     ->extraAttributes('data-id="'.$id.'"')          // raw, and yours to escape
+     *
+     * @param  array<string, mixed>|string  $attributes
+     */
+    public function extraAttributes(array|string $attributes): static
     {
         $this->extraAttributes = $attributes;
 
         return $this;
     }
 
+    /** The cell's extra attributes as attribute text, or null for none. */
     public function getExtraAttributes(): ?string
     {
-        return $this->extraAttributes;
+        if ($this->extraAttributes === null || $this->extraAttributes === '' || $this->extraAttributes === []) {
+            return null;
+        }
+
+        if (is_string($this->extraAttributes)) {
+            return $this->extraAttributes;
+        }
+
+        return ExtraAttributes::fromArray($this->extraAttributes)->toHtml();
     }
 
     /**

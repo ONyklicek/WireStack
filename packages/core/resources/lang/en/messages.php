@@ -47,6 +47,12 @@ return [
     'theme_system' => 'System',
     'theme_dark' => 'Dark',
 
+    'shape_rounded' => 'Rounded',
+    'shape_sharp' => 'Sharp',
+    'density' => 'Density',
+    'density_normal' => 'Normal',
+    'density_compact' => 'Compact',
+
     // What a file is, as a family rather than as a format
     // ({@see Foundation\Enums\FileKind}). Shown where a file has no preview to
     // show and its name has no extension to print instead.
@@ -61,4 +67,24 @@ return [
         'code' => 'Code',
         'other' => 'File',
     ],
+
+    // The dashboard grid ({@see Widgets\Widget}). `widget_loading` is announced
+    // to a screen reader while a deferred widget is being fetched; the empty
+    // state is what a list widget shows when its query came back with nothing.
+    'widget_loading' => 'Loading…',
+    'widget_filter' => 'Filter',
+    'widget_empty' => 'Nothing to show.',
+    'widget_reorder' => 'Drag to reorder',
+    'widget_tray' => 'Available widgets',
+    'widget_tray_empty' => 'Everything is on the dashboard.',
+    'widget_add' => 'Add to dashboard',
+    'widget_remove' => 'Remove from dashboard',
+    'widget_wider' => 'Wider',
+    'widget_narrower' => 'Narrower',
+    'widget_taller' => 'Taller',
+    'widget_shorter' => 'Shorter',
+    'widget_customise' => 'Customise',
+    'widget_save_layout' => 'Save layout',
+    'widget_cancel_layout' => 'Cancel',
+    'widget_reset_layout' => 'Reset to default',
 ];

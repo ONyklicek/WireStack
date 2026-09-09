@@ -14,9 +14,12 @@ use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\LaravelPackageToolkit\Support\PackageAssets;
 use NyonCode\LaravelPackageToolkit\Support\PublishedAssets;
+use NyonCode\WireCore\Actions\Support\ActionCallbackInvoker;
+use NyonCode\WireCore\Actions\Support\ComponentActionRunner;
 use NyonCode\WireCore\Actions\View\BulkButtonComponent;
 use NyonCode\WireCore\Actions\View\ButtonComponent;
 use NyonCode\WireCore\Actions\View\GroupComponent;
+use NyonCode\WireCore\Actions\View\HaltHostComponent;
 use NyonCode\WireCore\Actions\View\ModalHostComponent;
 use NyonCode\WireCore\Audit\AuditEventSubscriber;
 use NyonCode\WireCore\Audit\Console\PruneAuditEntriesCommand;
@@ -39,7 +42,9 @@ use NyonCode\WireCore\Exceptions\IconSetRegistrationException;
 use NyonCode\WireCore\Exceptions\PluginRegistrationException;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Components\Component;
+use NyonCode\WireCore\Foundation\Contracts\ClassifiesComponentActions;
 use NyonCode\WireCore\Foundation\Contracts\ResolvesRecordUrls;
+use NyonCode\WireCore\Foundation\Contracts\RunsComponentActions;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
 use NyonCode\WireCore\Foundation\Mentions\MentionRegistry;
@@ -53,6 +58,8 @@ use NyonCode\WireCore\Foundation\Support\PartialRenderHook;
 use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireCore\Foundation\View\CopyButton;
+use NyonCode\WireCore\Foundation\View\ElementHook;
+use NyonCode\WireCore\Foundation\View\ExtraAttributes;
 use NyonCode\WireCore\Foundation\View\FloatingAssets;
 use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireCore\Foundation\View\Primitives;
@@ -76,6 +83,7 @@ use NyonCode\WireCore\Notifications\NotificationBell;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireCore\Notifications\Support\NotificationChannel;
 use NyonCode\WireCore\Widgets\Console\MakeDashboardCommand;
+use NyonCode\WireCore\Widgets\Console\MakeWidgetCommand;
 use NyonCode\WireCore\Widgets\DashboardRegistry;
 
 class WireCoreServiceProvider extends PackageServiceProvider
@@ -112,11 +120,17 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->hasCommand(PruneAuditEntriesCommand::class)
             ->hasCommand(PruneNotificationsCommand::class)
             ->hasCommand(MakeDashboardCommand::class)
-            // The dashboard generator's template, publishable so an application
-            // can change what it produces — Laravel's own `stub:publish`
-            // convention, which the command honours by preferring
-            // `base_path('stubs/dashboard.stub')` over this one.
-            ->hasStubs(['../stubs/dashboard.stub'])
+            ->hasCommand(MakeWidgetCommand::class)
+            // The generators' templates, publishable so an application can
+            // change what they produce — Laravel's own `stub:publish`
+            // convention, which the commands honour by preferring
+            // `base_path('stubs/…')` over these. The widget generator writes two
+            // files, so it has two: the class and the Blade view it names.
+            ->hasStubs([
+                '../stubs/dashboard.stub',
+                '../stubs/widget.stub',
+                '../stubs/widget-view.stub',
+            ])
             // A provider the consumer owns, the way Cashier and Fortify ship
             // one: where an application registers its dashboards and declares
             // its navigation groups. Shipped as a .stub so the package's own
@@ -328,6 +342,35 @@ class WireCoreServiceProvider extends PackageServiceProvider
         //
         // A thin passthrough, the same as before: the whole expression goes to the
         // renderer, so an app may still narrow it to one package.
+        // `@wireRenderHook('panels.page.header.end', ['page' => $page])` — whatever
+        // an application registered for that position. Nothing registered is an
+        // empty string and one array lookup, so an unused position is free.
+        Blade::directive('wireRenderHook', static fn (string $expression): string => sprintf(
+            '<?php echo app(%s::class)->runRenderHook(%s); ?>',
+            '\\'.PluginManager::class,
+            $expression,
+        ));
+
+        // `@wireEl('admin-sidebar')` — the stable name an application styles this
+        // element by, as `data-wire="…"`. An attribute rather than a class
+        // because 143 elements build their class list with `@class([…])`, and a
+        // second `class` attribute is silently dropped by the browser.
+        Blade::directive('wireEl', static fn (string $expression): string => sprintf(
+            '<?php echo %s::render(%s); ?>',
+            '\\'.ElementHook::class,
+            $expression,
+        ));
+
+        // `@wireExtraAttributes($component)` — the component's `extraAttributes()`
+        // on its root tag. A directive rather than a partial because the field
+        // wrapper renders once per field of every form, and an `@include` there
+        // costs a view render per field (FormRenderCountTest measures it).
+        Blade::directive('wireExtraAttributes', static fn (string $expression): string => sprintf(
+            '<?php echo %s::for(%s)->toHtml(); ?>',
+            '\\'.ExtraAttributes::class,
+            $expression,
+        ));
+
         Blade::directive('wireStackScripts', static fn (string $expression): string => sprintf(
             '<?php echo app(%s::class)->tags(%s); ?>',
             '\\'.PackageAssets::class,
@@ -369,6 +412,20 @@ class WireCoreServiceProvider extends PackageServiceProvider
         $this->app->singleton(ValidationPipeline::class);
         $this->app->singleton(ActionRegistry::class);
         $this->app->singleton(MetadataRegistry::class);
+        $this->app->singleton(ActionCallbackInvoker::class);
+
+        // The way across a module boundary the layers forbid importing over: a
+        // widget carries actions, `Widgets` may not see `Actions`, so the widget
+        // host asks the container for the capability and this is what answers.
+        // Bound to the contract rather than to the class, so a consumer names
+        // `Foundation\Contracts\RunsComponentActions` and nothing else.
+        $this->app->singleton(RunsComponentActions::class, ComponentActionRunner::class);
+
+        // The same object under its other contract, and `singleton` on both would
+        // build it twice — one instance answering "may this run" and a different
+        // one running it. Aliased so the two questions and the answer are the
+        // same object, which is what a caller asking all three assumes.
+        $this->app->alias(RunsComponentActions::class, ClassifiesComponentActions::class);
 
         // ActionPipeline is transient — each execution gets a fresh instance
         $this->app->bind(ActionPipeline::class);
@@ -386,6 +443,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
         Blade::component('wire-actions::group', GroupComponent::class);
         Blade::component('wire-actions::bulk-button', BulkButtonComponent::class);
         Blade::component('wire-actions::modal-host', ModalHostComponent::class);
+        Blade::component('wire-actions::halt-host', HaltHostComponent::class);
     }
 
     // ─── Notifications ──────────────────────────────────────────
