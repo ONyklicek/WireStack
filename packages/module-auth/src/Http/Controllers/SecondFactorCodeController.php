@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\TwoFactorLoginResponse;
 use Laravel\Fortify\Events\TwoFactorAuthenticationFailed;
@@ -121,10 +122,48 @@ class SecondFactorCodeController extends Controller
      * The same `HttpResponseException` Fortify throws for the same state, rather
      * than a redirect return type on three methods: a bookmarked challenge URL
      * is not an error, it is a session that ended.
+     *
+     * **`login.id` is not permission to be here, and that was the bug.** Two
+     * different branches write that key: Fortify's own, for a user with a
+     * confirmed authenticator app, and {@see RedirectIfCodeRequired::codeChallengeResponse()},
+     * for a user this installation mails codes to. The session cannot tell them
+     * apart. So a challenge that asked only "is somebody half signed in" let the
+     * first kind answer with the second kind's factor — password right, ignore
+     * the redirect to Fortify's challenge, post to `send`, and an inbox stood in
+     * for the authenticator app the person deliberately set up.
+     *
+     * The same door reopened the one {@see CodeLoginController::handToTwoFactorChallenge()}
+     * had just shut: that method refuses to open a session for a TOTP user and
+     * writes `login.id` instead, and this screen turned it straight back into a
+     * mailed code.
+     *
+     * So the two questions the pipe asked on the way in are asked again here.
+     * They have to be: a route is reachable by anybody who knows its shape, and
+     * a check that only runs in the pipeline is a check the pipeline can be
+     * stepped around.
      */
     protected function ensureChallenged(TwoFactorLoginRequest $request): void
     {
         if (! $request->hasChallengedUser()) {
+            throw new HttpResponseException(redirect()->route('login'));
+        }
+
+        $user = $request->challengedUser();
+
+        // An authenticator app always wins (ADR 0037 §2). Sent to Fortify's own
+        // challenge rather than to the login form: this person *is* half signed
+        // in, they are simply owed a different question, and starting them over
+        // would punish them for a URL they should not have reached.
+        if (Codes::usesAuthenticatorApp($user)) {
+            throw new HttpResponseException(redirect()->to(
+                Route::has('two-factor.login') ? route('two-factor.login') : route('login'),
+            ));
+        }
+
+        // Off for this installation, or declined by this user through
+        // `ReceivesLoginCodes` (ADR 0037 §4). Neither factor is answerable here,
+        // so there is nothing to send them on to.
+        if (! Codes::wantedBy($user)) {
             throw new HttpResponseException(redirect()->route('login'));
         }
     }

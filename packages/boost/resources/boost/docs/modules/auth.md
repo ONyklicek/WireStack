@@ -220,7 +220,11 @@ working:
   of Fortify's own class to that contract. The credential check, the `Failed`
   event, the login throttle and the `login.id` session key are inherited
   untouched, and **an authenticator app always wins** — a user with a confirmed
-  TOTP secret goes to Fortify's challenge, not to a code.
+  TOTP secret goes to Fortify's challenge, not to a code. The mailed challenge
+  asks that question again for itself, rather than trusting that the pipeline
+  already did: both branches write the same `login.id`, so a screen that checked
+  only for a pending sign-in would let a TOTP user request a mailed code by
+  posting to it directly, and an inbox would stand in for the app they set up.
 - **The reset keeps the broker's token.** The mail carries a code; the code's row
   carries the token. Typing the code hands the request to Fortify's own
   `NewPasswordController` with the real token in it, so expiry, single use and
@@ -231,6 +235,9 @@ working:
   runs, so anything listening hears both ways in. The link keeps working.
 - **A code cannot walk past a second factor.** The passwordless flow ends at
   Fortify's two-factor challenge for anyone who has one. An inbox is one factor.
+  That hand-off leaves a pending sign-in behind on purpose, and the mailed
+  challenge refuses it for the same reason it was written — otherwise the very
+  next request would turn the refusal back into the code it refused.
 
 **What is stored is a hash.** A code is minted, hashed the way Laravel hashes a
 reset token, and filed under a *purpose* and an identifier — so a code mailed to

@@ -179,3 +179,79 @@ it('is switched off, and says why, when Fortify two-factor feature is off', func
     expect(Codes::secondFactor())->toBeFalse()
         ->and(Codes::secondFactorIsStranded())->toBeTrue();
 });
+
+it('will not mail a second factor to somebody Fortify challenged for their app', function () {
+    // The bypass this guard exists for, walked end to end rather than asserted
+    // at the pipeline. The old test stopped at "no code was sent on login",
+    // which was true and not enough: the pipe declined to send one, and the
+    // challenge screen would have sent it anyway to anybody who asked.
+    $user = CodeWorld::user([
+        'two_factor_secret' => encrypt('secret'),
+        'two_factor_confirmed_at' => now(),
+    ]);
+
+    $this->post('/login', ['email' => 'ann@example.com', 'password' => 'correct-horse'])
+        ->assertRedirect(route('two-factor.login'));
+
+    // The precondition of the attack: a pending sign-in is on the session, and
+    // it looks exactly like the one a mailed code would have written.
+    expect(session('login.id'))->toBe($user->getKey());
+
+    // Ignore that redirect and ask for a code anyway.
+    $this->post('/two-factor/code/send')->assertRedirect(route('two-factor.login'));
+    $this->get('/two-factor/code')->assertRedirect(route('two-factor.login'));
+
+    Notification::assertNothingSent();
+
+    // And no code can be typed in either, so a code from some earlier flow is
+    // not a way in either.
+    $this->post('/two-factor/code', ['code' => '123456'])
+        ->assertRedirect(route('two-factor.login'));
+
+    expect(auth()->check())->toBeFalse();
+});
+
+it('will not turn the passwordless hand-off to an app into a mailed code', function () {
+    // CodeLoginController refuses to open a session for a TOTP user and writes
+    // `login.id` instead. Without this guard the very next request converted
+    // that refusal into the thing it refused.
+    CodeWorld::enable(['second_factor' => true, 'login' => true]);
+
+    $user = CodeWorld::user([
+        'two_factor_secret' => encrypt('secret'),
+        'two_factor_confirmed_at' => now(),
+    ]);
+
+    $this->post('/login/code', ['email' => 'ann@example.com']);
+
+    $code = Notification::sent($user, OneTimeCodeNotification::class)->first()->code->code;
+
+    $this->post('/login/code/challenge', ['code' => $code])
+        ->assertRedirect(route('two-factor.login'));
+
+    expect(auth()->check())->toBeFalse()
+        ->and(session('login.id'))->toBe($user->getKey());
+
+    $this->post('/two-factor/code/send')->assertRedirect(route('two-factor.login'));
+
+    // Only the passwordless one, never a second-factor one.
+    Notification::assertSentToTimes($user, OneTimeCodeNotification::class, 1);
+    expect(auth()->check())->toBeFalse();
+});
+
+it('will not mail a second factor to a user who declined them', function () {
+    // No legitimate path leaves this state behind — the opt-out user walks
+    // straight through the pipeline — so the session is seeded directly. That is
+    // the point: the guard has to hold for a session key however it got there.
+    config()->set('auth.providers.users.model', OptOutUser::class);
+
+    $user = CodeWorld::user(model: OptOutUser::class);
+
+    session(['login.id' => $user->getKey()]);
+
+    $this->post('/two-factor/code/send')->assertRedirect(route('login'));
+    $this->get('/two-factor/code')->assertRedirect(route('login'));
+
+    Notification::assertNothingSent();
+    expect(auth()->check())->toBeFalse();
+});

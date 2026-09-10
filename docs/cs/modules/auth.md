@@ -221,7 +221,11 @@ právě ony drží zbytek instalace v chodu:
   potomka Fortifyho vlastní třídy. Kontrola hesla, událost `Failed`, throttling
   přihlášení i session klíč `login.id` se dědí beze změny — a **autentikátor vždy
   vyhrává**: uživatel s potvrzeným TOTP tajemstvím jde na výzvu Fortify, ne na
-  kód.
+  kód. Mailovaná výzva si tuhle otázku položí znovu sama, místo aby věřila, že ji
+  pipeline už vyřešila: obě větve zapisují stejné `login.id`, takže obrazovka,
+  která by kontrolovala jen rozpracované přihlášení, by uživateli s TOTP dovolila
+  vyžádat si mailovaný kód přímým požadavkem — a schránka by zastoupila aplikaci,
+  kterou si nastavil.
 - **Obnova hesla si nechává token brokeru.** V e-mailu je kód, v řádku kódu je
   token. Zadaný kód předá požadavek Fortifyho vlastnímu `NewPasswordController`
   i se skutečným tokenem, takže expirace, jednorázovost i `ResetsUserPasswords`
@@ -232,7 +236,10 @@ právě ony drží zbytek instalace v chodu:
   vlastní controller, takže cokoli naslouchá, uslyší obě cesty. Odkaz dál
   funguje.
 - **Kódem se nedá obejít druhý faktor.** Passwordless tok skončí u dvoufázové
-  výzvy Fortify pro každého, kdo ji má. Schránka je jeden faktor.
+  výzvy Fortify pro každého, kdo ji má. Schránka je jeden faktor. To předání
+  záměrně nechává za sebou rozpracované přihlášení a mailovaná výzva ho odmítne
+  ze stejného důvodu, kvůli kterému vzniklo — jinak by hned další požadavek
+  proměnil to odmítnutí zpět v kód, který odmítalo.
 
 **Uložený je hash.** Kód se vygeneruje, zahashuje stejně, jako Laravel hashuje
 token pro obnovu hesla, a založí se pod *účelem* a identifikátorem — takže kód
