@@ -5,7 +5,15 @@
 PROPOSED — 2026-09-05. Requested by the repo owner ("možnost přidávat hotové
 části jako balíčky"), with one constraint stated on top of it — **"balíček by měl
 přidávat, ne přepisovat"** — which §3 turns into the invariant the rest hangs
-from. Nothing implemented; sequenced in
+from.
+
+**Amended 2026-09-10** with [§5](#5-what-a-package-may-depend-on-and-where-that-stops-mattering),
+on the repo owner's reading of [ADR 0036](0036-native-submit-forms.md): *"module
+auth je nadstavba, takže může plně využívat možnosti wirestacku… to ADR by mělo
+[platit pro] vše kromě admin a modules."* The dependency rule this ADR implied —
+and `AI_BLUEPRINT.md` stated outright — was both unwritten here and untrue in the
+tree. §5 writes it down where it belongs and scopes it to where it earns its
+keep. Nothing implemented; sequenced in
 [`plans/v3-optional-admin-and-module-packages.md`](../plans/v3-optional-admin-and-module-packages.md).
 
 Extends [ADR 0014](0014-plugin-architecture.md) (plugin lifecycle) and the domain
@@ -192,6 +200,49 @@ Rejected alongside the `replace` map:
 It still is: a package registers itself through its own provider, which composer
 already discovers. Scanning `App\Modules\` for classes would be a second answer
 to a question the provider answers.
+
+### 5. What a package may depend on, and where that stops mattering
+
+The rule has two halves, and only the first is about layering.
+
+**Inside the stack, edges point down.** `wire-core → wire-forms → wire-table →
+wire-sortable → wire-panels → wire-admin` is a line, and a package may require
+only packages below it. This is the constraint that makes the graph readable:
+one upward or sideways edge and "what does installing this pull in" stops being
+answerable from the diagram. A behaviour two stack packages both want moves
+*down* to where both can see it — which is what `Foundation/` is for — rather
+than sideways through a new edge.
+
+**Above the line, the stack is fair game.** `wire-admin` and every
+`wire-module-*` are consumers of this framework in exactly the sense an
+application is. They may require anything in it and use all of it. So the
+question when a ready-made part wants a feature is **"does it work here"**, never
+"is this package allowed to ask for it" — the shape of the question ADR 0036
+answered at length for `wire-forms` on the sign-in screens.
+
+**This half is a correction, and the tree had already voted.** The blueprint said
+a module requires "nothing but `wire-panels`". Measured on 2026-09-10, all five
+domain modules require `wire-core`, `wire-forms`, `wire-table` **and**
+`wire-panels`; not one has ever obeyed the sentence. The only package the rule
+was ever enforced against is `wire-module-auth`, which is also the one whose
+screens are made of forms — so the rule cost exactly the thing it was never
+written to protect.
+
+**Two constraints survive above the line**, and both are about optionality rather
+than layering:
+
+- **No package may `require` `wire-admin`.** Nothing requires the shell — naming
+  the layout is the opt-in (ADR 0028) — so a module that required it could not be
+  installed by an application rendering its own frame. `suggest` says the same
+  thing without deciding it, which is what `wire-module-auth` already does.
+  `wire-suite` is the one exception, being the dependency list an installer runs.
+- **A module may not require another module.** "Install users" must not mean
+  "install media too". Something two modules share belongs in the stack below
+  them.
+
+**Enforced, not reviewed.** `tests/Integration/PackageGraphTest.php` reads every
+`packages/*/composer.json` and checks all four rules. A prose-only rule is what
+produced the sentence in the blueprint that nothing obeyed.
 
 ## Consequences
 

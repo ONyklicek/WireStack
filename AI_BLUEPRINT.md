@@ -42,13 +42,17 @@ package:
 ```text
 wire-suite ------> core, forms, table, sortable, panels, admin (+ `wire:install`)
 wire-admin        -> wire-panels -> wire-table -> wire-forms -> wire-core
-wire-module-*     -> wire-panels   (users, settings, audit, notifications, media)
-wire-module-auth  -> wire-core + laravel/fortify   (the screens on the way in)
+wire-module-*     -> the stack, as much of it as they use   (users, settings, audit, notifications, media)
+wire-module-auth  -> wire-core + wire-forms + laravel/fortify   (the screens on the way in)
 wire-sortable     -> wire-table
 wire-boost ------> wire-core   (companion AI tooling; suggests the rest)
 ```
 
-Dependency direction matters:
+Direction matters **inside** the stack, and stops mattering above it (ADR 0029
+§5). The line `core → forms → table → sortable → panels → admin` takes edges
+pointing down and no others; `wire-admin` and every `wire-module-*` sit on top of
+it as consumers, exactly as an application does, and may require and use all of
+it. `tests/Integration/PackageGraphTest.php` holds both halves.
 
 - `wire-core` is the shared foundation and must not depend on downstream
   packages.
@@ -61,14 +65,16 @@ Dependency direction matters:
 - `wire-admin` consumes `wire-panels` and sits at the top: the optional shell.
   Nothing requires it, which is what makes installing it the opt-in (ADR 0028).
 - `wire-module-*` are **modules**, not layers: business areas shipped as packages
-  (ADR 0029), each registering itself and requiring nothing but `wire-panels`.
-  `users` is the reference implementation; `settings`, `audit`, `notifications`
-  and `media` follow the same shape.
+  (ADR 0029), each registering itself. They take what they use — all five domain
+  modules require core, forms, table and panels — and the two limits on them are
+  about optionality, not layering: the shell is `suggest`, never `require`, and a
+  module never requires another module. `users` is the reference implementation;
+  `settings`, `audit`, `notifications` and `media` follow the same shape.
 - `wire-module-auth` shares the naming and not the shape: it declares no
   resources and no navigation, so it is **not** a `DomainModule` (ADR 0032). It
-  requires `wire-core` and `laravel/fortify`, and *suggests* the shell whose
-  frame its screens render in — a module above the shell would make the graph
-  above a set of exceptions.
+  requires `wire-core`, `wire-forms` — its screens are made of fields (ADR 0036)
+  — and `laravel/fortify`, and *suggests* the shell whose frame its screens
+  render in.
 - `wire-suite` is a meta-package: a dependency list plus `php artisan wire:install`.
   It ships no runtime code, and modules stay `suggest` rather than `require` —
   an application that wants users and nothing else should not carry a media
@@ -303,12 +309,18 @@ The signed-out surface, and the smallest package in the repo on purpose:
   **booted**, so an application provider can replace any one of them and keep the
   other six
 - seven Blade screens (login, register, forgot, reset, verify, confirm, the
-  two-factor challenge) and `user-menu.blade.php`, the sign-out row
+  two-factor challenge) and `user-menu.blade.php`, the sign-out row — each the
+  chrome around a form object: the `<form>`, the `@csrf`, the button, the links
 - `View\Screen` — the one seam between a screen and the frame it renders in
 - `Support\Frame` — which layout that is: `auto` borrows the shell's, or the
   application names its own, or `AuthFrameException` says which line to write
 - `Support\Screens` — the four feature questions and "is there a logout route",
   each asked of the switch that creates the route rather than of a copy
+- `Forms\AuthForms` + `Forms\AuthForm` — every screen's fields, declared in PHP.
+  They are `wire-forms` fields in native-submit mode (ADR 0036): the browser
+  still posts to Fortify, and no view contains an input. `extend(AuthForm, …)` is
+  where an application adds or replaces a field without publishing anything —
+  a container singleton, registered in `registeringPackage`
 
 It owns **no authentication**: the credential check, the throttle, the session
 regeneration, the reset tokens, the verification links, the TOTP window and the
@@ -320,6 +332,7 @@ it out.
 Start files:
 
 - `packages/module-auth/src/WireModuleAuthServiceProvider.php`
+- `packages/module-auth/src/Forms/AuthForms.php`
 - `packages/module-auth/src/Support/Frame.php`
 - `packages/module-auth/resources/views/screen.blade.php`
 

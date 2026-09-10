@@ -32,10 +32,17 @@ Use the smallest useful context first.
 ```text
 wire-suite ------> everything below (a meta-package, plus `php artisan wire:install`)
 wire-admin        -> wire-panels -> wire-table -> wire-forms -> wire-core
-wire-module-*     -> wire-panels   (users, settings, audit, notifications, media)
-wire-module-auth  -> wire-core + laravel/fortify   (screens, not a DomainModule)
+wire-module-*     -> the stack, as much of it as they use   (users, settings, audit, notifications, media)
+wire-module-auth  -> wire-core + wire-forms + laravel/fortify   (screens, not a DomainModule)
 wire-sortable     -> wire-table
 ```
+
+Edges point **down inside the stack** (`core → forms → table → sortable → panels
+→ admin`) and nowhere else. Above it, `wire-admin` and the modules are consumers
+like an application: they may require and use anything in the stack, with two
+limits that are about optionality rather than layering — the shell is `suggest`,
+never `require`, and no module requires another. ADR 0029 §5;
+`tests/Integration/PackageGraphTest.php` enforces it.
 
 `wire-admin` is the optional shell (layout + sidebar) and `wire-panels` the owner
 layer (resources, pages, routing). Nothing requires either — installing is the
@@ -278,8 +285,10 @@ npm run docs:refresh
 
 # Hook-name gate. `@wireEl('…')` names are public API an application styles by
 # (`[data-wire="…"]`), so this holds the promise the docs make about them: a
-# documented name exists, every name is kebab-case, and a name that shipped
-# keeps shipping. Ledger in scripts/hook-names.json — it may grow, not shrink.
+# documented name exists, every name is kebab-case, a name that shipped keeps
+# shipping, and each one sits inside an opening tag — one written a line too low
+# prints `data-wire="…"` into the page as text and still counts as rendered.
+# Ledger in scripts/hook-names.json — it may grow, not shrink.
 npm run hooks:verify
 npm run hooks:verify -- --verbose
 npm run hooks:names                  # record names you added
