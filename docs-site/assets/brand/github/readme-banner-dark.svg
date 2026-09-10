@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="280" viewBox="0 0 1200 280" role="img" aria-label="WireStack">
+  <rect width="1200" height="280" fill="#131210"/>
+  <g transform="translate(880 -90) scale(7)" opacity=".10"><path d="M52 12H20A10 10 0 0 0 20 32H44A10 10 0 0 1 44 52H12" fill="none" stroke="#f59e0b" stroke-width="7" stroke-linecap="round"/></g>
+  <g transform="translate(64 96) scale(1.35)"><path d="M52 12H20A10 10 0 0 0 20 32H44A10 10 0 0 1 44 52H12" fill="none" stroke="#f59e0b" stroke-width="7" stroke-linecap="round"/><circle cx="52" cy="12" r="4.6" fill="#f4f1ea"/><circle cx="12" cy="52" r="4.6" fill="#f4f1ea"/></g>
+  <text x="152" y="158" font-family="Archivo,'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="54" letter-spacing="-1.89"><tspan font-weight="500" fill="#a29a8c">wire</tspan><tspan font-weight="700" fill="#f4f1ea">Stack</tspan></text>
+  <text x="152" y="196" font-family="'JetBrains Mono',ui-monospace,Menlo,monospace" font-size="19" fill="#a29a8c">forms  ·  tables  ·  sortable  ·  panels  ·  admin  ·  modules</text>
+</svg>

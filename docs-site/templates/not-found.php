@@ -9,6 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
     <?php // Served for any unknown path at any depth, so every URL here is absolute.?>
+    <link rel="icon" href="<?= htmlspecialchars($assetPrefix.'assets/brand/favicon.svg', ENT_QUOTES) ?>" type="image/svg+xml">
+    <link rel="icon" href="<?= htmlspecialchars($assetPrefix.'assets/brand/favicon-32.png', ENT_QUOTES) ?>" sizes="32x32">
+    <link rel="apple-touch-icon" href="<?= htmlspecialchars($assetPrefix.'assets/brand/apple-touch-icon.png', ENT_QUOTES) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars($assetPrefix.'assets/site.css', ENT_QUOTES) ?>">
     <script>
         (function () {
@@ -25,7 +28,7 @@
 <body class="docs-body not-found-body">
     <main class="not-found">
         <a class="brand-link" href="<?= htmlspecialchars($assetPrefix, ENT_QUOTES) ?>">
-            <span class="brand-mark">W</span>
+            <?php include __DIR__.'/partials/brand-mark.php'; ?>
             <span class="brand-name">WireStack</span>
         </a>
         <p class="not-found-code">404</p>

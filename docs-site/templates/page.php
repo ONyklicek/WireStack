@@ -23,6 +23,9 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="icon" href="<?= htmlspecialchars(str_replace('site.css', 'brand/favicon.svg', $cssUrl), ENT_QUOTES) ?>" type="image/svg+xml">
+    <link rel="icon" href="<?= htmlspecialchars(str_replace('site.css', 'brand/favicon-32.png', $cssUrl), ENT_QUOTES) ?>" sizes="32x32">
+    <link rel="apple-touch-icon" href="<?= htmlspecialchars(str_replace('site.css', 'brand/apple-touch-icon.png', $cssUrl), ENT_QUOTES) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars($cssUrl, ENT_QUOTES) ?>">
     <script>
         // Remember the locale the visitor is actually reading — explicit
@@ -70,7 +73,7 @@ $nextPage = ($activeIndex !== null && isset($flatNav[$activeIndex + 1])) ? $flat
         <aside class="site-sidebar" data-sidebar>
             <div class="sidebar-header">
                 <a class="brand-link" href="<?= htmlspecialchars($homeUrl, ENT_QUOTES) ?>">
-                    <span class="brand-mark">W</span>
+                    <?php include __DIR__.'/partials/brand-mark.php'; ?>
                     <span class="brand-name">WireStack</span>
                 </a>
                 <button class="sidebar-close" type="button" data-nav-close aria-label="<?= htmlspecialchars($t('Close navigation'), ENT_QUOTES) ?>">

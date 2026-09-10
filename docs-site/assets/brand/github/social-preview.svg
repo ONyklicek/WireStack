@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-label="WireStack">
+  <rect width="1280" height="640" fill="#131210"/>
+  <g transform="translate(760 -70) scale(12)" opacity=".07"><path d="M52 12H20A10 10 0 0 0 20 32H44A10 10 0 0 1 44 52H12" fill="none" stroke="#f59e0b" stroke-width="7" stroke-linecap="round"/></g>
+  <g transform="translate(96 232) scale(1.7)"><path d="M52 12H20A10 10 0 0 0 20 32H44A10 10 0 0 1 44 52H12" fill="none" stroke="#f59e0b" stroke-width="7" stroke-linecap="round"/><circle cx="52" cy="12" r="4.6" fill="#f4f1ea"/><circle cx="12" cy="52" r="4.6" fill="#f4f1ea"/></g>
+  <text x="220" y="312" font-family="Archivo,'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="84" letter-spacing="-2.94"><tspan font-weight="500" fill="#a29a8c">wire</tspan><tspan font-weight="700" fill="#f4f1ea">Stack</tspan></text>
+  <text x="220" y="378" font-family="Archivo,'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="27" font-weight="500" fill="#a29a8c">Enterprise-grade Livewire components for Laravel</text>
+  <path d="M96 452H1184" stroke="#2b2722" stroke-width="2"/>
+  <text x="96" y="504" font-family="'JetBrains Mono',ui-monospace,Menlo,monospace" font-size="21" fill="#7d766c">14 packages<tspan fill="#3c372f">  ·  </tspan>Laravel 12 / 13<tspan fill="#3c372f">  ·  </tspan>Livewire 4<tspan fill="#3c372f">  ·  </tspan>PHP 8.2+</text>
+</svg>

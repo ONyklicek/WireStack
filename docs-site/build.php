@@ -283,6 +283,22 @@ $fieldExtraPreviews = [
 $renderedPages = [];
 $searchIndex = [];
 
+/*
+ * The share card every page falls back to.
+ *
+ * A page with no runtime screenshot used to emit no `og:image` at all, which
+ * drops the tweet, the Slack unfurl and the Discord embed to a bare title —
+ * the one place where the docs look unfinished to someone who has not opened
+ * them yet. The brand card is the honest answer there: it names the project
+ * rather than showing a screenshot that belongs to a different page.
+ *
+ * Empty when the build has no base URL, like every other absolute tag, so a
+ * local build never points at a site it is not.
+ */
+$brandCardUrl = $siteBaseUrl !== ''
+    ? $absoluteUrl('index.html', $localeSubdir).'assets/brand/github/social-preview.png'
+    : '';
+
 foreach ($pages as $page) {
     $content = renderMarkdownPage(
         markdown: $page['markdown'],
@@ -358,7 +374,7 @@ foreach ($pages as $page) {
         'ogDescription' => $content['excerpt'],
         'ogImage' => $previewUrl !== null && $siteBaseUrl !== ''
             ? $absoluteUrl('index.html', $localeSubdir).ltrim(preg_replace('#^(\.\./)+#', '', $previewUrl) ?? '', '/')
-            : '',
+            : $brandCardUrl,
         'searchIndexUrl' => relativeAssetPath($currentFile, $versionRoot.'/search-index.json'),
         'cssUrl' => relativeAssetPath($currentFile, $versionRoot.'/assets/site.css'),
         'jsUrl' => relativeAssetPath($currentFile, $versionRoot.'/assets/site.js'),
@@ -396,7 +412,7 @@ $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
     'alternateUrls' => $alternatesFor('index.html'),
     'ogTitle' => 'Wire Docs — '.$t('Forms, Tables & Sorting for Livewire'),
     'ogDescription' => $t('Complete static documentation for the Wire ecosystem: forms, tables, sortable, and core runtime, with real runtime preview screenshots.'),
-    'ogImage' => $siteBaseUrl !== '' ? $absoluteUrl('index.html', $localeSubdir).'assets/previews/table-overview.png' : '',
+    'ogImage' => $brandCardUrl,
     'searchIndexUrl' => 'search-index.json',
     'cssUrl' => 'assets/site.css',
     'jsUrl' => 'assets/site.js',
