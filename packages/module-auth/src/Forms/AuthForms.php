@@ -197,6 +197,65 @@ final class AuthForms
         ]);
     }
 
+    /** The address a sign-in code is mailed to. */
+    public function loginCode(): Form
+    {
+        return $this->build(AuthForm::LoginCode, [
+            $this->username()->autofocus(),
+        ]);
+    }
+
+    /**
+     * The digits from the mail.
+     *
+     * The same field as the authenticator challenge, and the same reasons: boxes
+     * because that is what a code looks like everywhere else, one named input
+     * behind them so the form still posts with JavaScript off, and never
+     * `required()` — a browser asked to validate a control Alpine has hidden
+     * refuses the submit and reports it nowhere.
+     *
+     * The length is read from config rather than fixed at six, because it is the
+     * length the store mints and the two have to agree: boxes for six digits in
+     * front of an eight-digit code is a form that cannot be completed.
+     */
+    public function code(): Form
+    {
+        return $this->build(AuthForm::Code, [
+            OtpInput::make('code')
+                ->label(__('wire-module-auth::messages.code'))
+                ->length(max(4, (int) config('wire-module-auth.codes.length', 6)))
+                ->numericOnly()
+                ->autofocus(),
+        ]);
+    }
+
+    /**
+     * A new password, from a code rather than a link.
+     *
+     * No token field: the token is what the code's row carries, and a screen
+     * that showed it would be a screen where the code was decoration. The
+     * address is filled in from the request that asked for the code and stays
+     * editable — somebody who asked in one browser and finished in another can
+     * still complete it.
+     */
+    public function resetPasswordCode(?string $email = null): Form
+    {
+        return $this->build(AuthForm::ResetPasswordCode, [
+            $this->username()->default($email),
+
+            OtpInput::make('code')
+                ->label(__('wire-module-auth::messages.code'))
+                ->length(max(4, (int) config('wire-module-auth.codes.length', 6)))
+                ->numericOnly(),
+
+            $this->password()
+                ->label(__('wire-module-auth::messages.new_password'))
+                ->autocomplete('new-password'),
+
+            $this->passwordConfirmation(),
+        ]);
+    }
+
     /**
      * The fields as declared, after everything registered has had its say.
      *

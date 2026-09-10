@@ -15,6 +15,20 @@
         </p>
     @endif
 
+    {{-- The other way to confirm, where the code flow is on: a mail whose link
+         a client rewrote is a dead end, and this is the way out of it. A form
+         rather than a link, because reaching that screen is what mails the
+         code. --}}
+    @if (\NyonCode\WireModuleAuth\Support\Codes::verifyEmail())
+        <form method="POST" action="{{ route('wire-auth.verify-email-code.send') }}" class="mb-4" data-testid="auth-verify-code-form" @wireEl('auth-verify-code-form')>
+            @csrf
+
+            <button type="submit" class="text-sm text-primary-600 hover:underline dark:text-primary-400" data-testid="auth-code-link" @wireEl('auth-code-link')>
+                {{ __('wire-module-auth::messages.code_verify_link') }}
+            </button>
+        </form>
+    @endif
+
     <div class="flex items-center justify-between gap-3">
         <form method="POST" action="{{ route('verification.send') }}" data-testid="auth-verify-form" @wireEl('auth-verify-form')>
             @csrf

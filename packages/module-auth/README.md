@@ -7,7 +7,8 @@
 
 The signed-out screens for [Wire](https://github.com/nyoncode) — login, password
 reset, e-mail verification and the two-factor challenge — over
-[Laravel Fortify](https://laravel.com/docs/fortify).
+[Laravel Fortify](https://laravel.com/docs/fortify), plus the one-time codes
+Fortify has no flow for.
 
 ```bash
 composer require nyoncode/wire-module-auth
@@ -32,6 +33,31 @@ point.
 Plus **Sign out**, contributed into the shell's user menu through
 `PageChrome::USER_MENU` — the entry every application used to hand-write into a
 layout slot.
+
+## One-time codes
+
+A six-digit code, mailed, where Fortify has no flow of its own. Four of them, and
+**every one is off until it is switched on** — an installation that says nothing
+gets no new routes, no new mail and no new table:
+
+| Flow | Switch | Screen |
+| --- | --- | --- |
+| Sign in with a code, no password | `codes.login` | `wire-auth.login-code` |
+| A second factor by mail | `codes.second_factor` | `wire-auth.second-factor` |
+| Confirm an address by code | `codes.verify_email` | `wire-auth.verify-email-code` |
+| A new password from a code | `codes.reset_password` | `wire-auth.reset-code` |
+
+Everything Fortify has an answer for keeps it: the mailed second factor is a
+subclass of Fortify's own login pipe bound to the contract Fortify resolves (so
+an authenticator app still wins), the reset keeps the broker's token — the code's
+row carries it — and confirming by code ends in `markEmailAsVerified()` and the
+`Verified` event, exactly as the signed link does. A code cannot walk past a
+second factor.
+
+The codes themselves are hashed, scoped to a purpose, expiring, attempt-counted
+and single-use, behind `Contracts\OneTimeCodes` — bind your own to keep them
+somewhere else. The whole of it is `docs/modules/auth.md` § One-Time Codes, and
+the reasoning is ADR 0037.
 
 ## What it does not own
 

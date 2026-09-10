@@ -4,15 +4,24 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleAuth;
 
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Blade;
+use Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable;
+use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Fortify;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Modules\Module;
 use NyonCode\WireCore\Foundation\View\PageChrome;
+use NyonCode\WireModuleAuth\Actions\MailResetCode;
+use NyonCode\WireModuleAuth\Actions\RedirectIfCodeRequired;
+use NyonCode\WireModuleAuth\Contracts\OneTimeCodes;
 use NyonCode\WireModuleAuth\Forms\AuthForms;
+use NyonCode\WireModuleAuth\Http\Responses\RedirectToResetCodeScreen;
 use NyonCode\WireModuleAuth\Install\LayoutScaffold;
+use NyonCode\WireModuleAuth\Services\DatabaseOneTimeCodes;
+use NyonCode\WireModuleAuth\Support\Codes;
 use NyonCode\WireModuleAuth\Support\Frame;
 use NyonCode\WireModuleAuth\Support\Screens;
 use NyonCode\WireModuleAuth\View\Screen;
@@ -52,22 +61,41 @@ class WireModuleAuthServiceProvider extends PackageServiceProvider
             ->hasShortName('wire-module-auth')
             ->hasConfig()
             ->hasViews()
+            ->hasRoutes()
+            ->hasMigrations()
             ->hasTranslations()
             // One registry for the whole signed-out surface, resolved before any
             // provider boots: an application adjusts a screen's fields in its
             // own `boot()`, and a second instance handed out there would collect
             // callbacks nothing renders.
-            ->registeringPackage(fn () => $this->app->singleton(AuthForms::class))
+            ->registeringPackage(function (): void {
+                $this->app->singleton(AuthForms::class);
+
+                // The store, bound in `register()` so an application's own
+                // provider — which registers later — can put a different one in
+                // front of it without racing this. `bind` rather than
+                // `singleton`: it holds no state, and a long-lived connection
+                // handle inside a container singleton is a queue worker's
+                // problem later.
+                $this->app->bind(OneTimeCodes::class, fn ($app) => new DatabaseOneTimeCodes($app->make('db')->connection()));
+            })
             ->bootedPackage(function (): void {
                 Blade::component('wire-module-auth::screen', Screen::class);
 
                 $this->registerScreens();
                 $this->registerSignOut();
+                $this->registerCodeFlows();
             })
             ->hasInstallCommand(function (InstallCommand $command): void {
                 $command
                     ->publishConfig()
                     ->publishTranslations()
+                    // Published rather than run from the package, like every
+                    // other table in this repository: what the codes are stored
+                    // in is the application's schema, and an application that
+                    // uses none of the flows should not be handed a table it
+                    // never asked for.
+                    ->publishMigrations()
                     ->afterInstallation(fn (InstallCommand $installer) => $this->reportEnvironment($installer));
             })
             ->hasAbout();
@@ -127,6 +155,39 @@ class WireModuleAuthServiceProvider extends PackageServiceProvider
     }
 
     /**
+     * Wire whichever code flows are switched on, and nothing else.
+     *
+     * Two of the four need no wiring at all — their routes are their whole
+     * surface — and the two here both work by *replacing a Fortify binding*
+     * rather than by adding a parallel path (ADR 0037 §2):
+     *
+     *  - the second factor binds the contract Fortify's own login pipeline
+     *    resolves, so the mailed code is inserted into that pipeline without a
+     *    copy of it existing anywhere;
+     *  - the reset flow replaces the mail Laravel's broker sends and the
+     *    response Fortify returns after sending it. The token, its expiry and
+     *    the reset itself are untouched.
+     *
+     * In `booted`, like the screens, so an application that binds its own wins.
+     */
+    protected function registerCodeFlows(): void
+    {
+        if (Codes::secondFactor()) {
+            $this->app->singleton(RedirectsIfTwoFactorAuthenticatable::class, RedirectIfCodeRequired::class);
+        }
+
+        if (Codes::resetPassword()) {
+            // Resolved when the mail is built, not now: the callback outlives
+            // this boot, and an application (or a test) that puts its own store
+            // in front of `OneTimeCodes` afterwards would otherwise be talking
+            // to one instance while the mail minted codes into another.
+            ResetPassword::toMailUsing(fn ($notifiable, string $token) => $this->app->make(MailResetCode::class)($notifiable, $token));
+
+            $this->app->bind(SuccessfulPasswordResetLinkRequestResponse::class, RedirectToResetCodeScreen::class);
+        }
+    }
+
+    /**
      * Say what this installation actually got, and what it still owes.
      *
      * Both halves are things an application would otherwise find out from a
@@ -136,6 +197,10 @@ class WireModuleAuthServiceProvider extends PackageServiceProvider
     protected function reportEnvironment(InstallCommand $command): void
     {
         $command->comment('  ✅ Fortify\'s screens are answered — login, reset, verification, two-factor');
+
+        foreach ($this->codeReport() as $line) {
+            $command->comment($line);
+        }
 
         $this->scaffoldLayout($command);
 
@@ -168,6 +233,40 @@ class WireModuleAuthServiceProvider extends PackageServiceProvider
         $command->comment((new LayoutScaffold($this->app->basePath()))->write()
             ? '  ✅ Wrote '.LayoutScaffold::PATH.' — your stylesheet loads on the sign-in screens'
             : '  ↩︎  '.LayoutScaffold::PATH.' already exists — left as it is');
+    }
+
+    /**
+     * What the code flows are, and the one way they can be on and useless.
+     *
+     * The stranded second factor is worth its own line: config says yes,
+     * Fortify's feature says no, and the consequence is a sign-in that asks for
+     * nothing. Reported rather than fixed here — turning Fortify's feature on
+     * from a package would bring its routes and its profile card with it, as a
+     * side effect of an unrelated switch (ADR 0037 §5).
+     *
+     * @return array<int, string>
+     */
+    protected function codeReport(): array
+    {
+        $lines = [];
+
+        if (Codes::secondFactorIsStranded()) {
+            $lines[] = '  ⚠️  Codes: the mailed second factor is on, but Fortify\'s two-factor feature is off — no code will be sent';
+        }
+
+        $flows = array_keys(array_filter([
+            'sign-in' => Codes::login(),
+            'second factor' => Codes::secondFactor(),
+            'address confirmation' => Codes::verifyEmail(),
+            'password reset' => Codes::resetPassword(),
+        ]));
+
+        if ($flows !== []) {
+            $lines[] = '  ✅ One-time codes: '.implode(', ', $flows);
+            $lines[] = '  • Run: php artisan migrate (the codes need their table)';
+        }
+
+        return $lines;
     }
 
     /**
@@ -209,6 +308,24 @@ class WireModuleAuthServiceProvider extends PackageServiceProvider
                 : (string) config('wire-module-auth.layout'),
             'Registration' => Screens::canRegister() ? 'open' : 'closed',
             'Two-factor' => Screens::hasTwoFactor() ? 'enabled' : 'off',
+            'One-time codes' => $this->codeSummary(),
         ];
+    }
+
+    /** The four switches in one line, and the one state that is a warning. */
+    protected function codeSummary(): string
+    {
+        if (Codes::secondFactorIsStranded()) {
+            return 'second factor on, but Fortify two-factor is off';
+        }
+
+        $flows = array_keys(array_filter([
+            'sign-in' => Codes::login(),
+            'second factor' => Codes::secondFactor(),
+            'verification' => Codes::verifyEmail(),
+            'reset' => Codes::resetPassword(),
+        ]));
+
+        return $flows === [] ? 'off' : implode(', ', $flows);
     }
 }

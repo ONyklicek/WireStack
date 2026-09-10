@@ -45,6 +45,16 @@
             {{ __('wire-module-auth::messages.sign_in') }}
         </x-wire::button>
 
+        {{-- The other way in, where there is one. Same rule as the reset link
+             above: the switch that draws it is the switch that routed it. --}}
+        @if (\NyonCode\WireModuleAuth\Support\Codes::login())
+            <p class="text-center text-sm">
+                <a href="{{ route('wire-auth.login-code') }}" class="text-primary-600 hover:underline dark:text-primary-400" data-testid="auth-code-link" @wireEl('auth-code-link')>
+                    {{ __('wire-module-auth::messages.code_login_link') }}
+                </a>
+            </p>
+        @endif
+
         @if (\NyonCode\WireModuleAuth\Support\Screens::canRegister())
             <p class="text-center text-sm text-gray-500 dark:text-gray-400">
                 <a href="{{ route('register') }}" class="text-primary-600 hover:underline dark:text-primary-400" data-testid="auth-register-link" @wireEl('auth-register-link')>

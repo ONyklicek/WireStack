@@ -28,15 +28,41 @@ function amInstall(callable $assertions): void
 {
     $written = [config_path('wire-module-auth.php'), base_path(LayoutScaffold::PATH)];
     $existed = array_values(array_filter($written, 'is_file'));
+    $migrations = amPublishedMigrations();
 
     try {
         $assertions(test()->artisan('wire-module-auth:install'));
     } finally {
+        amCleanMigrations($migrations);
+
         foreach (array_diff($written, $existed) as $path) {
             if (is_file($path)) {
                 unlink($path);
             }
         }
+    }
+}
+
+/**
+ * What the installer published into the skeleton's `database/migrations`.
+ *
+ * By glob, because the publisher stamps the file with the minute it ran and the
+ * path is not knowable in advance. Left behind, copies pile up and the *next*
+ * `migrate` fails on a table that already exists — in a run where the installer
+ * itself passed, which is the worst way to find out.
+ *
+ * @return array<int, string>
+ */
+function amPublishedMigrations(): array
+{
+    return glob(database_path('migrations/*create_wire_auth_one_time_codes_table.php')) ?: [];
+}
+
+/** @param array<int, string> $before */
+function amCleanMigrations(array $before): void
+{
+    foreach (array_diff(amPublishedMigrations(), $before) as $path) {
+        @unlink($path);
     }
 }
 
@@ -111,6 +137,7 @@ it('leaves a layout the application already edited alone', function () {
     $path = base_path(LayoutScaffold::PATH);
     @mkdir(dirname($path), 0755, true);
     file_put_contents($path, 'mine');
+    $migrations = amPublishedMigrations();
 
     try {
         $this->artisan('wire-module-auth:install')
@@ -121,9 +148,30 @@ it('leaves a layout the application already edited alone', function () {
         expect(file_get_contents($path))->toBe('mine');
     } finally {
         unlink($path);
+        amCleanMigrations($migrations);
 
         if (is_file(config_path('wire-module-auth.php'))) {
             unlink(config_path('wire-module-auth.php'));
         }
     }
+});
+
+it('names the code flows that are on, and the table they need', function () {
+    config()->set('wire-module-auth.codes.login', true);
+    config()->set('wire-module-auth.codes.verify_email', true);
+
+    amInstall(fn ($command) => $command
+        ->expectsOutputToContain('One-time codes: sign-in, address confirmation')
+        // Published rather than run from the package, so the line that makes
+        // them work has to be said out loud.
+        ->expectsOutputToContain('php artisan migrate'));
+});
+
+it('warns about a mailed second factor that will never be sent', function () {
+    // On in config, and impossible: the pipe that sends the code is a contract
+    // Fortify only resolves when its two-factor feature is on (ADR 0037 §5).
+    config()->set('wire-module-auth.codes.second_factor', true);
+    config()->set('fortify.features', []);
+
+    amInstall(fn ($command) => $command->expectsOutputToContain('Fortify\'s two-factor feature is off'));
 });

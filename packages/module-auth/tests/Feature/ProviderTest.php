@@ -2,16 +2,23 @@
 
 declare(strict_types=1);
 
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\View;
+use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Contracts\ConfirmPasswordViewResponse;
 use Laravel\Fortify\Contracts\LoginViewResponse;
+use Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Contracts\RegisterViewResponse;
 use Laravel\Fortify\Contracts\RequestPasswordResetLinkViewResponse;
 use Laravel\Fortify\Contracts\ResetPasswordViewResponse;
+use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Contracts\TwoFactorChallengeViewResponse;
 use Laravel\Fortify\Contracts\VerifyEmailViewResponse;
+use Laravel\Fortify\Features;
 use Laravel\Fortify\Http\Responses\SimpleViewResponse;
 use NyonCode\WireCore\Foundation\View\PageChrome;
+use NyonCode\WireModuleAuth\Actions\RedirectIfCodeRequired;
+use NyonCode\WireModuleAuth\Http\Responses\RedirectToResetCodeScreen;
 use NyonCode\WireModuleAuth\Support\Frame;
 use NyonCode\WireModuleAuth\WireModuleAuthServiceProvider;
 
@@ -148,4 +155,55 @@ it('says so in about when the application answers Fortify itself', function () {
     expect($data['Screens'])->toBe('left to the application')
         ->and($data['Registration'])->toBe('closed')
         ->and($data['Two-factor'])->toBe('off');
+});
+
+it('reports the code flows in about, and the one that cannot run', function () {
+    $provider = new WireModuleAuthServiceProvider(app());
+
+    expect($provider->aboutData()['One-time codes'])->toBe('off');
+
+    config()->set('wire-module-auth.codes.login', true);
+    config()->set('wire-module-auth.codes.verify_email', true);
+
+    expect($provider->aboutData()['One-time codes'])->toBe('sign-in, verification');
+
+    // The state a switch alone cannot express: on, and never going to happen,
+    // because Fortify's two-factor feature is what puts the pipe in the
+    // pipeline (ADR 0037 §5). Reported instead of "off", which would agree with
+    // the config and describe nothing.
+    config()->set('wire-module-auth.codes.second_factor', true);
+    config()->set('fortify.features', []);
+
+    expect($provider->aboutData()['One-time codes'])->toBe('second factor on, but Fortify two-factor is off');
+});
+
+it('binds Fortify two-factor pipe only where the mailed second factor is on', function () {
+    // The whole of the mailed second factor is this binding: Fortify's own login
+    // pipeline resolves the contract, so replacing it inserts a code without a
+    // copy of that pipeline existing anywhere (ADR 0037 §2).
+    expect(app()->make(RedirectsIfTwoFactorAuthenticatable::class))
+        ->toBeInstanceOf(RedirectIfTwoFactorAuthenticatable::class)
+        ->not->toBeInstanceOf(RedirectIfCodeRequired::class);
+
+    amRebootWith([
+        'wire-module-auth.codes.second_factor' => true,
+        'fortify.features' => [Features::twoFactorAuthentication()],
+    ]);
+
+    expect(app()->make(RedirectsIfTwoFactorAuthenticatable::class))->toBeInstanceOf(RedirectIfCodeRequired::class);
+});
+
+it('leaves Laravel reset mail alone until the reset flow is on', function () {
+    expect(ResetPassword::$toMailCallback)->toBeNull();
+
+    amRebootWith([
+        'wire-module-auth.codes.reset_password' => true,
+        'fortify.features' => [Features::resetPasswords()],
+    ]);
+
+    // A code in the mail, and Fortify's "we sent a link" response replaced by
+    // one that lands on a screen with a field for what the mail contains.
+    expect(ResetPassword::$toMailCallback)->not->toBeNull()
+        ->and(app()->make(SuccessfulPasswordResetLinkRequestResponse::class, ['status' => 'passwords.sent']))
+        ->toBeInstanceOf(RedirectToResetCodeScreen::class);
 });

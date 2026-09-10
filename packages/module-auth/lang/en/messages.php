@@ -56,4 +56,44 @@ return [
     'recovery_code' => 'Recovery code',
     'use_recovery_code' => 'Use a recovery code instead',
     'use_authentication_code' => 'Use an authentication code instead',
+
+    // One-time codes, wherever a code stands in for something else (ADR 0037).
+    'code_login_heading' => 'Sign in with a code',
+    'code_login_description' => 'Tell us the address you sign in with and we will mail you a code.',
+    'code_login_link' => 'Sign in with a code instead',
+    'code_send' => 'Mail me a code',
+    'code_heading' => 'Enter your code',
+    'code_description' => 'Type the code from the mail we just sent.',
+    'code_description_address' => 'Type the code we sent to :address.',
+    'code_continue' => 'Continue',
+    'code_resend' => 'Send it again',
+    'code_restart' => 'Ask for a new code',
+    'code_sent' => 'If that address is one of ours, the code is on its way.',
+    'code_sent_recently' => 'A code has just gone out — give it a moment before asking for another.',
+    'code_invalid' => 'That code is wrong or has expired.',
+    'code_verify_link' => 'Type a code instead',
+    'code_reset_description' => 'Type the code from the mail, then choose a password you have not used here before.',
+
+    // The mail each code arrives in. One wording per purpose: a shared template
+    // that tries to be all four reads like none of them.
+    'code_mail' => [
+        'expires' => 'The code is good for :minutes minutes.',
+        'ignore' => 'If you did not ask for this, you can ignore this message.',
+        'login' => [
+            'subject' => 'Your sign-in code',
+            'line' => 'Here is the code that signs you in:',
+        ],
+        'second_factor' => [
+            'subject' => 'Your sign-in code',
+            'line' => 'Your password was right. Here is the second half:',
+        ],
+        'verify_email' => [
+            'subject' => 'Confirm your e-mail address',
+            'line' => 'Type this code on the confirmation screen:',
+        ],
+        'reset_password' => [
+            'subject' => 'Your password reset code',
+            'line' => 'Type this code to set a new password:',
+        ],
+    ],
 ];

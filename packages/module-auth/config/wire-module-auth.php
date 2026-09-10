@@ -65,4 +65,79 @@ return [
     */
     'user_menu' => env('WIRE_AUTH_USER_MENU', true),
 
+    /*
+    |--------------------------------------------------------------------------
+    | One-Time Codes
+    |--------------------------------------------------------------------------
+    |
+    | Four things a six-digit code mailed to somebody can stand in for, and each
+    | one is its own switch because each one is a different decision about the
+    | same trade: a code is only as strong as the inbox it lands in (ADR 0037).
+    |
+    |   login           sign in with a code and no password at all. A user with
+    |                   an authenticator app is still challenged for it — a code
+    |                   to an inbox must not be the way around a second factor.
+    |   second_factor   a code after a correct password, for people who have no
+    |                   authenticator app. **Needs Fortify's two-factor feature
+    |                   to be on**: the pipe that sends the code is the contract
+    |                   Fortify only puts in its login pipeline when it is, and
+    |                   with the feature off no code is ever sent. `php artisan
+    |                   about` reports that state rather than printing "off".
+    |   verify_email    confirm an address by typing a code. The signed link
+    |                   Fortify mails keeps working beside it.
+    |   reset_password  the reset mail carries a code instead of a link. The
+    |                   broker's token is untouched underneath — the code's row
+    |                   carries it — so expiry and single use stay Laravel's.
+    |
+    | Everything is off until it is switched on: an installation that says
+    | nothing here gets no new routes and no new mail.
+    |
+    | Who gets the mailed second factor is the user model's answer first: a model
+    | implementing `Contracts\ReceivesLoginCodes` decides per user, and one that
+    | does not leaves the switch below answering for everybody without a
+    | confirmed authenticator app.
+    |
+    */
+    'codes' => [
+
+        'login' => env('WIRE_AUTH_CODE_LOGIN', false),
+        'second_factor' => env('WIRE_AUTH_CODE_SECOND_FACTOR', false),
+        'verify_email' => env('WIRE_AUTH_CODE_VERIFY_EMAIL', false),
+        'reset_password' => env('WIRE_AUTH_CODE_RESET_PASSWORD', false),
+
+        /*
+        | How many digits, and how long they are worth anything. Ten minutes is
+        | long enough to read a mail on a phone and type it on a laptop, and
+        | short enough that a code left open in an inbox is not a spare key.
+        */
+        'length' => env('WIRE_AUTH_CODE_LENGTH', 6),
+        'expires' => env('WIRE_AUTH_CODE_EXPIRES', 10),
+
+        /*
+        | Wrong guesses before the code itself is thrown away, and the seconds a
+        | "send it again" button waits before it does anything. The first is what
+        | makes six digits acceptable — the route throttle counts an address and
+        | an IP, and neither of those is the thing being guessed. The second
+        | stops a leaned-on button mailing five codes of which four are dead.
+        */
+        'attempts' => env('WIRE_AUTH_CODE_ATTEMPTS', 5),
+        'resend_after' => env('WIRE_AUTH_CODE_RESEND_AFTER', 60),
+
+        /*
+        | The rate limiter on every route that takes digits or sends a mail, in
+        | Laravel's `attempts,minutes` form. Its own rather than Fortify's login
+        | limiter: a mistyped code should not spend the budget that belongs to
+        | the password form.
+        */
+        'throttle' => env('WIRE_AUTH_CODE_THROTTLE', '6,1'),
+
+        /*
+        | Where the codes live. Hashed, one row per purpose and identifier, and
+        | swept by expiry — an application that would rather keep them somewhere
+        | else binds `Contracts\OneTimeCodes` to its own store instead.
+        */
+        'table' => env('WIRE_AUTH_CODE_TABLE', 'wire_auth_one_time_codes'),
+
+    ],
+
 ];
