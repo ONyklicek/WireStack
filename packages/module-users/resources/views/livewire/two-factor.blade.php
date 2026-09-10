@@ -56,22 +56,13 @@
                     @endif
                 </div>
 
-                <div class="max-w-xs space-y-1">
-                    <label for="two-factor-code" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                        {{ __('wire-module-users::messages.two_factor_code') }}
-                    </label>
-                    <input
-                        id="two-factor-code"
-                        type="text"
-                        inputmode="numeric"
-                        autocomplete="one-time-code"
-                        wire:model="code"
-                        data-testid="two-factor-code" @wireEl('two-factor-code')
-                        class="block w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                    >
-                    @error('code')
-                        <p class="text-red-600 dark:text-red-400 text-sm">{{ $message }}</p>
-                    @enderror
+                {{-- The same field the challenge on the way in draws, rather
+                     than a second opinion about what a six-digit code looks
+                     like: `wire-forms`' OtpInput, bound straight to this
+                     component's `$code` (ADR 0037 §6). The label, the error and
+                     the numeric keypad come with it. --}}
+                <div class="max-w-xs" data-testid="two-factor-code" @wireEl('two-factor-code')>
+                    {{ $this->codeField() }}
                 </div>
             @endif
 

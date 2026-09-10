@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Notifications\NotificationManager;
+use NyonCode\WireForms\Components\OtpInput;
+use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireModuleUsers\Support\TwoFactor;
 use Throwable;
 
@@ -43,6 +45,26 @@ class TwoFactorAuthentication extends Component implements IdentifiesHookTarget
 
     /** Whether the recovery codes are on screen. Never on by default. */
     public bool $showingRecoveryCodes = false;
+
+    /**
+     * The box the setup code is typed into — the same field as the challenge.
+     *
+     * It used to be a hand-written `<input autocomplete="one-time-code">`, three
+     * clicks away from the screen on the way in that draws six boxes for the
+     * same six digits (ADR 0037 §6). One field, one behaviour: the boxes advance
+     * themselves, a pasted code fills the row, and the value still arrives in
+     * `$code` because with no state path the binding is this component's own
+     * property.
+     */
+    public function codeField(): Form
+    {
+        return Form::make()->schema([
+            OtpInput::make('code')
+                ->label(__('wire-module-users::messages.two_factor_code'))
+                ->length(6)
+                ->numericOnly(),
+        ]);
+    }
 
     public function enable(): void
     {

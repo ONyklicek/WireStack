@@ -119,6 +119,23 @@ it('shows the code to scan and the key to type, and finishes on a right code', f
         ->and($component->instance()->recoveryCodes())->not->toBeEmpty();
 });
 
+it('asks for the code in the same boxes as the screen on the way in', function () {
+    // ADR 0037 §6: one field for a six-digit code, everywhere one is typed. This
+    // card used to draw a plain text input while the challenge three clicks away
+    // drew boxes that advance themselves and take a pasted code apart.
+    signedIn();
+
+    Livewire::test(TwoFactorAuthentication::class)
+        ->call('enable')
+        ->assertSee('data-testid="form-otp-code-0"', false)
+        // Still this component's own property: a field with no state path binds
+        // to the name it was made with, so the boxes write into `$code` rather
+        // than into a form's state array that nothing here reads.
+        ->assertSee('statePath: \'code\'', false)
+        ->set('code', '123456')
+        ->assertSet('code', '123456');
+});
+
 it('keeps the pending state on a wrong code, and says so', function () {
     $user = signedIn();
 
