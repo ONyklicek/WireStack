@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\View;
 
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
+use NyonCode\WireCore\Foundation\Concerns\ResolvesColorClasses;
 
 /**
  * The palette, as a class a Blade file may actually call.
@@ -22,5 +23,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasColor;
  */
 final class Palette
 {
-    use HasColor;
+    // The static half only: this class has no colour of its own to answer
+    // `getColor()` with, and {@see HasColor}'s instance helpers all read one.
+    use ResolvesColorClasses;
 }

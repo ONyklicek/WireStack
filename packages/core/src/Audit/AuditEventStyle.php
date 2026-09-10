@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Audit;
 
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
+use NyonCode\WireCore\Foundation\Concerns\ResolvesColorClasses;
 
 /**
  * What an audit event looks like — its palette role and its glyph, named once.
@@ -35,8 +36,12 @@ final class AuditEventStyle
      * A Blade file asking `HasColor::…` directly is calling a static method on a
      * trait, which PHP 8.1 deprecated; more to the point, the timeline wants to
      * ask what an *event* looks like, not what a colour resolves to.
+     *
+     * The static half alone ({@see ResolvesColorClasses}): this class has no
+     * colour of its own — it answers for an *event* — so `HasColor`'s instance
+     * helpers, which all read `$this->getColor()`, have nothing to read here.
      */
-    use HasColor;
+    use ResolvesColorClasses;
 
     /**
      * Event type → [palette role, icon].

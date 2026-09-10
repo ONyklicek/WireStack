@@ -26,7 +26,14 @@ use Illuminate\Contracts\Support\Htmlable;
  */
 final class ExtraAttributes implements Htmlable
 {
-    /** @param array<string, mixed> $attributes */
+    /**
+     * `array-key`, not `string`, and that is the point of the guard in
+     * {@see self::toHtml()}: PHP casts a decimal-string key to an int on the way
+     * into an array, so `extraAttributes(['0' => 'x'])` arrives here keyed `0`.
+     * A name that is not a string is not an attribute name.
+     *
+     * @param  array<array-key, mixed>  $attributes
+     */
     private function __construct(private readonly array $attributes) {}
 
     /**
@@ -53,7 +60,7 @@ final class ExtraAttributes implements Htmlable
      * A table column is the one: it stores what an author passed and hands the
      * cell a string, so it reaches this from the other end.
      *
-     * @param  array<string, mixed>  $attributes
+     * @param  array<array-key, mixed>  $attributes
      */
     public static function fromArray(array $attributes): self
     {

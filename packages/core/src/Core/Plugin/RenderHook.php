@@ -19,9 +19,10 @@ use Closure;
  *     RenderHook::add('panels.page.header.end', fn () => view('badges.beta'));
  *     RenderHook::add('table.toolbar.end', fn (array $scope) => view('export', $scope));
  *
- * and in a view:
- *
- *     @wireRenderHook('panels.page.header.end', ['page' => $page])
+ * and in a view, `@wireRenderHook('panels.page.header.end', ['page' => $page])`
+ * — written inline here rather than as its own line, because a docblock line
+ * that opens with `@` is a tag, and a tag whose value is PHP is one no parser
+ * can read.
  *
  * Registration is {@see PluginManager}'s, not a second registry: priorities and
  * the `for:` scoping that decides which resource a callback applies to are the
