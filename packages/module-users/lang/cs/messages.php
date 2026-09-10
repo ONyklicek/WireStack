@@ -81,4 +81,6 @@ return [
     'passkey_remove_confirm' => 'Odebrat tenhle passkey? Přihlášení tím zařízením přestane fungovat.',
     'passkey_removed' => 'Passkey byl odebrán.',
     'passkey_failed' => 'Nepovedlo se. Zkuste to znovu, nebo použijte heslo.',
+    'password_confirmation_required' => 'Z bezpečnostních důvodů před změnou nebo zobrazením těchto nastavení potvrďte své heslo.',
+    'password_confirmation_link' => 'Potvrdit heslo',
 ];

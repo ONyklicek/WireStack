@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithPasswordConfirmation;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireForms\Components\OtpInput;
 use NyonCode\WireForms\Forms\Form;
@@ -40,6 +41,14 @@ use Throwable;
  */
 class TwoFactorAuthentication extends Component implements IdentifiesHookTarget
 {
+    /**
+     * Every state change and every reveal on this card sits behind a recently
+     * confirmed password, because Fortify's own routes for these actions do.
+     * Driving its actions out of the container reaches them around that guard,
+     * so the guard is re-stated here rather than lost. See the trait.
+     */
+    use InteractsWithPasswordConfirmation;
+
     /** The code typed in to finish the setup. */
     public string $code = '';
 
@@ -68,6 +77,10 @@ class TwoFactorAuthentication extends Component implements IdentifiesHookTarget
 
     public function enable(): void
     {
+        if (! $this->ensurePasswordConfirmed()) {
+            return;
+        }
+
         if (! $this->run(TwoFactor::ENABLE_ACTION)) {
             return;
         }
@@ -81,6 +94,10 @@ class TwoFactorAuthentication extends Component implements IdentifiesHookTarget
 
     public function confirm(): void
     {
+        if (! $this->ensurePasswordConfirmed()) {
+            return;
+        }
+
         $user = $this->user();
 
         if ($user === null) {
@@ -109,6 +126,10 @@ class TwoFactorAuthentication extends Component implements IdentifiesHookTarget
 
     public function disable(): void
     {
+        if (! $this->ensurePasswordConfirmed()) {
+            return;
+        }
+
         if (! $this->run(TwoFactor::DISABLE_ACTION)) {
             return;
         }
@@ -121,6 +142,10 @@ class TwoFactorAuthentication extends Component implements IdentifiesHookTarget
 
     public function regenerateRecoveryCodes(): void
     {
+        if (! $this->ensurePasswordConfirmed()) {
+            return;
+        }
+
         if (! $this->run(TwoFactor::GENERATE_CODES_ACTION)) {
             return;
         }
@@ -132,6 +157,10 @@ class TwoFactorAuthentication extends Component implements IdentifiesHookTarget
 
     public function toggleRecoveryCodes(): void
     {
+        if (! $this->ensurePasswordConfirmed()) {
+            return;
+        }
+
         $this->showingRecoveryCodes = ! $this->showingRecoveryCodes;
     }
 
@@ -163,7 +192,10 @@ class TwoFactorAuthentication extends Component implements IdentifiesHookTarget
     {
         $user = $this->user();
 
-        if ($user === null || ! TwoFactor::pending($user)) {
+        // Read on every render, so it asks rather than redirects: a stale window
+        // hides the secret and the card says why, instead of bouncing somebody
+        // off a page they only opened to look at.
+        if ($user === null || ! TwoFactor::pending($user) || ! $this->hasConfirmedPasswordRecently()) {
             return null;
         }
 
@@ -185,7 +217,11 @@ class TwoFactorAuthentication extends Component implements IdentifiesHookTarget
     {
         $user = $this->user();
 
-        if ($user === null || ! $this->showingRecoveryCodes || $user->getAttribute('two_factor_recovery_codes') === null) {
+        if ($user === null || ! $this->showingRecoveryCodes || ! $this->hasConfirmedPasswordRecently()) {
+            return [];
+        }
+
+        if ($user->getAttribute('two_factor_recovery_codes') === null) {
             return [];
         }
 
@@ -213,6 +249,9 @@ class TwoFactorAuthentication extends Component implements IdentifiesHookTarget
             'qrCode' => $this->qrCodeSvg(),
             'setupKey' => $this->setupKey(),
             'codes' => $this->recoveryCodes(),
+            // The card explains a stale window rather than silently missing a QR.
+            'needsPasswordConfirmation' => ! $this->hasConfirmedPasswordRecently(),
+            'passwordConfirmationUrl' => $this->passwordConfirmationUrl(),
         ]);
     }
 

@@ -13,6 +13,20 @@
     >
         @include('wire-core::partials.passkey-assets')
 
+        {{-- A stale confirmation hides the secret and refuses every button, so
+             the card says so. Without this the panel looks broken rather than
+             careful: the QR simply is not there and nothing explains why. --}}
+        @if ($needsPasswordConfirmation)
+            <p class="mb-4 text-sm text-amber-700 dark:text-amber-400" data-testid="passkeys-needs-password">
+                {{ __('wire-module-users::messages.password_confirmation_required') }}
+                @if ($passwordConfirmationUrl)
+                    <a href="{{ $passwordConfirmationUrl }}" class="font-medium underline">
+                        {{ __('wire-module-users::messages.password_confirmation_link') }}
+                    </a>
+                @endif
+            </p>
+        @endif
+
         <div class="space-y-4">
             {{-- The keys themselves. "None yet" is a state worth drawing: a
                  person who has just switched this on has to be able to tell an

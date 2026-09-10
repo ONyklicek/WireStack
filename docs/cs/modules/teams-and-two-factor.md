@@ -368,6 +368,29 @@ volitelných půlek tahle instalace opravdu dostala:
 | Přihlášení, registrace, reset hesla, ověření e-mailu | Fortify nebo Breeze | nic — viz [admin shell](../admin/overview.md) |
 | Týmy samotné: tabulka, model, členství | vaše aplikace | přepínač nad tím, co už máte |
 
+### Změna dvoufázového ověření nebo passkeys si znovu vyžádá heslo
+
+Fortify dává `password.confirm` na každou route, která vypíná dvoufázové
+ověření, čte záložní kód nebo odebírá passkey — a má to ve výchozím stavu
+zapnuté. Tyto karty ovšem volají Fortify akce přes Livewire, čímž se k nim
+dostanou **mimo** ten middleware — takže je ta pojistka zopakovaná přímo na
+kartě, místo aby se ztratila. Kdo drží vypůjčenou session, nevypne druhý faktor,
+nepřečte TOTP secret ani nesmaže passkey, aniž by znal heslo, které to všechno
+chrání.
+
+Čte se stejné okno, jaké zapisuje Laravelí vlastní `RequirePassword` —
+`auth.password_confirmed_at` proti `auth.password_timeout` — takže potvrzení
+hesla kdekoli v aplikaci vyhoví všem těmto místům a timeout se nastavuje na
+jediném místě:
+
+```php
+// config/auth.php
+'password_timeout' => 10800, // v sekundách; Laravel má ve výchozím stavu tři hodiny [tl! focus]
+```
+
+Mimo toto okno tlačítka přesměrují na obrazovku pro potvrzení hesla a karta
+řekne proč, místo aby tiše zobrazila prázdný panel.
+
 ## Související
 
 - [Modul uživatelů](users.md) — stránka profilu, na které tyhle karty žijí

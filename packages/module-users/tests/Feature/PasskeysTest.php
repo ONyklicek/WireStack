@@ -16,6 +16,7 @@ use NyonCode\WireModuleUsers\Pages\EditProfile;
 use NyonCode\WireModuleUsers\Support\Passkeys;
 use NyonCode\WireModuleUsers\Tests\Fixtures\AvatarUser;
 use NyonCode\WireModuleUsers\Tests\Fixtures\User;
+use NyonCode\WireModuleUsers\Tests\Support\Access;
 
 /*
  * The passkey card, over `laravel/passkeys`.
@@ -62,6 +63,9 @@ function passkeyUser(string $model = User::class): mixed
     ]);
 
     test()->actingAs($user);
+
+    // Removing a key needs a confirmed password; the guard has its own test.
+    Access::confirmPassword();
 
     return $user;
 }

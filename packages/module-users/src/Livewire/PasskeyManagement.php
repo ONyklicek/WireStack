@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithPasswordConfirmation;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireModuleUsers\Support\Passkeys;
 
@@ -33,6 +34,14 @@ use NyonCode\WireModuleUsers\Support\Passkeys;
  */
 class PasskeyManagement extends Component implements IdentifiesHookTarget
 {
+    /**
+     * Removing a key sits behind a recently confirmed password, because
+     * `laravel/passkeys` puts `password.confirm` on its own management routes
+     * and defaults it on. Registering does not need the same line here — that
+     * ceremony *is* those routes, so it is already guarded where it happens.
+     */
+    use InteractsWithPasswordConfirmation;
+
     /** The label a new key is offered under, and the only thing anybody types. */
     public string $name = '';
 
@@ -59,6 +68,10 @@ class PasskeyManagement extends Component implements IdentifiesHookTarget
      */
     public function forget(int|string $passkey): void
     {
+        if (! $this->ensurePasswordConfirmed()) {
+            return;
+        }
+
         $user = $this->user();
 
         if ($user === null || ! Passkeys::usable($user) || ! class_exists(Passkeys::DELETE_ACTION)) {
@@ -96,6 +109,10 @@ class PasskeyManagement extends Component implements IdentifiesHookTarget
             // its absence is silent everywhere else: the routes exist, the
             // button works, and the key it registers belongs to nobody.
             'usable' => Passkeys::usable($user),
+            // Same as the two-factor card: the reason a delete button will not
+            // work is worth saying before it is pressed.
+            'needsPasswordConfirmation' => ! $this->hasConfirmedPasswordRecently(),
+            'passwordConfirmationUrl' => $this->passwordConfirmationUrl(),
         ]);
     }
 

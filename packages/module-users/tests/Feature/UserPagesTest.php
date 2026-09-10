@@ -22,6 +22,7 @@ use NyonCode\WireModuleUsers\Support\Roles;
 use NyonCode\WireModuleUsers\Tests\Fixtures\AvatarUser;
 use NyonCode\WireModuleUsers\Tests\Fixtures\SpatieOnlyUser;
 use NyonCode\WireModuleUsers\Tests\Fixtures\User;
+use NyonCode\WireModuleUsers\Tests\Support\Access;
 use NyonCode\WireModuleUsers\WireModuleUsersServiceProvider;
 use Spatie\Permission\Models\Role;
 
@@ -34,6 +35,11 @@ use Spatie\Permission\Models\Role;
  */
 
 beforeEach(function () {
+    // These screens require an ability now. What they are *about* is the form
+    // and the list, so they run as somebody who is allowed; the guard has its
+    // own tests, which deliberately do not do this.
+    Access::grantEveryAbility();
+
     Schema::create('users', function (Blueprint $table) {
         $table->id();
         $table->string('name');
@@ -233,6 +239,9 @@ it('reports the model it works over and whether roles are part of it', function 
     // indistinguishable from a broken package until something says so.
     expect($provider->aboutData())->toBe([
         'User model' => User::class,
+        // Guarded by default now, and reported: an installation that opened
+        // these screens should be able to see that it did.
+        'Permissions' => 'all screens guarded',
         'Roles' => 'enabled',
         'Avatars' => 'off',
         'Two-factor' => 'off',

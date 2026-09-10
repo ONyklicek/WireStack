@@ -81,4 +81,6 @@ return [
     'passkey_remove_confirm' => 'Remove this passkey? Signing in with that device will stop working.',
     'passkey_removed' => 'The passkey was removed.',
     'passkey_failed' => 'That did not work. Try again, or use your password.',
+    'password_confirmation_required' => 'For your security, confirm your password before changing or revealing these settings.',
+    'password_confirmation_link' => 'Confirm your password',
 ];

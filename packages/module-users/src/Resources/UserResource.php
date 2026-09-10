@@ -29,6 +29,7 @@ use NyonCode\WireModuleUsers\Pages\EditUser;
 use NyonCode\WireModuleUsers\Pages\ListUsers;
 use NyonCode\WireModuleUsers\Pages\ViewUser;
 use NyonCode\WireModuleUsers\Support\Avatars;
+use NyonCode\WireModuleUsers\Support\Permissions;
 use NyonCode\WireModuleUsers\Support\Roles;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
 use NyonCode\WireTable\Columns\ImageColumn;
@@ -75,18 +76,31 @@ class UserResource implements DescribesResource, ProvidesNavigation, ProvidesPag
         return __('wire-module-users::messages.users');
     }
 
+    /**
+     * The screens, each behind the ability it needs.
+     *
+     * Administrative by default rather than open — this form sets other people's
+     * passwords and assigns their roles, so `auth` alone is not a guard, it is
+     * an audience. `wire-module-users.permissions` names each ability and null
+     * on any of them opens that screen again.
+     *
+     * `profile` is the exception and stays bare: it is the signed-in person's
+     * own account, resolved from `Auth::user()` rather than from the URL, so an
+     * administrative ability in front of it would lock everybody out of their
+     * own password and two-factor settings.
+     */
     public static function pages(): array
     {
         return [
-            'index' => ListUsers::class,
-            'create' => CreateUser::class,
+            'index' => Permissions::page(ListUsers::class, 'users', 'viewAny'),
+            'create' => Permissions::page(CreateUser::class, 'users', 'create'),
             // Before `view`, and the order is load-bearing: an unknown page key
             // routes at `{prefix}/{name}`, so `users/profile` and the
             // `users/{record}` this sits above are the same URL shape. Declared
             // after it, "profile" would be looked up as a user's key and 404.
             'profile' => EditProfile::class,
-            'view' => ViewUser::class,
-            'edit' => EditUser::class,
+            'view' => Permissions::page(ViewUser::class, 'users', 'view'),
+            'edit' => Permissions::page(EditUser::class, 'users', 'update'),
         ];
     }
 

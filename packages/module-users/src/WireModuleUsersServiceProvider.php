@@ -12,6 +12,7 @@ use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireModuleUsers\Http\Middleware\SetCurrentTeam;
 use NyonCode\WireModuleUsers\Support\Avatars;
+use NyonCode\WireModuleUsers\Support\Permissions;
 use NyonCode\WireModuleUsers\Support\Roles;
 use NyonCode\WireModuleUsers\Support\Teams;
 use NyonCode\WireModuleUsers\Support\TwoFactor;
@@ -135,6 +136,8 @@ class WireModuleUsersServiceProvider extends PackageServiceProvider
     {
         $command->comment('  ✅ Users are registered as the `users` module');
 
+        $this->reportPermissions($command);
+
         foreach ($this->optionalFeatures() as $line) {
             $command->comment($line);
         }
@@ -178,12 +181,67 @@ class WireModuleUsersServiceProvider extends PackageServiceProvider
     }
 
     /**
+     * Say which screens are guarded, and say it loudest when none are.
+     *
+     * These abilities ship with real defaults precisely so this is a non-event
+     * on a normal install. The line that matters is the other one: an
+     * installation that set them to null has opened the screen that assigns
+     * roles, and that decision should be visible at install time rather than
+     * discovered later.
+     */
+    protected function reportPermissions(InstallCommand $command): void
+    {
+        $open = [];
+
+        foreach (['users', 'roles'] as $resource) {
+            foreach (['viewAny', 'view', 'create', 'update'] as $page) {
+                if (Permissions::for($resource, $page) === null) {
+                    $open[] = "{$resource}.{$page}";
+                }
+            }
+        }
+
+        if ($open === []) {
+            $command->comment('  ✅ User and role screens require an ability — see wire-module-users.permissions');
+
+            return;
+        }
+
+        $command->comment('  ⚠️  Open to anyone the panel admits: '.implode(', ', $open));
+        $command->comment('     Name an ability in wire-module-users.permissions — these screens set passwords and assign roles');
+    }
+
+    /** How the `about` row puts it: guarded, partly guarded, or not at all. */
+    protected static function permissionSummary(): string
+    {
+        $named = 0;
+        $total = 0;
+
+        foreach (['users', 'roles'] as $resource) {
+            foreach (['viewAny', 'view', 'create', 'update'] as $page) {
+                $total++;
+
+                if (Permissions::for($resource, $page) !== null) {
+                    $named++;
+                }
+            }
+        }
+
+        return match (true) {
+            $named === $total => 'all screens guarded',
+            $named === 0 => 'OPEN — no ability required',
+            default => "{$named} of {$total} screens guarded",
+        };
+    }
+
+    /**
      * @return array<string, string>
      */
     public function aboutData(): array
     {
         return [
             'User model' => (string) config('wire-module-users.model'),
+            'Permissions' => self::permissionSummary(),
             'Roles' => Roles::enabled() ? 'enabled' : 'off',
             'Avatars' => Avatars::enabled() ? 'enabled' : 'off',
             'Two-factor' => TwoFactor::enabled() ? 'enabled' : 'off',

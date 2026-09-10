@@ -170,6 +170,81 @@ application they can no longer reach, and if they were the only one, nobody can.
 Closing your own account is [the profile page's](#your-own-account) business,
 where it asks twice and takes a password.
 
+## Who May Reach These Screens
+
+**These screens require an ability, and that is new in 2.0.** The user edit form
+sets other people's passwords and assigns their roles, so a screen open to
+whoever the panel's `auth` middleware admitted is a screen that turns any
+account into an administrator. Before 2.0 they shipped open, and the failure was
+silent — the panel looked correct while serving user administration to everyone
+who could sign in.
+
+So they now fail closed. Each screen names an ability, it becomes Laravel's own
+`can:` middleware on the route, and the button that leads there is hidden by the
+same declaration:
+
+```php
+// config/wire-module-users.php — the shipped defaults [tl! focus:start]
+'permissions' => [
+    'users' => [
+        'viewAny' => 'users.viewAny',
+        'view' => 'users.view',
+        'create' => 'users.create',
+        'update' => 'users.update',
+    ],
+
+    'roles' => [
+        'viewAny' => 'roles.viewAny',
+        'view' => 'roles.view',
+        'create' => 'roles.create',
+        'update' => 'roles.update',
+    ],
+], // [tl! focus:end]
+```
+
+Nothing here re-implements an authorization check — `Gate` answers every one of
+these, which is why a wildcard (`users.*`), a policy, and the super-admin bypass
+in `nyoncode/laravel-permission-extended` all work without this module knowing
+they exist. On that package a super-admin passes regardless.
+
+**On an installation with no such ability defined, these screens answer 403.**
+That is deliberate: a visible problem with an obvious fix is better than a silent
+one. Define the abilities, grant them to a role, or open a screen again by naming
+`null`:
+
+```php
+'permissions' => [
+    'users' => [
+        'viewAny' => 'users.viewAny',
+        'view' => null,              // open to anyone the panel admitted [tl! focus]
+        'create' => 'users.create',
+        'update' => 'users.update',
+    ],
+],
+```
+
+An empty string counts as `null` rather than as an ability nobody can hold —
+that is the shape an unset `.env` produces, and `can:` on it would deny everyone
+with no way to grant it.
+
+**The profile page is deliberately not on this list.** It is the signed-in
+person's own account, resolved from `Auth::user()` rather than from the URL, so
+an administrative ability in front of it would lock every user out of their own
+password and two-factor settings.
+
+`php artisan about` reports which way this installation is set, and the
+installer says so at install time — an installation that opened these screens
+should be able to see that it did.
+
+### Roles Are Checked Where They Are Written, Too
+
+The route guard is not the only lock. Assigning a role goes through a second
+check at the pivot write itself, because the ways to reach a form are many and
+not all of them are routes — a bulk action, a wizard step, an application's own
+page composing `SyncsRoles`. A save that *changes* the roles requires the
+`users.update` ability; a save that leaves them as they were does not, so fixing
+a typo in somebody's name never strips their roles.
+
 ## Adapting The Screens
 
 `fields` maps three **column names**, and nothing more. It is there for a users

@@ -373,6 +373,28 @@ optional halves this installation actually got:
 | Login, registration, password reset, e-mail verification | Fortify or Breeze | nothing — see [the admin shell](../admin/overview.md) |
 | Teams themselves: the table, the model, membership | your application | the switcher over what you already have |
 
+### Changing Two-Factor Or Passkeys Asks For The Password Again
+
+Fortify puts `password.confirm` on every route that turns two-factor off, reads
+a recovery code or removes a passkey, and defaults that on. These cards drive
+Fortify's own actions over Livewire, which reaches them *around* that middleware
+— so the guard is restated on the card itself rather than lost. Somebody holding
+a borrowed session cannot turn a second factor off, read the TOTP secret, or
+delete a passkey without knowing the password it all protects.
+
+It reads the same window Laravel's own `RequirePassword` writes —
+`auth.password_confirmed_at`, against `auth.password_timeout` — so confirming a
+password anywhere in the application satisfies every one of these, and the
+timeout is configured in exactly one place:
+
+```php
+// config/auth.php
+'password_timeout' => 10800, // seconds; Laravel's default is three hours [tl! focus]
+```
+
+Outside that window the buttons redirect to the confirmation screen and the
+card says why rather than silently showing an empty panel.
+
 ## Related
 
 - [The Users Module](users.md) — the profile page these cards live on

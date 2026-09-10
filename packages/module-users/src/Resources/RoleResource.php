@@ -25,6 +25,7 @@ use NyonCode\WireModuleUsers\Pages\CreateRole;
 use NyonCode\WireModuleUsers\Pages\EditRole;
 use NyonCode\WireModuleUsers\Pages\ListRoles;
 use NyonCode\WireModuleUsers\Pages\ViewRole;
+use NyonCode\WireModuleUsers\Support\Permissions;
 use NyonCode\WireModuleUsers\Support\Roles;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
 use NyonCode\WireTable\Columns\BadgeColumn;
@@ -69,13 +70,21 @@ class RoleResource implements DescribesResource, ProvidesNavigation, ProvidesPag
         return __('wire-module-users::messages.roles');
     }
 
+    /**
+     * The screens, each behind the ability it needs.
+     *
+     * A role screen writes the permission set every other check in the
+     * application reads, so an unguarded one is a way to grant yourself
+     * anything. `wire-module-users.permissions.roles` names each ability;
+     * null on any of them opens that screen again.
+     */
     public static function pages(): array
     {
         return [
-            'index' => ListRoles::class,
-            'create' => CreateRole::class,
-            'view' => ViewRole::class,
-            'edit' => EditRole::class,
+            'index' => Permissions::page(ListRoles::class, 'roles', 'viewAny'),
+            'create' => Permissions::page(CreateRole::class, 'roles', 'create'),
+            'view' => Permissions::page(ViewRole::class, 'roles', 'view'),
+            'edit' => Permissions::page(EditRole::class, 'roles', 'update'),
         ];
     }
 

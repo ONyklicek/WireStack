@@ -10,6 +10,7 @@ use Livewire\Livewire;
 use NyonCode\WireModuleUsers\Pages\ListRoles;
 use NyonCode\WireModuleUsers\Pages\ListUsers;
 use NyonCode\WireModuleUsers\Tests\Fixtures\User;
+use NyonCode\WireModuleUsers\Tests\Support\Access;
 use Spatie\Permission\Models\Role;
 
 /*
@@ -28,6 +29,11 @@ use Spatie\Permission\Models\Role;
  */
 
 beforeEach(function () {
+    // These screens require an ability now. What they are *about* is the form
+    // and the list, so they run as somebody who is allowed; the guard has its
+    // own tests, which deliberately do not do this.
+    Access::grantEveryAbility();
+
     Schema::create('users', function (Blueprint $table) {
         $table->id();
         $table->string('name');

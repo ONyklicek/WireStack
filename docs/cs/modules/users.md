@@ -167,6 +167,81 @@ aplikace, kam už se nedostane — a pokud byl jediný, nedostane se tam nikdo.
 Zavření vlastního účtu je věc [stránky profilu](#vlastni-ucet), kde se ptá
 dvakrát a chce heslo.
 
+## Kdo Se K Těmto Obrazovkám Dostane
+
+**Tyto obrazovky vyžadují oprávnění, a to je ve 2.0 nové.** Formulář pro úpravu
+uživatele nastavuje ostatním lidem hesla a přiděluje jim role, takže obrazovka
+otevřená komukoli, koho pustil `auth` middleware panelu, je obrazovka, která
+z libovolného účtu udělá správce. Před 2.0 se dodávaly otevřené a selhání bylo
+tiché — panel vypadal správně, zatímco podával správu uživatelů každému, kdo se
+dokázal přihlásit.
+
+Nově tedy selhávají zavřeně. Každá obrazovka pojmenuje oprávnění, to se stane
+Laravelím vlastním `can:` middleware na route, a tlačítko, které tam vede, se
+skryje podle téže deklarace:
+
+```php
+// config/wire-module-users.php — výchozí hodnoty [tl! focus:start]
+'permissions' => [
+    'users' => [
+        'viewAny' => 'users.viewAny',
+        'view' => 'users.view',
+        'create' => 'users.create',
+        'update' => 'users.update',
+    ],
+
+    'roles' => [
+        'viewAny' => 'roles.viewAny',
+        'view' => 'roles.view',
+        'create' => 'roles.create',
+        'update' => 'roles.update',
+    ],
+], // [tl! focus:end]
+```
+
+Nic tady autorizační kontrolu neimplementuje znovu — na každou z nich odpovídá
+`Gate`, a právě proto funguje zástupný znak (`users.*`), policy i obejití pro
+super-admina z `nyoncode/laravel-permission-extended`, aniž by o nich tento modul
+věděl. Na tom balíčku super-admin projde vždy.
+
+**Na instalaci, kde žádné takové oprávnění definované není, tyto obrazovky
+odpoví 403.** To je záměr: viditelný problém se zřejmou opravou je lepší než
+tichý. Definujte oprávnění, přidělte je roli, nebo obrazovku znovu otevřete
+pomocí `null`:
+
+```php
+'permissions' => [
+    'users' => [
+        'viewAny' => 'users.viewAny',
+        'view' => null,              // otevřené komukoli, koho panel pustil [tl! focus]
+        'create' => 'users.create',
+        'update' => 'users.update',
+    ],
+],
+```
+
+Prázdný řetězec se počítá jako `null`, ne jako oprávnění, které nikdo nemůže
+mít — takový tvar vyrobí nenastavené `.env` a `can:` nad ním by odepřelo přístup
+všem bez možnosti ho udělit.
+
+**Profilová stránka na tomto seznamu záměrně není.** Je to vlastní účet
+přihlášeného člověka, získaný z `Auth::user()` a ne z URL, takže administrátorské
+oprávnění před ní by každého uživatele zamklo od jeho vlastního hesla a nastavení
+dvoufázového ověření.
+
+`php artisan about` hlásí, jak je to na této instalaci nastavené, a installer to
+řekne při instalaci — instalace, která tyto obrazovky otevřela, by to měla mít
+možnost vidět.
+
+### Role Se Kontrolují I Tam, Kde Se Zapisují
+
+Route guard není jediný zámek. Přidělení role prochází druhou kontrolou přímo
+u zápisu do pivot tabulky, protože cest k formuláři je mnoho a ne všechny jsou
+route — hromadná akce, krok průvodce, vlastní stránka aplikace skládající
+`SyncsRoles`. Uložení, které role **mění**, vyžaduje oprávnění `users.update`;
+uložení, které je nechává být, ne — takže oprava překlepu ve jméně nikdy nikomu
+role nesebere.
+
 ## Úpravy obrazovek
 
 `fields` mapuje tři **jména sloupců**, nic víc. Je tu pro tabulku uživatelů,

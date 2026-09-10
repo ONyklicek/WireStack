@@ -58,6 +58,14 @@ parameters:
         - { identifier: trait.unused, path: packages/table/src/Concerns/CanSelectRecords.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTable.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTableQueryString.php }
+        # Both users are Livewire cards in wire-module-users, which is outside the
+        # analysed paths — so "unused" is a fact about that list, not about the
+        # trait. It carries no @phpstan-require-extends because it requires
+        # nothing of its host: it reads the session and Gate, and the one host
+        # method it reaches for (`redirect()`) is guarded by method_exists,
+        # precisely so a non-Livewire caller is a supported case rather than a
+        # fatal.
+        - { identifier: trait.unused, path: packages/core/src/Foundation/Concerns/InteractsWithPasswordConfirmation.php }
         # Composed by resource pages in the module packages, which are outside the
         # analysed paths — so "unused" is a fact about this list, not about the
         # trait. Unlike the host traits above it carries

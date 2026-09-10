@@ -11,6 +11,7 @@ use NyonCode\WireModuleUsers\Livewire\TwoFactorAuthentication;
 use NyonCode\WireModuleUsers\Pages\EditProfile;
 use NyonCode\WireModuleUsers\Support\TwoFactor;
 use NyonCode\WireModuleUsers\Tests\Fixtures\FortifyUser;
+use NyonCode\WireModuleUsers\Tests\Support\Access;
 use PragmaRX\Google2FA\Google2FA;
 
 /*
@@ -50,6 +51,11 @@ function signedIn(): FortifyUser
     ]);
 
     test()->be($user);
+
+    // The card's own guard: Fortify puts `password.confirm` on every route that
+    // does these things, so the state a user reaches this card in is one where
+    // the password was just confirmed. The tests about the guard itself say so.
+    Access::confirmPassword();
 
     return $user;
 }

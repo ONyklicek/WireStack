@@ -55,6 +55,55 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Permissions
+    |--------------------------------------------------------------------------
+    |
+    | The abilities the user and role screens require. Each becomes Laravel's own
+    | `can:` middleware on the route and hides the button that leads there, from
+    | this single line — nothing here re-implements the check, so Gate,
+    | spatie/laravel-permission and permission-extended all answer it the way
+    | they answer every other check in this framework.
+    |
+    | Unlike every other module here these default to a real ability rather than
+    | to null, and the reason is what these particular screens do: the user edit
+    | form sets other people's passwords and assigns roles, so a screen that is
+    | open to whoever the panel's `auth` let through is a screen that turns any
+    | account into an administrator. Defaulting to null would have been the
+    | quieter choice and the wrong one — the failure is silent, and it looks
+    | exactly like a working panel.
+    |
+    | So this fails closed: an installation with no such ability defined gets 403
+    | until it defines one, which is a visible problem with an obvious fix. On
+    | `nyoncode/laravel-permission-extended` a super-admin passes regardless,
+    | through that package's own `Gate::before`.
+    |
+    | Set any of them to null to leave that screen open to anyone the panel's own
+    | middleware already admitted — the pre-2.0 behaviour, and yours to choose.
+    |
+    | The profile page is deliberately absent: it is the signed-in person's own
+    | account, it resolves the record from `Auth::user()` rather than the URL, and
+    | putting an administrative ability in front of it would lock every user out
+    | of their own password and two-factor settings.
+    |
+    */
+    'permissions' => [
+        'users' => [
+            'viewAny' => 'users.viewAny',
+            'view' => 'users.view',
+            'create' => 'users.create',
+            'update' => 'users.update',
+        ],
+
+        'roles' => [
+            'viewAny' => 'roles.viewAny',
+            'view' => 'roles.view',
+            'create' => 'roles.create',
+            'update' => 'roles.update',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Avatars
     |--------------------------------------------------------------------------
     |
