@@ -143,6 +143,7 @@ final class Codes
         return self::login() || self::secondFactor() || self::verifyEmail() || self::resetPassword();
     }
 
+    /** One flow's own switch, before any question about Fortify's features. */
     private static function enabled(string $flow): bool
     {
         return (bool) config('wire-module-auth.codes.'.$flow, false);

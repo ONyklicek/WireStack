@@ -37,6 +37,14 @@ final class DatabaseOneTimeCodes implements OneTimeCodes
 {
     public function __construct(private readonly ConnectionInterface $connection) {}
 
+    /**
+     * Replace first, then insert.
+     *
+     * In that order rather than as an upsert, because the unique index is on the
+     * pair and an update would keep the attempt counter of the code being
+     * replaced — a person who asked for a second code would inherit their own
+     * wrong guesses at the first.
+     */
     public function issue(CodePurpose $purpose, string $identifier, array $payload = []): OneTimeCode
     {
         $code = $this->generate();
@@ -57,6 +65,13 @@ final class DatabaseOneTimeCodes implements OneTimeCodes
         return new OneTimeCode($purpose, $identifier, $code, $expiresAt, $payload);
     }
 
+    /**
+     * Expiry, then the hash, then consume — and `null` for every kind of no.
+     *
+     * The order is the interesting part: checking the hash first would spend a
+     * `Hash::check()` on a code that is already dead, and counting an attempt
+     * against it would let an expired code lock out the one that replaces it.
+     */
     public function verify(CodePurpose $purpose, string $identifier, string $code): ?OneTimeCode
     {
         $record = $this->find($purpose, $identifier);
@@ -181,11 +196,13 @@ final class DatabaseOneTimeCodes implements OneTimeCodes
         return $payload;
     }
 
+    /** How long a code is worth anything, never less than a minute. */
     private function minutes(): int
     {
         return max(1, (int) config('wire-module-auth.codes.expires', 10));
     }
 
+    /** The configured table, on the connection this store was handed. */
     private function table(): Builder
     {
         return $this->connection->table((string) config('wire-module-auth.codes.table', 'wire_auth_one_time_codes'));

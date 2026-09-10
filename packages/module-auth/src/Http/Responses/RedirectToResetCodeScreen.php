@@ -35,6 +35,9 @@ final class RedirectToResetCodeScreen implements SuccessfulPasswordResetLinkRequ
      */
     public function __construct(string $status) {}
 
+    /**
+     * @param  Request  $request
+     */
     public function toResponse($request): RedirectResponse
     {
         /** @var Request $request */

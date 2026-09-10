@@ -99,6 +99,7 @@ class PasskeyManagement extends Component implements IdentifiesHookTarget
         ]);
     }
 
+    /** The signed-in person, as a model — the card is about their own account. */
     protected function user(): ?Model
     {
         $user = Auth::user();

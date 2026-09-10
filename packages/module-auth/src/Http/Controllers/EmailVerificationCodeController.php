@@ -112,6 +112,7 @@ class EmailVerificationCodeController extends Controller
         return redirect()->intended($this->homePath());
     }
 
+    /** Fortify's configured landing path, which is also where a signed link ends. */
     private function homePath(): string
     {
         return (string) config('fortify.home', '/');
