@@ -127,7 +127,7 @@ soubory teď proudí přes vlastní route modulu.
 ],
 ```
 
-**„Publikovaný" znamená klíč `url` na disku, ne to, co říká `Storage::url()`.**
+**„Publikovaný“ znamená klíč `url` na disku, ne to, co říká `Storage::url()`.**
 Laravel odpoví `/storage/{path}` pro *jakýkoli* lokální disk, ať ta adresa vede
 kamkoli — je to pohodlí pro disk `public` a chybný odhad pro každý jiný. Věřit
 tomu je způsob, jak se neveřejná smlouva ocitne na stránce odkazovaná, jako by
@@ -153,7 +153,7 @@ kontrola.
 **Bez zaregistrované policy se neodmítá nic.** Laravelova brána zamítá schopnost,
 kterou nikdo nedefinoval, takže ptát se jí bezpodmínečně by při upgradu zamklo
 každou existující knihovnu před jejími vlastními soubory. Nenapsat policy je
-způsob, jak aplikace říká „tohle není řízené oprávněními", a bere se to vážně.
+způsob, jak aplikace říká „tohle není řízené oprávněními“, a bere se to vážně.
 
 ## Náhledy
 
@@ -442,7 +442,7 @@ Odpověď přijde na `wire-media-picker:picked` i s tokenem, se kterým se otev�
 takže si dva výběry na jedné stránce nemůžou zkřížit odpovědi. Váš vlastní kód
 může knihovnu otevřít stejně.
 
-### Odkud se bere modál
+### Odkud se bere modal
 
 Výběr musí být na každé stránce a shell, který každou stránku vykresluje
 (`wire-admin`), je *nad* tímhle modulem a nikdy o něm neslyšel. Modul si tedy

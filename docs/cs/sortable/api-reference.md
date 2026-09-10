@@ -67,7 +67,7 @@ Vrací, zda je stránkování zachováno během reorder režimu.
 
 ### `columnReorderable(bool $enabled = true): static`
 
-Zapnout nebo vypnout uživatelsky specifické řazení sloupců. Pořadí sloupců se perzistuje per uživatel + model v databázi.
+Zapnout nebo vypnout uživatelsky specifické řazení sloupců. Pořadí sloupců se v databázi ukládá zvlášť pro každého uživatele a model.
 
 ### `isColumnReorderable(): bool`
 
@@ -117,7 +117,7 @@ No-op, pokud:
 
 #### `reorderColumns(array $columnOrder): void`
 
-Zpracovat drag & drop sloupců. Zvaliduje názvy sloupců proti definici tabulky a perzistuje do tabulky `reorderable_column_orders`.
+Zpracovat drag & drop sloupců. Zvaliduje názvy sloupců proti definici tabulky a ukládá do tabulky `reorderable_column_orders`.
 
 No-op, pokud:
 - Tabulka není column-reorderable
@@ -284,5 +284,5 @@ Alpine: při návštěvě přes `wire:navigate`, u lazy vykreslené tabulky, v m
 
 | Klíč | EN | CS | Popis |
 |---|---|---|---|
-| `reorder` | Reorder | Přeuspořádat | Label toggle tlačítka (neaktivní) |
-| `done_reordering` | Done reordering | Hotovo | Label toggle tlačítka (aktivní) |
+| `reorder` | Reorder | Přeuspořádat | Popisek přepínacího tlačítka (neaktivní) |
+| `done_reordering` | Done reordering | Hotovo | Popisek přepínacího tlačítka (aktivní) |

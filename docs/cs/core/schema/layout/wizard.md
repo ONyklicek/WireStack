@@ -6,7 +6,7 @@ summary: Indikátor kroků nad sadou panelů s Předchozí a Další — samosta
 # Wizard
 
 Posloupnost. `Wizard` jsou [`Tabs`](tabs.md) pro případ, kdy panely mají pořadí
-a chceš, aby jimi uživatel procházel po jednom — registrační tok, import, cokoli
+a chcete, aby jimi uživatel procházel po jednom — registrační tok, import, cokoli
 dost dlouhého na to, že ukázat to celé naráz by lidi odradilo. Je to samostatný
 protějšek [wizardu v modalu akce](../../modals.md#vicekrokovy-wizard).
 
@@ -28,15 +28,15 @@ vidět. Nic se nemusí nejdřív navštívit, aby data platila.
 viditelné instance `Step`, takže pole vložené přímo do
 `Wizard::make()->schema([...])` se tiše zahodí. Pole patří dovnitř kroku.
 
-**Pojmenuj wizard, když můžou být dva na obrazovce naráz.** Kroky se adresují
+**Pojmenujte wizard, když můžou být dva na obrazovce naráz.** Kroky se adresují
 jménem wizardu, takže `Wizard::make('signup')` validuje nezávisle na jiném vedle
 sebe; nepojmenovaný wizard se vyhodnotí na první ve schématu a dva nepojmenované
 sdílejí prázdný scope.
 
-Na desktopu nese každé kolečko indikátoru label a popis svého kroku; na mobilu se
-indikátor scvrkne na číslovaná kolečka a label i popis aktivního kroku jsou pod
+Na desktopu nese každé kolečko indikátoru popisek a popis svého kroku; na mobilu se
+indikátor scvrkne na číslovaná kolečka a popisek i popis aktivního kroku jsou pod
 ním. Vlastní děti kroku se rozkládají do gridu, jehož int varianta rozumí **1 až
-4** sloupcům — na víc předej mapu breakpointů.
+4** sloupcům — na víc předejte mapu breakpointů.
 
 ## Základní použití
 
@@ -82,7 +82,7 @@ repeateru — zúžená na ten krok. Při neúspěchu wizard zůstane, kde je, c
 vykreslí v aktivním panelu a kroky, na které uživatel ještě nedošel, se nikdy
 neoznačí předčasně.
 
-Plynou z toho tři chování, která bys jinak musel postavit sám:
+Plynou z toho tři chování, která byste jinak museli postavit sami:
 
 - **Neúspěšné odeslání skočí na první krok s chybou**, takže hláška z prvního
   kroku nikdy neuvízne v panelu, na který se nikdo nedívá.
@@ -90,8 +90,8 @@ Plynou z toho tři chování, která bys jinak musel postavit sám:
   krok přidá nebo odebere — po round tripu pole s `live()` — indikátor i navigace
   se přerovnají a aktivní krok se ořízne do vykresleného rozsahu.
 - **Skok přes indikátor u `skippable()` validaci přeskočí**, stejně jako
-  u Filamentu. Skippable znamená „nech mě podívat se dopředu", ne „nech mě
-  odeslat neúplné".
+  u Filamentu. Skippable znamená „nech mě podívat se dopředu“, ne „nech mě
+  odeslat neúplné“.
 
 Vykreslený **mimo** Livewire host spadne Další na obyčejnou klientskou navigaci
 a formulář se validuje při odeslání jako dřív.
@@ -135,7 +135,7 @@ událost by se k ní nikdy nedostala:
 Obojí je zúžené přes `wizard` — jméno wizardu, `null` u nepojmenovaného.
 
 [Modal s možnostmi u `Selectu`](../../../forms/fields/select.md#plnohodnotny-formular-ne-seznam-poli)
-tohle dělá za tebe: dej wizard s `navigation(false)` do `createOptionForm()`
+tohle dělá za vás: dejte wizard s `navigation(false)` do `createOptionForm()`
 a patička modalu se toho ujme — ukazuje Zpět / Další až do posledního kroku
 a odesílací tlačítko až tam.
 
@@ -205,7 +205,7 @@ class Onboarding extends Component
 }
 ```
 
-Select typu je `live()`, takže volba „Firemní" firemní krok hned přidá; „Osobní"
+Select typu je `live()`, takže volba „Firemní“ firemní krok hned přidá; „Osobní“
 ho odebere a indikátor se přečísluje. Další nepustí z kroku účtu dřív, než jsou
 jméno a e-mail platné.
 

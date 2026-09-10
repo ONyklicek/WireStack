@@ -3,12 +3,12 @@ order: 20
 summary: "Na co se akce zeptá, než se spustí — věta, formulář, read-only infolist nebo wizard — a co se stane, když jeden modal otevře další."
 ---
 
-# Modály akcí
+# Modaly akcí
 
 Akce se může zeptat, než se spustí, a ptá se modalem: větou a dvěma tlačítky,
 formulářem k vyplnění, read-only infolistem ke kontrole nebo wizardem kroků.
 Všechny čtyři jsou tentýž povrch jinak nastavený — ani jeden z nich není druhý
-druh akce a callback na konci je ten, který jsi už napsal.
+druh akce a callback na konci je ten, který jste už napsali.
 
 ## Potvrzovací modal
 
@@ -66,7 +66,7 @@ Action::make('edit')
 
 Closura může vrátit případ enumu rovnou z castovaného atributu (`fn ($record) => ['role' => $record->role]`): naplněný bag každý enum srazí na jeho backing hodnotu, protože právě ta putuje ve stavu Livewiru do prohlížeče a právě proti ní `Select` porovnává hodnoty svých `<option>`. Uložení pak proběhne zpátky přes cast.
 
-`$data` dorazí **dehydratovaná**, přesně tak, jak by je zapsalo `Form::save()`: vymazaný `Select` nebo vyprázdněný číselný `TextInput` je `null`, ne `''`, `DateTimePicker` nese storage formát a časovou zónu, `FileUpload` uloženou cestu a případný tvůj `dehydrateStateUsing()` je aplikovaný. Proto je `$record->update($data)` výše bezpečné vůči enum i číselnému castu. Viz [co dorazí k záznamu](../../forms/save-lifecycle.md#stejne-transformace-v-action-modalu).
+`$data` dorazí **dehydratovaná**, přesně tak, jak by je zapsalo `Form::save()`: vymazaný `Select` nebo vyprázdněný číselný `TextInput` je `null`, ne `''`, `DateTimePicker` nese storage formát a časovou zónu, `FileUpload` uloženou cestu a případný váš `dehydrateStateUsing()` je aplikovaný. Proto je `$record->update($data)` výše bezpečné vůči enum i číselnému castu. Viz [co dorazí k záznamu](../../forms/save-lifecycle.md#stejne-transformace-v-action-modalu).
 
 Modal formuláře `HeaderAction` **nemá záznam**, takže jeho closura `fillFormUsing` nebere žádné argumenty. Použijte ji k naplnění počátečního stavu — a array-typovaná pole (`CheckboxList`, `Tags`, multiple `Select`) vždy naplňte prázdným polem, aby se správně navázala od první interakce:
 
@@ -227,7 +227,7 @@ patologické rekurzi — callbacku, který otevírá modal ve smyčce — ne lim
 který někdo narazí návrhem toku: otevření dalšího nad tuhle mez je odmítnuto, ne
 potichu zahozeno.
 
-To je kanonický vzor „vytvoř + vyber" — podformulář, který naplní pole ve formuláři,
+To je kanonický vzor „vytvořte + vyberte“ — podformulář, který naplní pole ve formuláři,
 z něhož byl otevřen:
 
 ```php
@@ -277,11 +277,11 @@ Dvě další bindings v callbacku skládají hluboké flow bez přidávání dal
 
 - `$replace(jméno, arguments = [])` — vymění **aktivní** modal za jiný **na místě**.
   Vrchní rámec se popne a pojmenovaná akce se namountuje ve stejné hloubce, takže rodiče
-  zůstanou nedotčení. Použij pro pohyb *uvnitř* modalu — tlačítko „zpět na první krok"
+  zůstanou nedotčení. Použijte pro pohyb *uvnitř* modalu — tlačítko „zpět na první krok“
   nebo výměnu edit modalu za potvrzovací — místo navršení další úrovně. Záznam u řádkové
-  akce se dědí automaticky (přepiš přes `record`/`recordKey` v `arguments`).
+  akce se dědí automaticky (přepište přes `record`/`recordKey` v `arguments`).
 - `$cancelParents(?upTo = null)` — zavře aktivní modal **i jeho rodiče**. Bez argumentu
-  zahodí celý zásobník (jedno „Zrušit vše"); s názvem akce odvine až po nejbližšího
+  zahodí celý zásobník (jedno „Zrušit vše“); s názvem akce odvine až po nejbližšího
   předka s tím názvem (včetně něj).
 
 ```php
@@ -301,12 +301,12 @@ Action::make('editOrder')
 ```
 
 Obojí jsou i veřejné metody (`$this->replaceMountedAction(...)`, `$this->cancelParentActions(...)`),
-takže je můžeš volat přímo z `wire:click` nebo z `$component`.
+takže je můžete volat přímo z `wire:click` nebo z `$component`.
 
 ## Související
 
-- [Akce](index.md) — třídy, kterým tyhle modály patří
-- [Modály](../modals.md) — samotné třídy modálů, použité bez akce
+- [Akce](index.md) — třídy, kterým tyhle modaly patří
+- [Modaly](../modals.md) — samotné třídy modalů, použité bez akce
 - [Formuláře](../../forms/overview.md) — schéma, které modal s formulářem vykreslí
 - [Infolisty](../infolists/index.md) — co ukazuje modal s infolistem
-- [Lifecycle a fronty](lifecycle.md) — co běží po odeslání modalu
+- [Životní cyklus a fronty](lifecycle.md) — co běží po odeslání modalu

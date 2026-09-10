@@ -1,14 +1,14 @@
 ---
 order: 50
-summary: "Akce na libovolné Livewire komponentě — celý povrch včetně modálů a lifecyclu, s jednou traitou a jedním hostitelem modálů."
+summary: "Akce na libovolné Livewire komponentě — celý povrch včetně modalů a životního cyklu, s jedním traitem a jedním hostitelem modalů."
 ---
 
 # Akce mimo tabulku
 
 Akce nejsou funkce tabulky, kterou tabulka náhodou vlastní. Kterákoli Livewire
 komponenta je umí deklarovat a plně spustit — modal, slide-over, wizard,
-potvrzení, formulář, validaci i celý lifecycle — s jednou traitou a jedním
-hostitelem modálů vykresleným jednou.
+potvrzení, formulář, validaci i celý životní cyklus — s jedním traitem a jedním
+hostitelem modalů vykresleným jednou.
 
 ## Samostatné akce (bez tabulky)
 
@@ -53,7 +53,7 @@ class EditPanel extends Component
 ```
 
 ```blade
-{{-- Tlačítko auto-odvodí wire:click="mountAction('editOffer')" --}}
+{{-- Tlačítko automaticky odvodí wire:click="mountAction('editOffer')" --}}
 <x-wire-actions::button :action="$this->editOfferAction()" />
 
 {{-- Vykreslit jednou — ukáže modal/slide-over/wizard/potvrzení namountované akce --}}
@@ -95,14 +95,14 @@ Action::make('archive')
     });
 ```
 
-Nepotřebuje nic než modal host, který stejně vykresluješ. Co halt nese a co
+Nepotřebuje nic než modal host, který stejně vykreslujete. Co halt nese a co
 jediné chce po aplikaci — cache store, který přežije request, bez něhož se po
 neúspěšné validaci nevrátí jeho pole — popisují
-[Lifecycle a fronty](lifecycle.md#halt-vykonavani).
+[Životní cyklus a fronty](lifecycle.md#halt-vykonavani).
 
 ## Související
 
 - [Akce](index.md) — třídy, které se tu deklarují
-- [Modály akcí](modals.md) — všechno, co samostatná akce může otevřít
+- [Modaly akcí](modals.md) — všechno, co samostatná akce může otevřít
 - [Panely: Stránky](../../panels/pages.md) — `ListPage` hostí akce skrze `WithTable`; zbylé čtyři žádný runtime neskládají
 - [Formuláře](../../forms/overview.md) — druhá polovina hostitelské komponenty `WithActions`

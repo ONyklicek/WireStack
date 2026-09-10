@@ -41,8 +41,8 @@ odhadem.
 
 **Výchozí stav a hraniční případy:**
 
-- **Prázdný výraz nevrací nic.** Matchovat všechno by znamenalo „tady je celá tvá
-  databáze" ve chvíli, kdy se modál otevře.
+- **Prázdný výraz nevrací nic.** Matchovat všechno by znamenalo „tady je celá vaše
+  databáze“ ve chvíli, kdy se modal otevře.
 - `%` a `_` jsou v `LIKE` divoké karty, takže se výraz escapuje, a escape znak je
   deklarovaný explicitně (`ESCAPE '!'`). MySQL bere `\` jako výchozí escape a
   SQLite ne, takže dotaz spoléhající na tenhle default by na dvou podporovaných
@@ -105,7 +105,7 @@ final class OrderResource implements DescribesResource, GloballySearchable
 | `url` | `?string` | Kam výběr vede; odvozené, když se vynechá, `null`, když záznam nic neroutuje |
 | `icon` | `?string` | Jméno ikony, resolvované jako každá jiná ikona ve frameworku |
 
-**Všimni si, co příklad nepředává.** Řádek už obě půlky své URL nese — klíč
+**Všimněte si, co příklad nepředává.** Řádek už obě půlky své URL nese — klíč
 resource a klíč záznamu — takže ji framework sestaví:
 `urlFor($resourceKey, 'view', ['record' => $recordKey])`, v [zóně](../panels/routing.md#zony),
 ve které byla paleta otevřená. Napsat sem cestu znamená kopírovat to, co router
@@ -180,34 +180,34 @@ a pole odečítači obrazovky říká, kde ten kurzor je, přes `aria-activedesc
 | <kbd>Tab</kbd> | přesune skutečný fokus na řádek; z dialogu nevypadne |
 | <kbd>Esc</kbd> | zavře |
 
-<kbd>Tab</kbd> a kurzor se rozejít smí a stane se vždy to, co jsi aktivoval —
+<kbd>Tab</kbd> a kurzor se rozejít smí a stane se vždy to, co jste aktivovali —
 řádek se při kliknutí i po Tabu pojmenuje sám a jen <kbd>Enter</kbd> v poli se
 řídí kurzorem.
 
 ### Co udělá Enter
 
-Paleta nevlastní modál, takže akci, která se potřebuje na něco zeptat, nikdy
+Paleta nevlastní modal, takže akci, která se potřebuje na něco zeptat, nikdy
 nespustí sama. Kterou ze tří věcí udělá, rozhoduje sama akce:
 
 | Akce | Co paleta udělá |
 |---|---|
 | nemá se na co ptát | spustí ji na místě a zavře se |
-| je o záznamu a má modál | přejde na stránku toho záznamu s `?action=` |
-| stojí sama a má modál | vyšle `wire-palette-action` hostovi na obrazovce |
+| je o záznamu a má modal | přejde na stránku toho záznamu s `?action=` |
+| stojí sama a má modal | vyšle `wire-palette-action` hostovi na obrazovce |
 
 Prostřední řádek nepotřebuje zapojit: stránka zobrazující jeden záznam `?action=`
 po příchodu přečte a akci připojí — **pokud vlastní akční host**. Žádná dodávaná
 stránka ho nemá: `ListPage` skládá `WithTable`, formulářové stránky `WithForms`
-a `ViewPage` záměrně nesloží žádný host. Přidej na vlastní stránku
+a `ViewPage` záměrně nesloží žádný host. Přidejte na vlastní stránku
 [`WithActions`](actions/standalone.md) a odpoví na query parametr i na dispatch.
 
 Samostatný příkaz se nikam nenaviguje, protože ani index stránka akční host
-nevlastní — poslat tam uživatele kvůli modálu, který se neotevře, je horší než
+nevlastní — poslat tam uživatele kvůli modalu, který se neotevře, je horší než
 ho nikam neposílat.
 
 Pořadí skupin je dané a záleží na něm: **záznamy, pak navigace, pak příkazy**.
 Výraz, který sedí na záznam i na příkaz, patří záznamu — napsat `INV` má otevřít
-fakturu, ne spustit „Přepočítat faktury".
+fakturu, ne spustit „Přepočítat faktury“.
 
 ## Připojení palety
 
@@ -243,14 +243,14 @@ posledním řádku jedné skupiny dojde na první řádek další. Změna výraz
 kurzor nahoru, jinak by Enter otevřel něco z výsledků, na které se uživatel už
 nedíval.
 
-Dialog je teleportovaný do `<body>`, jako každý modál ve frameworku, takže ho
+Dialog je teleportovaný do `<body>`, jako každý modal ve frameworku, takže ho
 nikdy neořízne polohovaný předek.
 
 **V zónované aplikaci nepotřebuje žádnou konfiguraci.** Paleta si přečte svoji
 [zónu](../panels/routing.md#zony) ze stránky, na které se vykreslila, a drží si ji
 v public property, takže výsledky míří zpátky do zóny, ve které uživatel je —
 tentýž layout připojený pod `/admin` a `/business` odkazuje do každé z nich.
-Nastav ji výslovně jen tehdy, když paleta sedí v shellu, který sám resource routa
+Nastavte ji výslovně jen tehdy, když paleta sedí v shellu, který sám resource routa
 není:
 
 ```blade
@@ -395,4 +395,4 @@ takže callback může řádky zúžit a nemůže se prohledat kolem policy.
 
 - [Resources](../panels/resources.md) — registr, který paleta čte, a kontrakt identity, který implementuje každý resource
 - [Autorizace](../start/authorization.md) — policies, tenancy a co scopované není
-- [Modály](modals.md) — vzor teleportu do body, který dialog následuje
+- [Modaly](modals.md) — vzor teleportu do body, který dialog následuje

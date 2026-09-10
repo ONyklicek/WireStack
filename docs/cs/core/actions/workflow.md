@@ -29,7 +29,7 @@ $orders = WorkflowState::for(OrderStatus::class)
     ->after(OrderStatus::Shipped, fn ($order) => ShipmentJob::dispatch($order));
 ```
 
-`allow()` bere seznam výchozích stavů, protože „cokoli až sem jde zrušit" je
+`allow()` bere seznam výchozích stavů, protože „cokoli až sem jde zrušit“ je
 běžný tvar a napsat ho třikrát je způsob, jak na jeden ze tří zapomenout.
 
 **Seam, ne workflow engine.** Vlastní tvar a význam deleguje: žádné definice
@@ -50,7 +50,7 @@ $orders->transition($order, OrderStatus::Confirmed); // bez položek → false
 
 **Nelegální** přechod vyhodí výjimku: stroj říká, že ta hrana neexistuje, a mlčet
 znamená nechat záznam tam, kde uživatel věří, že se posunul. **Guard veto** vrátí
-false, protože „ještě ne" je doménová odpověď, ne rozbitý stroj — volající ji
+false, protože „ještě ne“ je doménová odpověď, ne rozbitý stroj — volající ji
 ohlásí.
 
 Guardy na jednom stavu musí projít všechny. Schvalovací limit a kontrola
@@ -85,9 +85,9 @@ které se chce zeptat přímo.
 takže tlačítko nepotřebuje vlastní `->action()`. Explicitní `->action()` pořád
 vyhraje, v libovolném pořadí.
 
-Label, barvu i ikonu bere z cílového enumu stejnou kanonickou cestou jako
+Popisek, barvu i ikonu bere z cílového enumu stejnou kanonickou cestou jako
 `BadgeColumn`, takže se tlačítko a badge nemůžou neshodnout na tom, jak vypadá
-„Confirmed". Explicitní `->label()` pořád vyhraje.
+„Confirmed“. Explicitní `->label()` pořád vyhraje.
 
 Vlastní `->visible()` akce a odpověď stroje zůstávají oddělené otázky — musí
 platit obě a ani jedna tiše nepřebíjí druhou. Kontrola bez záznamu (header akce,

@@ -113,7 +113,7 @@ z markupu, který Blade zkompiluje jednou pro tabulku (`Support\RowRenderer`, a
 `Support\CardRenderer` pro stacked karty). Výsledný markup je tentýž, se dvěma
 rozdíly:
 
-- **zmizely per-řádkové morph markery.** Livewire vkládá dvojici
+- **zmizely morph markery jednotlivých řádků.** Livewire vkládá dvojici
   `<!--[if BLOCK]><![endif]-->` kolem každého `@if` a `@foreach`, který
   zkompiluje, a podmínky řádkové smyčky jich emitovaly 459–999 B na řádek —
   848–1035 B na řádek i s whitespace mezi nimi, a 1 347 B na stacked kartu. Nic
@@ -287,7 +287,7 @@ Viz [Widgety → Odložené vykreslení](../core/widgets/index.md#odlozene-vykre
 
 ## `ChartWidget::filter()` se řeší na serveru a má ho každý widget (2.0)
 
-Dropdown filtru se dřív řešil v prohlížeči: `<select>` navázaný na Alpine
+Rozbalovací nabídka filtru se dřív řešila v prohlížeči: `<select>` navázaný na Alpine
 property a `updateChart()`, který přiřadil `this.labels` a `this.datasets`
 zpátky na graf, se kterým byl sestaven. Změna výběru tedy překreslila identický
 graf a closure na datasety nikdy neběžela s ničím jiným než se svou výchozí
@@ -329,7 +329,7 @@ x-data="wireChart(@js($type), @js($labels), @js($datasets), @js($options))"  {{-
 ```
 
 Publikovaný pohled ponechaný na starém volání předá `$options` tam, kde factory
-teď čte `$filterOptions`, takže se graf postaví úplně bez options — vykreslí se,
+teď čte `$filterOptions`, takže se graf postaví úplně bez nastavení — vykreslí se,
 a vykreslí se špatně. Nic na to neupozorní, a právě proto to stojí za ty dvě
 minuty.
 
@@ -404,11 +404,11 @@ vyhodnotí proti prázdnému registru a pole tiše nedělá nic.
 ## Odstraněno: každý shim označený pro 2.0 (2.0)
 
 Linie 1.x vezla sadu metod a tříd, kterým v docblocku stálo *„Will be removed in
-v2.0"*. Tohle je to vydání, takže jsou pryč — volání teď vyhodí
+v2.0“*. Tohle je to vydání, takže jsou pryč — volání teď vyhodí
 `BadMethodCallException` (nebo třída nebude nalezena) místo zápisu deprecace.
 Náhrady existují po celou dobu linie 1.x a každá je jen přejmenování:
 
-| Odstraněno | Použij místo toho |
+| Odstraněno | Použijte místo toho |
 | --- | --- |
 | `Action::hiddeLabel()` | `Action::hideLabel()` — starý název byl překlep |
 | `ActionHalt::modalHeading()` | `ActionHalt::heading()` |
@@ -422,13 +422,13 @@ Náhrady existují po celou dobu linie 1.x a každá je jen přejmenování:
 | `Table::polling()` | `Table::poll()` |
 | `TableNotification` | `Notification` |
 | `TableNotificationManager` | `NotificationManager` |
-| `confirmTableAction()`, `executeConfirmedAction()`, `closeConfirmationModal()`, `confirmBulkAction()`, `getConfirmationModalData()` | API halt modalu — viz [Lifecycle a fronty](../core/actions/lifecycle.md#halt-vykonavani) |
+| `confirmTableAction()`, `executeConfirmedAction()`, `closeConfirmationModal()`, `confirmBulkAction()`, `getConfirmationModalData()` | API halt modalu — viz [Životní cyklus a fronty](../core/actions/lifecycle.md#halt-vykonavani) |
 | `WireForms\Components\Layout\{Section,Fieldset,Grid}` | `WireCore\Foundation\Schema\{Section,Fieldset,Grid}` |
 
 Dalších pět bylo deprecated během 1.x, aniž by pojmenovaly vydání, a jdou stejným
 tahem — každé je přejmenování se stejným chováním za sebou:
 
-| Odstraněno | Použij místo toho |
+| Odstraněno | Použijte místo toho |
 | --- | --- |
 | `Table::rowContextMenu([...])` | `Table::recordActions([Action::make('edit')->onContextMenu(), …])` |
 | `TextInputColumn::formatForSave()` | `dehydrateState()` |
@@ -441,7 +441,7 @@ tahem — každé je přejmenování se stejným chováním za sebou:
 **Legacy properties jsou to, co je potřeba zkontrolovat.** `WithTable` dřív
 odpovídal na `$this->tableSearch` a dvacet sourozenců přes `__get`/`__set` a mapoval
 je na stavové cesty. Jsou pryč, takže komponenta, která některou čte, dostane od
-Livewiru „property does not exist" — včetně pole `$queryString`, které je jmenuje,
+Livewiru „property does not exist“ — včetně pole `$queryString`, které je jmenuje,
 což je přesně to, co dokumentace pro stav v URL dřív ukazovala. Podporovaná cesta
 je [`Table::queryString()`](../table/advanced.md#perzistence-stavu-v-url), která si
 načtené hodnoty i ověří:
@@ -575,7 +575,7 @@ případě ho `composer update "nyoncode/wire-*"` posune se vším ostatním a n
   stavíte vlastní balíček, nebo ze starého pinu — a drží ho pod 2.4. Composer pak
   hlásí jako neinstalovatelné balíčky Wire, ne toolkit jako starý, takže ten
   constraint rozšiřte na `^2.4` jako první.
-- běžíte na Octane. Memo assetů, které je jinak per-request a tady přežívá celý
+- běžíte na Octane. Memo assetů, které je jinak vázané na jeden request a tady přežívá celý
   worker, se na `RequestTerminated` zahazuje přes `PublishedAssets::flush()`
   z toolkitu, a 2.4 je první vydání, které ho nese. Pod ním worker, který přežije
   deploy, dál emituje `?id=<mtime>` z minulého vydání a `wire:navigate` si nových
@@ -643,7 +643,7 @@ Změnily se dva konstruktory a oba se resolvují z kontejneru, takže se to týk
 kódu, který si je stavěl ručně: `Workspace` bere `Catalog`, své navigační skupiny
 a `ResolvesPageUrls`; `GlobalSearch` bere `Catalog` místo `ResourceRegistry`.
 
-**Co teď můžeš smazat.** Položka menu nese URL stránky svého klíče a výsledek
+**Co teď můžete smazat.** Položka menu nese URL stránky svého klíče a výsledek
 hledání URL svého záznamu, obojí doplněné z klíče — takže ručně psaná mapa
 `klíč => url`, kterou si držela každá aplikace, může pryč:
 
@@ -660,11 +660,11 @@ url: route('orders.show', $record),                           // [tl! --]
 Explicitní `url:` nebo `->url()` pořád vyhraje — pro řádek, který vede někam, kam
 konvence nedosáhne.
 
-**Routing je pořád opt-in** a `Route::wireResources()` ve tvém route souboru
+**Routing je pořád opt-in** a `Route::wireResources()` ve vašem route souboru
 zůstává referenční cestou. Novinka vedle ní je
 [`wire-panels.routes`](configuration.md#panels) — tytéž argumenty skupiny předané
 jednou — a [zóny](../panels/routing.md#zony), víc mount pointů nad jedním katalogem.
-Obojí je vypnuté, dokud to nezapneš.
+Obojí je vypnuté, dokud to nezapnete.
 
 ---
 
@@ -695,7 +695,7 @@ nebo, pokud je celý projekt back office:
 'defaults' => ['gestures' => true],
 ```
 
-Co změna *neovlivní*: zaškrtávátka, oba ovladače „vybrat vše" i bulk bar fungují
+Co změna *neovlivní*: zaškrtávátka, oba ovladače „vybrat vše“ i bulk bar fungují
 beze změny a tabulka, která si o gesta neřekla, nemontuje delegovaný controller
 vůbec. Stejně tak kontextové menu pod pravým tlačítkem a fill handle — o oboje
 jste si stejně museli říct sami.
@@ -711,8 +711,8 @@ Enter  Space  ArrowUp  ArrowDown  Home  End  PageUp  PageDown  ContextMenu  F10 
 
 `Backspace` zůstává k dispozici a nově funguje i jako alias klávesy `Delete`.
 
-**3. Rozsahová gesta už neopouštějí režim „vše odpovídající".** Když je vybráno
-„vše, co odpovídá filtru", je uložený seznam seznamem *výjimek* — takže rozsah
+**3. Rozsahová gesta už neopouštějí režim „vše odpovídající“.** Když je vybráno
+„vše, co odpovídá filtru“, je uložený seznam seznamem *výjimek* — takže rozsah
 přes `Shift`+šipku ho nově **odznačí**, místo aby celý výběr zúžil na jednu
 stránku. Pokud výběr čtete přímo, počítejte s tím, že `getSelectedRecordKeys()`
 v tomto režimu záměrně vrací `[]`; použijte `selectedRecordsQuery()` nebo
@@ -765,7 +765,7 @@ z jednoho místa ve vašem layoutu. Při upgradu udělejte dvě věci.
 Je to aditivní — každý povrch si svůj bundle stále načte sám, takže aplikace bez
 direktivy funguje dál. Ale je to právě ono, co opraví komponenty umírající po
 návštěvě přes `wire:navigate` (`wireRecordSelection is not defined`, mrtvé
-dropdowny, šedý scrim přes tabulku): cesta cachovaného Zpět/Vpřed v Livewire
+rozbalovací nabídky, šedý scrim přes tabulku): cesta cachovaného Zpět/Vpřed v Livewire
 nečeká na nově injektované `<head>` skripty a imunní je jen bundle, který už
 v dokumentu byl. Viz
 [Začínáme → JavaScriptové assety](getting-started.md#javascriptove-assety).

@@ -41,7 +41,7 @@ které končí dřív, než začíná, spadne na validaci místo aby se uložilo
 stojí jeden roundtrip; právě to nechá kalendář druhého konce překreslit s novým
 limitem.
 
-**Předvolby se počítají na serveru.** „Tento měsíc" se spočítá v PHP a vykreslí
+**Předvolby se počítají na serveru.** „Tento měsíc“ se spočítá v PHP a vykreslí
 jako dvojice hodnot, takže prohlížeč nemusí vědět, co ta fráze znamená, a nikdy
 se se serverem neneshodne na dnešním datu. Kliknutí zapíše oba konce najednou.
 

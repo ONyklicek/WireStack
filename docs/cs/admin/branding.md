@@ -6,7 +6,7 @@ summary: Dvě podoby loga, třístavový přepínač motivu rozhodnutý před pr
 # Branding a motiv
 
 Dvě rozhodnutí padnou dřív, než se stránka vykreslí — které logo a který motiv — a
-obě ze stejného důvodu v hlavičce: přečti kterékoli z nich o snímek později a
+obě ze stejného důvodu v hlavičce: přečtěte kterékoli z nich o snímek později a
 uživatel se dívá, jak se to mění.
 
 ## Logo v liště

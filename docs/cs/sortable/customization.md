@@ -115,14 +115,14 @@ Nastavte na `0` pro vypnutí animace.
 
 Toggle tlačítko se vykreslí automaticky v toolbaru tabulky. Ukazuje:
 
-- „Reorder" (s grip ikonou), když není v reorder režimu
-- „Done reordering" (s check ikonou), když je v reorder režimu
+- „Reorder“ (s grip ikonou), když není v reorder režimu
+- „Done reordering“ (s check ikonou), když je v reorder režimu
 
 Tlačítko je skryté, když tabulka používá `alwaysReorderable()` nebo když je řazení řádků vypnuté.
 
 ### Překlady
 
-Labely tlačítka jsou přeložitelné. Publikujte překlady:
+Popisky tlačítka jsou přeložitelné. Publikujte překlady:
 
 ```bash
 php artisan vendor:publish --tag=wire-sortable::translations

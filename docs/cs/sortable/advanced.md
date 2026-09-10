@@ -73,7 +73,7 @@ class TaskTable extends Component
 </div>
 ```
 
-> **Poznámka:** Toggle tlačítko „Reorder" / „Done reordering" se vykreslí automaticky sortable pohledem. Nemusíte ho přidávat manuálně.
+> **Poznámka:** Toggle tlačítko „Reorder“ / „Done reordering“ se vykreslí automaticky sortable pohledem. Nemusíte ho přidávat manuálně.
 
 ## Jen řazení řádků
 
@@ -117,7 +117,7 @@ Aktualizujte `config/wire-sortable.php`, aby odpovídal:
 'user_model' => 'App\\Models\\Admin',
 ```
 
-## Pořadí sloupců per komponenta
+## Pořadí sloupců pro každou komponentu
 
 Ve výchozím stavu je pořadí sloupců klíčované třídou Eloquent modelu. Pokud máte více komponent zobrazujících stejný model, ale chcete nezávislá pořadí sloupců:
 
@@ -186,7 +186,7 @@ Pokud upgradujete z předchozí verze wire-sortable:
 | `dragHandleColumn()` | Odstraněno (handly jsou v reorder režimu automatické) |
 | `dragHandleBeforeSelect()` | Odstraněno |
 | Session-based perzistence sloupců | DB-based přes tabulku `reorderable_column_orders` |
-| Vždy zapnuté drag handly | Toggle režim (klik „Reorder" pro vstup) |
+| Vždy zapnuté drag handly | Toggle režim (klik „Reorder“ pro vstup) |
 | Vždy vynucuje pořadí řazení | Vynucuje řazení jen v reorder režimu |
 
 ### Kroky migrace
@@ -198,4 +198,4 @@ Pokud upgradujete z předchozí verze wire-sortable:
    - Nahraďte volání `toggleSortable()` za `toggleReordering()`
    - Nahraďte volání `getSortableColumns()` za `getReorderableColumns()`
    - Odstraňte volání `dragHandleColumn()` a `dragHandleBeforeSelect()`
-4. Odstraňte jakákoli manuální toggle tlačítka -- balíček teď jedno vykresluje automaticky
+4. Odstraňte jakákoli ruční přepínací tlačítka -- balíček teď jedno vykresluje automaticky

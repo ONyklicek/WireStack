@@ -1,14 +1,14 @@
 ---
-summary: Jeden checkbox pro jeden boolean, s inline labelem a stavem, který zapisuje.
+summary: Jeden checkbox pro jeden boolean, s inline popiskem a stavem, který zapisuje.
 ---
 
 # Checkbox
 
-Jeden box, jeden boolean. Sáhni po `Checkboxu`, když je otázka „ano, nebo ne"
+Jeden box, jeden boolean. Sáhni po `Checkboxu`, když je otázka „ano, nebo ne“
 a odpověď patří vedle svého znění — souhlas s podmínkami, přihlášení k newsletteru.
 Když je ten přepínač spíš nastavení, které uživatel překlápí, než tvrzení, se
 kterým souhlasí, čte se líp [`Toggle`](toggle.md). Na několik booleanů ze seznamu
-použij [`CheckboxList`](checkbox-list.md).
+použijte [`CheckboxList`](checkbox-list.md).
 
 ```php
 use NyonCode\WireForms\Components\Checkbox;
@@ -21,20 +21,20 @@ kterékoli jiné.
 
 **Jeho typ stavu je `bool`.** Na to se formulář ptá, když plní prázdné schéma,
 takže checkbox, kterého se nikdo nedotkl, začíná jako `false`, ne `null` — a proto
-`->required()` na checkboxu znamená „musí být zaškrtnutý", ne „musí být přítomný".
+`->required()` na checkboxu znamená „musí být zaškrtnutý“, ne „musí být přítomný“.
 
-**Label kreslí checkbox, ne obal pole.** Na rozdíl od každého jiného pole dostane
-obal pokyn label skrýt a checkbox si ho vykreslí sám, vedle boxu, s povinnou
+**Popisek kreslí checkbox, ne obal pole.** Na rozdíl od každého jiného pole dostane
+obal pokyn popisek skrýt a checkbox si ho vykreslí sám, vedle boxu, s povinnou
 hvězdičkou za ním. Plynou z toho dvě věci:
 
-- Label checkboxu je **vždycky** vedle boxu, nikdy nad ním.
-- `description()` je druhý, menší řádek pod tím labelem — patří checkboxu a je
+- Popisek checkboxu je **vždycky** vedle boxu, nikdy nad ním.
+- `description()` je druhý, menší řádek pod tím popiskem — patří checkboxu a je
   něco jiného než sdílený `helperText()`, který obal vykresluje pod celým polem.
 
 **`inline()` tady dneska nedělá nic.** Metoda je deklarovaná a přijme se, ale
 `checkbox.blade.php` ji nikdy nečte — `isInline()` konzumuje jen [`Radio`](radio.md)
-a [`CheckboxList`](checkbox-list.md). Label je vedle boxu tak jako tak, takže se nic
-nerozbije; jen to na tomhle poli dneska není volba, kterou bys měl.
+a [`CheckboxList`](checkbox-list.md). Popisek je vedle boxu tak jako tak, takže se nic
+nerozbije; jen to na tomhle poli dneska není volba, kterou byste měli.
 
 ## Základní použití
 
@@ -120,8 +120,8 @@ class Register extends Component
 }
 ```
 
-Všimni si `rules(['accepted'])` u podmínek: samotné `required()` odmítne chybějící
-klíč, kdežto `accepted` je laravelí pravidlo pro „tohle musí být opravdu true",
+Všimněte si `rules(['accepted'])` u podmínek: samotné `required()` odmítne chybějící
+klíč, kdežto `accepted` je laravelí pravidlo pro „tohle musí být opravdu true“,
 a to je přesně, co checkbox se souhlasem znamená.
 
 ## Checkbox API
@@ -134,7 +134,7 @@ a to je přesně, co checkbox se souhlasem znamená.
 ->getStateType(): string                          // 'bool'
 ```
 
-Labely, nápovědu, viditelnost, výchozí hodnoty, validaci a `live()` sdílí každé
+Popisky, nápovědu, viditelnost, výchozí hodnoty, validaci a `live()` sdílí každé
 pole — viz [Společné API polí](index.md#spolecne-api-pole).
 
 ## Související

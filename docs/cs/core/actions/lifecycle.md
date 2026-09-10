@@ -4,26 +4,26 @@ summary: "Co běží kolem callbacku — před, po, při selhání — jak běh 
 api_class: NyonCode\WireCore\Actions\ActionHalt
 ---
 
-# Lifecycle a fronty
+# Životní cyklus a fronty
 
 Mezi kliknutím a notifikací je pevné pořadí kroků a u každého z nich je hook,
-který si můžeš vzít. Tahle stránka je to pořadí — co běží kdy, co který hook
+který si můžete vzít. Tahle stránka je to pořadí — co běží kdy, co který hook
 dostane, jak běh zevnitř zastavit a co je jinak, jakmile je práce dost dlouhá na
 to, aby patřila na frontu.
 
-## Lifecycle hooky
+## Hooky životního cyklu
 
-Pořadí je pevné a u každého kroku je místo, které si můžeš vzít:
+Pořadí je pevné a u každého kroku je místo, které si můžete vzít:
 
 | Krok | Co běží | Co je dobré vědět |
 | --- | --- | --- |
 | 1. Modal | potvrzení, formulář, infolist nebo wizard, pokud je akce deklaruje | jeho formulář se validuje dřív, než pipeline začne |
-| 2. `before()` | tvoje callbacky, v pořadí deklarace | **přeskočí se při opakovaném běhu** po potvrzeném haltu (tam je `$confirmed` true) |
+| 2. `before()` | vaše callbacky, v pořadí deklarace | **přeskočí se při opakovaném běhu** po potvrzeném haltu (tam je `$confirmed` true) |
 | 3. `action()` | samotná práce | dostane `$record` / `$records`, `$data`, `$confirmed`, `$halt` |
 | 4. Redirect a notifikace | redirect výsledku a pak `successNotification()` nebo `failureNotification()` | zaznamenává se tady, *před* krokem 5 |
-| 5. `after()` | tvoje callbacky | **přeskočí se, když běh haltnul**, takže vedlejší efekty haltu nemůžou proběhnout dvakrát |
+| 5. `after()` | vaše callbacky | **přeskočí se, když běh haltnul**, takže vedlejší efekty haltu nemůžou proběhnout dvakrát |
 
-Tři důsledky, které je dobré mít v hlavě, než napíšeš hook:
+Tři důsledky, které je dobré mít v hlavě, než napíšete hook:
 
 - **`before()`, který haltne, zastaví všechno za sebou.** Práce neproběhne a after
   callbacky taky ne — což je smyslem věci, ale zároveň to znamená, že úklid do
@@ -119,7 +119,7 @@ vykreslení modalu přesunulo do core vedle enginu. Předtím halt mimo tabulku
 nastavil stav, který nikdo nekreslil: akce se zastavila a obrazovka mlčela.
 
 Jediné, co hostitel haltu dluží, je modal host, který stejně vykresluje kvůli
-modálům akcí:
+modalům akcí:
 
 ```blade
 <x-wire-actions::modal-host :component="$this" />
@@ -188,7 +188,7 @@ proti datům, se kterými se odešle. Hostitel skládající `WithActions` nebo
 
 ### API haltu
 
-Halt **je** modal, takže mluví slovníkem, který vlastní třídy modálů —
+Halt **je** modal, takže mluví slovníkem, který vlastní třídy modalů —
 `heading()`, `description()`, `width()`, `closeOnEscape()`. **Akce** tytéž věci
 prefixuje (`modalHeading()`, `modalWidth()`), protože akce je tlačítko, které
 modal *má*, a její vlastní `icon()` a `color()` patří tomu tlačítku. To je celé
@@ -229,7 +229,7 @@ Pět presetů nastaví nadpis, text, ikonu a barvu jedním voláním:
 Tři z nich mají pravidlo, které stojí za to říct nahlas, protože každé z nich
 byla past:
 
-- **Closure v nadpisu se vyhodnotí, když ji napíšeš, ne když se modal kreslí.**
+- **Closure v nadpisu se vyhodnotí, když ji napíšete, ne když se modal kreslí.**
   Halt se serializuje do stavu komponenty v okamžiku vyvolání a scope, který by
   closure uměl odpovědět, je při dalším requestu pryč.
 - **`form()` a `informative()` se navzájem přebijí, platí to poslední.**
@@ -258,7 +258,7 @@ Action::make('recalculate')
 ```
 
 Kliknutí dispatchne job a hned se vrátí; uživatel dostane notifikaci „běží na
-pozadí" a druhou, až to doběhne.
+pozadí“ a druhou, až to doběhne.
 
 ### Co přes hranici jde
 
@@ -274,7 +274,7 @@ se zpracuje **v podobě, v jaké je při běhu jobu**, ne v jaké byl při zařa
 ### Co přes ni nejde
 
 Frontovaná akce **nemá prohlížeč**. Bindingy, které synchronní callback dostane
-pro modál — `$set`, `$setParent`, `$close`, `$replace`, `$halt` — vyhazují
+pro modal — `$set`, `$setParent`, `$close`, `$replace`, `$halt` — vyhazují
 výjimku, nejsou to no-opy:
 
 ```php
@@ -285,7 +285,7 @@ Action::make('recalculate')->queue()->action(function ($records, $close) {
 ```
 
 No-op by vypadal, že fungoval, a vývojář by se to dozvěděl, až by uživatel
-nahlásil, že se modál nezavřel. Hlas se místo toho notifikací — přesně na to je
+nahlásil, že se modal nezavřel. Hlas se místo toho notifikací — přesně na to je
 [databázový driver](../notifications/index.md), protože request, který job spustil, už
 touhle dobou není.
 
@@ -317,6 +317,6 @@ která to umí. Viz [Hooky](../plugins/hooks.md).
 ## Související
 
 - [Akce](index.md) — callback, který tyhle hooky obklopují
-- [Modály akcí](modals.md) — co může běžet dřív než callback
+- [Modaly akcí](modals.md) — co může běžet dřív než callback
 - [Notifikace](../notifications/index.md) — jak se dokončený nebo selhaný běh ohlásí
-- [Save lifecycle](../../forms/save-lifecycle.md) — tentýž nápad na straně formuláře
+- [Životní cyklus ukládání](../../forms/save-lifecycle.md) — tentýž nápad na straně formuláře

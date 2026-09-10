@@ -36,7 +36,7 @@ TextEntry::make('api_token')
     ]);
 ```
 
-**Akce per řádek** — deklarované na `RepeatableEntry`, vykreslené jednou per řádek a vyvolané s **položkou toho řádku** jako `$record` / `$state`:
+**Akce pro každý řádek** — deklarované na `RepeatableEntry`, vykreslené jednou na řádek a vyvolané s **položkou toho řádku** jako `$record` / `$state`:
 
 ```php
 RepeatableEntry::make('lines')
@@ -74,5 +74,5 @@ ViewAction::make()->infolist(fn ($record) => Infolist::make()->schema([
 
 - [Infolisty](index.md) — povrch, na kterém tyhle akce sedí
 - [Akce](../actions/index.md) — třídy, které se vykreslují
-- [Modály akcí](../actions/modals.md) — modal s infolistem z druhé strany
+- [Modaly akcí](../actions/modals.md) — modal s infolistem z druhé strany
 - [Panely: Stránky](../../panels/pages.md) — proč stránka detailu neskládá hostitelskou traitu

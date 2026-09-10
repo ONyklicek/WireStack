@@ -23,7 +23,7 @@ Table::make()
     ])
 ```
 
-Tři stavy, z nichž jen dva jsou volbami — „bez smazaných" je placeholder, tedy
+Tři stavy, z nichž jen dva jsou volbami — „bez smazaných“ je placeholder, tedy
 zrušení filtru:
 
 | Stav | Dotaz |

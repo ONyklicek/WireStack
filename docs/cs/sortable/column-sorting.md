@@ -1,12 +1,12 @@
 ---
 title: Řazení sloupců
 order: 40
-summary: Přerovnávání sloupců tažením za jejich hlavičky, zapamatované per uživatel a per tabulka.
+summary: Přerovnávání sloupců tažením za jejich hlavičky, zapamatované zvlášť pro každého uživatele a každou tabulku.
 ---
 
 # Řazení sloupců
 
-Drag & drop řazení hlaviček sloupců s databázovou perzistencí per uživatel, per tabulka.
+Řazení hlaviček sloupců tažením, ukládané do databáze zvlášť pro každého uživatele a každou tabulku.
 
 ## Základní použití
 
@@ -83,7 +83,7 @@ Když uživatel táhne hlavičku sloupce:
 
 ### Validace názvů sloupců
 
-Trait filtruje příchozí názvy sloupců proti definici tabulky. Perzistují se jen názvy, které odpovídají definovanému sloupci. To předchází:
+Trait filtruje příchozí názvy sloupců proti definici tabulky. Ukládají se jen názvy, které odpovídají definovanému sloupci. To předchází:
 
 - Injektování libovolných názvů sloupců z frontendu
 - Zastaralým názvům sloupců, které by rozbily tabulku poté, co je sloupec odebrán z definice
@@ -168,7 +168,7 @@ Když `getReorderableUserId()` vrátí `null`, řazení sloupců se tiše vypne:
 - `reorderColumns()` je no-op
 - `resetColumnOrder()` vyčistí jen lokální vlastnost
 
-Drag & drop UI stále funguje v prohlížeči (přes Alpine.js), ale změny se neperzistují.
+Drag & drop UI stále funguje v prohlížeči (přes Alpine.js), ale změny se neukládají.
 
 ## Tok řazení sloupců
 

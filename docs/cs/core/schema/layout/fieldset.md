@@ -20,14 +20,14 @@ Fieldset je **layoutová komponenta**: nenese hodnotu ani state path, takže se 
 přidat nebo odebrat bez dotyku na data. Vykreslí orámovaný box, dá `label()` do
 legendy a děti uvnitř rozloží do gridu.
 
-**Bez labelu není legenda.** Element `<legend>` se vypíše jen tehdy, když je label
+**Bez popisku není legenda.** Element `<legend>` se vypíše jen tehdy, když je popisek
 nastavený, takže `Fieldset::make('address')` a nic dalšího vykreslí orámovaný box
-bez nadpisu — což je legitimní přání a překvapení, když jsi čekal, že se jméno
-stane legendou. Na rozdíl od pole si fieldset ze jména label *neudělá*: napiš
+bez nadpisu — což je legitimní přání a překvapení, když jste čekali, že se jméno
+stane legendou. Na rozdíl od pole si fieldset ze jména popisek *neudělá*: napište
 `->label('Adresa')`.
 
 **Výchozí počet sloupců je 1**, ne 2 — fieldset je v první řadě seskupení a až
-potom grid. Vyhodnocuje se různě podle tvaru, který předáš, a tohle je ta část,
+potom grid. Vyhodnocuje se různě podle tvaru, který předáte, a tohle je ta část,
 kterou je dobré vědět:
 
 - **Int** projde malou lokální mapou, která rozumí **1, 2, 3 a 4** a přeskládává se
@@ -36,8 +36,8 @@ kterou je dobré vědět:
 - **Mapa po breakpointech** projde tímtéž `ResponsiveGrid`, který používá
   [`Grid`](grid.md) — `['default' => 1, 'md' => 3]` — s plným rozsahem 1–12.
 
-Ty dva tvary tady tedy nejsou jen dva zápisy téhož: **když chceš víc než čtyři
-sloupce nebo kontrolu nad tím, kde se to přeskládá, předej mapu.**
+Ty dva tvary tady tedy nejsou jen dva zápisy téhož: **když chcete víc než čtyři
+sloupce nebo kontrolu nad tím, kde se to přeskládá, předejte mapu.**
 
 Děti se před vykreslením filtrují vlastní podmínkou `visible()` a fieldset se za
 skrytým dítětem zavře.
@@ -68,7 +68,7 @@ Fieldset::make('address')
 ```
 
 Ulice zabere celý řádek, město a PSČ si rozdělí další. Na cokoli přes čtyři
-sloupce nebo na jiný bod přeskládání použij tvar s mapou:
+sloupce nebo na jiný bod přeskládání použijte tvar s mapou:
 
 ```php
 Fieldset::make('address')

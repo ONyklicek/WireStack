@@ -1,13 +1,13 @@
 ---
 order: 1
-summary: "Sdílený slovník pro rozvržení obsahu: jedno uspořádané pole komponent, které konzumují formuláře, infolisty i modály akcí."
+summary: "Sdílený slovník pro rozvržení obsahu: jedno uspořádané pole komponent, které konzumují formuláře, infolisty i modaly akcí."
 ---
 
 # Schema
 
 **Schema** je uspořádané pole komponent předané do `->schema([...])`. Je to
 sdílený slovník pro uspořádání obsahu a stejné komponenty se vykreslují
-napříč surface — formuláře, infolisty i action modaly konzumují schema.
+napříč povrchy — formuláře, infolisty i action modaly konzumují schema.
 
 ```php
 use NyonCode\WireCore\Foundation\Schema\Grid;
@@ -35,7 +35,7 @@ Schema je **strom komponent**. Ten strom tvoří dva druhy:
   `->schema([...])`, takže se layouty vnořují libovolně hluboko.
 
 Při renderu hostitel prochází strom do hloubky: každá komponenta vyresolvuje svou
-vlastní konfiguraci (labely, viditelnost, sloupce) a vykreslí svůj Blade pohled,
+vlastní konfiguraci (popisky, viditelnost, sloupce) a vykreslí svůj Blade pohled,
 rekurzivně do dětských schémat. Protože layoutové komponenty nedrží hodnotu, lze
 je přidávat, odebírat nebo přeřazovat volně bez zásahu do vašich dat — na stav se
 mapují jen pole.
@@ -90,7 +90,7 @@ Tři z nich si zaslouží větu, protože právě na ně lidi narazí jako na p�
 
 - **`columnSpan()` je o rodiči, ne o dítěti.** Říká, kolik z gridu, který tuhle
   komponentu *obsahuje*, zabere. Rozumí `2`, `3`, `4` a `'full'` a ničemu jinému —
-  `columnSpan(5)` tiše znamená „jeden sloupec".
+  `columnSpan(5)` tiše znamená „jeden sloupec“.
 - **`visible()` bere closure a vyhodnocuje se při každém renderu**, takže layout
   může přicházet a mizet podle stavu formuláře. `visibleWhen('type', 'company')`
   je totéž napsané pro ten obvyklý případ.

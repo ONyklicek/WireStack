@@ -75,7 +75,7 @@ Každá form komponenta rozšiřuje
 `NyonCode\WireCore\Foundation\Components\Component`. Ta základní třída vám zdarma dává:
 
 - factory `make(string $name)` a konstruktor jen s `$name`
-- label, hint, helper text, id, size, column span, viditelnost
+- popisek, hint, helper text, id, size, column span, viditelnost
 - `extraAttributes()`, `default()` a vyhodnocování closur přes `evaluate()`
 - `render()`, který volá váš `viewName()` s komponentou dostupnou v pohledu jako `$field`
 
@@ -173,7 +173,7 @@ Konvence, které stojí za dodržení, protože je vestavěná pole všechna dod
 
 ### 2. Blade pohled
 
-Obalte input do sdílených field-wrapper partialů. Vykreslí za vás label,
+Obalte input do sdílených field-wrapper partialů. Vykreslí za vás popisek,
 hint, marker povinnosti, helper text a validační chybu — takže vlastní
 pole vypadá stejně jako vestavěné a nepotřebuje pro ně žádný extra markup.
 
@@ -407,9 +407,9 @@ i transformace, která by se dvojím uplatněním rozbila, je v bezpečí. `$rec
 `null`, když hostitel žádný nemá (create formulář); buňka tabulky ho má vždy.
 
 Hostitelé jsou tři, ne dva: uložení formuláře, editace buňky v tabulce a
-[action modal](../core/actions/index.md), který svá data předává callbacku. Tvoje pole
-dostane od všech tří stejnou otázku, takže transformaci piš proti hodnotě — ne
-proti domněnce „teď se ukládá".
+[action modal](../core/actions/index.md), který svá data předává callbacku. Vaše pole
+dostane od všech tří stejnou otázku, takže transformaci pište proti hodnotě — ne
+proti domněnce „teď se ukládá“.
 
 ---
 
@@ -418,8 +418,8 @@ proti domněnce „teď se ukládá".
 
 Kontrakty výše patří *poli* — cestují s ním do každého formuláře. Dvě vrstvy níže
 patří **formuláři** nebo **aplikaci**. Sáhněte po nich, když ta znalost není
-polem: `DehydratesState` na „tohle pole vždycky ukládá centy", hook na „každý
-formulář razítkuje tenanta".
+polem: `DehydratesState` na „tohle pole vždycky ukládá centy“, hook na „každý
+formulář razítkuje tenanta“.
 
 Existují dvě vrstvy a skládají se:
 
@@ -460,7 +460,7 @@ Tato sekce pokrývá další krok: dodávat vlastní pole jako **znovupoužiteln
 instalovatelnou jednotku** — doprovodný balíček, který si ostatní mohou `composer require`,
 nebo sdílený modul uvnitř větší aplikace.
 
-### Co „registrace pole" doopravdy znamená
+### Co „registrace pole“ doopravdy znamená
 
 **Neexistuje žádný registr typů polí.** Na rozdíl od sloupců tabulky, filtrů a akcí
 — které mají metadatové registry `addColumnType()` / `addFilterType()` / `addActionType()`
@@ -758,12 +758,12 @@ else document.addEventListener('alpine:init', register)
 ```
 
 Guard `registered` není obranný detail: bundle se legitimně může na jedné stránce
-vypsat dvakrát (per-surface include plus
+vypsat dvakrát (include na každém povrchu plus
 [`@wireStackScripts`](../start/getting-started.md#javascriptove-assety)) a prohlížeč ho
-oba dva krát spustí.
+obakrát spustí.
 
 Pokud váš balíček dodává víc než občasné těžké pole, deklarujte bundle v
-`configure()` vlastního balíčku místo pouhého per-surface includu —
+`configure()` vlastního balíčku místo pouhého includu na každém povrchu —
 `@wireStackScripts` ho pak vypíše vedle vlastních bundlů Wire:
 
 ```php
@@ -805,7 +805,7 @@ přeloží zpátky na váš soubor: pojmenujte bundle `my-field.js`,
 sedí.
 
 Těžká těla držte mimo stránky, které je nepotřebují, tak že je vynecháte z
-`entries:` a necháte je dodat pole per-surface — ale nikdy ne malý controller,
+`entries:` a necháte je dodat pole pro každý povrch — ale nikdy ne malý controller,
 který komponentu registruje.
 
 ---
@@ -835,6 +835,6 @@ balíček testuje vestavěná pole. Spusťte je pomocí `composer test:forms`.
 ## Viz také
 
 - [Reference Form Fields](fields/index.md) — každé vestavěné pole
-- [Životní cyklus ukládání](save-lifecycle.md) — per-form save callbacky
+- [Životní cyklus ukládání](save-lifecycle.md) — save callbacky pro každý formulář
 - [Validace](validation.md) — sběr pravidel a zprávy
 - [Core Pluginy](../core/plugins/index.md) — hooky, makra, registry typů, balíčkování

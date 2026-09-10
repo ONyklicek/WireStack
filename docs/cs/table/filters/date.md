@@ -22,7 +22,7 @@ DateFilter::make('created_at')
 
 ## Rozsah dat
 
-Zavolejte `range()` pro vykreslení dvou date inputů („from" a „to"). Uživatel může
+Zavolejte `range()` pro vykreslení dvou date inputů („from“ a „to“). Uživatel může
 vyplnit kteroukoli stranu, takže otevřené rozsahy fungují bez extra konfigurace.
 
 ```php

@@ -14,7 +14,7 @@ composer require nyoncode/wire-suite
 php artisan wire:install
 ```
 
-Nic tě k téhle cestě nenutí. Každý balíček níž se instaluje samostatně a celý
+Nic vás k téhle cestě nenutí. Každý balíček níž se instaluje samostatně a celý
 stack nad `wire-core` je volitelný — viz [Instalace Wire](start/installation.md)
 pro setup na jeden příkaz a [Mapa projektu](start/project-map.md) pro to, co na
 čem závisí.
@@ -45,7 +45,7 @@ použité samostatně.
 | [Přehled formulářů](forms/overview.md) | Jeden formulář, více formulářů, standalone použití a průběh ukládání |
 | [Validace](forms/validation.md) | Pravidla, hlášky a vlastní validační chování |
 | [Reaktivní pole](forms/reactive-fields.md) | Pole, která živě reagují na jiná pole |
-| [Save lifecycle](forms/save-lifecycle.md) | Validace, mutace, perzistence a notifikace |
+| [Životní cyklus ukládání](forms/save-lifecycle.md) | Validace, mutace, perzistence a notifikace |
 | [Reference polí](forms/fields/index.md) | Všechna pole — vstupní, layoutová, zobrazovací, relační, repeater |
 | [Rozšiřování formulářů](forms/custom-fields.md) | Vlastní pole, zobrazovací komponenty, presety a balíčkování |
 
@@ -78,8 +78,8 @@ ani formulář nemají.
 |----------|-------|
 | [Wire Core](core/overview.md) | Co žije v core, jak jsou jeho moduly navrstvené a která stránka na co odpovídá |
 | [Foundation](core/foundation/index.md) | Sdílené traity, ikony, barvy, enumy a Blade helpery |
-| [Akce](core/actions/index.md) | Řádkové, hromadné a hlavičkové akce, skupiny, modály, wizardy, fronty |
-| [Modály](core/modals.md) | Potvrzovací, slide-over a wizard komponenty |
+| [Akce](core/actions/index.md) | Řádkové, hromadné a hlavičkové akce, skupiny, modaly, wizardy, fronty |
+| [Modaly](core/modals.md) | Potvrzovací, slide-over a wizard komponenty |
 | [Notifikace](core/notifications/index.md) | Hodnotové objekty notifikací, manager a drivery |
 | [Widgety](core/widgets/index.md) | Statistiky, grafy, tabulkové a vlastní widgety, dashboardy |
 | [Infolisty](core/infolists/index.md) | Read-only zobrazení jednoho záznamu podle schématu |
@@ -100,7 +100,7 @@ stránky, menu a routy.
 | [Resources](panels/resources.md) | Identita, kontrakty povrchů, pojmenování, registrace |
 | [Stránky](panels/pages.md) | Seznam, založení, editace, detail a dashboard |
 | [Navigace](panels/navigation.md) | Položky, skupiny, workspace a katalog |
-| [Routování](panels/routing.md) | Deklarované stránky jako URL, middleware per resource, zóny |
+| [Routování](panels/routing.md) | Deklarované stránky jako URL, middleware pro každý resource, zóny |
 | [Moduly](panels/modules.md) | Resource a dashboardy jedné byznysové oblasti, deklarované jednou |
 
 ## Admin
@@ -122,7 +122,7 @@ Celé oblasti dodané jako composer balíčky.
 |----------|-------|
 | [Hotové moduly](modules/index.md) | Co která nainstaluje a jak ji zase odebrat |
 | [Uživatelé](modules/users.md) | Uživatelská oblast, s rolemi tam, kde je aplikace má |
-| [Týmy a dvoufaktor](modules/teams-and-two-factor.md) | Zapnutí dvoufaktoru přes Fortify a rolí per tým |
+| [Týmy a dvoufaktor](modules/teams-and-two-factor.md) | Zapnutí dvoufaktoru přes Fortify a rolí v rámci týmů |
 | [Přihlašování](modules/auth.md) | Přihlášení, reset hesla, ověření, dvoufaktorová výzva |
 | [Nastavení](modules/settings.md) | Typovaná nastavení aplikace, s obrazovkou i úložištěm |
 | [Notifikace](modules/notifications.md) | Historie za zvonečkem |

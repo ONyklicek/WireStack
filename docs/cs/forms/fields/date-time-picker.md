@@ -31,7 +31,7 @@ DateTimePicker::make('x')->mode('date')      // 'date', 'month', 'time', 'dateti
 ```
 
 > `asMonth()` vždy renderuje nativní `<input type="month">` prohlížeče — vlastní kalendář
-> nemá month-only mřížku — takže zůstane nativní i když předáš `->native(false)`.
+> nemá month-only mřížku — takže zůstane nativní i když předáte `->native(false)`.
 
 > `asTime()` vybírá čas steppery hodin a minut. Pro pole, jehož časy jsou **sloty**
 > — otevírací doba, termíny — ukládá [`TimePicker`](time-picker.md) tutéž hodnotu,
@@ -183,4 +183,4 @@ Jedinou výjimkou je [`asMonth()`](#rezimy), který je vždy nativní.
 | `required()` | — | Označit jako povinné |
 | `live()` | — | Spustit Livewire update při změně |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).
+Popisek, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

@@ -35,7 +35,7 @@ use NyonCode\WireCore\Actions\Action;
 
 ### Reference na existující akci
 
-Pokud akce už existuje v `->actions()`, jen ji pojmenuj místo nové definice:
+Pokud akce už existuje v `->actions()`, jen ji pojmenujte místo nové definice:
 
 ```php
 ->actions([
@@ -120,7 +120,7 @@ tatáž klávesa pod jiným jménem.
 
 Výběrová gesta — `Space`, rozsahy, `mod`+`A` — popisuje
 [Výběr řádků](selection.md), včetně gest myší a toho, co rozsah znamená, když je
-vybráno „vše odpovídající".
+vybráno „vše odpovídající“.
 
 Myš i klávesnice sdílejí jeden aktivní řádek: **klik na řádek ho označí** a šipky
 pokračují odtud, takže se tabulka nikdy neovládá ze dvou míst zároveň. Označení
@@ -129,12 +129,12 @@ záznamu i po přeřazení (když záznam ze stránky zmizí, tabstop se vrátí
 řádek).
 
 Klávesy dosáhnou na grid jen tehdy, když má fokus **samotný řádek**: stisk uvnitř
-tlačítka akce, inline editovatelné buňky nebo dropdownu patří tomu prvku. Dokud
+tlačítka akce, inline editovatelné buňky nebo rozbalovací nabídky patří tomu prvku. Dokud
 je otevřený modal akce, grid je inertní — žádná šipka neposune označení za
 dialogem a žádná zkratka nespustí druhou akci — a po zavření modalu se fokus
 vrátí na aktivní řádek, takže šipky dál fungují.
 
-Vynuť vypnutí (či zapnutí), pokud potřebuješ — klávesnice je jedna ze schopností
+Vynuť vypnutí (či zapnutí), pokud potřebujete — klávesnice je jedna ze schopností
 [vrstvy gest](gestures.md):
 
 ```php
@@ -177,8 +177,8 @@ nespustí navázanou akci nad záznamem. Hromadné akce zůstávají nedotčené
 
 ## Styling
 
-Řádek ukáže kurzor ruky, když je klikatelný. Nech neutrální hover, nebo ho
-obarvi pro silnější náznak „tento řádek je klikatelný":
+Řádek ukáže kurzor ruky, když je klikatelný. Nechte neutrální hover, nebo ho
+obarvi pro silnější náznak „tento řádek je klikatelný“:
 
 ```php
 ->recordActionHover('primary')   // obarvený hover místo neutrální šedé
@@ -203,7 +203,7 @@ kontrast:
 - **App-like tabulka** — `->recordAction('open')->behaviorOnly()` plus kontextové
   menu; zmenši nebo vypusť sloupec akcí. Řádky se chovají jako položky v
   Průzkumníku.
-- **Klasická tabulka + zkratka** — nech plný sloupec akcí a přidej
+- **Klasická tabulka + zkratka** — nechte plný sloupec akcí a přidejte
   `->recordAction('view')->onDoubleClick()->alsoInRowActions()` jen jako
   zrychlení.
 - **Read-heavy** — dvojklik otevře detail; pravé tlačítko nabídne
@@ -212,9 +212,9 @@ kontrast:
 ## Nejčastější chyby
 
 - **Jednoklik jako primární u selectable tabulky** — krade klik určený výběru.
-  Použij dvojklik (výchozí při selectable).
+  Použijte dvojklik (výchozí při selectable).
 - **Vložení `Action::make()->onDoubleClick()` do `->actions()`** — vrací record
-  action a tam je odmítnuta; předej ji do `recordActions()`.
+  action a tam je odmítnuta; předejte ji do `recordActions()`.
 - **Očekávání record akcí na mobilní kartě nebo sub-rows** — record akce jsou
   desktop pointer koncept na hlavních řádcích; touch karty používají viditelná
   tlačítka akcí a sub-rows jsou záměrně vyloučené.

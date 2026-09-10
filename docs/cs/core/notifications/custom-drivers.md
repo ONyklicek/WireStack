@@ -39,8 +39,8 @@ NotificationManager::setDefaultDriver(new SlackDriver());
 Nebo ho použijte pro jednu komponentu/volání bez změny globálního výchozího:
 
 ```php
-$this->setNotificationDriver(new SlackDriver());      // per-komponenta (trait)
-NotificationManager::send($notification, new SlackDriver()); // per-volání
+$this->setNotificationDriver(new SlackDriver());      // pro jednotlivé komponenty (trait)
+NotificationManager::send($notification, new SlackDriver()); // pro jednotlivá volání
 ```
 
 ## Související

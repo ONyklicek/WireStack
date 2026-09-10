@@ -47,7 +47,7 @@ Form::save()
 │       Void hook — side efekty, vyčištění cache, události
 │
 ├── 8. PLUGIN HOOK: form.saved
-│   └── Pluginy pozorují perzistovaný $record
+│   └── Pluginy pozorují uložený $record
 │
 └── 9. NOTIFIKACE
     ├── Odeslat úspěšnou notifikaci přes Notifications modul
@@ -226,7 +226,7 @@ Action::make('publish')
 
 Obojí dveře aplikují stejnou dehydrataci, takže `$data` tady drží přesně to, co
 by zapsalo uložení: `null` za vymazaný select i vyprázdněné číselné pole, storage
-formát a časovou zónu u data, uloženou cestu u uploadu a nakonec tvůj vlastní
+formát a časovou zónu u data, uloženou cestu u uploadu a nakonec váš vlastní
 `dehydrateStateUsing()`. Kroky wizardu sdílejí jeden data bag a dehydratuje se
 každý z nich — ne jen ten, který je při odeslání na obrazovce.
 
@@ -258,7 +258,7 @@ Callback `using()` nahrazuje celou výchozí create/update logiku. Dostane `$dat
 **Relační repeatery a `using()`.** `$data` obsahuje hodnotu každého pole, **včetně relačních `Repeater` polí** (např. klíč `children` pro `Repeater::make('children')->relationship('children')`). Výchozí cesta perzistence tyto klíče před zápisem rodiče odstraní; `using()` ne. Takže:
 
 - **Neprovádějte** hromadné přiřazení celého `$data` — `User::create($data)` by se pokusil zapsat `children` jako sloupec. Přiřaďte jen vlastní atributy rodiče.
-- **Vraťte perzistovaný `Model`** a kaskáda relací (krok 6) stále poběží a uloží za vás řádky repeateru do relace:
+- **Vraťte uložený `Model`** a kaskáda relací (krok 6) stále poběží a uloží za vás řádky repeateru do relace:
 
 ```php
 $form->using(fn (array $data) => User::create(['name' => $data['name']]));
@@ -331,7 +331,7 @@ Dostane `$record` — návratovou hodnotu kroku perzistence (typicky instanci Mo
 
 ## Krok 8: Plugin hook — form.saved
 
-Vystřelí po `afterSave`, aby pluginy mohly pozorovat perzistovaný záznam. Uživatelský kód s tímto krokem přímo neinteraguje.
+Vystřelí po `afterSave`, aby pluginy mohly pozorovat uložený záznam. Uživatelský kód s tímto krokem přímo neinteraguje.
 
 ---
 

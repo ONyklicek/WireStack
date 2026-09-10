@@ -21,7 +21,7 @@ Radio::make('priority')
     ])
 ```
 
-## Dynamické options
+## Dynamické možnosti
 
 ```php
 Radio::make('plan')
@@ -29,12 +29,12 @@ Radio::make('plan')
 ```
 
 <a id="enum-options"></a>
-## Options z enumu
+## Možnosti z enumu
 
-Předejte třídu PHP enumu pro rozvinutí jeho case na options `value => label`. Labely pocházejí z
+Předejte třídu PHP enumu pro rozvinutí jeho case na možnosti `value => label`. Popisky pocházejí z
 `getLabel()`, když enum implementuje `Foundation\Contracts\Enum\HasLabel`, jinak se
-z názvu case udělá headline. Pole je také auto-omezeno na hodnoty enumu pravidlem `in:`.
-Detaily viz [Select › Options z enumu](select.md#options-z-enumu).
+z názvu case udělá headline. Pole je také automaticky omezeno na hodnoty enumu pravidlem `in:`.
+Detaily viz [Select › Možnosti z enumu](select.md#moznosti-z-enumu).
 
 ```php
 Radio::make('status')->options(Status::class)
@@ -68,7 +68,7 @@ enum Plan: string implements HasLabel, HasIcon, HasColor
     }
 }
 
-// Ikony + barvy per option pocházejí obojí rovnou z enumu:
+// Ikony + barvy jednotlivých možností pocházejí obojí rovnou z enumu:
 Radio::make('plan')->options(Plan::class)->cards();
 ```
 
@@ -121,7 +121,7 @@ Radio::make('plan')
 ### Karty s ikonami
 
 Poskytněte mapu `value => icon` (nebo nechte `HasIcon` enum je dodat automaticky — viz
-[Options z enumu](#options-z-enumu)).
+[Možnosti z enumu](#moznosti-z-enumu)).
 
 ```php
 Radio::make('plan')
@@ -193,7 +193,7 @@ Radio::make('alignment')
 ## Barva
 
 Zabarvěte vybranou možnost pomocí `->color()` (nebo `Color` enumu). Aplikuje se na **každou**
-variantu — nativní radio akcent, segmentovaný label, výplň tlačítek a
+variantu — nativní radio akcent, segmentovaný popisek, výplň tlačítek a
 ohraničení/prstenec/ikonu/indikátor karty. Výchozí je `primary`.
 
 ```php
@@ -205,10 +205,10 @@ Radio::make('align')->options([...])->buttons()->color(Color::Danger);
 
 Podporované barvy: kompletní Tailwind paleta — sémantické role (`primary`, `success`, `danger`, `warning`, `info`, `gray`), každá surová rodina odstínů (`blue`, `green`, `red`, `yellow`, `cyan`, `slate`, `zinc`, `neutral`, `stone`, `orange`, `lime`, `teal`, `sky`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`) a adaptivní achromatické krajní body (`white`, `black`). Literal odstíny jsou odlišné od sémantických rolí — `blue` ≠ `primary`, `green` ≠ `success`, `yellow` ≠ `warning`.
 
-### Barvy per option
+### Barvy jednotlivých možností
 
 Dejte každé možnosti vlastní akcent pomocí `->colors([value => color])`, nebo nechte `HasColor` enum
-je dodat z `->options(Enum::class)` (viz [Options z enumu](#options-z-enumu)). Barva per option
+je dodat z `->options(Enum::class)` (viz [Možnosti z enumu](#moznosti-z-enumu)). Barva jednotlivé možnosti
 vyhrává nad skupinovým `->color()`; možnosti bez ní na něj spadnou.
 
 ```php
@@ -237,22 +237,22 @@ Radio::make('delivery_method')
 
 | Metoda | Typ | Popis |
 |--------|------|-------------|
-| `options(array\|string\|Closure)` | array | Seznam options nebo třída enumu (`value => label`) |
-| `descriptions(array\|Closure)` | array | Popisný text per option (`value => description`) |
-| `icons(array\|Closure)` | array | Ikony per option (`value => icon`); auto-odvozené z `HasIcon` enumu |
-| `cards(bool)` | bool | Vykreslit options jako vybíratelné karty |
-| `segmented(bool)` | bool | Vykreslit options jako segmentovaný ovladač (pilulka nad dráhou) |
-| `buttons(bool)` | bool | Vykreslit options jako samostatná tlačítka (vybrané vyplněné) |
+| `options(array\|string\|Closure)` | array | Seznam možností nebo třída enumu (`value => label`) |
+| `descriptions(array\|Closure)` | array | Popisný text pro každou možnost (`value => description`) |
+| `icons(array\|Closure)` | array | Ikony pro každou možnost (`value => icon`); automaticky odvozené z `HasIcon` enumu |
+| `cards(bool)` | bool | Vykreslit možnosti jako vybíratelné karty |
+| `segmented(bool)` | bool | Vykreslit možnosti jako segmentovaný ovladač (pilulka nad dráhou) |
+| `buttons(bool)` | bool | Vykreslit možnosti jako samostatná tlačítka (vybrané vyplněné) |
 | `size(string)` / `sm()` / `md()` / `lg()` | string | Velikost variant `segmented`/`buttons` (`xs`/`sm`/`md`/`lg`, výchozí `md`) |
 | `color(string\|Color)` | string | Skupinová akcentová barva vybrané možnosti, všechny varianty (výchozí `primary`) |
-| `colors(array\|Closure)` | array | Akcentové barvy per option (`value => color`); auto-odvozené z `HasColor` enumu |
+| `colors(array\|Closure)` | array | Akcentové barvy pro každou možnost (`value => color`); automaticky odvozené z `HasColor` enumu |
 | `indicator(bool)` | bool | Přepnout radio tečku na kartách (výchozí `true`) |
 | `hideIndicator()` | — | Skrýt radio tečku na kartách |
-| `inline(bool)` | bool | Zobrazit options vodorovně (řada karet/tlačítek při kombinaci s `cards()`/`buttons()`) |
+| `inline(bool)` | bool | Zobrazit možnosti vodorovně (řada karet/tlačítek při kombinaci s `cards()`/`buttons()`) |
 | `boolean()` | — | Zkratka pro Yes/No radio skupinu |
 | `default(mixed\|Closure)` | mixed | Předvybraná hodnota |
 | `disabled(bool\|Closure)` | bool | Znepřístupnit všechna radio tlačítka |
 | `required()` | — | Označit jako povinné |
 | `live()` | — | Spustit Livewire update při změně |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).
+Popisek, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

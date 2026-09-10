@@ -25,7 +25,7 @@ sáhněte na kterýkoli z nich.
 | [ButtonColumn](button.md) | Tlačítko s odkazem nebo Livewire akcí v buňce |
 | [ToggleColumn](toggle.md) | Inline editovatelný přepínač on/off |
 | [CheckboxColumn](checkbox.md) | Inline editovatelné zaškrtávátko (hustší ToggleColumn) |
-| [SelectColumn](select.md) | Inline editovatelný dropdown (options, relace, enumy) |
+| [SelectColumn](select.md) | Inline editovatelný rozbalovací seznam (možnosti, relace, enumy) |
 | [TextInputColumn](text-input.md) | Inline editovatelný text/číslo/email input |
 | [StackedColumn](stacked.md) | Layouty avatar + jméno + email na sobě |
 | [SplitColumn](split.md) | Poskládat několik sloupců vedle sebe |
@@ -37,8 +37,8 @@ sáhněte na kterýkoli z nich.
 ## Koncepty
 
 - [Cesty relací a tečková notace](relations.md) — zobrazit hodnoty souvisejících modelů, agregáty, pivoty
-- [Enum a JSON casty](casts.md) — labely/barvy/ikony enumů a rendering array/json
-- [Editace a filtry na úrovni sloupce](editing.md) — inline editace a per-sloupcové inputy filtrů
+- [Enum a JSON casty](casts.md) — popisky/barvy/ikony enumů a rendering array/json
+- [Editace a filtry na úrovni sloupce](editing.md) — inline editace a filtrovací inputy v jednotlivých sloupcích
 - [Fill handle](fill-handle.md) — vyplňování tažením jako v Excelu, jedním requestem
 - [Vzory a recepty](patterns.md) — kompletní příkladové tabulky
 
@@ -50,7 +50,7 @@ Každý sloupec dědí tyto schopnosti ze základní třídy `Column`.
 
 ```php
 Column::make(string $name)           // statická factory — $name je cesta v tečkové notaci
-->label(string|Closure $label)        // zobrazovací popisek v <th> (auto-generovaný z názvu)
+->label(string|Closure $label)        // zobrazovací popisek v <th> (automaticky generovaný z názvu)
 ->getName(): string                   // získat název sloupce
 ->getLabel(): string                  // získat resolvovaný popisek
 ```
@@ -157,7 +157,7 @@ porovnání textem správným — a ví to jen vlastník. Odemyká
 ->permission(?string $permission)            // viditelné jen když má uživatel oprávnění
 ->visible(Closure $callback)                 // vlastní callback viditelnosti (jen Closure)
 
-// Viditelnost buňky per záznam (redakce jedné buňky per řádek)
+// Viditelnost buňky pro každý záznam (redakce jedné buňky na řádek)
 ->visibleForRecord(Closure $callback)        // fn ($record) => bool
 ```
 
@@ -278,7 +278,7 @@ TextColumn::make('subtitle')
 ```php
 ->icon(string|Icon|Closure|null $icon, ?string $position = 'before')   // pozice: 'before' | 'after'
 ->color(string|Color $color)           // barva sloupce: text a ikona, pokud nemá vlastní
-->iconColor(string|Color|Closure|null $color)   // barva ikony, per záznam — role, nebo closure, která ji vrátí
+->iconColor(string|Color|Closure|null $color)   // barva ikony pro každý záznam — role, nebo closure, která ji vrátí
 ->iconTile(bool $tile = true)           // posadit ikonu do tónované dlaždice — kotva řádku v seznamu
 ```
 
@@ -393,7 +393,7 @@ z `renderCell()` — volají `renderView('tables.columns.<name>', [...])`.
 Dva způsoby přizpůsobení markupu:
 
 ```php
-// 1. Přepis per sloupec — nasměrujte jakýkoli sloupec na svůj vlastní Blade pohled.
+// 1. Přepis u jednotlivých sloupců — nasměrujte jakýkoli sloupec na svůj vlastní Blade pohled.
 TextColumn::make('name')->view('columns.my-name-cell');
 
 // 2. Přepis pro celý projekt — publikujte pohledy balíčku a upravte partial.

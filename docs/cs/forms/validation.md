@@ -39,7 +39,7 @@ Select::make('role')
 presety: nastaví HTML input typ a inputmode, což vybere klávesnici na telefonu a
 nechá prohlížeč nabídnout vlastní nápovědu. `->maxLength()` a `->minLength()`
 vykreslí atributy `maxlength` / `minlength`. Žádný z nich nepřidává Laravel
-pravidlo a žádný nepřežije request, který nepřišel z tvého formuláře — serveru
+pravidlo a žádný nepřežije request, který nepřišel z vašeho formuláře — serveru
 se musí zvlášť říct, co přijme:
 
 | Metoda | Co doopravdy dělá | Pravidlo, které dopsat |
@@ -48,7 +48,7 @@ se musí zvlášť říct, co přijme:
 | `->numeric()` | `type=number`, `inputmode=decimal` | `->rules(['numeric'])` |
 | `->integer()` | `type=number`, `inputmode=numeric`, `step=1` | `->rules(['integer'])` |
 | `->url()` | `type=url` | `->rules(['url'])` |
-| `->tel()` | `type=tel` | `->rules(['regex:…'])`, nebo použij [PhoneInput](fields/phone-input.md) |
+| `->tel()` | `type=tel` | `->rules(['regex:…'])`, nebo použijte [PhoneInput](fields/phone-input.md) |
 | `->maxLength(255)` | `maxlength="255"` | `->rules(['max:255'])` |
 | `->minLength(3)` | `minlength="3"` | `->rules(['min:3'])` |
 
@@ -58,7 +58,7 @@ předřadí `required`, a [`->unique()`](#unikatni-hodnoty). Některá pole nav�
 zkontrolovat nejde: [`MoneyInput`](fields/money-input.md) validuje částku za
 formátovaným textem, [`PhoneInput`](fields/phone-input.md) číslo za předvolbou,
 [`FileUpload`](fields/file-upload.md) nakonfigurované mime typy a velikosti a pole
-s `options()` omezení `in:` nad vlastními klíči voleb (pokud sis žádné
+s `options()` omezení `in:` nad vlastními klíči voleb (pokud jste si žádné
 nedeklaroval).
 
 > **Vyprázdněné číselné pole nepotřebuje pravidlo, aby bylo bezpečné.** `<input
@@ -219,7 +219,7 @@ TextInput::make('slug')->rules([
 ### Podmiňovací helpery
 
 Fluent zkratky vyjadřují nejběžnější mezipolní podmínky bez psaní closury. Každá
-porovnává živou hodnotu jiného pole; předání pole odpovídá „je jedno z".
+porovnává živou hodnotu jiného pole; předání pole odpovídá „je jedno z“.
 
 | Metoda | Chování |
 |--------|----------|
@@ -237,7 +237,7 @@ Select::make('department')
 ```
 
 `visibleWhen` / `hiddenWhen` / `disabledWhen` jsou sdílené foundation helpery,
-takže jsou dostupné i na sloupcích, filtrech a akcích. Na surface bez kontextu
+takže jsou dostupné i na sloupcích, filtrech a akcích. Na povrchu bez kontextu
 živého stavu jsou no-op (nechají komponentu viditelnou/zapnutou).
 
 Skrytá pole se během validace přeskočí, takže pravidlo `required` na poli, které

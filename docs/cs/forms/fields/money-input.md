@@ -117,7 +117,7 @@ MoneyInput::make('price')
 ```
 
 Obojí se validuje proti naparsované částce a chyba hlásí mez ve formátu, ve
-kterém byla nastavena: *„Pole price musí být alespoň 0,00 CZK."*
+kterém byla nastavena: *„Pole price musí být alespoň 0,00 CZK.“*
 
 ## Rozšířený příklad
 

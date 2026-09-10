@@ -81,7 +81,7 @@ Doručování notifikací je založené na driverech.
 | FlasherDriver | Používáte `php-flasher` |
 | Vlastní driver | Potřebujete integraci specifickou pro projekt |
 
-### Přepis per tabulka
+### Přepis pro jednotlivé tabulky
 
 ```php
 use NyonCode\WireCore\Notifications\Drivers\LivewireEventDriver;

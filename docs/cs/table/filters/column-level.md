@@ -1,6 +1,6 @@
 ---
 order: 33
-summary: Filtr přímo v hlavičce sloupce — pro zúžení jednoho sloupce, aniž bys ho opustil.
+summary: Filtr přímo v hlavičce sloupce — pro zúžení jednoho sloupce, aniž byste ho opustili.
 ---
 
 # Filtry na úrovni sloupce
@@ -30,7 +30,7 @@ Filtry sloupců používají Livewire vlastnost `$columnFilters` (oddělenou od 
 
 Hlavičkový filtr sloupce je **umístění** téhož kanonického objektu `Filter`, který používá i dedikovaný [panel filtrů](index.md) — ne samostatný engine. Pomocné metody `filterAs*()` jsou tenké factory nad `TextFilter`, `SelectFilter`, `DateFilter`, `NumberRangeFilter` a `TernaryFilter`; sloupec vlastní *kde* se ovládací prvek vykreslí (hlavičková buňka) a *který atribut* cílí, zatímco `Filter` vlastní *jak* se aplikuje, vykresluje a persistuje. Díky tomu se každý filtr sloupce plánuje stejným `QueryPlanner`em jako panel filtr (joiny + kvalifikace vyřešeny jednou) a zdarma dědí autorizaci (`->can()` / `->visible()`).
 
-Když potřebuješ plnou kontrolu, můžeš předat hotový filtr přes `->filter()`:
+Když potřebujete plnou kontrolu, můžete předat hotový filtr přes `->filter()`:
 
 ```php
 use NyonCode\WireTable\Filters\SelectFilter;
@@ -48,5 +48,5 @@ Filtry, jejichž SQL planner nedokáže vyjádřit jednou klauzulí — datum (`
 
 Protože hlavičkové filtry jsou kanonické objekty `Filter`, sdílí UX aktivních filtrů s panelem:
 
-- **Indikátorové chipy** — aktivní filtr sloupce zobrazí odstranitelný chip v toolbaru vedle chipů panelových filtrů. Popisek chipu pochází z `Filter::getIndicator()` (labely možností, meze rozsahu, formátovaná data); tlačítko × smaže jen daný filtr sloupce a odkaz „resetovat vše" smaže všechny aktivní filtry.
+- **Indikátorové chipy** — aktivní filtr sloupce zobrazí odstranitelný chip v toolbaru vedle chipů panelových filtrů. Popisek chipu pochází z `Filter::getIndicator()` (popisky možností, meze rozsahu, formátovaná data); tlačítko × smaže jen daný filtr sloupce a odkaz „resetovat vše“ smaže všechny aktivní filtry.
 - **Query-string persistence** — s `Table::queryString()` se filtry sloupců zapisují do URL pod parametrem `col_<sloupec>` (rozsahy používají `col_<sloupec>_min` / `_max` atd.), takže sdílená nebo znovunačtená URL reprodukuje stejný pohled. Relační (tečkové) názvy sloupců se přeskakují, stejně jako u panelových filtrů.

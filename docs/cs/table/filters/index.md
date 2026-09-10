@@ -15,7 +15,7 @@ vlastní stránku.
 | Filtr | Použití pro |
 |--------|---------|
 | [TextFilter](text.md) | Textová shoda s operátorem (`like`, `starts_with`, …) |
-| [SelectFilter](select.md) | Jednoduchý/vícenásobný výběr z options, relací nebo enumů |
+| [SelectFilter](select.md) | Jednoduchý/vícenásobný výběr z možností, relací nebo enumů |
 | [DateFilter](date.md) | Jedno datum, rozsah dat nebo měsíc + rok |
 | [NumberRangeFilter](number-range.md) | Min/max číselný rozsah |
 | [TernaryFilter](ternary.md) | Trojstavový boolean (vše / true / false) |
@@ -37,7 +37,7 @@ Table::filters([...])
 │   └── Každý filtr vykreslí svůj vlastní Blade pohled
 │
 ├── Stav: pole $tableFilters ['name' => 'value', ...]
-│   └── Perzistováno ve stavu Livewire komponenty
+│   └── Ukládá se do stavu Livewire komponenty
 │
 └── Apply: Když se stav změní
     ├── Zavolá se callback apply() nebo query() každého filtru
@@ -57,7 +57,7 @@ Každý filtr dědí ze základní třídy `Filter`.
 
 ```php
 Filter::make(string $name)           // statická factory
-->label(?string $label)               // zobrazovací popisek (auto-generovaný z názvu)
+->label(?string $label)               // zobrazovací popisek (automaticky generovaný z názvu)
 ->getName(): string
 ->getLabel(): string
 ```
@@ -107,7 +107,7 @@ boolean:
 | `DateFilter` + `->month()` | `string` `'YYYY-MM'` | `'2026-07'` |
 
 Callback se volá jen když je filtr **aktivní** — prázdný stav (`null`, `''`,
-`[]` nebo „Vše" u ternary) filtr vypne a do closure se vůbec nedostane, takže se
+`[]` nebo „Vše“ u ternary) filtr vypne a do closure se vůbec nedostane, takže se
 proti němu nemusíte bránit. Výjimkou jsou v jednom směru vícepolní filtry:
 rozsah zůstává aktivní, dokud je vyplněná *kterákoli* strana, takže si každou
 mez ověřte zvlášť.
@@ -176,15 +176,15 @@ php artisan vendor:publish --tag=wire-table::views
 
 Aktivní filtry se vykreslí jako odstranitelné chipy pod toolbarem tabulky — každý
 chip ukazuje čitelný popisek a tlačítko ×, které vyčistí jen daný filtr.
-S více než jedním aktivním filtrem se vedle chipů objeví odkaz „Reset filters".
+S více než jedním aktivním filtrem se vedle chipů objeví odkaz „Reset filters“.
 
-Výchozí popisky se generují per typ filtru:
+Výchozí popisky se generují podle typu filtru:
 
 | Filtr | Příklad chipu |
 |---|---|
 | `SelectFilter` | `Status: Active` (popisek option, ne surová hodnota) |
 | `SelectFilter` + `multiple()` | `Status: Active, Trial` |
-| `TernaryFilter` | `Verified: Yes` (labely true/false) |
+| `TernaryFilter` | `Verified: Yes` (popisky true/false) |
 | `NumberRangeFilter` | `Price: 10 – 100`, `Price: ≥ 10`, `Price: ≤ 100` |
 | `DateFilter` | `Created: 2026-06-11` |
 | `DateFilter` + `range()` | `Created: 2026-06-01 – 2026-06-30` |
@@ -224,6 +224,6 @@ $component->removeColumnFilter('name');         // vyčistit jeden filtr sloupce
 ## Mobil
 
 Lišta filtrů a menu přepínání sloupců se na telefonu otevřou jako bottom sheet.
-Konfigurujte globálně přes blok `wire-core.mobile`, nebo per komponenta pomocí
+Konfigurujte globálně přes blok `wire-core.mobile`, nebo u jednotlivých komponent pomocí
 `->sheetOnMobile()` / `->mobileBreakpoint()` — viz
 [mobilní prezentace](../../start/configuration.md#mobil).

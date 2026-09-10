@@ -34,7 +34,7 @@ konec kanonické palety (`success` je emerald, ne green) a výchozí je klasick�
 jantarová hvězda, ne primární barva tématu — hodnocení vypadá jako hodnocení
 v každém tématu.
 
-**Nula je skutečná hodnota a není „prázdno".** Nedotčené pole je `null`, což
+**Nula je skutečná hodnota a není „prázdno“.** Nedotčené pole je `null`, což
 `required()` odmítne — ale *zrušené* hodnocení uloží `0` a laravelí `required`
 nulu přijme. Pole, které musí opravdu držet hvězdu, chce vedle toho
 `->rules(['min:1'])`.
@@ -136,5 +136,5 @@ class LeaveReview extends Component
 ## Související
 
 - [Formulářová pole](index.md) — sdílené API pole
-- [Slider](slider.md) — stejná otázka „vyber číslo" na spojitém rozsahu
+- [Slider](slider.md) — stejná otázka „vyberte číslo“ na spojitém rozsahu
 - [RatingColumn](../../table/columns/rating.md) — totéž skóre zobrazené v tabulce

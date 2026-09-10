@@ -6,7 +6,7 @@ summary: "Co žije ve wire-core, jak jsou jeho moduly navrstvené a která strá
 # Wire Core
 
 `wire-core` je to, z čeho je postavené všechno ostatní. Neveze žádnou tabulku ani
-formulář: veze slovník, kterým obojí mluví — akce, modály, notifikace, ikony,
+formulář: veze slovník, kterým obojí mluví — akce, modaly, notifikace, ikony,
 barvy, schéma — plus povrchy, které vlastní seznam ani formulář nepotřebují.
 
 ```bash
@@ -43,14 +43,14 @@ ten slovník vyplatí naučit jednou.
 | --- | --- |
 | [Foundation](foundation/index.md) | Sdílené traity, základní třídy, ikony, barvy, enumy a Blade komponenty |
 | [Akce](actions/index.md) | Co se stane po kliknutí — řádkové, hromadné a hlavičkové akce, skupiny, potvrzení, fronty |
-| [Modály](modals.md) | Dialogy, které akce otevírá: potvrzení, slide-over, vícekrokový wizard |
+| [Modaly](modals.md) | Dialogy, které akce otevírá: potvrzení, slide-over, vícekrokový wizard |
 | [Notifikace](notifications/index.md) | Toasty a uložené notifikace, jejich drivery a kam který doručuje |
 | [Widgety](widgets/index.md) | Statistiky, grafy, vnořené tabulky, vlastní pohledy a dashboardy, které je drží |
 | [Infolisty](infolists/index.md) | Jeden záznam vykreslený read-only ze schématu |
 | [Editovatelné panely](record-panels.md) | Stejný tvar, ale s entries, které zapisují rovnou do záznamu |
-| [Schéma](schema/overview.md) | Layoutový slovník, který konzumují formuláře, infolisty i modály |
+| [Schéma](schema/overview.md) | Layoutový slovník, který konzumují formuláře, infolisty i modaly |
 | [Globální vyhledávání](global-search.md) | ⌘K palette nad vším zaregistrovaným |
-| [Auditní log](audit.md) | Stopa změn modelů, zapisovaná za tebe |
+| [Auditní log](audit.md) | Stopa změn modelů, zapisovaná za vás |
 | [Pluginy](plugins/index.md) | Rozšiřovací bod pro aplikace i doprovodné balíčky |
 
 ## Kam dál

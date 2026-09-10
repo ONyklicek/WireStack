@@ -6,7 +6,7 @@ summary: "Callout uvnitř formuláře: zpráva s barvou, ikonou a volitelným za
 
 Barevné upozornění, které sedí ve schématu tam, kde by bylo pole. Sáhni po
 `Alertu`, když formulář potřebuje něco říct na místě — „tenhle účet je
-pozastavený", „změny tady ovlivní každého uživatele" — a ne až po akci, na což je
+pozastavený“, „změny tady ovlivní každého uživatele“ — a ne až po akci, na což je
 [notifikace](../../core/notifications/index.md).
 
 ```php
@@ -22,11 +22,11 @@ dotyku na data.
 **Je to polní alias [`Calloutu`](../../core/schema/callout.md)**, a to není
 obrazné vyjádření — obojí vykresluje `wire-core::partials.callout`, takže box,
 místo pro ikonu, `role="alert"` i tlačítko zavření jsou doslova týž markup.
-`Alert` používej uvnitř schématu formuláře, `Callout` ve sdíleném schema
+`Alert` používejte uvnitř schématu formuláře, `Callout` ve sdíleném schema
 slovníku; cokoli platí o jednom, platí o druhém.
 
 **`message()` je `content()`.** Volá přímo skrz, takže jsou zaměnitelné a když
-nastavíš obojí, vyhraje to druhé. Ve formuláři se `message()` čte líp.
+nastavíte obojí, vyhraje to druhé. Ve formuláři se `message()` čte líp.
 
 **Tělo se escapuje.** View vypisuje `e($field->getContent())`, takže
 `message('<strong>Pozor</strong>')` vykreslí ty tagy jako viditelný text. Alert je
@@ -37,7 +37,7 @@ znát. Barvy se řeší přes sdílenou alert paletu, uzavřený `match` nad
 `success`/`emerald`, `green`, `warning`/`amber`, `yellow`, `danger`/`red`,
 `black` a `white`. **Všechno ostatní propadne na informační modrou** —
 `->color('primary')` i `->color('purple')` se vykreslí modře, bez jediné chyby.
-Používej ty čtyři zkratky a cokoli jiného ber jako přání, které nemusí být
+Používejte ty čtyři zkratky a cokoli jiného ber jako přání, které nemusí být
 vyslyšeno.
 
 **Zavření je Alpine a nepamatuje se.** Zavření skryje box na klientovi bez round
@@ -172,7 +172,7 @@ pozastavený, ne až při dalším round tripu.
 ->isDismissible(): bool
 ```
 
-Labely, pomocný text, viditelnost a `columnSpan()` jsou sdílený povrch komponent —
+Popisky, pomocný text, viditelnost a `columnSpan()` jsou sdílený povrch komponent —
 viz [Společné API pole](index.md#spolecne-api-pole). Validace, `live()` a výchozí
 hodnoty neplatí: alert žádný stav nedrží.
 

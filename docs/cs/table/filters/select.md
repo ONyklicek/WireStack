@@ -5,7 +5,7 @@ summary: Rozbalovací seznam nad předdefinovanými možnostmi — filtr, po kte
 
 # SelectFilter
 
-Dropdown filtr pro předdefinované options. Nejběžnější typ filtru.
+Rozbalovací filtr pro předdefinované možnosti. Nejběžnější typ filtru.
 
 Vykresluje se přes stejný combobox jako `Select` field ve formulářích, takže
 otevřený filtr vypadá stejně jako otevřený formulářový select. Nativní `<select>`
@@ -28,7 +28,7 @@ SelectFilter::make('status')
 
 ## S placeholderem
 
-První položka je vždy prázdná option „All". Pro přizpůsobení:
+První položka je vždy prázdná možnost „All“. Pro přizpůsobení:
 
 ```php
 SelectFilter::make('role')
@@ -51,7 +51,7 @@ SelectFilter::make('tags')
 
 Při `multiple()` aplikuje `whereIn()` místo `where()`.
 
-## Vyhledávatelný dropdown
+## Vyhledávatelný rozbalovací seznam
 
 ```php
 SelectFilter::make('country')
@@ -60,7 +60,7 @@ SelectFilter::make('country')
     ->label('Country')
 ```
 
-Přidá do dropdownu vyhledávací input. Povrch je stejný combobox jako u
+Přidá do rozbalovacího seznamu vyhledávací input. Povrch je stejný combobox jako u
 nevyhledávatelného filtru — jen navíc s vyhledávacím inputem.
 
 ## Nativní HTML select
@@ -72,7 +72,7 @@ SelectFilter::make('type')
 ```
 
 Odhlásí filtr ze sdíleného comboboxu, takže přestane odpovídat formulářovému
-selectu. Používej jen tam, kde je cena renderu důležitější než jednotný vzhled.
+selectu. Používejte jen tam, kde je cena renderu důležitější než jednotný vzhled.
 
 ## Z databáze
 
@@ -81,12 +81,12 @@ SelectFilter::make('department')
     ->options(fn () => Department::orderBy('name')->pluck('name', 'id')->toArray())
 ```
 
-Options mohou být Closure — vyhodnoceno lazy při renderu.
+Možnosti mohou být closure — vyhodnocují se líně při renderu.
 
 ## Z enumu
 
-Předejte třídu PHP enumu místo pole — jeho case se rozvinou na options `value => label`.
-Labely pocházejí z `getLabel()`, když enum implementuje `Foundation\Contracts\Enum\HasLabel`,
+Předejte třídu PHP enumu místo pole — jeho case se rozvinou na možnosti `value => label`.
+Popisky pocházejí z `getLabel()`, když enum implementuje `Foundation\Contracts\Enum\HasLabel`,
 jinak se z názvu case udělá headline.
 
 ```php
@@ -94,7 +94,7 @@ SelectFilter::make('status')->options(OrderStatus::class)
 ```
 
 > Když je atribut modelu **přetypován** na enum, `SelectFilter` na tom sloupci
-> auto-naplní své options z enumu i bez volání `->options()`. Tato zkratka je
+> automaticky naplní své možnosti z enumu i bez volání `->options()`. Tato zkratka je
 > pro případy, kdy filtr nastavujete explicitně.
 
 ## Vlastní dotaz
@@ -116,6 +116,6 @@ SelectFilter::make('has_avatar')
 ```php
 ->options(array|string|Closure $options) // ['value' => 'Label', ...] nebo třída enumu
 ->multiple(bool $multiple = true)    // režim multi-select
-->searchable(bool $searchable = true) // přidá vyhledávací input do dropdownu
+->searchable(bool $searchable = true) // přidá vyhledávací input do rozbalovacího seznamu
 ->native(bool $native = true)        // opt-in nativní <select> prohlížeče (výchozí: false)
 ```

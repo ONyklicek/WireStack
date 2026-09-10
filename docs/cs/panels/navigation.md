@@ -40,9 +40,9 @@ každá jiná komponenta. Přidává jen to, co potřebuje *menu*: `group()`, `s
 a `badge()`. Closure v badge se vyhodnocuje při každém čtení, nikdy se necachuje
 — počet neodeslaných objednávek je špatně v okamžiku, kdy se uloží.
 
-Položka, která si sama nepojmenuje label, se jmenuje po svém resource:
+Položka, která si sama nepojmenuje popisek, se jmenuje po svém resource:
 `NavigationItem::make()` vedle `->icon()` a `->group()` je běžný tvar a menu
-ukáže `pluralLabel()` — „Objednávky". Resource, který chce v menu jiný název než
+ukáže `pluralLabel()` — „Objednávky“. Resource, který chce v menu jiný název než
 svůj plurál, ho předá a ten vyhraje.
 
 ## Položky pod položkou
@@ -188,7 +188,7 @@ katalog, takže jedna registrace obslouží všechny tři. Dva zdroje hlásící
 jedna položka by jinak zabrala místo druhé a menu, kterému tiše zmizel řádek, se
 pozná až v den, kdy ten řádek byl potřeba.
 
-Fallback labelu výše je resourcový, protože `pluralLabel()` je slovo resource.
+Fallback popisku výše je resourcový, protože `pluralLabel()` je slovo resource.
 Cokoli jiného v menu si položku pojmenuje samo.
 
 Stejně jako registr nevlastní `Workspace` routing ani layout — menu vykresluje
@@ -254,13 +254,13 @@ zúžení nenese, takže zúžený callback vynechá.
 
 | Metoda | Vrací | Účel |
 | --- | --- | --- |
-| `NavigationItem::make(string\|Closure\|null $label = null)` | `self` | Nová položka. Bez labelu ji pojmenuje `pluralLabel()` resource |
+| `NavigationItem::make(string\|Closure\|null $label = null)` | `self` | Nová položka. Bez popisku ji pojmenuje `pluralLabel()` resource |
 | `label(string\|Closure\|null $label)` | `self` | Vlastní text položky, který ten fallback přebije |
 | `hiddenLabel(bool $condition = true)` | `self` | Položku zachová, text nevykreslí — řádek jen s ikonou |
-| `icon(string\|Icon\|Closure\|null $icon, string\|IconPosition\|null $position = null)` | `self` | Ikona vedle labelu |
+| `icon(string\|Icon\|Closure\|null $icon, string\|IconPosition\|null $position = null)` | `self` | Ikona vedle popisku |
 | `group(string\|Closure\|null $group)` | `self` | **Klíč** skupiny, pod kterou položka patří; `null` je nejvyšší úroveň |
 | `sort(int $sort)` | `self` | Pořadí uvnitř skupiny; shody drží pořadí prvního výskytu |
-| `badge(mixed $badge, string\|Closure\|null $color = null)` | `self` | Počet nebo krátký text vedle labelu, volitelně s barvou |
+| `badge(mixed $badge, string\|Closure\|null $color = null)` | `self` | Počet nebo krátký text vedle popisku, volitelně s barvou |
 | `url(string\|Closure\|null $url)` | `self` | Explicitní cíl, který vždycky vyhraje nad routovaným |
 | `children(array\|Closure $children)` | `self` | Položky pod touhle — jedna úroveň, filtrované a seřazené při čtení |
 | `visible(bool\|Closure $condition = true)` / `hidden(bool\|Closure $condition = true)` | `self` | Jestli je položka v menu vůbec |

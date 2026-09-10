@@ -27,8 +27,8 @@ Obojí ukládá tutéž hodnotu ve stejném formátu. Liší se jen panelem:
 | `TimePicker::make('x')` | Seznam časů po `minutesStep()` |
 | `DateTimePicker::make('x')->asTime()` | Steppery hodin / minut / sekund |
 
-`TimePicker` zvol tam, kde jsou časy sloty — otevírací doba, termíny, rozvrhy.
-[`asTime()`](date-time-picker.md) zvol tam, kde je platná libovolná minuta dne,
+`TimePicker` zvolte tam, kde jsou časy sloty — otevírací doba, termíny, rozvrhy.
+[`asTime()`](date-time-picker.md) zvolte tam, kde je platná libovolná minuta dne,
 nebo když se režim musí měnit.
 
 ## Interval
@@ -113,5 +113,5 @@ měnit, je to `DateTimePicker`.
 | `mode(string)` | string | Zamčeno na `time`; jakýkoli jiný režim vyhodí `FormConfigurationException` |
 
 Všechny ostatní metody pocházejí z [DateTimePicker](date-time-picker.md#metody) a
-ze [společného API pole](index.md#spolecne-api-pole) pro label, hint, tooltip a
+ze [společného API pole](index.md#spolecne-api-pole) pro popisek, hint, tooltip a
 další sdílené metody.

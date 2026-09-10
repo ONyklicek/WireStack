@@ -21,10 +21,10 @@ Sekce je **layoutová komponenta**: žádná hodnota, žádná state path, bezpe
 přidá i odebere bez dotyku na data. Vykreslí orámovanou kartu s odsazením,
 volitelný hlavičkový blok a pod ním děti v gridu.
 
-**Hlavička existuje, jen když do ní něco jde.** Žádný label, žádný popis a žádné
+**Hlavička existuje, jen když do ní něco jde.** Žádný popisek, žádný popis a žádné
 hlavičkové akce znamená, že hlavičkový blok nevznikne vůbec — holá karta. Stojí za
 to to vědět, protože `Section::make('billing')` samo o sobě ze svého jména nadpis
-*neudělá* tak, jak to dělá pole. Napiš `->label('Fakturace')`.
+*neudělá* tak, jak to dělá pole. Napište `->label('Fakturace')`.
 
 **Skládání je Alpine, ne Livewire.** `collapsible()` dá na kartu
 `x-data="{ open }"` a na tělo `x-show` + `x-collapse`, takže otevírání a zavírání
@@ -37,9 +37,9 @@ je okamžité a nestojí žádný round trip. Plynou z toho dvě věci:
   `:aria-expanded`. Hlavičkové akce jsou zabalené v `@click.stop`, takže stisk
   jedné z nich spustí akci místo složení karty; přesně tuhle chybu to hlídá.
 
-**`collapsed()` implikuje `collapsible()`.** Nastavit jen „začíná složená" by
+**`collapsed()` implikuje `collapsible()`.** Nastavit jen „začíná složená“ by
 uživateli dalo sekci, kterou nejde otevřít, takže ten druhý přepínač concern
-zapne za tebe. Obojí bere closure, vyhodnocovanou při čtení — sekce, která se
+zapne za vás. Obojí bere closure, vyhodnocovanou při čtení — sekce, která se
 skládá jedné roli a jiné ne, je podmínka, ne konstanta.
 
 **Sloupce se vyhodnocují přes kanonický `ResponsiveGrid`**, přesně jako
@@ -82,8 +82,8 @@ Section::make('advanced')
     ])
 ```
 
-`collapsed()` je to, co napíšeš, když chceš mít sekci zpočátku z cesty. Samotné
-`collapsible()` použij, když má začít otevřená, ale jít složit. Obojí bere closure:
+`collapsed()` je to, co napíšete, když chcete mít sekci zpočátku z cesty. Samotné
+`collapsible()` použijte, když má začít otevřená, ale jít složit. Obojí bere closure:
 
 ```php
 Section::make('internal')
@@ -95,7 +95,7 @@ Section::make('internal')
 ## Tlačítka v hlavičce
 
 `headerActions()` dá [akce](../../actions/index.md) vedle nadpisu — „Vygenerovat
-klíč znovu", „Poslat testovací e-mail", věci, které patří téhle skupině, ne
+klíč znovu“, „Poslat testovací e-mail“, věci, které patří téhle skupině, ne
 formuláři jako celku:
 
 ```php

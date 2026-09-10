@@ -44,7 +44,7 @@ Reference pro vestavěné Wire Forms field a layoutové komponenty.
 
 Layoutové komponenty (Grid, Flex, Section, Fieldset, Tabs, Wizard) žijí ve
 sdílené sekci [Schema](../../core/schema/overview.md) — stejný slovník používají
-formuláře, infolisty i modály.
+formuláře, infolisty i modaly.
 
 ## Zobrazovací komponenty
 
@@ -65,7 +65,7 @@ znovupoužitelné presety a balíčkování polí do pluginu viz [Rozšíření 
 
 Každé pole dědí následující metody ze sdílené základní třídy `Field`. Jednotlivé dokumentace polí se soustředí na volby specifické pro dané pole; pro cokoli tam neuvedeného se vraťte sem.
 
-### Label a nápověda
+### Popisek a nápověda
 
 | Metoda | Příklad |
 |--------|---------|
@@ -95,19 +95,19 @@ TextInput::make('user_id')->default(fn () => auth()->id())
 Při naplnění formuláře se každé pole ze schématu naseeduje automaticky: jeho
 `->default()`, pokud je nastaven, jinak **typově správná prázdná hodnota**
 (`''`/`null` u textu, `[]` u polí typu pole jako `CheckboxList`/`Tags`/
-multi-select, `false` u přepínačů). Nikdy nemusíš pole předvyplňovat jen proto,
+multi-select, `false` u přepínačů). Nikdy nemusíte pole předvyplňovat jen proto,
 aby jeho klíč existoval — pole typu pole zejména začínají jako `[]` místo aby
 zkolabovala.
 
 Výchozí hodnoty doplní jen klíče, které příchozí data nedodala, takže se
 uplatní při vytváření a u nových/virtuálních polí a **nikdy nepřepíšou uloženou
 hodnotu záznamu — ani záměrný `null`.** Pro předvyplnění z recordu nebo kontextu
-nad rámec výchozích hodnot použij `fillFormUsing()` na akci (viz
+nad rámec výchozích hodnot použijte `fillFormUsing()` na akci (viz
 [Akce](../../core/actions/index.md)).
 
 #### Doplnění výchozí hodnoty i pro null
 
-Jednotlivé pole můžeš přihlásit k tomu, aby `null` (nebo prázdný řetězec) v edit
+Jednotlivé pole můžete přihlásit k tomu, aby `null` (nebo prázdný řetězec) v edit
 módu bralo jako nenastavené, takže se i tam doplní jeho výchozí hodnota:
 
 ```php
@@ -115,11 +115,11 @@ TextInput::make('quantity')->numeric()->default(1)->defaultOnNull()
 Select::make('status')->options(Status::class)->default(Status::Draft)->defaultOnNull()
 ```
 
-Používej to **jen** tam, kde `null` není hodnota, kterou si uživatel může
+Používejte to **jen** tam, kde `null` není hodnota, kterou si uživatel může
 záměrně zvolit — třeba u sloupce, který musí vždy nést hodnotu. Pokud pole
-uživatel může vědomě vymazat, nech `defaultOnNull()` vypnuté, ať jeho volba
-zůstane; pro nápovědu k prázdnému stavu použij radši `placeholder()`. Když sloupec
-jen nikdy nemá být `null`, dej přednost výchozí hodnotě na modelu/v DB, ať jsou
+uživatel může vědomě vymazat, nechte `defaultOnNull()` vypnuté, ať jeho volba
+zůstane; pro nápovědu k prázdnému stavu použijte radši `placeholder()`. Když sloupec
+jen nikdy nemá být `null`, dejte přednost výchozí hodnotě na modelu/v DB, ať jsou
 create i edit konzistentní už na datové vrstvě.
 
 ### Validace

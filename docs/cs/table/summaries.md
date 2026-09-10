@@ -196,7 +196,7 @@ faktur při stálém výpisu každé faktury.
 <a id="rollup-columns"></a>
 ## Rollup sloupce
 
-Sloupec může tahat agregát **z relace** a ukázat ho per řádek. Ty se počítají
+Sloupec může tahat agregát **z relace** a ukázat ho na každém řádku. Ty se počítají
 jako efektivní `withCount` / `withSum` podotázky:
 
 | Metoda                              | Buňka ukazuje         |
@@ -209,7 +209,7 @@ jako efektivní `withCount` / `withSum` podotázky:
 
 ```php
 TextColumn::make('items_total')
-    ->sums('items', 'line_total')   // per řádek: součet položek této faktury
+    ->sums('items', 'line_total')   // na řádek: součet položek této faktury
     ->money();
 ```
 
@@ -217,11 +217,11 @@ TextColumn::make('items_total')
 ### Celkové součty přes všechny děti
 
 Přidejte souhrn na rollup sloupec a patička ukáže **celkový součet každého
-dítěte napříč všemi rodiči** — součet rollupů per řádek:
+dítěte napříč všemi rodiči** — součet rollupů po řádcích:
 
 ```php
 TextColumn::make('items_total')
-    ->sums('items', 'line_total')   // rollup per řádek v buňce
+    ->sums('items', 'line_total')   // rollup za řádek v buňce
     ->summaryDecimals(0)
     ->suffix(' Kč')
     ->summarizeSum('Grand total');  // patička: každá položka, každá faktura
@@ -258,7 +258,7 @@ v hlavní patičce, bez rollup sloupce:
     TextColumn::make('line_total')
         ->suffix(' Kč')
         ->summaryDecimals(0)
-        ->summarizeSum('Subtotal', scope: 'subRows')  // patička panelu per rodič
+        ->summarizeSum('Subtotal', scope: 'subRows')  // patička panelu pro každého rodiče
         ->summarizeSum('Celkem'),                     // celkový součet v hlavní patičce
 ])
 ```
@@ -362,8 +362,8 @@ public function table(Table $table): Table
 
 ## Související dokumentace
 
-- [Podřádky](sub-rows.md) — mezisoučty per rodič a souhrny dětí
-- [Seskupení řádků](grouping.md) — řádky mezisoučtů per skupina
+- [Podřádky](sub-rows.md) — mezisoučty po rodičích a souhrny dětí
+- [Seskupení řádků](grouping.md) — řádky mezisoučtů po skupinách
 - [Exporty](exports.md) — souhrny se připojují k CSV/Excel/PDF exportům
 - [Sloupce](columns/index.md)
 - [Přehled tabulek](overview.md)

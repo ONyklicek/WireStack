@@ -1,20 +1,20 @@
 ---
 order: 100
-summary: Čtrnáct balíčků, k čemu který je, na čem závisí a nejkratší instalace toho, co opravdu chceš.
+summary: Čtrnáct balíčků, k čemu který je, na čem závisí a nejkratší instalace toho, co opravdu chcete.
 ---
 
 # Mapa projektu
 
 Wire je ekosystém Livewire balíčků rozdělený do čtrnácti composer balíčků.
-Nainstaluj si jen ten, který odpovídá tomu, co stavíš; jeho závislosti se
-dotáhnou samy a nic nad ním se ti neinstaluje.
+Nainstalujte si jen ten, který odpovídá tomu, co stavíte; jeho závislosti se
+dotáhnou samy a nic nad ním se vám neinstaluje.
 
 ## Balíčky
 
 | Balíček | Composer název | K čemu je | Závisí na |
 |---------|----------------|-----------|-----------|
-| Core | `nyoncode/wire-core` | Sdílené akce, modály, notifikace, widgety, infolisty, schéma, auditní log, Blade helpery | Laravel, Livewire |
-| Forms | `nyoncode/wire-forms` | Schéma formuláře, komponenty polí, validace, save lifecycle | Core |
+| Core | `nyoncode/wire-core` | Sdílené akce, modaly, notifikace, widgety, infolisty, schéma, auditní log, Blade helpery | Laravel, Livewire |
+| Forms | `nyoncode/wire-forms` | Schéma formuláře, komponenty polí, validace, životní cyklus ukládání | Core |
 | Table | `nyoncode/wire-table` | Tabulky, sloupce, filtry, akce, inline editace, exporty, gesta | Core, Forms |
 | Sortable | `nyoncode/wire-sortable` | Drag & drop řazení řádků a sloupců | Core, Table |
 | Panels | `nyoncode/wire-panels` | Vlastnická vrstva: resource, jejich stránky a routovací makro | Core, Forms, Table |
@@ -49,12 +49,12 @@ záměrem, vysvětlují [Panely](../panels/overview.md).
 
 ## Mapa dokumentace
 
-| Oblast | Začni tady | Hlavní reference |
+| Oblast | Začněte tady | Hlavní reference |
 |--------|------------|------------------|
 | Setup | [Instalace Wire](installation.md) | [Začínáme](getting-started.md), [Konfigurace](configuration.md), [Autorizace](authorization.md) |
-| Formuláře | [Přehled formulářů](../forms/overview.md) | [Reference polí](../forms/fields/index.md), [Validace](../forms/validation.md), [Save lifecycle](../forms/save-lifecycle.md) |
+| Formuláře | [Přehled formulářů](../forms/overview.md) | [Reference polí](../forms/fields/index.md), [Validace](../forms/validation.md), [Životní cyklus ukládání](../forms/save-lifecycle.md) |
 | Tabulky | [Přehled tabulky](../table/overview.md) | [Sloupce](../table/columns/index.md), [Filtry](../table/filters/index.md), [Akce](../table/actions.md), [Exporty](../table/exports.md) |
-| Core UI | [Foundation](../core/foundation/index.md) | [Akce](../core/actions/index.md), [Schéma](../core/schema/overview.md), [Modály](../core/modals.md), [Notifikace](../core/notifications/index.md), [Widgety](../core/widgets/index.md), [Infolisty](../core/infolists/index.md), [Pluginy](../core/plugins/index.md) |
+| Core UI | [Foundation](../core/foundation/index.md) | [Akce](../core/actions/index.md), [Schéma](../core/schema/overview.md), [Modaly](../core/modals.md), [Notifikace](../core/notifications/index.md), [Widgety](../core/widgets/index.md), [Infolisty](../core/infolists/index.md), [Pluginy](../core/plugins/index.md) |
 | Vlastnická vrstva | [Přehled panelů](../panels/overview.md) | [Resources](../panels/resources.md), [Stránky](../panels/pages.md), [Navigace](../panels/navigation.md), [Routování](../panels/routing.md) |
 | Admin shell | [Admin shell](../admin/overview.md) | [Layout](../admin/layout.md), [Sidebar](../admin/sidebar.md), [Branding](../admin/branding.md) |
 | Hotové oblasti | [Hotové moduly](../modules/index.md) | [Uživatelé](../modules/users.md), [Přihlašování](../modules/auth.md), [Nastavení](../modules/settings.md), [Média](../modules/media.md) |
@@ -68,26 +68,26 @@ záměrem, vysvětlují [Panely](../panels/overview.md).
 | `packages/core/src/Actions` | Action, BulkAction, HeaderAction, presety, helpery modálních akcí |
 | `packages/core/src/Foundation/Schema` | Sdílený layoutový slovník — Grid, Section, Fieldset, Flex, Tabs/Tab, Wizard/Step, Callout, EmptyState |
 | `packages/core/src/Foundation/View` | Samostatné `<x-wire::*>` Blade komponenty zrcadlící layouty schématu |
-| `packages/core/src/Foundation/Support` | Sdílené helpery — `ResponsiveGrid` (sloupce per breakpoint), `MobileSheet`, `EnumResolver` |
+| `packages/core/src/Foundation/Support` | Sdílené helpery — `ResponsiveGrid` (sloupce podle breakpointů), `MobileSheet`, `EnumResolver` |
 | `packages/core/src/Foundation/Concerns` | Kanonické sdílené traity — `HasColor`, `HasIcon`, `HasSize`, `HasVisibility`, `HasActions`, `HasSheetOnMobile`, … |
 | `packages/core/src/Foundation/Registration` | `Catalog` — všechno, co aplikace zaregistrovala, ať je to cokoli — plus kontrakty `RegistrySource` / `HasRegistryKey`, kterými se k němu registr připojí |
 | `packages/core/src/Foundation/Routing` | Co nese deklarace stránky (`ProvidesPages`, `RoutePage`, `ConfiguresRoutes`), `Zone` a švy `ResolvesPageUrls` / `RegistersPageRoutes`, na které odpovídá URL konvence |
 | `packages/core/src/GlobalSearch` | ⌘K palette, její vyhledávací služba a hodnotový objekt výsledku |
 | `packages/core/src/Core/Resources` | Identita resourcu, registr, `Workspace` a navigační slovník |
-| `packages/core/src/Modals` | Třídy modálů, potvrzení, slide-overu a wizardu |
+| `packages/core/src/Modals` | Třídy modalů, potvrzení, slide-overu a wizardu |
 | `packages/core/src/Notifications` | Hodnotový objekt notifikace, manager, drivery |
 | `packages/core/src/Widgets` | Statistiky, grafy, tabulkové a vlastní widgety a registr dashboardů |
 | `packages/core/src/Infolists` | Infolist, entries, read-only zobrazení záznamu |
 | `packages/core/src/Panels` | Editovatelné panely záznamu — infolist, jehož entries zapisují zpět |
-| `packages/core/src/Audit` | Auditní záznamy, události, logger, modelová traita, akce s auditní stopou |
+| `packages/core/src/Audit` | Auditní záznamy, události, logger, modelový trait, akce s auditní stopou |
 | `packages/core/src/Core/Plugin` | Kontrakt pluginu, manager, hooky, registry typů |
 | `packages/forms/src/Components` | Formulářová pole, layoutové komponenty, relační pole, repeater |
-| `packages/forms/src/Forms` | Veřejné API `Form` a Livewire traita `WithForms` |
+| `packages/forms/src/Forms` | Veřejné API `Form` a Livewire trait `WithForms` |
 | `packages/table/src/Columns` | Třídy tabulkových sloupců a sloupce s inline editací |
 | `packages/table/src/Filters` | Select, datumové, číselné rozsahy, ternární a vlastní filtry |
 | `packages/table/src/Export` | Podpora CSV, Excel a PDF exportů |
 | `packages/table/src/Concerns/WithTable.php` | Livewire integrace pro stav a akce tabulky |
-| `packages/sortable/src` | Helpery sortable tabulky, Livewire traita, model pořadí sloupců |
+| `packages/sortable/src` | Helpery sortable tabulky, Livewire trait, model pořadí sloupců |
 | `packages/panels/src/Resources/Pages` | `ListPage`, `CreatePage`, `EditPage`, `ViewPage`, `DashboardPage` |
 | `packages/panels/src/Routing` | `ResourceRoutes`, skupina rout deklarovaná v configu a URL registrovaných stránek |
 | `packages/admin/src/View` | Komponenty shellu — layout, auth layout, sidebar, položka menu |

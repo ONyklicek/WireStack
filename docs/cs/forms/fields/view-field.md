@@ -1,13 +1,13 @@
 ---
-summary: Tvůj vlastní Blade view vykreslený v toku schématu, se stavem pole předaným dovnitř.
+summary: Váš vlastní Blade view vykreslený v toku schématu, se stavem pole předaným dovnitř.
 ---
 
 # ViewField
 
-Tvůj vlastní Blade partial, vykreslený ve schématu tam, kde by bylo pole. Sáhni
-po `ViewFieldu`, když je to, co potřebuješ ukázat, víc než řádek textu — náhled
+Váš vlastní Blade partial, vykreslený ve schématu tam, kde by bylo pole. Sáhni
+po `ViewFieldu`, když je to, co potřebujete ukázat, víc než řádek textu — náhled
 právě editované objednávky, graf, mapa, vlastní malá komponenta — a radši to
-napíšeš v Blade, než abys stavěl [vlastní pole](../custom-fields.md).
+napíšete v Blade, než abys stavěl [vlastní pole](../custom-fields.md).
 
 ```php
 use NyonCode\WireForms\Components\Display\ViewField;
@@ -20,7 +20,7 @@ stav formuláře. Žádná state path, žádná validace, nic se neodesílá.
 
 **View vyhrává nad content.** Vykreslený markup se nejdřív ptá na `getView()`
 a na `getContent()` spadne, jen když žádný view nastavený není. Komponenta, která
-má obojí, tedy ukáže view a řetězec tiše ignoruje — nastav jedno, nebo druhé.
+má obojí, tedy ukáže view a řetězec tiše ignoruje — nastavte jedno, nebo druhé.
 
 **Partial se `@include`uje, nevykresluje se izolovaně.** Plynou z toho dvě věci
 a ta druhá je ta užitečná:
@@ -28,15 +28,15 @@ a ta druhá je ta užitečná:
 - Cokoli drží `viewData()`, přijde jako proměnné, takže `['total' => 120]` je
   v partialu `$total`.
 - Blade `@include` navíc předává **obklopující scope**, takže `$field` — samotný
-  `ViewField` — je k dispozici, aniž bys ho předával. Tak se partial dostane
-  k `$field->getLabel()` nebo k metodám tvé vlastní podtřídy.
+  `ViewField` — je k dispozici, aniž byste ho předávali. Tak se partial dostane
+  k `$field->getLabel()` nebo k metodám vaší vlastní podtřídy.
 
 `viewData()` může být closure, vyhodnocovaná při každém čtení, a právě to dovolí
 partialu ukázat něco, co závisí na aktuálním stavu, ne na tom, co platilo při
 deklaraci schématu.
 
 **`escape()` se čte pozpátku a stojí za to přečíst to dvakrát.** Nastavuje
-„vykreslit jako HTML" na *opak* svého argumentu a ta property začíná na `false`:
+„vykreslit jako HTML“ na *opak* svého argumentu a ta property začíná na `false`:
 
 - Obsah se **ve výchozím stavu escapuje**. Nic se volat nemusí.
 - `->escape()` — argument má výchozí `true` — tedy nedělá vůbec nic.
@@ -78,7 +78,7 @@ přepočítávala, jak uživatel píše, potřebují pole, na kterých závisí,
 ## Bez view
 
 `ViewField` s `content()` a bez `view()` je [`Placeholder`](placeholder.md)
-s obráceným přepínačem escapování. Na tohle použij radši `Placeholder`;
+s obráceným přepínačem escapování. Na tohle použijte radši `Placeholder`;
 `ViewField` sáhni tehdy, když je tam partial.
 
 ## Rozšířený příklad
@@ -155,7 +155,7 @@ reagovat sám — překreslí se, když se překreslí formulář.
 ->isHtmlContent(): bool
 ```
 
-Labely, pomocný text, viditelnost a `columnSpan()` jsou sdílený povrch komponent —
+Popisky, pomocný text, viditelnost a `columnSpan()` jsou sdílený povrch komponent —
 viz [Společné API pole](index.md#spolecne-api-pole). Validace, `live()` a výchozí
 hodnoty neplatí: view field žádný stav nedrží.
 

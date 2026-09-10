@@ -1,6 +1,6 @@
 ---
 order: 40
-summary: "Přidání vlastních typů sloupců, filtrů a akcí, tlačítka na povrchy, které nevlastníš, a pipes tvarující každý dotaz tabulky."
+summary: "Přidání vlastních typů sloupců, filtrů a akcí, tlačítka na povrchy, které nevlastníte, a pipes tvarující každý dotaz tabulky."
 ---
 
 # Rozšiřování povrchů

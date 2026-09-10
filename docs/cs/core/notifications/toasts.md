@@ -5,7 +5,7 @@ summary: "Notifikace na obrazovce — kde je namountovaná, jak dlouho vydrží 
 
 # Toasty
 
-Toast je notifikace, kterou vidíš a pak už ne: objeví se v rohu, vydrží tak
+Toast je notifikace, kterou vidíte a pak už ne: objeví se v rohu, vydrží tak
 dlouho, jak si její závažnost zaslouží, a zmizí. Tahle stránka je driver, který ho
 kreslí, Blade komponenta, která ho hostí, a jeden JavaScriptový vstupní bod pro
 kód, který se PHP nikdy nedotkl.
@@ -16,7 +16,7 @@ Vše níže vykresluje `<x-wire-notifications::toast-container />` — drivery j
 
 ### Odpočtová lišta
 
-Každý auto-zavírající toast má u spodní hrany tenkou **odpočtovou lištu**, která ubývá, jak toast stárne — uživatel tak vidí, za jak dlouho se zavře. **Najetí na jakýkoli toast pauzuje lištu i auto-zavření** (a po odjetí pokračuje). Lišta je defaultně zapnutá a obarvená podle typu notifikace.
+Každý automaticky se zavírající toast má u spodní hrany tenkou **odpočtovou lištu**, která ubývá, jak toast stárne — uživatel tak vidí, za jak dlouho se zavře. **Najetí na jakýkoli toast pauzuje lištu i automatické zavření** (a po odjetí pokračuje). Lišta je defaultně zapnutá a obarvená podle typu notifikace.
 
 - Je **volitelná** — `:progress="false"` ji skryje.
 - **Trvalé toasty lištu nemají** — sticky toast neodpočítává, takže by neměl co ukazovat (viz níže).
@@ -39,7 +39,7 @@ NotificationManager::send(
 
 ### Akční tlačítka
 
-Přidejte tlačítka, která po kliknutí dispatchnou Livewire událost — afordance „Undo". Hostitelská komponenta poslouchá přes `#[On(...)]`.
+Přidejte tlačítka, která po kliknutí dispatchnou Livewire událost — afordance „Undo“. Hostitelská komponenta poslouchá přes `#[On(...)]`.
 
 ```php
 use NyonCode\WireCore\Notifications\Notification;
@@ -126,7 +126,7 @@ Umístěte toast kontejner do svého layoutu:
 <x-wire-notifications::toast-container />
 ```
 
-Můžete přizpůsobit pozici, fallback trvání auto-zavření a browser událost, které naslouchá:
+Můžete přizpůsobit pozici, záložní trvání automatického zavření a browser událost, které naslouchá:
 
 ```blade
 <x-wire-notifications::toast-container
@@ -138,9 +138,9 @@ Můžete přizpůsobit pozici, fallback trvání auto-zavření a browser událo
 | Prop | Výchozí | Účel |
 |------|---------|---------|
 | `position` | `top-right` | `top-left` / `top-center` / `top-right` / `bottom-left` / `bottom-center` / `bottom-right` |
-| `duration` | `4000` | fallback auto-zavření (ms) pro notifikace bez vlastního `duration` |
+| `duration` | `4000` | záložní automatické zavření (ms) pro notifikace bez vlastního `duration` |
 | `event-name` | `table-notification` | `window` událost, které naslouchá (`x-on:{eventName}.window`) |
-| `progress` | `true` | zobrazit per-toast odpočtovou lištu (viz [Odpočtová lišta](#odpoctova-lista)) |
+| `progress` | `true` | zobrazit odpočtovou lištu u každého toastu (viz [Odpočtová lišta](#odpoctova-lista)) |
 | `stack` | `false` | sbalit toasty do hromádky, která se na hover rozevře |
 | `max` | `0` | omezit počet viditelných toastů (`0` = neomezeno); přebytek se sbalí do pillu „+N more“ |
 

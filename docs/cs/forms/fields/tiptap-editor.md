@@ -172,7 +172,7 @@ Právě proto dokument ukládá vedle id i morph typ: pod jedním `#` by `12` sa
 sobě neřeklo, jestli jde o článek, nebo o stránku.
 
 Každý zdroj se dotazuje zvlášť a řádky se seskupí podle jeho popisku — `UNION` by
-stál per-source scopování, což je důvod, proč zdroje sdílejí jeden trigger. Řádky
+stál scopování pro každý zdroj, což je důvod, proč zdroje sdílejí jeden trigger. Řádky
 se napříč zdroji **neřadí** proti sobě: seznam říká, ze které skupiny řádek
 pochází, místo aby předstíral, že ví, že článek poráží stránku.
 
@@ -445,4 +445,4 @@ symboly, ne slova; překládá se tooltip.
 | `limit(int)` | int | Kolik řádků zdroj přispěje (výchozí `5`) |
 | `modifyOptionsQueryUsing(Closure)` | Closure | Scopování dotazu nabídky |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).
+Popisek, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

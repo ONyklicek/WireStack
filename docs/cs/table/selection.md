@@ -7,7 +7,7 @@ summary: Checkboxy, výběr všeho, hromadná lišta — a co výběr znamená, 
 
 Z výběru může být sada gest, ne jen sloupec zaškrtávátek. Tabulka se
 `->selectable()` — nebo taková, která má jen `->bulkActions()`, což výběr
-implikuje — dává zaškrtávátka, ovladače „vybrat vše" a bulk bar:
+implikuje — dává zaškrtávátka, ovladače „vybrat vše“ a bulk bar:
 
 ```php
 ->selectable()
@@ -70,7 +70,7 @@ akcí: šipkou na řádek, `Space` pro výběr, `Shift`+šipka pro rozšíření
 hromadná akce.
 
 Klávesy se k tabulce dostanou jen tehdy, když má fokus **samotný řádek**. Stisk
-uvnitř řádku — tlačítko akce, editovatelná buňka, dropdown — patří tomu prvku,
+uvnitř řádku — tlačítko akce, editovatelná buňka, rozbalovací nabídka — patří tomu prvku,
 takže `Space` napsaný do buňky zůstane mezerou a `?` napsaný do vyhledávání
 nápovědu neotevře.
 
@@ -86,7 +86,7 @@ vybráno 2–6 a 8–12. Zmenšení rozsahu vrátí jen ty řádky, které rozsa
 přidal.
 
 Když výběr žádnou vlastní kotvu nemá — vznikl přes `mod`+`A` nebo přes pruh
-„vybrat vše" — první `Shift`+šipka roste od vzdálenější hrany souvislého bloku,
+„vybrat vše“ — první `Shift`+šipka roste od vzdálenější hrany souvislého bloku,
 ve kterém stojíte. Díky tomu *zmenší nebo zvětší blok, který vidíte*, místo aby
 zahodila zbytek výběru.
 
@@ -96,10 +96,10 @@ Jednotlivé řádky z výběru vyřadíte tak, že na ně přejdete šipkami a s
 ## Výběr přes hranici stránky
 
 Jakmile je vybraná celá stránka, nabídne lišta **Vybrat všech N** a výběr přejde
-z výčtu klíčů na „vše, co odpovídá aktuálnímu filtru" (co ten tvar znamená a proč
+z výčtu klíčů na „vše, co odpovídá aktuálnímu filtru“ (co ten tvar znamená a proč
 existuje, popisují [Hromadné akce](actions.md#hromadne-akce)).
 
-Gesta fungují i v tomto režimu a čtou se tak, jak se od „všechno kromě…" čeká:
+Gesta fungují i v tomto režimu a čtou se tak, jak se od „všechno kromě…“ čeká:
 
 - `Shift`+šipka přes rozsah ho **odznačí**, protože uložený seznam je seznam
   výjimek.
@@ -144,8 +144,8 @@ Výběr není funkce jen pro myš a tabulka to dává najevo:
   první řádek druhé stránky se ohlásí jako řádek 12, ne znovu jako řádek 1.
 - Každý řádek hlásí `aria-selected`, drženo v souladu s živým výběrem, ne s
   poslední odpovědí serveru.
-- Změny výběru se ohlašují v „polite" live regionu: *„3 z 40 vybráno"*,
-  *„Vybráno vše (40)"*, *„Výběr zrušen"*.
+- Změny výběru se ohlašují v „polite“ live regionu: *„3 z 40 vybráno“*,
+  *„Vybráno vše (40)“*, *„Výběr zrušen“*.
 - Aktivní řádek je označen podbarvením **a** pruhem u náběžné hrany. Samotná
   barva by selhala u každého, kdo ty dva odstíny nerozliší, a samotné podbarvení
   má kontrast asi 1,1:1 — pod hranicí 3:1. Pruh ji splňuje ve světlém i tmavém

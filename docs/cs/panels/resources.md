@@ -15,8 +15,8 @@ každé Livewire komponenty, která je zrovna zobrazuje.
 Tabulka, formulář a infolist jsou samostatné primitivy a zůstávají jimi:
 resource nemění nic na tom, jak fungují. Co přidává, je **vlastník** nad nimi —
 jedna třída, která odpovídá „tohle je entita Order, takhle se vypisuje, takhle se
-edituje" — a **registr**, který umí odpovědět „které resources existují" a „který
-vlastní `App\Models\Order`", aniž by kterýkoli z těch povrchů postavil.
+edituje“ — a **registr**, který umí odpovědět „které resources existují“ a „který
+vlastní `App\Models\Order`“, aniž by kterýkoli z těch povrchů postavil.
 
 To rozdělení je důvod, proč je resource několik malých kontraktů místo jednoho
 velkého:
@@ -84,7 +84,7 @@ App\Models\Person     →  key 'people'       ·  label 'Person'      ·  plural
 ```
 
 Množné číslo dělá Laravelův inflector, takže nepravidelná slova jsou správně bez
-vypisování. Přebij jen tu odpověď, která je špatně:
+vypisování. Přebijte jen tu odpověď, která je špatně:
 
 ```php
 public static function pluralLabel(): string
@@ -212,7 +212,7 @@ založení a pro editaci je přesně ta chyba, které tenhle tvar předchází. 
 opravdu lišit musí, předá stránka formulář, který resource teprve tvaruje, místo
 aby resource deklaroval dva.
 
-Perzistence zůstává formuláři: `Form` už vlastní save lifecycle a resource nad
+Perzistence zůstává formuláři: `Form` už vlastní životní cyklus ukládání a resource nad
 non-Eloquent zdrojem zapisuje přes `Form::using()`.
 
 ## Introspekce

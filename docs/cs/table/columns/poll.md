@@ -5,7 +5,7 @@ summary: "Buňka, která se sama obnovuje: stavové automaty, průběh a podmín
 
 # PollColumn
 
-Pokročilý auto-obnovující sloupec se stavovými automaty, sledováním postupu a pollingem podle podmínky. Ideální pro joby na pozadí, živý stav, progress bary.
+Pokročilý automaticky se obnovující sloupec se stavovými automaty, sledováním postupu a pollingem podle podmínky. Ideální pro joby na pozadí, živý stav, progress bary.
 
 ```php
 use NyonCode\WireTable\Columns\PollColumn;
@@ -163,7 +163,7 @@ PollColumn::make('status')
 ->animateTransitions(bool $animate = true)
 
 // Na úrovni řádku
-->rowLevelPolling(bool $rowLevel = true) // pollovat per řádek (ne celou tabulku)
+->rowLevelPolling(bool $rowLevel = true) // pollovat po řádcích (ne celou tabulku)
 
 // Callbacky
 ->refreshMethod(string $method)          // Livewire metoda při obnovení

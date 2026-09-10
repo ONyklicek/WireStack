@@ -65,7 +65,7 @@ má a nechrání ho nic:
 
 Panel, který by tohle modeloval jako boolean, by nechal každé přerušené nastavení
 uvízlé v prostředním stavu, zatímco odznak tvrdí, že jsou v bezpečí. Odznak tam
-čte „Nedokončeno" a *Vypnout* se nabízí i z něj, nejen ze stavu `zapnuto` —
+čte „Nedokončeno“ a *Vypnout* se nabízí i z něj, nejen ze stavu `zapnuto` —
 polorozdělané nastavení musí jít opustit oběma směry, jinak je to past.
 
 **Tým omezuje všechno, takže se nastavuje dřív, než ho něco přečte.** Se zapnutým
@@ -119,8 +119,8 @@ class User extends Authenticatable
 ```
 
 Karta se na stránce profilu objeví ve chvíli, kdy platí obojí. `'confirm' => false`
-se taky respektuje — modul si to čte z Fortify vlastních options funkce, ne
-z kopie nastavení — a tajemství pak *je* celé nastavení, takže stav „nedokončeno"
+se taky respektuje — modul si to čte přímo z nastavení dané Fortify funkce, ne
+z kopie toho nastavení — a tajemství pak *je* celé nastavení, takže stav „nedokončeno“
 nenastane.
 
 **Výzva patří té druhé polovině.** Tenhle modul vlastní *správcovskou* kartu — QR

@@ -41,15 +41,15 @@ Děti se vykreslují v pořadí deklarace a dítě, jehož podmínka `visible()`
 
 **Past: `columnSpan()` rozumí jen 2, 3, 4 a `full`.** Mapa rozpětí je uzavřený
 `match`, takže `->columnSpan(5)` propadne na výchozí hodnotu a pole tiše zabere
-jeden sloupec. Když má být dítě širší než čtyři, přidej sloupce gridu, ne rozpětí
+jeden sloupec. Když má být dítě širší než čtyři, přidejte sloupce gridu, ne rozpětí
 dítěti.
 
 **Ta druhá past je Tailwind, ne tahle třída.** Třída gridu se skládá za běhu
-z řetězců, takže ji scanner Tailwindu ve tvém kódu nevidí. Balíček každou možnou
+z řetězců, takže ji scanner Tailwindu ve vašem kódu nevidí. Balíček každou možnou
 utilitu `grid-cols-*` vypisuje jako literální text, aby ji scanner našel — což
-funguje jen tehdy, když jsou view balíčku v tvých `content` cestách. Grid, který
+funguje jen tehdy, když jsou view balíčku v vašich `content` cestách. Grid, který
 se vykreslí se správným markupem a bez jediného sloupce, je skoro vždycky tohle.
-Cesty najdeš v [Getting Started](../../../start/getting-started.md).
+Cesty najdete v [Getting Started](../../../start/getting-started.md).
 
 ## Základní použití
 
@@ -63,7 +63,7 @@ Grid::make()
 ```
 
 `Grid::make()` nebere jméno, protože layout, který nenese stav, nemá čím být
-adresovaný. Předej ho, jen když ho chceš pro vlastní potřebu.
+adresovaný. Předejte ho, jen když ho chcete pro vlastní potřebu.
 
 ## Jak udělat jedno dítě širší
 
@@ -81,11 +81,11 @@ Grid::make()
 ```
 
 Ve výchozím případě sahej po `columnSpanFull()`. Znamená „kolik je sloupců, tolik
-si vezmi", takže funguje dál, když grid ze dvou sloupců předěláš na tři.
+si vezměte“, takže funguje dál, když grid ze dvou sloupců předěláte na tři.
 
 ## Responzivní sloupce
 
-Když int přeskládání není to, co chceš, vyjmenuj každý breakpoint sám:
+Když int přeskládání není to, co chcete, vyjmenuj každý breakpoint sám:
 
 ```php
 Grid::make()
@@ -101,7 +101,7 @@ Grid::make()
     ])
 ```
 
-Vygenerují se jen breakpointy, které pojmenuješ, a každý platí až do dalšího.
+Vygenerují se jen breakpointy, které pojmenujete, a každý platí až do dalšího.
 
 ## Zanořování
 

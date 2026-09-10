@@ -30,7 +30,7 @@ dál — což je zkouška toho, jestli je vlastnická vrstva opravdu volitelná.
 | **Router** | „která URL vede na kterou stránku a v jaké zóně“ | [Routování](routing.md) |
 
 Resource bez stránek je pořád zaregistrovaný a pořád introspektovatelný. Stránky
-fungují i bez resourcu — napiš na stránku `table()` a je to obyčejná komponenta s
+fungují i bez resourcu — napište na stránku `table()` a je to obyčejná komponenta s
 `WithTable`. Položka menu, jejíž klíč nikam neroutuje, se vykreslí bez odkazu
 místo toho, aby spadla. Každá vrstva degraduje na tu pod sebou, místo aby ji
 vyžadovala.
@@ -44,7 +44,7 @@ jsou instanční metody a menu o čtyřiceti resourcech nesestaví ani jeden z n
 Resource je deklarovaný napříč balíčky, které vlastní typy, jež jmenuje — takže
 aplikace instaluje jen to, co její resource opravdu používají:
 
-| Co potřebuješ | Kde to žije | Protože to jmenuje |
+| Co potřebujete | Kde to žije | Protože to jmenuje |
 | --- | --- | --- |
 | `DescribesResource`, `DescribesRecords`, `ResourceRegistry` | `wire-core` | nic než skaláry |
 | `ProvidesResourceForm` | `wire-forms` | `Form` |
@@ -113,8 +113,8 @@ tomhle pořadí.
 ## Co tenhle balíček nedělá
 
 Neveze žádný layout, žádné markup sidebaru a žádný chrome dashboardu. Celostránková
-Livewire komponenta layout potřebuje a tenhle balíček ho nedodává — buď nastav
-`livewire.component_layout` na vlastní, nebo nainstaluj
+Livewire komponenta layout potřebuje a tenhle balíček ho nedodává — buď nastavte
+`livewire.component_layout` na vlastní, nebo nainstalujte
 [admin shell](../admin/overview.md), což je hotová odpověď a přesně proto
 samostatný balíček.
 

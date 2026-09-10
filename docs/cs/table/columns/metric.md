@@ -45,7 +45,7 @@ dashboardu ukazují pro stejná data stejný tvar.
 
 ### Řadu dodáváte vy, a to schválně
 
-Řadu per záznam nejde odvodit z cesty toho sloupce: *objednávky po měsících pro
+Řadu pro každý záznam nejde odvodit z cesty toho sloupce: *objednávky po měsících pro
 tohohle zákazníka* je druhý tvar dotazu, ne formátování toho prvního. Closure
 drží to rozhodnutí — i případné N+1 — tam, kde je vidět.
 
@@ -80,7 +80,7 @@ public function table(Table $table): Table
 | `[]` | vůbec nic: buňka je obyčejné číslo |
 
 Nečíselná čtení se **zahazují, nepřevádějí**. `null` měsíc znamená „žádné
-čtení" a vykreslit ho jako `0` si vymyslí propad na dno a zpátky, který se nikdy
+čtení“ a vykreslit ho jako `0` si vymyslí propad na dno a zpátky, který se nikdy
 nestal.
 
 ## Barva trendu

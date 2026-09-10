@@ -66,5 +66,5 @@ To zaregistruje server pod lokálním handle `wire-boost` a deleguje na Laravel 
 ## Git
 
 Vygenerované soubory (`.mcp.json`, `CLAUDE.md`, `AGENTS.md`, adresáře skills) je bezpečné commitnout, aby
-váš tým sdílel stejné nastavení, nebo je přidat do `.gitignore` a regenerovat per stroj — obojí funguje,
+váš tým sdílel stejné nastavení, nebo je přidat do `.gitignore` a regenerovat na každém stroji — obojí funguje,
 protože `wire-boost:install` je idempotentní.

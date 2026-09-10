@@ -5,7 +5,7 @@ summary: "Jeden objekt notifikace, několik driverů a fluent builder, který po
 
 # Notifikace
 
-Notifikace je nejdřív hodnotový objekt a až potom doručení: popíšeš, co se stalo
+Notifikace je nejdřív hodnotový objekt a až potom doručení: popíšete, co se stalo
 — titulek, text, barva, ikona, případně akce — a kam to dopadne, rozhodne
 **driver**. Výměna driveru nemění na volajícím kódu nic, a právě proto může být
 tentýž řádek toastem v prohlížeči i řádkem v databázi.
@@ -20,7 +20,7 @@ tentýž řádek toastem v prohlížeči i řádkem v databázi.
 | Flasher | `FlasherDriver` | Integrace [PHP Flasher](https://php-flasher.io) | `php-flasher/flasher-laravel` |
 | Database | `DatabaseDriver` | Zapíše notifikaci; přežije request, který ji vyvolal | Tabulka `wire_notifications` (migrace je součástí balíčku) |
 | Broadcast | `BroadcastDriver` | Řekne **ostatním otevřeným stránkám** příjemce, že něco přišlo — pobídka přes websockety, bez payloadu | Laravel broadcasting a `window.Echo` na stránce |
-| Stack | `StackDriver` | Několik driverů naráz — obvyklá dvojice „toast **a** zvoneček" | Co potřebují obalené drivery |
+| Stack | `StackDriver` | Několik driverů naráz — obvyklá dvojice „toast **a** zvoneček“ | Co potřebují obalené drivery |
 | Null | `NullDriver` | No-op — zahodí vše | Žádné |
 
 Vestavěný výchozí je **`CurrentComponentDriver`** obalující `SessionDriver`: sám resolvuje právě renderovanou Livewire komponentu, takže call-sites nikdy nemusí předávat `$this`. `SessionDriver` i `LivewireEventDriver` forwardují **plný** payload (`title`, `duration`, `icon`, `actions`, …), takže bohaté toasty přežijí server round-trip.
@@ -82,7 +82,7 @@ Fluent modifikátory. Objekt je immutable, takže každý vrací **novou** insta
 
 ```php
 ->title(?string $title): static
-->duration(?int $ms): static      // čas auto-zavření, 0 = trvalé
+->duration(?int $ms): static      // čas automatického zavření, 0 = trvalé
 ->persistent(bool $on = true): static   // sticky toast: duration 0, bez odpočtové lišty
 ->icon(?string $icon): static
 ->position(?string $position): static

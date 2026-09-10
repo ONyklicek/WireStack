@@ -18,7 +18,7 @@ balíček:
 |-----------|--------|
 | `core` | Přehled wireStack, graf balíčků a konvence (fluent API, kanonické vlastnictví, `Htmlable` rendering). |
 | `wire-core` | Akce, modaly, notifikace, infolisty, widgety, ikony, barvy. |
-| `wire-forms` | Pole, validace, layout, options, životní cyklus ukládání. |
+| `wire-forms` | Pole, validace, layout, možnosti, životní cyklus ukládání. |
 | `wire-table` | Tabulky, sloupce, filtry, akce, souhrny, podřádky. |
 | `wire-sortable` | Řazení řádků a sloupců. |
 

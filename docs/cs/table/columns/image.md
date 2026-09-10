@@ -41,7 +41,7 @@ ImageColumn::make('members')
 ## Neveřejné soubory
 
 Ve výchozím stavu sloupec staví běžnou Storage URL. Pro soubor, který není
-veřejně čitelný, si nech od disku podepsat dočasnou:
+veřejně čitelný, si nechte od disku podepsat dočasnou:
 
 ```php
 ImageColumn::make('scan')

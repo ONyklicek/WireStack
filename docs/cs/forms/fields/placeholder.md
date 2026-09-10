@@ -4,10 +4,10 @@ summary: "Statický text v toku schématu: čte se jako pole a nedrží žádná
 
 # Placeholder
 
-Řádek textu, který sedí ve schématu a vypadá jako pole — label nahoře, hodnota
-pod ním — ale nic nedrží. Sáhni po `Placeholderu`, když chceš vedle editovatelných
+Řádek textu, který sedí ve schématu a vypadá jako pole — popisek nahoře, hodnota
+pod ním — ale nic nedrží. Sáhni po `Placeholderu`, když chcete vedle editovatelných
 vstupů ukázat spočítanou hodnotu nebo hodnotu jen ke čtení: celkovou částku
-faktury, vygenerovanou referenci, „naposledy přihlášen před třemi dny".
+faktury, vygenerovanou referenci, „naposledy přihlášen před třemi dny“.
 
 ```php
 use NyonCode\WireForms\Components\Display\Placeholder;
@@ -32,7 +32,7 @@ týž přepínač:
 
 Ani jedno nic nesanitizuje. To escapování je jediné, co stojí mezi hodnotou
 a stránkou, takže cokoli, co jde do `allowHtml()`, musí být už důvěryhodné —
-řetězec, který jsi složil ty, ne ten, který někdo napsal.
+řetězec, který jste složili vy, ne ten, který napsal někdo jiný.
 
 **Obsah může být closure**, vyhodnocovaná při každém čtení, a právě to dělá
 z placeholderu užitečnou věc pro hodnotu, která závisí na zbytku formuláře, ne na
@@ -67,7 +67,7 @@ Placeholder::make('status')
     ->html('<span class="text-red-600 font-medium">Po splatnosti</span>')   // [tl! focus]
 ```
 
-`html()` je `content()` plus `allowHtml()`. Používej ho jen s řetězcem, který jsi
+`html()` je `content()` plus `allowHtml()`. Používejte ho jen s řetězcem, který jste
 složil sám.
 
 ## Rozšířený příklad
@@ -139,13 +139,13 @@ ně v `$data` není klíč a validace na ně nedosáhne.
 ->isHtmlContent(): bool
 ```
 
-Labely, pomocný text, viditelnost a `columnSpan()` jsou sdílený povrch komponent —
+Popisky, pomocný text, viditelnost a `columnSpan()` jsou sdílený povrch komponent —
 viz [Společné API pole](index.md#spolecne-api-pole). Validace, `live()` a výchozí
 hodnoty neplatí: placeholder žádný stav nedrží.
 
 ## Související
 
-- [Html](html.md) — markup bez labelu a bez tvaru pole kolem
+- [Html](html.md) — markup bez popisku a bez tvaru pole kolem
 - [ViewField](view-field.md) — když je tou věcí celý Blade partial
 - [Alert](alert.md) — tatáž myšlenka uvnitř barevného boxu
 - [Hidden](hidden.md) — opak: hodnota, která se veze, ale nikdy neukazuje

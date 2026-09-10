@@ -1,6 +1,6 @@
 ---
 order: 50
-summary: "Dva pluginy napsané od začátku do konce — preset akce a audit formuláře — a jak plugin otestovat, aniž bys kolem něj nabootoval aplikaci."
+summary: "Dva pluginy napsané od začátku do konce — preset akce a audit formuláře — a jak plugin otestovat, aniž byste kolem něj bootovali celou aplikaci."
 ---
 
 # Příklady a testování
@@ -88,7 +88,7 @@ final class FormAuditPlugin implements Plugin
 }
 ```
 
-`form.saving` může upravit data, která se perzistují. `form.saved` je v aktuálním runtime observační, protože save handler nekonzumuje jeho vrácený payload.
+`form.saving` může upravit data, která se ukládají. `form.saved` je v aktuálním runtime observační, protože save handler nekonzumuje jeho vrácený payload.
 
 ## Testování pluginů
 

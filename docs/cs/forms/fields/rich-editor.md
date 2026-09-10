@@ -93,4 +93,4 @@ php artisan vendor:publish --tag=wire-forms::translations
 | `readOnly(bool\|Closure)` | bool | Read-only režim |
 | `required()` | — | Označit jako povinné |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).
+Popisek, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

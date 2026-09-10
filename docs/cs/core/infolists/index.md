@@ -107,13 +107,13 @@ To je celá smyčka: **záznam dovnitř → schéma → vyechovat ven.** `{{ $th
 | **Image** | `ImageEntry` | Avatary a náhledy (jeden nebo galerie) |
 | **Color** | `ColorEntry` | Barevný vzorek + jeho hodnota |
 | **Key-value** | `KeyValueEntry` | Array / JSON atribut jako tabulka klíč/hodnota |
-| **Repeatable** | `RepeatableEntry` | Vnořené schéma entries opakované per položka relace/pole |
+| **Repeatable** | `RepeatableEntry` | Vnořené schéma entries opakované pro každou položku relace/pole |
 | **Changes** | `ChangesEntry` | Rozdíl před/po jako jedna tabulka, řádek na pole |
 | **Html** | `HtmlEntry` | Uložený bohatý text vypsaný jako markup, se [zmínkami](../../forms/fields/tiptap-editor.md#zminky) rozbalenými při každém renderu |
 
-> **Enum casty.** Entries čtou enum-cast atributy bezpečně: `TextEntry` vykreslí label enumu
+> **Enum casty.** Entries čtou enum-cast atributy bezpečně: `TextEntry` vykreslí popisek enumu
 > (přes kontrakt `Enum\HasLabel`, jinak backing hodnota / název case) a `IconEntry`
-> auto-resolvuje svou ikonu a barvu z enumu implementujícího `Enum\HasColor` / `Enum\HasIcon`.
+> automaticky resolvuje svou ikonu a barvu z enumu implementujícího `Enum\HasColor` / `Enum\HasIcon`.
 > Viz [Foundation → Enumy](../foundation/enums.md#enumy).
 
 ## Objekt Infolist
@@ -220,7 +220,7 @@ public function billing(): Infolist { /* ... */ }
 </div>
 ```
 
-> **Pravidlo palce:** pokud dokážete popsat, co ukázat, jako „tato hodnota, pak ta hodnota, seskupené pod těmito nadpisy", můžete to vyjádřit zde — jedna entry na hodnotu, jedna sekce na skupinu.
+> **Pravidlo palce:** pokud dokážete popsat, co ukázat, jako „tato hodnota, pak ta hodnota, seskupené pod těmito nadpisy“, můžete to vyjádřit zde — jedna entry na hodnotu, jedna sekce na skupinu.
 
 <a id="state-resolution"></a>
 

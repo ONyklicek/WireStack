@@ -57,7 +57,7 @@ TextColumn::make('age')
 
 Filtr hlavičky sloupce je umístění kanonického `Filter` — pomocné metody
 `filterAs*()` jsou tenké factory nad `TextFilter` / `SelectFilter` / `DateFilter` /
-`NumberRangeFilter` / `TernaryFilter`, nebo předej hotový přes `->filter()`. Sdílený
+`NumberRangeFilter` / `TernaryFilter`, nebo předejte hotový přes `->filter()`. Sdílený
 engine, chipy a query-string persistenci viz [Filtry na úrovni sloupce](../filters/column-level.md).
 
 ```php
@@ -104,7 +104,7 @@ Pojmenování typu editoru — `editable(true, 'select', […])` — vyhodí vý
 
 Argument `options` u `filterable()` / `filterAsSelect()` přijímá i PHP enum —
 rozbalí se na `value => label` stejně jako u `SelectColumn`/`SelectFilter`.
-Viz [Options z enumu](select.md#options-z-enumu).
+Viz [Možnosti z enumu](select.md#moznosti-z-enumu).
 
 ### Jak fungují inline uložení
 
@@ -133,7 +133,7 @@ i toggly ji používají, takže se chovají konzistentně.
 - **Vypnutí renderu.** `Table::refreshAfterEdit(false)` se vrací k odpovědi bez HTML. Vyplatí se
   jen u tabulky, kde je dotaz za renderem drahý a na editované hodnotě nic na obrazovce nezávisí:
   buňka se z odpovědi sesynchronizuje pořád, okolí ne.
-- **Serverová autorizace.** Klientský `disabled()` stav je jen kosmetika — per-record `disabled()`
+- **Serverová autorizace.** Klientský `disabled()` stav je jen kosmetika — `disabled()` na úrovni záznamu
   buňka (i oprávnění sloupce) se znovu vynutí na serveru v `updateTableCell`, takže forged request
   nemůže zapsat do zamčené buňky.
 

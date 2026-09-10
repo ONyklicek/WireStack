@@ -51,7 +51,7 @@ formulář kolem sebe, nakreslené tak, jak takový řádek kreslí menu framewo
 ```
 
 Tohle je komponenta z core; `<x-wire-admin::menu-item>` je tentýž řádek uvnitř
-uživatelského menu [admin shellu](../../admin/layout.md) — takže cokoli tam dáš
+uživatelského menu [admin shellu](../../admin/layout.md) — takže cokoli tam dáte
 vypadá jako to, co v něm už je.
 
 `file-thumb` vyplní jakýkoli box, do kterého ho dáte — stejná komponenta je
@@ -84,7 +84,7 @@ use NyonCode\WireCore\Foundation\Schema\{Grid, Section, Flex, Callout};
 Section::make('Team')
     ->description('People with access.')
     ->schema([
-        // Int reflow, nebo Filament-style per-breakpoint mapa.
+        // Int reflow, nebo mapa podle breakpointů ve stylu Filamentu.
         Grid::make()->columns(['default' => 1, 'md' => 2, 'lg' => 3])->schema([...]),
     ]);
 
@@ -96,8 +96,8 @@ Callout::make()->warning()->heading('Heads up')->icon('exclamation-triangle')->d
     ->content('Something worth noticing.');
 ```
 
-`Callout` je sdílený vlastník upozorňovacího surface; forms `Alert` pole je jeho field-style alias.
-Počty sloupců (`Grid`, `CheckboxList`, `Section`, …) přijímají int **nebo** per-breakpoint mapu klíčovanou
+`Callout` je sdílený vlastník upozorňovacího povrchu; forms `Alert` pole je jeho field-style alias.
+Počty sloupců (`Grid`, `CheckboxList`, `Section`, …) přijímají int **nebo** mapu podle breakpointů, klíčovanou
 `default`/`sm`/`md`/`lg`/`xl`/`2xl`.
 
 ### Samostatné Blade tagy
@@ -120,7 +120,7 @@ Stejné layouty jsou také vystaveny jako slot-based `wire::` tagy pro prosté B
     <button>New invoice</button> {{-- slot se stane řádkem akcí --}}
 </x-wire::empty-state>
 
-{{-- Alpine-driven; jen client-side stav (bez per-step validace) --}}
+{{-- Alpine-driven; jen client-side stav (bez validace jednotlivých kroků) --}}
 <x-wire::tabs>
     <x-wire::tab label="Profile">…</x-wire::tab>
     <x-wire::tab label="Security">…</x-wire::tab>

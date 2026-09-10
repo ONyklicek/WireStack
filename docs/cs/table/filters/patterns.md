@@ -128,7 +128,7 @@ $table->filters([
 ]);
 ```
 
-## Filtr se závislými options
+## Filtr se závislými možnostmi
 
 ```php
 // Kaskáda Země → Město (vyžaduje Livewire re-render)

@@ -48,7 +48,7 @@ deklarace aplikace nad tou dodanou.
 | [Přihlašování](auth.md) | `wire-module-auth` | Přihlášení, reset hesla, ověření e-mailu, dvoufaktorová výzva a **Odhlásit** v uživatelském menu | `laravel/fortify` — vlastní bezpečnost, modul vlastní obrazovky |
 | [Nastavení](settings.md) | `wire-module-settings` | Typovaná tabulka nastavení, její cache a obrazovka nad ní | Databázové připojení |
 | [Notifikace](notifications.md) | `wire-module-notifications` | Historie za zvonečkem, jako tabulka | Laravelí tabulka `notifications` |
-| [Audit](audit.md) | `wire-module-audit` | Obrazovka pro stopu, kterou `wire-core` už zapisuje | `HasAuditable` na modelech, které chceš sledovat |
+| [Audit](audit.md) | `wire-module-audit` | Obrazovka pro stopu, kterou `wire-core` už zapisuje | `HasAuditable` na modelech, které chcete sledovat |
 | [Média](media.md) | `wire-module-media` | Knihovna médií — uploady, složky, náhledy a picker do formulářů | Filesystem disk |
 
 [Týmy a dvoufaktor](teams-and-two-factor.md) není sedmý balíček: je to návod, jak
@@ -60,14 +60,14 @@ když chybí.
 
 `wire:install` nabídne každý modul, který vidí, a pojmenuje ty, které nevidí —
 nabídnout modul, který není nainstalovaný, je totiž smyslem věci: seznam řádků
-`composer require`, které si můžeš zkopírovat, je užitečnější než ticho:
+`composer require`, které si můžete zkopírovat, je užitečnější než ticho:
 
 ```bash
 composer require nyoncode/wire-suite
 php artisan wire:install
 ```
 
-Composer za tebe nikdy nespustí. Co instalátor dělá a co odmítá dělat, popisuje
+Composer za vás nikdy nespustí. Co instalátor dělá a co odmítá dělat, popisuje
 [Instalace Wire](../start/installation.md).
 
 ## Vlastní modul

@@ -26,7 +26,7 @@ slovník komponent.
 | `application-info` | Verze PHP / Laravel / Livewire, nainstalované verze wire balíčků a klíčový efektivní config. |
 | `list-wire-components` | Objevit app Livewire komponenty, které staví wire tabulku, formulář nebo infolist. |
 | `describe-table` | Vyresolvovat sloupce tabulky, filtry, header/row/bulk akce, výchozí řazení a searchability. |
-| `describe-form` | Vyresolvovat zploštělé schéma polí formuláře (název, label, typ, obalující layout). |
+| `describe-form` | Vyresolvovat zploštělé schéma polí formuláře (název, popisek, typ, obalující layout). |
 | `describe-infolist` | Vyresolvovat schéma entries infolistu. |
 | `describe-resource` | Vypíše zaregistrované resource — klíč, model, popisky, které povrchy který deklaruje, a jeho položku v navigaci. |
 | `describe-module` | Vypíše doménové moduly — id, závislosti a resource, dashboardy a navigační skupinu, které každý deklaruje. |

@@ -17,7 +17,7 @@ položky faktury, zásilky objednávky, úkoly projektu — bez opuštění tabu
 │       27" monitor      1   5 600 Kč      5 600 Kč  [✎][🗑] │
 │       Keyboard         2   1 200 Kč      2 400 Kč  [✎][🗑] │
 │       Wireless mouse   3     450 Kč      1 350 Kč  [✎][🗑] │
-│       Subtotal:                          9 350 Kč          │  ← součet per rodič
+│       Subtotal:                          9 350 Kč          │  ← součet za rodiče
 │   └──────────────────────────────────────────────────────┘
 │ ▸ │ INV-1002   │ Globex       │  pending  │  18 100 Kč   │
 └───┴────────────┴──────────────┴───────────┴──────────────┘
@@ -77,16 +77,16 @@ Záznamy, které podmínka odmítne, přijdou o chevron, o dětský panel i o sv
 na eager loadu. **Buňka** s chevronem se pořád vykreslí — prázdná — protože její
 vypuštění by posunulo všechny ostatní sloupce toho řádku.
 
-Není to totéž jako „zrovna nemá děti": záznam, který děti mít může, ale právě
+Není to totéž jako „zrovna nemá děti“: záznam, který děti mít může, ale právě
 žádné nemá, se dál rozbalí na hlášku `no_sub_rows`. Podmínku použijte pro
 záznamy, které je mít strukturálně nemohou.
 
-Výsledek se memoizuje per záznam na dobu requestu, takže callback smí sáhnout do
+Výsledek se memoizuje pro každý záznam na dobu requestu, takže callback smí sáhnout do
 databáze — lepší je ale číst něco, co už na záznamu je.
 
 ### Skrytí řádků, které prostě žádné nemají
 
-Na nejčastější podmínku — „tenhle záznam právě teď nemá děti" — použijte
+Na nejčastější podmínku — „tenhle záznam právě teď nemá děti“ — použijte
 `subRowsHideWhenEmpty()` místo vlastní closure:
 
 ```php
@@ -95,7 +95,7 @@ Na nejčastější podmínku — „tenhle záznam právě teď nemá děti" —
 ```
 
 Ručně napsané to stojí jeden `COUNT` na řádek. Přepínač místo toho nechá dotaz
-tabulky nést omezený count relace podřádků, takže kontrola per řádek je čtení
+tabulky nést omezený count relace podřádků, takže kontrola na každém řádku je čtení
 atributu — u vykreslené stránky žádný dotaz navíc. Záznam předaný tabulce přímo
 (ne načtený jejím dotazem) spadne zpět na jeden `EXISTS`.
 
@@ -103,7 +103,7 @@ Count je omezený přesně tak jako panel — `subRowQuery()` a případný
 [`Filter::subRows()`](filters/relationships.md) — takže rodič, jehož děti filtr
 celé odstraní, přijde o rozbalovátko místo aby se otevřel na hlášku o prázdném
 stavu. Interaktivní lišta filtrů podřádků (`subRowsFilterable()`) se do něj
-záměrně **nepromítá**: její hodnoty se mění per rodič, jak uživatel píše, a
+záměrně **nepromítá**: její hodnoty se mění u každého rodiče, jak uživatel píše, a
 rozbalovátko by mizelo a objevovalo se pod kurzorem.
 
 Obě podmínky se skládají a ta levnější běží první — záznam, který už
@@ -171,19 +171,19 @@ odmítnuty, takže je řazení bezpečné řídit z requestu. Kliknutí na aktiv
 otočí směr; kliknutí na jiný ho seřadí vzestupně. Aktivní řazení je sdílené napříč
 všemi rozbalenými rodiči.
 
-## Limit a „Zobrazit více"
+## Limit a „Zobrazit více“
 
 ```php
 ->subRowsLimit(5)
 ```
 
 Když je nastaven limit a existuje více dětí, na konci dětské tabulky se vykreslí
-tlačítko **„Zobrazit N dalších"**. Kliknutí odhalí celou sadu pro daného rodiče
-(sledováno per rodič ve stavu), zatímco počet zůstává přesný.
+tlačítko **„Zobrazit N dalších“**. Kliknutí odhalí celou sadu pro daného rodiče
+(sledováno pro každého rodiče ve stavu), zatímco počet zůstává přesný.
 
-Eager load načte jen `limit` řádků na rodiče (nativní per-parent eager-load limit)
+Eager load načte jen `limit` řádků na rodiče (nativní limit eager loadu na rodiče)
 plus jeden count dotaz pro přesné součty — celé dětské sady se nikdy nenačítají do
-paměti, dokud není rodič rozbalen přes „Zobrazit více":
+paměti, dokud není rodič rozbalen přes „Zobrazit více“:
 
 ```text
 Product        Qty   Line total
@@ -206,7 +206,7 @@ use Illuminate\Database\Eloquent\Builder;
 )
 ```
 
-Zapněte per-dítě interaktivní filtry pomocí `subRowsFilterable()`. Lišta filtrů
+Zapněte interaktivní filtry pro jednotlivé děti pomocí `subRowsFilterable()`. Lišta filtrů
 se vykreslí nad dětskou tabulkou pro každý filtrovatelný sloupec podřádku a zúží
 **děti** — rodičovské řádky zůstanou nedotčené:
 
@@ -239,7 +239,7 @@ Jeden filtr omezí vše konzistentně:
 
 - rodiče se zmenší na ty s aspoň jedním odpovídajícím dítětem,
 - rozbalené panely ukážou jen odpovídající děti,
-- mezisoučty per rodič, počty „zobrazit více", rollup sloupce (`->sums()`,
+- mezisoučty po rodičích, počty „zobrazit více“, rollup sloupce (`->sums()`,
   `->counts()`, …) a jejich celkové součty v patičce agregují jen odpovídající děti.
 
 ```text
@@ -259,7 +259,7 @@ Měsíc: [ 2026-06 ▾ ]
 automaticky. Součty lze získat dvěma způsoby podle toho, zda má být částka per
 faktura viditelným rodičovským sloupcem:
 
-**Částka jen v podřádcích.** Dejte sloupci podřádku mezisoučet per rodič
+**Částka jen v podřádcích.** Dejte sloupci podřádku mezisoučet za rodiče
 (`scope: 'subRows'`) a souhrn ve výchozím rozsahu pro celkový součet — ten se
 vykreslí v hlavní patičce, spočtený v SQL nad přesně těmi dětmi, které filtr
 povoluje (viz
@@ -273,7 +273,7 @@ $table
         TextColumn::make('line_total')
             ->suffix(' Kč')
             ->summaryDecimals(0)
-            ->summarizeSum('Subtotal', scope: 'subRows')  // patička panelu per faktura
+            ->summarizeSum('Subtotal', scope: 'subRows')  // patička panelu za fakturu
             ->summarizeSum('Celkem'),                     // hlavní patička, filtrované děti
     ])
     ->filters([
@@ -312,7 +312,7 @@ Viz [Filtry — Filtrování podle hodnot podřádků](filters/relationships.md#
 
 ## Řádkové akce
 
-Vykreslete per-dítě akce v koncové buňce akcí. Každá akce se vykreslí proti
+Vykreslete akce jednotlivých dětí v koncové buňce akcí. Každá akce se vykreslí proti
 **dětskému** záznamu, přesně jako akce hlavní tabulky proti rodiči:
 
 ```php
@@ -332,7 +332,7 @@ Product        Qty   Line total       Actions
 Keyboard         2     2 400 Kč     [✎ Edit][🗑 Delete]
 ```
 
-## Mezisoučty per rodič
+## Mezisoučty po rodičích
 
 Dejte sloupci podřádku souhrn v rozsahu `subRows` a dětská tabulka získá patičku
 s tou agregací pro děti rodiče:
@@ -355,7 +355,7 @@ Product        Qty   Line total
 27" monitor      1     5 600 Kč
 Keyboard         2     2 400 Kč
 Wireless mouse   3     1 350 Kč
-Subtotal:        6     9 350 Kč     ← patička per rodič
+Subtotal:        6     9 350 Kč     ← patička za rodiče
 ```
 
 Platí zde všechny typy agregací a formátování čísel ze stránky [Souhrny](summaries.md).
@@ -434,7 +434,7 @@ rozbaleného rodiče:
 To odstraňuje N+1, které by jinak rostlo s počtem otevřených řádků. Čtení dětí
 rodiče (a jeho počtu pro mezisoučet) pak nestojí žádné extra dotazy. Eager loading
 se automaticky přeskočí, když jsou aktivní interaktivní filtry podřádků, protože
-filtrování per rodič spadne zpět na bezpečný per-parent dotaz.
+filtrování po rodičích spadne zpět na bezpečný dotaz na rodiče.
 
 ## Reference voleb
 
@@ -446,8 +446,8 @@ filtrování per rodič spadne zpět na bezpečný per-parent dotaz.
 | `subRowColumns(array $columns)`                 | Sloupce pro dětskou tabulku              |
 | `subRowQuery(Closure $cb)`                      | Tvarovat dotaz dětské relace             |
 | `subRowsSortable(bool, ?string $default, string $direction)` | Řazení klikem na hlavičky + výchozí řazení |
-| `subRowActions(array $actions)`                 | Řádkové akce per dítě                    |
-| `subRowsLimit(?int)`                            | Omezit děti, zapnout „Zobrazit N dalších"|
+| `subRowActions(array $actions)`                 | Řádkové akce pro každé dítě              |
+| `subRowsLimit(?int)`                            | Omezit děti, zapnout „Zobrazit N dalších“|
 | `subRowsFilterable(bool)`                       | Per-dítě interaktivní lišta filtrů       |
 | `subRowsExpandable(bool)`                       | Povolit přepínač rozbalit/sbalit         |
 | `subRowsDefaultExpanded(bool)`                  | Začít rozbalené                          |

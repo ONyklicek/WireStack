@@ -54,7 +54,7 @@ fotka z mobilu vůbec neputovala po drátě. Ořez se bere ze středu obrázku,
 nezvětšují. PNG zůstane PNG, ostatní se překóduje na JPEG a SVG (nemá pixely
 k převzorkování) projde nedotčené.
 
-Ve výchozím stavu se ořez bere ze středu. Nech uživatele, ať si ho umístí:
+Ve výchozím stavu se ořez bere ze středu. Nechte uživatele, ať si ho umístí:
 
 ```php
 FileUpload::make('photo')
@@ -95,7 +95,7 @@ zachová původní klientský název.
 
 ### Vlastní název & cesta
 
-Pro konkrétní název použij `fileNameUsing()` — dostane `UploadedFile` a vrátí
+Pro konkrétní název použijte `fileNameUsing()` — dostane `UploadedFile` a vrátí
 holý název, pod kterým se soubor uloží (v `directory()` na `disk()`). Prázdná
 hodnota spadne na výchozí pojmenování:
 
@@ -107,10 +107,10 @@ FileUpload::make('invoice')
     // → invoices/42.pdf
 ```
 
-Pro plnou kontrolu nad **celou** uloženou cestou — vyber složku a zapiš na disk
-sám — použij `storeFileUsing()`. Má přednost před `directory()` /
+Pro plnou kontrolu nad **celou** uloženou cestou — vyberte složku a zapiš na disk
+sám — použijte `storeFileUsing()`. Má přednost před `directory()` /
 `preserveFilenames()` / `fileNameUsing()`; pole si nechá tu cestu (relativní k
-disku), kterou vrátíš:
+disku), kterou vrátíte:
 
 ```php
 FileUpload::make('scan')
@@ -164,7 +164,7 @@ Uložené cesty se resolvují na URL podle `visibility()`:
 - hodnota, která už je plná URL nebo `data:` URI, se použije tak, jak je;
 - **veřejný** soubor dostane prosté disk URL (`Storage::disk()->url()`);
 - **privátní** soubor dostane **podepsanou, expirující** URL
-  (`Storage::disk()->temporaryUrl()`) — životnost nastavíš přes
+  (`Storage::disk()->temporaryUrl()`) — životnost nastavíte přes
   `signedUrlExpiration(minuty)` (výchozí `5`).
 
 ```php
@@ -200,7 +200,7 @@ FileUpload::make('gallery')
     ->deletesFromDisk()   // odebrání zároveň smaže soubor z disku
 ```
 
-Pro vlastní teardown — smazat i odvozený náhled, odpojit záznam — použij
+Pro vlastní teardown — smazat i odvozený náhled, odpojit záznam — použijte
 `deleteUsing()`. Předání callbacku implikuje `deletesFromDisk()` a plně nahrazí
 vestavěné mazání; dostane uloženou cestu:
 
@@ -245,4 +245,4 @@ nesmaže nikdy, ani s `deletesFromDisk()`.
 | `disabled(bool\|Closure)` | Znepřístupnit uploader |
 | `required()` | Označit jako povinné |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).
+Popisek, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

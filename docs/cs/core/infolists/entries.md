@@ -5,7 +5,7 @@ summary: "Všechny typy entries, které infolist může držet, jaký stav kter�
 
 # Entries
 
-Entry je jeden fakt o záznamu. Po které třídě sáhneš, rozhoduje to, co hodnota
+Entry je jeden fakt o záznamu. Po které třídě sáhnete, rozhoduje to, co hodnota
 *je* — řetězec, stav s barvou, boolean, seznam, obrázek, diff — a všechny sdílejí
 slovník popisku, ikony, barvy, velikosti a viditelnosti z
 [Foundation](../foundation/index.md).
@@ -200,7 +200,7 @@ přes výchozí zónu. Zapisovací polovinu popisuje
 
 ## RepeatableEntry
 
-Vykreslí vnořené schéma entries jednou per položka iterable stavu — `hasMany` relace nebo pole řádků.
+Vykreslí vnořené schéma entries jednou pro každou položku iterovatelného stavu — `hasMany` relace nebo pole řádků.
 
 ```php
 RepeatableEntry::make('items')
@@ -214,26 +214,26 @@ RepeatableEntry::make('items')
 
 | Metoda | Popis |
 |--------|-------------|
-| `schema(array)` | Schéma entries vykreslené per položka |
-| `columns(int)` | Sloupce gridu per řádek |
+| `schema(array)` | Schéma entries vykreslené pro každou položku |
+| `columns(int)` | Sloupce gridu na řádek |
 | `contained(bool = true)` | Obalit každý řádek do ohraničené karty |
-| `actions(array)` | Akční tlačítka per řádek (viz [Akce](actions.md#akce)) |
-| `with(array\|string)` | Eager-load relací na řádcích (viz níže) |
+| `actions(array)` | Akční tlačítka pro každý řádek (viz [Akce](actions.md#akce)) |
+| `with(array\|string)` | Eager load relací na řádcích (viz níže) |
 
 ### Předcházení N+1 na řádcích relace
 
-Když jsou řádky Eloquent modely, jejichž dětské entries čtou **vnořenou** cestu relace (např. `product.name` na každém řádku objednávky), čtení té cesty lazy načte relaci jednou per řádek — N+1. Deklarujte relace pomocí `with()` a eager-loadnou se přes všechny řádky v jednom dotazu před renderem:
+Když jsou řádky Eloquent modely, jejichž dětské entries čtou **vnořenou** cestu relace (např. `product.name` na každém řádku objednávky), čtení té cesty načte relaci líně, jednou pro každý řádek — N+1. Deklarujte relace pomocí `with()` a načtou se eager loadem přes všechny řádky v jednom dotazu před renderem:
 
 ```php
 RepeatableEntry::make('lines')
-    ->with(['product', 'tax'])              // jeden dotaz per relace, ne per řádek
+    ->with(['product', 'tax'])              // jeden dotaz na relaci, ne na řádek
     ->schema([
         TextEntry::make('product.name'),
         TextEntry::make('tax.rate')->numeric(2),
     ]);
 ```
 
-`with()` je no-op pro array řádky a slučuje se napříč opakovanými voláními. (Relace, která pohání samotné repeatable — `lines` — by měla být eager-loadovaná na rodičovském dotazu jako obvykle.)
+`with()` je no-op pro array řádky a slučuje se napříč opakovanými voláními. (Relace, která pohání samotné repeatable — `lines` — by měla být načtená eager loadem na rodičovském dotazu jako obvykle.)
 
 <a id="actions"></a>
 

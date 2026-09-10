@@ -21,11 +21,11 @@ protected $casts = [
 
 ```php
 // Prostý sloupec prostě funguje — bez explicitního labelu se z názvu case udělá headline
-// pro zobrazení (`InReview` → "In Review"), stejný text, jaký hodnota vydá jako select option.
+// pro zobrazení (`InReview` → "In Review"), stejný text, jaký hodnota vydá jako možnost selectu.
 TextColumn::make('status')
 ```
 
-Pro řízení přesného textu nechte enum nést vlastní label implementací opt-in kontraktu:
+Pro řízení přesného textu nechte enum nést vlastní popisek implementací opt-in kontraktu:
 
 ```php
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
@@ -56,7 +56,7 @@ TextColumn::make('status')   // nyní vykreslí "Awaiting payment", "Paid", …
 
 ## Self-coloring / self-icon enumy (badge a ikony)
 
-`BadgeColumn` a `IconColumn` auto-resolvují barvu a ikonu rovnou z enumu, když
+`BadgeColumn` a `IconColumn` automaticky resolvují barvu a ikonu rovnou z enumu, když
 implementuje `HasColor` / `HasIcon` — mapa `colors()` / `icons()` není potřeba:
 
 ```php
@@ -122,6 +122,6 @@ TextColumn::make('meta')   // vykreslí kompaktní JSON: {"k":"v"} — nikdy dos
 ## Kde to platí
 
 Stejná normalizace běží všude, kde se cast hodnota zobrazuje nebo zapisuje: text/badge/icon/select
-sloupce, **exporty** (CSV/Excel/PDF exportují label zobrazení / kompaktní JSON), **`groupBy()`**
+sloupce, **exporty** (CSV/Excel/PDF exportují popisek zobrazení / kompaktní JSON), **`groupBy()`**
 hlavičky a **souhrny**, **indikátorové chipy filtrů** a **infolist entries**. Podkladový
 `EnumResolver` a kontrakty viz [Foundation → Enumy](../../core/foundation/enums.md#enumy).

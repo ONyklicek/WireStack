@@ -21,7 +21,7 @@ Slider::make('volume')
 
 ## S jednotkami
 
-Použijte `prefix()` / `suffix()` pro přidání labelu jednotky ke koncovým bodům rozsahu i k odznaku aktuální hodnoty:
+Použijte `prefix()` / `suffix()` pro přidání popisku jednotky ke koncovým bodům rozsahu i k odznaku aktuální hodnoty:
 
 ```php
 Slider::make('discount')
@@ -79,10 +79,10 @@ Slider::make('health')
 | `step(int\|float)` | number | Krok inkrementu (výchozí `1`) |
 | `showValue(bool)` | bool | Zobrazit odznak s aktuální hodnotou (výchozí `true`) |
 | `color(?string)` | string | CSS barva výplně/jezdce (výchozí primary motivu) |
-| `prefix(string)` | string | Prefix jednotky u min/max labelů a odznaku hodnoty |
-| `suffix(string)` | string | Suffix jednotky u min/max labelů a odznaku hodnoty |
+| `prefix(string)` | string | Prefix jednotky u min/max popisků a odznaku hodnoty |
+| `suffix(string)` | string | Suffix jednotky u min/max popisků a odznaku hodnoty |
 | `default(int\|float\|Closure)` | number | Předvyplněná hodnota |
 | `disabled(bool\|Closure)` | bool | Znepřístupnit slider |
 | `live()` | — | Spustit Livewire update při každém pohybu |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).
+Popisek, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

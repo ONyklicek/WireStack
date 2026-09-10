@@ -13,7 +13,7 @@ uschovaný místo ukázaný.
 ## Perzistentní notifikace
 
 Drivery výš doručují na právě renderovanou stránku, což je správná odpověď na
-„Uloženo" a špatná na frontovaný export, který doběhne za dvacet minut: to už
+„Uloženo“ a špatná na frontovaný export, který doběhne za dvacet minut: to už
 není komu dispatchovat ani do čeho flashovat. `DatabaseDriver` notifikaci místo
 toho zapíše.
 
@@ -24,7 +24,7 @@ toho zapíše.
 ],
 ```
 
-**Seznam** vybere několik driverů naráz a obvykle je to přesně to, co chceš:
+**Seznam** vybere několik driverů naráz a obvykle je to přesně to, co chcete:
 toast hned a záznam ve zvonečku pro uživatele, který se zrovna díval jinam.
 Samotný řetězec dál funguje a zůstane jedním driverem.
 
@@ -48,7 +48,7 @@ se nic přebindovávat.
 Neřekla nic? Příjemce přijde z `ResolvesNotifiable` — přihlášený uživatel. Když
 tam není nikdo, driver **nezapíše nic**: řádek uložený na nikoho si nemá kdo
 přečíst. Vlastní resolver navažte, když je odpověď jiná než „přihlášený
-uživatel" pro celou aplikaci — impersonace, tenant:
+uživatel“ pro celou aplikaci — impersonace, tenant:
 
 ```php
 use NyonCode\WireCore\Notifications\Contracts\ResolvesNotifiable;
@@ -125,7 +125,7 @@ se nedrží věčně, dokud to neřeknete:
 Schedule::command('wire-core:notifications-prune')->daily();
 ```
 
-Dvě okna, protože „přečtené" a „nikdy se na to nepodíval" jsou různá tvrzení.
+Dvě okna, protože „přečtené“ a „nikdy se na to nepodíval“ jsou různá tvrzení.
 Obě můžou být null, což znamená nechat. `--days` a `--read-days` to pro jeden běh
 přebijí a bez periody i bez volby to příkaz řekne a nesmaže nic — mazat řádky,
 protože nikdo neřekl, že ne, není výchozí chování, které stojí za to mít.
@@ -223,13 +223,13 @@ událost se stringovými jmény kanálů a klientská půlka nevolá nic než
 
 Počet nepřečtených a za ním **slide-over panel**: posledních pár se dvěma
 záložkami (*Vše* a *Nepřečtené*), označení jedné i všech a odkaz na plný seznam
-tam, kde je nějaký nasměrovaný. Panel místo 320px dropdownu, protože inbox je
+tam, kde je nějaký nasměrovaný. Panel místo 320px rozbalovací nabídky, protože inbox je
 místo, kam se jde, ne menu, o které se cestou otřete — je tu místo na zprávu pod
 titulkem i na záložku, která skryje přečtené.
 
 **Značka má tři stavy, ne dva.** Zvoneček bez odznaku neumí říct, jestli se nic
 nestalo, nebo jestli jste všechno přečetli — tak říká obojí: prázdný zvoneček pro
-nic, tichá šedá tečka pro „něco tam je, nic nečeká" a počet — jediná hlasitá věc
+nic, tichá šedá tečka pro „něco tam je, nic nečeká“ a počet — jediná hlasitá věc
 tady — pro nepřečtené. Počet sedí v prstenci barvy plochy za ním, takže se na
 16 px čte jako čip přilepený ke zvonečku, ne jako flek přes něj, a opakuje se
 v přístupném názvu tlačítka, protože barevné kolečko čtečce obrazovky neřekne nic.
@@ -267,7 +267,7 @@ zvoneček v shellu, který sám není wire route, ji předejte:
 
 **Slovesa jsou ta, co má schránka**: označit přečtené, označit nepřečtené a smazat
 u řádku, označit vše a uklidit přečtené v patičce. Každé spíš chybí, než by bylo
-neaktivní, když nemá co dělat. Záměrně tu není „smazat všechno" — přečtené je to,
+neaktivní, když nemá co dělat. Záměrně tu není „smazat všechno“ — přečtené je to,
 co už uživatel viděl, takže úklid přečteného mu nemůže vzít nic, na co se
 nepodíval, a tlačítko, které to umí, je tlačítko, které schránka mít nemá.
 

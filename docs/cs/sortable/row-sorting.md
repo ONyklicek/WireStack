@@ -1,7 +1,7 @@
 ---
 title: Řazení řádků
 order: 30
-summary: Tažení řádků do nového pořadí, s přepínacím režimem a sloupcem pozice zapisovaným za tebe.
+summary: Tažení řádků do nového pořadí, s přepínacím režimem a sloupcem pozice zapisovaným za vás.
 ---
 
 # Řazení řádků
@@ -52,7 +52,7 @@ Blade šablona používá computed vlastnost `$table`:
 
 ## Jak reorder režim funguje
 
-1. V toolbaru tabulky se objeví **tlačítko „Reorder"**
+1. V toolbaru tabulky se objeví **tlačítko „Reorder“**
 2. Uživatel klikne na tlačítko pro **vstup do reorder režimu**
 3. V reorder režimu:
    - Na každém řádku se objeví drag handly
@@ -61,7 +61,7 @@ Blade šablona používá computed vlastnost `$table`:
    - **Hledání a filtry zůstávají v platnosti**, seznam tedy jde stále zúžit
 4. Uživatel táhne řádky na požadovanou pozici
 5. Při konci tažení se nové pořadí uloží do databáze
-6. Uživatel klikne na **„Done reordering"** pro opuštění reorder režimu
+6. Uživatel klikne na **„Done reordering“** pro opuštění reorder režimu
 7. Tabulka se vrátí do normálního stavu s obnoveným stránkováním a řazením podle sloupce
 
 Řazení podle sloupce musí ustoupit, protože pořadí na obrazovce je přesně to
@@ -83,7 +83,7 @@ Název sloupce musí existovat ve vaší databázové tabulce. Výchozí `sort_o
 
 ## Vždy zapnutý reorder režim
 
-Pokud chcete drag handly viditelné neustále bez toggle tlačítka:
+Pokud chcete drag handly viditelné neustále bez přepínacího tlačítka:
 
 ```php
 return $table
@@ -160,7 +160,7 @@ Tři důsledky, které stojí za to znát:
   místo toho zapíšou pozice od klienta (`1..n`) -- což je pro sloupec, který
   žádné pořadí nenesl, ta správná odpověď.
 
-## Lifecycle hooky
+## Hooky životního cyklu
 
 Přepište tyto metody ve své komponentě pro zapojení do reorder procesu:
 

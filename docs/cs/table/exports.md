@@ -130,7 +130,7 @@ TableExport::make()
     ->withSummaries(false);
 ```
 
-Rollup sloupce (`->sums()`, `->counts()`, …) exportují své hodnoty per řádek
+Rollup sloupce (`->sums()`, `->counts()`, …) exportují své hodnoty za každý řádek
 i celkové součty. Při exportu **vlastního dotazu** s rollup sloupci musí dotaz
 obsahovat odpovídající `withSum`/`withCount` — stejný požadavek jako u samotné
 tabulky. Celkové součty podřádků a [mezisoučty skupin](grouping.md) jsou jen
@@ -245,7 +245,7 @@ public function exportInBackground(): void
 }
 ```
 
-Uživatel dostane „export se připravuje" hned a druhou notifikaci se jménem
+Uživatel dostane „export se připravuje“ hned a druhou notifikaci se jménem
 souboru, až worker doběhne — přesně proto existuje
 [databázový driver notifikací](../core/notifications/index.md): než velký export
 skončí, není už kam blikat, žádný request nezbyl.
@@ -315,7 +315,7 @@ try {
 
 Vlastní exportér má dělat totéž. Alternativou je nulabajtový soubor pod správným
 jménem a notifikace, že je export hotový — export na frontě nemá odpověď, kterou
-by si uživatel přečetl, takže „nezapsalo se nic" a „zapsal se soubor" jsou pro
+by si uživatel přečetl, takže „nezapsalo se nic“ a „zapsal se soubor“ jsou pro
 něj nerozlišitelné, pokud se selhání nevyhodí.
 
 ## Úprava exportu, který nevlastníte

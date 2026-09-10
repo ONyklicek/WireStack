@@ -96,4 +96,4 @@ php artisan vendor:publish --tag=wire-forms::translations
 | `live()` | — | Spustit Livewire update při každém stisku klávesy |
 | `debounce(int)` | ms | Debounce prodleva pro `live()` |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).
+Popisek, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

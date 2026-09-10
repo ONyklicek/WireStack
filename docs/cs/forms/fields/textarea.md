@@ -5,7 +5,7 @@ summary: Víceřádkový text, s počtem řádků a chováním při změně veli
 # Textarea
 
 Víceřádkový text. Sáhni po `Textarea`, kdykoli je odpovědí věta a víc — poznámka,
-popis, adresa. Na jeden řádek použij [`TextInput`](text-input.md); na text, který
+popis, adresa. Na jeden řádek použijte [`TextInput`](text-input.md); na text, který
 má jít *formátovat*, [rich](rich-editor.md) nebo [markdownový](markdown-editor.md)
 editor.
 
@@ -17,7 +17,7 @@ use NyonCode\WireForms\Components\Textarea;
 
 Textarea je **pole**: řetězec na své state path, validovaný jako kterékoli jiné.
 Vykreslí obyčejný `<textarea>` — žádný editor, žádný toolbar — a přesně proto je
-to správná výchozí volba na volný text, který nechceš mít označkovaný.
+to správná výchozí volba na volný text, který nechcete mít označkovaný.
 
 **`rows()` nastavuje počáteční výšku, ne limit.** Vypíše HTML atribut `rows`
 a výchozí hodnota je `3`. Uživatel si roh vždycky může přetáhnout a zvětšit si to;
@@ -29,13 +29,13 @@ vstupu nastaví `style.height` na `scrollHeight` obsahu — a protože běží i
 při zapnutém autosize řídí `rows()` jen ten okamžik, než naběhne Alpine. Box roste
 *i* se zmenšuje podle textu.
 
-**`cols()` skoro nikdy není to, co chceš.** Vypíše atribut `cols`, jenže element
-nese `w-full` a CSS šířka přebije HTML počet sloupců. Na zúžení textarey použij
+**`cols()` skoro nikdy není to, co chcete.** Vypíše atribut `cols`, jenže element
+nese `w-full` a CSS šířka přebije HTML počet sloupců. Na zúžení textarey použijte
 `columnSpan()` v [`Gridu`](../../core/schema/layout/grid.md), ne `cols()`.
 
 **`spellcheck()` má tři hodnoty.** `null` — výchozí — atribut vůbec nevypíše
 a nechá rozhodnutí na prohlížeči a OS. `true` a `false` ho vynutí. To je rozdíl
-mezi „nemám názor" a „vypnout" a jen to druhé zastaví prohlížeč v podtrhávání pole
+mezi „nemám názor“ a „vypnout“ a jen to druhé zastaví prohlížeč v podtrhávání pole
 plného produktových kódů.
 
 **`minLength()` / `maxLength()` dělají dvě věci naráz.** Vypíšou HTML atributy
@@ -72,7 +72,7 @@ Textarea::make('sku_list')
 
 ## Živé aktualizace
 
-Textarea na `live()` posílá round trip na každý stisk klávesy, takže jí dej
+Textarea na `live()` posílá round trip na každý stisk klávesy, takže jí dejte
 debounce:
 
 ```php
@@ -150,7 +150,7 @@ než 50 znaků a roste, jak se píše.
 ->getMaxLength(): ?int
 ```
 
-Labely, nápovědu, placeholder, prefixy, viditelnost, výchozí hodnoty, validaci
+Popisky, nápovědu, placeholder, prefixy, viditelnost, výchozí hodnoty, validaci
 a `live()` sdílí každé pole — viz [Společné API pole](index.md#spolecne-api-pole).
 
 ## Související

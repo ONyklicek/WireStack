@@ -14,7 +14,7 @@ Akce používejte pro operace na úrovni záznamu, hromadné operace a příkazy
 | Řádkové akce | Jeden záznam po druhém |
 | Hromadné akce | Aktuálně vybrané záznamy |
 | Hlavičkové akce | Globální příkazy tabulky |
-| Skupiny akcí | Kompaktní dropdowny pro více řádkových akcí |
+| Skupiny akcí | Kompaktní rozbalovací nabídky pro více řádkových akcí |
 
 ## Řádkové akce
 
@@ -164,7 +164,7 @@ use NyonCode\WireCore\Actions\HeaderAction;
 ])
 ```
 
-## Potvrzovací modály
+## Potvrzovací modaly
 
 Vyžadujte potvrzení pro destruktivní nebo vysoce dopadové akce.
 
@@ -223,7 +223,7 @@ Action::make('approve')
 Baseline se zachytí při otevření modalu a porovná při odeslání, přes stejnou
 konvenci verzí (`RecordVersion`, `updated_at` modelu), jakou vždycky používá
 [inline edit buňky](columns/editing.md#jak-funguji-inline-ulozeni) — jedna
-odpověď na „pohnul se ten řádek?", ne dvě, které se můžou rozejít. Když akci
+odpověď na „pohnul se ten řádek?“, ne dvě, které se můžou rozejít. Když akci
 odmítne, modal se zavře a vyskočí varování; nechat formulář otevřený by uživatele
 vrátilo před hodnoty, které už neplatí, a nijak by to nepoznal.
 

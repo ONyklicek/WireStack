@@ -5,8 +5,8 @@ summary: Surový markup uvnitř schématu a statické pomocníky, které z něj 
 # Html
 
 Markup vložený rovnou do schématu. Sáhni po `Html`, když formulář potřebuje něco,
-co není pole ani věta — linku mezi dvěma skupinami, nadpis, který ti layoutové
-komponenty nedají, blok vlastního markupu. Na hodnotu s labelem nad ní použij
+co není pole ani věta — linku mezi dvěma skupinami, nadpis, který vám layoutové
+komponenty nedají, blok vlastního markupu. Na hodnotu s popiskem nad ní použijte
 [`Placeholder`](placeholder.md), na celý partial [`ViewField`](view-field.md).
 
 ```php
@@ -20,8 +20,8 @@ formuláře. Žádná state path, žádná validace, nic se neodesílá.
 
 **Jeho obsah se vykresluje neescapovaný, vždycky.** Žádný přepínač `escape()` tu
 není — na rozdíl od [`Placeholderu`](placeholder.md), který ve výchozím stavu
-escapuje, a od [`ViewFieldu`](view-field.md), který nechává volbu na tobě. Co
-nastavíš, to se dostane na stránku:
+escapuje, a od [`ViewFieldu`](view-field.md), který nechává volbu na vám. Co
+nastavíte, to se dostane na stránku:
 
 ```php
 Html::make()->content($userSuppliedString)   // tohle nikdy nedělej
@@ -32,7 +32,7 @@ dostane, nebo to patří do komponenty, která escapuje.
 
 **Jméno je volitelné**, což je neobvyklé — `Html::make()` bez argumentu si samo
 vygeneruje `html_<uniqid>`, protože komponenta, která nedrží stav, nemá čím být
-adresovaná. Jméno předej, jen když ho chceš pro vlastní potřebu.
+adresovaná. Jméno předejte, jen když ho chcete pro vlastní potřebu.
 
 **Statické továrny jsou ta bezpečná cesta.** `divider()`, `spacer()`, `heading()`
 a `paragraph()` nespojují řetězce: každá nastaví `content()` na closure, která
@@ -68,7 +68,7 @@ Html::paragraph('Čísla karet neukládáme.');
 ```
 
 Po těchhle sahej ve výchozím případě: escapují svůj text a jejich markup je jeden
-publikovatelný partial místo řetězce ve tvém schématu.
+publikovatelný partial místo řetězce ve vašem schématu.
 
 ## Rozdělení dlouhého formuláře
 
@@ -160,7 +160,7 @@ hodnoty neplatí: `Html` žádný stav nedrží.
 
 ## Související
 
-- [Placeholder](placeholder.md) — text s labelem, ve výchozím stavu escapovaný
+- [Placeholder](placeholder.md) — text s popiskem, ve výchozím stavu escapovaný
 - [ViewField](view-field.md) — celý Blade partial místo řetězce
 - [Alert](alert.md) — barevný box na zprávu
 - [Section](../../core/schema/layout/section.md) — nadpisy s kartou kolem

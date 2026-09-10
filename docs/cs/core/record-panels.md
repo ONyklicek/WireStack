@@ -5,9 +5,9 @@ summary: "Infolist, který jde editovat: read-only entries vedle přepínačů, 
 
 # Editovatelné panely
 
-**Panel** je editovatelný „panel záznamu": vypadá jako [infolist](infolists/index.md) — stejné deklarativní schéma sekcí, gridů a entry — ale vedle read-only entry umí hostit **editovatelné** entry (switch, checkbox, select, textové pole), které zapisují **rovnou do záznamu**. Každá změna se odešle samostatně s optimistickým UI a optimistickým zámkem, stejnou cestou jako [editovatelné sloupce tabulky](../table/columns/editing.md) — žádné tlačítko Uložit, žádný buffer formuláře.
+**Panel** je editovatelný „panel záznamu“: vypadá jako [infolist](infolists/index.md) — stejné deklarativní schéma sekcí, gridů a entry — ale vedle read-only entry umí hostit **editovatelné** entry (switch, checkbox, select, textové pole), které zapisují **rovnou do záznamu**. Každá změna se odešle samostatně s optimistickým UI a optimistickým zámkem, stejnou cestou jako [editovatelné sloupce tabulky](../table/columns/editing.md) — žádné tlačítko Uložit, žádný buffer formuláře.
 
-Infolisty zůstávají kontraktem read-only; panel je plocha pro „přečti *a* uprav tento jeden záznam na místě".
+Infolisty zůstávají kontraktem read-only; panel je plocha pro „přečti *a* uprav tento jeden záznam na místě“.
 
 ```php
 use NyonCode\WireCore\Panels\Panel;
@@ -34,7 +34,7 @@ Panel::make()
     ]);
 ```
 
-> **Nováček?** Panel je infolist, který jde editovat. Sestavíš ho v PHP, předáš mu záznam a každý switch/select/pole se odešle ve chvíli, kdy ho změníš.
+> **Nováček?** Panel je infolist, který jde editovat. Sestavíte ho v PHP, předáte mu záznam a každý switch/select/pole se odešle ve chvíli, kdy ho změníte.
 
 ## Instalace
 
@@ -43,17 +43,17 @@ Panely jsou součástí `wire-core` — nic dalšího se neinstaluje. Zajisti, a
 ```js
 export default {
     content: [
-        // ...cesty tvé aplikace
+        // ...cesty vaší aplikace
         './vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
     ],
 }
 ```
 
-Editovatelné entry odesílají přes sdílený Alpine engine `wireEditableCell`, který dodává předkompilovaný JS bundle `wire-core` a injektuje se automaticky přes Livewire `@assets` — žádný JavaScript nezapojuješ ručně.
+Editovatelné entry odesílají přes sdílený Alpine engine `wireEditableCell`, který dodává předkompilovaný JS bundle `wire-core` a injektuje se automaticky přes Livewire `@assets` — žádný JavaScript nezapojujete ručně.
 
 ## Rychlý start
 
-Panel potřebuje Livewire hostitele, aby jeho editace měly kam odeslat. Nejrychlejší cesta je rozšířit `PanelComponent`: podrž si záznam, vrať schéma z `panel()` a hotovo — základní komponenta ho vykreslí a poskytne zapisovací endpoint.
+Panel potřebuje Livewire hostitele, aby jeho editace měly kam odeslat. Nejrychlejší cesta je rozšířit `PanelComponent`: podržte si záznam, vraťte schéma z `panel()` a hotovo — základní komponenta ho vykreslí a poskytne zapisovací endpoint.
 
 ```php
 use NyonCode\WireCore\Panels\Panel;
@@ -88,11 +88,11 @@ Umísti ho na stránku jako každou Livewire komponentu:
 
 To je celé. Přepni switch `is_paid` a sloupec `orders.is_paid` se okamžitě aktualizuje; žádný formulář, žádné odeslání.
 
-> **Proč komponenta, ne jen `{{ $panel }}`?** Read-only infolisty jsou bezstavové, takže je můžeš vypsat kdekoliv. Panel zapisuje, a proto potřebuje Livewire hostitele, který commit přijme. `PanelComponent` je tím hostitelem; pokud už komponentu máš, použij místo dědění trait [`WithEditablePanel`](#prime-pouziti-traitu).
+> **Proč komponenta, ne jen `{{ $panel }}`?** Read-only infolisty jsou bezstavové, takže je můžete vypsat kdekoliv. Panel zapisuje, a proto potřebuje Livewire hostitele, který commit přijme. `PanelComponent` je tím hostitelem; pokud už komponentu máte, použijte místo dědění trait [`WithEditablePanel`](#prime-pouziti-traitu).
 
 ## Editovatelné entry
 
-Každé editovatelné entry je navázané na atribut záznamu podle svého názvu (`ToggleEntry::make('is_active')` čte i zapisuje `is_active`). Sdílejí fluent Foundation slovník (label, ikona, barva, column span, viditelnost) s infolist entry a poli formulářů.
+Každé editovatelné entry je navázané na atribut záznamu podle svého názvu (`ToggleEntry::make('is_active')` čte i zapisuje `is_active`). Sdílejí fluent Foundation slovník (popisek, ikona, barva, column span, viditelnost) s infolist entry a poli formulářů.
 
 | Entry | Ovládací prvek | Zapisuje |
 | --- | --- | --- |
@@ -121,7 +121,7 @@ CheckboxEntry::make('accepts_marketing')
 
 ### SelectEntry
 
-Options přijímají prostou mapu `hodnota => popisek` nebo název backed-enum třídy (přeložený stejným `EnumResolver` jako `Select` pole a `SelectColumn`):
+Možnosti přijímají prostou mapu `hodnota => popisek` nebo název backed-enum třídy (přeložený stejným `EnumResolver` jako `Select` pole a `SelectColumn`):
 
 ```php
 use NyonCode\WireCore\Panels\Components\SelectEntry;
@@ -133,7 +133,7 @@ SelectEntry::make('status')
 
 ### TextInputEntry
 
-Inline textové pole, které se uloží při blur a Enter, s návratem přes Escape. Typ HTML inputu zvolíš přes `type()`:
+Inline textové pole, které se uloží při blur a Enter, s návratem přes Escape. Typ HTML inputu zvolíte přes `type()`:
 
 ```php
 use NyonCode\WireCore\Panels\Components\TextInputEntry;
@@ -144,7 +144,7 @@ TextInputEntry::make('price')->type('number')->rules(['numeric', 'min:0']);
 
 ## Vlastní editovatelná entry
 
-Ty čtyři výše jsou potomci `EditableEntry` — a stejně tak ta tvoje: základní třída
+Ty čtyři výše jsou potomci `EditableEntry` — a stejně tak ta vaše: základní třída
 vlastní zápisovou cestu (optimistický zápis, kontrolu verze, rollback i sync uzel)
 a potomkovi nechává markup jeho ovládacího prvku a hodnotu, kterou čte zpět. Právě
 tohle dělení je důvod, proč vlastní entry dostane optimistický zámek zadarmo místo
@@ -175,11 +175,11 @@ SelectEntry::make('role')
     ->permission('assign-roles');
 ```
 
-Zapsat lze jedině entry, které ve schématu deklaruješ jako editovatelné — název read-only `TextEntry`, ani žádný atribut mimo schéma, hostitel neuloží. To je zapisovací whitelist.
+Zapsat lze jedině entry, které ve schématu deklarujete jako editovatelné — název read-only `TextEntry`, ani žádný atribut mimo schéma, hostitel neuloží. To je zapisovací whitelist.
 
 ## Vlastní ukládání & vedlejší efekty
 
-Ve výchozím stavu entry zapíše vlastní atribut. Přepiš to přes `saveUsing()` a spusť vedlejší efekt po úspěšném zápisu přes `afterStateUpdated()`:
+Ve výchozím stavu entry zapíše vlastní atribut. Přepište to přes `saveUsing()` a spusťte vedlejší efekt po úspěšném zápisu přes `afterStateUpdated()`:
 
 ```php
 ToggleEntry::make('is_active')
@@ -193,13 +193,13 @@ Každý commit prvek okamžitě aktualizuje, pak se srovná se serverem:
 
 - **Úspěch** — hodnota zůstane a verze `updated_at` záznamu se posune.
 - **Selhání** — prvek se vrátí na poslední potvrzenou hodnotu a zobrazí zprávu inline.
-- **Konflikt** — pokud se záznam od načtení panelu změnil jinde (jeho `updated_at` už nesedí), zápis je odmítnut, prvek převezme aktuální serverovou hodnotu a uživatel vidí poznámku „změněno jinde". Žádné ztracené aktualizace.
+- **Konflikt** — pokud se záznam od načtení panelu změnil jinde (jeho `updated_at` už nesedí), zápis je odmítnut, prvek převezme aktuální serverovou hodnotu a uživatel vidí poznámku „změněno jinde“. Žádné ztracené aktualizace.
 
 Záznam se vždy dohledá na serveru z vlastního navázaného záznamu komponenty uvnitř zamčené transakce — klient nikdy nevolí, který řádek ani sloupec se zapíše.
 
 ## Přímé použití traitu
 
-Pokud už Livewire komponentu máš, místo dědění `PanelComponent` použij trait `WithEditablePanel`. Implementuj `panel()`, vykresli panel ve svém view a přidej partial se sdílenými assety:
+Pokud už Livewire komponentu máte, místo dědění `PanelComponent` použijte trait `WithEditablePanel`. Implementujte `panel()`, vykreslete panel ve svém view a přidejte partial se sdílenými assety:
 
 ```php
 use Livewire\Component;
@@ -235,6 +235,6 @@ class Dashboard extends Component
 | Účel | Zobrazit jeden záznam | Editovat jeden záznam na místě | Editovat s krokem odeslání |
 | Zapisuje | Nikdy | Po každé změně, přímo do záznamu | Při uložení, ze stavového bufferu |
 | Hostitel | Jakýkoliv (bezstavový) | Livewire (`PanelComponent` / trait) | Livewire |
-| Použij když | Read-only detail | Rychlé inline editace, obrazovky nastavení | Vícepolní formuláře, průvodci, náročná validace |
+| Použijte když | Read-only detail | Rychlé inline editace, obrazovky nastavení | Vícepolní formuláře, průvodci, náročná validace |
 
-Sáhni po panelu, když má editace jednoho záznamu působit jako přepínání switchů na stránce nastavení; sáhni po [formuláři](../forms/overview.md), když chceš vědomé odeslání.
+Sáhni po panelu, když má editace jednoho záznamu působit jako přepínání switchů na stránce nastavení; sáhni po [formuláři](../forms/overview.md), když chcete vědomé odeslání.

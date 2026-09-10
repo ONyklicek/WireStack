@@ -1,15 +1,15 @@
 ---
 order: 31
-summary: Ano, ne, nebo vše — pro booleovský sloupec i pro relace ve smyslu „má" versus „nemá".
+summary: Ano, ne, nebo vše — pro booleovský sloupec i pro relace ve smyslu „má“ versus „nemá“.
 ---
 
 # TernaryFilter
 
-Trojstavový filtr: Yes / No / All. Ideální pro boolean sloupce a relace „má/nemá".
+Trojstavový filtr: Yes / No / All. Ideální pro boolean sloupce a relace „má/nemá“.
 
 Vykresluje se přes stejný combobox jako [`SelectFilter`](select.md) a `Select`
 field ve formulářích, takže otevřený boolean filtr vypadá stejně jako kterýkoli
-jiný select. „All" je placeholder — jeho výběrem se filtr zruší. Nativní `<select>`
+jiný select. „All“ je placeholder — jeho výběrem se filtr zruší. Nativní `<select>`
 prohlížeče je opt-in přes [`->native()`](#nativni-html-select).
 
 ```php
@@ -46,7 +46,7 @@ TernaryFilter::make('verified')
 ## Vlastní logika dotazu
 
 Použijte jediný callback `query()`; dostane builder a vybraný stav jako
-**skutečný boolean** — `true` pro option „Ano", `false` pro „Ne". Volba „Vše"
+**skutečný boolean** — `true` pro možnost „Ano“, `false` pro „Ne“. Volba „Vše“
 filtr vypne, takže se callback s prázdným stavem nikdy nezavolá.
 
 ```php
@@ -76,7 +76,7 @@ TernaryFilter::make('invoiced')
         : $query->whereDoesntHave('invoice'))
 ```
 
-`nullable()` rozšiřuje větev „Ne" u **výchozího** dotazu. Callback `query()`
+`nullable()` rozšiřuje větev „Ne“ u **výchozího** dotazu. Callback `query()`
 vlastní svůj dotaz, takže se tam neuplatní — callback se dozví, která strana
 byla vybraná, a rozhodne sám, jak se má `NULL` chovat.
 
@@ -94,7 +94,7 @@ TernaryFilter::make('is_active')
 ```
 
 Odhlásí filtr ze sdíleného comboboxu, takže přestane odpovídat ostatním selectům.
-Používej jen tam, kde je cena renderu důležitější než jednotný vzhled.
+Používejte jen tam, kde je cena renderu důležitější než jednotný vzhled.
 
 ## API TernaryFilter
 
@@ -109,7 +109,7 @@ Používej jen tam, kde je cena renderu důležitější než jednotný vzhled.
 
 ## Hodnoty stavu
 
-Select odesílá klíč option; callbacky `query()` i výchozí dotaz pracují
+Select odesílá klíč možnosti; callbacky `query()` i výchozí dotaz pracují
 s normalizovaným booleanem, takže se podle transportní podoby nikdy nevětví.
 
 | Stav UI | Odeslaný stav | `$value` v `query()` | Výchozí chování |

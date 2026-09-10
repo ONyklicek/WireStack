@@ -34,13 +34,13 @@ v hlavičce sekce — dispatchuje na hostitelův `callInfolistAction()`, který 
 action runtimu, jejž tahle stránka neskládá; a
 [halt](../core/actions/lifecycle.md#halt-vykonavani), který vzniká uvnitř téhož
 pipeline, se také nemá kde objevit. Z pěti stránek hostí akce jedině `ListPage`,
-a to skrze `WithTable`. Na detailu z toho vedou dvě cesty: dej akci `url()`, což
+a to skrze `WithTable`. Na detailu z toho vedou dvě cesty: dejte akci `url()`, což
 ji vykreslí jako odkaz a po hostiteli nechce nic — vlastní `MediaResource`
-frameworku otevírá a stahuje přesně takhle — nebo dej povrch do vlastní Livewire
+frameworku otevírá a stahuje přesně takhle — nebo dejte povrch do vlastní Livewire
 komponenty skládající [`WithActions`](../core/actions/standalone.md) a tu na
 stránku namountuj.
 
-Každá stránka funguje i **bez vlastníka** — napiš si na ni `table()`, `form()`
+Každá stránka funguje i **bez vlastníka** — napište si na ni `table()`, `form()`
 nebo `widgets()` a je to obyčejná hostitelská komponenta. Co ale stránka *napůl*
 deklarovaná udělá, je výjimka: stránka bez resource i bez `table()`, nebo mířící
 na resource, který seznam nedeklaruje, se ozve nahlas místo aby vykreslila
@@ -66,7 +66,7 @@ final class ListOrders extends ListPage
 
 To je celá stránka. Nadpis se bere z množného označení resource — proto je ten
 popisek na *statickém* kontraktu: stránka ho ukáže, aniž by cokoli skládala.
-Přebij ho nastavením `$title`.
+Přebijte ho nastavením `$title`.
 
 Resource není povinný. Stránka si může tabulku napsat sama a žádný resource
 nepoužít, přesně jako každá `WithTable` komponenta:
@@ -127,7 +127,7 @@ Editace a detail ukazují jeden záznam a ten přichází jako **klíč**:
 Ne model, a je to záměr. Mount argumenty Livewire komponenty končí v jejím
 snapshotu, takže hydratovaný model je tam jednak větší než klíč, jednak zastaralý
 v okamžiku, kdy dorazí další request. Cestuje klíč; záznam se resolvuje per
-request. Přebij `resolveRecord()`, když ho chceš hledat jinak — soft-delete
+request. Přebijte `resolveRecord()`, když ho chcete hledat jinak — soft-delete
 scope, tenant guard, non-Eloquent zdroj. Vrací `Model|RecordContract|null`, takže
 override opravdu může vrátit něco, co není model:
 
@@ -140,10 +140,10 @@ protected function resolveRecord(): RecordContract
 
 **View stránka** to vykreslí tak, jak to je: infolist se každou hodnotu zeptá
 kontraktu, místo aby do záznamu sahal. **Edit stránka** to odmítne, a to zprávou,
-která pojmenuje cestu ven — save lifecycle formuláře je Eloquent (relační
+která pojmenuje cestu ven — životní cyklus ukládání formuláře je Eloquent (relační
 repeatery, optimistický zámek, `$model->save()`), takže záznam, který se
-nerozbalí na model, na něj navázat nejde. Přebij na stránce `form()`, nech model
-nenavázaný a dej formuláři vlastní příkaz.
+nerozbalí na model, na něj navázat nejde. Přebijte na stránce `form()`, nechte model
+nenavázaný a dejte formuláři vlastní příkaz.
 
 **Perzistence zůstává formuláři.** `Form` už vlastní validate → mutate → hooky →
 persist → notify; stránka jen naváže model a zavolá `save()`. Resource nad
@@ -208,9 +208,9 @@ $page->breadcrumbs();
 // [ NavigationItem('Objednávky')->url('/admin/orders'), NavigationItem('Objednávka #17') ]
 ```
 
-Drobky jsou `NavigationItem`y, ne vlastní tvar — drobek je label a obvykle URL,
+Drobky jsou `NavigationItem`y, ne vlastní tvar — drobek je popisek a obvykle URL,
 což je přesně to, co [ta třída](navigation.md#navigationitem-api) veze od chvíle,
-kdy ji potřebovalo menu. Poslední drobek URL nenese: to je stránka, na které jsi.
+kdy ji potřebovalo menu. Poslední drobek URL nenese: to je stránka, na které jste.
 **Nejvýš dva drobky**, protože tohle je celá hloubka, kterou tyhle stránky mají —
 seznam není uvnitř ničeho a stopa o jednom drobku se nevykreslí vůbec, takže
 stránka se seznamem za tohle neplatí nic.
@@ -275,7 +275,7 @@ Každá resourcová stránka skládá `BelongsToResource` — tu polovinu, kter�
 | `pageUrl(string $page, mixed $record = null): ?string` | `string\|null` | *(protected)* Kde je jedna ze stránek tohohle resource, v zóně téhle stránky |
 | `pagePermission(string $page): ?string` | `string\|null` | *(protected)* Oprávnění, které ta stránka vyžaduje, tak jak ho deklaroval resource |
 | `requireResource(string $surface): object` | `object` | *(protected)* Deklarovaný resource, zkontrolovaný; vyhodí výjimku místo vykreslení prázdné stránky |
-| `resourceLabel(): ?string` | `string\|null` | *(protected)* Singulární label resource |
+| `resourceLabel(): ?string` | `string\|null` | *(protected)* Singulární popisek resource |
 
 Co každá stránka přidává, je jen její vlastní povrch:
 
@@ -301,7 +301,7 @@ Editace a detail řeší jeden záznam přes `ResolvesOneRecord`:
 | `public mixed $record` | `mixed` | **Klíč** záznamu. Veřejný, protože ho Livewire veze mezi requesty |
 | `mount(mixed $record = null): void` | `void` | Vezme klíč a zavolá `mountedRecord()` |
 | `mountedRecord(): void` | `void` | *(protected)* Hook pro to, co stránka udělá, jakmile zná svůj záznam — editační tu naplní formulář, detail nepotřebuje nic |
-| `resolveRecord(): Model\|RecordContract\|null` | `Model\|RecordContract\|null` | *(protected)* Samotný záznam. Přebij ho kvůli soft-delete scope, tenant guardu nebo neeloquentnímu zdroji |
+| `resolveRecord(): Model\|RecordContract\|null` | `Model\|RecordContract\|null` | *(protected)* Samotný záznam. Přebijte ho kvůli soft-delete scope, tenant guardu nebo neeloquentnímu zdroji |
 | `nativeRecord(): mixed` | `mixed` | *(protected)* Nativní objekt za ním — to, čím se mountuje relation manager, protože relace se dotazují na modelu |
 | `requireEloquentRecord(): ?Model` | `Model\|null` | *(protected)* Totéž jako model, nebo odmítnutí, které pojmenuje cestu ven |
 | `recordAttributes(): array` | `array<string, mixed>` | *(protected)* Jeho atributy, ať je záznam jakéhokoli druhu |
@@ -309,10 +309,10 @@ Editace a detail řeší jeden záznam přes `ResolvesOneRecord`:
 Editace a detail skládají navíc `EmbedsRelationManagers`, jehož jediná metoda je
 `relationManagers(): array`.
 
-## Layout je tvůj
+## Layout je váš
 
 Celostránková Livewire komponenta potřebuje layout a tenhle balíček ho nedodává —
-nastav `livewire.component_layout` na vlastní, nebo nainstaluj
+nastavte `livewire.component_layout` na vlastní, nebo nainstalujte
 [admin shell](../admin/overview.md), který jeden veze.
 
 ## Související

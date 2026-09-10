@@ -79,7 +79,7 @@ order by "users_company"."name" asc       -- řazení
 
 Takto se joinují jen singulární relace (`belongsTo`, `hasOne`, `hasOneThrough`).
 To-many relace — `hasMany`, `belongsToMany`, `hasManyThrough`, `morphMany` — a morph
-cíle se pro zobrazení eager-loadují a přes join se řadit ani filtrovat **nedají**
+cíle se pro zobrazení načítají eager loadem a přes join se řadit ani filtrovat **nedají**
 (join by násobil řádky rodiče).
 
 ### Scopes a constraints relace (vč. soft delete)
@@ -107,7 +107,7 @@ a constraints si drží prostý přímý join na tabulku.
 > `hasOneThrough` (tam se aplikují jen global scopes jeho modelů). Constraint musí
 > být samostatný — korelovaný na rodičovský řádek
 > (`whereColumn('companies.x', 'users.y')`) se jako subquery vyjádřit nedá.
-> `morphOne` se přes join nescopuje (eager-loaduje se pro zobrazení).
+> `morphOne` se přes join nescopuje (načítá se pro zobrazení eager loadem).
 
 ## Jak to funguje
 

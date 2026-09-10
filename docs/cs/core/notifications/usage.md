@@ -77,6 +77,6 @@ Form::make()
 ## Související
 
 - [Notifikace](index.md) — builder, který tahle místa volají
-- [Akce: Lifecycle](../actions/lifecycle.md) — kde vzniká vlastní hláška akce
-- [Save lifecycle](../../forms/save-lifecycle.md) — notifikační krok formuláře
+- [Akce: životní cyklus](../actions/lifecycle.md) — kde vzniká vlastní hláška akce
+- [Životní cyklus ukládání](../../forms/save-lifecycle.md) — notifikační krok formuláře
 - [Notifikace v tabulce](../../table/notifications.md) — výchozí hlášky tabulky

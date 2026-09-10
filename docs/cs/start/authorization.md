@@ -35,9 +35,9 @@ Pořadí vyhodnocení:
 | `authorize()` | Kontroluje Laravel Gate ability |
 | `permission()` | Kontroluje permission řetězec přes Gate |
 
-### Autorizace per záznam
+### Autorizace po záznamech
 
-Callback `authorizeUsing()` dostává přihlášeného uživatele a — kde ho surface má — **záznam řádku**, takže autorizaci lze zúžit per záznam:
+Callback `authorizeUsing()` dostává přihlášeného uživatele a — kde ho povrch má — **záznam řádku**, takže autorizaci lze zúžit na jednotlivé záznamy:
 
 ```php
 Action::make('approve')
@@ -45,7 +45,7 @@ Action::make('approve')
     ->action(fn (Order $record) => $record->approve());
 ```
 
-Záznam je přítomný u **řádkových akcí**; je `null` u surface bez záznamu (strukturální viditelnost sloupce/filtru, pole, widgety), takže jednoargumentová closura `fn ($user) => …` zůstává platná všude.
+Záznam je přítomný u **řádkových akcí**; je `null` u povrchů bez záznamu (strukturální viditelnost sloupce/filtru, pole, widgety), takže jednoargumentová closura `fn ($user) => …` zůstává platná všude.
 
 Tohle řídí, zda celý sloupec/akce strukturálně **existuje** (vyhodnoceno jednou). Pro skrytí nebo redakci **jedné buňky na řádek** — např. zobrazit `salary` jen na záznamech, které uživatel smí vidět — použijte místo toho `visibleForRecord()` sloupce, který běží při renderu buňky se záznamem daného řádku:
 
@@ -178,7 +178,7 @@ public function beforeRowsReordered(array $orderedIds): void
 }
 ```
 
-Lifecycle hooky viz [Sortable řazení řádků](../sortable/row-sorting.md).
+Hooky životního cyklu viz [Sortable řazení řádků](../sortable/row-sorting.md).
 
 ## Související dokumentace
 
@@ -203,7 +203,7 @@ byla `WHERE` klauzule koupená za nic. Jakmile je zapnutá, je **striktní**.
 ```
 
 Naváž resolver; výchozí odpovídá null, což se zapnutou tenancy znamená prázdnou
-stránku, dokud to neuděláš:
+stránku, dokud to neuděláte:
 
 ```php
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
@@ -227,7 +227,7 @@ class Invoice extends Model
 }
 ```
 
-Opt-in per model, protože framework nemůže vědět, které z tvých tabulek tenant
+Zapíná se pro každý model zvlášť, protože framework nemůže vědět, které z vašich tabulek tenant
 vlastní, a hádat by znamenalo hádat, kdo co smí vidět.
 
 ### Fail-safe
@@ -236,7 +236,7 @@ vlastní, a hádat by znamenalo hádat, kdo co smí vidět.
 
 To je celý bezpečnostní příběh v jedné větě. Každý běžný stav vyrobí null
 tenanta — před přihlášením, na queue workeru, v konzolovém příkazu — takže scope,
-který by null četl jako „bez omezení", by každému z nich podal všechny řádky.
+který by null četl jako „bez omezení“, by každému z nich podal všechny řádky.
 Místo toho omezí na `0 = 1`.
 
 Záměrně to není ani `where tenant_id is null`: řádek, který nikdo nevlastní, by
@@ -251,7 +251,7 @@ každý dotaz, který Eloquent postaví:
 | | Scopované |
 | --- | --- |
 | `Invoice::query()`, výpis tabulky, relace | ano |
-| `Invoice::find($id)` ve tvém vlastním controlleru | ano |
+| `Invoice::find($id)` ve vašem vlastním controlleru | ano |
 | `->update()` a `->delete()` | ano |
 | Frontovaný job resolvující záznamy podle klíče | ano |
 | `Invoice::create()` | připíše se aktuálnímu tenantovi |
@@ -276,7 +276,7 @@ reálnou potřebu a revize musí najít každé místo, které si ji nárokovalo
 ### Zdroj, na který Eloquent nedosáhne
 
 Non-Eloquent `DataSource` — `CollectionDataSource`, zdroj nad API — nestaví
-žádný Eloquent dotaz, takže na něj globální scope nedosáhne. Obal ho:
+žádný Eloquent dotaz, takže na něj globální scope nedosáhne. Obalte ho:
 
 ```php
 use NyonCode\WireCore\Core\Tenancy\TenantScopedDataSource;
@@ -297,5 +297,5 @@ Fail-safe je tentýž, jaký má `TenantScope`: tenancy zapnutá a žádný tena
 rozpoznaný znamená **nic**. Vypnutá tenancy deleguje beze změny, takže obalení
 zdroje jednotenantovou aplikaci nic nestojí.
 
-Třetím argumentem předáš sloupec tam, kde si ho zdroj pojmenoval jinak než
+Třetím argumentem předáte sloupec tam, kde si ho zdroj pojmenoval jinak než
 konfigurace.

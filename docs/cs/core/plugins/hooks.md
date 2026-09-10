@@ -56,7 +56,7 @@ $query = $payload !== null ? $payload->query : $this->query();                  
 
 Payload přichází jako **closure**, a to je ten smysl: postavit ho může znamenat přečíst sloupce tabulky nebo widgety dashboardu a aplikace, která žádný plugin neinstaluje, za to nemá platit nic. Closure se spustí, až když se najde callback, který ho přijme.
 
-**`null` znamená „nikdo neposlouchal", ne „nic se nezměnilo".** Když se to slije dohromady přes `?? $original`, obnoví se vaše vlastní hodnota pokaždé, když callback pole vyprázdní — a vyprázdnit ho je legitimní odpověď, takže filtr, který odstranil všechny sloupce, by tiše vypadal jako no-op. Porovnávejte proti `null` výslovně.
+**`null` znamená „nikdo neposlouchal“, ne „nic se nezměnilo“.** Když se to slije dohromady přes `?? $original`, obnoví se vaše vlastní hodnota pokaždé, když callback pole vyprázdní — a vyprázdnit ho je legitimní odpověď, takže filtr, který odstranil všechny sloupce, by tiše vypadal jako no-op. Porovnávejte proti `null` výslovně.
 
 ### Dodávané hooky
 
@@ -277,13 +277,13 @@ $manager->hook('orders.exporting', function (ExportingOrders $payload): Exportin
 });
 ```
 
-**Jedna asymetrie, kterou je dobré znát, než si vybereš variantu:** typovaný payload `table.querying` se dispatchuje *až* po sestavení plánu, takže slouží ke čtení hotového plánu a jeho výsledek se nečte zpět. Přebití řazení patří na polní hook, který běží před plánovačem.
+**Jedna asymetrie, kterou je dobré znát, než si vyberete variantu:** typovaný payload `table.querying` se dispatchuje *až* po sestavení plánu, takže slouží ke čtení hotového plánu a jeho výsledek se nečte zpět. Přebití řazení patří na polní hook, který běží před plánovačem.
 
-Core také dodává typované payload DTO pod `NyonCode\WireCore\Core\Plugin\Hooks` pro běžné tvary table, form a action hooků — a runtime je **už dispatchuje**. Každý vestavěný lifecycle bod spouští oba dispatchery za sebou: `table.configuring`, `table.querying` a `table.queried` z `TableQueryService`, `form.saving` a `form.saved` ze save handleru, `action.executing` a `action.executed` z action runtime. Callback na kterémkoli z těch hooků si tedy může vzít přímo `TableQueryingPayload`, `FormSavingPayload`, `ActionExecutingPayload` a další.
+Core také dodává typované payload DTO pod `NyonCode\WireCore\Core\Plugin\Hooks` pro běžné tvary table, form a action hooků — a runtime je **už dispatchuje**. Každý vestavěný bod životního cyklu spouští oba dispatchery za sebou: `table.configuring`, `table.querying` a `table.queried` z `TableQueryService`, `form.saving` a `form.saved` ze save handleru, `action.executing` a `action.executed` z action runtime. Callback na kterémkoli z těch hooků si tedy může vzít přímo `TableQueryingPayload`, `FormSavingPayload`, `ActionExecutingPayload` a další.
 
 ### Který dispatcher dostane váš callback
 
-Protože na každém lifecycle bodě běží oba dispatchery, musí každý callback patřit právě jednomu z nich — a rozhoduje o tom **typový hint prvního parametru**:
+Protože v každém bodě životního cyklu běží oba dispatchery, musí každý callback patřit právě jednomu z nich — a rozhoduje o tom **typový hint prvního parametru**:
 
 | První parametr | Dispatcher | Payload |
 | --- | --- | --- |
@@ -309,4 +309,4 @@ $manager->hook('form.saving', function (FormSavingPayload $payload): FormSavingP
 - [Pluginy](index.md) — odkud se hooky registrují
 - [Rozšiřování povrchů](extending.md) — registry, do kterých hook často zapisuje
 - [Příklady a testování](examples.md) — hooky ve dvou hotových pluginech
-- [Save lifecycle](../../forms/save-lifecycle.md) — vlastní hookovací body formuláře
+- [Životní cyklus ukládání](../../forms/save-lifecycle.md) — vlastní hookovací body formuláře

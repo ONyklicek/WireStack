@@ -112,7 +112,7 @@ TextInputColumn::make('name')
     ->saveUsing(fn ($record, $value, $column) => $record->forceFill(['name' => $value])->saveQuietly())
 ```
 
-Na úspěšné uložení zareaguješ přes `afterStateUpdated()`:
+Na úspěšné uložení zareagujete přes `afterStateUpdated()`:
 
 ```php
 TextInputColumn::make('quantity')

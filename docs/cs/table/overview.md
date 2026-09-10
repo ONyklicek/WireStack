@@ -1,11 +1,11 @@
 ---
 order: 10
-summary: "Tabulkový povrch: hostitelská traita, dotaz, který staví, a základní konfigurace, na které stojí každý sloupec, filtr i akce."
+summary: "Tabulkový povrch: hostitelský trait, dotaz, který staví, a základní konfigurace, na které stojí každý sloupec, filtr i akce."
 ---
 
 # Wire Table
 
-Livewire tabulková komponenta enterprise úrovně pro Laravel. Závisí na `wire-core` a `wire-forms`.
+Tabulková Livewire komponenta na enterprise úrovni pro Laravel. Závisí na `wire-core` a `wire-forms`.
 
 ## Instalace
 
@@ -124,7 +124,7 @@ A to je vše. Tabulka zvládá hledání, řazení, filtrování, stránkování
 Trait `WithTable` je vrstva Livewire integrace. Poskytuje:
 
 - Všechny Livewire-vázané veřejné vlastnosti (hledání, řazení, filtry, stránkování, výběr)
-- Lifecycle hooky (`mountWithTable`, property watchery)
+- Hooky životního cyklu (`mountWithTable`, property watchery)
 - Sestavení dotazu přes `TableQueryService`
 - Pipeline vykonání akcí
 - Pipeline inline editace
@@ -164,15 +164,15 @@ Ty se volají z Alpine.js nebo Livewire direktiv v Blade pohledech:
 | `updatedTablePerPage()` | Změní se výběr počtu na stránku |
 | `toggleColumnVisibility($name)` | Uživatel skryje/zobrazí sloupec |
 | `selectRecord($key)` | Přepnut checkbox |
-| `selectAll()` | Přepnuto „vybrat vše" |
-| `deselectAll()` | Kliknuto „zrušit výběr" |
+| `selectAll()` | Přepnuto „vybrat vše“ |
+| `deselectAll()` | Kliknuto „zrušit výběr“ |
 | `expandRow($key)` | Rozbalení/sbalení řádku |
 | `toggleAllRowExpansion()` | Hromadné rozbalení/sbalení — posune výchozí stav rozbalení |
 | `executeAction($name, $key)` | Kliknuto tlačítko akce |
 | `executeBulkAction($name)` | Kliknuta hromadná akce |
 | `updateCell($column, $key, $value)` | Potvrzena inline editace |
-| `confirmActionExecution()` | Kliknuto „potvrdit" v modalu |
-| `cancelAction()` | Kliknuto „zrušit" v modalu |
+| `confirmActionExecution()` | Kliknuto „potvrdit“ v modalu |
+| `cancelAction()` | Kliknuto „zrušit“ v modalu |
 | `submitActionForm()` | Odeslán formulář akce |
 
 ---
@@ -184,13 +184,13 @@ Třída `Table` poskytuje komplexní fluent API. Níže je kompletní reference.
 ### Zdroj dat
 
 ```php
-// Z třídy Eloquent modelu (auto-vytvoří dotaz)
+// Z třídy Eloquent modelu (automaticky vytvoří dotaz)
 ->model(string $modelClass)
 
 // Vlastní základní dotaz (přepíše model)
 ->query(Builder $query)
 
-// Upravit auto-generovaný dotaz
+// Upravit automaticky generovaný dotaz
 ->modifyQueryUsing(Closure $fn)
 
 // Sloupec primárního klíče (výchozí: 'id')
@@ -211,7 +211,7 @@ $table->query(
         ->with(['department', 'team'])
 );
 
-// Úprava auto-dotazu
+// Úprava automatického dotazu
 $table->model(User::class)
       ->modifyQueryUsing(fn (Builder $q) => $q->where('active', true));
 
@@ -427,7 +427,7 @@ přípustný člen řazení: `GROUP BY`, `DISTINCT` a sjednocení.
 // Výchozí počet na stránku — int, nebo 'all' pro jednu stránku se vším
 ->perPage(int|string $perPage = 10) // [tl! focus:start]
 
-// Volby dropdownu počtu na stránku; velikostí smí být slovo 'all'
+// Volby rozbalovací nabídky počtu na stránku; velikostí smí být slovo 'all'
 ->perPageOptions(array $options = [10, 25, 50, 100])
 ->perPageSelector(bool $show = true)   // vykreslit ovládání velikosti stránky // [tl! focus:end]
 
@@ -451,7 +451,7 @@ přípustný člen řazení: `GROUP BY`, `DISTINCT` a sjednocení.
 
 `perPageOptions()` vždy nabídne i nakonfigurovaný `perPage()`, takže
 `->perPage(3)` proti výchozím volbám vykreslí select, který `3` opravdu umí
-zobrazit, místo aby si protiřečil s řádky na obrazovce. Hodnota per-page
+zobrazit, místo aby si protiřečil s řádky na obrazovce. Hodnota počtu na stránku
 přicházející od klienta, kterou tabulka nenabízí, spadne zpět na `perPage()`.
 
 **Zobrazit vše na jedné stránce.** Velikostí stránky smí být slovo `'all'`,
@@ -472,7 +472,7 @@ výše popsané spadnutí zpět existuje právě proto, aby si o to podvržený 
 nemohl říct — podstrčené `perPage: -1` spadne zpět na tabulce, která `'all'`
 nikdy nenabídla. Napsat ho je způsob, jak tabulka řekne, že u *jejích* dat je
 ten kompromis přijatelný. Žádný strop za tím není: dávej ho na tabulku, jejíž
-počet řádků znáš, ne na tu nad zdrojem, který roste bez omezení.
+počet řádků znáte, ne na tu nad zdrojem, který roste bez omezení.
 
 **Stránky mimo rozsah se samy zakotví zpět.** Standardní stránkování ořízne na
 poslední zaplněnou stránku vždy, když uložené číslo stránky ukazuje za konec
@@ -520,10 +520,10 @@ v rozsahu výběru zůstaly živé.
 // Vlastní CSS třída na <thead>
 ->headerClass(string $class)
 
-// Vlastní CSS třída na <tr>, staticky nebo počítaná per záznam
+// Vlastní CSS třída na <tr>, staticky nebo počítaná pro každý záznam
 ->rowClass(string|Closure $class)
 
-// Obarvení celého řádku sémantickou barvou, staticky nebo per záznam
+// Obarvení celého řádku sémantickou barvou, staticky nebo pro každý záznam
 ->rowColor(string|Closure|null $color)
 ```
 
@@ -535,7 +535,7 @@ scrollujícímu předkovi a tabulka už jednoho má: wrapper nese `overflow-x: a
 kvůli vodorovnému scrollu a CSS dopočítá druhou osu na `auto` s ním. Scrollport
 velký přesně jako jeho obsah nikdy nescrolluje, takže hlavička přišpendlená
 uvnitř neomezeného scrollportu nemá za čím zůstat a nikdy se nepohne. Když
-`70vh` stránce nesedí, pojmenuj vlastní strop:
+`70vh` stránce nesedí, pojmenujte vlastní strop:
 
 ```php
 ->stickyHeader()                    // 70vh řádků pod připnutou hlavičkou
@@ -587,7 +587,7 @@ stejném odstínu a potlačí neutrální hover/zebrování, takže barva vždy 
 
 Preferuj `rowColor()` před ručně psanými background třídami — prochází
 kanonickým vlastníkem `HasColor`, takže zůstává konzistentní se zbytkem UI a
-funguje ve světlém i tmavém režimu. `rowClass()` použij, když potřebuješ
+funguje ve světlém i tmavém režimu. `rowClass()` použijte, když potřebujete
 libovolné utility (tučné písmo, ring, průhlednost) místo tónu pozadí; obojí lze
 kombinovat na téže tabulce:
 
@@ -642,7 +642,7 @@ $table->emptyState(
 
 #### Akce prázdného stavu
 
-Nabídněte z prázdného stavu cestu ven — obvykle „vytvořit první záznam":
+Nabídněte z prázdného stavu cestu ven — obvykle „vytvořit první záznam“:
 
 ```php
 ->emptyStateActions(array $actions)
@@ -690,7 +690,7 @@ Z absence záznamu plynou dvě věci:
 Tyto akce se nezobrazují, když tabulku vyprázdnil **filtr**: tam záznamy za
 filtrem existují, takže prázdný stav místo toho nabízí filtr zrušit.
 
-### Polling (auto-obnovení)
+### Polling (automatické obnovení)
 
 ```php
 // Zapnout polling v intervalu
@@ -750,7 +750,7 @@ $table->lazy()
 ```
 
 ```php
-// Cache na 60 sekund — klíč auto-generovaný z hashe stavu
+// Cache na 60 sekund — klíč automaticky generovaný z hashe stavu
 $table->cacheQuery(60);
 
 // Vlastní cache klíč
@@ -826,7 +826,7 @@ $table->columns([
 2. Zavolá se `updateCell($column, $recordKey, $newValue)`
 3. **Validace** proběhne proti pravidlům sloupce
 4. **Událost `CellUpdating`** odeslána (lze naslouchat)
-5. **Eloquent update** perzistuje novou hodnotu
+5. **Eloquent update** uloží novou hodnotu
 6. **Událost `CellUpdated`** odeslána
 7. Zobrazena úspěšná notifikace
 
@@ -984,7 +984,7 @@ každou tabulku v aplikaci. Viz [Hooky](../core/plugins/hooks.md).
 | [Importy](imports.md) | Importy CSV — mapování hlaviček, přetypování, validace po řádcích, updateExisting |
 | [Správci relací](relation-managers.md) | Tabulky zúžené na relaci jako samostatné Livewire komponenty |
 | [Pokročilé](advanced.md) | Podřádky, souhrnná patička, polling, lazy loading, cachování, debug, responzivita |
-| [Výběr řádků](selection.md) | Zaškrtávátka, „vybrat vše odpovídající" a výběrová gesta |
+| [Výběr řádků](selection.md) | Zaškrtávátka, „vybrat vše odpovídající“ a výběrová gesta |
 | [Akce nad záznamem](record-actions.md) | Vazby na klik, dvojklik, pravý klik a klávesy celého řádku |
 | [Vrstva gest](gestures.md) | `gestures()` — opt-in klávesová/tažecí vrstva a fallback na tlačítka na mobilu |
-| [Akce](../core/actions/index.md) | Kompletní systém akcí — modály, formuláře, wizard kroky, životní cyklus |
+| [Akce](../core/actions/index.md) | Kompletní systém akcí — modaly, formuláře, wizard kroky, životní cyklus |

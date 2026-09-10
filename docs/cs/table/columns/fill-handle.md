@@ -8,7 +8,7 @@ summary: Tažení jedné hodnoty dolů přes řádky pod ní, jako v Excelu — 
 Táhnutím přenesete hodnotu z jedné editovatelné buňky na řádky pod ní — stejně
 jako v Excelu nebo Google Sheets. Celý rozsah se zapíše **jedním** requestem.
 
-Zapíná se per tabulka:
+Zapíná se pro každou tabulku:
 
 ```php
 use NyonCode\WireTable\Columns\SelectColumn;
@@ -56,13 +56,13 @@ z řádku, do kterého zrovna píšete.
 
 `fillable()` má smysl jen na sloupci, který už je editovatelný — zobrazovací
 sloupec vyplnit nelze nikdy. Vypněte ho tam, kde opakování jedné hodnoty nedává
-smysl nebo je nebezpečné: číslo faktury, unikátní kód, per-záznamový token.
+smysl nebo je nebezpečné: číslo faktury, unikátní kód, token vázaný na záznam.
 
 ## Co vyplnění doopravdy dělá
 
 Každý záznam projde **stejnou cestou jako jedna inline editace**: vlastní
 kontrolou `canEdit()`, vlastní validací, vlastní verzí pro optimistické zamykání.
-Request je jeden, zápisy jsou per záznam.
+Request je jeden, zápisy jsou po záznamech.
 
 Je to záměr, ne opomenutá optimalizace. Jediné `UPDATE … WHERE id IN (…)` by
 obešlo Eloquent události, casty a mutátory, nesáhlo by na `updated_at` — což je
@@ -86,7 +86,7 @@ Celou transakci vrátí zpět jen infrastrukturní chyba.
 - Záznamy se hledají přes vlastní dotaz tabulky, takže klíč mimo něj neodpovídá
   ničemu a je ohlášen jako nenalezený — podvržený request se nedostane na řádek,
   který tabulka nikdy nezobrazila.
-- Oprávnění sloupce (`->permission()`) i per-záznamové `canEdit()` se vynucují
+- Oprávnění sloupce (`->permission()`) i `canEdit()` na úrovni záznamu se vynucují
   znovu na serveru; klientský stav `disabled()` je jen kosmetický.
 - `fillMaxRecords()` omezuje, kolik toho jeden request smí zapsat.
 
@@ -108,7 +108,7 @@ neextrapoluje.
 - Funguje myší, dotykem i perem přes Pointer Events; tažení za okraj viewportu
   automaticky roluje.
 - Úchyt se nikdy neobjeví na buňce se zakázaným ovládacím prvkem ani na
-  per-záznamově readonly buňce — ty žádný editovatelný input nevykreslí.
+  buňce, která je pro daný záznam readonly — ty žádný editovatelný input nevykreslí.
 - Stejně jako jedna inline editace tabulku **nepřekresluje**: buňky se smíří samy,
   takže Alpine stav všech ostatních editovatelných buněk přežije.
 - Tabulka s `queryCached()` bude po vyplnění servírovat cachovaná data až do

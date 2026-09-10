@@ -5,8 +5,8 @@ summary: Boolean jako přepínač, s barvami, ikonami a popiskami, které nese k
 # Toggle
 
 Přepínač. `Toggle` drží týž boolean jako [`Checkbox`](checkbox.md) a rozdíl je
-v tom, co říká uživateli: checkbox je tvrzení, se kterým souhlasíš, toggle je
-nastavení, které zapínáš. Obrazovky nastavení chtějí toggly, obchodní podmínky
+v tom, co říká uživateli: checkbox je tvrzení, se kterým souhlasíte, toggle je
+nastavení, které zapínáte. Obrazovky nastavení chtějí toggly, obchodní podmínky
 checkboxy.
 
 ```php
@@ -31,7 +31,7 @@ Alpine přepíná. Funguje jakákoli barva z palety — viz
 **Popisky on/off jsou jeden element, ne dva.** Span s popiskem se vykreslí, jen
 když je nastavený `onLabel()` **nebo** `offLabel()`, a zobrazuje
 `enabled ? onLabel : offLabel`. Nastavit jen jeden z nich tedy znamená prázdný
-popisek v tom druhém stavu, ne žádný popisek — když nastavíš jeden, nastav oba.
+popisek v tom druhém stavu, ne žádný popisek — když nastavíte jeden, nastavte oba.
 
 **Ikony jsou uvnitř kolečka** a na popiskách nezávisejí: `onIcon()` se ukazuje
 v zapnutém stavu, `offIcon()` ve vypnutém, každá s `x-cloak`, aby ani jedna
@@ -63,7 +63,7 @@ Toggle::make('notifications_enabled')
 
 ## Slova pro každý stav
 
-Nastav **oba**, nebo žádný:
+Nastavte **oba**, nebo žádný:
 
 ```php
 Toggle::make('visibility')
@@ -161,7 +161,7 @@ vnitřní toggly ne, protože při jejich změně se nic nepřekresluje.
 ->getStateType(): string                  // 'bool'
 ```
 
-Labely, nápovědu, viditelnost, výchozí hodnoty, validaci a `live()` sdílí každé
+Popisky, nápovědu, viditelnost, výchozí hodnoty, validaci a `live()` sdílí každé
 pole — viz [Společné API pole](index.md#spolecne-api-pole).
 
 ## Související

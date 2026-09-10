@@ -1,6 +1,6 @@
 ---
 order: 40
-summary: "Tabulka uvnitř widgetu a widget, který je jen tvoje Blade view — pro panel, na který se žádný vestavěný typ nehodí."
+summary: "Tabulka uvnitř widgetu a widget, který je jen vaše Blade view — pro panel, na který se žádný vestavěný typ nehodí."
 ---
 
 # Tabulky a vlastní pohledy

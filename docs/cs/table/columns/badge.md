@@ -38,7 +38,7 @@ Když nesedí nic, ikona není a badge se vykreslí jako holá pilulka.
 Čtyři věci, které je dobré vědět, než začnete psát řetěz:
 
 - **Popisek se resolvuje odděleně od barvy.** Text pilulky pochází z běžné
-  formátovací pipeline sloupce (`->formatStateUsing()`, casty, labely enumů),
+  formátovací pipeline sloupce (`->formatStateUsing()`, casty, popisky enumů),
   nikdy z barevné mapy. Enum stav bez kontraktu `HasLabel` se čte jako headline
   názvu case — `InReview` → „In Review“.
 - **Do `->colors()` předávejte pole, ne closuru.** Signatura přijímá
@@ -120,7 +120,7 @@ BadgeColumn::make('score')
 
 Enum, který implementuje kontrakty `HasLabel` / `HasColor` / `HasIcon`, si nese
 vlastní prezentaci a sloupec nepotřebuje žádné mapy. Tentýž enum se pak čte
-stejně na buňce tabulky, v infolist entry i jako `<select>` option:
+stejně na buňce tabulky, v infolist entry i jako možnost `<select>`:
 
 ```php
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasColor;

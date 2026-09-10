@@ -58,7 +58,7 @@ Widgety se vykreslují přes Blade pohledy a podporují `toHtml()` / `__toString
 
 ## Polling
 
-Všechny widgety podporují auto-obnovení přes Livewire polling.
+Všechny widgety podporují automatické obnovení přes Livewire polling.
 
 ```php
 use NyonCode\WireCore\Widgets\Concerns\HasPolling;
@@ -125,7 +125,7 @@ stránky.
 
 > **Mřížka dodá bundle z wire-core, když nějaký widget polluje.** Kotva je jen
 > atribut; kód, který oblast aplikuje, je v `wire-core-dropdown.js`. Dashboard bez
-> dropdownu, modalu nebo tabulky nemá jiný důvod ho načíst, takže si o něj mřížka
+> rozbalovací nabídky, modalu nebo tabulky nemá jiný důvod ho načíst, takže si o něj mřížka
 > řekne — jinak by odpověď dorazila a na stránce by se nezměnilo nic.
 
 ---
@@ -316,7 +316,7 @@ jako u tiku pollingu. Není to *životní cyklus* akce:
 | `->label()`, `->icon()`, `->color()`, `->tooltip()` | `->wizard()` |
 | `->hidden()` / `->visible()` | mountování a cokoli, co se vrací do namountované akce |
 
-Akce, která svůj vlastní widget *odstraní* — tlačítko „Dismiss", jehož callback
+Akce, která svůj vlastní widget *odstraní* — tlačítko „Dismiss“, jehož callback
 překlopí to, co čte `visible()` widgetu — se zodpoví plným renderem. Partial umí
 element nahradit, ne smazat.
 
@@ -415,7 +415,7 @@ nikdy nedostane — karta je tam pořád vysoká podle obsahu, přesně jako dř
 stepper­y velikosti; `Uložit` uspořádání zachová, `Zrušit` ho zahodí, `Zpět na
 výchozí` layout úplně zapomene a vrátí to, co dashboard deklaruje.
 
-Metody dává hostitelský trait; chrome kolem mřížky je tvoje, protože patří
+Metody dává hostitelský trait; chrome kolem mřížky je vaše, protože patří
 tomu, kdo dashboard vykresluje, ne mřížce:
 
 ```blade
@@ -434,19 +434,19 @@ tomu, kdo dashboard vykresluje, ne mřížce:
 ])
 ```
 
-**Dokud nedáš Uložit, nic se nezapíše.** Uspořádání žije po dobu režimu v draftu
+**Dokud nedáte Uložit, nic se nezapíše.** Uspořádání žije po dobu režimu v draftu
 na komponentě — a právě to dává `Zrušit` co zahodit. Živý drag by zapisoval při
 každém puštění, takže náhodné chycení by přepsalo layout, se kterým byl někdo
 spokojený, a nešlo by to vzít zpět.
 
 **Drag nestojí žádný JavaScript.** Je to `x-sort`, vlastní Alpine plugin
 Livewiru, který si s sebou nese SortableJS i ducha při tažení. Dlaždici umísťuje
-server: puštění nahlásí „tenhle klíč, tahle pozice", draft se přeskládá a mřížka
+server: puštění nahlásí „tenhle klíč, tahle pozice“, draft se přeskládá a mřížka
 se překreslí. Buňky nesou `wire:key`, takže je morph páruje podle klíče, ne
 podle pozice, a puštěné DOM se s odpovědí nemůže rozejít.
 
 **Změna velikosti jsou steppery, ne tažení za roh.** Rozpon je 1–4 sloupce a 1–6
-řádků, takže dosažitelných velikostí je jedenáct a tlačítko říká, kterou dostaneš.
+řádků, takže dosažitelných velikostí je jedenáct a tlačítko říká, kterou dostanete.
 
 ### API režimu úprav
 
@@ -495,7 +495,7 @@ Dvojice jsou *nabídka*, ne slib o úložišti: layout, který dorazí s velikos
 mimo ně, se pořád jen ořízne na mřížku, protože uložený layout může přežít
 deklaraci, která ho utvářela.
 
-**„Odebraný" a „dostupný" je týž stav.** Nikde se nezaznamenává, že byl widget
+**„Odebraný“ a „dostupný“ je týž stav.** Nikde se nezaznamenává, že byl widget
 sundán — prostě už není v layoutu, a to ho vrací do zásobníku. Jedno pravidlo
 dělá dvě práce, takže si nemohou odporovat.
 
@@ -535,7 +535,7 @@ public function render()
 
 ### Hotové ovládání
 
-Metody si můžeš volat, odkud chceš — ale běžný případ je hotový:
+Metody si můžete volat, odkud chcete — ale běžný případ je hotový:
 
 ```blade
 @include('wire-core::widgets.partials.widget-layout-controls')
@@ -548,7 +548,7 @@ wire-panels už oboje includuje, takže deklarovaný dashboard s `customisable()
 přeskládatelný bez jediného vlastního view.
 
 Samostatný balíček na to není. Úložiště je wire-core, stránka wire-panels a
-widgety patří aplikaci — modul by nevlastnil nic, a „volitelné" už znamená
+widgety patří aplikaci — modul by nevlastnil nic, a „volitelné“ už znamená
 `customisable()` a konfigurace driveru.
 
 ### Co je potřeba, aby to celé fungovalo

@@ -4,7 +4,7 @@ summary: Spousta checkboxů z jednoho pole možností, s hledáním, hromadnými
 
 # CheckboxList
 
-Více checkboxů z pole options.
+Více checkboxů z pole možností.
 
 ```php
 use NyonCode\WireForms\Components\CheckboxList;
@@ -25,18 +25,18 @@ CheckboxList::make('permissions')
     ->bulkToggleable()
 ```
 
-## Dynamické options
+## Dynamické možnosti
 
 ```php
 CheckboxList::make('roles')
     ->options(fn () => Role::pluck('name', 'id')->toArray())
 ```
 
-## Options z enumu
+## Možnosti z enumu
 
-Předejte třídu PHP enumu pro rozvinutí jeho case na options `value => label`. Labely pocházejí z
+Předejte třídu PHP enumu pro rozvinutí jeho case na možnosti `value => label`. Popisky pocházejí z
 `getLabel()`, když enum implementuje `Foundation\Contracts\Enum\HasLabel`, jinak se
-z názvu case udělá headline. Detaily viz [Select › Options z enumu](select.md#options-z-enumu).
+z názvu case udělá headline. Detaily viz [Select › Možnosti z enumu](select.md#moznosti-z-enumu).
 
 ```php
 CheckboxList::make('permissions')->options(Permission::class)
@@ -73,7 +73,7 @@ CheckboxList::make('permissions')
 
 Tohle je ta polovina, kterou zaškrtávací seznam oproti multi-selectu ztrácí.
 Dlouhý seznam ukáže jen řádky kolem místa, kam je odscrollovaný, a vyhledaný jen
-shody — takže v obou případech je odpověď na „co jsem vlastně vybral" mimo
+shody — takže v obou případech je odpověď na „co jsem vlastně vybral“ mimo
 obrazovku. A kliknutí na chip je nejrychlejší způsob, jak vzít zpátky špatné
 zaškrtnutí, aniž byste ho hledali ve dvou stech řádcích.
 
@@ -105,7 +105,7 @@ a u seznamu oprávnění je ta nehoda udělení nebo odebrání všeho.
 Když není napsané nic, jsou shodami všechny možnosti, takže nefiltrovaný seznam
 se chová přesně, jak čekáte: všechno, nebo nic.
 
-## Seskupené options
+## Seskupené možnosti
 
 Při použití `groups()` je každý klíč nadpisem skupiny a jeho hodnota je pole párů `value => label`.
 
@@ -153,14 +153,14 @@ sloupce jsou výbava seznamu a neuplatní se.
 
 | Metoda | Typ | Popis |
 |--------|------|-------------|
-| `options(array\|string\|Closure)` | array | Seznam options nebo třída enumu (`value => label`) |
+| `options(array\|string\|Closure)` | array | Seznam možností nebo třída enumu (`value => label`) |
 | `columns(int)` | int | Počet sloupců (výchozí `1`) |
-| `searchable(bool)` | bool | Zapnout hledací box filtr-podle-labelu |
+| `searchable(bool)` | bool | Zapnout vyhledávací pole pro filtrování podle popisku |
 | `searchPrompt(string\|null)` | string | Placeholder hledacího inputu |
 | `showSelected(bool)` | bool | Zobrazit vybrané položky nad seznamem jako odebratelné chipy |
-| `bulkToggleable(bool)` | bool | Zobrazit ovládání select-all / deselect-all |
-| `selectAllLabel(string\|null)` | string | Label tlačítka select-all |
-| `deselectAllLabel(string\|null)` | string | Label tlačítka deselect-all |
+| `bulkToggleable(bool)` | bool | Zobrazit ovládání „vybrat vše“ / „zrušit výběr“ |
+| `selectAllLabel(string\|null)` | string | Popisek tlačítka „vybrat vše“ |
+| `deselectAllLabel(string\|null)` | string | Popisek tlačítka „zrušit výběr“ |
 | `grouped(bool)` | bool | Zapnout seskupený layout |
 | `groups(array\|Closure)` | array | Definice skupin (také zapíná seskupený layout) |
 | `default(array\|Closure)` | array | Předvybrané hodnoty |
@@ -168,4 +168,4 @@ sloupce jsou výbava seznamu a neuplatní se.
 | `required()` | — | Označit jako povinné |
 | `live()` | — | Spustit Livewire update při změně |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).
+Popisek, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

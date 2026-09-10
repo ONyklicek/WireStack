@@ -8,7 +8,7 @@ summary: "Čtyři třídy akcí, co dostane který callback a fluent povrch, kte
 Akce je deklarované tlačítko s callbackem za sebou: `Action` pro jeden záznam,
 `BulkAction` pro výběr, `HeaderAction` pro ani jedno a `ActionGroup` na složení
 několika do rozbalovacího menu. Všechny dědí z `BaseAction`, takže to, co se
-naučíš tady, platí všude, kde se kreslí tlačítko — v řádku tabulky, v hlavičce,
+naučíte tady, platí všude, kde se kreslí tlačítko — v řádku tabulky, v hlavičce,
 v infolistu, na stránce i ve vlastní komponentě.
 
 ## Typy akcí
@@ -18,9 +18,9 @@ v infolistu, na stránce i ve vlastní komponentě.
 | `Action` | Řádková akce — jeden záznam | `fn (Model $record, array $data)` |
 | `BulkAction` | Vybrané záznamy | `fn (Collection $records, array $data)` |
 | `HeaderAction` | Hlavička tabulky — bez kontextu záznamu | `fn (array $data)` |
-| `ActionGroup` | Seskupuje akce do dropdownu | — |
+| `ActionGroup` | Seskupuje akce do rozbalovací nabídky | — |
 
-Všechny rozšiřují `BaseAction` a sdílejí stejné fluent API pro label, ikonu, barvu, velikost, modal, životní cyklus.
+Všechny rozšiřují `BaseAction` a sdílejí stejné fluent API pro popisek, ikonu, barvu, velikost, modal, životní cyklus.
 
 ## Předpřipravené akce
 
@@ -41,7 +41,7 @@ $table->actions([DeleteAction::make()])
       ->bulkActions([DeleteBulkAction::make()]);
 ```
 
-Každý preset dodává label, ikonu, barvu a potvrzovací modal; chování
+Každý preset dodává popisek, ikonu, barvu a potvrzovací modal; chování
 dodáte pomocí `->action()`. Soft-delete presety se párují s tabulkou zúženou na
 trashed záznamy (např. `->query(User::onlyTrashed())`):
 
@@ -94,7 +94,7 @@ HeaderAction::make('create')
 
 ## Skupiny akcí
 
-Sbalte sekundární akce do dropdown menu. Na telefonu se menu otevře jako
+Sbalte sekundární akce do rozbalovací nabídky. Na telefonu se menu otevře jako
 bottom sheet — přepište pomocí `->sheetOnMobile(false)` / `->mobileBreakpoint('md')`;
 viz [mobilní prezentace](../../start/configuration.md#mobil).
 
@@ -117,7 +117,7 @@ $table->actions([
             ->color('danger')
             ->requiresConfirmation()
             ->action(fn ($record) => $record->delete()),
-    ])->divided(),                            // auto-vložit oddělovače mezi položky
+    ])->divided(),                            // automaticky vložit oddělovače mezi položky
 ]);
 ```
 
@@ -138,7 +138,7 @@ každý řádek, a nevyplatí se na tabulce o třech řádcích.
 
 ## Dynamické vlastnosti
 
-Všechny vlastnosti podporují Closury — vyhodnocené per-záznam v čase renderu:
+Všechny vlastnosti přijímají closury — vyhodnocené pro každý záznam v době renderu:
 
 ```php
 Action::make('toggle')
@@ -203,15 +203,15 @@ Override prezentace řádkové akce (`Action`), respektované pod `Table::action
 
 | Stránka | Co pokrývá |
 | --- | --- |
-| [Modály akcí](modals.md) | Potvrzení, slide-over, modály s formulářem a infolistem, wizardy a jejich vrstvení |
-| [Lifecycle a fronty](lifecycle.md) | Hooky kolem běhu, zastavení běhu zevnitř — i na komponentě úplně bez akcí — a předání práce frontě |
+| [Modaly akcí](modals.md) | Potvrzení, slide-over, modaly s formulářem a infolistem, wizardy a jejich vrstvení |
+| [Životní cyklus a fronty](lifecycle.md) | Hooky kolem běhu, zastavení běhu zevnitř — i na komponentě úplně bez akcí — a předání práce frontě |
 | [Tlačítka a vzhled](appearance.md) | Icon buttony, odkazy, zkratky, velikosti a tichá řádková varianta |
 | [Mimo tabulku](standalone.md) | `WithActions` na libovolné Livewire komponentě |
 | [Workflow a přechody](workflow.md) | Které přechody stavů jsou legální, deklarované na jednom místě |
 
 ## Související
 
-- [Modály](../modals.md) — třídy modálů, které akce otevírá
+- [Modaly](../modals.md) — třídy modalů, které akce otevírá
 - [Akce v tabulce](../../table/actions.md) — vlastní řádkové, hromadné a hlavičkové akce tabulky
 - [Akce nad záznamem](../../table/record-actions.md) — celý řádek jako ovládací prvek
 - [Notifikace](../notifications/index.md) — co akce řekne, když doběhne

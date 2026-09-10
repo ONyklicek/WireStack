@@ -4,15 +4,15 @@ summary: Rozbalovací seznam nad statickými nebo dotazovanými možnostmi, s hl
 
 # Select
 
-Dropdown select se statickými nebo dynamickými options, hledáním a multi-selectem.
+Rozbalovací seznam se statickými nebo dynamickými možnostmi, hledáním a vícenásobným výběrem.
 
 ```php
 use NyonCode\WireForms\Components\Select;
 ```
 
-> **Mobil.** Dropdown/hledací panel se otevře jako bottom sheet pod
+> **Mobil.** Rozbalovací/hledací panel se otevře jako bottom sheet pod
 > nakonfigurovaným breakpointem (searchable selecty zůstanou plovoucím panelem ve výchozím stavu,
-> aby vyhledávací box zůstal použitelný). Přepište per pole pomocí `->sheetOnMobile()` /
+> aby vyhledávací pole zůstalo použitelné). Přepište u jednotlivých polí pomocí `->sheetOnMobile()` /
 > `->mobileBreakpoint('md')` — viz [mobilní prezentace](../../start/configuration.md#mobil).
 
 ## Základní použití
@@ -26,7 +26,7 @@ Select::make('role')
     ])
 ```
 
-## Dynamické options
+## Dynamické možnosti
 
 ```php
 Select::make('category_id')
@@ -35,11 +35,11 @@ Select::make('category_id')
 ```
 
 <a id="enum-options"></a>
-## Options z enumu
+## Možnosti z enumu
 
 Předejte třídu PHP enumu přímo místo pole — case se rozvinou na
 mapu `value => label`. Klíč je backing hodnota (nebo název case pro unit enumy)
-a label pochází z `getLabel()` enumu, když implementuje kontrakt
+a popisek pochází z `getLabel()` enumu, když implementuje kontrakt
 `Foundation\Contracts\Enum\HasLabel`, s fallbackem na headline z názvu case.
 
 ```php
@@ -63,10 +63,10 @@ Select::make('status')->options(Status::class)
 // → ['draft' => 'Draft', 'published' => 'Published']
 ```
 
-Enum bez `HasLabel` stále funguje — z názvu case se udělá headline pro label
+Enum bez `HasLabel` stále funguje — z názvu case se udělá headline pro popisek
 (`LowPriority` → `Low Priority`). Closura vracející třídu enumu se rozvine také.
 
-**Automatická validace.** Jednohodnotový `Select` (nebo [`Radio`](radio.md)), jehož options pocházejí
+**Automatická validace.** Jednohodnotový `Select` (nebo [`Radio`](radio.md)), jehož možnosti pocházejí
 z enumu, je automaticky omezen na tyto hodnoty pravidlem `in:` — odeslání
 mimo enum je odmítnuto, aniž byste ho museli znovu uvádět. Přeskočí se pro `multiple()` selecty
 (stav pole) a když deklarujete vlastní pravidlo `in:` / `Rule::in()` / `Rule::enum()`.
@@ -117,8 +117,8 @@ Select::make('author_id')
 
 - `getSearchResultsUsing()` implikuje `searchable()` a vrací mapu `value => label`.
 - `getOptionLabelUsing()` (single) / `getOptionLabelsUsing()` (multiple) resolvují
-  label(y) pro aktuální výběr, takže trigger zůstane čitelný i když
-  vybraná option nebyla nikdy přednačtena.
+  popisek nebo popisky pro aktuální výběr, takže trigger zůstane čitelný i když
+  vybraná možnost nebyla nikdy přednačtená.
 - `preload()` dychtivě naplní remote seznam při renderu (spustí search callback s
   prázdným výrazem) místo čekání na první stisk klávesy.
 
@@ -127,9 +127,9 @@ action modal to dělá. [`BelongsToSelect`](belongs-to-select.md) dostane remote
 řízené relací automaticky.
 
 <a id="create--edit-options"></a>
-## Create & Edit options
+## Vytvoření a úprava možností
 
-Nechte uživatele vytvořit novou option — nebo editovat vybranou — z modalu bez
+Nechte uživatele vytvořit novou možnost — nebo upravit vybranou — z modalu bez
 opuštění formuláře:
 
 ```php
@@ -146,23 +146,23 @@ Select::make('category_id')
     ->updateOptionUsing(fn ($value, array $data) => Category::find($value)->update($data))
 ```
 
-Prvek „+ Create" (a pro vybranou hodnotu „Edit") se objeví v patičce panelu comboboxu
+Prvek „+ Create“ (a pro vybranou hodnotu „Edit“) se objeví v patičce panelu comboboxu
 a otevře izolovaný modal. Validace drží modal otevřený s
 chybami; při úspěchu se nová hodnota vybere (přidá u multi-selectu).
 
-- `createOptionUsing()` vrací hodnotu nové option — skalární klíč nebo model,
+- `createOptionUsing()` vrací hodnotu nové možnosti — skalární klíč nebo model,
   jehož klíč se použije.
-- Editace cílí na jedinou vybranou option, takže není dostupná na `multiple()`.
+- Editace cílí na jedinou vybranou možnost, takže není dostupná na `multiple()`.
 - Funguje v samostatných `WithForms` komponentách **i** uvnitř table action modalů.
-- Aby nově vytvořená hodnota vykreslila label, spárujte s `getOptionLabelUsing()`
-  nebo přednačteným seznamem options.
-- Vytvořená/editovaná option se okamžitě sloučí do otevřeného comboboxu (hostitel
+- Aby nově vytvořená hodnota vykreslila popisek, spárujte s `getOptionLabelUsing()`
+  nebo přednačteným seznamem možností.
+- Vytvořená/upravená možnost se okamžitě sloučí do otevřeného comboboxu (hostitel
   odesílá browser události `select-option-created` / `select-option-updated`) — žádné
   obnovení stránky není potřeba.
 
 ### Plnohodnotný formulář, ne seznam polí
 
-Option schéma je běžné formulářové schéma a namountovaný option form je
+Schéma možnosti je běžné formulářové schéma a namountovaný formulář možnosti je
 plnohodnotný formulář hostitele, takže věci, které potřebují, aby hostitel našel
 pole podle state path, uvnitř něj fungují stejně jako kdekoli jinde:
 
@@ -184,24 +184,24 @@ Select::make('category_id')
     ->createOptionUsing(fn (array $data) => Category::create($data)->getKey())
 ```
 
-- [`Wizard`](../../core/schema/layout/wizard.md) gatuje jednotlivé kroky: „Next"
+- [`Wizard`](../../core/schema/layout/wizard.md) gatuje jednotlivé kroky: „Next“
   validuje jen pole daného kroku a při neúspěchu zůstane stát, přičemž chyby
-  přistanou na option bagu (`createOptionFormData.*`), kde je modal už zobrazuje.
+  přistanou v bagu možnosti (`createOptionFormData.*`), kde je modal už zobrazuje.
 - Vnořený `Select` dosáhne na endpoint remote searche a field actions
   (`suffixAction()`, `hintAction()`, `Button`) se resolvnou a proběhnou.
-- Otevření *druhého* option modalu zevnitř option formu je odmítnuto, ne vnořeno:
+- Otevření *druhého* modalu možnosti zevnitř formuláře možnosti je odmítnuto, ne vnořeno:
   na každý druh je jedna mounted path a jeden data bag, takže vyhovět by znamenalo
   zahodit rozepsaný formulář.
 
 Přidejte wizardu [`navigation(false)`](../../core/schema/layout/wizard.md#predani-navigace-jinam)
 a **patička modalu převezme jeho navigaci** — Back a Next vedle Cancel, s tlačítkem
 odeslání, které se objeví až na posledním kroku, místo druhého navigačního řádku
-uvnitř panelu. Wizard pojmenujte, když můžou být oba option modaly otevřené naráz:
+uvnitř panelu. Wizard pojmenujte, když můžou být oba modaly možnosti otevřené naráz:
 patička a wizard se najdou právě podle toho názvu.
 
-### Konfigurace option modalu
+### Konfigurace modalu možnosti
 
-Ani jeden option modal není zvláštní případ: oba se konfigurují přes stejný objekt
+Ani jeden modal možnosti není zvláštní případ: oba se konfigurují přes stejný objekt
 `Modal`, jaký používají action modaly, takže nadpis, popis, ikona, šířka, chování
 při zavírání, sticky chrome i popisky obou tlačítek žijí na jednom místě.
 
@@ -236,14 +236,14 @@ nastavení nadpisu nemůžou rozejít. Šířka bere case `ModalWidth` nebo jeho
 následuje `wire-core.modals.default_width` jako každý jiný modal.
 
 `id` modalu, `wire:model` a zavírací akce konfigurovatelné záměrně **nejsou**.
-Klíčují teleport, podle kterého Livewire morfuje, a oba option modaly můžou být
+Klíčují teleport, podle kterého Livewire morfuje, a oba modaly možnosti můžou být
 namountované najednou — `id` nastavené volajícím by nechalo jejich obsah prohodit.
 
 ## Reaktivita
 
 Combobox se váže deferred ve výchozím stavu. Přidejte `live()`, když na výběr reagují jiná pole
 — `afterStateUpdated()`, `visibleWhen()` souseda nebo `Form::live()` —
-aby se výběr option synchronizoval na server při kliknutí místo čekání na další
+aby se výběr možnosti synchronizoval na server při kliknutí místo čekání na další
 roundtrip:
 
 ```php
@@ -288,12 +288,12 @@ Select::make('country')
 
 ```php
 Select::make('active')
-    ->boolean()         // Yes/No options
+    ->boolean()         // Možnosti Ano/Ne
 ```
 
-## Disabled options
+## Zakázané možnosti
 
-Vykreslit konkrétní options jako nevybíratelné:
+Vykreslit konkrétní možnosti jako nevybíratelné:
 
 ```php
 Select::make('status')
@@ -306,7 +306,7 @@ Select::make('status')
     ->disabledOptions(['archived'])
 ```
 
-Dynamické disabled options:
+Dynamicky zakázané možnosti:
 
 ```php
 Select::make('tier')
@@ -318,29 +318,29 @@ Select::make('tier')
 
 | Metoda | Typ | Popis |
 |--------|------|-------------|
-| `options(array\|string\|Closure)` | array | Statické, dynamické nebo enum-class options (`value => label`) |
-| `searchable()` | bool | Zapnout hledání options |
+| `options(array\|string\|Closure)` | array | Statické, dynamické nebo enum-class možnosti (`value => label`) |
+| `searchable()` | bool | Zapnout hledání v možnostech |
 | `multiple()` | bool | Povolit více výběrů |
 | `native(bool $native = true)` | bool | Použít nativní `<select>` prohlížeče místo comboboxu (výchozí: `false`) |
 | `maxItems(int\|null)` | int | Maximum vybraných položek (multi-select) |
 | `minItems(int\|null)` | int | Minimum vybraných položek (multi-select) |
-| `disabledOptions(array\|Closure)` | array | Klíče options vykreslené jako disabled |
+| `disabledOptions(array\|Closure)` | array | Klíče možností vykreslené jako zakázané |
 | `noSearchResultsMessage(string\|null)` | string | Zpráva, když hledání nic nenajde |
-| `loadingMessage(string\|null)` | string | Zpráva během načítání options |
+| `loadingMessage(string\|null)` | string | Zpráva během načítání možností |
 | `searchPrompt(string\|null)` | string | Prompt zobrazený v hledacím boxu |
-| `boolean()` | — | Zkratka pro Yes/No options |
-| `relationship(?string, ?string)` | — | Načíst options z relace |
+| `boolean()` | — | Zkratka pro možnosti Ano/Ne |
+| `relationship(?string, ?string)` | — | Načíst možnosti z relace |
 | `getSearchResultsUsing(Closure)` | — | Remote hledání: resolvovat shody na serveru (implikuje `searchable()`) |
-| `getOptionLabelUsing(Closure)` / `getOptionLabelsUsing(Closure)` | — | Resolvovat label(y) pro aktuální výběr |
-| `preload()` | bool | Dychtivě naplnit remote seznam options při renderu |
-| `createOptionForm(array\|Closure)` / `createOptionUsing(Closure)` | — | Vytvořit novou option z modalu |
-| `editOptionForm(array\|Closure)` / `fillEditOptionUsing(Closure)` / `updateOptionUsing(Closure)` | — | Editovat vybranou option z modalu |
-| `createOptionModal(Closure)` / `editOptionModal(Closure)` | — | Konfigurace option modalu přes kanonický objekt `Modal` |
+| `getOptionLabelUsing(Closure)` / `getOptionLabelsUsing(Closure)` | — | Resolvovat popisek nebo popisky pro aktuální výběr |
+| `preload()` | bool | Dychtivě naplnit vzdálený seznam možností při renderu |
+| `createOptionForm(array\|Closure)` / `createOptionUsing(Closure)` | — | Vytvořit novou možnost z modalu |
+| `editOptionForm(array\|Closure)` / `fillEditOptionUsing(Closure)` / `updateOptionUsing(Closure)` | — | Upravit vybranou možnost z modalu |
+| `createOptionModal(Closure)` / `editOptionModal(Closure)` | — | Konfigurace modalu možnosti přes kanonický objekt `Modal` |
 | `createOptionModalHeading(string)` / `editOptionModalHeading(string)` | string | Nadpisy modalu (zkratka) |
 | `createOptionModalWidth(string\|ModalWidth\|null)` / `editOptionModalWidth(string\|ModalWidth\|null)` | string | Šířky modalu (`sm`…`7xl`, `full`; výchozí `md`) (zkratka) |
-| `placeholder(string\|Closure)` | string | Label prázdné/blank option |
+| `placeholder(string\|Closure)` | string | Popisek prázdné možnosti |
 | `disabled(bool\|Closure)` | bool | Znepřístupnit select |
 | `required()` | — | Označit jako povinné |
 | `live()` | — | Spustit Livewire update při změně |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).
+Popisek, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

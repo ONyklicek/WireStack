@@ -33,7 +33,7 @@ instalátor každého balíčku místo jeho kopie.
   …
 ```
 
-Všechno je nabídnuté předvybrané: instalátor, jehož výchozí stav je „nic", dělá
+Všechno je nabídnuté předvybrané: instalátor, jehož výchozí stav je „nic“, dělá
 z běžného případu ten zdlouhavý. `--all` otázku přeskočí, což je to, co chce
 skriptované nasazení.
 
@@ -80,7 +80,7 @@ php artisan migrate
 
 ## Všechny příkazy, které se s tím vezou
 
-`wire:install` spustí instalátory jednotlivých balíčků za tebe; každý jde zavolat
+`wire:install` spustí instalátory jednotlivých balíčků za vás; každý jde zavolat
 i samostatně, po čemž sáhne aplikace, která si nějaký balíček přidá později:
 
 ```bash

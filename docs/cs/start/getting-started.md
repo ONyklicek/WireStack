@@ -18,21 +18,21 @@ Tento průvodce popisuje produkční nastavení Wire v Laravel aplikaci.
 | Alpine.js | 3.x+ (součástí Livewire) |
 | `nyoncode/laravel-package-toolkit` | ^2.4 (nainstaluje se sám) |
 
-Poslední řádek si sami nevyžadujete — Composer ho stáhne spolu s balíčky Wire.
-Je tu proto, že určuje dva řádky nad sebou. Toolkit vlastní mirror do
-`public/vendor`, který dostane JavaScriptové bundly na disk (viz
+Poslední řádek si sami nepřidáváte — Composer ho stáhne spolu s balíčky Wire.
+Je tu proto, že rozhoduje o dvou řádcích nad ním. Toolkit vlastní zrcadlo do
+`public/vendor`, které dostane JavaScriptové bundly na disk (viz
 [JavaScriptové assety](#javascriptove-assety)), a verze 2.4 vyžaduje
-`illuminate/support ^12.61.1|^13.12.0` — takže právě tohle, a ne `^12.0`
-deklarované balíčky Wire, je verze Laravelu, proti které se instalace opravdu
+`illuminate/support ^12.61.1|^13.12.0` — takže právě tohle, a ne `^12.0`, které
+deklarují balíčky Wire, je verze Laravelu, vůči které se instalace opravdu
 řeší. Aplikace, která si toolkit připíná sama, mu musí povolit `^2.4`, jinak
 `composer require nyoncode/wire-table` vůbec neprojde.
 
 ## Instalace
 
-Nainstaluj si vrstvu, kterou potřebuješ. Každá si dotáhne to, na čem závisí, a nic
+Nainstalujte si vrstvu, kterou potřebujete. Každá si dotáhne to, na čem závisí, a nic
 nad sebou — celý seznam je v [Mapě projektu](project-map.md#balicky).
 
-### Celý stack, nastavený za tebe
+### Celý stack, nastavený za vás
 
 ```bash
 composer require nyoncode/wire-suite
@@ -61,7 +61,7 @@ composer require nyoncode/wire-forms
 composer require nyoncode/wire-core
 ```
 
-### Resource a jejich stránky (panels + table + forms + core)
+### Resources a jejich stránky (panels + table + forms + core)
 
 ```bash
 composer require nyoncode/wire-panels
@@ -212,7 +212,7 @@ Neinstalujte Alpine samostatně. Livewire 4 ho už obsahuje.
 <a id="javascript-assets"></a>
 ## JavaScriptové assety
 
-Interaktivní části Wire — dropdowny, kontextové menu řádku, taby, wizardy,
+Interaktivní části Wire — rozbalovací nabídky, kontextové menu řádku, taby, wizardy,
 buňky inline editace, fill handle, výběr řádků, record akce, drag & drop
 řazení — jsou malé Alpine komponenty dodávané jako předsestavené bundly přímo
 z balíčků. Není co instalovat, není co publikovat a na vaší straně není žádný
@@ -250,7 +250,7 @@ komponentu ještě nemá:
 Uncaught ReferenceError: wireRecordSelection is not defined
 ```
 
-což se projeví mrtvými dropdowny, checkboxy, které nic nedělají, a — nejhlasitěji —
+což se projeví mrtvými rozbalovacími nabídkami, checkboxy, které nic nedělají, a — nejhlasitěji —
 šedým scrimem přes celou stránku, protože každý backdrop mobilního sheetu je
 navázaný na stav, který už neexistuje.
 
@@ -289,9 +289,9 @@ location ~* \.(js|css)$ {
 }
 ```
 
-Na sdíleném hostingu tenhle blok často není váš, abyste ho měnili — a úplně stejně
-rozbíjí i Livewire vlastní `/livewire-{hash}/livewire.js`. Soubor, který existuje,
-naservíruje každá konfigurace webserveru, jaká je, a proto vám ho balíčky připraví.
+Na sdíleném hostingu na tenhle blok často nedosáhnete — a úplně stejně
+rozbíjí i vlastní `/livewire-{hash}/livewire.js` Livewiru. Soubor, který existuje,
+naservíruje jakákoli konfigurace webserveru, a proto vám ho balíčky připraví.
 
 **Publikování je pořád podporované** a dělá tutéž kopii dopředu, čímž ji sundá
 z prvního requestu po nasazení:

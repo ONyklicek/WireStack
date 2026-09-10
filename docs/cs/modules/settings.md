@@ -43,7 +43,7 @@ final class BrandingSettings implements SettingsGroup    // [tl! focus:start]
 
 **Hodnoty si drží svůj typ.** Sloupec je JSON, takže boolean se vrátí jako
 boolean a pole přežije — tabulka nastavení, která všechno převede na řetězec,
-nutí každého čtenáře přetypovávat ručně, a ti se pak neshodnou.
+nutí každého čtenáře přetypovávat ručně, a vám se pak neshodnou.
 
 **Skupina je jeden záznam v cache.** Nastavení se čte skoro při každém requestu a
 zapisuje se téměř nikdy; po klíčích by to bylo jedno hledání na čtení, po
@@ -164,7 +164,7 @@ kolem karty je rámeček uvnitř rámečku a skupina už řekla, kde má vlastn�
 `groups` je seznam aplikace a zůstává jím — majitel panelu říká, co se v jeho
 panelu nastavuje. Druhá půlka je balíček, který dodává funkci *a* tab, kterým se
 nastavuje; ten jinak musí končit README větou „a teď si tuhle třídu přidejte do
-configu" — jedinou instrukcí, kterou každá jiná plocha v tomhle frameworku už
+configu“ — jedinou instrukcí, kterou každá jiná plocha v tomhle frameworku už
 dávno dávat přestala. Modul se registruje sám, a jeho nastavení taky.
 
 ```php
@@ -247,7 +247,7 @@ nesmí uložit jinou tím, že přepíše hodnotu, která cestuje.
 
 Uživatel, který neprojde *žádnou* deklarovanou skupinou, dostane 403 i na celou
 obrazovku, a ne prázdný stav: ten říká „deklarujte třídu SettingsGroup a uveďte ji
-v configu", což je instrukce pro vývojáře a pro všechny ostatní lež. Aplikace,
+v configu“, což je instrukce pro vývojáře a pro všechny ostatní lež. Aplikace,
 která skutečně nedeklarovala nic, ho vidí dál.
 
 ## Reakce na změnu

@@ -7,8 +7,8 @@ summary: "Sdílené traity, které skládá každá komponenta, základní tří
 
 Foundation je trvalé jádro `wire-core`: vrstva, kterou nic nad ní nesmí měnit a
 ze které je všechno nad ní postavené. Pole, sloupec, akce a widget jsou různé
-objekty, které odpovídají na tytéž otázky — jaký máš popisek, ikonu, barvu,
-velikost, jsi vidět — a odpovídají na ně **stejnými traitami**. Proto se ten
+objekty, které odpovídají na tytéž otázky — jaký má popisek, ikonu, barvu,
+velikost, jestli je vidět — a odpovídají na ně **stejnými traity**. Proto se ten
 slovník vyplatí naučit jednou.
 
 ## Concerny (traity)
@@ -17,7 +17,7 @@ slovník vyplatí naučit jednou.
 
 | Trait | Metody | Popis |
 |-------|---------|-------------|
-| `HasLabel` | `label($label)`, `translateLabel()`, `getLabel()` | Zobrazovací label |
+| `HasLabel` | `label($label)`, `translateLabel()`, `getLabel()` | Zobrazovací popisek |
 | `HasDescription` | `description($text)`, `getDescription()` | Popisný text |
 | `HasHelperText` | `helperText($text)`, `getHelperText()` | Helper text pod polem |
 | `HasHint` | `hint($text)`, `hintIcon($icon)`, `getHint()` | Hint text/ikona |
@@ -61,7 +61,7 @@ slovník vyplatí naučit jednou.
 
 > CSS třídy tlačítek/badge pocházejí z kanonických `HasColor` resolverů (viz
 > [Kanonické color resolvery](colors.md#kanonicke-color-resolvery-hascolor)), ne z
-> per-komponentní mapy. `HasButtonStyles` zůstává jen jako deprecated alias.
+> mapy pro jednotlivé komponenty. `HasButtonStyles` zůstává jen jako deprecated alias.
 
 ### Vyhodnocování closur
 
@@ -71,7 +71,7 @@ Všechny konfigurační metody přijímají skalární hodnoty i closury:
 // Skalár
 TextColumn::make('name')->label('Full Name');
 
-// Closura — vyhodnocená per záznam v čase renderu
+// Closura — vyhodnocená pro každý záznam v době renderu
 TextColumn::make('name')->label(fn (User $record) => "Name: {$record->name}");
 
 // Closura s dependency injection

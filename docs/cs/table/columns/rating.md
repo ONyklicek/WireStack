@@ -43,7 +43,7 @@ RatingColumn::make('score')
 
 ## Přístupnost
 
-Řada hvězdiček je jediný prvek `role="img"` s popiskem „3 z 5" (přeloženo), takže
+Řada hvězdiček je jediný prvek `role="img"` s popiskem „3 z 5“ (přeloženo), takže
 čtečka oznámí hodnotu jednou místo předčítání pěti ikon.
 
 ## RatingColumn API

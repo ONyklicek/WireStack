@@ -73,4 +73,4 @@ Tags::make('tags')
 | `readOnly(bool\|Closure)` | bool | Read-only režim |
 | `live()` | — | Spustit Livewire update po každé změně tagu |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).
+Popisek, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

@@ -75,7 +75,7 @@ pak přebuildujte. Viz také průvodce začínáme.
 
 ---
 
-## „No publishable resources for tag"
+## „No publishable resources for tag“
 
 **Příznak:** `vendor:publish` hlásí žádné zdroje pro tag jako
 `wire-forms-config`.

@@ -47,7 +47,7 @@ ten pohled přebije.
 **Oprávnění jsou zaškrtávací seznam, ne multi-select.** Ty dvě věci odpovídají na
 různé otázky: multi-select ukazuje, co jste *vybrali*, a zbytek schová — což je
 správně pro dvě tři role u uživatele. U oprávnění je to naopak: otázka zní vždycky
-„co tam ještě je", nad stovkou názvů, které si nikdo nepamatuje. Takže na stránce
+„co tam ještě je“, nad stovkou názvů, které si nikdo nepamatuje. Takže na stránce
 je každé oprávnění, s vyhledávacím polem, dvojicí Vybrat vše / Zrušit výběr
 a **skupinami podle resource, o kterém oprávnění je** — podle úseku před první
 tečkou (`invoices.view`, `invoices.*` → *invoices*).
@@ -86,7 +86,7 @@ implementuje stejné rozhraní, místo aby brala trait tohohle modulu. Uložená
 hodnota, která *už* je URL, projde beze změny — a právě to tohle umožňuje.
 
 **Heslo se z profilu odstěhovalo.** Má vlastní kartu, která se nejdřív zeptá na
-současné heslo. Pole s poznámkou „nechte prázdné pro zachování hesla" je ovládací
+současné heslo. Pole s poznámkou „nechte prázdné pro zachování hesla“ je ovládací
 prvek administrátora — a na stránce profilu je administrátorem sám držitel účtu,
 takže obě obrazovky ho nemůžou sdílet. Admin, který edituje někoho jiného, žádné
 současné heslo nemá. V tom je celý rozdíl.
@@ -130,13 +130,14 @@ současné heslo nemá. V tom je celý rozdíl.
 
 'navigation' => [
     'group' => 'access',
+    'label' => null,   // null použije vlastní nadpis skupiny modulu
     'icon' => 'outline:users',
     'sort' => 90,
 ],
 ```
 
 Všechno v zvýrazněném bloku je volitelné a každé `auto` výš umí čistě odpovědět
-„ne". Aplikace, která nenastaví nic z toho, dostane správu uživatelů, jakou měla.
+„ne“. Aplikace, která nenastaví nic z toho, dostane správu uživatelů, jakou měla.
 
 ## Co dostanete
 
@@ -152,7 +153,7 @@ Všechno v zvýrazněném bloku je volitelné a každé `auto` výš umí čist�
 **Každé tlačítko se řídí tím, co aplikace naroutovala.** Řádková akce je skrytá
 tam, kde její stránka naroutovaná není — místo odkazu, který skončí na 404.
 Aplikace může namountovat jen seznam a nic dalšího, a poctivá odpověď na „žádná
-editační stránka není" je žádné Upravit. Tam, kde naroutovaná *je* i s
+editační stránka není“ je žádné Upravit. Tam, kde naroutovaná *je* i s
 oprávněním (`RoutePage::make(EditUser::class)->permission('users.update')`), si
 tlačítko přečte ability z téže deklarace — skryté tlačítko a hlídaná routa se
 tak nemůžou rozejít.
@@ -171,7 +172,7 @@ otázka, jiné tlačítko, jiná věc, která může selhat.
 
 Není to preference rozvržení. Jeden formulář se třemi sekcemi musí umět
 vysvětlit, co se stalo, když neprojde ta prostřední — a *„jméno se uložilo, heslo
-ne"* není zpráva, kterou by stránka profilu měla kdy vyprodukovat.
+ne“* není zpráva, kterou by stránka profilu měla kdy vyprodukovat.
 
 | Karta | Komponenta | Zobrazí se, když |
 | --- | --- | --- |
@@ -198,14 +199,14 @@ záleží nejvíc. Karta ji posune.
 opatrnost: v administraci je člověk na téhle stránce většinou zaměstnanec
 a administrátor, který se dvěma kliknutími odstraní, je budoucí ticket na
 podporu. Tam, kde jsou účty samoobslužné, to zapněte. Ptá se dvakrát — dialog,
-který je potřeba otevřít, a heslo účtu napsané do něj — a co „smazat" znamená,
+který je potřeba otevřít, a heslo účtu napsané do něj — a co „smazat“ znamená,
 zůstává vašemu modelu, takže tabulka `users` se soft delete soft-deletuje.
 
 Routuje se se vším ostatním — `Route::wireResources()` mu dá
 `{prefix}/users/profile` pod jménem `wire.users.profile` — a v `pages()` je
 deklarovaná **před** `view` schválně: neznámý klíč stránky routuje na
 `{prefix}/{name}`, takže `users/profile` a `users/{record}` mají stejný tvar URL
-a deklarovaná až za ním by se „profile" hledalo jako klíč uživatele a skončilo
+a deklarovaná až za ním by se „profile“ hledalo jako klíč uživatele a skončilo
 404.
 
 ### Karta na vlastní stránce

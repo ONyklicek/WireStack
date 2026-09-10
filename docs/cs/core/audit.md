@@ -114,16 +114,16 @@ Akce otevře slide-over s historií záznamu.
 
 Audit události můžete odesílat ručně pro operace, které neprocházejí auditovanou událostí modelu.
 
-K loggeru vede pět událostí a první tři vyvolává `HasAuditable` za tebe — vlastní
+K loggeru vede pět událostí a první tři vyvolává `HasAuditable` za vás — vlastní
 ruční odeslání má smysl tam, kde zápis proběhl mimo dohled modelových událostí
 (přímý dotaz, import, změna stavu z jobu):
 
-| Událost | Konstruktor | Kdo ji vyvolá za tebe |
+| Událost | Konstruktor | Kdo ji vyvolá za vás |
 | --- | --- | --- |
 | `RecordCreated` | `(Model $record, array $newValues = [], array $metadata = [])` | `HasAuditable`, při vytvoření |
 | `RecordUpdated` | `(Model $record, array $oldValues = [], array $newValues = [], array $metadata = [])` | `HasAuditable`, při úpravě |
 | `RecordDeleted` | `(Model $record, array $oldValues = [], array $metadata = [])` | `HasAuditable`, při smazání |
-| `BulkActionExecuted` | `(string $actionName, string $modelType, array $recordIds, bool $success, array $metadata = [])` | nikdo — vyvoláš ji sám |
+| `BulkActionExecuted` | `(string $actionName, string $modelType, array $recordIds, bool $success, array $metadata = [])` | nikdo — vyvoláte ji sám |
 | `InlineCellUpdated` | viz níže | inline editace v tabulce |
 
 ```php

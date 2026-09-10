@@ -1,13 +1,13 @@
 ---
 order: 20
-summary: Blade komponenta, kterou tvůj layout jmenuje, sloty, které vystavuje, přihlašovací rám vedle ní a kam patří přihlášený uživatel.
+summary: Blade komponenta, kterou váš layout jmenuje, sloty, které vystavuje, přihlašovací rám vedle ní a kam patří přihlášený uživatel.
 ---
 
 # Layout
 
-Shell je Blade komponenta, ne konfigurační objekt. Tvůj layout ji jmenuje a plní
-její sloty — proto jsou brand, přihlašování i chrome markup, který napíšeš, a ne
-třída, kterou nastavíš.
+Shell je Blade komponenta, ne konfigurační objekt. Váš layout ji jmenuje a plní
+její sloty — proto jsou brand, přihlašování i chrome markup, který napíšete, a ne
+třída, kterou nastavíte.
 
 ## Sloty
 
@@ -39,7 +39,7 @@ Shell má rám pro přihlášení a **žádnou autentizaci**: `<x-wire-admin::au
 </x-wire-admin::auth-layout>
 ```
 
-Zbytek vlastní Laravel, a je to záměr: **Fortify** (headless) nebo **Breeze** (scaffolding) už nesou omezení počtu pokusů, tokeny pro reset hesla a jejich expiraci, ověření e-mailu, dvoufaktor i regeneraci session. Panel, který si tohle napíše znovu, vlastní bezpečnostní plochu a nezíská funkci — takže tenhle balíček dodává kartu a ani jednu přihlašovací cestu. Tam, kde obrazovku pro nastavení dvoufázového ověření v panelu *chcete*, ji dodá [modul uživatelů](../modules/teams-and-two-factor.md) a volá Fortify vlastní akce — obrazovka nad vlastníkem, ne druhý vlastník.
+Zbytek vlastní Laravel, a je to záměr: **Fortify** (headless) nebo **Breeze** (scaffolding) už nesou omezení počtu pokusů, tokeny pro reset hesla a jejich expiraci, ověření e-mailu, dvoufaktor i regeneraci session. Panel, který si tohle napíše znovu, vlastní bezpečnostní plochu a nezíská funkci — takže tenhle balíček dodává kartu a ani jednu přihlašovací cestu. Tam, kde obrazovku pro nastavení dvoufázového ověření v panelu *chcete*, ji dodá [modul uživatelů](../modules/teams-and-two-factor.md) a volá vlastní akce Fortify — obrazovka nad vlastníkem, ne druhý vlastník.
 
 Spojuje je middleware, který stejně píšete:
 
@@ -47,7 +47,7 @@ Spojuje je middleware, který stejně píšete:
 Route::middleware(['web', 'auth'])->prefix('admin')->group(fn () => Route::wireResources());
 ```
 
-Per [zóna](../panels/routing.md#zony), když jich aplikace má víc — `can:admin` na jedné skupině, `can:business` na druhé — a per stránka přes `RoutePage::make($page)->permission('users.manage')`, což se stane Laravelím `can:` middlewarem. Všechno odpovídá Gate, takže role ze Spatie i wildcardy z `nyoncode/laravel-permission-extended` fungují, aniž by o nich tenhle balíček věděl.
+Pro každou [zónu](../panels/routing.md#zony), když jich aplikace má víc — `can:admin` na jedné skupině, `can:business` na druhé — a pro jednotlivé stránky přes `RoutePage::make($page)->permission('users.manage')`, což se stane Laravelím `can:` middlewarem. Všechno odpovídá Gate, takže role ze Spatie i wildcardy z `nyoncode/laravel-permission-extended` fungují, aniž by o nich tenhle balíček věděl.
 
 ## Kdo je přihlášený
 

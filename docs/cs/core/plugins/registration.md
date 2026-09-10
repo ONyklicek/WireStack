@@ -5,7 +5,7 @@ summary: "Dvě registrační cesty — config aplikace a provider balíčku — 
 
 # Registrace pluginů
 
-Plugin se k frameworku dostane dvěma způsoby a to, který použiješ, říká, kdo ho
+Plugin se k frameworku dostane dvěma způsoby a to, který použijete, říká, kdo ho
 vlastní: **aplikace** si své vypíše v configu, **balíček** si svůj zaregistruje ze
 service provideru. Všechno další — konfigurace, výchozí hodnoty i závislost na
 jiném pluginu — je na obou cestách stejné.

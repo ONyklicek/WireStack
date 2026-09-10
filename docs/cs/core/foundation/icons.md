@@ -93,7 +93,7 @@ Malá sada krátkých aliasů mapuje na kanonické ikony pro pohodlí:
 
 Ikony se ve výchozím stavu vykreslují jako dekorativní (`aria-hidden="true"`). Předejte `label`, když
 ikona nese význam sama o sobě — pak je vystavena jako obrázek s tím
-labelem (`role="img"` + `aria-label`):
+popiskem (`role="img"` + `aria-label`):
 
 ```blade
 <x-wire::icon name="check-circle" label="Verified" />
@@ -274,4 +274,4 @@ soubor místo ruční editace cest ikon.
 - [Barvy](colors.md) — stejný tvar resolveru pro druhou polovinu povrchu
 - [Enumy](enums.md) — enum, který si pojmenuje vlastní ikonu
 - [Motivy a přizpůsobení](../../start/theming.md) — výměna sady, kterou aplikace používá
-- [Foundation](index.md) — concerny, kterými se k tomuhle dostaneš
+- [Foundation](index.md) — concerny, kterými se k tomuhle dostanete

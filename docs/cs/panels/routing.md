@@ -1,6 +1,6 @@
 ---
 order: 50
-summary: Jak z deklarovaných stránek vzniknou skutečné URL — makro, tvar URL, middleware per resource, několik zón nad jednou sadou resourců a cesta přes config.
+summary: Jak z deklarovaných stránek vzniknou skutečné URL — makro, tvar URL, middleware pro každý resource, několik zón nad jednou sadou resourců a cesta přes config.
 ---
 
 # Routování
@@ -44,8 +44,8 @@ Route::prefix('admin')
     });
 ```
 
-Prefix, middleware i doména jsou tvoje — jsou to obyčejné Laravelí routy
-registrované ve skupině, ve které jsi macro zavolal. Resource, který nedeklaruje
+Prefix, middleware i doména jsou vaše — jsou to obyčejné Laravelí routy
+registrované ve skupině, ve které jste macro zavolali. Resource, který nedeklaruje
 stránky, se přeskočí; tak zůstane interní nebo vnořený resource neroutovaný.
 Jmenovat takový resource explicitně naopak vyhodí výjimku, protože to je chyba,
 ne volba.
@@ -82,7 +82,7 @@ public static function routeDomain(): ?string { return '{tenant}.example.com'; }
 public static function routePrefix(): ?string { return 'billing/tenants'; }
 ```
 
-Parametr domény se dostane do tvého `TenantResolver`u jako každý jiný parametr
+Parametr domény se dostane do vašeho `TenantResolver`u jako každý jiný parametr
 routy. Samotná tenancy zůstává, kde je — globální scope nad každým dotazem, ne
 záležitost routování; viz [Autorizace](../start/authorization.md).
 
@@ -116,7 +116,7 @@ Které resources zóna obsahuje, říká `only` / `except` a nic jiného — ž�
 seznam, který by se musel držet v souladu s routami.
 
 **Odkazování uvnitř zóny.** Každá otázka na URL zní „kde je tenhle klíč *v téhle
-zóně*", takže zóna cestuje s ní:
+zóně*“, takže zóna cestuje s ní:
 
 ```php
 ResourceRoutes::urlFor('orders', zone: 'business');   // /business/orders
@@ -157,7 +157,7 @@ business.wire.orders.index              →  business/orders
 ```
 
 Která zóna přistane kde, říká `only` / `except` — jako každá jiná otázka na
-členství: dej každé zóně vlastní dashboard a vypiš ho tam. Dvě stránky, které si
+členství: dejte každé zóně vlastní dashboard a vypište ho tam. Dvě stránky, které si
 nárokují kořen **jedné** skupiny, jsou odmítnuty — Laravel klíčuje routy podle
 URI, takže by druhá tu první nahradila i se jménem routy a zůstala by položka
 menu, která vypadá zaroutovaně a tiše nikam neodkazuje.
@@ -184,7 +184,7 @@ public function mount(): void
 `Route::currentRouteName()` během Livewire round tripu odpoví `livewire.update`,
 takže komponenta, která se zeptá znovu uprostřed updatu, nedostane nic — a paleta,
 která hledá při každém stisku klávesy, by odkazovala mimo svoji zónu a přitom
-vypadala bezvadně. Přečti to jednou, ulož do public property a nech to Livewire
+vypadala bezvadně. Přečtěte to jednou, uložte do public property a nechte to Livewire
 přenášet. Command paleta to přesně tak dělá, takže paleta v zónovaném layoutu
 nepotřebuje žádnou konfiguraci.
 
@@ -233,7 +233,7 @@ odkazy druhé. Klíč pole vynechat nejde a opakovat se nemůže.
 Bez klíče `zones` je to jedna nepojmenovaná skupina, což je to, co chce
 jednozónová aplikace.
 
-Ve výchozím stavu vypnuté, a to záměrně: providery balíčků bootují dřív než tvoje
+Ve výchozím stavu vypnuté, a to záměrně: providery balíčků bootují dřív než vaše
 vlastní, takže tyhle routy se matchují **před** vším v `routes/web.php`. Aplikace
 s catch-all routou pod stejným prefixem dnes vyhraje a přestala by — to je
 rozhodnutí, které se dělá, ne default, který se zdědí.
@@ -267,7 +267,7 @@ ResourceRoutes::urlFor('orders', 'edit', ['record' => 7]); // /admin/orders/7/ed
 ResourceRoutes::urls();                                    // ['orders' => '/admin/orders', …]
 ```
 
-Full-page Livewire komponenta potřebuje layout a framework ho nedodává — nastav
+Full-page Livewire komponenta potřebuje layout a framework ho nedodává — nastavte
 si `livewire.component_layout` na svůj vlastní.
 
 ## Routing API
@@ -285,7 +285,7 @@ Zone::prefix(?string $zone): string
 
 `urlFor()` odpoví `null` ve dvou případech: když klíč nic neroutuje, a když routa
 potřebuje parametr, který tohle volání nedalo — třeba resource na doméně
-`{tenant}`. Obojí se vykreslí jako „bez odkazu", místo aby to shodilo menu.
+`{tenant}`. Obojí se vykreslí jako „bez odkazu“, místo aby to shodilo menu.
 
 Z `wire-core` na to sáhni přes `ResolvesPageUrls`, na které odpovídá `wire-panels`
 a které odpoví `null`, když routing nevlastní žádný balíček. `RegistersPageRoutes`

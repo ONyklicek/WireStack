@@ -70,4 +70,4 @@ ColorPicker::make('preview_color')
 | `disabled(bool\|Closure)` | bool | Znepřístupnit výběr a vzorky |
 | `live()` | — | Spustit Livewire update při každé změně |
 
-Label, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).
+Popisek, hint, tooltip a další sdílené metody viz [Společné API pole](index.md#spolecne-api-pole).

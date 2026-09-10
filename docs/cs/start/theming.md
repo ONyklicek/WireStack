@@ -18,7 +18,7 @@ Vzhled si přizpůsobíte na deseti úrovních, od nejlehčí po nejtěžší:
 | [Stylovací hooky](#stylovaci-hooky) | Jeden druh prvku, kdekoli se objeví | Vlastní CSS |
 | [Render hooky](#render-hooky) | Přidání něčeho, co tam není | Closure vracející view |
 | [Ikony](#ikony) | Výměna nebo přidání ikon globálně | `wire-core` config |
-| [Per-komponenta](#upravy-per-komponenta) | Jedno pole/sloupec/akce | Fluent API |
+| [Jednotlivé komponenty](#upravy-jednotlivych-komponent) | Jedno pole/sloupec/akce | Fluent API |
 | [Přepis pohledů](#prepis-pohledu) | Markup libovolné komponenty | Publish + editace Blade |
 
 ---
@@ -111,7 +111,7 @@ jinou Tailwind škálu jako `colors.zinc` nebo `colors.slate` stejným způsobem
 
 `success`, `danger`, `warning` a `info` jsou role, ne barvy. Co se za každou
 vykreslí, je odstín, který si zvolíte, a následuje ho každá plocha — tlačítka,
-badge, alerty, ikony modálů, toasty, tinty řádků tabulky i audit timeline:
+badge, alerty, ikony modalů, toasty, tinty řádků tabulky i audit timeline:
 
 ```php
 // config/wire-core.php
@@ -215,7 +215,7 @@ objevovali celé odpoledne:
 Tabulka má vlastní `->compact()` a ta dvě nastavení se skládají, místo aby se
 nahrazovala: celoaplikační compact vezme řádek z 65 px na 51, tabulka, která si
 navíc řekne o `->compact()`, jde na 40. Je to záměrné „tahle tabulka je zvlášť
-hustá", ne omylem dvakrát použité nastavení — ale stojí za to o tom vědět, než
+hustá“, ne omylem dvakrát použité nastavení — ale stojí za to o tom vědět, než
 napíšete obojí.
 
 Všechno je v `wire-core::partials.density`, který shell dává do hlavičky.
@@ -232,7 +232,7 @@ místo aby se přetahovala: **váš config je výchozí, volba člověka ho pře
 Kdo se přepínače nikdy nedotkne, dostane to, co jste nastavili — včetně pozdější
 změny té hodnoty.
 
-Volba je per prohlížeč, uložená v `localStorage`, aplikovaná před prvním
+Volba platí pro každý prohlížeč zvlášť, uložená v `localStorage`, aplikovaná před prvním
 vykreslením a znovu po `wire:navigate` — Livewire kopíruje `<html>` atributy
 staženého dokumentu přes živé, takže bez té poslední části by každý přechod
 volbu tiše zahodil.
@@ -358,7 +358,7 @@ Holý string se escapuje záměrně: markup musí být view nebo výslovný
 
 ### Pořadí a rozsah
 
-Registrace je ta samá, jakou používá každý lifecycle hook, takže bere stejné dvě
+Registrace je ta samá, jakou používá každý hook životního cyklu, takže bere stejné dvě
 volby:
 
 ```php
@@ -427,7 +427,7 @@ model `prefix:name`, vlastní sady a přístupnost viz
 ---
 
 <a id="per-component-tweaks"></a>
-## Úpravy per-komponenta
+## Úpravy jednotlivých komponent
 
 Pro jedno pole, sloupec nebo akci upřednostněte fluent API před přepisem
 pohledu. Každé pole podporuje libovolné HTML atributy a extra třídy:
@@ -471,7 +471,7 @@ kopii; smažte ji pro návrat k výchozímu stavu balíčku.
 > méně náročné na údržbu než přepis sdíleného pohledu. Přepsané pohledy znovu
 > zkontrolujte při [upgradu](upgrade.md).
 
-Sdílený chrome pole (label, hint, marker povinnosti, helper text, chyba) žije
+Sdílený chrome pole (popisek, hint, marker povinnosti, helper text, chyba) žije
 v `partials/field-wrapper-start.blade.php` a `field-wrapper-end.blade.php`;
 jejich přepisem přestylujete wrapper všech polí najednou.
 

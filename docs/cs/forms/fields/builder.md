@@ -31,7 +31,7 @@ Builder::make('content')
     ->reorderable()
 ```
 
-Tlačítko „přidat" otevře nabídku všech deklarovaných bloků; výběrem se přidá
+Tlačítko „přidat“ otevře nabídku všech deklarovaných bloků; výběrem se přidá
 položka daného typu.
 
 ## Uložený tvar

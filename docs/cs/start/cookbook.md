@@ -1,6 +1,6 @@
 ---
 order: 70
-summary: Samostatné receptury postavené na veřejném API — zkopíruj jednu do komponenty a uprav si ji.
+summary: Samostatné receptury postavené na veřejném API — zkopírujte jednu do komponenty a upravte si ji.
 ---
 
 # Kuchařka
@@ -139,7 +139,7 @@ nahrazuje se pouze krok perzistence.
 ## Side efekty po uložení
 
 `afterSave()` dostane uložený záznam — použijte ho pro notifikace, události nebo
-práci s relacemi, která potřebuje perzistovaný model.
+práci s relacemi, která potřebuje uložený model.
 
 ```php
 $form

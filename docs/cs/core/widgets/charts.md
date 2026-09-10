@@ -49,7 +49,7 @@ ChartWidget::make()
 
 ### Dynamická data s closurami
 
-Datasety a labely přijímají closury. Aktivní hodnota filtru se předá jako argument:
+Datasety a popisky přijímají closury. Aktivní hodnota filtru se předá jako argument:
 
 ```php
 ChartWidget::make()
@@ -66,13 +66,13 @@ ChartWidget::make()
     ])
 ```
 
-### Dropdown filtr
+### Filtr v rozbalovací nabídce
 
 ```php
 ->filter(array $options, ?string $default = null)
 ```
 
-Přidá dropdown na widget. Vybraný klíč se předá closurám na datasety a labely —
+Přidá rozbalovací nabídku na widget. Vybraný klíč se předá closurám na datasety a popisky —
 **na serveru**, protože tam ty closury žijí.
 
 ```php
@@ -163,8 +163,8 @@ Widget má tři vizuální režimy, vybrané z `type()` + `variant()`:
 | `type()` | `variant()` | Vzhled |
 | --- | --- | --- |
 | `vertical` | `finance` | Vertikální sloupce: formátovaná hodnota nahoře, světlá max-height dráha, `MM / YYYY` popisek dole |
-| `vertical` | `system` / `default` | Vertikální sloupce na 0–100% dráze s hlavičkou ikona + label + procento a volitelnými mřížkovými čárami |
-| `horizontal` | `system` / `default` | Horizontální progress bary: label vlevo, hodnota vpravo |
+| `vertical` | `system` / `default` | Vertikální sloupce na 0–100% dráze s hlavičkou ikona + popisek + procento a volitelnými mřížkovými čárami |
+| `horizontal` | `system` / `default` | Horizontální progress bary: popisek vlevo, hodnota vpravo |
 
 ### Finanční sloupce
 
@@ -214,9 +214,9 @@ BarChartWidget::make()
 
 Procento výplně každého sloupce (`percentageFor(ChartItem)`) se resolvuje v tomto pořadí:
 
-1. Explicitní per-item `->percentage(0–100)` vyhrává.
+1. Explicitní `->percentage(0–100)` u jednotlivých položek vyhrává.
 2. Jinak se hodnota škáluje proti widget `->maxValue()`.
-3. Jinak (procentní režim bez stropu) se hodnota auto-škáluje proti největší položce.
+3. Jinak (procentní režim bez stropu) se hodnota automaticky škáluje proti největší položce.
 
 Výsledek se vždy ořízne na `0–100`. Velikost výplně je **jediný** dynamický styl, předaný jako CSS proměnná a konzumovaný Tailwind arbitrary hodnotami:
 

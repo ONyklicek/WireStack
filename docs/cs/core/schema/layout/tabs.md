@@ -7,7 +7,7 @@ summary: Lišta záložek nad sadou panelů, přepínaná v prohlížeči — ka
 
 Lišta záložek nad sadou panelů. Sáhni po `Tabs`, když jsou skupiny dlouhého
 formuláře **alternativy** — Profil / Předvolby / Zabezpečení — a ne posloupnost,
-kterou od někoho čekáš projít po pořádku. Když *je* to posloupnost, použij
+kterou od někoho čekáte projít po pořádku. Když *je* to posloupnost, použijte
 [`Wizard`](wizard.md).
 
 ```php
@@ -29,24 +29,24 @@ a každý panel se přepíná přes `x-show`, takže změna záložky je okamži
 tenhle layout ve formuláři bezpečný: vnořená pole se odesílají a validují
 dohromady bez ohledu na to, která záložka je vidět. Povinné pole na třetí záložce
 pořád blokuje odeslání a jeho chybová hláška se vykreslí v panelu, kam patří. Nic
-se nemusí nejdřív „aktivovat".
+se nemusí nejdřív „aktivovat“.
 
 **Vykreslují se jen děti typu `Tab`.** `getTabs()` profiltruje schéma na viditelné
-instance `Tab` — cokoli jiného, co dáš přímo do `Tabs::make()->schema([...])`,
+instance `Tab` — cokoli jiného, co dáte přímo do `Tabs::make()->schema([...])`,
 třeba holý `TextInput`, se **tiše zahodí**. Pole patří dovnitř záložky, nikdy
 vedle ní.
 
 **Skryté záložky se odeberou a zbytek přeindexuje**, takže `activeTab(1)` vždycky
-znamená „druhá záložka, která se opravdu vykresluje". Záložka skrytá podmínkou
+znamená „druhá záložka, která se opravdu vykresluje“. Záložka skrytá podmínkou
 nikdy nenechá v liště díru ani neposune aktivní panel na špatný obsah.
 
-Label záložky spadne na `Str::headline()` jejího jména, takže `Tab::make('Profile')`
+Popisek záložky spadne na `Str::headline()` jejího jména, takže `Tab::make('Profile')`
 žádné `->label()` nepotřebuje. Na úzkých obrazovkách se lišta scrolluje vodorovně
 místo aby se zalamovala — zalomené záložky přirozené šířky vypadají jako dvě
 roztřepené řady.
 
 `Tab` rozkládá vlastní děti do gridu, jehož int varianta rozumí **1 až 4**
-sloupcům; na cokoli dalšího předej mapu breakpointů (`['default' => 1, 'lg' => 6]`).
+sloupcům; na cokoli dalšího předejte mapu breakpointů (`['default' => 1, 'lg' => 6]`).
 
 ## Základní použití
 

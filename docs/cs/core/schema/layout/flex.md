@@ -26,22 +26,22 @@ přidat i odebrat bez dotyku na data.
 **Je to nejdřív sloupec a až potom řádek.** Vykreslený element je vždycky
 `flex flex-col` a vodorovným ho dělá až breakpoint z `from()` — ve výchozím stavu
 `md:flex-row`. Na telefonu se tedy děti skládají pod sebe, což je skoro vždycky
-to, co chceš, a není to nic, o co bys musel žádat.
+to, co chcete, a není to nic, o co byste museli žádat.
 
 **Každé dítě je zabalené** do boxu s `min-w-0`, a dokud je zapnutý `grow()`
 (výchozí stav), i do `flex-1`. Dva důsledky, které stojí za to znát:
 
 - `min-w-0` je důvod, proč dlouhý nezalomitelný řetězec uvnitř dítěte nerozerve
   řádek do šířky. Flexové položky se jinak odmítají zmenšit pod obsah; tohle je ta
-  oprava, udělaná za tebe.
-- `flex-1` je důvod, proč děti vyjdou **stejně velké bez ohledu na obsah**. Vypni
-  ho přes `grow(false)`, když chceš přirozené šířky — tlačítko velké jako tlačítko
+  oprava, udělaná za vás.
+- `flex-1` je důvod, proč děti vyjdou **stejně velké bez ohledu na obsah**. Vypněte
+  ho přes `grow(false)`, když chcete přirozené šířky — tlačítko velké jako tlačítko
   vedle vstupu, který si vezme zbytek.
 
 **Tři setry mají uzavřený slovník a cokoli mimo něj se tiše ignoruje:**
 
 - `from()` rozumí `sm`, `md` a `lg`. **Cokoli jiného spadne na `md`** — `from('xl')`
-  neselže, jen se chová, jako bys ho nenapsal.
+  neselže, jen se chová, jako byste ho nenapsali.
 - `justify()` rozumí `start`, `end`, `center`, `between`, `around`, `evenly`;
   neznámá hodnota nevygeneruje žádnou třídu.
 - `align()` rozumí `start`, `end`, `center`, `stretch`, `baseline`, stejným
@@ -77,8 +77,8 @@ Flex::make()
 ```
 
 S `grow(false)` si každé dítě vezme šířku, kterou opravdu potřebuje. `align('end')`
-zarovná tlačítko na spodní hranu vstupu místo na horní, což chceš vždycky, když
-jedno dítě má label a druhé ne.
+zarovná tlačítko na spodní hranu vstupu místo na horní, což chcete vždycky, když
+jedno dítě má popisek a druhé ne.
 
 ## Řízení řádku
 
@@ -138,7 +138,7 @@ class OrderFilters extends Component
 ```
 
 Tři prvky stejné šířky od `md` nahoru, na telefonu pod sebou, se spodními hranami
-zarovnanými, protože jeden z nich nese delší label než ostatní.
+zarovnanými, protože jeden z nich nese delší popisek než ostatní.
 
 ## Flex API
 

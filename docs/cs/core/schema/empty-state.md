@@ -39,14 +39,14 @@ má `__toString()` — a `Action` z tohohle frameworku implementuje `Htmlable`
 Error: Object of class NyonCode\WireCore\Actions\Action could not be converted to string
 ```
 
-Předej ji vykreslenou — `->toHtml()`, nebo vlastní Blade řetězec:
+Předejte ji vykreslenou — `->toHtml()`, nebo vlastní Blade řetězec:
 
 ```php
 ->actions([$action->toHtml()])
 ```
 
-Stav „žádné záznamy" u tabulky i samostatný tag `<x-wire::empty-state>` se
-vykreslují přes tentýž partial, takže cokoli se tady naučíš, platí ve všech třech.
+Stav „žádné záznamy“ u tabulky i samostatný tag `<x-wire::empty-state>` se
+vykreslují přes tentýž partial, takže cokoli se tady naučíte, platí ve všech třech.
 
 ## Základní použití
 
@@ -71,7 +71,7 @@ EmptyState::make()
     ])
 ```
 
-Všimni si toho `->toHtml()`. Když předáš víc tlačítek, zalomí se na další řádky
+Všimněte si toho `->toHtml()`. Když předáte víc tlačítek, zalomí se na další řádky
 a řádek je vycentrovaný pod popisem.
 
 ## Closure místo řetězce
@@ -170,4 +170,4 @@ společný layoutový povrch. Viz [Společné API layoutů](overview.md#spolecne
 - [Schema](overview.md) — slovník, do kterého tohle patří, a společný povrch
 - [Callout](callout.md) — druhá prime komponenta
 - [Akce](../actions/index.md) — co patří do řádku tlačítek
-- [Tabulky](../../table/overview.md) — vlastní stav „žádné záznamy" u tabulky
+- [Tabulky](../../table/overview.md) — vlastní stav „žádné záznamy“ u tabulky

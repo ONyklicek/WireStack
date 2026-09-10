@@ -180,8 +180,8 @@ dělá Cashier a Fortify:
 php artisan vendor:publish --tag=wire-core::providers
 ```
 
-Publikuje se jako `app/Providers/WireDashboardServiceProvider.php` a je tvůj
-k úpravám: zaregistruj ho v `bootstrap/providers.php` a deklaruj v něm své
+Publikuje se jako `app/Providers/WireDashboardServiceProvider.php` a je váš
+k úpravám: zaregistrujte ho v `bootstrap/providers.php` a deklarujte v něm své
 dashboardy i skupiny menu na jednom místě.
 
 ### Jak se vykresluje
@@ -202,7 +202,7 @@ class SalesDashboardPage extends DashboardPage
 Obě cesty zůstávají rovnocenné: stránka, která si deklaruje vlastní
 `getWidgets()` a žádný dashboard nejmenuje, funguje jako dřív. Stránka, která
 nedeklaruje ani jedno, se odmítne vykreslit místo prázdné mřížky — prázdná se
-čte jako „žádné widgety", ne jako chyba.
+čte jako „žádné widgety“, ne jako chyba.
 
 ### Jak se dostane do menu
 

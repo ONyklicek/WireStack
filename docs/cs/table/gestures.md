@@ -33,7 +33,7 @@ a všechny tři čekají:
 - **Označování tažením** promění stisk v checkboxovém sloupci na blokový výběr —
   gesto, které lidé najdou omylem dřív než schválně.
 - **Rozsahový výběr** přepisuje význam modifikovaného kliku: `Shift`+klik přestane
-  být klikem a stane se z něj „všechno mezi tímhle a posledním". Ve správci
+  být klikem a stane se z něj „všechno mezi tímhle a posledním“. Ve správci
   souborů správně, v seznamu článků překvapivě.
 
 Tabulka se `selectable()` proto začíná jako zaškrtávátka a nic víc a delegovaný
@@ -60,7 +60,7 @@ handle, vůbec nic — řekněte si o to:
 
 ## Co se počítá jako gesto
 
-Šest schopností, každá zvlášť přepínatelná. „Výchozí" je to, co dostane tabulka,
+Šest schopností, každá zvlášť přepínatelná. „Výchozí“ je to, co dostane tabulka,
 která `gestures()` nikdy nezavolá:
 
 | Schopnost | Výchozí | Co pokrývá |
@@ -128,7 +128,7 @@ tabulky rozhoduje, co *má*.
 ## `keyboard()` má tři stavy
 
 Ostatních pět schopností jsou prosté booleany. `keyboard` je třístavová, protože
-„zapnuto" tu musí znamenat dvě různé věci:
+„zapnuto“ tu musí znamenat dvě různé věci:
 
 | Hodnota | Význam |
 |---------|--------|
@@ -162,7 +162,7 @@ Jedinou výjimkou je `->onKey()`, které potřebuje klávesovou vrstvu, aby měl
 poslouchat. S vypnutou `keyboard` nemá vazba `onKey()` odkud vystřelit.
 
 Samotný výběr zůstává taky nedotčený. I s vypnutými gesty fungují checkboxy, oba
-ovladače „vybrat vše" i bulk bar přesně jako dřív — přijdete o zkratky k nim, ne
+ovladače „vybrat vše“ i bulk bar přesně jako dřív — přijdete o zkratky k nim, ne
 o funkci. Buňka výběru pak na modifikovaný klik reaguje přepnutím, protože
 s vypnutými rozsahy by na něj nereagoval nikdo jiný.
 
@@ -199,7 +199,7 @@ Klíče schopností se párují volně — `drag_select`, `drag-select`, `dragSe
 i `dragselect` jsou tentýž klíč. **Neznámý** klíč vyhodí
 `TableConfigurationException`, místo aby tiše nedělal nic: překlep v povolení je
 přesně ten druh chyby, která se projeví až za půl roku jako „proč tohle
-nefunguje".
+nefunguje“.
 
 Per-table `->gestures(...)` vždy přebije výchozí hodnotu z configu.
 
@@ -265,7 +265,7 @@ Všechno, co vrstva nabízí, na jednom místě.
 
 | Volání | Co dělá |
 |--------|---------|
-| `->gestures()` | Povolí všechny schopnosti. Klávesnice zůstane na „rozhodne tabulka" |
+| `->gestures()` | Povolí všechny schopnosti. Klávesnice zůstane na „rozhodne tabulka“ |
 | `->gestures(false)` | Nepovolí vůbec nic |
 | `->gestures(fn (TableGestures $g) => …)` | Nastaví schopnosti téhle tabulky na místě |
 | `->gestures(TableGestures $set)` | Převezme hotovou sadu |

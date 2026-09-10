@@ -13,7 +13,7 @@ stavu.
 ## Enumy
 
 PHP enumy nelze stringifikovat pomocí `(string) $enum`, přesto Eloquent enum casty předávají surovou
-instanci každému display a state surface. `EnumResolver` je jediný kanonický vlastník, který
+instanci každému zobrazovacímu a stavovému povrchu. `EnumResolver` je jediný kanonický vlastník, který
 normalizuje takové hodnoty; navazující balíčky (table, forms, infolists, exports) na něj delegují
 místo re-enkódování `(string) $enum` nebo lokálních `match` map.
 
@@ -36,13 +36,13 @@ Použijte `scalar()` pro klíče map, porovnání a copy hodnoty; `display()` (n
 hodnota zobrazuje. Ne-enum hodnoty vždy projdou beze změny, takže je bezpečné helpery volat na
 cokoli.
 
-`options()` pohání Filament-style enum-jako-options zkratku: jakýkoli option-based surface —
+`options()` pohání zkratku „enum jako možnosti“ ve stylu Filamentu: jakýkoli povrch postavený na možnostech —
 form `Select` / `Radio` / `CheckboxList` (přes sdílený trait `WireForms\Concerns\HasOptions`),
 table `SelectColumn` a `SelectFilter`, plus generický `Column::editable()` / `filterable()` /
 `filterAsSelect()` — přijímá `->options(Status::class)` a deleguje rozvinutí sem. Každý case
-klíčuje přes `scalar()` a labeluje přes stejné kanonické `label()` resolvování, takže option čte
-identicky jako odpovídající display buňka. Jednohodnotové form pole, jehož options pocházejí z enumu,
-také získá automatické `in:` validační pravidlo (viz [Formuláře → Select](../../forms/fields/select.md#options-z-enumu)).
+klíčuje přes `scalar()` a popisek řeší stejným kanonickým `label()`, takže možnost čte
+identicky jako odpovídající display buňka. Jednohodnotové formulářové pole, jehož možnosti pocházejí z enumu,
+také získá automatické `in:` validační pravidlo (viz [Formuláře → Select](../../forms/fields/select.md#moznosti-z-enumu)).
 
 ### Čím soubor je — rodina, ne formát
 
@@ -99,9 +99,9 @@ Enum použitý jako cast může implementovat kterýkoli z těchto pro řízení
 
 | Kontrakt | Metoda | Efekt |
 |----------|--------|--------|
-| `Enum\HasLabel` | `getLabel(): ?string` | Display surface vykreslí tento label místo výchozího headline názvu case |
-| `Enum\HasColor` | `getColor(): string\|Color\|null` | `BadgeColumn` / `IconColumn` / `IconEntry` auto-resolvují barvu |
-| `Enum\HasIcon` | `getIcon(): string\|Icon\|null` | Stejné surface auto-resolvují ikonu |
+| `Enum\HasLabel` | `getLabel(): ?string` | Zobrazovací povrch vykreslí tento popisek místo výchozího headline názvu case |
+| `Enum\HasColor` | `getColor(): string\|Color\|null` | `BadgeColumn` / `IconColumn` / `IconEntry` automaticky resolvují barvu |
+| `Enum\HasIcon` | `getIcon(): string\|Icon\|null` | Stejné povrchy automaticky resolvují ikonu |
 
 ```php
 use NyonCode\WireCore\Foundation\Colors\Color;

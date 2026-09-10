@@ -23,7 +23,7 @@ skládá; vrstvy, které ty věci už vlastní, je vlastní dál.
 ## Jak to funguje
 
 Modul je **plugin**, ne paralelní registrační systém. To je celé to designové
-rozhodnutí a je to ono, co drží lifecycle poctivý:
+rozhodnutí a je to ono, co drží životní cyklus poctivý:
 
 1. Registruje se jako každý jiný plugin — z `config('wire-core.plugins')`, když
    ho deklaruje aplikace, nebo z vlastního service provideru balíčku, když ho
@@ -237,4 +237,4 @@ describe-module billing      # jeden, podle id
 | `dashboards(): array` | `array<int, class-string>` | Třídy dashboardů, které přináší |
 | `navigation(): ?NavigationGroup` | `NavigationGroup\|null` | Skupina menu, pod kterou její položky patří |
 | `dependencies(): array` | `array<int, string>` | Id modulů, které se musí zaregistrovat dřív (přes `HasDependencies`) |
-| `register()` / `boot()` | `void` | Plugin lifecycle; výchozí prázdný, přepiš pro hooky nebo bindingy |
+| `register()` / `boot()` | `void` | Životní cyklus pluginu; výchozí prázdný, přepište pro hooky nebo bindingy |

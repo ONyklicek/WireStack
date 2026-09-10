@@ -1,6 +1,6 @@
 ---
 order: 25
-summary: Pole, která na sebe reagují, aniž by opustila schéma — které closures vidí živý stav, kdy se přepočítají a co stojí každý round trip.
+summary: Pole, která na sebe reagují, aniž by opustila schéma — které closury vidí živý stav, kdy se přepočítají a co stojí každý round trip.
 ---
 
 # Reaktivní pole
@@ -58,7 +58,7 @@ Section::make('Billing')
 
 Připojte interaktivní `Action` k affixu inputu nebo oblasti hintu pomocí `suffixAction()`,
 `prefixAction()` nebo `hintAction()`. Callback akce běží na serveru se stejným
-kontextem `$get` / `$set` / `$state` — ideální pro lookup, „generate" helper nebo inline
+kontextem `$get` / `$set` / `$state` — ideální pro lookup, „generate“ helper nebo inline
 verify tlačítko:
 
 ```php
@@ -96,7 +96,7 @@ hodnotu jako `$state`, předchozí hodnotu jako `$old`, plus `$get` / `$set` / `
 ```php
 TextInput::make('type')
     ->afterStateUpdated(function ($state, $old, $get, $set) {
-        // Auto-naplnit závislé pole z právě zadané hodnoty.
+        // Automaticky naplnit závislé pole z právě zadané hodnoty.
         $set('vat_id', $state === 'business' ? null : '');
     });
 ```
@@ -110,14 +110,14 @@ TextInput::make('quantity')
 
 Veškerá tato reaktivita — `afterStateUpdated()`, live validace, field akce, remote
 select hledání a podmíněná viditelnost (`visibleWhen()` / `visible(fn ($get) => …)`) — funguje
-i pro pole uvnitř `Repeater` položek: dispatch vyresolvuje pole per položka a
+i pro pole uvnitř `Repeater` položek: dispatch vyresolvuje pole v každé položce a
 `$get`/`$set` čtou a zapisují do vlastního bagu té položky (takže `$set('slug', …)` na řádku 2 sáhne jen na
 řádek 2). Podmíněné pole uvnitř repeateru se zobrazí nebo skryje podle stavu **své vlastní položky**,
 ne svých sousedů.
 
 Vícekrokové formuláře dostávají stejné zacházení: uvnitř Livewire hostitele samostatný
 [Wizard](../core/schema/layout/wizard.md#validace-po-krocich) zvaliduje aktuální krok na serveru, než
-„Další" postoupí, a neúspěšné odeslání skočí na první krok obsahující chybu.
+„Další“ postoupí, a neúspěšné odeslání skočí na první krok obsahující chybu.
 
 ## Předvyplnění formuláře z akce
 

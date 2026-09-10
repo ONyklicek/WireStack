@@ -1,11 +1,11 @@
 ---
 order: 52
-summary: "CSV načtené zpět do modelu: hlavičky namapované, buňky přetypované a zvalidované per sloupec a chyby posbírané místo fatálních."
+summary: "CSV načtené zpět do modelu: hlavičky namapované, buňky přetypované a zvalidované po sloupcích a chyby posbírané místo fatálních."
 ---
 
 # Importy tabulky
 
-Wire Table umí importovat řádky z nahraného CSV souboru do modelu tabulky — zrcadlo [Exportů](exports.md). Sloupce mapují hlavičky souboru na atributy modelu, každá buňka se přetypuje a zvaliduje per sloupec a selhání validace po řádcích se sbírají místo přerušení běhu.
+Wire Table umí importovat řádky z nahraného CSV souboru do modelu tabulky — zrcadlo [Exportů](exports.md). Sloupce mapují hlavičky souboru na atributy modelu, každá buňka se přetypuje a zvaliduje podle svého sloupce a selhání validace po řádcích se sbírají místo přerušení běhu.
 
 ## Deklarace importéru
 
@@ -70,7 +70,7 @@ class Contacts extends Component
 
 ## Mapování hlaviček
 
-Sloupec se spáruje s hlavičkou souboru podle svého **labelu**, **názvu atributu** nebo libovolného aliasu z `guess()` — case-insensitive a otrimované. Mapování se vyresolvuje jednou z řádku hlaviček.
+Sloupec se spáruje s hlavičkou souboru podle svého **popisku**, **názvu atributu** nebo libovolného aliasu z `guess()` — case-insensitive a otrimované. Mapování se vyresolvuje jednou z řádku hlaviček.
 
 - `requiredMapping()` označí hlavičku, kterou soubor **musí** obsahovat; chybějící vyhodí `RuntimeException` před zpracováním jakéhokoli řádku.
 - Nenamapované volitelné sloupce se pro každý řádek jednoduše přeskočí.
@@ -82,7 +82,7 @@ Sloupec se spáruje s hlavičkou souboru podle svého **labelu**, **názvu atrib
 ```php
 $result = $this->importTable($path);
 
-$result->getImported();     // perzistované řádky
+$result->getImported();     // uložené řádky
 $result->getFailedCount();  // řádky přeskočené validací
 $result->hasFailures();
 $result->getFailures();     // [['row' => 3, 'errors' => ['The Email field must be…']], …]
@@ -134,7 +134,7 @@ Importér zvládá UTF-8 BOM, prázdné řádky a řádky s méně/více buňkam
 | `createUsing(Closure)` | `TableImport` | Vlastní handler perzistence po řádcích |
 | `label(string\|Closure)` | `ImportColumn` | Popisek hlavičky (výchozí je headline z názvu) |
 | `requiredMapping()` | `ImportColumn` | Soubor musí obsahovat tento sloupec |
-| `rules(array)` | `ImportColumn` | Validační pravidla per buňka |
+| `rules(array)` | `ImportColumn` | Validační pravidla pro buňku |
 | `castStateUsing(Closure)` | `ImportColumn` | Transformovat surovou hodnotu buňky |
 | `guess(array)` | `ImportColumn` | Alternativní názvy hlaviček |
 | `importTable(string)` | hostitel | Spustí import hned, z reálné cesty |
@@ -156,7 +156,7 @@ public function importInBackground(): void
 }
 ```
 
-**Nahraný soubor nejdřív ulož a předej to, co uložení vrátí.**
+**Nahraný soubor nejdřív uložte a předejte to, co uložení vrátí.**
 `queueTableImport()` bere **cestu na disku**, ne reálnou cestu dočasného uploadu:
 worker může být klidně jiný stroj a dočasný soubor Livewire tam v tu chvíli
 nebude.
@@ -167,8 +167,8 @@ odmítl, hlásí **varování**, ne úspěch: import, který potichu zahodil ř�
 přesně ten druh úspěchu, o kterém je lepší vědět.
 
 **Chybějící soubor job položí.** Čtečka CSV bere nečitelnou cestu jako „žádné
-řádky", což je správně, když se uživatel dívá, a lež, když běží fronta:
-„naimportováno 0 řádků, 0 chyb" se nedá odlišit od prázdného souboru. Worker,
+řádky“, což je správně, když se uživatel dívá, a lež, když běží fronta:
+„naimportováno 0 řádků, 0 chyb“ se nedá odlišit od prázdného souboru. Worker,
 který upload nenajde, vyhodí `ImportException` a zkusí to znovu.
 
 ## Úprava importu, který nevlastníte

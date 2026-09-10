@@ -67,12 +67,12 @@ zůstanou viditelná, a oba nechají vycentrovaný dialog na desktopu beze změn
 safe-area padding, úchyt pro zavření tažením a focus trap automaticky.
 
 Breakpoint je ve výchozím stavu globální `wire-core.mobile.breakpoint` (`sm`, tj.
-`< 640px`) a lze ho zvýšit per akce pomocí `->mobileBreakpoint('md')` (`< 768px`,
+`< 640px`) a lze ho zvýšit u jednotlivých akcí pomocí `->mobileBreakpoint('md')` (`< 768px`,
 zahrnuje malé tablety) nebo `'lg'` (`< 1024px`). Globální výchozí viz
 [Konfigurace → Mobil](../start/configuration.md#mobil).
 
 Modal postavený přímo bere ještě jedno: `->mobileWidth(string $width)` nastaví
-šířku, kterou panel použije pod tím breakpointem — pro případ, kdy nechceš ani
+šířku, kterou panel použije pod tím breakpointem — pro případ, kdy nechcete ani
 sheet, ani celou obrazovku.
 
 **Potvrzení, kde není co potvrzovat** — hláška, kterou uživatel může jen vzít na
@@ -172,7 +172,7 @@ Action::make('create')
                 TextInput::make('name')->required(),
                 TextInput::make('email')->email()->required(),
             ])
-            ->validation(['name' => 'required|min:2']),    // extra pravidla per krok
+            ->validation(['name' => 'required|min:2']),    // extra pravidla pro každý krok
 
         ModalStep::make('Settings')
             ->schema([
@@ -198,9 +198,9 @@ hook `afterValidation`; hook `before` dalšího kroku může vrátit pole, aby h
 předvyplnil. **Submit** znovu zvaliduje každý krok kumulativně (hooky
 `afterValidation` se nespouští znovu, takže nikdy nevystřelí dvakrát).
 
-### Přizpůsobení labelů navigace
+### Přizpůsobení popisků navigace
 
-Labely wizardu **Back**, **Next** a submit-in-progress **Saving…** jsou
+Popisky wizardu **Back**, **Next** a submit-in-progress **Saving…** jsou
 konfigurovatelné a spadají na přeložitelné výchozí hodnoty
 (`wire-core::actions.{wizard_previous,wizard_next,submit_saving}`):
 
@@ -280,7 +280,7 @@ Action::make('process')
 
 ### API ActionHalt
 
-Halt je modal, takže bere slovník modálů — tytéž `heading()` a `description()`,
+Halt je modal, takže bere slovník modalů — tytéž `heading()` a `description()`,
 které používají třídy na této stránce:
 
 ```php
@@ -295,8 +295,8 @@ které používají třídy na této stránce:
 ->validation(array $rules, ?array $messages = null, ?array $attributes = null)
 ```
 
-Celý povrch a to, co halt dělá s `before()` hooky při potvrzeném průchodu, najdeš
-v [Lifecycle a fronty](actions/lifecycle.md#api-haltu).
+Celý povrch a to, co halt dělá s `before()` hooky při potvrzeném průchodu, najdete
+v [Životním cyklu a frontách](actions/lifecycle.md#api-haltu).
 
 ## Blade komponenty
 

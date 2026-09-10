@@ -44,7 +44,7 @@ To provede:
 php artisan migrate
 ```
 
-To vytvoří tabulku `reorderable_column_orders` použitou pro ukládání preferencí pořadí sloupců per uživatel. Tabulka má následující strukturu:
+To vytvoří tabulku `reorderable_column_orders` použitou pro ukládání uživatelských preferencí pořadí sloupců. Tabulka má následující strukturu:
 
 | Sloupec | Typ | Popis |
 |---|---|---|
@@ -56,7 +56,7 @@ To vytvoří tabulku `reorderable_column_orders` použitou pro ukládání prefe
 | `created_at` | timestamp | |
 | `updated_at` | timestamp | |
 
-Unikátní omezení na `(user_id, model_type, table_identifier)` zajišťuje jedno pořadí sloupců per uživatel, per model, per table komponenta.
+Unikátní omezení na `(user_id, model_type, table_identifier)` zajišťuje jedno pořadí sloupců pro každou kombinaci uživatele, modelu a komponenty tabulky.
 
 ## SortableJS
 

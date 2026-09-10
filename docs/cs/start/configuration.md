@@ -1,6 +1,6 @@
 ---
 order: 30
-summary: Každý config soubor, který tyhle balíčky publikují, o čem který klíč rozhoduje a co dostaneš, když neřekneš nic.
+summary: Každý config soubor, který tyhle balíčky publikují, o čem který klíč rozhoduje a co dostanete, když neřeknete nic.
 ---
 
 # Konfigurace
@@ -185,7 +185,7 @@ Pluginy implementující `HasConfiguration` mohou také číst sloučené volby 
 
 Třídy pluginů, životní cyklus, závislosti, makra, hooky, type registry, query pipes a konfiguraci pluginů viz [Core Pluginy](../core/plugins/index.md).
 
-### Modály
+### Modaly
 
 Hodnoty šířky modalu jsou size tokeny ve stylu Tailwindu jako `sm`, `md`, `lg`, `xl`, `2xl` nebo `full`.
 
@@ -198,12 +198,12 @@ Hodnoty šířky modalu jsou size tokeny ve stylu Tailwindu jako `sm`, `md`, `lg
 ],
 ```
 
-Modální akce a slide-overy viz [Core Modály](../core/modals.md).
+Modální akce a slide-overy viz [Core Modaly](../core/modals.md).
 
 <a id="mobile"></a>
 ### Mobil
 
-Plovoucí panely (dropdowny, menu skupin akcí, select/date/tag pickery, panely filtrů a přepínání sloupců tabulky) a mobilní varianty modalů se pod breakpointem zobrazí jako **bottom sheet**. Toto jsou globální výchozí hodnoty — každá komponenta je přepisuje per instance.
+Plovoucí panely (rozbalovací nabídky, menu skupin akcí, select/date/tag pickery, panely filtrů a přepínání sloupců tabulky) a mobilní varianty modalů se pod breakpointem zobrazí jako **bottom sheet**. Toto jsou globální výchozí hodnoty — každá komponenta je přepisuje u své instance.
 
 ```php
 'mobile' => [
@@ -219,7 +219,7 @@ Plovoucí panely (dropdowny, menu skupin akcí, select/date/tag pickery, panely 
 ],
 ```
 
-Přepisy per komponenta (vyhrávají nad globálními výchozími):
+Přepisy u jednotlivých komponent (vyhrávají nad globálními výchozími):
 
 ```php
 // Sheet zap/vyp
@@ -238,7 +238,7 @@ Action::make('edit')->form([...])->slideOverOnMobile()->mobileBreakpoint('md');
 <x-wire::dropdown :sheet-on-mobile="false" :breakpoint="'md'">…</x-wire::dropdown>
 ```
 
-Priorita: per-komponenta (`->sheetOnMobile()` / `->mobileBreakpoint()`) > searchable-auto-floating > globální konfigurace. Searchable selecty jsou defaultně plovoucí, aby vyhledávací pole zůstalo použitelné. Sheety automaticky přidávají safe-area padding, úchyt pro zavření tažením a focus trap.
+Priorita: jednotlivá komponenta (`->sheetOnMobile()` / `->mobileBreakpoint()`) > searchable-auto-floating > globální konfigurace. Searchable selecty jsou defaultně plovoucí, aby vyhledávací pole zůstalo použitelné. Sheety automaticky přidávají safe-area padding, úchyt pro zavření tažením a focus trap.
 
 ## Forms
 
@@ -348,7 +348,7 @@ Viz [Instalace Sortable](../sortable/installation.md).
 ## Panels
 
 Konfigurace `wire-panels` rozhoduje, jestli framework zaregistruje stránky
-resource jako routy za tebe.
+resource jako routy za vás.
 
 ```php
 return [
@@ -364,11 +364,11 @@ return [
 ```
 
 `enabled` je `false`, protože referenční cestou zůstává `Route::wireResources()`
-ve tvém vlastním route souboru — tohle jsou tytéž argumenty skupiny, předané
+ve vašem vlastním route souboru — tohle jsou tytéž argumenty skupiny, předané
 jednou, pro aplikaci, která si kvůli nim nechce držet route soubor.
 
-Dvě věci, které je dobré vědět, než to zapneš. Providery balíčků bootují dřív než
-tvoje vlastní, takže tyhle routy se matchují **před** vším v `routes/web.php`;
+Dvě věci, které je dobré vědět, než to zapnete. Providery balíčků bootují dřív než
+vaše vlastní, takže tyhle routy se matchují **před** vším v `routes/web.php`;
 aplikace s catch-all routou pod stejným prefixem dnes vyhraje a přestala by.
 A zapnout tohle *a zároveň* volat `Route::wireResources()` je odmítnuto, ne
 smířeno — zaregistrovalo by to každou stránku dvakrát pod jedním jménem routy.
@@ -376,7 +376,7 @@ smířeno — zaregistrovalo by to každou stránku dvakrát pod jedním jménem
 `only` / `except` berou registrované klíče: klíč resource nebo klíč dashboardu,
 tentýž, kterým je adresuje menu a `ResourceRoutes::urlFor()`.
 
-Pro víc mount pointů — `admin`, `business`, `production` — přidej klíč `zones`,
+Pro víc mount pointů — `admin`, `business`, `production` — přidejte klíč `zones`,
 jednu položku na zónu; každá zdědí hodnoty nad sebou a přepíše to, co pojmenuje.
 Klíč pole se stane prefixem jména routy, takže tentýž resource ve dvou zónách
 dostane dvě jména rout místo dvou rout, které se perou o jedno.
@@ -451,7 +451,7 @@ Nastavení, použití modelu a prořezávání viz [Audit Log](../core/audit.md)
 ## Admin
 
 Shell publikuje jediný blok a je to brand — všechno ostatní kolem něj je markup,
-který si napíšeš (viz [Admin shell](../admin/overview.md)):
+který si napíšete (viz [Admin shell](../admin/overview.md)):
 
 ```php
 // config/wire-admin.php
@@ -495,6 +495,6 @@ popsaný tam, kde se vysvětluje věc, kterou deklaruje:
 | `tenancy` | `enabled` a `column`, na který se aplikuje tenant scope | [Autorizace](authorization.md) |
 
 `config/wire-table.php` má ještě jeden: `preferences` volí driver, do kterého se
-ukládá per-uživatelské pořadí sloupců, jejich viditelnost a velikost stránky
+ukládá pořadí sloupců pro každého uživatele, jejich viditelnost a velikost stránky
 (`null`, `session` nebo `database`, přičemž `guest` pojmenovává driver pro
 nepřihlášeného návštěvníka). Viz [Pokročilé funkce](../table/advanced.md).

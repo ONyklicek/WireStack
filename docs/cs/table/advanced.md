@@ -11,7 +11,7 @@ summary: "Polling, výkon a ladění: co tabulka stojí na jedno vykreslení a p
 
 1. [Podřádky (rozbalitelné řádky)](#podradky-rozbalitelne-radky)
 2. [Souhrnná patička (agregáty)](#souhrnna-paticka-agregaty)
-3. [Polling (auto-obnovení)](#polling-auto-obnoveni)
+3. [Polling (automatické obnovení)](#polling-automaticke-obnoveni)
 4. [Lazy loading](#lazy-loading)
 5. [Optimalizace výkonu](#optimalizace-vykonu)
 6. [Debugging dotazů](#debugging-dotazu)
@@ -20,7 +20,7 @@ summary: "Polling, výkon a ladění: co tabulka stojí na jedno vykreslení a p
 9. [Přepínání sloupců](#prepinani-sloupcu)
 10. [Uložené pohledy](#ulozene-pohledy)
 11. [Kontextové menu řádku](#kontextove-menu-radku)
-12. [Notifikace per tabulka](#notifikace-per-tabulka)
+12. [Notifikace pro jednotlivé tabulky](#notifikace-pro-jednotlive-tabulky)
 13. [Perzistence stavu v URL](#perzistence-stavu-v-url)
 14. [Selektory pro browser testy](#selektory-pro-browser-testy)
 15. [Vlastní pohledy](#vlastni-pohledy)
@@ -71,7 +71,7 @@ byly odstraněny — flatten režim nikdy nic nezploštil, jen otevřel všechny
 
 ### Relace podřádků s eager loadingem
 
-`->subRows()` přijímá tečkovou notaci pro eager-loaded relace:
+`->subRows()` přijímá tečkovou notaci pro relace načtené eager loadem:
 
 ```php
 $table->subRows('items.product')
@@ -246,7 +246,7 @@ Tyto metody žijí na **sloupci** (`HasSummary`):
 ---
 
 <a id="polling-auto-refresh"></a>
-## Polling (auto-obnovení)
+## Polling (automatické obnovení)
 
 Wire Table podporuje dva režimy pollingu: **na úrovni tabulky** (obnoví celou tabulku) a **na úrovni řádku/sloupce** (obnoví konkrétní buňky přes `PollColumn`).
 
@@ -352,7 +352,7 @@ kombinovat.
 `TableRecordsChanged` a stránka se na něj přihlásí. Zápis se pak k ostatním
 relacím dostane hned po commitu, ne až na jejich dalším ticku.
 
-Událost **nenese žádná data** — je to pobídka „přečti si to znovu", ne payload
+Událost **nenese žádná data** — je to pobídka „přečti si to znovu“, ne payload
 k aplikaci. Každý klient se obnoví přes vlastní komponentu, takže se serverově
 znovu vyhodnotí jeho autorizace, filtry, řazení i stránka, přesně jako u pollingu.
 Na kanálu tím pádem není nic, co by stálo za odposlech: jméno scopu a nic víc.
@@ -360,9 +360,9 @@ Na kanálu tím pádem není nic, co by stálo za odposlech: jméno scopu a nic 
 **Žádný broadcaster není závislost tohohle balíčku a žádný není zvýhodněný.**
 `TableRecordsChanged` je obyčejná laravelí broadcast událost se jmény kanálů jako
 stringy a klientská půlka nevolá nic než `window.Echo.private()` a
-`window.Echo.leave()`. Takže broadcaster, který Echo v tvé aplikaci řídí — Pusher,
+`window.Echo.leave()`. Takže broadcaster, který Echo ve vaší aplikaci řídí — Pusher,
 Ably, Reverb — by to měl přenést bez jakékoli změny tady, nastavený přesně tak,
-jak už broadcasting v aplikaci nastavený máš.
+jak už broadcasting v aplikaci nastavený máte.
 
 Stojí za to oddělit, co je *ověřené*, od toho, co z toho *plyne*: jediný
 broadcaster, proti kterému tahle cesta opravdu běžela, je Reverb — driverem
@@ -374,7 +374,7 @@ přeskočí, dokud si to někdo vědomě nepostaví. Že bude fungovat Pusher ne
 `BroadcasterAgnosticTest` — ne proto, že by to někdo viděl na vlastní oči.
 
 Událost je `ShouldBroadcastNow`, takže **nejde přes frontu**. Zařazený broadcast
-by v běžné situaci „fronta nastavená, worker neběží" zmizel úplně — a *tiše*,
+by v běžné situaci „fronta nastavená, worker neběží“ zmizel úplně — a *tiše*,
 protože polling to zakryje a tabulka se stejně o chvíli později obnoví. Cena za
 odeslání inline řečeno na rovinu: zápis čeká na HTTP volání broadcasteru, než
 odpoví. Proti lokálnímu Reverbu je to pod milisekundu; proti vzdálenému
@@ -387,7 +387,7 @@ stránce, nenastavené připojení, odmítnutá autorizace kanálu, spadlý sock
 tabulka spadne zpátky na svůj interval. Uživatel dostane pomalejší tabulku, nikdy
 ne zastaralou.
 
-**Všechny živé tabulky autorizuješ jedním callbackem**, ne řádkem na model:
+**Všechny živé tabulky autorizujete jedním callbackem**, ne řádkem na model:
 
 ```php
 // routes/channels.php
@@ -407,17 +407,17 @@ psaný `Broadcast::channel()`. Stojí za to na tom trvat, protože překlep v n�
 nevyhodí — subscribe se odmítne, push přestane chodit, polling to zakryje, a
 broadcastová půlka je mrtvá, zatímco tabulka vypadá v pořádku.
 
-`LiveChannel::for(Invoice::class)` vrátí jméno, když ho potřebuješ přímo.
+`LiveChannel::for(Invoice::class)` vrátí jméno, když ho potřebujete přímo.
 
 **Pauza pollingu pauzuje i push.** Listener sedí na pollovacím wrapperu, takže
 tlačítko Stop — i podmínka `pollWhen()`, která zrovna neplatí — vezmou broadcast
-s sebou. U Stopu je to záměr: „přestaň mi tou tabulkou hýbat" má znamenat obojí.
+s sebou. U Stopu je to záměr: „přestaň mi tou tabulkou hýbat“ má znamenat obojí.
 U `pollWhen()` je dobré o tom vědět, protože ta podmínka je o ceně pollingu, ne
-o tom, že updaty nechceš: tabulka, která ji kombinuje s `broadcast: true`,
+o tom, že updaty nechcete: tabulka, která ji kombinuje s `broadcast: true`,
 dokud podmínka neplatí, push nedostane. Když má push přežít, `pollWhen()`
-nepoužívej.
+nepoužívejte.
 
-**Balíček za tebe neautorizuje.** Neregistruje žádný kanál a nevolá žádnou
+**Balíček za vás neautorizuje.** Neregistruje žádný kanál a nevolá žádnou
 policy sám — kdo smí poslouchat, je rozhodnutí aplikace, řečené tam, kde to
 Laravel čeká. Co dělá místo toho: odmítá o vynechání mlčet. Subscribe, který
 server odmítne, se ohlásí do konzole i s voláním, které to spraví. Je to jediné
@@ -436,7 +436,7 @@ ním a buňka by ji stejně právem ignorovala.
 
 ### Polling řádku/sloupce
 
-Použijte `PollColumn` pro živé aktualizace per buňka bez obnovování celé tabulky:
+Použijte `PollColumn` pro živé aktualizace jednotlivých buněk bez obnovování celé tabulky:
 
 ```php
 PollColumn::make('job_status')
@@ -524,7 +524,7 @@ $table->simplePagination()
 ```
 
 Kompromisy:
-- Žádný text „Showing X of Y"
+- Žádný text „Showing X of Y“
 - Žádné odkazy na čísla stránek (jen Předchozí / Další)
 - Ušetří jeden dotaz při načtení stránky u velkých tabulek
 
@@ -681,7 +681,7 @@ Editace množství pošle zpět ten řádek a totál v patičce. Kolegova editac
 Cachovat výsledky dotazu na nakonfigurovaný TTL:
 
 ```php
-$table->cacheQuery(ttl: 60)                    // 60 sekund, auto-generovaný klíč
+$table->cacheQuery(ttl: 60)                    // 60 sekund, automaticky generovaný klíč
 $table->cacheQuery(ttl: 300, key: 'users')     // 5 minut, vlastní klíč
 ```
 
@@ -735,7 +735,7 @@ Interně používá `chunkById()` pro konzistentní pořadí.
 
 Nejrychlejší z nich je `$table->dumpColumns()`: vypíše u každého sloupce název,
 popisek, typ a příznaky sortable/searchable a **vrátí tabulku**, takže se dá
-vložit doprostřed řetězu, aniž bys definici rozebíral.
+vložit doprostřed řetězu, aniž byste definici rozebírali.
 
 
 ### Inspekce QueryPlan
@@ -848,7 +848,7 @@ potřebuje jedno.
 **Všechno kolem záznamů zůstává**, a proto je to layout, ne jiná stránka —
 hledání, filtry, stránkování, výběr přeživší stránkování, hromadné akce nad ním,
 exporty. Označit dvanáct tisíc notifikací přečtenými je výběr, který přežije
-stránku, a nic ručně psaného per modul by ho nevypěstovalo.
+stránku, a nic ručně psaného pro každý modul zvlášť by ho nevypěstovalo.
 
 Dvě věci se posunou, protože seznam nemá hlavičku: řazení se objeví jako vlastní
 ovládání (stejné, jaké dostane stohovaná tabulka na telefonu) a tvar karty přijde
@@ -900,7 +900,7 @@ množinou bývá silnější i tišší.
 
 ### Naskládané na mobilu
 
-Pod breakpointem se sloupce naskládají svisle jako páry label-hodnota:
+Pod breakpointem se sloupce naskládají svisle jako dvojice popisek–hodnota:
 
 ```php
 $table->stackedOnMobile(true, 'md')   // 2. arg = breakpoint, pod kterým se skládá (výchozí 'md')
@@ -921,7 +921,7 @@ $table
 ```
 
 Sbalení se zapne, až když má řádek **3 a více** akcí; při méně je karta nechá
-vedle sebe. Práh nastavíš druhým argumentem:
+vedle sebe. Práh nastavíte druhým argumentem:
 
 ```php
 ->collapseActionsOnMobile(threshold: 2)   // sbalit od 2 akcí
@@ -939,7 +939,7 @@ spodní sheet).
 
 Toolbar má stejný problém s teteskem o patro výš: už v něm sedí vyhledávací pole,
 spouštěč filtrů a menu zobrazení, a dvě popsaná tlačítka hlavičky („Nová
-faktura", „Import CSV") celý řádek na šířce telefonu zalomí.
+faktura“, „Import CSV“) celý řádek na šířce telefonu zalomí.
 `collapseHeaderActionsOnMobile()` je sbalí do jednoho menu:
 
 ```php
@@ -959,7 +959,7 @@ $table
 
 Sbalí se od **2** spustitelných akcí hlavičky výš — jedno tlačítko ještě není
 tlačenice a toolbar se sbaluje dřív než akce řádku v kartě, protože sdílí řádek
-s vyhledávacím polem. Práh nastavíš stejně:
+s vyhledávacím polem. Práh nastavíte stejně:
 
 ```php
 ->collapseHeaderActionsOnMobile(threshold: 3)   // dvě tlačítka nechat vedle sebe, sbalit od tří
@@ -1082,7 +1082,7 @@ Akce dětí se vždy sbalí pod jeden spouštěč `⋮`, ať `collapseActionsOnM
 popiskem tam rozdrtí název položky na tři tečky.
 
 Sbalený přepínač uvádí počet dětí (`3 položky`), když je číslo už v paměti, a
-jinak se vrátí k `Detail` — sbalený řádek nemá eager-loadované děti, takže spočítat
+jinak se vrátí k `Detail` — sbalený řádek nemá děti načtené eager loadem, takže spočítat
 je by stálo jeden dotaz na kartu. Přidejte do základního dotazu `->withCount('items')`
 a každá karta svůj počet uvede zadarmo.
 
@@ -1122,7 +1122,7 @@ TextColumn::make('subtitle')->onlyOnTabletAndUp()   // ≥md
 TextColumn::make('metadata')->onlyOnLargeScreens()  // ≥xl
 ```
 
-### Mobilní zobrazení per záznam
+### Mobilní zobrazení jednotlivých záznamů
 
 ```php
 TextColumn::make('user')
@@ -1151,7 +1151,7 @@ vykreslí stejně, buňka se vypíše jednou, bez breakpointových obalů.
 <a id="column-toggling"></a>
 ## Přepínání sloupců
 
-Uživatelé mohou zobrazit/skrýt přepínatelné sloupce přes dropdown výběru sloupců:
+Uživatelé mohou zobrazit/skrýt přepínatelné sloupce přes rozbalovací nabídku výběru sloupců:
 
 ```php
 // Označit konkrétní sloupce jako přepínatelné
@@ -1169,7 +1169,7 @@ komponenty (po úplném reloadu stránky se resetuje).
 
 ### Zapamatování rozvržení pro každého uživatele
 
-Zavolej `rememberColumns()` se stabilním klíčem — tabulka při mountu načte uložené
+Zavolejte `rememberColumns()` se stabilním klíčem — tabulka při mountu načte uložené
 rozvržení aktuálního uživatele a při každém přepnutí sloupce ho uloží, takže si
 každý uživatel drží vlastní uspořádání sloupců i po reloadu. V přepínači se
 objeví tlačítko „Obnovit sloupce“ pro návrat na výchozí nastavení.
@@ -1206,7 +1206,7 @@ ignorován.
 ],
 ```
 
-Pro database driver publikuj a spusť migraci — ta je ve **wire-core**, protože
+Pro database driver publikujte a spusťte migraci — ta je ve **wire-core**, protože
 úložiště je sdílené:
 
 ```bash
@@ -1264,8 +1264,8 @@ Pohled je seznam cest do stavu, ne snímek komponenty:
 
 | Nese | Nenese |
 | --- | --- |
-| Sloupec a směr řazení | **Výběr** — výběr je o záznamech a jeho obnovení zaškrtne políčka, která uživatel nikdy nezaškrtl; uložený režim `all` by navíc znamenal „všechno, co filtr matchuje" proti filtru, který se mezitím posunul |
-| Velikost stránky | **Otevřený modál** — to je místo, kde uživatel stojí, ne layout |
+| Sloupec a směr řazení | **Výběr** — výběr je o záznamech a jeho obnovení zaškrtne políčka, která uživatel nikdy nezaškrtl; uložený režim `all` by navíc znamenal „všechno, co filtr matchuje“ proti filtru, který se mezitím posunul |
+| Velikost stránky | **Otevřený modal** — to je místo, kde uživatel stojí, ne layout |
 | Hledaný výraz | **Kurzor** a rozbalení jednotlivých řádků — obojí pojmenovává záznamy, které už ve výsledku být nemusí |
 | Filtry a filtry sloupců | Latch lazy loadingu, který patří jednomu requestu |
 | Skryté sloupce | |
@@ -1282,8 +1282,8 @@ stránka, na které se pohled ukládal, není stránka tohohle pohledu.
 ### V UI
 
 Přepínač žije **uvnitř existujícího menu nastavení pohledu**, vedle výběru
-sloupců, ne ve vlastním dropdownu: ovládací prvek už se jmenuje „nastavení
-pohledu" a druhý trigger by byly dvě místa, kde hledat jednu věc. Uložení se
+sloupců, ne ve vlastní rozbalovací nabídce: ovládací prvek už se jmenuje „nastavení
+pohledu“ a druhý trigger by byly dvě místa, kde hledat jednu věc. Uložení se
 zeptá na jméno; každý uložený pohled má řádek, který ho aplikuje, a ovládací
 prvek, který ho smaže. Smazání pohledu se nikdy nedotkne layoutu, na kterém
 uživatel stojí.
@@ -1322,7 +1322,7 @@ class ListOrders extends Component
 ```
 
 Uživatel si pak vyfiltruje `paid`, seřadí podle částky, skryje dva sloupce a
-uloží to jako „Unpaid this month" — a příští týden dostane všechny čtyři věci
+uloží to jako „Unpaid this month“ — a příští týden dostane všechny čtyři věci
 zpátky z menu.
 
 ### Úložiště a sdílení
@@ -1344,7 +1344,7 @@ app(DatabasePreferenceDriver::class)->save(
 
 Uložení pod jménem, které už existuje, ho nahradí místo duplikace, a prázdné
 jméno odmítnou všechny tři endpointy — nepojmenovaný bag je živý layout, takže
-přijmout `''` by znamenalo nechat „Uložit" přepsat layout sám sebou a „Smazat"
+přijmout `''` by znamenalo nechat „Uložit“ přepsat layout sám sebou a „Smazat“
 ho zahodit.
 
 ### API uložených pohledů
@@ -1368,12 +1368,12 @@ $this->getTableViews(): array                 // jména, pro přepínač
 <a id="row-context-menu"></a>
 ## Kontextové menu řádku
 
-Nech pokročilé uživatele **kliknout pravým tlačítkem na řádek** a otevřít menu
+Nechte pokročilé uživatele **kliknout pravým tlačítkem na řádek** a otevřít menu
 akcí u kurzoru — zkratka vedle sloupce s akcemi. Akce menu se definují
 **samostatně** navázáním každé z nich na trigger pravého tlačítka (nejsou to akce
 z `->actions()` toolbaru), takže je menu explicitní, ne implicitní kopie tlačítek
-řádku — pokud je chceš stejné, předej stejné objekty. Používá stejný styl položek
-jako dropdown action-group.
+řádku — pokud je chcete stejné, předejte stejné objekty. Používá stejný styl položek
+jako rozbalovací action-group.
 
 ```php
 $table
@@ -1399,7 +1399,7 @@ $table
 ---
 
 <a id="notifications-per-table"></a>
-## Notifikace per tabulka
+## Notifikace pro jednotlivé tabulky
 
 Přepsat globální notifikační driver pro konkrétní tabulku:
 
@@ -1449,14 +1449,14 @@ se stane `filter_created_at_from` / `filter_created_at_to`. Filtry používajíc
 `multiple()` přijímají pole syntax (`filter_status[]=active&filter_status[]=trial`).
 
 Příchozí URL hodnoty se validují proti konfiguraci tabulky —
-neznámé sloupce řazení, hodnoty per-page mimo `perPageOptions()` a
+neznámé sloupce řazení, hodnoty počtu na stránku mimo `perPageOptions()` a
 parametry pro neznámé nebo skryté filtry se ignorují. Stejná kontrola běží
 i na živé `wire:model` cestě, takže podvržený Livewire payload si nemůže
 vyžádat velikost stránky, kterou tabulka nenabízí.
 
 ### Více tabulek na stránku
 
-Názvy parametrů jsou globální per URL. Když se na stejné stránce vykreslí dvě
+Názvy parametrů jsou globální v rámci jedné URL. Když se na stejné stránce vykreslí dvě
 tabulky s perzistencí v query stringu, dejte každé prefix:
 
 ```php
@@ -1557,7 +1557,7 @@ Prosté text / number inputy mají jen kontejner (cil ho, nebo `<input>` uvnitř
 | Color / rating / OTP | `form-color-{path}` (+ `-hex` / `-swatch-{barva}`), `form-rating-{path}-star-{n}`, `form-otp-{path}-{i}` |
 | Editory (markdown/rich/tiptap) | `form-editor-{path}` (tělo) + `-{command|index}` toolbar tlačítka + `-write` / `-preview` taby |
 | Field / affix / hint akce | `field-action-{path}-{name}` |
-| Searchable select (formuláře + filtry) | `select-trigger` / `select-search` / `select-option-{value}` / `select-clear`; triggery akcí volby `form-select-{path}-create-option` / `-edit-option`; create/edit-option modaly: `select-create-save|cancel`, `select-edit-save|cancel` |
+| Searchable select (formuláře + filtry) | `select-trigger` / `select-search` / `select-option-{value}` / `select-clear`; triggery akcí volby `form-select-{path}-create-option` / `-edit-option`; modaly pro vytvoření/úpravu možnosti: `select-create-save|cancel`, `select-edit-save|cancel` |
 | MorphToSelect | `form-select-{path}-type` (typ morphu) / `form-select-{path}-record` (výběr záznamu) |
 | Modal / slide-over / potvrzení | `modal-close`, `slide-over-close`, `modal-cancel` / `modal-submit`, `modal-back` / `modal-next`, `confirmation-confirm` / `confirmation-cancel`, `modal-footer-action-{name}` |
 | Wizard / tabs / sekce / callout | `wizard-step-{i}` / `wizard-back` / `wizard-next`, `tab-{i}`, `section-toggle`, `callout-dismiss` |

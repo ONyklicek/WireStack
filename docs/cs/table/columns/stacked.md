@@ -1,11 +1,11 @@
 ---
 order: 23
-summary: Avatar, hlavní řádek a vedlejší v jedné buňce — tvar, který sloupec „uživatel" pořád chce.
+summary: Avatar, hlavní řádek a vedlejší v jedné buňce — tvar, který sloupec „uživatel“ pořád chce.
 ---
 
 # StackedColumn
 
-Skládá obsah svisle — avatar + primární text + sekundární text. Ideální pro buňky „uživatel".
+Skládá obsah svisle — avatar + primární text + sekundární text. Ideální pro buňky „uživatel“.
 
 ```php
 use NyonCode\WireTable\Columns\StackedColumn;

@@ -65,7 +65,7 @@ masky podle měny a napsanou částku přečte zpět jako číslo.
 
 ## Prázdné hodnoty
 
-Prohlížeč nemá jak odeslat „nic". Vymazaný `<input>` dorazí jako prázdný řetězec
+Prohlížeč nemá jak odeslat „nic“. Vymazaný `<input>` dorazí jako prázdný řetězec
 a co to má znamenat, závisí čistě na sloupci za ním:
 
 ```php
@@ -77,7 +77,7 @@ TextInput::make('reference')->nullable()  // vymazáno -> null, protože sis o t
 **Číselný input nulluje sám od sebe.** `''` není číslo: Postgres a MySQL ve
 strict módu ho na číselném sloupci odmítnou a SQLite tiše uloží prázdný řetězec
 vedle desetinných míst. Neexistuje čtení vymazaného pole `type=number`, ve kterém
-by autor myslel „prázdný řetězec", takže `numeric()`, `integer()` i přímé
+by autor myslel „prázdný řetězec“, takže `numeric()`, `integer()` i přímé
 `type('number')` zapíšou `null`. Nula zůstane nedotčená — `0` je číslo, ne prázdná
 hodnota.
 
@@ -141,8 +141,8 @@ TextInput::make('city')
     ->datalist(['Prague', 'Brno', 'Ostrava'])
 ```
 
-Předejte třídu PHP enumu pro použití labelů jeho case jako návrhů (stejné resolvování labelu jako
-[options `Select`](select.md#options-z-enumu)):
+Předejte třídu PHP enumu pro použití popisků jeho case jako návrhů (stejné resolvování popisku jako
+[možnosti `Select`](select.md#moznosti-z-enumu)):
 
 ```php
 TextInput::make('city')->datalist(City::class)

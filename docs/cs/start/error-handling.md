@@ -1,6 +1,6 @@
 ---
 order: 80
-summary: "Wire selhává nahlas a chytatelně: jedna final třída výjimky na každé selhání, jedno značkovací rozhraní na balíček — chytáš tak široce, jak chceš."
+summary: "Wire selhává nahlas a chytatelně: jedna final třída výjimky na každé selhání, jedno značkovací rozhraní na balíček — chytáte tak široce, jak chcete."
 ---
 
 # Ošetření chyb
@@ -64,10 +64,10 @@ breaking change.
 | | `IconSetRegistrationException` | sada ikon je registrovaná pod rezervovaným nebo nejednoznačným prefixem |
 | | `PluginRegistrationException` | id pluginu je obsazené, nebo závislost není registrovaná |
 | | `ModelNotRegisteredException` | jsou požadována metadata pro neregistrovaný model |
-| | `InvalidChartDataException` | chart widget dostal data nebo options, které neumí vyrenderovat |
+| | `InvalidChartDataException` | chart widget dostal data nebo nastavení, která neumí vyrenderovat |
 | | `InvalidWidgetDataException` | `items()` widgetu dostalo položku špatné třídy |
 | `wire-forms` | `FormConfigurationException` | formulář nemá model, nebo si jeho form metody protiřečí |
-| | `StaleModelException` | optimistic-lock kontrola zjistila, že se záznam mezitím změnil ([save lifecycle](../forms/save-lifecycle.md)) |
+| | `StaleModelException` | optimistic-lock kontrola zjistila, že se záznam mezitím změnil ([životní cyklus ukládání](../forms/save-lifecycle.md)) |
 | `wire-table` | `TableHasNoDataSourceException` | tabulka je dotazovaná bez `model()` nebo `query()` |
 | | `TableConfigurationException` | poll interval, cesta v `groupBy()` nebo typ summary není platný |
 | | `RelationManagerException` | relation manager je špatně nakonfigurovaný, nebo vztah danou operaci nepodporuje |
@@ -100,6 +100,6 @@ ikonami a názvy sloupců, které váš model neumí vyresolvovat.
 
 ## Související
 
-- [Save Lifecycle](../forms/save-lifecycle.md) — kam zapadá `StaleModelException`
+- [Životní cyklus ukládání](../forms/save-lifecycle.md) — kam zapadá `StaleModelException`
 - [Autorizace](authorization.md) — proč se zamítnutá komponenta skryje místo házení výjimky
 - [Wire Boost](../boost/mcp-tools.md) — nástroje, které najdou selhání, jež zůstávají tichá

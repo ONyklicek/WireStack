@@ -8,7 +8,7 @@ summary: "Kdy je plugin správný tvar, co smí dělat, jaký kontrakt implement
 Plugin sdružuje opakovaně použitelné nastavení na jedno místo: makra, registry
 typů, query pipes, callbacky hooků, výchozí konfiguraci a integraci balíčku. Je to
 podporovaná cesta, jak aplikace nebo doprovodný balíček změní chování frameworku —
-a první otázka na téhle stránce je, jestli ho vůbec potřebuješ, protože closure,
+a první otázka na téhle stránce je, jestli ho vůbec potřebujete, protože closure,
 event nebo makro bývají menší odpověď.
 
 Pro jednu tabulku, formulář nebo akci nejdřív preferujte veřejné fluent API. Plugin použijte, když se má stejné chování nainstalovat jednou a znovupoužít napříč více komponentami, projekty nebo balíčky.
@@ -18,7 +18,7 @@ Pro jednu tabulku, formulář nebo akci nejdřív preferujte veřejné fluent AP
 | Potřeba | Preferujte |
 |------|--------|
 | Změnit jeden dotaz tabulky | `Table::modifyQueryUsing()` |
-| Přidat jeden save callback formuláře | Lifecycle callbacky formuláře |
+| Přidat jeden save callback formuláře | Callbacky životního cyklu formuláře |
 | Přidat jedno chování akce | Fluent API akce |
 | Znovupoužít table/action makro všude | Plugin `boot()` |
 | Přidat stejné tlačítko tabulky do mnoha tabulek | Plugin table makro, které sloučí akce |

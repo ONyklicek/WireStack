@@ -5,7 +5,7 @@ summary: Inline rozbalovací seznam, který uloží v okamžiku změny, s možno
 
 # SelectColumn
 
-Inline select dropdown — ukládá okamžitě při změně.
+Inline rozbalovací seznam — ukládá okamžitě při změně.
 
 ```php
 use NyonCode\WireTable\Columns\SelectColumn;
@@ -23,7 +23,7 @@ SelectColumn::make('status')
     ])
 ```
 
-## Options z relace
+## Možnosti z relace
 
 ```php
 SelectColumn::make('category_id')
@@ -40,9 +40,9 @@ SelectColumn::make('category_id')
     ->loadRelationshipOptions($record)
 ```
 
-## Options z enumu
+## Možnosti z enumu
 
-Předejte třídu PHP enumu pro rozvinutí jeho case na options `value => label`. Labely pocházejí z
+Předejte třídu PHP enumu pro rozvinutí jeho case na možnosti `value => label`. Popisky pocházejí z
 `getLabel()`, když enum implementuje `Foundation\Contracts\Enum\HasLabel`, jinak se
 z názvu case udělá headline. Kontrakty viz [Enum a JSON casty](casts.md).
 
@@ -59,7 +59,7 @@ fieldu ve formulářích: buňka commituje přes `wireEditableCell` (bind přes 
 uložení při změně), ne přes entangled statePath, což je jediný binding, který sdílený
 combobox umí.
 
-Pokud potřebuješ vyhledávatelný dropdown, použij [`SelectFilter`](../filters/select.md)
+Pokud potřebujete vyhledávatelný rozbalovací seznam, použijte [`SelectFilter`](../filters/select.md)
 pro filtrování, nebo `Select` field ve formuláři uvnitř [edit akce](../actions.md)
 pro editaci.
 

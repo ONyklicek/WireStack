@@ -5,10 +5,10 @@ summary: Jemný barevný box s upozorněním, nadpisem, ikonou a volitelným zav
 
 # Callout
 
-Barevné upozornění uvnitř formuláře nebo infolistu — „tohle nejde vzít zpět",
-„zkušební období končí za tři dny". Sáhni po něm, když zpráva patří k jedné části
+Barevné upozornění uvnitř formuláře nebo infolistu — „tohle nejde vzít zpět“,
+„zkušební období končí za tři dny“. Sáhni po něm, když zpráva patří k jedné části
 obrazovky a má tam zůstat. Na něco, co se objeví jako reakce na to, co uživatel
-právě udělal, a zase zmizí, chceš [notifikaci](../notifications/index.md).
+právě udělal, a zase zmizí, chcete [notifikaci](../notifications/index.md).
 
 ```php
 use NyonCode\WireCore\Foundation\Schema\Callout;
@@ -35,7 +35,7 @@ v calloutu jde přes dětskou komponentu, ne přes `content()`.
 `match` nad `success`/`emerald`, `green`, `warning`/`amber`, `yellow`,
 `danger`/`red`, `black` a `white` — a **všechno, co nepozná, propadne na
 informační modrou**. `->color('primary')` i `->color('purple')` jsou modré, bez
-jediné chyby. Prakticky: používej ty čtyři zkratky a cokoli jiného ber jako
+jediné chyby. Prakticky: používejte ty čtyři zkratky a cokoli jiného ber jako
 přání, které nemusí být vyslyšeno.
 
 **Zavření je Alpine a nepamatuje se.** `dismissible()` obalí box do
@@ -57,7 +57,7 @@ Callout::make()
     ->content('Tuhle akci nejde vzít zpět.')
 ```
 
-`title()` je alias `heading()`, když se to tam, kde jsi, čte líp.
+`title()` je alias `heading()`, když se to tam, kde jste, čte líp.
 
 ## Barvy
 
@@ -86,7 +86,7 @@ Callout::make()
     ])                                                   // [tl! focus:end]
 ```
 
-Pamatuj, že schéma, jakmile něco vykreslí, `content()` úplně nahradí.
+Pamatujte, že schéma, jakmile něco vykreslí, `content()` úplně nahradí.
 
 ## Zavíratelný
 

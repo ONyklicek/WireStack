@@ -61,7 +61,7 @@ Action::make('cancel')
 ## Tiché řádkové akce
 
 Ve výchozím stavu se řádkové akce tabulky vykreslují jako plná, stále barevná
-tlačítka. Nastav styl akcí tabulky na `quiet` pro klidnější, profesionálnější
+tlačítka. Nastavte styl akcí tabulky na `quiet` pro klidnější, profesionálnější
 vzhled — akce v klidu vypadají jako neutrální text a barvu odhalí až na hoveru
 nebo klávesovém focusu, takže řádek plný akcí přestane soupeřit s daty.
 
@@ -76,7 +76,7 @@ Chování tichého stylu:
   zařízení nemají hover — `DeleteAction` tak čte jako nebezpečná i bez interakce.
 - Každá akce si drží viditelný focus ring pro klávesnici.
 
-Jednu akci necháš výraznou tím, že ji vrátíš do plné výplně přes `->solid()`:
+Jednu akci necháte výraznou tím, že ji vrátíte do plné výplně přes `->solid()`:
 
 ```php
 $table
@@ -90,7 +90,7 @@ $table
 ```
 
 Tichý styl je opt-in; existující tabulky zůstávají beze změny. `->solid()` a
-`->outlined()` zůstávají dostupné jako per-akce override.
+`->outlined()` zůstávají dostupné jako override u jednotlivých akcí.
 
 ## Extra atributy
 
