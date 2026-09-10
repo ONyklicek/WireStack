@@ -194,6 +194,18 @@ layer 5, V2.6) plugs into. `Dashboard` composes `Widget`s via `WithWidgets`.
 4. ~~Registration?~~ **Config array** (`config('wire-core.resources')`), read by
    `ResourceRegistry::registerMany()`. Attribute discovery remains the opt-in
    second path and belongs with boost's `ComponentScanner`, not the registry.
+5. ~~Where does a save land?~~ **Create redirects, edit stays** — Nova's and
+   Filament's split, and for the same reason: the record a create page filed
+   exists while the form that filed it is still full, so the next press of the
+   same button files a second one. The destination falls through
+   `view → edit → index → stay`, skipping what the resource does not declare,
+   what nothing routes, what has no key to put in a URL, and what this user's
+   permissions would turn into a 403. Both pages name their own through
+   `getRedirectUrl(mixed $record): ?string`
+   (`Resources\Concerns\RedirectsAfterSave`), which is also the override an
+   application reaches for. The toast crosses with it: `SessionDriver` already
+   flashed the notification it dispatched, and the toast container now renders
+   that on arrival — which fixes `Action::successRedirect()` in the same move.
 
 ## What the prototype found
 

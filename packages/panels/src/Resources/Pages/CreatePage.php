@@ -13,6 +13,7 @@ use NyonCode\WireForms\Contracts\ProvidesResourceForm;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
+use NyonCode\WirePanels\Resources\Concerns\RedirectsAfterSave;
 
 /**
  * A full page creating one of a resource's records.
@@ -39,6 +40,7 @@ use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
 abstract class CreatePage extends Component implements IdentifiesHookTarget, ProvidesBreadcrumbs
 {
     use BelongsToResource;
+    use RedirectsAfterSave;
     use WithForms;
 
     /**
@@ -106,15 +108,25 @@ abstract class CreatePage extends Component implements IdentifiesHookTarget, Pro
     }
 
     /**
-     * Persist, and hand the result back so a subclass can redirect on it.
+     * Where a successful create lands: the new record, or the list.
      *
-     * Deliberately thin: everything that could go wrong — validation, an
-     * unauthorized save — is already the form's, and catching it here would only
-     * hide it from the host that knows what to do about it.
+     * The record's own page first, because the thing the user was making now
+     * exists and looking at it is the obvious next step — view if the resource
+     * has one, edit if it does not. The list is the fallback, and it is also
+     * what an unroutable record falls back to: a resource over a non-Eloquent
+     * source has no key to build a record URL from, and `pageUrl()` answers null
+     * for the missing parameter rather than throwing.
+     *
+     * Staying is deliberately not an option here. The form is still full, the
+     * record is already filed, and the second press of the same button files a
+     * second one — which is the whole reason this page redirects and the edit
+     * page does not.
      */
-    public function save(): mixed
+    protected function getRedirectUrl(mixed $record): ?string
     {
-        return $this->form->save();
+        return $this->reachablePageUrl('view', $record)
+            ?? $this->reachablePageUrl('edit', $record)
+            ?? $this->reachablePageUrl('index');
     }
 
     public function render(): View

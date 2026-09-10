@@ -15,6 +15,7 @@ use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
 use NyonCode\WirePanels\Resources\Concerns\EmbedsRelationManagers;
+use NyonCode\WirePanels\Resources\Concerns\RedirectsAfterSave;
 use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
 
 /**
@@ -40,6 +41,7 @@ abstract class EditPage extends Component implements IdentifiesHookTarget, Provi
 {
     use BelongsToResource;
     use EmbedsRelationManagers;
+    use RedirectsAfterSave;
     use ResolvesOneRecord;
     use WithForms;
 
@@ -90,9 +92,24 @@ abstract class EditPage extends Component implements IdentifiesHookTarget, Provi
         return $label !== null ? __('wire-panels::messages.edit', ['label' => $label]) : null;
     }
 
-    public function save(): mixed
+    /**
+     * Nowhere, by default — an edit stays on the record it edited.
+     *
+     * There is nothing to escape from: the record exists, the page is already
+     * its own, and the form now holds exactly what was written. Saving twice
+     * writes the same row twice rather than filing a duplicate, which is the
+     * difference from the create page.
+     *
+     * An application that wants the list back overrides this and says so:
+     *
+     *   protected function getRedirectUrl(mixed $record): ?string
+     *   {
+     *       return $this->pageUrl('index');
+     *   }
+     */
+    protected function getRedirectUrl(mixed $record): ?string
     {
-        return $this->form->save();
+        return null;
     }
 
     /** Seed the form once the record is known — {@see ResolvesOneRecord::mount()}. */

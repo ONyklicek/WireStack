@@ -64,5 +64,8 @@ parameters:
         # `@phpstan-require-extends ViewPage`, so its body is still checked
         # against the class it is written for; only the unused verdict is muted.
         - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/InteractsWithRecordTitle.php }
+        # Same fact about this list: its two users are CreatePage and EditPage,
+        # both excluded above as Livewire hosts.
+        - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/RedirectsAfterSave.php }
         - { identifier: trait.unused, path: packages/core/src/Core/Resources/Concerns/DescribesRecords.php }
         - { identifier: trait.unused, path: packages/core/src/Core/Tenancy/Concerns/BelongsToTenant.php }

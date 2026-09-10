@@ -156,6 +156,58 @@ stejné dělení, díky kterému `table()` resource nic neví o komponentě, kte
 vykresluje. Resource, který potřebuje jinou cestu, si ji nastaví ve svém
 `form()`, který běží potom, a tedy vyhraje.
 
+## Kam uložení dopadne
+
+Úspěšné uložení jsou dvě rozhodnutí a stránky se shodnou jen na prvním.
+**Založení přesměrovává, editace zůstává.** Záznam, který stránka se založením
+právě podala, existuje, formulář, který ho podal, je pořád plný, a další
+stisknutí téhož tlačítka podá druhý — takže stránka, na které vznikl, je jediné
+místo, kde uživatel nesmí zůstat stát. Editace je už na vlastní stránce svého
+záznamu a ta po uložení drží přesně to, co se zapsalo.
+
+Založení dopadne na vlastní stránku záznamu, seznam je záložní varianta:
+
+```text
+view  →  edit  →  index  →  zůstat
+```
+
+Každý krok se přeskočí, když resource takovou stránku nedeklaruje, když ji
+aplikace neroutuje, když záznam nejde dát do URL — resource nad non-Eloquent
+zdrojem nemá klíč, ze kterého by ji postavil — nebo když stránka deklaruje
+oprávnění, které uživatel nemá. To poslední je podstatné, protože `ResourceRoutes`
+z téže deklarace udělá middleware `can:`: přesměrovat do 403 je striktně horší než
+stránka, na kterou se člověk zrovna díval. Když neroutuje nic, dojde se na
+poslední „zůstat" — což dostane stránka namountovaná ručně nebo vykreslená uvnitř
+něčeho jiného.
+
+Obě stránky si svůj cíl pojmenují přepsáním jediné metody:
+
+```php
+final class CreateOrder extends CreatePage
+{
+    protected static ?string $resource = OrderResource::class;
+
+    protected function getRedirectUrl(mixed $record): ?string   // [tl! focus:3]
+    {
+        return $this->pageUrl('index');
+    }
+}
+```
+
+Dostane, co vrátilo uložení formuláře — model v obyčejném Eloquent případě a
+cokoliv, co odpovědělo `Form::using()`, jinak — a `null` znamená zůstat.
+`pageUrl()` je pomocník na URL sourozenců popsaný níž;
+[`reachablePageUrl()`](#cesta-na-jeji-dalsi-stranky) je totéž minus stránky, které
+tenhle uživatel otevřít nesmí.
+
+Přesměrování jde přes `wire:navigate`, jako každý jiný odkaz v panelu.
+
+**Toast o úspěchu jde s ním.** Notifikace je browser event a navigate vymění
+dokument, který by ji ukázal — takže ji driver zároveň flashne a toast container
+ji po příchodu vykreslí. Nemusí se nic zapínat: je to to, co
+[session driver](../core/notifications/index.md#drivery) dělal odjakživa, jen to
+teď někdo čte.
+
 ## Stránky s dashboardem
 
 Dashboard se deklaruje stejně jako resource a `DashboardPage` je jeho seznamová
@@ -250,6 +302,18 @@ deklarovaná jako holý class string nevyžaduje nic — a tlačítko taky ne.
 nedeklaruje, nebo aplikace, která ji neroutuje, dostane tlačítko bez odkazu místo
 odkazu rozbitého.
 
+`reachablePageUrl()` je obojí zeptané naráz: URL, nebo `null` tam, kde by ji
+tenhle uživatel stejně neotevřel.
+
+```php
+$this->reachablePageUrl('view', $order);   // URL, nebo null — neroutované, nebo nepovolené
+```
+
+Právě na tom [přesměrovává stránka se založením](#kam-ulozeni-dopadne) — a existuje
+místo toho, aby si dvojici skládal každý volající sám, z jednoho důvodu:
+deklarované oprávnění je zároveň middleware `can:` na té routě, takže odkaz, který
+by ho ignoroval, by byl odkazem do 403.
+
 `hookKey()` je třetí z nich. Odpoví registrovaným klíčem toho, co stránka ukazuje,
 a to je právě to, co dělá z [`for: 'invoices'`](../core/plugins/hooks.md) něco, co
 jde v aplikaci napsat: tabulka i formulář na téhle stránce se staví uvnitř kódu,
@@ -274,6 +338,7 @@ Každá resourcová stránka skládá `BelongsToResource` — tu polovinu, kter�
 | `hookKey(): ?string` | `string\|null` | Registrovaný klíč, kterým hook pluginu adresuje povrchy téhle stránky |
 | `pageUrl(string $page, mixed $record = null): ?string` | `string\|null` | *(protected)* Kde je jedna ze stránek tohohle resource, v zóně téhle stránky |
 | `pagePermission(string $page): ?string` | `string\|null` | *(protected)* Oprávnění, které ta stránka vyžaduje, tak jak ho deklaroval resource |
+| `reachablePageUrl(string $page, mixed $record = null): ?string` | `string\|null` | *(protected)* Táž URL, minus stránky, které tenhle uživatel otevřít nesmí |
 | `requireResource(string $surface): object` | `object` | *(protected)* Deklarovaný resource, zkontrolovaný; vyhodí výjimku místo vykreslení prázdné stránky |
 | `resourceLabel(): ?string` | `string\|null` | *(protected)* Singulární popisek resource |
 
@@ -282,7 +347,7 @@ Co každá stránka přidává, je jen její vlastní povrch:
 | Stránka | Přidává |
 | --- | --- |
 | `ListPage` | `table(Table $table): Table` |
-| `CreatePage` | `public ?array $data`, `form(Form $form): Form`, `save(): mixed` |
+| `CreatePage` | `public ?array $data`, `form(Form $form): Form`, `save(): mixed`, `getRedirectUrl(mixed $record): ?string` |
 | `EditPage` | totéž, plus `recordData(): array` a `mountedRecord()`, který naplní formulář |
 | `ViewPage` | `infolist(): Infolist` |
 | `DashboardPage` | `protected static ?string $dashboard`, `protected static ?string $layoutKey`, `static dashboardClass(): ?string`, `getWidgets(): array`, `getWidgetColumns(): int`, `widgetLayoutKey(): ?string` |

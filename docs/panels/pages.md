@@ -158,6 +158,58 @@ division that lets a resource's `table()` know nothing about the component
 rendering it. A resource needing a different path sets one in its `form()`, which
 runs afterwards and wins.
 
+## Where A Save Lands
+
+A successful save is two decisions, and the pages only agree on the first one.
+**Create redirects; edit stays.** The record a create page just filed exists, the
+form that filed it is still full, and the next press of the same button files a
+second one — so the page it was made on is the one place the user must not be
+left standing. An edit is already on its record's own page, and after a save that
+page holds exactly what was written.
+
+Where a create lands is the record's own page, and the list is the fallback:
+
+```text
+view  →  edit  →  index  →  stay
+```
+
+Each step is skipped when the resource declares no such page, when the
+application routes none, when the record cannot be put in a URL — a resource over
+a non-Eloquent source has no key to build one from — or when the page declares a
+permission this user lacks. The last one matters because `ResourceRoutes` turns
+that same declaration into `can:` middleware: redirecting into a 403 is strictly
+worse than the page they were already looking at. Nothing routed at all is the
+final `stay`, which is what a page mounted by hand or rendered inside something
+else gets.
+
+Either page names its own destination by overriding one method:
+
+```php
+final class CreateOrder extends CreatePage
+{
+    protected static ?string $resource = OrderResource::class;
+
+    protected function getRedirectUrl(mixed $record): ?string   // [tl! focus:3]
+    {
+        return $this->pageUrl('index');
+    }
+}
+```
+
+It receives whatever the form's save returned — a model for the ordinary Eloquent
+case, and whatever `Form::using()` answered for anything else — and `null` means
+stay. `pageUrl()` is the sibling-URL helper described below;
+[`reachablePageUrl()`](#reaching-its-other-pages) is the same thing minus the
+pages this user may not open.
+
+The redirect uses `wire:navigate`, like every other link in a panel.
+
+**The success toast comes with it.** A notification is a browser event, and the
+navigate replaces the document that would have shown it — so the driver flashes
+it too, and the toast container renders that on arrival. Nothing has to be
+switched on: it is what the [session driver](../core/notifications/index.md#drivers)
+has always done, now that something reads it.
+
 ## Dashboard Pages
 
 A dashboard is declared the same way a resource is, and `DashboardPage` is its
@@ -254,6 +306,18 @@ requires nothing, and neither does the button.
 application that routes none, gets a button without a link rather than a broken
 one.
 
+`reachablePageUrl()` is the two of them asked together: the URL, or `null` where
+this user could not open it anyway.
+
+```php
+$this->reachablePageUrl('view', $order);   // the URL, or null — unrouted or not allowed
+```
+
+It is what [a create page redirects on](#where-a-save-lands), and the reason it
+exists rather than each caller pairing the two: the declared permission is also
+`can:` middleware on that route, so a link that ignored it would be a link to a
+403.
+
 `hookKey()` is the third of these. It answers with the registered key of whatever
 the page shows, which is what turns
 [`for: 'invoices'`](../core/plugins/hooks.md) into something an application can
@@ -279,6 +343,7 @@ Every resource page composes `BelongsToResource`, which is the half that is abou
 | `hookKey(): ?string` | `string\|null` | The registered key a plugin hook addresses this page's surfaces by |
 | `pageUrl(string $page, mixed $record = null): ?string` | `string\|null` | *(protected)* Where one of this resource's pages is, in this page's zone |
 | `pagePermission(string $page): ?string` | `string\|null` | *(protected)* The ability that page requires, as the resource declared it |
+| `reachablePageUrl(string $page, mixed $record = null): ?string` | `string\|null` | *(protected)* The same URL, minus the pages this user may not open |
 | `requireResource(string $surface): object` | `object` | *(protected)* The declared resource, checked; throws rather than rendering an empty page |
 | `resourceLabel(): ?string` | `string\|null` | *(protected)* The resource's singular label |
 
@@ -287,7 +352,7 @@ What each page adds is only its own surface:
 | Page | Adds |
 | --- | --- |
 | `ListPage` | `table(Table $table): Table` |
-| `CreatePage` | `public ?array $data`, `form(Form $form): Form`, `save(): mixed` |
+| `CreatePage` | `public ?array $data`, `form(Form $form): Form`, `save(): mixed`, `getRedirectUrl(mixed $record): ?string` |
 | `EditPage` | the same, plus `recordData(): array` and a `mountedRecord()` that seeds the form |
 | `ViewPage` | `infolist(): Infolist` |
 | `DashboardPage` | `protected static ?string $dashboard`, `protected static ?string $layoutKey`, `static dashboardClass(): ?string`, `getWidgets(): array`, `getWidgetColumns(): int`, `widgetLayoutKey(): ?string` |

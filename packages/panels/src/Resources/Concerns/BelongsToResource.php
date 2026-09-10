@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WirePanels\Resources\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 use NyonCode\WireCore\Core\Plugin\HookDispatch;
 use NyonCode\WireCore\Core\Plugin\Hooks\PageMountingPayload;
 use NyonCode\WireCore\Core\Plugin\HookTarget;
@@ -148,6 +149,38 @@ trait BelongsToResource
             : [];
 
         return app(ResolvesPageUrls::class)->urlFor($resource::key(), $page, $parameters, $this->breadcrumbZone);
+    }
+
+    /**
+     * The same URL as {@see pageUrl()}, minus the pages this user cannot open.
+     *
+     * `ResourceRoutes` turns a page's declared permission into `can:` middleware
+     * on its route, so sending someone to a page they lack it for is a 403 —
+     * strictly worse than the page they were already looking at. Asking first is
+     * what lets a caller fall through to its next candidate instead, which is
+     * how a create lands on the list when it may not open the record it just
+     * made.
+     *
+     * Null for the same reasons `pageUrl()` gives one, plus this one; a caller
+     * that wants the URL regardless of who is asking keeps using `pageUrl()`.
+     *
+     * @param  string  $page  A page kind — `index`, `create`, `view`, `edit`, or one of the resource's own.
+     */
+    protected function reachablePageUrl(string $page, mixed $record = null): ?string
+    {
+        $url = $this->pageUrl($page, $record);
+
+        if ($url === null) {
+            return null;
+        }
+
+        $permission = $this->pagePermission($page);
+
+        // Gate rather than a permission package's own API, like every other
+        // authorization check in the framework: both Spatie and
+        // permission-extended register into it, and a page declaring nothing is
+        // open to whoever the route already let through.
+        return $permission === null || Gate::allows($permission) ? $url : null;
     }
 
     /**
