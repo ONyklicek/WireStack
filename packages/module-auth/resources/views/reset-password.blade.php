@@ -6,7 +6,6 @@
 
      Nothing here is trusted for having been in the form: Fortify validates the
      token and the address against the broker. --}}
-@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
 
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.reset_heading')"

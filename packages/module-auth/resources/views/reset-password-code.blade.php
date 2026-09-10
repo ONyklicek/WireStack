@@ -10,7 +10,6 @@
      usual case is three boxes and two passwords. It stays editable: a person who
      asked from one browser and finished in another still has a form they can
      complete. --}}
-@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
 
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.reset_heading')"

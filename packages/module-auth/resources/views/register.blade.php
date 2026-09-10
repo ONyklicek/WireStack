@@ -7,7 +7,6 @@
      company name or a phone number at sign-up adds it there — and tells
      `Fortify::createUsersUsing()` what to do with it, which is the half no view
      ever owned. --}}
-@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
 
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.register')"

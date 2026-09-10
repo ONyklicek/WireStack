@@ -16,7 +16,6 @@
      The action is the GET route's URL on purpose: Fortify serves both verbs at
      one path and names the POST differently across its major versions, so the
      name that has been stable is the one to use. --}}
-@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
 
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.sign_in')"

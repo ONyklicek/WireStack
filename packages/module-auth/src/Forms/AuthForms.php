@@ -107,9 +107,7 @@ final class AuthForms
 
             $this->username(),
 
-            $this->password()
-                ->label(__('wire-module-auth::messages.password'))
-                ->autocomplete('new-password'),
+            $this->password()->autocomplete('new-password'),
 
             $this->passwordConfirmation(),
         ]);
@@ -230,7 +228,7 @@ final class AuthForms
         return $this->build(AuthForm::Code, [
             OtpInput::make('code')
                 ->label(__('wire-module-auth::messages.code'))
-                ->length(max(4, (int) config('wire-module-auth.codes.length', 6)))
+                ->length($this->codeLength())
                 ->numericOnly()
                 ->autofocus(),
         ]);
@@ -250,10 +248,13 @@ final class AuthForms
         return $this->build(AuthForm::ResetPasswordCode, [
             $this->username()->default($email),
 
+            // The focus goes on the code, not the address above it: the address
+            // arrives filled in and the code is what the person came here with.
             OtpInput::make('code')
                 ->label(__('wire-module-auth::messages.code'))
-                ->length(max(4, (int) config('wire-module-auth.codes.length', 6)))
-                ->numericOnly(),
+                ->length($this->codeLength())
+                ->numericOnly()
+                ->autofocus(),
 
             $this->password()
                 ->label(__('wire-module-auth::messages.new_password'))
@@ -303,6 +304,19 @@ final class AuthForms
         // every value it was configured for — and translates the label with the
         // `email` key, which is a translation file rather than a fork.
         return $name === 'email' ? $field->email() : $field;
+    }
+
+    /**
+     * How many boxes a mailed code gets.
+     *
+     * Read from config rather than fixed at six because it is the length the
+     * store mints, and the two have to agree: six boxes in front of an
+     * eight-digit code is a form that cannot be completed. Floored at four so a
+     * misconfigured length cannot render a challenge with one box.
+     */
+    private function codeLength(): int
+    {
+        return max(4, (int) config('wire-module-auth.codes.length', 6));
     }
 
     /** A password input, revealable — the toggle is Alpine, already in the document. */

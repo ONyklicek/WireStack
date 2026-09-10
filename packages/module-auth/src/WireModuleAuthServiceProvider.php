@@ -6,6 +6,7 @@ namespace NyonCode\WireModuleAuth;
 
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\View;
 use Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Fortify;
@@ -81,6 +82,21 @@ class WireModuleAuthServiceProvider extends PackageServiceProvider
             })
             ->bootedPackage(function (): void {
                 Blade::component('wire-module-auth::screen', Screen::class);
+
+                // Every screen renders its fields from the registry, and the
+                // registry reaches them from here rather than from nine copies
+                // of `app(...)` in the templates: a view that resolves out of
+                // the container is a view doing PHP's job (Rendering Rule 1),
+                // and nine of them are nine places to keep in step.
+                //
+                // A composer rather than data passed at the call site, because
+                // these views have two callers — Fortify's view callbacks and
+                // this package's own code-flow routes — and an application may
+                // render one directly as a third.
+                View::composer(
+                    'wire-module-auth::*',
+                    fn ($view) => $view->with('forms', $this->app->make(AuthForms::class)),
+                );
 
                 $this->registerScreens();
                 $this->registerSignOut();

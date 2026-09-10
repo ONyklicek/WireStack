@@ -12,7 +12,6 @@
      optional for the same reason: the hidden half is still in the document, and
      a browser asked to validate a required control it cannot focus refuses the
      submit and reports it nowhere. --}}
-@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
 
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.two_factor_heading')"

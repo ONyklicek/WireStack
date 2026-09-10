@@ -4,7 +4,6 @@
      something behind the `password.confirm` middleware. Fortify remembers the
      confirmation for the window in its config and sends them where they were
      going. --}}
-@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
 
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.confirm_heading')"

@@ -8,7 +8,6 @@
 
      Routed only where `codes.login` is on, so nothing here asks whether the flow
      exists: a screen for a switch that is off is never reached. --}}
-@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
 
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.code_login_heading')"

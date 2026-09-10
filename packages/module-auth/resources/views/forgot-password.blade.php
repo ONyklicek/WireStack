@@ -5,7 +5,6 @@
      always the same whether or not the address exists, which is Fortify's
      decision and the right one: a form that says "no such account" is an
      account enumerator. --}}
-@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
 
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.forgot_heading')"

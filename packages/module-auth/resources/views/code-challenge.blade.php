@@ -11,7 +11,6 @@
      first: two submits posting to different URLs is a screen where pressing
      Enter in the code boxes may mail a new code and throw away the one being
      typed. --}}
-@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
 
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.code_heading')"
