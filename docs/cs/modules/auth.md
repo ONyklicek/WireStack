@@ -307,9 +307,58 @@ Co který tok potřebuje od vašeho user modelu, kromě `codes.*`:
 nikdy nepošle — bez chyby, bez e-mailu — a to je první věc ke kontrole, když tok
 nedělá vůbec nic.
 
+**4. Řekněte to všechno na modelu najednou.** Tohle je každý požadavek z tabulky
+v jedné třídě — traity a rozhraní jsou celé to, co toky chtějí:
+
+```php
+namespace App\Models;
+
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Fortify\TwoFactorAuthenticatable;
+use NyonCode\WireModuleAuth\Contracts\ReceivesLoginCodes;
+
+class User extends Authenticatable implements MustVerifyEmail, ReceivesLoginCodes   // [tl! focus]
+{
+    use HasFactory;
+    use Notifiable;                 // aby se kód vůbec dal poslat            [tl! focus]
+    use TwoFactorAuthenticatable;   // aby autentikátor mohl vyhrát nad kódem [tl! focus]
+
+    protected $fillable = ['name', 'email', 'password', 'two_factor_by_mail'];
+
+    protected $hidden = ['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'];
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'two_factor_by_mail' => 'boolean',
+        ];
+    }
+
+    /** Ptá se před každým druhým faktorem e-mailem. Bez rozhraní rozhoduje konfigurace. */
+    public function wantsLoginCode(): bool   // [tl! focus]
+    {
+        return $this->two_factor_by_mail;
+    }
+}
+```
+
+Povinný pro všechny toky je jen `Notifiable`; zbytek jsou funkce, které jste si
+zapnuli.
+
 ### Přihlášení kódem
 
-Co dělá člověk u obrazovky, když je `codes.login` zapnutý:
+Jeden přepínač a nic dalšího měnit nemusíte:
+
+```dotenv
+WIRE_AUTH_CODE_LOGIN=true
+```
+
+Co pak dělá člověk u obrazovky:
 
 1. Na přihlašovací obrazovce klikne na **Přihlásit se kódem** — odkaz se kreslí
    jen tam, kde je tok zapnutý, takže je to zároveň důkaz, že přepínač zabral.
@@ -340,6 +389,36 @@ Pro lidi bez autentikátoru. Zapnuté musí být `codes.second_factor` **i**
 Kdo má potvrzené TOTP tajemství, tuhle obrazovku nikdy neuvidí: jde na výzvu
 Fortify, protože autentikátor je silnější faktor a nastavoval si ho schválně.
 
+Oba druhy druhého faktoru vyvolávají vlastní události Fortify, takže audit, který
+chce zaznamenat, který z nich to byl, poslouchá jednou:
+
+```php
+namespace App\Providers;
+
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Events\TwoFactorAuthenticationFailed;
+use Laravel\Fortify\Events\ValidTwoFactorAuthenticationCodeProvided;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        Event::listen(ValidTwoFactorAuthenticationCodeProvided::class, function ($event): void {   // [tl! focus:start]
+            // Kód z e-mailu, nebo z aplikace: uživatel bez TOTP tajemství
+            // odpověděl na ten, který poslal tenhle balíček.
+            activity()->causedBy($event->user)->log(
+                $event->user->two_factor_secret ? 'přihlášení kódem z aplikace' : 'přihlášení kódem z e-mailu',
+            );
+        });
+
+        Event::listen(TwoFactorAuthenticationFailed::class, fn ($event) => logger()->warning(
+            'druhý faktor odmítnut', ['user' => $event->user->getKey()],
+        ));                                                                                        // [tl! focus:end]
+    }
+}
+```
+
 ### Potvrzení adresy kódem
 
 Vedle podepsaného odkazu, ne místo něj — pro poštovního klienta, který URL
@@ -355,6 +434,17 @@ přepsal, nebo pro odkaz otevřený na jiném stroji:
 
 Váš user model musí implementovat `MustVerifyEmail`, jinak není co potvrzovat a
 obě obrazovky pošlou návštěvníka domů.
+
+Potvrzení adresy *znamená* něco jen tam, kde je do té doby něco zavřené — a to je
+tady middleware, ne nastavení:
+
+```php
+// config/wire-panels.php
+'routes' => [
+    'enabled' => true,
+    'middleware' => ['web', 'auth', 'verified'],   // [tl! focus]
+],
+```
 
 ### Nové heslo z kódu
 
@@ -378,6 +468,27 @@ Se zapnutým tokem se nahrazují dva bindingy — Laravelův
 `ResetPassword::toMailUsing()` a `SuccessfulPasswordResetLinkRequestResponse` z
 Fortify. Pokud si některý navazuje vaše aplikace, její provider bootuje poslední
 a vyhraje — a kódy pak nemají čím jet.
+
+Jeden binding naopak musí být váš, a je to ten, který Fortify záměrně nechává
+nenavázaný — co obnova hesla doopravdy zapíše. Instalátor `laravel/fortify` ho
+publikuje; aplikace, která si Fortify drátovala ručně, ho musí dodat, jinak
+**obě** obrazovky pro obnovu spadnou na chybě kontejneru, ne na něčem o kódech:
+
+```php
+namespace App\Providers;
+
+use App\Actions\Fortify\ResetUserPassword;
+use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Contracts\ResetsUserPasswords;
+
+class FortifyServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->singleton(ResetsUserPasswords::class, ResetUserPassword::class);   // [tl! focus]
+    }
+}
+```
 
 ### Když žádný kód nedorazí
 
@@ -425,6 +536,134 @@ class User extends Authenticatable implements ReceivesLoginCodes
         return $this->two_factor_by_mail;
     }                                           // [tl! focus:end]
 }
+```
+
+### Změna toho, na co se kódové obrazovky ptají
+
+Kódové obrazovky jsou `AuthForms` jako každá jiná tady, takže políčka jsou pole,
+které se dá vyměnit, ne markup, který byste museli publikovat. `AuthForm::Code` je
+jeden case pro tři obrazovky — passwordless výzvu, druhý faktor e-mailem i
+potvrzení adresy — protože aplikace, která má osmimístné kódy, to myslí na všechny
+tři:
+
+```php
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use NyonCode\WireForms\Components\OtpInput;
+use NyonCode\WireModuleAuth\Forms\AuthForm;
+use NyonCode\WireModuleAuth\Forms\AuthForms;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        // Osm políček, po třech, aby to sedělo s `'length' => 8` v konfiguraci —
+        // pole kreslí to, co úložiště generuje, a musí se shodnout.
+        app(AuthForms::class)->extend(AuthForm::Code, fn (array $fields): array => [   // [tl! focus:start]
+            OtpInput::make('code')
+                ->label(__('Váš kód'))
+                ->length(8)
+                ->separator(3)
+                ->numericOnly()
+                ->autofocus(),
+        ]);                                                                            // [tl! focus:end]
+
+        // Adresa na passwordless obrazovce tam, kde se lidé přihlašují osobním číslem.
+        app(AuthForms::class)->extend(
+            AuthForm::LoginCode,
+            fn (array $fields): array => [...$fields, /* … */],
+        );
+    }
+}
+```
+
+Pravidlo, které každé rozšíření dodržuje, je z ADR 0036: pole, které neumí odeslat
+nativně, je při renderu odmítnuté jménem — místo aby neposlalo nic.
+
+### Testování ve vaší aplikaci
+
+Kód existuje na jediném místě — v notifikaci na cestě ven — takže si ho test
+přečte stejně, jako si ho člověk přečte v mailu:
+
+```php
+use Illuminate\Support\Facades\Notification;
+use NyonCode\WireModuleAuth\Enums\CodePurpose;
+use NyonCode\WireModuleAuth\Notifications\OneTimeCodeNotification;
+
+it('přihlásí kódem z e-mailu', function () {
+    Notification::fake();
+
+    $user = User::factory()->create(['email' => 'ann@example.com']);
+
+    $this->post('/login/code', ['email' => 'ann@example.com'])
+        ->assertRedirect(route('wire-auth.login-code.challenge'));
+
+    Notification::assertSentTo($user, OneTimeCodeNotification::class);
+
+    $code = Notification::sent($user, OneTimeCodeNotification::class)   // [tl! focus:start]
+        ->first()->code->code;                                         // číslice, jednou
+
+    $this->post('/login/code/challenge', ['code' => $code])
+        ->assertRedirect(config('fortify.home'));                      // [tl! focus:end]
+
+    expect(auth()->id())->toBe($user->getKey());
+});
+```
+
+**Obnova hesla je výjimka a stojí za to vědět proč.** Její kód vzniká *uvnitř*
+mailu, který posílá Laravelův broker — v jediném okamžiku, kdy token existuje —
+takže `Notification::fake()` ten mail nikdy nesestaví a žádný kód nevznikne. Test
+napsaný takhle prochází proti toku, který neudělal nic. Přečtěte si ho z
+úložiště:
+
+```php
+use NyonCode\WireModuleAuth\Contracts\OneTimeCodes;
+use NyonCode\WireModuleAuth\Enums\CodePurpose;
+use NyonCode\WireModuleAuth\ValueObjects\OneTimeCode;
+
+it('nastaví nové heslo z kódu v e-mailu', function () {
+    $issued = null;
+
+    // Dekorátor nad skutečným úložištěm: pořád se hashuje, expiruje a
+    // počítají se pokusy — tohle si jen nechá číslice, které si databáze
+    // záměrně nenechává.
+    app()->extend(OneTimeCodes::class, fn (OneTimeCodes $codes) => new class($codes, $issued) implements OneTimeCodes   // [tl! focus:start]
+    {
+        public function __construct(private OneTimeCodes $codes, public ?OneTimeCode &$last) {}
+
+        public function issue(CodePurpose $purpose, string $identifier, array $payload = []): OneTimeCode
+        {
+            return $this->last = $this->codes->issue($purpose, $identifier, $payload);
+        }
+
+        public function verify(CodePurpose $purpose, string $identifier, string $code): ?OneTimeCode
+        {
+            return $this->codes->verify($purpose, $identifier, $code);
+        }
+
+        public function recentlyIssued(CodePurpose $purpose, string $identifier): bool
+        {
+            return $this->codes->recentlyIssued($purpose, $identifier);
+        }
+
+        public function invalidate(CodePurpose $purpose, string $identifier): void
+        {
+            $this->codes->invalidate($purpose, $identifier);
+        }
+    });                                                                                                                 // [tl! focus:end]
+
+    User::factory()->create(['email' => 'ann@example.com']);
+
+    $this->post('/forgot-password', ['email' => 'ann@example.com']);
+
+    $this->post('/reset-password-code', [
+        'email' => 'ann@example.com',
+        'code' => $issued->code,
+        'password' => 'a-brand-new-one',
+        'password_confirmation' => 'a-brand-new-one',
+    ])->assertSessionHasNoErrors();
+});
 ```
 
 ### E-mail s kódem
@@ -496,7 +735,61 @@ spotřebuje a vypršelý kód je k nerozeznání od špatného — `null` pro ka
 podobu „ne".
 
 ```php
-// config/app.php nebo provider
+namespace App\Auth;
+
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Redis;
+use NyonCode\WireModuleAuth\Contracts\OneTimeCodes;
+use NyonCode\WireModuleAuth\Enums\CodePurpose;
+use NyonCode\WireModuleAuth\ValueObjects\OneTimeCode;
+
+class RedisOneTimeCodes implements OneTimeCodes
+{
+    public function issue(CodePurpose $purpose, string $identifier, array $payload = []): OneTimeCode
+    {
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);   // [tl! focus:start]
+        $expiresAt = now()->addMinutes(10);
+
+        // TTL je expirace: není co uklízet a kód, který přežije svůj klíč,
+        // nemůže existovat.
+        Redis::setex($this->key($purpose, $identifier), 600, json_encode([
+            'code' => Hash::make($code),
+            'payload' => $payload,
+            'attempts' => 0,
+            'issued_at' => now()->timestamp,
+        ]));
+
+        return new OneTimeCode($purpose, $identifier, $code, $expiresAt, $payload);   // [tl! focus:end]
+    }
+
+    public function verify(CodePurpose $purpose, string $identifier, string $code): ?OneTimeCode
+    {
+        // Špatný, po expiraci, nikdy nevydaný, o pokus navíc: všechno `null`,
+        // protože ten rozdíl je užitečný jen tomu, kdo hádá.
+        // …
+    }
+
+    public function recentlyIssued(CodePurpose $purpose, string $identifier): bool
+    {
+        // …
+    }
+
+    public function invalidate(CodePurpose $purpose, string $identifier): void
+    {
+        Redis::del($this->key($purpose, $identifier));
+    }
+
+    private function key(CodePurpose $purpose, string $identifier): string
+    {
+        // Účel je součást adresy, ne nálepka: kód poslaný na potvrzení adresy
+        // nesmí otevřít přihlašovací výzvu.
+        return "wire-auth:{$purpose->value}:{$identifier}";
+    }
+}
+```
+
+```php
+// app/Providers/AppServiceProvider.php, v register()
 $this->app->bind(
     NyonCode\WireModuleAuth\Contracts\OneTimeCodes::class,
     App\Auth\RedisOneTimeCodes::class,   // [tl! focus]

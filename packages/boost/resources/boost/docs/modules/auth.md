@@ -304,9 +304,58 @@ What each flow needs of your user model, beyond `codes.*`:
 it is never sent a code — no error, no mail — which is the first thing to check
 when a flow does nothing at all.
 
+**4. Say all of it on the model once.** This is every requirement above in one
+class — the traits and interfaces are the whole of what the flows ask for:
+
+```php
+namespace App\Models;
+
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Fortify\TwoFactorAuthenticatable;
+use NyonCode\WireModuleAuth\Contracts\ReceivesLoginCodes;
+
+class User extends Authenticatable implements MustVerifyEmail, ReceivesLoginCodes   // [tl! focus]
+{
+    use HasFactory;
+    use Notifiable;                 // a code can be sent at all          [tl! focus]
+    use TwoFactorAuthenticatable;   // an authenticator app can win over one [tl! focus]
+
+    protected $fillable = ['name', 'email', 'password', 'two_factor_by_mail'];
+
+    protected $hidden = ['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'];
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'two_factor_by_mail' => 'boolean',
+        ];
+    }
+
+    /** Asked before every mailed second factor. Drop the interface to let config decide. */
+    public function wantsLoginCode(): bool   // [tl! focus]
+    {
+        return $this->two_factor_by_mail;
+    }
+}
+```
+
+Only `Notifiable` is required for every flow; the rest are the features you
+turned on.
+
 ### Signing In With A Code
 
-What the person does, once `codes.login` is on:
+One switch, and nothing else has to change:
+
+```dotenv
+WIRE_AUTH_CODE_LOGIN=true
+```
+
+What the person then does:
 
 1. On the sign-in screen they click **Sign in with a code instead** — the link is
    drawn only where the flow is on, so it is also your proof the switch took.
@@ -341,6 +390,36 @@ Anyone with a confirmed TOTP secret never sees this screen: they go to Fortify's
 challenge instead, because an authenticator app is the stronger factor and they
 set it up on purpose.
 
+Both kinds of second factor fire Fortify's own events, so an audit trail that
+wants to record which one was used listens once:
+
+```php
+namespace App\Providers;
+
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Events\TwoFactorAuthenticationFailed;
+use Laravel\Fortify\Events\ValidTwoFactorAuthenticationCodeProvided;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        Event::listen(ValidTwoFactorAuthenticationCodeProvided::class, function ($event): void {   // [tl! focus:start]
+            // Mailed code or authenticator app: a user with no TOTP secret
+            // answered the one this package sent.
+            activity()->causedBy($event->user)->log(
+                $event->user->two_factor_secret ? 'signed in with an app code' : 'signed in with a mailed code',
+            );
+        });
+
+        Event::listen(TwoFactorAuthenticationFailed::class, fn ($event) => logger()->warning(
+            'second factor refused', ['user' => $event->user->getKey()],
+        ));                                                                                        // [tl! focus:end]
+    }
+}
+```
+
 ### Confirming An Address By Code
 
 Beside the signed link, never instead of it — for the mail client that rewrote
@@ -355,6 +434,17 @@ the URL, or a link opened on the wrong machine:
 
 Your user model has to implement `MustVerifyEmail`, or there is nothing to
 confirm and both screens send the visitor home.
+
+Confirming an address only *means* something where something is closed until it
+happens, which is a middleware rather than a setting here:
+
+```php
+// config/wire-panels.php
+'routes' => [
+    'enabled' => true,
+    'middleware' => ['web', 'auth', 'verified'],   // [tl! focus]
+],
+```
 
 ### A New Password From A Code
 
@@ -380,6 +470,27 @@ Two bindings are replaced while this flow is on — Laravel's
 `ResetPassword::toMailUsing()` and Fortify's
 `SuccessfulPasswordResetLinkRequestResponse`. If your application binds either
 one, yours boots last and wins, and the codes then have no mail to travel in.
+
+One binding has to be yours, and it is the one Fortify deliberately leaves unbound
+— what a reset actually writes. `laravel/fortify`'s own installer publishes it;
+an application that wired Fortify by hand supplies it, or **both** reset screens
+fail on a container error rather than on anything about codes:
+
+```php
+namespace App\Providers;
+
+use App\Actions\Fortify\ResetUserPassword;
+use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Contracts\ResetsUserPasswords;
+
+class FortifyServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->singleton(ResetsUserPasswords::class, ResetUserPassword::class);   // [tl! focus]
+    }
+}
+```
 
 ### When No Code Arrives
 
@@ -425,6 +536,134 @@ class User extends Authenticatable implements ReceivesLoginCodes
         return $this->two_factor_by_mail;
     }                                           // [tl! focus:end]
 }
+```
+
+### Changing What The Code Screens Ask
+
+The code screens are `AuthForms` like every other screen here, so the boxes are a
+field you can replace rather than markup you would have to publish. `AuthForm::Code`
+is one case for three screens — the passwordless challenge, the mailed second
+factor and the address confirmation all render it — because an application that
+makes its codes eight digits long means all three:
+
+```php
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use NyonCode\WireForms\Components\OtpInput;
+use NyonCode\WireModuleAuth\Forms\AuthForm;
+use NyonCode\WireModuleAuth\Forms\AuthForms;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        // Eight boxes, in threes, to match `'length' => 8` in the config —
+        // the field draws what the store mints, and the two have to agree.
+        app(AuthForms::class)->extend(AuthForm::Code, fn (array $fields): array => [   // [tl! focus:start]
+            OtpInput::make('code')
+                ->label(__('Your code'))
+                ->length(8)
+                ->separator(3)
+                ->numericOnly()
+                ->autofocus(),
+        ]);                                                                            // [tl! focus:end]
+
+        // The address on the passwordless screen, where sign-in is by staff number.
+        app(AuthForms::class)->extend(
+            AuthForm::LoginCode,
+            fn (array $fields): array => [...$fields, /* … */],
+        );
+    }
+}
+```
+
+The rule every extension keeps is ADR 0036's: a field that cannot submit natively
+is refused at render, by name, rather than posting nothing.
+
+### Testing It In Your Application
+
+The code exists in one place — the notification on its way out — so a test reads
+it the way a person reads their mail:
+
+```php
+use Illuminate\Support\Facades\Notification;
+use NyonCode\WireModuleAuth\Enums\CodePurpose;
+use NyonCode\WireModuleAuth\Notifications\OneTimeCodeNotification;
+
+it('signs in with a mailed code', function () {
+    Notification::fake();
+
+    $user = User::factory()->create(['email' => 'ann@example.com']);
+
+    $this->post('/login/code', ['email' => 'ann@example.com'])
+        ->assertRedirect(route('wire-auth.login-code.challenge'));
+
+    Notification::assertSentTo($user, OneTimeCodeNotification::class);
+
+    $code = Notification::sent($user, OneTimeCodeNotification::class)   // [tl! focus:start]
+        ->first()->code->code;                                         // the digits, once
+
+    $this->post('/login/code/challenge', ['code' => $code])
+        ->assertRedirect(config('fortify.home'));                      // [tl! focus:end]
+
+    expect(auth()->id())->toBe($user->getKey());
+});
+```
+
+**The reset flow is the exception, and it is worth knowing why.** Its code is
+minted *inside* the mail Laravel's broker sends, which is the one moment the
+token exists — so `Notification::fake()` never builds that mail and never mints a
+code, and a test written that way passes against a flow that did nothing. Read it
+off the store instead:
+
+```php
+use NyonCode\WireModuleAuth\Contracts\OneTimeCodes;
+use NyonCode\WireModuleAuth\Enums\CodePurpose;
+use NyonCode\WireModuleAuth\ValueObjects\OneTimeCode;
+
+it('resets a password from a mailed code', function () {
+    $issued = null;
+
+    // A decorator over the real store: everything still hashes, expires and
+    // counts attempts — this only keeps the digits the database deliberately
+    // does not.
+    app()->extend(OneTimeCodes::class, fn (OneTimeCodes $codes) => new class($codes, $issued) implements OneTimeCodes   // [tl! focus:start]
+    {
+        public function __construct(private OneTimeCodes $codes, public ?OneTimeCode &$last) {}
+
+        public function issue(CodePurpose $purpose, string $identifier, array $payload = []): OneTimeCode
+        {
+            return $this->last = $this->codes->issue($purpose, $identifier, $payload);
+        }
+
+        public function verify(CodePurpose $purpose, string $identifier, string $code): ?OneTimeCode
+        {
+            return $this->codes->verify($purpose, $identifier, $code);
+        }
+
+        public function recentlyIssued(CodePurpose $purpose, string $identifier): bool
+        {
+            return $this->codes->recentlyIssued($purpose, $identifier);
+        }
+
+        public function invalidate(CodePurpose $purpose, string $identifier): void
+        {
+            $this->codes->invalidate($purpose, $identifier);
+        }
+    });                                                                                                                 // [tl! focus:end]
+
+    User::factory()->create(['email' => 'ann@example.com']);
+
+    $this->post('/forgot-password', ['email' => 'ann@example.com']);
+
+    $this->post('/reset-password-code', [
+        'email' => 'ann@example.com',
+        'code' => $issued->code,
+        'password' => 'a-brand-new-one',
+        'password_confirmation' => 'a-brand-new-one',
+    ])->assertSessionHasNoErrors();
+});
 ```
 
 ### The Mail
@@ -495,7 +734,61 @@ scoped to its purpose *and* identifier, verifying consumes, and an expired code 
 indistinguishable from a wrong one — `null` for every kind of no.
 
 ```php
-// config/app.php or a provider
+namespace App\Auth;
+
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Redis;
+use NyonCode\WireModuleAuth\Contracts\OneTimeCodes;
+use NyonCode\WireModuleAuth\Enums\CodePurpose;
+use NyonCode\WireModuleAuth\ValueObjects\OneTimeCode;
+
+class RedisOneTimeCodes implements OneTimeCodes
+{
+    public function issue(CodePurpose $purpose, string $identifier, array $payload = []): OneTimeCode
+    {
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);   // [tl! focus:start]
+        $expiresAt = now()->addMinutes(10);
+
+        // The TTL is the expiry: nothing to sweep, and a code that outlives its
+        // key cannot exist.
+        Redis::setex($this->key($purpose, $identifier), 600, json_encode([
+            'code' => Hash::make($code),
+            'payload' => $payload,
+            'attempts' => 0,
+            'issued_at' => now()->timestamp,
+        ]));
+
+        return new OneTimeCode($purpose, $identifier, $code, $expiresAt, $payload);   // [tl! focus:end]
+    }
+
+    public function verify(CodePurpose $purpose, string $identifier, string $code): ?OneTimeCode
+    {
+        // Wrong, expired, never issued, one guess too many: all `null`, because
+        // the difference is only useful to somebody guessing.
+        // …
+    }
+
+    public function recentlyIssued(CodePurpose $purpose, string $identifier): bool
+    {
+        // …
+    }
+
+    public function invalidate(CodePurpose $purpose, string $identifier): void
+    {
+        Redis::del($this->key($purpose, $identifier));
+    }
+
+    private function key(CodePurpose $purpose, string $identifier): string
+    {
+        // The purpose is part of the address, not a label: a code mailed to
+        // confirm an address must not open the sign-in challenge.
+        return "wire-auth:{$purpose->value}:{$identifier}";
+    }
+}
+```
+
+```php
+// app/Providers/AppServiceProvider.php, in register()
 $this->app->bind(
     NyonCode\WireModuleAuth\Contracts\OneTimeCodes::class,
     App\Auth\RedisOneTimeCodes::class,   // [tl! focus]
