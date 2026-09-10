@@ -216,6 +216,33 @@ once. Database rows are carried across by the migration.
 
 ---
 
+## A notification now survives the redirect that raised it (2.0)
+
+The session driver has always flashed alongside the browser event it dispatches.
+Nothing rendered that flash, so a notification raised by a request that then
+redirected — `Action::successRedirect()`, a create page landing on its new
+record, any redirect-after-write — announced nothing at all: the event reached a
+document that `wire:navigate` replaced a moment later.
+
+`<x-wire-notifications::toast-container />` renders it now, on arrival.
+
+**It cannot arrive twice**, and that is Livewire's doing rather than a flag:
+`SupportRedirects` forgets everything flashed during an update that did *not*
+redirect, so a save that stayed put has already shown its toast as an event and
+leaves nothing behind. Only the notification that genuinely could not be
+delivered crosses.
+
+Two things to check, and only if you touched either:
+
+1. **A workaround of your own.** If you flashed your own key after a redirect and
+   rendered it yourself, you will now see both. Drop yours, or point the
+   container at your key: `<x-wire-notifications::toast-container session-key="…" />`.
+2. **Anything reading `session('table-notification')`.** It now holds the whole
+   notification — `title`, `icon`, `duration`, `actions` — rather than only
+   `type` and `message`. Both of those are still there under the same names, so a
+   reader of `['message']` is unaffected; a strict comparison against the old
+   two-key array is not.
+
 ## Notifications are a new table, and its id is a ULID (2.0)
 
 Nothing to migrate: `wire_notifications` does not exist in 1.x. It arrives with

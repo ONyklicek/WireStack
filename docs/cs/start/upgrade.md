@@ -213,6 +213,33 @@ resetuje. Řádky v databázi migrace převede.
 
 ---
 
+## Notifikace teď přežije redirect, který ji vyvolal (2.0)
+
+Session driver odjakživa flashuje vedle browser události, kterou odesílá. Ten
+flash ale nikdo nevykresloval, takže notifikace vyvolaná requestem, který pak
+přesměroval — `Action::successRedirect()`, stránka se založením dopadající na
+nový záznam, jakýkoliv redirect po zápisu — neohlásila vůbec nic: událost dorazila
+do dokumentu, který `wire:navigate` o chvíli později vyměnil.
+
+`<x-wire-notifications::toast-container />` ji teď po příchodu vykreslí.
+
+**Dvakrát přijít nemůže**, a je to zásluha Livewiru, ne nějakého přepínače:
+`SupportRedirects` zapomene všechno flashnuté během updatu, který
+*ne*přesměroval, takže uložení, které zůstalo na místě, svůj toast ukázalo jako
+událost a nic po sobě nenechá. Hranici překročí jen notifikace, kterou opravdu
+nešlo doručit.
+
+Dvě věci ke kontrole, a jen pokud jste se jich dotkli:
+
+1. **Vlastní obcházka.** Pokud jste si po redirectu flashovali vlastní klíč a
+   sami ho vykreslovali, uvidíte teď obojí. Zrušte tu svoji, nebo kontejner
+   nasměrujte na svůj klíč:
+   `<x-wire-notifications::toast-container session-key="…" />`.
+2. **Cokoliv, co čte `session('table-notification')`.** Drží teď celou
+   notifikaci — `title`, `icon`, `duration`, `actions` — ne jen `type` a
+   `message`. Obojí tam pod stejnými jmény zůstává, takže čtenáře `['message']`
+   se to netýká; striktní porovnání se starým dvouklíčovým polem ano.
+
 ## Notifikace jsou nová tabulka a její id je ULID (2.0)
 
 Není co migrovat: `wire_notifications` v 1.x neexistuje. Přichází s historií
