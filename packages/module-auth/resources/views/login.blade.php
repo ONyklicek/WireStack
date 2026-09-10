@@ -45,6 +45,51 @@
             {{ __('wire-module-auth::messages.sign_in') }}
         </x-wire::button>
 
+        {{-- Passkeys, where Fortify routes them.
+
+             Beside the password form and not inside it: a discoverable
+             credential already knows which account it belongs to, so there is
+             nothing to type first. `x-cloak` and `x-show="supported"` are what
+             keep the button off a browser that cannot do the ceremony — absent
+             beats present-and-broken, and the password is on the same screen.
+
+             The controller is wire-core's `wirePasskey` (ADR 0032 §5): the users
+             module's profile card draws the other half of the same behaviour and
+             neither package may depend on the other. --}}
+        @if (\NyonCode\WireModuleAuth\Support\Screens::hasPasskeys())
+            @include('wire-core::partials.passkey-assets')
+
+            <div
+                x-data="wirePasskey({
+                    routes: {
+                        options: @js(route('passkey.login-options')),
+                        submit: @js(route('passkey.login')),
+                    },
+                    autofill: true,
+                    failedMessage: @js(__('wire-module-auth::messages.passkey_failed')),
+                })"
+                x-show="supported"
+                x-cloak
+                class="space-y-2"
+                data-testid="auth-passkey" @wireEl('auth-passkey')
+            >
+                <x-wire::button
+                    type="button"
+                    color="gray"
+                    outlined
+                    class="w-full"
+                    icon="outline:finger-print"
+                    x-on:click="signIn()"
+                    x-bind:disabled="busy"
+                    data-testid="auth-passkey-button"
+                >
+                    {{ __('wire-module-auth::messages.passkey_sign_in') }}
+                </x-wire::button>
+
+                <p x-show="error" x-text="error" x-cloak class="text-sm text-red-600 dark:text-red-400" data-testid="auth-passkey-error"></p>
+            </div>
+        @endif
+
         {{-- The other way in, where there is one. Same rule as the reset link
              above: the switch that draws it is the switch that routed it. --}}
         @if (\NyonCode\WireModuleAuth\Support\Codes::login())

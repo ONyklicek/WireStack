@@ -10,6 +10,7 @@ use NyonCode\WireForms\Components\Hidden;
 use NyonCode\WireForms\Components\OtpInput;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
+use NyonCode\WireModuleAuth\Support\Screens;
 
 /**
  * The fields of every signed-out screen, declared in PHP.
@@ -76,7 +77,13 @@ final class AuthForms
     public function login(): Form
     {
         return $this->build(AuthForm::Login, [
-            $this->username()->autofocus(),
+            // `webauthn` beside `username` where passkeys are routed: it is the
+            // token the browser's own credential dropdown anchors to, and
+            // without an input carrying it the conditional-UI autofill shows
+            // nothing at all — silently, which is the whole difficulty with it.
+            $this->username()
+                ->autocomplete(Screens::hasPasskeys() ? 'username webauthn' : 'username')
+                ->autofocus(),
 
             $this->password()->autocomplete('current-password'),
 

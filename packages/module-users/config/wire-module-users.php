@@ -92,6 +92,7 @@ return [
     'profile' => [
         'password' => true,
         'two_factor' => true,
+        'passkeys' => true,
         'delete_account' => env('WIRE_USERS_DELETE_ACCOUNT', false),
 
         // Whether the shell's user menu gets a link to this page. On, because
@@ -117,6 +118,26 @@ return [
     |
     */
     'two_factor' => env('WIRE_USERS_TWO_FACTOR', 'auto'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Passkeys
+    |--------------------------------------------------------------------------
+    |
+    | The same arrangement as two-factor, one layer newer: `laravel/passkeys`
+    | behind Fortify's `Features::passkeys()` owns the WebAuthn ceremony, the
+    | credential rows, the routes and the browser client — this module adds the
+    | card that lists a person's keys, registers another and removes one.
+    |
+    | `auto` shows the card where the packages are installed and the feature is
+    | on; true and false answer for you. The card is drawn but says what is
+    | missing when the user model has not taken `PasskeyAuthenticatable` yet,
+    | because that is the one line an application has to write itself and its
+    | absence is otherwise silent — every route answers and the key belongs to
+    | nobody.
+    |
+    */
+    'passkeys' => env('WIRE_USERS_PASSKEYS', 'auto'),
 
     /*
     |--------------------------------------------------------------------------

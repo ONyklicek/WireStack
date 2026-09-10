@@ -96,4 +96,8 @@ return [
             'line' => 'Type this code to set a new password:',
         ],
     ],
+
+    // Passkeys, where Fortify routes them.
+    'passkey_sign_in' => 'Sign in with a passkey',
+    'passkey_failed' => 'That passkey did not work. Try again, or sign in with your password.',
 ];

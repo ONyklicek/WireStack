@@ -65,4 +65,20 @@ return [
     'teams' => 'Týmy',
     'switch_team' => 'Přepnout tým',
     'team_switched' => 'Pracujete v týmu :team.',
+
+    // Passkeys — karta nad laravel/passkeys.
+    'passkeys' => 'Passkeys',
+    'passkeys_hint' => 'Přihlašování přes Touch ID, Windows Hello, telefon nebo bezpečnostní klíč místo hesla.',
+    'passkeys_empty' => 'Zatím žádné passkeys.',
+    'passkeys_unsupported' => 'Tenhle prohlížeč passkeys neumí.',
+    'passkeys_trait_missing' => 'Přidejte na user model trait PasskeyAuthenticatable, aby bylo kam passkeys ukládat.',
+    'passkey_name' => 'Pojmenujte zařízení',
+    'passkey_default_name' => 'Passkey',
+    'passkey_add' => 'Přidat passkey',
+    'passkey_added' => 'Passkey byl přidán.',
+    'passkey_added_on' => 'Přidáno :date',
+    'passkey_remove' => 'Odebrat',
+    'passkey_remove_confirm' => 'Odebrat tenhle passkey? Přihlášení tím zařízením přestane fungovat.',
+    'passkey_removed' => 'Passkey byl odebrán.',
+    'passkey_failed' => 'Nepovedlo se. Zkuste to znovu, nebo použijte heslo.',
 ];

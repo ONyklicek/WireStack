@@ -48,6 +48,19 @@ final class Screens
     }
 
     /**
+     * Whether a passkey is a way in here.
+     *
+     * `laravel/passkeys` ships with Fortify and Fortify routes the whole
+     * ceremony — options, verification, registration, deletion — the moment this
+     * feature is on. What is missing without it is not a route but a *button*,
+     * so this is the switch the login screen draws one from.
+     */
+    public static function hasPasskeys(): bool
+    {
+        return Features::enabled(Features::passkeys());
+    }
+
+    /**
      * Whether there is a route to sign out through.
      *
      * Asked of the router rather than of Fortify's features, because logout is

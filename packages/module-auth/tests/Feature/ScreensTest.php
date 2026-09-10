@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\ViewErrorBag;
+use Laravel\Fortify\Features;
+use Laravel\Fortify\FortifyServiceProvider;
 use NyonCode\WireModuleAuth\Support\Frame;
 use NyonCode\WireModuleAuth\Tests\Fixtures\AuthFrame;
 
@@ -169,3 +171,28 @@ class AuthScreenUser extends User
 
     protected $guarded = [];
 }
+
+it('offers a passkey where Fortify routes one, and the field the browser anchors to', function () {
+    // The button is drawn from the same switch that registers the ceremony's
+    // routes, like every other link on this screen — and the e-mail field grows
+    // the `webauthn` token, which is what the browser's own credential dropdown
+    // attaches to. Without an input carrying it, autofill shows nothing at all
+    // and says nothing about why.
+    config()->set('fortify.features', [Features::passkeys()]);
+    app()->register(FortifyServiceProvider::class, force: true);
+
+    $this->get('/login')
+        ->assertOk()
+        ->assertSee('data-testid="auth-passkey-button"', false)
+        ->assertSee('wirePasskey(', false)
+        ->assertSee('autocomplete="username webauthn"', false);
+});
+
+it('draws no passkey button where the feature is off', function () {
+    config()->set('fortify.features', []);
+
+    $this->get('/login')
+        ->assertOk()
+        ->assertDontSee('data-testid="auth-passkey-button"', false)
+        ->assertSee('autocomplete="username"', false);
+});

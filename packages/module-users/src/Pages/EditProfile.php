@@ -13,9 +13,11 @@ use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireModuleUsers\Livewire\DeleteAccount;
+use NyonCode\WireModuleUsers\Livewire\PasskeyManagement;
 use NyonCode\WireModuleUsers\Livewire\TwoFactorAuthentication;
 use NyonCode\WireModuleUsers\Livewire\UpdatePassword;
 use NyonCode\WireModuleUsers\Resources\UserResource;
+use NyonCode\WireModuleUsers\Support\Passkeys;
 use NyonCode\WireModuleUsers\Support\TwoFactor;
 use NyonCode\WirePanels\Resources\Pages\EditPage;
 
@@ -174,6 +176,10 @@ class EditProfile extends EditPage
         // card off, and the application may have no Fortify to drive it.
         if (config('wire-module-users.profile.two_factor', true) && TwoFactor::enabled()) {
             $cards[] = TwoFactorAuthentication::class;
+        }
+
+        if (config('wire-module-users.profile.passkeys', true) && Passkeys::enabled()) {
+            $cards[] = PasskeyManagement::class;
         }
 
         if (config('wire-module-users.profile.delete_account', false)) {

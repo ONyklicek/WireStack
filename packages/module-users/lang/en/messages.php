@@ -65,4 +65,20 @@ return [
     'teams' => 'Teams',
     'switch_team' => 'Switch team',
     'team_switched' => 'You are now working in :team.',
+
+    // Passkeys — the card over laravel/passkeys.
+    'passkeys' => 'Passkeys',
+    'passkeys_hint' => 'Sign in with Touch ID, Windows Hello, a phone or a security key instead of a password.',
+    'passkeys_empty' => 'No passkeys yet.',
+    'passkeys_unsupported' => 'This browser cannot use passkeys.',
+    'passkeys_trait_missing' => 'Add the PasskeyAuthenticatable trait to your user model to store passkeys.',
+    'passkey_name' => 'Name this device',
+    'passkey_default_name' => 'Passkey',
+    'passkey_add' => 'Add a passkey',
+    'passkey_added' => 'The passkey was added.',
+    'passkey_added_on' => 'Added :date',
+    'passkey_remove' => 'Remove',
+    'passkey_remove_confirm' => 'Remove this passkey? Signing in with that device will stop working.',
+    'passkey_removed' => 'The passkey was removed.',
+    'passkey_failed' => 'That did not work. Try again, or use your password.',
 ];

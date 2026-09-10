@@ -96,4 +96,8 @@ return [
             'line' => 'Tímto kódem si nastavíte nové heslo:',
         ],
     ],
+
+    // Passkeys tam, kde je Fortify routuje.
+    'passkey_sign_in' => 'Přihlásit se passkeyem',
+    'passkey_failed' => 'S tímhle passkeyem to nešlo. Zkuste to znovu, nebo se přihlaste heslem.',
 ];
