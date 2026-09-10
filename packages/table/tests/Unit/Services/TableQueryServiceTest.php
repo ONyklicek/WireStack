@@ -736,7 +736,10 @@ it('sorts a split column by its first sortable child, not by its own name', func
         sortDirection: 'desc',
     );
 
-    expect($query->toSql())->toContain('"tqs_users"."name" desc')
+    // Through the same unquoting every other SQL assertion here goes through:
+    // MySQL and MariaDB quote an identifier in backticks, so a double-quoted
+    // expectation is a test about one grammar rather than about the ordering.
+    expect(tqsUnquoted($query->toSql()))->toContain('order by tqs_users.name desc')
         ->and($query->toSql())->not->toContain('identity');
 
     $results = $query->get();
