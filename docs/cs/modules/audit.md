@@ -147,6 +147,13 @@ oprávnění vyplatí nejvíc.
 | `navigation.icon` | `outline:clipboard-document-list` | Ikona v menu |
 | `navigation.sort` | `95` | Pořadí skupiny v menu |
 
+Tenhle modul nedodává vlastní pohledy — jeho obrazovky jsou framework tabulka
+a infolist nad stopou, kterou zapisuje `wire-core`, takže se přestylují tam, kde
+každá jiná obrazovka ([Vzhled](../start/theming.md)). Co dodává, jsou texty:
+`php artisan vendor:publish --tag=wire-module-audit::translations`; soubor se
+slučuje přes ten balíčkový klíč po klíči, takže přepis obsahuje jen řádky, které
+jste změnili.
+
 ## Související
 
 - [Audit log](../core/audit.md) — motor a co zaznamenává

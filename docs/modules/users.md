@@ -118,6 +118,7 @@ difference.
     'password' => true,
     'two_factor' => true,
     'delete_account' => false,   // off by default — see below
+    'menu_item' => true,         // the profile link in the shell's user menu
 ],
 
 'two_factor' => 'auto',   // 'auto' looks for Fortify, with its feature on
@@ -132,6 +133,7 @@ difference.
 
 'navigation' => [
     'group' => 'access',
+    'label' => null,   // null uses the module's own group heading
     'icon' => 'outline:users',
     'sort' => 90,
 ],
@@ -165,6 +167,209 @@ administrator who removes their own row is signed out mid-request into an
 application they can no longer reach, and if they were the only one, nobody can.
 Closing your own account is [the profile page's](#your-own-account) business,
 where it asks twice and takes a password.
+
+## Adapting The Screens
+
+`fields` maps three **column names**, and nothing more. It is there for a users
+table whose columns were named before this module arrived — it answers "which
+column holds the name", never "how many fields the name is":
+
+```php
+'fields' => ['name' => 'full_name', 'email' => 'login', 'password' => 'password'],
+```
+
+Everything else about the list, the form and the detail page is adjusted through
+[hooks](../core/plugins/hooks.md#scoping-a-hook-to-one-component) scoped to the
+key this module registered, `users`. **Subclassing `UserResource` does not
+work**: a subclass keeps the parent's key, and the registry refuses two classes
+on one key — which is [what makes a module adjustable rather than
+forkable](../panels/modules.md#a-package-adds-it-does-not-overwrite).
+
+### A First Name And A Last Name In Two Columns
+
+The case the config cannot express, and the hooks can. Four steps, and the last
+one is the only one this module has anything to do with.
+
+**1. The columns.** An ordinary migration; keep or drop `name` as you like,
+because after step 2 nothing reads it as a column:
+
+```php
+Schema::table('users', function (Blueprint $table): void {
+    $table->string('first_name')->after('id')->default('');        // [tl! focus:start]
+    $table->string('last_name')->after('first_name')->default('');  // [tl! focus:end]
+});
+
+// Backfill before dropping anything: the halves of a name are not recoverable
+// from a column that is already gone.
+DB::table('users')->orderBy('id')->each(function (object $user): void {
+    [$first, $last] = array_pad(explode(' ', (string) $user->name, 2), 2, '');
+
+    DB::table('users')->where('id', $user->id)->update([
+        'first_name' => $first,
+        'last_name' => $last,
+    ]);
+});
+```
+
+**2. The model.** Both columns fillable, and an accessor so everything that only
+*displays* a name keeps working — the shell's corner, the avatar's initials, the
+audit log's actor column all read `$user->name` and never care where it came
+from:
+
+```php
+// app/Models/User.php
+use Illuminate\Database\Eloquent\Casts\Attribute;
+
+protected $fillable = ['first_name', 'last_name', 'email', 'password'];
+
+protected function name(): Attribute                                      // [tl! focus:start]
+{
+    return Attribute::get(fn (): string => trim($this->first_name.' '.$this->last_name));
+}                                                                         // [tl! focus:end]
+```
+
+**3. The config line.** Point `fields.name` at the column the list should sort
+on — a real column, because `sortable()` and the default sort become SQL, and an
+accessor is not one:
+
+```php
+// config/wire-module-users.php
+'fields' => ['name' => 'last_name', 'email' => 'email', 'password' => 'password'],
+```
+
+**4. The screens**, which is where the hooks come in:
+
+```php
+namespace App\Wire\Plugins;
+
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\Hooks\FormConfiguringPayload;
+use NyonCode\WireCore\Core\Plugin\Hooks\InfolistConfiguringPayload;
+use NyonCode\WireCore\Core\Plugin\Hooks\TableComposingPayload;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Enums\Hook;
+use NyonCode\WireCore\Infolists\Components\TextEntry;
+use NyonCode\WireForms\Components\Field;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireModuleUsers\Resources\UserResource;
+use NyonCode\WireTable\Columns\TextColumn;
+
+final class SplitUserName implements Plugin
+{
+    public function getId(): string
+    {
+        return 'split-user-name';
+    }
+
+    public function register(PluginManager $manager): void
+    {
+        $manager->hook(Hook::FormConfiguring, function (FormConfiguringPayload $payload): FormConfiguringPayload {   // [tl! focus:start]
+            $payload->schema = $this->splitName($payload->schema);
+
+            return $payload;
+        }, for: 'users');                                                                                            // [tl! focus:end]
+
+        $manager->hook(Hook::TableComposing, function (TableComposingPayload $payload): TableComposingPayload {
+            $payload->columns = array_map(
+                fn (object $column): object => $column->getName() === UserResource::field('name')
+                    // One column, both halves in it: the search reads either      [tl! focus:start]
+                    // column, the sort stays on the real one underneath.
+                    ? TextColumn::make(UserResource::field('name'))
+                        ->label(__('Name'))
+                        ->state(fn (Model $record): string => trim($record->first_name.' '.$record->last_name))
+                        ->searchable(['first_name', 'last_name'])
+                        ->sortable()                                            // [tl! focus:end]
+                    : $column,
+                $payload->columns,
+            );
+
+            return $payload;
+        }, for: 'users');
+    }
+
+    public function boot(PluginManager $manager): void {}
+
+    /**
+     * The module's schema with its one name input replaced by two.
+     *
+     * Recursive, because the resource groups its fields into sections — the same
+     * reason the profile page's own filter is.
+     *
+     * @param  array<int, mixed>  $schema
+     * @return array<int, mixed>
+     */
+    private function splitName(array $schema): array
+    {
+        $name = UserResource::field('name');
+        $out = [];
+
+        foreach ($schema as $component) {
+            if ($component instanceof LayoutComponent) {
+                $out[] = $component->schema($this->splitName($component->getSchema()));
+
+                continue;
+            }
+
+            if ($component instanceof Field && $component->getName() === $name) {
+                $out[] = TextInput::make('first_name')->label(__('First name'))->required();   // [tl! focus:start]
+                $out[] = TextInput::make('last_name')->label(__('Last name'))->required();     // [tl! focus:end]
+
+                continue;
+            }
+
+            $out[] = $component;
+        }
+
+        return $out;
+    }
+}
+```
+
+Registered the way every application plugin is:
+
+```php
+// config/wire-core.php
+'plugins' => [
+    App\Wire\Plugins\SplitUserName::class,
+],
+```
+
+The detail page is the same three lines with a third hook, and here the accessor
+from step 2 does the work — an infolist only displays, so nothing is searched or
+sorted:
+
+```php
+$manager->hook(Hook::InfolistConfiguring, function (InfolistConfiguringPayload $payload): InfolistConfiguringPayload {
+    $payload->schema = array_map(
+        fn (object $entry): object => $entry->getName() === UserResource::field('name')
+            ? TextEntry::make('name')->label(__('Name'))   // the accessor, not a column [tl! focus]
+            : $entry,
+        $payload->schema,
+    );
+
+    return $payload;
+}, for: 'users');
+```
+
+Three things are worth knowing before you run it:
+
+- **`Hook::FormConfiguring` reaches the profile page too.** [Your Own
+  Account](#your-own-account) composes this same resource form and takes two
+  fields out of it, so both screens get the pair from one callback.
+  `Hook::ExportConfiguring` does the same for what a download contains.
+- **The accessor alone would not have been enough.** It fills the form and the
+  detail page perfectly well, and then the list's `searchable()` and
+  `defaultSort()` ask the database for a column that does not exist — which is
+  why step 3 points the module at a real one.
+- **Fortify and the permission packages never see the name**, so nothing else in
+  the stack has an opinion about how many columns it is.
+
+The wording on these screens is a published translation file and their markup a
+published view — `wire-module-users::translations` and `…::views`, with what
+each costs in [Theming → Localization](../start/theming.md#localization) and
+[Overriding Views](../start/theming.md#overriding-views).
 
 ## Your Own Account
 

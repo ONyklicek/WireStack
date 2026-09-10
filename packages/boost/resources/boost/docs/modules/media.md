@@ -37,6 +37,56 @@ published page shows — so the ordinary outcome of the editor is a new row, and
 the other one is behind a warning that names what it will break. See
 [Editing an image](#editing-an-image).
 
+## Configuration
+
+```php
+// config/wire-module-media.php
+'disk' => 'public',                 // stored on every row too: changing it moves new uploads only [tl! focus]
+'directory' => 'media',
+'table' => 'wire_media',
+'folders_table' => 'wire_media_folders',
+
+'accepts' => [],                    // MIME types or extensions; empty accepts whatever your own rules do [tl! focus:start]
+'max_size' => 10240,                // kilobytes, the unit Laravel's rules use [tl! focus:end]
+
+'route' => [
+    'enabled' => true,              // the only way a private disk's files reach a browser
+    'prefix' => 'wire-media',
+    'middleware' => ['web', 'auth'],
+],
+
+'thumbnails' => [
+    'enabled' => true,
+    'width' => 400,                 // the tile: the longest edge, never enlarged
+    'sizes' => ['row' => 96, 'preview' => 1200],
+    'directory' => 'thumbnails',
+    'queue' => false,               // true, or a queue name, where a worker is actually running
+],
+
+'navigation' => [
+    'group' => 'content',
+    'label' => null,                // null uses the module's own group heading
+    'icon' => 'outline:photo',
+    'sort' => 80,
+],
+```
+
+Each block has a section of its own below: [Private Files and Who May See
+Them](#private-files-and-who-may-see-them) for the route, and
+[Thumbnails](#thumbnails) for the sizes and the queue. Three keys have no section
+because there is nothing more to them than the line above:
+
+- **`accepts` and `max_size`** are the library's own upload rules. `accepts`
+  empty means the library refuses nothing that your validation lets through —
+  useful for a private library, and the wrong default for one anybody uploads to.
+- **`table` and `folders_table`** name where rows live, for an application that
+  already had a `media` table when this one arrived.
+
+The wording is a published translation file and the markup a published view —
+`wire-module-media::translations` and `…::views`, with what each costs in
+[Theming → Localization](../start/theming.md#localization) and
+[Overriding Views](../start/theming.md#overriding-views).
+
 ## Folders
 
 A folder is **a row, not a directory**. Nothing on the disk moves when a file is

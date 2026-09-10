@@ -116,6 +116,7 @@ současné heslo nemá. V tom je celý rozdíl.
     'password' => true,
     'two_factor' => true,
     'delete_account' => false,   // ve výchozím stavu vypnuté — viz níž
+    'menu_item' => true,         // odkaz na profil v uživatelském menu shellu
 ],
 
 'two_factor' => 'auto',   // 'auto' hledá Fortify se zapnutou funkcí
@@ -163,6 +164,206 @@ administrátor, který odstraní vlastní řádek, se uprostřed requestu odhlá
 aplikace, kam už se nedostane — a pokud byl jediný, nedostane se tam nikdo.
 Zavření vlastního účtu je věc [stránky profilu](#vlastni-ucet), kde se ptá
 dvakrát a chce heslo.
+
+## Úpravy obrazovek
+
+`fields` mapuje tři **jména sloupců**, nic víc. Je tu pro tabulku uživatelů,
+jejíž sloupce se jmenovaly dřív, než tenhle modul přišel — odpovídá na otázku
+„ve kterém sloupci je jméno", nikdy na „z kolika polí se jméno skládá":
+
+```php
+'fields' => ['name' => 'full_name', 'email' => 'login', 'password' => 'password'],
+```
+
+Všechno ostatní na seznamu, ve formuláři i na detailu se upravuje přes
+[hooky](../core/plugins/hooks.md#zuzeni-hooku-na-jednu-komponentu) zúžené na
+klíč, pod kterým se modul zaregistroval — `users`. **Dědění z `UserResource`
+nefunguje**: potomek si nechá klíč rodiče a registr odmítne dvě třídy na jednom
+klíči — a přesně to dělá z modulu něco upravitelného místo
+[něčeho, co se forkuje](../panels/modules.md#balicek-pridava-neprepisuje).
+
+### Křestní jméno a příjmení ve dvou sloupcích
+
+Případ, který konfigurace neumí vyjádřit a hooky ano. Čtyři kroky, a jen ten
+poslední má s tímhle modulem vůbec co do činění.
+
+**1. Sloupce.** Obyčejná migrace; `name` si nechte nebo zahoďte, jak chcete —
+po kroku 2 ho jako sloupec nikdo nečte:
+
+```php
+Schema::table('users', function (Blueprint $table): void {
+    $table->string('first_name')->after('id')->default('');        // [tl! focus:start]
+    $table->string('last_name')->after('first_name')->default('');  // [tl! focus:end]
+});
+
+// Naplňte data dřív, než něco zahodíte: půlky jména se ze sloupce, který už
+// není, zpátky nedostanou.
+DB::table('users')->orderBy('id')->each(function (object $user): void {
+    [$first, $last] = array_pad(explode(' ', (string) $user->name, 2), 2, '');
+
+    DB::table('users')->where('id', $user->id)->update([
+        'first_name' => $first,
+        'last_name' => $last,
+    ]);
+});
+```
+
+**2. Model.** Oba sloupce fillable a accessor, aby všechno, co jméno jen
+*zobrazuje*, fungovalo dál — roh shellu, iniciály v avataru i sloupec aktéra
+v audit logu čtou `$user->name` a je jim jedno, odkud se vzalo:
+
+```php
+// app/Models/User.php
+use Illuminate\Database\Eloquent\Casts\Attribute;
+
+protected $fillable = ['first_name', 'last_name', 'email', 'password'];
+
+protected function name(): Attribute                                      // [tl! focus:start]
+{
+    return Attribute::get(fn (): string => trim($this->first_name.' '.$this->last_name));
+}                                                                         // [tl! focus:end]
+```
+
+**3. Řádek konfigurace.** Nasměrujte `fields.name` na sloupec, podle kterého má
+seznam řadit — na skutečný sloupec, protože `sortable()` a výchozí řazení se
+promění v SQL a accessor sloupec není:
+
+```php
+// config/wire-module-users.php
+'fields' => ['name' => 'last_name', 'email' => 'email', 'password' => 'password'],
+```
+
+**4. Obrazovky**, a tady přicházejí na řadu hooky:
+
+```php
+namespace App\Wire\Plugins;
+
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
+use NyonCode\WireCore\Core\Plugin\Hooks\FormConfiguringPayload;
+use NyonCode\WireCore\Core\Plugin\Hooks\InfolistConfiguringPayload;
+use NyonCode\WireCore\Core\Plugin\Hooks\TableComposingPayload;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Enums\Hook;
+use NyonCode\WireCore\Infolists\Components\TextEntry;
+use NyonCode\WireForms\Components\Field;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireModuleUsers\Resources\UserResource;
+use NyonCode\WireTable\Columns\TextColumn;
+
+final class SplitUserName implements Plugin
+{
+    public function getId(): string
+    {
+        return 'split-user-name';
+    }
+
+    public function register(PluginManager $manager): void
+    {
+        $manager->hook(Hook::FormConfiguring, function (FormConfiguringPayload $payload): FormConfiguringPayload {   // [tl! focus:start]
+            $payload->schema = $this->splitName($payload->schema);
+
+            return $payload;
+        }, for: 'users');                                                                                            // [tl! focus:end]
+
+        $manager->hook(Hook::TableComposing, function (TableComposingPayload $payload): TableComposingPayload {
+            $payload->columns = array_map(
+                fn (object $column): object => $column->getName() === UserResource::field('name')
+                    // Jeden sloupec a obě půlky v něm: hledání čte oba sloupce,  [tl! focus:start]
+                    // řazení zůstane na tom skutečném pod ním.
+                    ? TextColumn::make(UserResource::field('name'))
+                        ->label(__('Jméno'))
+                        ->state(fn (Model $record): string => trim($record->first_name.' '.$record->last_name))
+                        ->searchable(['first_name', 'last_name'])
+                        ->sortable()                                            // [tl! focus:end]
+                    : $column,
+                $payload->columns,
+            );
+
+            return $payload;
+        }, for: 'users');
+    }
+
+    public function boot(PluginManager $manager): void {}
+
+    /**
+     * Schéma modulu s jedním inputem na jméno nahrazeným dvěma.
+     *
+     * Rekurzivně, protože resource skládá pole do sekcí — ze stejného důvodu,
+     * z jakého je rekurzivní i filtr profilové stránky.
+     *
+     * @param  array<int, mixed>  $schema
+     * @return array<int, mixed>
+     */
+    private function splitName(array $schema): array
+    {
+        $name = UserResource::field('name');
+        $out = [];
+
+        foreach ($schema as $component) {
+            if ($component instanceof LayoutComponent) {
+                $out[] = $component->schema($this->splitName($component->getSchema()));
+
+                continue;
+            }
+
+            if ($component instanceof Field && $component->getName() === $name) {
+                $out[] = TextInput::make('first_name')->label(__('Křestní jméno'))->required();   // [tl! focus:start]
+                $out[] = TextInput::make('last_name')->label(__('Příjmení'))->required();         // [tl! focus:end]
+
+                continue;
+            }
+
+            $out[] = $component;
+        }
+
+        return $out;
+    }
+}
+```
+
+Zaregistrovaný tak, jak se registruje každý plugin aplikace:
+
+```php
+// config/wire-core.php
+'plugins' => [
+    App\Wire\Plugins\SplitUserName::class,
+],
+```
+
+Detail je tytéž tři řádky se třetím hookem a tady odvede práci accessor
+z kroku 2 — infolist jen zobrazuje, takže se nic nehledá ani neřadí:
+
+```php
+$manager->hook(Hook::InfolistConfiguring, function (InfolistConfiguringPayload $payload): InfolistConfiguringPayload {
+    $payload->schema = array_map(
+        fn (object $entry): object => $entry->getName() === UserResource::field('name')
+            ? TextEntry::make('name')->label(__('Jméno'))   // accessor, ne sloupec [tl! focus]
+            : $entry,
+        $payload->schema,
+    );
+
+    return $payload;
+}, for: 'users');
+```
+
+Tři věci stojí za to vědět, než to spustíte:
+
+- **`Hook::FormConfiguring` dosáhne i na profilovou stránku.** [Vlastní
+  účet](#vlastni-ucet) skládá tentýž formulář resourcu a jen z něj dvě pole
+  vyndá, takže obě obrazovky dostanou dvojici z jednoho callbacku.
+  `Hook::ExportConfiguring` udělá totéž pro obsah stažení.
+- **Samotný accessor by nestačil.** Formulář i detail naplní naprosto v pořádku
+  a pak se `searchable()` a `defaultSort()` seznamu zeptají databáze na sloupec,
+  který neexistuje — proto krok 3 nasměruje modul na skutečný.
+- **Fortify ani balíčky na oprávnění jméno nevidí**, takže zbytek stacku nemá na
+  počet sloupců názor.
+
+Texty na těchhle obrazovkách jsou publikovatelný překladový soubor a jejich
+markup publikovatelný pohled — `wire-module-users::translations` a `…::views`;
+co to stojí, říká [Vzhled → Lokalizace](../start/theming.md#lokalizace) a
+[Přepis pohledů](../start/theming.md#prepis-pohledu).
 
 ## Vlastní účet
 

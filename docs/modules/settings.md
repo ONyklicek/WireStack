@@ -290,6 +290,35 @@ installer says so when it finds the default is `database`.
 Turning caching off is for debugging and for tests that assert against the table
 directly.
 
+## The Rest Of The File
+
+Four keys, each covered by a section above except the two at the bottom:
+
+```php
+// config/wire-module-settings.php
+'groups' => [],        // your own group classes — see How It Works
+'except' => [],        // storage names of contributed tabs to drop [tl! focus]
+'permission' => null,  // the ability the screen requires — see Who May Change What
+'table' => 'wire_settings',
+
+'navigation' => [
+    'group' => 'system',
+    'label' => null,   // null uses the module's own group heading
+    'icon' => 'outline:cog-6-tooth',
+    'sort' => 97,
+],
+```
+
+`table` is there for an application that already had a `settings` table when this
+one arrived; the module reads and writes only the one it is told about.
+`navigation` decides where the entry sits in the menu, not who may click it —
+that is `permission`.
+
+The wording is a published translation file and the markup a published view —
+`wire-module-settings::translations` and `…::views`, with what each costs in
+[Theming → Localization](../start/theming.md#localization) and
+[Overriding Views](../start/theming.md#overriding-views).
+
 ## Extended Example
 
 A group that uses all three optional contracts, and something reading it:

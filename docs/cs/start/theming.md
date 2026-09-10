@@ -466,6 +466,21 @@ Každý příkaz zkopíruje Blade soubory daného balíčku do
 `resources/views/vendor/wire-forms/components/text-input.blade.php`. Upravte
 kopii; smažte ji pro návrat k výchozímu stavu balíčku.
 
+Stejný tag má každý balíček, který dodává Blade — vrstva panelů, shell i každý
+nainstalovaný modul:
+
+```bash
+php artisan vendor:publish --tag=wire-panels::views
+php artisan vendor:publish --tag=wire-admin::views
+
+# Jeden na každý nainstalovaný modul (wire-module-audit vlastní pohledy nemá)
+php artisan vendor:publish --tag=wire-module-users::views
+php artisan vendor:publish --tag=wire-module-auth::views
+php artisan vendor:publish --tag=wire-module-settings::views
+php artisan vendor:publish --tag=wire-module-notifications::views
+php artisan vendor:publish --tag=wire-module-media::views
+```
+
 > **Publikujte jen to, co měníte.** Každý přepsaný pohled je soubor, který nyní
 > udržujete napříč upgrady. Pro jednorázový markup je vlastní pole nebo `ViewField`
 > méně náročné na údržbu než přepis sdíleného pohledu. Přepsané pohledy znovu
@@ -493,6 +508,27 @@ Soubory přistanou v `lang/vendor/{package}/{locale}/`. Upravte publikovaný sou
 pro změnu formulací, nebo přidejte nový adresář locale pro překlad. Formáty data
 a času pro pole formulářů se konfigurují samostatně v `config/wire-forms.php`
 (`date_format`, `time_format`, `datetime_format`, `first_day_of_week`).
+
+Stejný tag má i každý další balíček a moduly jsou obvykle to první, po čem
+aplikace sáhne — nesou texty na obrazovkách, které její lidé čtou každý den:
+
+```bash
+php artisan vendor:publish --tag=wire-panels::translations
+php artisan vendor:publish --tag=wire-admin::translations
+
+# Jeden na každý nainstalovaný modul
+php artisan vendor:publish --tag=wire-module-users::translations
+php artisan vendor:publish --tag=wire-module-auth::translations
+php artisan vendor:publish --tag=wire-module-settings::translations
+php artisan vendor:publish --tag=wire-module-notifications::translations
+php artisan vendor:publish --tag=wire-module-audit::translations
+php artisan vendor:publish --tag=wire-module-media::translations
+```
+
+Soubor aplikace se slučuje **přes** soubor balíčku, klíč po klíči, takže úplným
+přepisem je soubor jen s řádky, se kterými nesouhlasíte — a klíče, které v něm
+necháte být, dál sledují balíček. Publikovaná kopie celého souboru je snadný
+začátek a zároveň to, co potichu přestane dostávat nové formulace.
 
 ---
 

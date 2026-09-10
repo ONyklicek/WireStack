@@ -287,6 +287,34 @@ když najde výchozí `database`.
 
 Vypnutí cache je na ladění a na testy, které kontrolují přímo tabulku.
 
+## Zbytek souboru
+
+Čtyři klíče; každý má sekci výš, kromě těch dvou na konci:
+
+```php
+// config/wire-module-settings.php
+'groups' => [],        // vaše vlastní třídy skupin — viz Jak to funguje
+'except' => [],        // úložná jména dodaných tabů, které se mají zahodit [tl! focus]
+'permission' => null,  // oprávnění, které obrazovka vyžaduje — viz Kdo co smí měnit
+'table' => 'wire_settings',
+
+'navigation' => [
+    'group' => 'system',
+    'label' => null,   // null použije vlastní nadpis skupiny modulu
+    'icon' => 'outline:cog-6-tooth',
+    'sort' => 97,
+],
+```
+
+`table` je tu pro aplikaci, která už tabulku `settings` měla, když tahle přišla;
+modul čte a zapisuje jen do té, o které ví. `navigation` rozhoduje, kde položka
+v menu sedí, ne kdo na ni smí kliknout — to je `permission`.
+
+Texty jsou publikovatelný překladový soubor a markup publikovatelný pohled —
+`wire-module-settings::translations` a `…::views`; co to stojí, říká
+[Vzhled → Lokalizace](../start/theming.md#lokalizace) a
+[Přepis pohledů](../start/theming.md#prepis-pohledu).
+
 ## Rozsáhlý příklad
 
 Skupina, která používá všechna tři volitelná rozhraní, a něco, co ji čte:

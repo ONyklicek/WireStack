@@ -36,6 +36,36 @@ row as well.
 **Only the `database` driver stores anything.** Under the default `session`
 driver there is nothing to list, and the installer says so.
 
+## Configuration
+
+```php
+// config/wire-module-notifications.php
+'model' => NyonCode\WireCore\Notifications\DatabaseNotification::class,
+
+'scope' => 'own',   // 'own' the viewer's own rows; 'all' everyone's [tl! focus]
+
+'navigation' => [
+    'visible' => false,   // the inbox is reached from the bell, not from a menu row
+    'group' => 'system',
+    'label' => null,      // null uses the module's own group heading
+    'icon' => 'outline:bell',
+    'sort' => 96,
+],
+```
+
+`model` is the class the screen lists, and it is `wire-core`'s: this module owns
+the screen, not the table. A model of your own must extend that one — the rows
+are written by the notification driver, which knows nothing about this module.
+
+`scope => 'all'` turns an inbox into an administrative view of everyone's mail,
+which wants a permission on the page rather than a config key alone. Signed out,
+`own` resolves to nothing at all, which is the safe half of the choice.
+
+The wording is a published translation file and the markup a published view —
+`wire-module-notifications::translations` and `…::views`, with what each costs in
+[Theming → Localization](../start/theming.md#localization) and
+[Overriding Views](../start/theming.md#overriding-views).
+
 ## What You Get
 
 | Screen | Notes |

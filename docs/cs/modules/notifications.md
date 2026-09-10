@@ -36,6 +36,36 @@ i tu položku.
 **Ukládá jen driver `database`.** Pod výchozím `session` není co vypisovat
 a instalátor to řekne.
 
+## Konfigurace
+
+```php
+// config/wire-module-notifications.php
+'model' => NyonCode\WireCore\Notifications\DatabaseNotification::class,
+
+'scope' => 'own',   // 'own' vlastní řádky přihlášeného; 'all' řádky všech [tl! focus]
+
+'navigation' => [
+    'visible' => false,   // do schránky se chodí přes zvonek, ne přes řádek v menu
+    'group' => 'system',
+    'label' => null,      // null použije vlastní nadpis skupiny modulu
+    'icon' => 'outline:bell',
+    'sort' => 96,
+],
+```
+
+`model` je třída, kterou obrazovka vypisuje, a patří `wire-core`: tenhle modul
+vlastní obrazovku, ne tabulku. Vlastní model z ní musí dědit — řádky zapisuje
+driver notifikací, který o tomhle modulu neví.
+
+`scope => 'all'` udělá ze schránky administrativní pohled na poštu všech, což
+chce oprávnění na stránce, ne jen klíč v konfiguraci. Odhlášenému `own`
+neodpovídá nic, což je ta bezpečná půlka volby.
+
+Texty jsou publikovatelný překladový soubor a markup publikovatelný pohled —
+`wire-module-notifications::translations` a `…::views`; co to stojí, říká
+[Vzhled → Lokalizace](../start/theming.md#lokalizace) a
+[Přepis pohledů](../start/theming.md#prepis-pohledu).
+
 ## Co dostanete
 
 | Obrazovka | Poznámky |

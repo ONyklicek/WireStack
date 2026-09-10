@@ -461,6 +461,21 @@ Each command copies that package's Blade files into
 `resources/views/vendor/wire-forms/components/text-input.blade.php`. Edit the
 copy; delete it to fall back to the package default.
 
+The same tag exists on every package that ships Blade — the panel layer, the
+shell, and each installed module:
+
+```bash
+php artisan vendor:publish --tag=wire-panels::views
+php artisan vendor:publish --tag=wire-admin::views
+
+# One per installed module (wire-module-audit ships no views of its own)
+php artisan vendor:publish --tag=wire-module-users::views
+php artisan vendor:publish --tag=wire-module-auth::views
+php artisan vendor:publish --tag=wire-module-settings::views
+php artisan vendor:publish --tag=wire-module-notifications::views
+php artisan vendor:publish --tag=wire-module-media::views
+```
+
 > **Publish only what you change.** Every overridden view is a file you now
 > maintain across upgrades. For one-off markup, a custom field or `ViewField` is
 > lower-maintenance than overriding a shared view. Re-check overridden views when
@@ -488,6 +503,28 @@ Files land in `lang/vendor/{package}/{locale}/`. Edit a published file to change
 wording, or add a new locale directory to translate. Date and time formats for
 form fields are configured separately in `config/wire-forms.php`
 (`date_format`, `time_format`, `datetime_format`, `first_day_of_week`).
+
+Every other package answers the same tag, and the modules are usually where an
+application reaches first — they carry the wording on the screens its people
+read every day:
+
+```bash
+php artisan vendor:publish --tag=wire-panels::translations
+php artisan vendor:publish --tag=wire-admin::translations
+
+# One per installed module
+php artisan vendor:publish --tag=wire-module-users::translations
+php artisan vendor:publish --tag=wire-module-auth::translations
+php artisan vendor:publish --tag=wire-module-settings::translations
+php artisan vendor:publish --tag=wire-module-notifications::translations
+php artisan vendor:publish --tag=wire-module-audit::translations
+php artisan vendor:publish --tag=wire-module-media::translations
+```
+
+An application's file is merged **over** the package's, key by key, so a file
+holding only the lines you disagree with is a complete override — and the keys
+you leave out keep tracking the package. A published copy of a whole file is the
+easy start and the thing that quietly stops receiving new wording.
 
 ---
 

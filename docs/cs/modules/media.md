@@ -36,6 +36,57 @@ ukazuje publikovaná stránka — takže obvyklý výsledek editoru je nový zá
 druhý je za varováním, které pojmenuje, co rozbije. Viz
 [Editace obrázku](#editace-obrazku).
 
+## Konfigurace
+
+```php
+// config/wire-module-media.php
+'disk' => 'public',                 // ukládá se i na každý řádek: změna přesune jen nové uploady [tl! focus]
+'directory' => 'media',
+'table' => 'wire_media',
+'folders_table' => 'wire_media_folders',
+
+'accepts' => [],                    // MIME typy nebo přípony; prázdné přijme vše, co pustí vaše pravidla [tl! focus:start]
+'max_size' => 10240,                // v kilobajtech, v jednotce pravidel Laravelu [tl! focus:end]
+
+'route' => [
+    'enabled' => true,              // jediná cesta, kterou se soubory z neveřejného disku dostanou do prohlížeče
+    'prefix' => 'wire-media',
+    'middleware' => ['web', 'auth'],
+],
+
+'thumbnails' => [
+    'enabled' => true,
+    'width' => 400,                 // dlaždice: nejdelší hrana, nikdy se nezvětšuje
+    'sizes' => ['row' => 96, 'preview' => 1200],
+    'directory' => 'thumbnails',
+    'queue' => false,               // true, nebo jméno fronty, tam kde skutečně běží worker
+],
+
+'navigation' => [
+    'group' => 'content',
+    'label' => null,                // null použije vlastní nadpis skupiny modulu
+    'icon' => 'outline:photo',
+    'sort' => 80,
+],
+```
+
+Každý blok má níž vlastní sekci: [Neveřejné soubory a kdo je smí
+vidět](#neverejne-soubory-a-kdo-je-smi-videt) pro routu a [Náhledy](#nahledy) pro
+velikosti a frontu. Tři klíče sekci nemají, protože k nim není víc než řádek
+výš:
+
+- **`accepts` a `max_size`** jsou vlastní pravidla knihovny pro upload. Prázdné
+  `accepts` znamená, že knihovna neodmítne nic, co projde vaší validací — což se
+  hodí u neveřejné knihovny a je to špatná výchozí hodnota u té, kam nahrává
+  kdokoli.
+- **`table` a `folders_table`** pojmenovávají, kde leží řádky — pro aplikaci,
+  která už tabulku `media` měla, když tahle přišla.
+
+Texty jsou publikovatelný překladový soubor a markup publikovatelný pohled —
+`wire-module-media::translations` a `…::views`; co to stojí, říká
+[Vzhled → Lokalizace](../start/theming.md#lokalizace) a
+[Přepis pohledů](../start/theming.md#prepis-pohledu).
+
 ## Složky
 
 Složka je **záznam, ne adresář**. Když soubor zařadíte jinam, na disku se nehne

@@ -150,6 +150,12 @@ for.
 | `navigation.icon` | `outline:clipboard-document-list` | Menu icon |
 | `navigation.sort` | `95` | Menu group order |
 
+This module ships no views of its own — its screens are the framework's table and
+infolist over the trail `wire-core` records, so they are restyled where every
+other screen is ([Theming](../start/theming.md)). What it does ship is wording:
+`php artisan vendor:publish --tag=wire-module-audit::translations`, merged over
+the package's file key by key, so an override holds only the lines you changed.
+
 ## Related
 
 - [Audit Log](../core/audit.md) — the engine, and what it records
