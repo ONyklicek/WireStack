@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/ONyklicek/WireStack/HEAD/docs-site/assets/brand/github/readme-banner-dark.png">
+  <img src="https://raw.githubusercontent.com/ONyklicek/WireStack/HEAD/docs-site/assets/brand/github/readme-banner-light.png" alt="WireStack" width="1200">
+</picture>
+
 # Wire Module Auth
 
 The signed-out screens for [Wire](https://github.com/nyoncode) — login, password
@@ -57,6 +62,27 @@ empty component name. Or name your own:
 **A guard.** A login screen in front of an unguarded panel is decoration. The
 installer says which of the two an application has — it reads
 `wire-panels.routes.middleware` and warns when `auth` is not in it.
+
+## Changing a form
+
+The inputs are `wire-forms` fields declared in PHP, rendered for the browser's
+own POST — so adding one to a screen is a closure in a provider, not a published
+view you then maintain forever:
+
+```php
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireModuleAuth\Forms\AuthForm;
+use NyonCode\WireModuleAuth\Forms\AuthForms;
+
+app(AuthForms::class)->extend(
+    AuthForm::Register,
+    fn (array $fields): array => [...$fields, TextInput::make('company')->required()],
+);
+```
+
+What the request then does with the value stays Fortify's —
+`Fortify::createUsersUsing()` and its siblings. A field that binds only through
+Livewire is refused at render rather than posting nothing (ADR 0036).
 
 ## Replacing one screen
 

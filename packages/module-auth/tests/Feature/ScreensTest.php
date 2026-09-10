@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\MessageBag;
+use Illuminate\Support\ViewErrorBag;
 use NyonCode\WireModuleAuth\Support\Frame;
 use NyonCode\WireModuleAuth\Tests\Fixtures\AuthFrame;
 
@@ -122,6 +123,10 @@ it('answers Fortify with a two-factor challenge that can switch to a recovery co
         ->get('/two-factor-challenge')
         ->assertOk()
         ->assertSee('data-testid="auth-two-factor-form"', false)
+        // Six boxes, and one input behind them carrying the name Fortify reads.
+        // That input is what a browser with no Alpine types into, so it is on
+        // the page rather than replaced by the boxes.
+        ->assertSee('data-testid="form-otp-code-0"', false)
         ->assertSee('name="code"', false)
         ->assertSee('name="recovery_code"', false)
         ->assertSee('data-testid="auth-two-factor-toggle"', false);
@@ -134,11 +139,25 @@ it('shows what Fortify put in the session on the way here', function () {
         ->assertSee('We sent you a link.');
 });
 
+it('says what Fortify answered in the panel own notice surface', function () {
+    // The status and the error summary are `<x-wire::callout>`, the same box the
+    // panel uses behind the door — they used to be hand-written green and red.
+    $this->withSession(['status' => 'We sent you a link.'])
+        ->get('/forgot-password')
+        ->assertSee('data-testid="auth-status"', false)
+        ->assertSee('role="alert"', false);
+});
+
 it('shows what the last attempt got wrong', function () {
     // Summarised as well as placed under the field: a failed sign-in is reported
     // against `email` whichever half was wrong, so the message alone under that
     // input is a message under the wrong one.
-    $this->withSession(['errors' => new MessageBag(['email' => ['These credentials do not match.']])])
+    // A `ViewErrorBag`, because that is what Laravel actually flashes: a failed
+    // validation redirects `withErrors()`, which wraps the bag before it reaches
+    // the session. A bare MessageBag here would be a fixture no request produces.
+    $errors = (new ViewErrorBag)->put('default', new MessageBag(['email' => ['These credentials do not match.']]));
+
+    $this->withSession(['errors' => $errors])
         ->get('/login')
         ->assertSee('data-testid="auth-errors"', false)
         ->assertSee('These credentials do not match.');

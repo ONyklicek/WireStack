@@ -4,12 +4,20 @@
      than a shortcut. Everything that makes signing in hard — the credential
      check, the rate limiter keyed on e-mail and IP, the session regeneration
      that closes fixation, the hand-off to the two-factor challenge — happens in
-     the controller behind this URL, by a maintained owner. What was missing was
-     only the markup, which Fortify deliberately has no opinion about.
+     the controller behind this URL, by a maintained owner.
+
+     What was missing was only the markup, and it is no longer written here: the
+     fields come from wire-forms in native-submit mode (ADR 0036), declared in
+     `Forms\AuthForms`, so they are the same schema, the same chrome and the same
+     Alpine as the panel's own forms. The reveal toggle works because
+     `@wireStackScripts` already put its controller in this document. The browser
+     still does the posting.
 
      The action is the GET route's URL on purpose: Fortify serves both verbs at
      one path and names the POST differently across its major versions, so the
      name that has been stable is the one to use. --}}
+@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
+
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.sign_in')"
     :heading="__('wire-module-auth::messages.sign_in_heading')"
@@ -18,43 +26,20 @@
     <form method="POST" action="{{ route('login') }}" class="space-y-4" data-testid="auth-login-form" @wireEl('auth-login-form')>
         @csrf
 
-        @include('wire-module-auth::partials.field', [
-            'name' => 'email',
-            'type' => 'email',
-            'label' => __('wire-module-auth::messages.email'),
-            'autocomplete' => 'username',
-            'autofocus' => true,
-        ])
+        {{ $forms->login() }}
 
-        @include('wire-module-auth::partials.field', [
-            'name' => 'password',
-            'type' => 'password',
-            'label' => __('wire-module-auth::messages.password'),
-            'autocomplete' => 'current-password',
-        ])
-
-        <div class="flex items-center justify-between gap-3">
-            <label class="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                <input
-                    type="checkbox"
-                    name="remember"
-                    value="1"
-                    class="rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800"
-                />
-                {{ __('wire-module-auth::messages.remember_me') }}
-            </label>
-
-            {{-- Drawn from the same switch that creates the route: a link to a
-                 password reset an application never enabled is a 404 it finds
-                 out about from a user. --}}
-            @if (\NyonCode\WireModuleAuth\Support\Screens::canResetPassword())
+        {{-- Drawn from the same switch that creates the route: a link to a
+             password reset an application never enabled is a 404 it finds out
+             about from a user. --}}
+        @if (\NyonCode\WireModuleAuth\Support\Screens::canResetPassword())
+            <p class="text-right">
                 <a
                     href="{{ route('password.request') }}"
                     class="text-sm text-primary-600 hover:underline dark:text-primary-400"
                     data-testid="auth-forgot-link" @wireEl('auth-forgot-link')
                 >{{ __('wire-module-auth::messages.forgot_password') }}</a>
-            @endif
-        </div>
+            </p>
+        @endif
 
         <x-wire::button type="submit" class="w-full" data-testid="auth-submit">
             {{ __('wire-module-auth::messages.sign_in') }}

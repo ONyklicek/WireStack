@@ -8,6 +8,7 @@ use Laravel\Fortify\Features;
 use Laravel\Fortify\FortifyServiceProvider;
 use Livewire\LivewireServiceProvider;
 use NyonCode\WireCore\WireCoreServiceProvider;
+use NyonCode\WireForms\WireFormsServiceProvider;
 use NyonCode\WireModuleAuth\WireModuleAuthServiceProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 
@@ -30,6 +31,7 @@ abstract class TestCase extends BaseTestCase
         return [
             LivewireServiceProvider::class,
             WireCoreServiceProvider::class,
+            WireFormsServiceProvider::class,
             FortifyServiceProvider::class,
             WireModuleAuthServiceProvider::class,
         ];

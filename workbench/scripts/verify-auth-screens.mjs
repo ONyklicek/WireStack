@@ -77,11 +77,39 @@ try {
     !! document.querySelector('[data-testid="auth-two-factor-form"]')
   `));
 
+  // The code is six boxes, and the input carrying its name is the one a browser
+  // with no Alpine would type into — so with Alpine it is on the page and
+  // hidden. Both halves of that are asserted, because getting either wrong
+  // renders perfectly: visible boxes that post nothing, or a stray text input
+  // beside them.
+  check('the code arrives as boxes', await eval_(`
+    document.querySelectorAll('[data-testid^="form-otp-code-"]').length >= 7
+  `));
+  check('with one named input behind them, hidden', await eval_(`
+    !! document.querySelector('input[name="code"]')
+      && ! document.querySelector('input[name="code"]')?.offsetParent
+  `));
+
   // x-cloak, and the stylesheet that gives it meaning. Without it both halves
   // are visible for the first frame.
   check('only the code half is visible to start', await eval_(`
-    !! document.querySelector('input[name="code"]')?.offsetParent
+    !! document.querySelector('[data-testid="form-otp-code-0"]')?.offsetParent
       && ! document.querySelector('input[name="recovery_code"]')?.offsetParent
+  `));
+
+  // Typing into the boxes has to reach the input that posts, or the challenge
+  // submits an empty code — the failure native submit exists to make impossible.
+  await eval_(`
+    (() => {
+      const first = document.querySelector('[data-testid="form-otp-code-0"]');
+      first.focus();
+      first.value = '4';
+      first.dispatchEvent(new Event('input', { bubbles: true }));
+    })()
+  `);
+  await waitFor(`document.querySelector('input[name="code"]')?.value === '4'`, 4000);
+  check('and a digit typed into a box reaches the field that posts', await eval_(`
+    document.querySelector('input[name="code"]').value === '4'
   `));
 
   await eval_(`document.querySelector('[data-testid="auth-two-factor-toggle"]').click()`);
@@ -89,7 +117,7 @@ try {
 
   check('the toggle swaps in the recovery code', await eval_(`
     !! document.querySelector('input[name="recovery_code"]')?.offsetParent
-      && ! document.querySelector('input[name="code"]')?.offsetParent
+      && ! document.querySelector('[data-testid="form-otp-code-0"]')?.offsetParent
   `));
 
   // The half a markup test cannot see: focus() on an element that is still
@@ -98,8 +126,10 @@ try {
   check('and puts the caret in it', await eval_(`document.activeElement?.name === 'recovery_code'`));
 
   await eval_(`document.querySelector('[data-testid="auth-two-factor-toggle"]').click()`);
-  await waitFor(`!! document.querySelector('input[name="code"]')?.offsetParent`, 4000);
-  check('and switches back', await eval_(`document.activeElement?.name === 'code'`));
+  await waitFor(`!! document.querySelector('[data-testid="form-otp-code-0"]')?.offsetParent`, 4000);
+  check('and switches back, into the first box', await eval_(`
+    document.activeElement?.dataset.testid === 'form-otp-code-0'
+  `));
   await shot('03-two-factor');
 
   console.log(`Screenshots: ${shotDir}`);

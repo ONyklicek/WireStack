@@ -5,6 +5,8 @@
      always the same whether or not the address exists, which is Fortify's
      decision and the right one: a form that says "no such account" is an
      account enumerator. --}}
+@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
+
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.forgot_heading')"
     :heading="__('wire-module-auth::messages.forgot_heading')"
@@ -13,13 +15,7 @@
     <form method="POST" action="{{ route('password.request') }}" class="space-y-4" data-testid="auth-forgot-form" @wireEl('auth-forgot-form')>
         @csrf
 
-        @include('wire-module-auth::partials.field', [
-            'name' => 'email',
-            'type' => 'email',
-            'label' => __('wire-module-auth::messages.email'),
-            'autocomplete' => 'username',
-            'autofocus' => true,
-        ])
+        {{ $forms->forgotPassword() }}
 
         <x-wire::button type="submit" class="w-full" data-testid="auth-submit">
             {{ __('wire-module-auth::messages.send_reset_link') }}

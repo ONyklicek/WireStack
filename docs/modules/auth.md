@@ -38,6 +38,15 @@ and two-factor are entries in `fortify.features`, and a view for a feature that
 is off is never routed to. Gating the registrations here would be a second copy
 of that list, able to disagree with the first.
 
+**The fields are `wire-forms`', the posting is the browser's.** Every input on
+these screens comes from a schema declared in PHP and rendered in native-submit
+mode: `name` and `value=old(…)` where a panel form would carry `wire:model`, the
+errors read from the shared `$errors` bag Fortify already fills. So they are the
+same fields, chrome and Alpine as the forms behind the door — the password reveal
+toggle included — and signing in still works with JavaScript off, because nothing
+on the critical path needs it. What it buys is [the section on
+fields](#the-fields): a screen gains one without a published view.
+
 **Application providers boot last, so yours wins.** Naming a view of your own in
 an application provider replaces one of these without turning the rest off —
 package providers boot before application ones, so the last
@@ -86,6 +95,10 @@ they are in.
 
 'user_menu' => true,   // put "Sign out" in the shell's user menu
 ```
+
+Each key takes an environment override — `WIRE_AUTH_LAYOUT`, `WIRE_AUTH_VIEWS`
+and `WIRE_AUTH_USER_MENU` — so a deployment can hand the screens back, or point
+them at another frame, without a second config file.
 
 `auto` finds the layout the installer wrote first, then the shell's. With
 neither, rendering a screen raises `AuthFrameException` — a sentence naming this
@@ -160,7 +173,210 @@ on — belongs to the users module's profile page. See
 [Teams and Two-Factor](teams-and-two-factor.md). This package owns only the
 challenge on the way in.
 
-## Replacing One Screen
+## Customizing The Screens
+
+Five rungs, cheapest first, and each keeps the ones below it: changing a word
+does not mean owning a form, adding a field does not mean owning the markup
+around it, and owning one screen does not mean owning the other six.
+
+| To change | Reach for | What you then own |
+| --- | --- | --- |
+| A word, a heading, a language | `lang/vendor/wire-module-auth/` | the keys you wrote |
+| The page around the card | `wire-module-auth.layout` | your own layout |
+| The fields on a form | `AuthForms::extend()` | the closure you wrote |
+| The markup around them | the published views | the views you kept |
+| A whole screen | `Fortify::loginView()` | that one screen |
+
+### The Wording
+
+Every string on these screens is a key in `wire-module-auth::messages` — the
+labels, the headings, the sentence under each heading, the links, "Sign out".
+Laravel merges an application's file **over** the package's, key by key, so a
+file holding only what you disagree with is the whole change:
+
+```php
+// lang/vendor/wire-module-auth/en/messages.php
+return [
+    'sign_in_heading' => 'Staff sign-in',
+    'sign_in_description' => 'Accounts are issued by the office; there is no sign-up.',
+    'remember_me' => 'Keep me signed in on this device',
+];
+```
+
+The installer publishes both shipped locales in full, and the tag does the same
+on its own. A complete copy is the easy start and a bad habit: a key you did not
+change is a key that has stopped tracking the package, so trim the file to the
+lines you meant. A locale the package does not ship — it ships `en` and `cs` — is
+a directory beside them rather than a fork, and a key left out of it falls back
+to `fallback_locale`:
+
+```bash
+php artisan vendor:publish --tag=wire-module-auth::translations
+# lang/vendor/wire-module-auth/{en,cs}/messages.php — add de/, pl/, … beside them
+```
+
+### The Frame
+
+The layout the screens render inside is one config key, and it is the change to
+make before any other: it is what puts your stylesheet, your brand and your
+background on all seven at once, without touching a single view. See
+[Configuration](#configuration) above.
+
+### The Fields
+
+**The inputs are not markup any more.** Every field on these screens is a
+`wire-forms` field declared in PHP, in `Forms\AuthForms`, rendered in
+native-submit mode — carrying `name` and `value=old(…)` instead of `wire:model`,
+so the browser posts the form exactly as it did when the markup was written by
+hand. Which means adding a field to a sign-in screen is a closure in a provider
+rather than a published view you then own forever:
+
+```php
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireModuleAuth\Forms\AuthForm;
+use NyonCode\WireModuleAuth\Forms\AuthForms;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        app(AuthForms::class)->extend(                    // [tl! focus:start]
+            AuthForm::Register,
+            // The fields as declared, in; what should render, out. Append to
+            // them, replace one, drop one, or return an array of your own.
+            fn (array $fields): array => [
+                ...$fields,
+                TextInput::make('company')
+                    ->label(__('Company'))
+                    ->required()
+                    ->autocomplete('organization'),
+            ],
+        );                                                // [tl! focus:end]
+    }
+}
+```
+
+Callbacks run in registration order, each on what the last returned, and an
+application's provider boots after every package's — so this composes with a
+module that adds a field of its own rather than racing it.
+
+| `AuthForm` case | Screen | What it ships with |
+| --- | --- | --- |
+| `Login` | Sign in | `email` (whatever `fortify.username` names), `password`, `remember` |
+| `Register` | Create an account | `name`, `email`, `password`, `password_confirmation` |
+| `ForgotPassword` | Request a reset link | `email` |
+| `ResetPassword` | Set a new password | `token` (hidden), `email`, `password`, `password_confirmation` |
+| `ConfirmPassword` | Confirm your password | `password` |
+| `TwoFactorCode` | Two-factor challenge | `code`, as six boxes |
+| `TwoFactorRecovery` | Two-factor challenge | `recovery_code` |
+
+Two cases for the last screen because it is one form posting to one URL with a
+different field depending on what the person has to hand — and replacing the code
+input is no reason to inherit whatever you did to the recovery one.
+
+The identity field follows `fortify.username`: it takes that name, and it is a
+`type="email"` input only where that name is `email`. A browser's format rule on
+a field holding staff numbers rejects every value the application configured it
+for, in the browser's own words, before anything is posted.
+
+**Putting the input on the page is half of a new field.** What the request does
+with the value is Fortify's action and always was:
+`Fortify::createUsersUsing()` is where a column read at sign-up is written, and
+adding a field here without telling that action about it is an input whose value
+is validated by nobody and stored nowhere.
+
+**A field the browser could not post is refused at render**, by name, with
+`FormConfigurationException`. Anything needing a round-trip mid-form binds
+through Livewire alone and carries no `name` — `live()` fields, a `Select`
+searching on the server, `FileUpload`, `Repeater` — so on this side of the door
+it would render an input that submits an empty value with no error anywhere. An
+exception naming the field is the cheap version of that discovery. See
+[the forms overview](../forms/overview.md#rendering).
+
+The forms are also readable from your own views, which is what makes a
+replacement screen cheap — see [below](#a-screen-of-your-own-in-the-same-frame):
+
+```php
+app(AuthForms::class)->login();               // a wire-forms Form, ready to echo
+app(AuthForms::class)->resetPassword($token, $email); // what the mailed link carried
+```
+
+### The Markup
+
+```bash
+php artisan vendor:publish --tag=wire-module-auth::views
+```
+
+Nine views land in `resources/views/vendor/wire-module-auth/`, where Laravel looks
+before the package's own. One is worth reading before you edit anything else:
+**`screen.blade.php`** — the frame call, the heading, the sentence under it,
+Fortify's session status and the error summary. All seven screens render through
+it, so a change here is a change to every one of them.
+
+What is *not* in these views any more is the fields: each screen echoes a form
+object and owns only the chrome around it — the `<form>`, the `@csrf`, the submit
+button, the links. So publishing is for changing that chrome, and
+[the section above](#the-fields) is for changing the inputs.
+
+**Publishing copies all nine, and a copy stops tracking the package.** A fix
+released upstream reaches the package's view and not yours, with no error on the
+page — last release's markup, rendering fine. So delete the files you did not
+come to edit, and keep the ones you did.
+
+### A Screen Of Your Own, In The Same Frame
+
+`<x-wire-module-auth::screen>` is the seam between a screen and its frame, and
+your own views may render inside it. Doing so keeps the layout resolution, the
+heading, Fortify's session status ("a new link is on its way") and the error
+summary that reports a failed sign-in where a user can see it — a login failure
+is reported against `email` whichever field was wrong, so a message drawn only
+under its own input is a message under the wrong one.
+
+The fields can come from the same place the shipped screen takes them, so a view
+of your own is the chrome and nothing else — or you build a
+[`Form`](../forms/overview.md) yourself and call `->nativeSubmit()` on it:
+
+```blade
+{{-- resources/views/auth/login.blade.php --}}
+<x-wire-module-auth::screen                                     {{-- [tl! focus:start] --}}
+    :title="__('Sign in')"
+    :heading="__('Staff sign-in')"
+    :description="__('Use the address the office issued you.')"
+>                                                               {{-- [tl! focus:end] --}}
+    <form method="POST" action="{{ route('login') }}" class="space-y-4">
+        @csrf
+
+        {{-- The same fields the shipped screen renders, extensions included. --}}
+        {{ app(\NyonCode\WireModuleAuth\Forms\AuthForms::class)->login() }}
+
+        <x-wire::button type="submit" class="w-full">{{ __('Sign in') }}</x-wire::button>
+    </form>
+</x-wire-module-auth::screen>
+```
+
+Then name it, the way the section below names any replacement:
+`Fortify::loginView('auth.login')`.
+
+What a screen may link to is Fortify's answer, not yours, and
+`NyonCode\WireModuleAuth\Support\Screens` is where to ask it:
+
+```php
+use NyonCode\WireModuleAuth\Support\Screens;
+
+Screens::canRegister();        // Features::registration()
+Screens::canResetPassword();   // Features::resetPasswords()
+Screens::mustVerifyEmail();    // Features::emailVerification()
+Screens::hasTwoFactor();       // Features::twoFactorAuthentication()
+Screens::canSignOut();         // Route::has('logout') — logout is not a feature
+```
+
+Ask before drawing the link. A "Forgot your password?" under a form whose route
+Fortify never registered is a 404 an application hears about from a user.
+
+### Replacing One Screen
 
 Register your own view in an application provider. Application providers boot
 after every package's, so yours is the one that stands:
@@ -184,6 +400,38 @@ class FortifyServiceProvider extends ServiceProvider
 ```
 
 Or hand all seven back with `'views' => false`.
+
+### The Way Out
+
+`'user_menu' => false` takes "Sign out" out of the shell's user menu — for an
+application that fills [the menu's slot](../admin/layout.md#who-is-signed-in) by
+hand, or one whose way out is somewhere else entirely. Your own rows arrive the
+way this package's does, and the sort is what keeps a region nobody owns in a
+sensible order: the users module contributes its profile link at `10`, this
+package its sign-out at `100`.
+
+```php
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use NyonCode\WireCore\Foundation\View\PageChrome;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        $this->app->make(PageChrome::class)->add(   // [tl! focus:start]
+            'menu.support',                         // resources/views/menu/support.blade.php
+            PageChrome::USER_MENU,
+            sort: 50,                               // after Profile (10), before Sign out (100)
+        );                                          // [tl! focus:end]
+    }
+}
+```
+
+Put `<x-wire::menu-item>` in that view — the component the sign-out row itself
+uses — and it looks like the menu it sits in without depending on the shell that
+draws it.
 
 ## Guarding The Panel
 

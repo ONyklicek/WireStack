@@ -11,6 +11,7 @@ use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Modules\Module;
 use NyonCode\WireCore\Foundation\View\PageChrome;
+use NyonCode\WireModuleAuth\Forms\AuthForms;
 use NyonCode\WireModuleAuth\Install\LayoutScaffold;
 use NyonCode\WireModuleAuth\Support\Frame;
 use NyonCode\WireModuleAuth\Support\Screens;
@@ -52,6 +53,11 @@ class WireModuleAuthServiceProvider extends PackageServiceProvider
             ->hasConfig()
             ->hasViews()
             ->hasTranslations()
+            // One registry for the whole signed-out surface, resolved before any
+            // provider boots: an application adjusts a screen's fields in its
+            // own `boot()`, and a second instance handed out there would collect
+            // callbacks nothing renders.
+            ->registeringPackage(fn () => $this->app->singleton(AuthForms::class))
             ->bootedPackage(function (): void {
                 Blade::component('wire-module-auth::screen', Screen::class);
 

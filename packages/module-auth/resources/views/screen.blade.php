@@ -15,10 +15,16 @@
 
     {{-- What Fortify put in the session on the way here: a reset link was sent,
          a verification mail was re-sent, a password was changed. Above the form
-         rather than below it, because it is the answer to what was just done. --}}
+         rather than below it, because it is the answer to what was just done.
+
+         Both boxes are `<x-wire::callout>`, the same surface the panel uses for
+         a notice behind the door. They used to be hand-written green and red
+         Tailwind — a second opinion about what a notice looks like, in the one
+         place a user compares the two sides of the door. The wrapper carries the
+         spacing and the hook name, because those belong to this screen. --}}
     @if (session('status'))
-        <div class="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-500/10 dark:text-green-300" data-testid="auth-status" @wireEl('auth-status')>
-            {{ session('status') }}
+        <div class="mt-4" data-testid="auth-status" @wireEl('auth-status')>
+            <x-wire::callout color="success">{{ session('status') }}</x-wire::callout>
         </div>
     @endif
 
@@ -27,12 +33,14 @@
          message drawn only under its own input is a message under the wrong
          one. The per-field messages stay too — this is the summary. --}}
     @if ($errors->any())
-        <div class="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-500/10 dark:text-red-300" data-testid="auth-errors" @wireEl('auth-errors')>
-            <ul class="space-y-1">
-                @foreach ($errors->all() as $message)
-                    <li>{{ $message }}</li>
-                @endforeach
-            </ul>
+        <div class="mt-4" data-testid="auth-errors" @wireEl('auth-errors')>
+            <x-wire::callout color="danger">
+                <ul class="space-y-1">
+                    @foreach ($errors->all() as $message)
+                        <li>{{ $message }}</li>
+                    @endforeach
+                </ul>
+            </x-wire::callout>
         </div>
     @endif
 

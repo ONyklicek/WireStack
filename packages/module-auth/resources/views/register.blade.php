@@ -1,7 +1,14 @@
 {{-- Fortify's registration view.
 
      Routed only where `Features::registration()` is on, which is why nothing
-     here checks it: a screen for a feature that is off is never reached. --}}
+     here checks it: a screen for a feature that is off is never reached.
+
+     The fields are `Forms\AuthForms::register()`, so an application that takes a
+     company name or a phone number at sign-up adds it there — and tells
+     `Fortify::createUsersUsing()` what to do with it, which is the half no view
+     ever owned. --}}
+@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
+
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.register')"
     :heading="__('wire-module-auth::messages.register_heading')"
@@ -10,33 +17,7 @@
     <form method="POST" action="{{ route('register') }}" class="space-y-4" data-testid="auth-register-form" @wireEl('auth-register-form')>
         @csrf
 
-        @include('wire-module-auth::partials.field', [
-            'name' => 'name',
-            'label' => __('wire-module-auth::messages.name'),
-            'autocomplete' => 'name',
-            'autofocus' => true,
-        ])
-
-        @include('wire-module-auth::partials.field', [
-            'name' => 'email',
-            'type' => 'email',
-            'label' => __('wire-module-auth::messages.email'),
-            'autocomplete' => 'username',
-        ])
-
-        @include('wire-module-auth::partials.field', [
-            'name' => 'password',
-            'type' => 'password',
-            'label' => __('wire-module-auth::messages.password'),
-            'autocomplete' => 'new-password',
-        ])
-
-        @include('wire-module-auth::partials.field', [
-            'name' => 'password_confirmation',
-            'type' => 'password',
-            'label' => __('wire-module-auth::messages.confirm_password'),
-            'autocomplete' => 'new-password',
-        ])
+        {{ $forms->register() }}
 
         <x-wire::button type="submit" class="w-full" data-testid="auth-submit">
             {{ __('wire-module-auth::messages.register') }}

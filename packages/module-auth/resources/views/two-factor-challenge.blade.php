@@ -6,9 +6,14 @@
      input and the toggle between them.
 
      The toggle is Alpine rather than two routes, because they are one form
-     posting to one URL with a different field — and a `x-ref` focused after the
-     switch, because a code input the user has to click into is a second step
-     that the earlier version had. --}}
+     posting to one URL with a different field — and a field looked up by id
+     after the switch, because a code input the user has to click into is a
+     second step that the earlier version had. Both schemas leave their input
+     optional for the same reason: the hidden half is still in the document, and
+     a browser asked to validate a required control it cannot focus refuses the
+     submit and reports it nowhere. --}}
+@php($forms = app(\NyonCode\WireModuleAuth\Forms\AuthForms::class))
+
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.two_factor_heading')"
     :heading="__('wire-module-auth::messages.two_factor_heading')"
@@ -26,13 +31,19 @@
              * — so a switch that focused on the next tick worked in one
              * direction and silently lost the caret in the other. One frame
              * later, both are true.
+             *
+             * The code half is six boxes, so what gets the caret is the first
+             * of them, not the input carrying the name: that one is on the page
+             * for a browser with no Alpine, and Alpine is hiding it right now.
              */
             toggle() {
                 this.recovery = ! this.recovery;
 
-                const id = this.recovery ? 'recovery_code' : 'code';
+                const selector = this.recovery
+                    ? '#recovery_code'
+                    : '[data-testid=\'form-otp-code-0\']';
 
-                this.$nextTick(() => requestAnimationFrame(() => document.getElementById(id)?.focus()));
+                this.$nextTick(() => requestAnimationFrame(() => document.querySelector(selector)?.focus()));
             },
         }"
         data-testid="auth-two-factor" @wireEl('auth-two-factor')
@@ -46,24 +57,11 @@
             @csrf
 
             <div x-show="! recovery">
-                @include('wire-module-auth::partials.field', [
-                    'name' => 'code',
-                    'label' => __('wire-module-auth::messages.code'),
-                    'autocomplete' => 'one-time-code',
-                    'inputmode' => 'numeric',
-                    'required' => false,
-                    'autofocus' => true,
-                ])
+                {{ $forms->twoFactorCode() }}
             </div>
 
             <div x-show="recovery" x-cloak>
-                @include('wire-module-auth::partials.field', [
-                    'name' => 'recovery_code',
-                    'label' => __('wire-module-auth::messages.recovery_code'),
-                    'autocomplete' => 'one-time-code',
-                    'required' => false,
-                    'id' => 'recovery_code',
-                ])
+                {{ $forms->twoFactorRecovery() }}
             </div>
 
             <x-wire::button type="submit" class="w-full" data-testid="auth-submit">
