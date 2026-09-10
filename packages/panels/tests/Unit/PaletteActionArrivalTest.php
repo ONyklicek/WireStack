@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Core\Data\ArrayRecord;
+use NyonCode\WireCore\Core\Data\RecordContract;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireForms\Concerns\WithActions;
@@ -111,6 +113,42 @@ class PaHostlessPage extends Component
     }
 }
 
+/** A page whose record is not a model — a read model, a DTO, an API row. */
+class PaSourcePage extends Component
+{
+    use BelongsToResource;
+    use ResolvesOneRecord;
+    use WithActions;
+
+    protected static ?string $resource = PaOrderResource::class;
+
+    protected function actions(): array
+    {
+        return [
+            // Optional, because this page's record does not unwrap to a model
+            // and the invoker has nothing to give the parameter.
+            Action::make('plain')->action(function ($record = null): void {
+                PaHostPage::$ran = $record?->getKey() ?? 'no-record';
+            }),
+        ];
+    }
+
+    protected function resolveRecord(): RecordContract
+    {
+        return new ArrayRecord(['id' => 7, 'number' => 'INV-7'], 'id');
+    }
+
+    public function getTitle(): string
+    {
+        return 'Report';
+    }
+
+    public function render(): string
+    {
+        return '<div>source</div>';
+    }
+}
+
 beforeEach(function () {
     Schema::create('pa_orders', function (Blueprint $table): void {
         $table->id();
@@ -176,4 +214,17 @@ it('does nothing on a page that owns no action host', function () {
         ->test(PaHostlessPage::class, ['record' => 1])
         ->assertOk()
         ->assertSee('hostless');
+});
+
+it('hands the action the model behind a wrapped record, or nothing at all', function () {
+    // A page over a non-Eloquent source resolves a `RecordContract`, and the
+    // action pipeline is mounted with a model or with nothing — never with the
+    // wrapper, which an action's `$record` closure would have to unwrap itself.
+    // An `ArrayRecord` has no model behind it, so this arrives record-less and
+    // runs anyway rather than failing on the way in.
+    Livewire::withQueryParams(['action' => 'plain'])
+        ->test(PaSourcePage::class, ['record' => 7])
+        ->assertOk();
+
+    expect(PaHostPage::$ran)->toBe('no-record');
 });
