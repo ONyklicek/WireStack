@@ -129,7 +129,31 @@ class WorkbenchServiceProvider extends ServiceProvider
             // and an unroutable screen is one no driver can drive.
             Features::emailVerification(),
             Features::twoFactorAuthentication(['confirm' => true]),
+            // Passkeys, which Fortify routes through `laravel/passkeys`. On here
+            // for the same reason as verification: the sign-in button and the
+            // profile card are drawn from this switch, so with it off there is
+            // nothing to preview and nothing for a driver to drive.
+            Features::passkeys(),
         ]);
+
+        // WebAuthn is bound to an origin, and the preview server is not the
+        // `APP_URL` a testbench application defaults to — a ceremony started on
+        // 127.0.0.1:8085 against a relying party of "localhost" is refused by the
+        // browser before any of this repository's code runs. An application sets
+        // these once, from its own domain; the workbench sets them from the host
+        // it is actually served on.
+        // `localhost`, not `127.0.0.1`: WebAuthn's secure-context exception is
+        // written for the *name*, and Laravel's own client refuses the address
+        // outright ("For local development, use localhost"). So the passkey
+        // driver is the one that browses this workbench by name — everything
+        // else can keep using the IP, and both origins are allowed so a session
+        // started on either is accepted.
+        config()->set('passkeys.relying_party_id', 'localhost');
+        config()->set('passkeys.allowed_origins', ['http://localhost:8085', 'http://127.0.0.1:8085']);
+        // The management routes sit behind `password.confirm` by default, which
+        // is right for an application and would put a password screen in front of
+        // every preview of the card.
+        config()->set('fortify-options.passkeys.confirmPassword', false);
         // Every code flow on, because the workbench stands in for the
         // application that turned them on: four screens that are otherwise
         // unroutable — and therefore unpreviewable, and unverifiable in a

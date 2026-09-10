@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\PasskeyAuthenticatable;
 use NyonCode\PermissionExtended\Traits\HasRoles;
 use NyonCode\WireCore\Foundation\Contracts\HasAvatar;
 use NyonCode\WireModuleUsers\Concerns\InteractsWithAvatar;
@@ -20,13 +22,13 @@ use Workbench\Database\Factories\UserFactory;
 // confirm, and both the link screen and the code screen send the visitor home —
 // which is the shape an application that turned the feature on and forgot this
 // interface is in.
-class User extends Authenticatable implements HasAvatar, MustVerifyEmail
+class User extends Authenticatable implements HasAvatar, MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     // `HasRoles` is this stack's, from nyoncode/laravel-permission-extended, and
     // not the Spatie trait it extends: the module's role screens look for exactly
     // this one, so a model on bare Spatie is deliberately not detected.
-    use HasFactory, HasRoles, InteractsWithAvatar, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, HasRoles, InteractsWithAvatar, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /** @var list<string> */
     protected $hidden = ['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'];
