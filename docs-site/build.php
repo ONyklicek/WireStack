@@ -223,6 +223,8 @@ $converter = new MarkdownConverter($environment);
 // Metadata for each captured runtime preview image.
 $previewMeta = [
     'auth-login' => ['title' => 'Signing In', 'caption' => 'The sign-in screen with everything switched on: a password, a passkey, and a one-time code — each drawn from the switch that registers its routes.'],
+    'auth-code-challenge' => ['title' => 'A Mailed Code', 'caption' => 'One screen for three flows — signing in without a password, a mailed second factor, confirming an address. The boxes advance themselves and post one value.'],
+    'auth-reset-code' => ['title' => 'A New Password From A Code', 'caption' => 'No token field: the mail carries a code whose row carries the broker\'s token, and the reset itself is still Fortify\'s.'],
     'auth-passkeys' => ['title' => 'Passkeys', 'caption' => 'The profile card, with a key registered through a real WebAuthn ceremony. Adding one opens the platform\'s own dialog; removing goes through the package\'s own action.'],
     'forms-overview' => ['title' => 'Form Layout', 'caption' => 'Sections, grid layout, toggle, textarea, and action footer.'],
     'forms-repeater' => ['title' => 'Repeater', 'caption' => 'Nested rows with add, remove, and reorder controls.'],
@@ -273,7 +275,7 @@ $pagePreviews = [
     // from the running workbench like every other preview here — the passkey one
     // through a virtual authenticator, because the platform's own dialog cannot
     // be scripted and an empty card documents the state a reader is leaving.
-    'docs/modules/auth.md' => ['auth-login'],
+    'docs/modules/auth.md' => ['auth-login', 'auth-code-challenge', 'auth-reset-code'],
     'docs/modules/teams-and-two-factor.md' => ['auth-passkeys'],
 ];
 

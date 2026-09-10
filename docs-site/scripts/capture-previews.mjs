@@ -76,6 +76,35 @@ const captures = [
     selector: '[data-testid="admin-auth"]',
     pad: 24,
   },
+  // The code screens, before the passkey one: they are behind `guest`, and the
+  // capture below signs the demo user in and leaves them signed in — captures
+  // share one browser.
+  {
+    slug: 'auth-code-challenge',
+    // Through the workbench route that puts Fortify's pending-sign-in key in
+    // place: the challenge is served from a half-authenticated session, and
+    // visiting the URL cold is a redirect to the login screen.
+    url: `${authBase}/previews/auth/second-factor-code`,
+    selector: '[data-testid="admin-auth"]',
+    pad: 24,
+    // Three digits in, so the boxes are photographed doing the one thing that
+    // makes them worth having: advancing themselves.
+    action: `
+      (() => {
+        const first = document.querySelector('[data-testid="form-otp-code-0"]');
+        first.focus();
+        first.value = '483';
+        first.dispatchEvent(new Event('input', { bubbles: true }));
+      })()
+    `,
+    wait: 600,
+  },
+  {
+    slug: 'auth-reset-code',
+    url: `${authBase}/reset-password-code`,
+    selector: '[data-testid="admin-auth"]',
+    pad: 24,
+  },
   {
     slug: 'auth-passkeys',
     url: `${authBase}/previews/routed/users/profile`,

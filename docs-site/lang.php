@@ -46,6 +46,10 @@ return [
         // --- Preview captions (build.php $previewMeta) ----------------------
         'Signing In' => 'Přihlášení',
         'The sign-in screen with everything switched on: a password, a passkey, and a one-time code — each drawn from the switch that registers its routes.' => 'Přihlašovací obrazovka se vším zapnutým: heslo, passkey a jednorázový kód — každé se kreslí z přepínače, který mu registruje routy.',
+        'A Mailed Code' => 'Kód z e-mailu',
+        'One screen for three flows — signing in without a password, a mailed second factor, confirming an address. The boxes advance themselves and post one value.' => 'Jedna obrazovka pro tři toky — přihlášení bez hesla, druhý faktor e-mailem, potvrzení adresy. Políčka se posouvají sama a odešlou jednu hodnotu.',
+        'A New Password From A Code' => 'Nové heslo z kódu',
+        'No token field: the mail carries a code whose row carries the broker\'s token, and the reset itself is still Fortify\'s.' => 'Žádné pole s tokenem: v e-mailu je kód, jehož řádek nese token brokeru, a samotnou obnovu dělá pořád Fortify.',
         'Passkeys' => 'Passkeys',
         'The profile card, with a key registered through a real WebAuthn ceremony. Adding one opens the platform\'s own dialog; removing goes through the package\'s own action.' => 'Karta na profilu s klíčem zaregistrovaným skutečnou ceremonií WebAuthn. Přidání otevře vlastní dialog platformy, odebrání jde přes vlastní akci balíčku.',
         'Form Layout' => 'Layout formuláře',

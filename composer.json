@@ -56,7 +56,8 @@
         "openspout/openspout": "^4.0",
         "barryvdh/laravel-dompdf": "^3.0",
         "nyoncode/laravel-permission-extended": "^1.0",
-        "laravel/fortify": "^1.0|^2.0"
+        "laravel/fortify": "^1.0|^2.0",
+        "larastan/larastan": "^3.0"
     },
     "repositories": [
         {
