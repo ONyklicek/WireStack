@@ -11,6 +11,11 @@ import { join } from 'node:path';
  */
 
 const previewBase = process.env.PREVIEW_BASE_URL ?? 'http://127.0.0.1:8085/previews';
+// By name rather than by address, and only for the auth captures: WebAuthn's
+// secure-context exception is written for `localhost`, and Laravel's passkey
+// client refuses `127.0.0.1` outright — a passkey card captured there would
+// photograph an error message.
+const authBase = previewBase.replace('/previews', '').replace('127.0.0.1', 'localhost');
 const chromeBin = process.env.CHROME_BIN
   ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const outputDir = new URL('../assets/previews/', import.meta.url);
@@ -62,6 +67,51 @@ const captures = [
   { slug: 'infolists-overview', path: 'infolists-overview' },
   { slug: 'infolists-entries', path: 'infolists-entries' },
   ...fieldSlugs.map((slug) => ({ slug: `field-${slug}`, path: `field-${slug}` })),
+
+  // The two auth screens that are not component previews: they live outside
+  // `/previews` because Fortify routes them, so these carry an absolute `url`.
+  {
+    slug: 'auth-login',
+    url: `${authBase}/login`,
+    selector: '[data-testid="admin-auth"]',
+    pad: 24,
+  },
+  {
+    slug: 'auth-passkeys',
+    url: `${authBase}/previews/routed/users/profile`,
+    selector: '[data-testid="profile-passkeys"]',
+    pad: 16,
+    // A real credential, from a virtual authenticator: the platform's dialog
+    // cannot be scripted, and a card photographed empty would document the one
+    // state the reader is trying to leave.
+    webauthn: true,
+    action: `
+      (async () => {
+        const input = document.querySelector('[data-testid="passkey-name"]');
+        input.value = 'MacBook Pro';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        document.querySelector('[data-testid="passkey-add"]').click();
+
+        for (let i = 0; i < 60; i++) {
+          if ([...document.querySelectorAll('[data-testid="passkeys-list"] li')]
+            .some((row) => row.textContent.includes('MacBook Pro'))) return;
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+      })()
+    `,
+    wait: 1200,
+    // The workbench database outlives this run, so the row goes again.
+    cleanup: `
+      (async () => {
+        window.confirm = () => true;
+        document.querySelector('[data-testid="passkey-remove"]')?.click();
+        for (let i = 0; i < 40; i++) {
+          if (! document.querySelector('[data-testid="passkeys-list"]')) return;
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+      })()
+    `,
+  },
 ];
 
 // Optionally capture only a subset, e.g. ONLY=table-subrows,table-summary
@@ -108,7 +158,7 @@ try {
   await page('Runtime.enable');
 
   for (const capture of activeCaptures) {
-    const url = `${previewBase}/${capture.path}`;
+    const url = capture.url ?? `${previewBase}/${capture.path}`;
     const selector = capture.selector ?? '[data-preview-root]';
 
     // Per-capture viewport (fixed-corner content needs a tighter frame).
@@ -116,6 +166,23 @@ try {
     await page('Emulation.setDeviceMetricsOverride', {
       width: viewport.width, height: viewport.height, deviceScaleFactor: 2, mobile: false,
     });
+
+    // A software authenticator behind `navigator.credentials`, with presence and
+    // verification simulated — the only way a passkey ceremony completes in a
+    // browser nobody is sitting at.
+    if (capture.webauthn) {
+      await page('WebAuthn.enable', { enableUI: false });
+      await page('WebAuthn.addVirtualAuthenticator', {
+        options: {
+          protocol: 'ctap2',
+          transport: 'internal',
+          hasResidentKey: true,
+          hasUserVerification: true,
+          isUserVerified: true,
+          automaticPresenceSimulation: true,
+        },
+      });
+    }
 
     await page('Page.navigate', { url });
     await waitForLoad(cdp, sessionId);
@@ -145,7 +212,17 @@ try {
         if (!el) return null;
         el.scrollIntoView();
         const r = el.getBoundingClientRect();
-        return JSON.stringify({ x: r.x, y: r.y, width: r.width, height: r.height });
+
+        // Page coordinates, not viewport ones: the screenshot clips against the
+        // document (captureBeyondViewport), so a target that had to be scrolled
+        // to — a card half-way down a profile page — was photographed one
+        // scroll-offset above itself, which read as a clipping bug in the card.
+        return JSON.stringify({
+          x: r.x + window.scrollX,
+          y: r.y + window.scrollY,
+          width: r.width,
+          height: r.height,
+        });
       })()`,
       returnByValue: true,
     });
@@ -170,6 +247,14 @@ try {
 
     await writeFile(new URL(`${capture.slug}.png`, outputDir), Buffer.from(data, 'base64'));
     console.log(`captured ${capture.slug}`);
+
+    // Put back whatever the capture wrote. The preview server's database is not
+    // rebuilt between runs, so a capture that only ever adds rows documents a
+    // longer list every time it is refreshed.
+    if (capture.cleanup) {
+      await page('Runtime.evaluate', { expression: capture.cleanup, awaitPromise: true });
+      await sleep(600);
+    }
   }
 } finally {
   cdp?.close();

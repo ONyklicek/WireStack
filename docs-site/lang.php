@@ -44,6 +44,10 @@ return [
         'Boost' => 'Boost',
 
         // --- Preview captions (build.php $previewMeta) ----------------------
+        'Signing In' => 'Přihlášení',
+        'The sign-in screen with everything switched on: a password, a passkey, and a one-time code — each drawn from the switch that registers its routes.' => 'Přihlašovací obrazovka se vším zapnutým: heslo, passkey a jednorázový kód — každé se kreslí z přepínače, který mu registruje routy.',
+        'Passkeys' => 'Passkeys',
+        'The profile card, with a key registered through a real WebAuthn ceremony. Adding one opens the platform\'s own dialog; removing goes through the package\'s own action.' => 'Karta na profilu s klíčem zaregistrovaným skutečnou ceremonií WebAuthn. Přidání otevře vlastní dialog platformy, odebrání jde přes vlastní akci balíčku.',
         'Form Layout' => 'Layout formuláře',
         'Sections, grid layout, toggle, textarea, and action footer.' => 'Sekce, grid layout, přepínač, textarea a patička s akcemi.',
         'Repeater' => 'Repeater',

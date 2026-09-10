@@ -222,6 +222,8 @@ $converter = new MarkdownConverter($environment);
 
 // Metadata for each captured runtime preview image.
 $previewMeta = [
+    'auth-login' => ['title' => 'Signing In', 'caption' => 'The sign-in screen with everything switched on: a password, a passkey, and a one-time code — each drawn from the switch that registers its routes.'],
+    'auth-passkeys' => ['title' => 'Passkeys', 'caption' => 'The profile card, with a key registered through a real WebAuthn ceremony. Adding one opens the platform\'s own dialog; removing goes through the package\'s own action.'],
     'forms-overview' => ['title' => 'Form Layout', 'caption' => 'Sections, grid layout, toggle, textarea, and action footer.'],
     'forms-repeater' => ['title' => 'Repeater', 'caption' => 'Nested rows with add, remove, and reorder controls.'],
     'table-overview' => ['title' => 'Table Surface', 'caption' => 'Search, filters, actions, and full row rendering.'],
@@ -267,6 +269,12 @@ $pagePreviews = [
     'docs/core/widgets/charts.md' => ['widgets-chart', 'widgets-bar-chart'],
     'docs/core/infolists/index.md' => ['infolists-overview'],
     'docs/core/infolists/entries.md' => ['infolists-entries'],
+    // The screens on the way in, and the card that manages a passkey. Captured
+    // from the running workbench like every other preview here — the passkey one
+    // through a virtual authenticator, because the platform's own dialog cannot
+    // be scripted and an empty card documents the state a reader is leaving.
+    'docs/modules/auth.md' => ['auth-login'],
+    'docs/modules/teams-and-two-factor.md' => ['auth-passkeys'],
 ];
 
 // Extra variant previews appended after a field page's primary preview, so one
