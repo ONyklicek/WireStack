@@ -43,6 +43,7 @@ Potřebujete jen tagy balíčků, které jste nainstalovali.
 | `WIRE_AUTH_CODE_SECOND_FACTOR` | `false` | Kód e-mailem po správném heslu |
 | `WIRE_AUTH_CODE_VERIFY_EMAIL` | `false` | Potvrzení adresy kódem |
 | `WIRE_AUTH_CODE_RESET_PASSWORD` | `false` | V e-mailu pro obnovu hesla přijde kód, ne odkaz |
+| `WIRE_USERS_PASSKEYS` | `auto` | Karta s passkeys na profilu |
 
 <a id="javascript-assets"></a>
 ## JavaScriptové assety

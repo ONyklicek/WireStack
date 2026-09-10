@@ -149,6 +149,7 @@ What the installer writes is an ordinary layout of yours, and yours to edit:
 | A second factor by mail | `wire-auth.second-factor` | `codes.second_factor` |
 | Confirm an address by code | `wire-auth.verify-email-code` | `codes.verify_email` |
 | A new password from a code | `wire-auth.reset-code` | `codes.reset_password` |
+| Sign in with a passkey | `passkey.login` | `Features::passkeys()` |
 
 Plus **Sign out**, in the user menu.
 
@@ -817,6 +818,145 @@ Codes::wantedBy($user);           // this user is mailed a second factor
 Codes::usesAuthenticatorApp($user);
 Codes::identifierFor($user);      // or an address, normalised
 ```
+
+## Passkeys
+
+A passkey is the platform's own credential — Touch ID, Windows Hello, a phone, a
+security key — and signing in with one is a fingerprint instead of a password.
+**Laravel ships all of it:** Fortify routes the ceremony through
+`laravel/passkeys` behind `Features::passkeys()`, and `@laravel/passkeys` is the
+browser client. What this framework adds is the two places a person meets it: a
+button on the sign-in screen, and a card on the profile page that lists their
+keys.
+
+**Nothing here implements WebAuthn.** The challenge, the relying party, the
+signature check, the credential rows and the session are the packages'; the
+browser half is Laravel's own npm client, compiled into a `wire-core` bundle. A
+hand-written ceremony would be a parallel implementation of a security protocol,
+diverging on the first browser quirk either side learned about — so this is an
+adapter, and a thin one: `wirePasskey` is a `busy` flag, a message, and where to
+go afterwards.
+
+**The button is drawn from the switch that routes the ceremony,** like every
+other link on the sign-in screen. With `Features::passkeys()` off there is no
+button, and with a browser that cannot do WebAuthn there is no button either —
+absent beats present-and-broken, and the password form is on the same screen.
+
+**The bundle ships per screen, not per page.** It compiles Laravel's client in,
+so declaring it would put 12 kB into the `<head>` of every page of every
+application for a feature most of them have off. The two surfaces that draw a
+passkey control include `wire-core::partials.passkey-assets` instead, and
+Livewire dedupes it to one tag.
+
+### Switching Passkeys On
+
+**1. The tables.** `laravel/passkeys` comes with Fortify; its migration is
+published like any other:
+
+```bash
+php artisan vendor:publish --tag=passkeys-migrations
+php artisan migrate
+```
+
+**2. The feature.** One line in Fortify's list, beside the ones you already have:
+
+```php
+// config/fortify.php
+use Laravel\Fortify\Features;
+
+'features' => [
+    Features::resetPasswords(),
+    Features::twoFactorAuthentication(['confirm' => true]),
+    Features::passkeys(),   // [tl! focus]
+],
+```
+
+**3. The model.** Two lines, and they are the ones whose absence is silent —
+every route answers, and the key that gets registered belongs to nobody:
+
+```php
+namespace App\Models;
+
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\PasskeyAuthenticatable;
+
+class User extends Authenticatable implements PasskeyUser   // [tl! focus]
+{
+    use PasskeyAuthenticatable;                             // [tl! focus]
+}
+```
+
+The trait reads `name` and `email` off the model — authenticators show them in
+the platform dialog and in the account picker — and falls back to the auth
+identifier. `getPasskeyDisplayName()` and `getPasskeyUsername()` are where an
+application that stores those elsewhere says so.
+
+**4. The origin, if you are not on your production domain.** WebAuthn is bound to
+one, and a relying party that disagrees with the address the page is served from
+fails inside the browser before any of this runs:
+
+```php
+// config/passkeys.php
+'relying_party_id' => parse_url(config('app.url'), PHP_URL_HOST),
+'allowed_origins' => [config('app.url')],
+```
+
+**In local development, browse `localhost` rather than `127.0.0.1`.** WebAuthn's
+secure-context exception is written for the name, and Laravel's client refuses
+the address outright: *"Passkeys can't be used on 127.0.0.1. For local
+development, use localhost."* Everywhere else the rule is plainer — passkeys
+need HTTPS.
+
+Nothing has to be installed with npm. The browser client is compiled into the
+`wire-core` bundle the two screens emit.
+
+### What The Person Sees
+
+Signing in:
+
+1. The sign-in screen shows **Sign in with a passkey** under the password button.
+2. Pressing it opens the platform's own dialog — a fingerprint, a face, a PIN,
+   a phone. Nothing on the page can style, rush or fake that dialog.
+3. They are signed in, and land where Fortify lands a sign-in.
+
+No address is typed first, and that is the point: a discoverable credential
+already knows which account it belongs to. The e-mail field also carries the
+`webauthn` autocomplete token, so browsers that support conditional UI offer
+saved passkeys inside their own dropdown as soon as the field is focused — and
+where they do not, the button is still there.
+
+Managing them, on the profile page:
+
+1. The **Passkeys** card lists what this account has, with the date each was
+   added.
+2. **Add a passkey** takes a name for the device — "MacBook", "work phone" — and
+   opens the same platform dialog.
+3. **Remove** deletes one through the package's own action, so `PasskeyDeleted`
+   fires for anything listening.
+
+The card is `wire-module-users`', beside the two-factor card, because it is the
+signed-in person's own account: see [Teams and
+Two-Factor](teams-and-two-factor.md#passkeys-on-the-profile-page).
+
+### When A Passkey Does Not Work
+
+- **No button on the sign-in screen.** Either `Features::passkeys()` is not in
+  Fortify's list, or the browser cannot do WebAuthn — the control is bound to
+  `x-show="supported"`, which is the client's own answer.
+- **"Passkeys can't be used on 127.0.0.1."** Browse `localhost` instead, or serve
+  over HTTPS.
+- **The dialog opens and the sign-in fails afterwards.** The relying party and
+  the origin are what to check: `passkeys.relying_party_id` must be the host the
+  page is served from, and `passkeys.allowed_origins` must contain the scheme and
+  port too.
+- **The card says a trait is missing.** `PasskeyAuthenticatable` and
+  `PasskeyUser` are not on the user model, so there is nowhere to store a key.
+  This is the one failure the card reports itself, because every route answers
+  without them.
+- **Adding a passkey asks for a password first.** That is
+  `passkeys.management_middleware` — `password.confirm` by default, which is the
+  right default for an application and can be relaxed per installation.
 
 ## Customizing The Screens
 

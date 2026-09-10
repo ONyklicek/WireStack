@@ -238,6 +238,46 @@ public function boot(): void
 }
 ```
 
+## Passkeys na profilu
+
+Třetí věc, kterou se dá účet zajistit, a nejnovější: passkey je vlastní
+přihlašovací údaj platformy — Touch ID, Windows Hello, telefon, bezpečnostní
+klíč. **Laravel má celé**, přesně jako dvoufázové ověření: `laravel/passkeys` za
+`Features::passkeys()` ve Fortify přináší ceremonii WebAuthn, řádky s údaji i
+klienta do prohlížeče. Tenhle modul přidává kartu.
+
+```php
+// config/wire-module-users.php
+'profile' => [
+    'passkeys' => true,   // karta tam, kde je funkce zapnutá [tl! focus]
+],
+
+'passkeys' => 'auto',     // 'auto' hledá balíčky se zapnutou funkcí [tl! focus]
+```
+
+Dva řádky na user modelu — a právě ty, jejichž chybění je tiché: všechny routy
+odpovídají a zaregistrovaný klíč nepatří nikomu, takže se karta na ně dívá a
+řekne, co chybí:
+
+```php
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\PasskeyAuthenticatable;
+
+class User extends Authenticatable implements PasskeyUser   // [tl! focus]
+{
+    use PasskeyAuthenticatable;                             // [tl! focus]
+}
+```
+
+Karta vypíše, co účet má, vezme jméno pro nový klíč a otevře dialog platformy, a
+odebírá vlastní akcí balíčku — takže se vyvolá `PasskeyDeleted` pro cokoli, co
+naslouchá.
+
+**Tlačítko pro přihlášení patří té druhé polovině**, vedle přihlašovacího
+formuláře, ze stejného důvodu jako dvoufázová výzva. Viz [modul
+auth](auth.md#passkeys) — včetně pasti při vývoji: choďte na `localhost`, nikdy na
+`127.0.0.1`.
+
 ## Rozšířený příklad
 
 Všechno výše v jedné aplikaci: tabulka uživatelů s fotkou, týmy omezující

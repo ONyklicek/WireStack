@@ -45,6 +45,7 @@ you, so the lines above are for an application setting one up by hand.
 | `WIRE_AUTH_CODE_SECOND_FACTOR` | `false` | A mailed code after a correct password |
 | `WIRE_AUTH_CODE_VERIFY_EMAIL` | `false` | Confirming an address by code |
 | `WIRE_AUTH_CODE_RESET_PASSWORD` | `false` | A reset mail that carries a code, not a link |
+| `WIRE_USERS_PASSKEYS` | `auto` | The passkey card on the profile page |
 
 ## JavaScript Assets
 

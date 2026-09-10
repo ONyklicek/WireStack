@@ -240,6 +240,30 @@ Dvě věci ke kontrole, a jen pokud jste se jich dotkli:
    `message`. Obojí tam pod stejnými jmény zůstává, takže čtenáře `['message']`
    se to netýká; striktní porovnání se starým dvouklíčovým polem ano.
 
+## Passkeys tam, kde je Fortify routuje (2.0)
+
+Novinka, a potřebuje vlastní přepínač Fortify, ne náš: s `Features::passkeys()` v
+`config/fortify.php` přibude na přihlašovací obrazovce tlačítko **Přihlásit se
+passkeyem** a na profilu karta s klíči účtu. S vypnutou funkcí — což je výchozí
+stav — se nemění nic.
+
+Celou ceremonii dělá `laravel/passkeys` za Fortify a klient `@laravel/passkeys` v
+prohlížeči; tohle vydání přidává ty dvě obrazovky a Alpine adaptér, který je
+propojí. Tři věci, které je dobré vědět předem:
+
+1. **User model potřebuje dva řádky** — `PasskeyAuthenticatable` a kontrakt
+   `PasskeyUser` — a jejich chybění je tiché: všechny routy odpovídají a
+   zaregistrovaný klíč nepatří nikomu. Karta je jediné místo, které se na to dívá
+   a řekne to.
+2. **Ve vývoji choďte na `localhost`, nikdy na `127.0.0.1`.** Výjimka WebAuthn pro
+   bezpečný kontext je psaná pro jméno a Laravelův klient tu adresu odmítne
+   hláškou, ne selháním.
+3. **Bundle se emituje po obrazovkách**, ne přes `@wireStackScripts`: je v něm
+   zabalený Laravelův klient a 12 kB v hlavičce každé stránky kvůli funkci, kterou
+   většina instalací nemá zapnutou, je přesně to, čemu `Bundle::serve()` předchází.
+   Aplikace, která si přihlašovací formulář nebo kartu vykresluje ve vlastním
+   layoutu, to dostane taky — views si partial includují samy.
+
 ## Jednorázové kódy na cestě dovnitř (2.0)
 
 Novinka a **dokud něco nezapnete, nemění se nic**. `wire-module-auth` teď umí

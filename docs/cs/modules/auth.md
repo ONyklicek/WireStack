@@ -150,6 +150,7 @@ To, co zapíše instalátor, je obyčejný layout — váš, a k editaci:
 | Druhý faktor e-mailem | `wire-auth.second-factor` | `codes.second_factor` |
 | Potvrzení adresy kódem | `wire-auth.verify-email-code` | `codes.verify_email` |
 | Nové heslo z kódu | `wire-auth.reset-code` | `codes.reset_password` |
+| Přihlášení passkeyem | `passkey.login` | `Features::passkeys()` |
 
 A k tomu **Odhlásit se** v uživatelském menu.
 
@@ -818,6 +819,138 @@ Codes::wantedBy($user);           // tomuhle uživateli se posílá druhý fakto
 Codes::usesAuthenticatorApp($user);
 Codes::identifierFor($user);      // nebo adresa, normalizovaná
 ```
+
+## Passkeys
+
+Passkey je vlastní přihlašovací údaj platformy — Touch ID, Windows Hello, telefon,
+bezpečnostní klíč — a přihlášení jím je otisk prstu místo hesla. **Laravel má
+celé:** Fortify routuje ceremonii přes `laravel/passkeys` za `Features::passkeys()`
+a `@laravel/passkeys` je klient do prohlížeče. Tenhle framework přidává dvě místa,
+kde to člověk potká: tlačítko na přihlašovací obrazovce a kartu na profilu, která
+vypíše jeho klíče.
+
+**Nic tady neimplementuje WebAuthn.** Challenge, relying party, ověření podpisu,
+řádky s přihlašovacími údaji i session patří těm balíčkům; prohlížečovou půlku
+dělá Laravelův vlastní npm klient zabalený do bundlu ve `wire-core`. Vlastnoručně
+napsaná ceremonie by byla paralelní implementace bezpečnostního protokolu, která
+se rozejde s originálem u první zvláštnosti prohlížeče — takže tohle je adaptér, a
+tenký: `wirePasskey` je příznak `busy`, hláška a informace, kam pak jít.
+
+**Tlačítko se kreslí z přepínače, který ceremonii routuje** — stejně jako každý
+jiný odkaz na přihlašovací obrazovce. S vypnutým `Features::passkeys()` tlačítko
+není, a v prohlížeči, který WebAuthn neumí, taky ne: chybět je lepší než být tam a
+nefungovat, a formulář s heslem je na téže obrazovce.
+
+**Bundle jde po obrazovkách, ne po stránkách.** Laravelův klient je v něm zabalený,
+takže deklarovat ho by znamenalo 12 kB v `<head>` každé stránky každé aplikace kvůli
+funkci, kterou většina z nich má vypnutou. Obě obrazovky, které passkey kreslí,
+proto includují `wire-core::partials.passkey-assets` a Livewire z toho udělá jeden
+tag.
+
+### Zapnutí passkeys
+
+**1. Tabulky.** `laravel/passkeys` chodí s Fortify; jeho migrace se publikuje jako
+každá jiná:
+
+```bash
+php artisan vendor:publish --tag=passkeys-migrations
+php artisan migrate
+```
+
+**2. Funkce.** Jeden řádek ve výčtu Fortify, vedle těch, které už máte:
+
+```php
+// config/fortify.php
+use Laravel\Fortify\Features;
+
+'features' => [
+    Features::resetPasswords(),
+    Features::twoFactorAuthentication(['confirm' => true]),
+    Features::passkeys(),   // [tl! focus]
+],
+```
+
+**3. Model.** Dva řádky — a právě ty, jejichž chybění je tiché: všechny routy
+odpovídají a klíč, který se zaregistruje, nepatří nikomu:
+
+```php
+namespace App\Models;
+
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\PasskeyAuthenticatable;
+
+class User extends Authenticatable implements PasskeyUser   // [tl! focus]
+{
+    use PasskeyAuthenticatable;                             // [tl! focus]
+}
+```
+
+Trait čte z modelu `name` a `email` — autentikátory je ukazují v dialogu platformy
+a ve výběru účtu — a padá zpátky na auth identifikátor. `getPasskeyDisplayName()` a
+`getPasskeyUsername()` jsou místa, kde aplikace s jiným uložením řekne, kde ty
+hodnoty jsou.
+
+**4. Origin, pokud nejste na produkční doméně.** WebAuthn je na origin navázaný a
+relying party, která nesouhlasí s adresou, ze které se stránka servíruje, selže
+uvnitř prohlížeče dřív, než se cokoli z tohohle spustí:
+
+```php
+// config/passkeys.php
+'relying_party_id' => parse_url(config('app.url'), PHP_URL_HOST),
+'allowed_origins' => [config('app.url')],
+```
+
+**Ve vývoji choďte na `localhost`, ne na `127.0.0.1`.** Výjimka WebAuthn pro
+bezpečný kontext je psaná pro to jméno a Laravelův klient adresu rovnou odmítne:
+*„Passkeys can't be used on 127.0.0.1. For local development, use localhost."*
+Všude jinde je pravidlo prostší — passkeys potřebují HTTPS.
+
+Přes npm se instalovat nemusí nic. Klient do prohlížeče je zabalený v bundlu
+`wire-core`, který obě obrazovky emitují.
+
+### Co uvidí člověk u obrazovky
+
+Přihlášení:
+
+1. Na přihlašovací obrazovce je pod tlačítkem s heslem **Přihlásit se passkeyem**.
+2. Stisknutí otevře vlastní dialog platformy — otisk, obličej, PIN, telefon. Nic
+   na stránce ten dialog nenastyluje, neuspěchá ani nepodvrhne.
+3. Je přihlášený a přistane tam, kam Fortify posílá přihlášení.
+
+Žádná adresa se předtím nezadává, a to je celý smysl: discoverable credential už
+ví, ke kterému účtu patří. Pole s e-mailem navíc nese autocomplete token
+`webauthn`, takže prohlížeče s conditional UI nabídnou uložené passkeys ve vlastní
+nabídce hned po kliknutí do pole — a kde to neumí, pořád je tam tlačítko.
+
+Správa na profilu:
+
+1. Karta **Passkeys** vypíše, co účet má, i s datem přidání.
+2. **Přidat passkey** vezme jméno zařízení — „MacBook", „pracovní telefon" — a
+   otevře stejný dialog platformy.
+3. **Odebrat** smaže klíč vlastní akcí balíčku, takže se vyvolá `PasskeyDeleted`
+   pro cokoli, co naslouchá.
+
+Karta patří `wire-module-users`, vedle karty s dvoufázovým ověřením, protože jde o
+vlastní účet přihlášeného člověka: viz [Týmy a dvoufázové
+ověření](teams-and-two-factor.md#passkeys-na-profilu).
+
+### Když passkey nefunguje
+
+- **Na přihlašovací obrazovce není tlačítko.** Buď `Features::passkeys()` není ve
+  výčtu Fortify, nebo prohlížeč WebAuthn neumí — ovládací prvek visí na
+  `x-show="supported"`, což je odpověď samotného klienta.
+- **„Passkeys can't be used on 127.0.0.1."** Choďte na `localhost`, nebo servírujte
+  přes HTTPS.
+- **Dialog se otevře a přihlášení pak selže.** Kontrolujte relying party a origin:
+  `passkeys.relying_party_id` musí být host, ze kterého se stránka servíruje, a
+  `passkeys.allowed_origins` musí obsahovat i schéma a port.
+- **Karta hlásí chybějící trait.** `PasskeyAuthenticatable` a `PasskeyUser` nejsou
+  na user modelu, takže není kam klíč uložit. Tohle je jediné selhání, které karta
+  hlásí sama — protože bez nich všechny routy odpovídají.
+- **Přidání passkeye si nejdřív řekne o heslo.** To je
+  `passkeys.management_middleware` — ve výchozím stavu `password.confirm`, což je
+  pro aplikaci správně a dá se to zvolnit.
 
 ## Přizpůsobení obrazovek
 

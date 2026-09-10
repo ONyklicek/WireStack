@@ -243,6 +243,30 @@ Two things to check, and only if you touched either:
    reader of `['message']` is unaffected; a strict comparison against the old
    two-key array is not.
 
+## Passkeys, where Fortify routes them (2.0)
+
+New, and it needs Fortify's own switch rather than one of ours: with
+`Features::passkeys()` in `config/fortify.php`, the sign-in screen grows a
+**Sign in with a passkey** button and the profile page grows a card listing the
+account's keys. With the feature off — which is the default — nothing changes.
+
+The whole ceremony is `laravel/passkeys` behind Fortify and the
+`@laravel/passkeys` browser client; this release adds the two screens and the
+Alpine adapter that connects them. Three things to know before switching it on:
+
+1. **The user model needs two lines** — `PasskeyAuthenticatable` and the
+   `PasskeyUser` contract — and their absence is silent: every route answers, and
+   the key that gets registered belongs to nobody. The card is the one surface
+   that checks and says so.
+2. **Browse `localhost` in development, never `127.0.0.1`.** WebAuthn's
+   secure-context exception is written for the name, and Laravel's client refuses
+   the address by message rather than by failure.
+3. **The bundle is emitted per screen**, not from `@wireStackScripts`: it
+   compiles Laravel's client in, and 12 kB in the head of every page for a
+   feature most installations have off is what `Bundle::serve()` exists to avoid.
+   An application that renders the login form or the profile card in a layout of
+   its own gets it either way — the views include the partial themselves.
+
 ## One-time codes on the way in (2.0)
 
 New, and **nothing changes until you switch something on**. `wire-module-auth`

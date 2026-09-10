@@ -115,11 +115,13 @@ současné heslo nemá. V tom je celý rozdíl.
 'profile' => [
     'password' => true,
     'two_factor' => true,
+    'passkeys' => true,
     'delete_account' => false,   // ve výchozím stavu vypnuté — viz níž
     'menu_item' => true,         // odkaz na profil v uživatelském menu shellu
 ],
 
 'two_factor' => 'auto',   // 'auto' hledá Fortify se zapnutou funkcí
+'passkeys' => 'auto',     // 'auto' hledá laravel/passkeys se zapnutou funkcí
 
 'teams' => [
     'enabled' => 'auto',   // 'auto' se řídí permission.teams
@@ -380,6 +382,7 @@ ne“* není zpráva, kterou by stránka profilu měla kdy vyprodukovat.
 | Údaje o profilu | samotný `EditProfile` | vždycky — formulář resource bez rolí a hesla |
 | Změna hesla | `UpdatePassword` | `profile.password` |
 | Dvoufázové ověření | `TwoFactorAuthentication` | `profile.two_factor` **a** je nainstalovaný Fortify |
+| Passkeys | `PasskeyManagement` | `profile.passkeys` **a** Fortify routuje `Features::passkeys()` |
 | Smazání účtu | `DeleteAccount` | `profile.delete_account` — **ve výchozím stavu vypnuté** |
 
 **Záznamem je přihlášený uživatel, nikdy parametr routy.** Stránka profilu, která

@@ -117,11 +117,13 @@ difference.
 'profile' => [
     'password' => true,
     'two_factor' => true,
+    'passkeys' => true,
     'delete_account' => false,   // off by default — see below
     'menu_item' => true,         // the profile link in the shell's user menu
 ],
 
 'two_factor' => 'auto',   // 'auto' looks for Fortify, with its feature on
+'passkeys' => 'auto',     // 'auto' looks for laravel/passkeys, with its feature on
 
 'teams' => [
     'enabled' => 'auto',   // 'auto' follows permission.teams
@@ -386,6 +388,7 @@ password did not"* is not a message a profile page should ever produce.
 | Profile information | `EditProfile` itself | always — the resource's own form, minus roles and password |
 | Update password | `UpdatePassword` | `profile.password` |
 | Two-factor authentication | `TwoFactorAuthentication` | `profile.two_factor` **and** Fortify is installed |
+| Passkeys | `PasskeyManagement` | `profile.passkeys` **and** Fortify routes `Features::passkeys()` |
 | Delete account | `DeleteAccount` | `profile.delete_account` — **off by default** |
 
 **The record is the signed-in user, never a route parameter.** A profile page

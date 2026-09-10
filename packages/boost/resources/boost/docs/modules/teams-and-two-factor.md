@@ -243,6 +243,46 @@ public function boot(): void
 }
 ```
 
+## Passkeys On The Profile Page
+
+The third thing an account can be secured with, and the newest: a passkey is the
+platform's own credential — Touch ID, Windows Hello, a phone, a security key.
+**Laravel owns all of it**, exactly as it owns two-factor: `laravel/passkeys`
+behind Fortify's `Features::passkeys()` ships the WebAuthn ceremony, the
+credential rows and the browser client. This module adds the card.
+
+```php
+// config/wire-module-users.php
+'profile' => [
+    'passkeys' => true,   // the card, where the feature is on [tl! focus]
+],
+
+'passkeys' => 'auto',     // 'auto' looks for the packages, with the feature on [tl! focus]
+```
+
+Two lines on the user model, and they are the ones whose absence is silent —
+every route answers and the key that gets registered belongs to nobody, so the
+card checks for them and says which are missing:
+
+```php
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\PasskeyAuthenticatable;
+
+class User extends Authenticatable implements PasskeyUser   // [tl! focus]
+{
+    use PasskeyAuthenticatable;                             // [tl! focus]
+}
+```
+
+The card lists what the account has, takes a name for a new one and opens the
+platform's dialog, and removes one through the package's own action — so
+`PasskeyDeleted` fires for anything listening.
+
+**The sign-in button belongs to the other half**, next to the login form, for the
+same reason the two-factor challenge does. See [the auth
+module](auth.md#passkeys) — including the local-development trap: browse
+`localhost`, never `127.0.0.1`.
+
 ## Extended Example
 
 Everything above, in one application: a users table with a photo, teams scoping
