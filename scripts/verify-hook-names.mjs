@@ -28,6 +28,11 @@
  *       scripts/hook-names.json may grow and may not shrink; removing a name is
  *       a major-release decision, and this is where that decision gets made on
  *       purpose rather than by a careless rename.
+ *   H5  A hook sits inside an opening tag. `@wireEl` writes an *attribute*, so
+ *       one written a line too low writes `data-wire="empty-state"` into the
+ *       page as visible text — which is what the canonical empty state did, on
+ *       every empty table in the framework, past 2869 green tests and a hook
+ *       gate that only ever asked whether the name was rendered.
  *
  *   node scripts/verify-hook-names.mjs [repo-root]
  *   node scripts/verify-hook-names.mjs . --update-ledger
@@ -144,6 +149,150 @@ function namesInMarkup() {
 }
 
 /**
+ * From just after a directive's name, the end of its balanced `(...)`.
+ *
+ * Not cosmetic: `@if($field->getMinValue() !== null)` carries a `>`, and a
+ * scanner that walks through it decides the tag ended there. Every attribute
+ * below that line then reads as page content.
+ */
+function skipArguments(text, from) {
+  let i = from;
+  while (i < text.length && (text[i] === ' ' || text[i] === '\t')) i += 1;
+  if (text[i] !== '(') return from;
+
+  let depth = 0;
+  let quote = null;
+
+  while (i < text.length) {
+    const c = text[i];
+
+    if (quote) {
+      if (c === '\\') { i += 2; continue; }
+      if (c === quote) quote = null;
+    } else if (c === '"' || c === "'") {
+      quote = c;
+    } else if (c === '(') {
+      depth += 1;
+    } else if (c === ')') {
+      depth -= 1;
+      if (depth === 0) return i + 1;
+    }
+
+    i += 1;
+  }
+
+  return from;
+}
+
+/**
+ * Every `@wireEl` that is not inside an opening tag — H5.
+ *
+ * A hand-rolled walk rather than a regex, because the question is positional and
+ * a line has no idea which side of a `>` it is on. What it has to step over:
+ * Blade comments and `@php` blocks (full of `<` and `>` that mean nothing here),
+ * echoes (`{{ $a > $b }}` is not a tag ending), quoted attribute values (an
+ * Alpine expression is mostly arrows), a directive's own arguments, and the
+ * bodies of `<script>` and `<style>` (where `<` is a comparison).
+ */
+function misplacedHooks() {
+  const found = [];
+
+  for (const file of bladeFiles(join(REPO, 'packages'))) {
+    const text = readFileSync(file, 'utf8');
+    let i = 0;
+    let inTag = false;
+    let quote = null;
+
+    while (i < text.length) {
+      if (!quote && text.startsWith('{{--', i)) {
+        const end = text.indexOf('--}}', i);
+        i = end < 0 ? text.length : end + 4;
+        continue;
+      }
+
+      if (!inTag && !quote) {
+        if (text.startsWith('@php', i)) {
+          const end = text.indexOf('@endphp', i);
+          i = end < 0 ? text.length : end + 7;
+          continue;
+        }
+
+        if (text.startsWith('<!--', i)) {
+          const end = text.indexOf('-->', i);
+          i = end < 0 ? text.length : end + 3;
+          continue;
+        }
+
+        const raw = /^<(script|style)\b/i.exec(text.slice(i));
+        if (raw) {
+          // Into the tag, so its own attributes still count; then past the body.
+          const open = text.indexOf('>', i);
+          if (open < 0) break;
+          const close = new RegExp(`</${raw[1]}\\s*>`, 'i').exec(text.slice(open));
+          i = close ? open + close.index + close[0].length : text.length;
+          continue;
+        }
+      }
+
+      if (text.startsWith('{!!', i)) {
+        const end = text.indexOf('!!}', i);
+        i = end < 0 ? text.length : end + 3;
+        continue;
+      }
+
+      if (text.startsWith('{{', i)) {
+        const end = text.indexOf('}}', i);
+        i = end < 0 ? text.length : end + 2;
+        continue;
+      }
+
+      const c = text[i];
+
+      if (inTag && quote) {
+        if (c === quote) quote = null;
+        i += 1;
+        continue;
+      }
+
+      if (inTag && (c === '"' || c === "'")) {
+        quote = c;
+        i += 1;
+        continue;
+      }
+
+      if (inTag && c === '>') {
+        inTag = false;
+        i += 1;
+        continue;
+      }
+
+      if (!inTag && c === '<' && /^<([A-Za-z/!]|\{\{)/.test(text.slice(i, i + 4))) {
+        inTag = true;
+        i += 1;
+        continue;
+      }
+
+      if (c === '@') {
+        const directive = /^@([A-Za-z][A-Za-z0-9_]*)/.exec(text.slice(i));
+
+        if (directive) {
+          if (directive[1] === 'wireEl' && !inTag) {
+            found.push(`${relative(REPO, file)}:${text.slice(0, i).split('\n').length}`);
+          }
+
+          i = skipArguments(text, i + directive[0].length);
+          continue;
+        }
+      }
+
+      i += 1;
+    }
+  }
+
+  return found;
+}
+
+/**
  * Every name a documentation page advertises.
  *
  * Two shapes, because the page uses both: `data-wire="…"` inside its examples,
@@ -246,6 +395,16 @@ for (const name of recorded) {
       '      deliberate and this is a major release, drop it with --update-ledger.',
     );
   }
+}
+
+// H5 — a hook that is not in a tag is text on the page rather than an attribute.
+for (const where of misplacedHooks()) {
+  failures.push(
+    `H5  @wireEl at ${where} is not inside an opening tag.\n` +
+    '      It writes an attribute, so from there it lands in the page as visible\n' +
+    '      text — and the name still counts as rendered, which is why every other\n' +
+    '      check here stays green. Move it up into the tag it belongs to.',
+  );
 }
 
 // H4 — the render-hook vocabulary, documented and shipped, in both directions.
