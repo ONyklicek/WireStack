@@ -243,6 +243,53 @@ Two things to check, and only if you touched either:
    reader of `['message']` is unaffected; a strict comparison against the old
    two-key array is not.
 
+## One-time codes on the way in (2.0)
+
+New, and **nothing changes until you switch something on**. `wire-module-auth`
+can now mail a six-digit code where Fortify has no flow of its own: signing in
+without a password, a second factor for people with no authenticator app,
+confirming an address, and a reset mail that carries a code instead of a link.
+Each is its own key under `wire-module-auth.codes`, and all four are `false` in
+a fresh config — an installation that says nothing has no new routes, no new
+mail and no new table.
+
+Turning any of them on takes the table with it, and it is published rather than
+run from the package:
+
+```bash
+php artisan vendor:publish --tag=wire-module-auth::migrations
+php artisan migrate
+```
+
+Two things worth knowing before you do:
+
+1. **The mailed second factor needs `Features::twoFactorAuthentication()` on.**
+   The pipe that sends the code *is* the contract Fortify only puts in its login
+   pipeline when that feature is enabled, so with the feature off no code is ever
+   sent and the sign-in screen looks perfectly normal. `php artisan about`
+   reports that state by name rather than printing "off", and so does the
+   installer.
+2. **Two Fortify bindings are replaced while the reset flow is on** — Laravel's
+   `ResetPassword::toMailUsing()` and Fortify's
+   `SuccessfulPasswordResetLinkRequestResponse`. If your application already
+   binds either, yours boots after this package's and wins; the codes then have
+   no mail to ride in, which is the state to check for rather than discover.
+
+Full reference: [One-Time Codes](../modules/auth.md#one-time-codes).
+
+## The two-factor setup card asks for the code in boxes (2.0)
+
+`wire-module-users`' profile card used to draw one `<input>` for the confirmation
+code while the challenge on the way in drew six boxes. It is now the same
+`OtpInput` field on both sides of the door — the boxes advance themselves and
+take a pasted code apart.
+
+Nothing about the request changes: the value still arrives in the component's
+`$code` and still goes to Fortify's confirm action. What changed is the markup
+inside `[data-wire="two-factor-code"]`, so a CSS rule or a browser test that
+reached for `input#two-factor-code` needs `[data-testid="form-otp-code-0"]`
+instead.
+
 ## Notifications are a new table, and its id is a ULID (2.0)
 
 Nothing to migrate: `wire_notifications` does not exist in 1.x. It arrives with

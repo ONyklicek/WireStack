@@ -45,7 +45,7 @@ deklarace aplikace nad tou dodanou.
 | Modul | Balíček | Co přijde | Co potřebuje |
 | --- | --- | --- | --- |
 | [Uživatelé](users.md) | `wire-module-users` | Uživatelský resource, jeho stránky, profilová obrazovka a správa rolí tam, kde aplikace role má | Uživatelský model; `nyoncode/laravel-permission-extended` pro rolové povrchy |
-| [Přihlašování](auth.md) | `wire-module-auth` | Přihlášení, reset hesla, ověření e-mailu, dvoufaktorová výzva a **Odhlásit** v uživatelském menu | `laravel/fortify` — vlastní bezpečnost, modul vlastní obrazovky |
+| [Přihlašování](auth.md) | `wire-module-auth` | Přihlášení, reset hesla, ověření e-mailu, dvoufaktorová výzva, **Odhlásit** v uživatelském menu a [jednorázové kódy](auth.md#jednorazove-kody), kde kód z e-mailu zastoupí heslo nebo odkaz | `laravel/fortify` — vlastní bezpečnost, modul vlastní obrazovky |
 | [Nastavení](settings.md) | `wire-module-settings` | Typovaná tabulka nastavení, její cache a obrazovka nad ní | Databázové připojení |
 | [Notifikace](notifications.md) | `wire-module-notifications` | Historie za zvonečkem, jako tabulka | Laravelí tabulka `notifications` |
 | [Audit](audit.md) | `wire-module-audit` | Obrazovka pro stopu, kterou `wire-core` už zapisuje | `HasAuditable` na modelech, které chcete sledovat |

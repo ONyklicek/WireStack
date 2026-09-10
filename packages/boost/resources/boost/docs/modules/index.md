@@ -46,7 +46,7 @@ application's own declaration wins over the contributed one.
 | Module | Package | What arrives | Needs |
 | --- | --- | --- | --- |
 | [Users](users.md) | `wire-module-users` | The user resource, its pages, a profile screen, and role management where the application has roles | A user model; `nyoncode/laravel-permission-extended` for the role surfaces |
-| [Auth](auth.md) | `wire-module-auth` | Sign-in, password reset, e-mail verification, the two-factor challenge, and **Sign out** in the user menu | `laravel/fortify` — it owns the security, the module owns the screens |
+| [Auth](auth.md) | `wire-module-auth` | Sign-in, password reset, e-mail verification, the two-factor challenge, **Sign out** in the user menu, and [one-time codes](auth.md#one-time-codes) where a mailed code stands in for a password or a link | `laravel/fortify` — it owns the security, the module owns the screens |
 | [Settings](settings.md) | `wire-module-settings` | A typed settings table, its cache, and the screen over it | A database connection |
 | [Notifications](notifications.md) | `wire-module-notifications` | The history behind the notification bell, as a table | Laravel's `notifications` table |
 | [Audit](audit.md) | `wire-module-audit` | A screen for the trail `wire-core` already records | `HasAuditable` on the models you want followed |

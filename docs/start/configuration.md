@@ -41,6 +41,10 @@ you, so the lines above are for an application setting one up by hand.
 | `WIRE_FORMS_UPLOAD_DISK` | `public` | Forms file upload |
 | `WIRE_MOBILE_SHEET` | `true` | Core mobile bottom-sheets |
 | `WIRE_MOBILE_BREAKPOINT` | `sm` | Core mobile sheet breakpoint |
+| `WIRE_AUTH_CODE_LOGIN` | `false` | Signing in with a mailed code, no password |
+| `WIRE_AUTH_CODE_SECOND_FACTOR` | `false` | A mailed code after a correct password |
+| `WIRE_AUTH_CODE_VERIFY_EMAIL` | `false` | Confirming an address by code |
+| `WIRE_AUTH_CODE_RESET_PASSWORD` | `false` | A reset mail that carries a code, not a link |
 
 ## JavaScript Assets
 
@@ -482,7 +486,7 @@ its options only make sense beside the screens they change:
 | File | What it configures | Page |
 | --- | --- | --- |
 | `wire-module-users.php` | The user model, the resource, roles and teams, the profile screen | [Users](../modules/users.md) |
-| `wire-module-auth.php` | Which screens the auth module registers, and the routes it claims | [Auth](../modules/auth.md) |
+| `wire-module-auth.php` | Which screens the auth module registers, the routes it claims, and the four one-time-code flows | [Auth](../modules/auth.md) |
 | `wire-module-settings.php` | The settings table, its cache, and the groups the screen shows | [Settings](../modules/settings.md) |
 | `wire-module-notifications.php` | The bell, its panel, and the stored-notification table | [Notifications](../modules/notifications.md) |
 | `wire-module-audit.php` | The audit screen over the trail `wire-core` records | [Audit](../modules/audit.md) |

@@ -309,8 +309,10 @@ The signed-out surface, and the smallest package in the repo on purpose:
   **booted**, so an application provider can replace any one of them and keep the
   other six
 - seven Blade screens (login, register, forgot, reset, verify, confirm, the
-  two-factor challenge) and `user-menu.blade.php`, the sign-out row — each the
-  chrome around a form object: the `<form>`, the `@csrf`, the button, the links
+  two-factor challenge), three more for the code flows (`login-code`,
+  `code-challenge` — one view for three of them — and `reset-password-code`), and
+  `user-menu.blade.php`, the sign-out row: each the chrome around a form object —
+  the `<form>`, the `@csrf`, the button, the links
 - `View\Screen` — the one seam between a screen and the frame it renders in
 - `Support\Frame` — which layout that is: `auto` borrows the shell's, or the
   application names its own, or `AuthFrameException` says which line to write
@@ -322,10 +324,28 @@ The signed-out surface, and the smallest package in the repo on purpose:
   where an application adds or replaces a field without publishing anything —
   a container singleton, registered in `registeringPackage`
 
-It owns **no authentication**: the credential check, the throttle, the session
-regeneration, the reset tokens, the verification links, the TOTP window and the
-recovery codes are Fortify's (ADR 0032). It ships no frame and no `Module`
-manifest. The panel's own guard is `wire-panels.routes.middleware`, which
+- `Contracts\OneTimeCodes` + `Services\DatabaseOneTimeCodes` +
+  `ValueObjects\OneTimeCode` — a six-digit code, hashed, scoped to a
+  `Enums\CodePurpose` and an identifier, expiring, attempt-counted and consumed
+  on use. The **only authentication this repository owns** (ADR 0037), and only
+  because Fortify has no flow for it
+- `Actions\RedirectIfCodeRequired` — the mailed second factor, as a *subclass of
+  Fortify's own login pipe* bound to the `RedirectsIfTwoFactorAuthenticatable`
+  contract Fortify resolves. An authenticator app still wins
+- `Actions\MailResetCode` + `Http\Responses\RedirectToResetCodeScreen` — the
+  reset mail carries a code whose row carries the broker's token; the token still
+  does the resetting
+- `Http\Controllers\` + `routes/codes.php` — four flows, four switches under
+  `wire-module-auth.codes`, every one off by default, and a flow that is off
+  registers no routes at all
+- `Support\Codes` — the same shape of question as `Support\Screens`, for the
+  code flows: which are on, which is on and *cannot run*, and whether this user
+  is one they are mailed to (`Contracts\ReceivesLoginCodes`)
+
+It owns **no authentication beyond the codes**: the credential check, the
+throttle, the session regeneration, the reset tokens, the verification links, the
+TOTP window and the recovery codes are Fortify's (ADR 0032, amended by 0037). It
+ships no frame and no `Module` manifest. The panel's own guard is `wire-panels.routes.middleware`, which
 defaults to `['web', 'auth']`; the installer warns when an application has taken
 it out.
 
@@ -334,6 +354,7 @@ Start files:
 - `packages/module-auth/src/WireModuleAuthServiceProvider.php`
 - `packages/module-auth/src/Forms/AuthForms.php`
 - `packages/module-auth/src/Support/Frame.php`
+- `packages/module-auth/src/Contracts/OneTimeCodes.php`
 - `packages/module-auth/resources/views/screen.blade.php`
 
 ### wire-suite

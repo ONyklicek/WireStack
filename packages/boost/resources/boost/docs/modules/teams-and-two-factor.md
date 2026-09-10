@@ -62,7 +62,7 @@ one and is protected by nothing:
 | State | Means | The card shows |
 | --- | --- | --- |
 | off | no secret | one button: turn it on |
-| pending | a secret, not confirmed | the QR code, the setup key, a code box — and a way back out |
+| pending | a secret, not confirmed | the QR code, the setup key, six code boxes — and a way back out |
 | on | `two_factor_confirmed_at` is set | recovery codes, and a way off |
 
 A panel that modelled this as a boolean would strand every interrupted setup in
@@ -125,6 +125,11 @@ The card appears on the profile page the moment both are true. `'confirm' => fal
 is honoured too — the module reads it off Fortify's own feature options rather
 than a copy of the setting — and a secret then *is* the whole of the setup, so
 the pending state does not occur.
+
+**The code is typed into the same field on both sides of the door.** The boxes on
+this card are `wire-forms`' `OtpInput`, which is what the sign-in challenge
+draws too — they advance themselves, take a pasted code apart, and post one
+value. There is no second opinion here about what six digits look like.
 
 **The challenge belongs to the other half.** This module owns the *management*
 card — the QR code, the recovery codes, the switch. The screen that asks for a

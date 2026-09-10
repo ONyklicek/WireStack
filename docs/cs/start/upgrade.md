@@ -240,6 +240,50 @@ Dvě věci ke kontrole, a jen pokud jste se jich dotkli:
    `message`. Obojí tam pod stejnými jmény zůstává, takže čtenáře `['message']`
    se to netýká; striktní porovnání se starým dvouklíčovým polem ano.
 
+## Jednorázové kódy na cestě dovnitř (2.0)
+
+Novinka a **dokud něco nezapnete, nemění se nic**. `wire-module-auth` teď umí
+poslat šestimístný kód tam, kde Fortify vlastní tok nemá: přihlášení bez hesla,
+druhý faktor pro lidi bez autentikátoru, potvrzení adresy a e-mail pro obnovu
+hesla, ve kterém je kód místo odkazu. Každý tok má vlastní klíč pod
+`wire-module-auth.codes` a v čerstvé konfiguraci jsou všechny čtyři `false` —
+instalace, která nic neřekne, nemá nové routy, nové e-maily ani novou tabulku.
+
+Zapnutí kteréhokoli z nich s sebou nese tabulku, a ta se publikuje, nespouští se
+z balíčku:
+
+```bash
+php artisan vendor:publish --tag=wire-module-auth::migrations
+php artisan migrate
+```
+
+Dvě věci, které je dobré vědět předem:
+
+1. **Druhý faktor e-mailem potřebuje zapnuté `Features::twoFactorAuthentication()`.**
+   Pipe, který kód posílá, *je* ten kontrakt, který Fortify dává do přihlašovací
+   pipeline jen se zapnutou dvoufázovou funkcí — s vypnutou se tedy žádný kód
+   neodešle a přihlašovací obrazovka vypadá úplně normálně. `php artisan about`
+   tenhle stav pojmenuje místo toho, aby hlásil „vypnuto"; stejně tak instalátor.
+2. **Se zapnutou obnovou hesla se nahrazují dva bindingy Fortify** — Laravelův
+   `ResetPassword::toMailUsing()` a Fortifyho
+   `SuccessfulPasswordResetLinkRequestResponse`. Pokud si některý z nich navazuje
+   vaše aplikace, její provider bootuje po tomhle balíčku a vyhraje; kódy pak
+   nemají čím jet, a to je stav, který je lepší zkontrolovat než objevit.
+
+Celý popis: [Jednorázové kódy](../modules/auth.md#jednorazove-kody).
+
+## Karta pro nastavení dvoufázového ověření se ptá na kód v políčkách (2.0)
+
+Profilová karta z `wire-module-users` kreslila na potvrzovací kód jeden `<input>`,
+zatímco výzva na cestě dovnitř kreslila šest políček. Teď je to na obou stranách
+dveří stejné pole `OtpInput` — políčka sama posouvají kurzor a rozeberou vložený
+kód.
+
+Na požadavku se nemění nic: hodnota pořád dorazí do `$code` komponenty a pořád
+jde do potvrzovací akce Fortify. Změnil se markup uvnitř
+`[data-wire="two-factor-code"]`, takže CSS pravidlo nebo prohlížečový test, který
+sahal po `input#two-factor-code`, potřebuje `[data-testid="form-otp-code-0"]`.
+
 ## Notifikace jsou nová tabulka a její id je ULID (2.0)
 
 Není co migrovat: `wire_notifications` v 1.x neexistuje. Přichází s historií

@@ -94,6 +94,13 @@ they are in.
 'views' => true,       // answer Fortify's seven view callbacks
 
 'user_menu' => true,   // put "Sign out" in the shell's user menu
+
+'codes' => [           // one-time codes, all four off by default
+    'login' => false,
+    'second_factor' => false,
+    'verify_email' => false,
+    'reset_password' => false,
+],
 ```
 
 Each key takes an environment override — `WIRE_AUTH_LAYOUT`, `WIRE_AUTH_VIEWS`
@@ -137,8 +144,17 @@ What the installer writes is an ordinary layout of yours, and yours to edit:
 | Confirm your address | `verification.notice` | `Features::emailVerification()` |
 | Confirm your password | `password.confirm` | always |
 | Two-factor challenge | `two-factor.login` | `Features::twoFactorAuthentication()` |
+| Sign in with a code | `wire-auth.login-code` | `codes.login` |
+| Enter your code | `wire-auth.login-code.challenge` | `codes.login` |
+| A second factor by mail | `wire-auth.second-factor` | `codes.second_factor` |
+| Confirm an address by code | `wire-auth.verify-email-code` | `codes.verify_email` |
+| A new password from a code | `wire-auth.reset-code` | `codes.reset_password` |
 
 Plus **Sign out**, in the user menu.
+
+The last five are [one-time codes](#one-time-codes), and every one of them is off
+until it is switched on: an installation that says nothing has no extra lines in
+`route:list`.
 
 ## Turning The Features On
 
@@ -172,6 +188,207 @@ The two-factor *setup* — the QR code, the recovery codes, the card that turns 
 on — belongs to the users module's profile page. See
 [Teams and Two-Factor](teams-and-two-factor.md). This package owns only the
 challenge on the way in.
+
+## One-Time Codes
+
+A six-digit code, mailed, typed into the same boxes as the two-factor challenge.
+Four things it can stand in for, **each off until you switch it on**:
+
+| Flow | Switch | What changes |
+| --- | --- | --- |
+| Sign in with a code, no password | `codes.login` | a second way in, linked from the sign-in screen |
+| A second factor by mail | `codes.second_factor` | a correct password stops at a code, for people with no authenticator app |
+| Confirm an address by code | `codes.verify_email` | a button on the "confirm your address" screen, beside the link that still works |
+| Reset a password by code | `codes.reset_password` | the reset mail carries a code instead of a link |
+
+**Fortify keeps every part of this it has an answer for.** It has none for a
+mailed code — there is no passwordless flow in it, and its second factor verifies
+TOTP against a stored secret — so the codes are the one piece of authentication
+this package owns. Everything around them is still Fortify's, and the seams are
+worth knowing because they are what makes the rest of your installation keep
+working:
+
+- **The second factor is a binding, not a second pipeline.** Fortify assembles
+  its login pipeline from the container and resolves
+  `RedirectsIfTwoFactorAuthenticatable` out of it; this package binds a subclass
+  of Fortify's own class to that contract. The credential check, the `Failed`
+  event, the login throttle and the `login.id` session key are inherited
+  untouched, and **an authenticator app always wins** — a user with a confirmed
+  TOTP secret goes to Fortify's challenge, not to a code.
+- **The reset keeps the broker's token.** The mail carries a code; the code's row
+  carries the token. Typing the code hands the request to Fortify's own
+  `NewPasswordController` with the real token in it, so expiry, single use and
+  `ResetsUserPasswords` never move. Six digits are a short-lived key to a token
+  nobody can guess, not a replacement for one.
+- **Verifying by code is what a signed link does.** `markEmailAsVerified()`, then
+  `Illuminate\Auth\Events\Verified` — the same two lines Fortify's own controller
+  runs, so anything listening hears both ways in. The link keeps working.
+- **A code cannot walk past a second factor.** The passwordless flow ends at
+  Fortify's two-factor challenge for anyone who has one. An inbox is one factor.
+
+**What is stored is a hash.** A code is minted, hashed the way Laravel hashes a
+reset token, and filed under a *purpose* and an identifier — so a code mailed to
+confirm an address cannot be typed into the sign-in challenge. Verifying consumes
+it, whether it was right or one guess too many; expiry, the attempt counter on
+the row and the resend window are what make six digits acceptable at all.
+
+### Turning One On
+
+```php
+// config/wire-module-auth.php
+'codes' => [
+    'login' => false,
+    'second_factor' => true,    // needs Fortify's two-factor feature on [tl! focus]
+    'verify_email' => false,
+    'reset_password' => true,   // [tl! focus]
+
+    'length' => 6,
+    'expires' => 10,            // minutes
+    'attempts' => 5,            // wrong guesses before the code is thrown away
+    'resend_after' => 60,       // seconds a "send it again" button waits
+    'throttle' => '6,1',        // its own limiter, not the login one
+    'table' => 'wire_auth_one_time_codes',
+],
+```
+
+Every key takes an environment override — `WIRE_AUTH_CODE_LOGIN`,
+`WIRE_AUTH_CODE_SECOND_FACTOR`, `WIRE_AUTH_CODE_VERIFY_EMAIL`,
+`WIRE_AUTH_CODE_RESET_PASSWORD`, and one per setting below them.
+
+The codes need their table, which the installer publishes:
+
+```bash
+php artisan vendor:publish --tag=wire-module-auth::migrations
+php artisan migrate
+```
+
+**The mailed second factor needs `Features::twoFactorAuthentication()` on.** The
+pipe that sends the code *is* the contract Fortify only puts in its login
+pipeline when that feature is enabled, so with the feature off no code is ever
+sent — and nothing on the sign-in screen looks wrong. `php artisan about` says so
+out loud rather than reporting the flow as off, and so does the installer.
+
+### Who Gets A Mailed Second Factor
+
+Config answers for everybody by default: every user without a confirmed
+authenticator app. A user model that wants to decide per account implements one
+method, and a package writing a column onto your `users` table is exactly what
+this avoids:
+
+```php
+namespace App\Models;
+
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use NyonCode\WireModuleAuth\Contracts\ReceivesLoginCodes;
+
+class User extends Authenticatable implements ReceivesLoginCodes
+{
+    public function wantsLoginCode(): bool      // [tl! focus:start]
+    {
+        // A column you own, a role, a policy about staff accounts — whatever
+        // the answer lives in. False here signs in with a password alone.
+        return $this->two_factor_by_mail;
+    }                                           // [tl! focus:end]
+}
+```
+
+### The Mail
+
+One wording per flow, in `wire-module-auth::messages.code_mail.*`, so "here is
+your sign-in code" and "confirm this address" are different sentences. Change
+them the way you change any other string on these screens — [The
+Wording](#the-wording) — or take the whole message over:
+
+```php
+namespace App\Providers;
+
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\ServiceProvider;
+use NyonCode\WireModuleAuth\Notifications\OneTimeCodeNotification;
+use NyonCode\WireModuleAuth\ValueObjects\OneTimeCode;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        OneTimeCodeNotification::toMailUsing(                       // [tl! focus:start]
+            fn (mixed $notifiable, OneTimeCode $code): MailMessage => (new MailMessage)
+                ->subject(__('Your code for :app', ['app' => config('app.name')]))
+                ->markdown('mail.code', [
+                    'code' => $code->code,           // the digits, readable here and nowhere else
+                    'purpose' => $code->purpose,     // CodePurpose::Login, SecondFactor, …
+                    'expiresAt' => $code->expiresAt,
+                ]),
+        );                                                          // [tl! focus:end]
+    }
+}
+```
+
+The notification is deliberately **not** queued: a code is worth nothing after
+ten minutes, and a queue that is not running turns "my code never arrived" into a
+bug report about the sign-in screen. An application with a working queue returns
+its own `ShouldQueue` notification from that callback.
+
+### A Store Of Your Own
+
+The codes live behind one interface. Bind your own to keep them in Redis with a
+TTL, or to hand them to a gateway that also sends an SMS — the four flows never
+learn the difference:
+
+```php
+namespace NyonCode\WireModuleAuth\Contracts;
+
+use NyonCode\WireModuleAuth\Enums\CodePurpose;
+use NyonCode\WireModuleAuth\ValueObjects\OneTimeCode;
+
+interface OneTimeCodes
+{
+    /** @param array<string, mixed> $payload */
+    public function issue(CodePurpose $purpose, string $identifier, array $payload = []): OneTimeCode;   // [tl! focus:start]
+
+    public function verify(CodePurpose $purpose, string $identifier, string $code): ?OneTimeCode;        // [tl! focus:end]
+
+    public function recentlyIssued(CodePurpose $purpose, string $identifier): bool;
+
+    public function invalidate(CodePurpose $purpose, string $identifier): void;
+}
+```
+
+Four rules an implementation has to keep, because the flows lean on them rather
+than re-checking: the plain code exists only in what `issue()` returns, a code is
+scoped to its purpose *and* identifier, verifying consumes, and an expired code is
+indistinguishable from a wrong one — `null` for every kind of no.
+
+```php
+// config/app.php or a provider
+$this->app->bind(
+    NyonCode\WireModuleAuth\Contracts\OneTimeCodes::class,
+    App\Auth\RedisOneTimeCodes::class,   // [tl! focus]
+);
+```
+
+The value the two methods hand back is a `OneTimeCode`: `purpose`, `identifier`,
+`code` (empty on the way out of `verify()`), `expiresAt`, and `payload(string
+$key)` for whatever the flow carried — the reset flow's broker token rides there.
+
+### Asking In Code
+
+`Support\Codes` answers what this installation has, which is what the screens ask
+before drawing a link to a route that may not exist:
+
+```php
+use NyonCode\WireModuleAuth\Support\Codes;
+
+Codes::login();                   // sign in with a code, no password
+Codes::secondFactor();            // and Fortify's two-factor feature is on
+Codes::verifyEmail();             // and Fortify routes verification
+Codes::resetPassword();           // and Fortify routes resets
+Codes::any();                     // any of the four
+Codes::secondFactorIsStranded();  // switched on, and Fortify's feature is off
+Codes::wantedBy($user);           // this user is mailed a second factor
+Codes::usesAuthenticatorApp($user);
+Codes::identifierFor($user);      // or an address, normalised
+```
 
 ## Customizing The Screens
 

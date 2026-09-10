@@ -94,6 +94,13 @@ připomínku — nic tady nedokáže přečíst, v jaké skupině jsou.
 'views' => true,       // odpovídat na sedm view callbacků Fortify
 
 'user_menu' => true,   // dát „Odhlásit se" do uživatelského menu shellu
+
+'codes' => [           // jednorázové kódy, všechny čtyři vypnuté
+    'login' => false,
+    'second_factor' => false,
+    'verify_email' => false,
+    'reset_password' => false,
+],
 ```
 
 Každý klíč má i override přes prostředí — `WIRE_AUTH_LAYOUT`, `WIRE_AUTH_VIEWS`
@@ -138,8 +145,17 @@ To, co zapíše instalátor, je obyčejný layout — váš, a k editaci:
 | Potvrzení adresy | `verification.notice` | `Features::emailVerification()` |
 | Potvrzení hesla | `password.confirm` | vždy |
 | Dvoufázová výzva | `two-factor.login` | `Features::twoFactorAuthentication()` |
+| Přihlášení kódem | `wire-auth.login-code` | `codes.login` |
+| Zadání kódu | `wire-auth.login-code.challenge` | `codes.login` |
+| Druhý faktor e-mailem | `wire-auth.second-factor` | `codes.second_factor` |
+| Potvrzení adresy kódem | `wire-auth.verify-email-code` | `codes.verify_email` |
+| Nové heslo z kódu | `wire-auth.reset-code` | `codes.reset_password` |
 
 A k tomu **Odhlásit se** v uživatelském menu.
+
+Posledních pět jsou [jednorázové kódy](#jednorazove-kody) a každý z nich je
+vypnutý, dokud ho nezapnete: instalace, která nic neřekne, nemá v `route:list`
+řádek navíc.
 
 ## Zapnutí jednotlivých funkcí
 
@@ -173,6 +189,211 @@ use Laravel\Fortify\Features;
 patří profilové stránce modulu uživatelů. Viz
 [Týmy a dvoufázové ověření](teams-and-two-factor.md). Tenhle balíček vlastní jen
 výzvu na cestě dovnitř.
+
+## Jednorázové kódy
+
+Šestimístný kód, poslaný e-mailem, zadaný do stejných políček jako dvoufázová
+výzva. Čtyři věci, které může zastoupit, a **každá je vypnutá, dokud ji
+nezapnete**:
+
+| Tok | Přepínač | Co se změní |
+| --- | --- | --- |
+| Přihlášení kódem, bez hesla | `codes.login` | druhá cesta dovnitř, odkázaná z přihlašovací obrazovky |
+| Druhý faktor e-mailem | `codes.second_factor` | správné heslo se zastaví u kódu — pro lidi bez autentikátoru |
+| Potvrzení adresy kódem | `codes.verify_email` | tlačítko na obrazovce „potvrďte adresu", vedle odkazu, který dál funguje |
+| Obnova hesla kódem | `codes.reset_password` | v e-mailu přijde kód místo odkazu |
+
+**Všechno, na co má Fortify odpověď, zůstává Fortify.** Na kód poslaný e-mailem
+ji nemá — passwordless tok v něm není a druhý faktor ověřuje TOTP proti uloženému
+tajemství — takže kódy jsou jediný kus autentizace, který tenhle balíček vlastní.
+Zbytek kolem nich je pořád Fortify a stojí za to vědět kudy vedou švy, protože
+právě ony drží zbytek instalace v chodu:
+
+- **Druhý faktor je binding, ne druhá pipeline.** Fortify si přihlašovací
+  pipeline skládá z kontejneru a vytahuje z něj
+  `RedirectsIfTwoFactorAuthenticatable`; tenhle balíček na ten kontrakt naváže
+  potomka Fortifyho vlastní třídy. Kontrola hesla, událost `Failed`, throttling
+  přihlášení i session klíč `login.id` se dědí beze změny — a **autentikátor vždy
+  vyhrává**: uživatel s potvrzeným TOTP tajemstvím jde na výzvu Fortify, ne na
+  kód.
+- **Obnova hesla si nechává token brokeru.** V e-mailu je kód, v řádku kódu je
+  token. Zadaný kód předá požadavek Fortifyho vlastnímu `NewPasswordController`
+  i se skutečným tokenem, takže expirace, jednorázovost i `ResetsUserPasswords`
+  zůstávají tam, kde byly. Šest číslic je krátkodobý klíč k tokenu, který nikdo
+  neuhodne — ne jeho náhrada.
+- **Potvrzení kódem dělá totéž co podepsaný odkaz.** `markEmailAsVerified()` a
+  pak `Illuminate\Auth\Events\Verified` — dva řádky, které spouští i Fortifyho
+  vlastní controller, takže cokoli naslouchá, uslyší obě cesty. Odkaz dál
+  funguje.
+- **Kódem se nedá obejít druhý faktor.** Passwordless tok skončí u dvoufázové
+  výzvy Fortify pro každého, kdo ji má. Schránka je jeden faktor.
+
+**Uložený je hash.** Kód se vygeneruje, zahashuje stejně, jako Laravel hashuje
+token pro obnovu hesla, a založí se pod *účelem* a identifikátorem — takže kód
+poslaný na potvrzení adresy nejde zadat do přihlašovací výzvy. Ověření kód
+spotřebuje, ať byl správný, nebo to byl pokus navíc; expirace, počítadlo pokusů
+na řádku a okno pro opětovné odeslání jsou to, proč je šest číslic vůbec
+přijatelných.
+
+### Zapnutí jednoho toku
+
+```php
+// config/wire-module-auth.php
+'codes' => [
+    'login' => false,
+    'second_factor' => true,    // vyžaduje zapnutou dvoufázovou funkci Fortify [tl! focus]
+    'verify_email' => false,
+    'reset_password' => true,   // [tl! focus]
+
+    'length' => 6,
+    'expires' => 10,            // minut
+    'attempts' => 5,            // špatných pokusů, než se kód zahodí
+    'resend_after' => 60,       // sekund, které čeká tlačítko „poslat znovu"
+    'throttle' => '6,1',        // vlastní limiter, ne ten přihlašovací
+    'table' => 'wire_auth_one_time_codes',
+],
+```
+
+Každý klíč má i override přes prostředí — `WIRE_AUTH_CODE_LOGIN`,
+`WIRE_AUTH_CODE_SECOND_FACTOR`, `WIRE_AUTH_CODE_VERIFY_EMAIL`,
+`WIRE_AUTH_CODE_RESET_PASSWORD` a po jednom na každé nastavení pod nimi.
+
+Kódy potřebují svou tabulku, kterou instalátor publikuje:
+
+```bash
+php artisan vendor:publish --tag=wire-module-auth::migrations
+php artisan migrate
+```
+
+**Druhý faktor e-mailem potřebuje zapnuté `Features::twoFactorAuthentication()`.**
+Pipe, který kód posílá, *je* ten kontrakt, který Fortify dává do přihlašovací
+pipeline jen se zapnutou dvoufázovou funkcí — s vypnutou se tedy žádný kód nikdy
+neodešle a na přihlašovací obrazovce nic nevypadá špatně. `php artisan about`
+tenhle stav řekne nahlas místo toho, aby tok hlásil jako vypnutý; stejně tak
+instalátor.
+
+### Kdo dostane druhý faktor e-mailem
+
+Ve výchozím stavu odpovídá konfigurace za všechny: každý uživatel bez potvrzeného
+autentikátoru. Model, který chce rozhodovat účet po účtu, implementuje jednu
+metodu — a balíček, který by kvůli tomu zapsal sloupec do vaší tabulky `users`,
+je přesně to, čemu se tím vyhýbáme:
+
+```php
+namespace App\Models;
+
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use NyonCode\WireModuleAuth\Contracts\ReceivesLoginCodes;
+
+class User extends Authenticatable implements ReceivesLoginCodes
+{
+    public function wantsLoginCode(): bool      // [tl! focus:start]
+    {
+        // Vlastní sloupec, role, pravidlo o zaměstnaneckých účtech — cokoli,
+        // kde ta odpověď žije. `false` tady znamená přihlášení jen heslem.
+        return $this->two_factor_by_mail;
+    }                                           // [tl! focus:end]
+}
+```
+
+### E-mail s kódem
+
+Pro každý tok vlastní text, v `wire-module-auth::messages.code_mail.*`, aby „tady
+je váš přihlašovací kód" a „potvrďte tuhle adresu" byly různé věty. Měníte je
+stejně jako kterýkoli jiný text těchhle obrazovek — [Texty](#texty) — nebo si
+vezmete celou zprávu:
+
+```php
+namespace App\Providers;
+
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\ServiceProvider;
+use NyonCode\WireModuleAuth\Notifications\OneTimeCodeNotification;
+use NyonCode\WireModuleAuth\ValueObjects\OneTimeCode;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        OneTimeCodeNotification::toMailUsing(                       // [tl! focus:start]
+            fn (mixed $notifiable, OneTimeCode $code): MailMessage => (new MailMessage)
+                ->subject(__('Váš kód pro :app', ['app' => config('app.name')]))
+                ->markdown('mail.code', [
+                    'code' => $code->code,           // číslice, čitelné tady a nikde jinde
+                    'purpose' => $code->purpose,     // CodePurpose::Login, SecondFactor, …
+                    'expiresAt' => $code->expiresAt,
+                ]),
+        );                                                          // [tl! focus:end]
+    }
+}
+```
+
+Notifikace záměrně **není** ve frontě: kód po deseti minutách nemá cenu a
+nespuštěná fronta udělá z „kód mi nepřišel" hlášení o rozbitém přihlašování.
+Aplikace s funkční frontou vrátí z toho callbacku vlastní notifikaci se
+`ShouldQueue`.
+
+### Vlastní úložiště
+
+Kódy žijí za jedním rozhraním. Navažte si vlastní implementaci, ať už je chcete
+držet v Redisu s TTL, nebo je předat bráně, která zároveň pošle SMS — žádný ze
+čtyř toků o tom nemusí vědět:
+
+```php
+namespace NyonCode\WireModuleAuth\Contracts;
+
+use NyonCode\WireModuleAuth\Enums\CodePurpose;
+use NyonCode\WireModuleAuth\ValueObjects\OneTimeCode;
+
+interface OneTimeCodes
+{
+    /** @param array<string, mixed> $payload */
+    public function issue(CodePurpose $purpose, string $identifier, array $payload = []): OneTimeCode;   // [tl! focus:start]
+
+    public function verify(CodePurpose $purpose, string $identifier, string $code): ?OneTimeCode;        // [tl! focus:end]
+
+    public function recentlyIssued(CodePurpose $purpose, string $identifier): bool;
+
+    public function invalidate(CodePurpose $purpose, string $identifier): void;
+}
+```
+
+Čtyři pravidla, která implementace musí dodržet, protože se na ně toky
+spoléhají místo aby je kontrolovaly znovu: čitelný kód existuje jen v tom, co
+vrátí `issue()`, kód patří ke svému účelu *i* identifikátoru, ověření kód
+spotřebuje a vypršelý kód je k nerozeznání od špatného — `null` pro každou
+podobu „ne".
+
+```php
+// config/app.php nebo provider
+$this->app->bind(
+    NyonCode\WireModuleAuth\Contracts\OneTimeCodes::class,
+    App\Auth\RedisOneTimeCodes::class,   // [tl! focus]
+);
+```
+
+Hodnota, kterou obě metody vracejí, je `OneTimeCode`: `purpose`, `identifier`,
+`code` (na cestě z `verify()` prázdný), `expiresAt` a `payload(string $key)` na
+to, co si tok nesl — token brokeru u obnovy hesla jede právě tam.
+
+### Dotazy z kódu
+
+`Support\Codes` odpovídá na to, co tahle instalace má — přesně na to se ptají
+obrazovky, než vykreslí odkaz na routu, která nemusí existovat:
+
+```php
+use NyonCode\WireModuleAuth\Support\Codes;
+
+Codes::login();                   // přihlášení kódem, bez hesla
+Codes::secondFactor();            // a dvoufázová funkce Fortify je zapnutá
+Codes::verifyEmail();             // a Fortify routuje ověření adresy
+Codes::resetPassword();           // a Fortify routuje obnovu hesla
+Codes::any();                     // kterýkoli ze čtyř
+Codes::secondFactorIsStranded();  // zapnuto, ale funkce Fortify je vypnutá
+Codes::wantedBy($user);           // tomuhle uživateli se posílá druhý faktor
+Codes::usesAuthenticatorApp($user);
+Codes::identifierFor($user);      // nebo adresa, normalizovaná
+```
 
 ## Přizpůsobení obrazovek
 

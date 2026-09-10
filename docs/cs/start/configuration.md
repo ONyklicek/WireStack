@@ -39,6 +39,10 @@ Potřebujete jen tagy balíčků, které jste nainstalovali.
 | `WIRE_FORMS_UPLOAD_DISK` | `public` | Forms upload souborů |
 | `WIRE_MOBILE_SHEET` | `true` | Core mobilní bottom-sheety |
 | `WIRE_MOBILE_BREAKPOINT` | `sm` | Breakpoint mobilního sheetu |
+| `WIRE_AUTH_CODE_LOGIN` | `false` | Přihlášení kódem z e-mailu, bez hesla |
+| `WIRE_AUTH_CODE_SECOND_FACTOR` | `false` | Kód e-mailem po správném heslu |
+| `WIRE_AUTH_CODE_VERIFY_EMAIL` | `false` | Potvrzení adresy kódem |
+| `WIRE_AUTH_CODE_RESET_PASSWORD` | `false` | V e-mailu pro obnovu hesla přijde kód, ne odkaz |
 
 <a id="javascript-assets"></a>
 ## JavaScriptové assety
@@ -477,7 +481,7 @@ které mění:
 | Soubor | Co konfiguruje | Stránka |
 | --- | --- | --- |
 | `wire-module-users.php` | Uživatelský model, resource, role a týmy, profilová obrazovka | [Uživatelé](../modules/users.md) |
-| `wire-module-auth.php` | Které obrazovky auth modul registruje a jaké routy si bere | [Přihlašování](../modules/auth.md) |
+| `wire-module-auth.php` | Které obrazovky auth modul registruje, jaké routy si bere a čtyři toky jednorázových kódů | [Přihlašování](../modules/auth.md) |
 | `wire-module-settings.php` | Tabulka nastavení, její cache a skupiny, které obrazovka ukazuje | [Nastavení](../modules/settings.md) |
 | `wire-module-notifications.php` | Zvoneček, jeho panel a tabulka uložených notifikací | [Notifikace](../modules/notifications.md) |
 | `wire-module-audit.php` | Auditní obrazovka nad stopou, kterou zapisuje `wire-core` | [Audit](../modules/audit.md) |

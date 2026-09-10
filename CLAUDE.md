@@ -148,8 +148,16 @@ Before changing shared behavior, ask:
   verification, the two-factor challenge, the sign-out in the user menu:
   `packages/module-auth/`, then `docs/modules/auth.md` and ADR
   `architecture/decisions/0032-authentication-surface.md`. Fortify owns the
-  security; that package owns seven views and nothing else. The panel's own
-  guard is `wire-panels.routes.middleware`, which defaults to `['web', 'auth']`
+  security; that package owns the screens. The panel's own guard is
+  `wire-panels.routes.middleware`, which defaults to `['web', 'auth']`
+- A **one-time code** — signing in without a password, a second factor by mail,
+  confirming an address or resetting a password by code: the same package's
+  `Contracts/OneTimeCodes.php`, `Services/`, `Http/Controllers/` and
+  `routes/codes.php`, then `docs/modules/auth.md` § One-Time Codes and ADR
+  `architecture/decisions/0037-one-time-codes.md`. Four switches under
+  `wire-module-auth.codes`, all off by default; everything Fortify has an answer
+  for is still Fortify's, and the codes are the only authentication this
+  repository owns
 - The signed-in user's own account — the profile cards, avatars, two-factor over
   Fortify, roles and teams over `nyoncode/laravel-permission-extended` (each an
   `auto` switch that looks for the thing itself):

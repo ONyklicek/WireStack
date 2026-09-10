@@ -60,7 +60,7 @@ má a nechrání ho nic:
 | Stav | Znamená | Karta ukáže |
 | --- | --- | --- |
 | vypnuto | žádné tajemství | jedno tlačítko: zapnout |
-| nedokončeno | tajemství, nepotvrzené | QR kód, klíč k opsání, políčko na kód — a cestu ven |
+| nedokončeno | tajemství, nepotvrzené | QR kód, klíč k opsání, šest políček na kód — a cestu ven |
 | zapnuto | `two_factor_confirmed_at` je vyplněné | záložní kódy a cestu pryč |
 
 Panel, který by tohle modeloval jako boolean, by nechal každé přerušené nastavení
@@ -122,6 +122,11 @@ Karta se na stránce profilu objeví ve chvíli, kdy platí obojí. `'confirm' =
 se taky respektuje — modul si to čte přímo z nastavení dané Fortify funkce, ne
 z kopie toho nastavení — a tajemství pak *je* celé nastavení, takže stav „nedokončeno“
 nenastane.
+
+**Kód se na obou stranách dveří zadává do stejného pole.** Políčka na téhle kartě
+jsou `OtpInput` z `wire-forms` — stejné, jaké kreslí přihlašovací výzva: samy
+posouvají kurzor, rozeberou vložený kód a odešlou jednu hodnotu. Žádný druhý
+názor na to, jak vypadá šest číslic.
 
 **Výzva patří té druhé polovině.** Tenhle modul vlastní *správcovskou* kartu — QR
 kód, záložní kódy, přepínač. Obrazovka, která se ptá na kód během přihlašování,
