@@ -203,6 +203,11 @@ nezapnete**:
 | Potvrzení adresy kódem | `codes.verify_email` | tlačítko na obrazovce „potvrďte adresu", vedle odkazu, který dál funguje |
 | Obnova hesla kódem | `codes.reset_password` | v e-mailu přijde kód místo odkazu |
 
+Když spěcháte: [Zapnutí od začátku do konce](#zapnuti-od-zacatku-do-konce) je
+konfigurace, migrace a kontrola e-mailů, a každý tok pod ním projde krok za
+krokem to, co doopravdy dělá člověk u obrazovky. Zbytek téhle sekce je o tom, co
+se za tím děje.
+
 **Všechno, na co má Fortify odpověď, zůstává Fortify.** Na kód poslaný e-mailem
 ji nemá — passwordless tok v něm není a druhý faktor ověřuje TOTP proti uloženému
 tajemství — takže kódy jsou jediný kus autentizace, který tenhle balíček vlastní.
@@ -235,7 +240,12 @@ spotřebuje, ať byl správný, nebo to byl pokus navíc; expirace, počítadlo 
 na řádku a okno pro opětovné odeslání jsou to, proč je šest číslic vůbec
 přijatelných.
 
-### Zapnutí jednoho toku
+### Zapnutí od začátku do konce
+
+Tři kroky a na ten třetí se nejčastěji zapomíná.
+
+**1. Zapněte tok.** Nic dalšího v konfiguraci měnit nemusíte; nastavení pod
+přepínači mají použitelné výchozí hodnoty.
 
 ```php
 // config/wire-module-auth.php
@@ -258,19 +268,140 @@ Každý klíč má i override přes prostředí — `WIRE_AUTH_CODE_LOGIN`,
 `WIRE_AUTH_CODE_SECOND_FACTOR`, `WIRE_AUTH_CODE_VERIFY_EMAIL`,
 `WIRE_AUTH_CODE_RESET_PASSWORD` a po jednom na každé nastavení pod nimi.
 
-Kódy potřebují svou tabulku, kterou instalátor publikuje:
+**2. Dejte kódům jejich tabulku.** Publikuje se, nespouští se z balíčku, protože
+patří do vašeho schématu:
 
 ```bash
 php artisan vendor:publish --tag=wire-module-auth::migrations
 php artisan migrate
 ```
 
-**Druhý faktor e-mailem potřebuje zapnuté `Features::twoFactorAuthentication()`.**
-Pipe, který kód posílá, *je* ten kontrakt, který Fortify dává do přihlašovací
-pipeline jen se zapnutou dvoufázovou funkcí — s vypnutou se tedy žádný kód nikdy
-neodešle a na přihlašovací obrazovce nic nevypadá špatně. `php artisan about`
-tenhle stav řekne nahlas místo toho, aby tok hlásil jako vypnutý; stejně tak
-instalátor.
+**3. Ověřte, že e-maily opravdu odcházejí.** Každý tok je e-mail; nedoručený kód
+vypadá úplně stejně jako špatný kód a balíček ten rozdíl nepozná. Ve vývoji stačí
+log driver — kód je pak v `storage/logs/laravel.log`, což je zároveň způsob, jak
+celý tok projít bez schránky:
+
+```dotenv
+MAIL_MAILER=log
+```
+
+Pak se podívejte, co doopravdy máte. `about` vypíše každý zapnutý tok — a
+pojmenuje ten jediný stav, který přepínač vyjádřit neumí: zapnuto a nemůže běžet:
+
+```bash
+php artisan about --only=wire-module-auth
+# One-time codes ..... sign-in, second factor
+# One-time codes ..... second factor on, but Fortify two-factor is off
+```
+
+Co který tok potřebuje od vašeho user modelu, kromě `codes.*`:
+
+| Tok | Funkce Fortify | User model musí |
+| --- | --- | --- |
+| Přihlášení kódem | — | používat `Notifiable` |
+| Druhý faktor e-mailem | `twoFactorAuthentication()` | používat `Notifiable`; volitelně implementovat `ReceivesLoginCodes` |
+| Potvrzení adresy kódem | `emailVerification()` | používat `Notifiable` a implementovat `MustVerifyEmail` |
+| Nové heslo z kódu | `resetPasswords()` | být to, co už dnes resetuje Laravelův password broker |
+
+`Notifiable` je na výchozím `App\Models\User` už dávno. Modelu bez něj se kód
+nikdy nepošle — bez chyby, bez e-mailu — a to je první věc ke kontrole, když tok
+nedělá vůbec nic.
+
+### Přihlášení kódem
+
+Co dělá člověk u obrazovky, když je `codes.login` zapnutý:
+
+1. Na přihlašovací obrazovce klikne na **Přihlásit se kódem** — odkaz se kreslí
+   jen tam, kde je tok zapnutý, takže je to zároveň důkaz, že přepínač zabral.
+2. Na `/login/code` zadá svou adresu a dá **Poslat kód**. Odpověď je stejná, ať
+   už na té adrese účet je, nebo není.
+3. Přistane na `/login/code/challenge`, kde je napsané, kam kód šel, a opíše šest
+   číslic. **Poslat znovu** pošle další po `resend_after` sekundách.
+4. Je přihlášený — přes vlastní `LoginResponse` Fortify, takže skončí tam, kde
+   končí přihlášení heslem.
+
+Jedna větev stojí za vědomí: člověk s potvrzeným autentikátorem ve čtvrtém kroku
+přihlášený **není**. Kód se přijme, session zůstane zavřená a předá se dvoufázové
+výzvě Fortify — kód do schránky je jeden faktor a nesmí být cestou kolem druhého.
+
+### Druhý faktor e-mailem
+
+Pro lidi bez autentikátoru. Zapnuté musí být `codes.second_factor` **i**
+`twoFactorAuthentication()` ve Fortify:
+
+1. Přihlásí se na `/login` heslem, které měl vždycky.
+2. Místo panelu dostane `/two-factor/code` a e-mail s kódem. Rozdělané
+   přihlášení drží vlastní session klíč Fortify `login.id` — heslo *bylo*
+   ověřené, takže je to přesně stav, ve kterém běží i vlastní výzva Fortify.
+3. Správný kód otevře session, vyvolá `ValidTwoFactorAuthenticationCodeProvided`
+   a přistane tam, kam Fortify posílá druhý faktor. Špatný vyvolá
+   `TwoFactorAuthenticationFailed` a napíše to k poli.
+
+Kdo má potvrzené TOTP tajemství, tuhle obrazovku nikdy neuvidí: jde na výzvu
+Fortify, protože autentikátor je silnější faktor a nastavoval si ho schválně.
+
+### Potvrzení adresy kódem
+
+Vedle podepsaného odkazu, ne místo něj — pro poštovního klienta, který URL
+přepsal, nebo pro odkaz otevřený na jiném stroji:
+
+1. Přihlášený, nepotvrzený uživatel je na obrazovce **Potvrďte svou e-mailovou
+   adresu** od Fortify. Se zapnutým `codes.verify_email` na ní je i **Zadat kód
+   místo odkazu**.
+2. Stisknutí pošle kód a přesune ho na `/email/verify/code`.
+3. Správný kód označí adresu za ověřenou a vyvolá `Verified` — tytéž dva řádky,
+   které spouští vlastní controller Fortify u podepsaného odkazu, takže uvítací
+   e-mail nebo záznam v auditu uslyší obě cesty.
+
+Váš user model musí implementovat `MustVerifyEmail`, jinak není co potvrzovat a
+obě obrazovky pošlou návštěvníka domů.
+
+### Nové heslo z kódu
+
+Tok s nejvíc pohyblivými díly a nejmíň prací pro vás: zapněte
+`codes.reset_password` a stávající obrazovky pro obnovu hesla změní tvar.
+
+1. Člověk požádá o obnovu na `/forgot-password`, přesně jako dosud.
+2. V e-mailu přijde **kód** místo odkazu. Laravelův broker svůj token vygeneroval
+   pořád stejně; nese ho řádek toho kódu.
+3. Přistane na `/reset-password-code` s předvyplněnou adresou — tenhle tok ji jako
+   jediný zná a jede v session, ne v URL, takže se nedostane do access logu.
+4. Zadá kód a nové heslo. Kód se kontroluje první, takže špatný stojí jeden pokus
+   a nic víc; pak běží vlastní `NewPasswordController` Fortify se skutečným
+   tokenem a pravidla na heslo, verdikt brokeru i `ResetsUserPasswords` jsou ta,
+   která jste měli doteď.
+
+Na té obrazovce není pole s tokenem, a to je záměr: token je to, co kód zastupuje.
+Obrazovka s obojím by byla obrazovka, kde je kód ozdoba.
+
+Se zapnutým tokem se nahrazují dva bindingy — Laravelův
+`ResetPassword::toMailUsing()` a `SuccessfulPasswordResetLinkRequestResponse` z
+Fortify. Pokud si některý navazuje vaše aplikace, její provider bootuje poslední
+a vyhraje — a kódy pak nemají čím jet.
+
+### Když žádný kód nedorazí
+
+V pořadí, ve kterém to má smysl kontrolovat, protože každá z těch věcí selhává
+potichu:
+
+- **Je tok vůbec zaroutovaný?** `php artisan route:list --name=wire-auth` má
+  vypsat obrazovky ke každému zapnutému přepínači. Prázdno znamená vypnutý
+  přepínač — nebo, u druhého faktoru a ověření adresy, vypnutou odpovídající
+  funkci Fortify.
+- **Odcházejí z téhle aplikace e-maily?** Dokud nedorazí
+  `Mail::raw('x', fn ($m) => $m->to('vy@example.com')->subject('x'))`, je všechno
+  ostatní jen odhad.
+- **Není v tom fronta?** E-mail s kódem záměrně ve frontě není, ale vlastní
+  notifikace se `ShouldQueue` z `OneTimeCodeNotification::toMailUsing()` potřebuje
+  workera — a kód, který dorazí o čtyři minuty později, je kód po expiraci.
+- **Neodešel právě jeden?** Uvnitř `resend_after` to tlačítko řekne a nepošle nic
+  — schválně, aby zmáčknuté tlačítko neposlalo pět kódů, ze kterých čtyři už
+  neplatí.
+- **Používá model `Notifiable`?** Bez něj se nepošle nikdy nic a všechny obrazovky
+  přesto tvrdí, že je kód na cestě.
+- **Není kód prostě špatný nebo po expiraci?** Odpověď je záměrně stejná. Po
+  `attempts` špatných pokusech se kód zahodí, takže přestanou fungovat i správné
+  číslice — vyžádejte si nový.
 
 ### Kdo dostane druhý faktor e-mailem
 

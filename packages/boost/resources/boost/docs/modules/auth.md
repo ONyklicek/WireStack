@@ -201,6 +201,11 @@ Four things it can stand in for, **each off until you switch it on**:
 | Confirm an address by code | `codes.verify_email` | a button on the "confirm your address" screen, beside the link that still works |
 | Reset a password by code | `codes.reset_password` | the reset mail carries a code instead of a link |
 
+In a hurry: [Switching One On, Start To Finish](#switching-one-on-start-to-finish)
+is the config, the migration and the mail check, and each flow below it walks
+through what the person in front of the screen actually does. The rest of this
+section is what happens behind them.
+
 **Fortify keeps every part of this it has an answer for.** It has none for a
 mailed code — there is no passwordless flow in it, and its second factor verifies
 TOTP against a stored secret — so the codes are the one piece of authentication
@@ -232,7 +237,12 @@ confirm an address cannot be typed into the sign-in challenge. Verifying consume
 it, whether it was right or one guess too many; expiry, the attempt counter on
 the row and the resend window are what make six digits acceptable at all.
 
-### Turning One On
+### Switching One On, Start To Finish
+
+Three steps, and the third is the one people forget.
+
+**1. Turn the flow on.** Nothing else in the config has to change; the settings
+under the switches already have working defaults.
 
 ```php
 // config/wire-module-auth.php
@@ -255,18 +265,143 @@ Every key takes an environment override — `WIRE_AUTH_CODE_LOGIN`,
 `WIRE_AUTH_CODE_SECOND_FACTOR`, `WIRE_AUTH_CODE_VERIFY_EMAIL`,
 `WIRE_AUTH_CODE_RESET_PASSWORD`, and one per setting below them.
 
-The codes need their table, which the installer publishes:
+**2. Give the codes their table.** It is published rather than run from the
+package, because it lives in your schema:
 
 ```bash
 php artisan vendor:publish --tag=wire-module-auth::migrations
 php artisan migrate
 ```
 
-**The mailed second factor needs `Features::twoFactorAuthentication()` on.** The
-pipe that sends the code *is* the contract Fortify only puts in its login
-pipeline when that feature is enabled, so with the feature off no code is ever
-sent — and nothing on the sign-in screen looks wrong. `php artisan about` says so
-out loud rather than reporting the flow as off, and so does the installer.
+**3. Make sure mail actually leaves.** Every flow is a mail; a code that is never
+delivered looks exactly like a wrong code, and nothing in the package can tell the
+difference. In development the log driver is enough — the code is then in
+`storage/logs/laravel.log`, which is also how you finish a flow without an inbox:
+
+```dotenv
+MAIL_MAILER=log
+```
+
+Then check what you actually have. `about` names each flow that is on, and names
+the one state a switch cannot express — on, and unable to run:
+
+```bash
+php artisan about --only=wire-module-auth
+# One-time codes ..... sign-in, second factor
+# One-time codes ..... second factor on, but Fortify two-factor is off
+```
+
+What each flow needs of your user model, beyond `codes.*`:
+
+| Flow | Fortify feature | The user model must |
+| --- | --- | --- |
+| Sign in with a code | — | use `Notifiable` |
+| A second factor by mail | `twoFactorAuthentication()` | use `Notifiable`; optionally implement `ReceivesLoginCodes` |
+| Confirm an address by code | `emailVerification()` | use `Notifiable` and implement `MustVerifyEmail` |
+| A new password from a code | `resetPasswords()` | be what Laravel's password broker already resets |
+
+`Notifiable` is on Laravel's default `App\Models\User` already. A model without
+it is never sent a code — no error, no mail — which is the first thing to check
+when a flow does nothing at all.
+
+### Signing In With A Code
+
+What the person does, once `codes.login` is on:
+
+1. On the sign-in screen they click **Sign in with a code instead** — the link is
+   drawn only where the flow is on, so it is also your proof the switch took.
+2. They type their address on `/login/code` and press **Mail me a code**. The
+   reply is the same whether or not the address has an account.
+3. They land on `/login/code/challenge`, which names the address the code went
+   to, and type the six digits. **Send it again** mails another after
+   `resend_after` seconds.
+4. They are signed in — through Fortify's own `LoginResponse`, so they land
+   wherever a password sign-in lands.
+
+The one branch worth knowing: somebody with a confirmed authenticator app is
+*not* signed in at step 4. The code is accepted, the session stays shut, and they
+are handed to Fortify's two-factor challenge — a code to an inbox is one factor,
+and this must not be the way around the second.
+
+### A Second Factor By Mail
+
+For people with no authenticator app. `codes.second_factor` **and** Fortify's
+`twoFactorAuthentication()` both have to be on:
+
+1. They sign in on `/login` with the password they have always used.
+2. Instead of the panel they get `/two-factor/code`, and a mail with a code.
+   Their sign-in is held in Fortify's own `login.id` session key — the password
+   *was* checked, so this is exactly the state Fortify's own challenge runs in.
+3. The right code opens the session, fires Fortify's
+   `ValidTwoFactorAuthenticationCodeProvided`, and lands them where Fortify lands
+   a second factor. A wrong one fires `TwoFactorAuthenticationFailed` and says so
+   on the field.
+
+Anyone with a confirmed TOTP secret never sees this screen: they go to Fortify's
+challenge instead, because an authenticator app is the stronger factor and they
+set it up on purpose.
+
+### Confirming An Address By Code
+
+Beside the signed link, never instead of it — for the mail client that rewrote
+the URL, or a link opened on the wrong machine:
+
+1. A signed-in, unconfirmed user is on Fortify's **Confirm your e-mail address**
+   screen. With `codes.verify_email` on it also offers **Type a code instead**.
+2. Pressing it mails a code and takes them to `/email/verify/code`.
+3. The right code marks the address verified and fires `Verified` — the same two
+   lines Fortify's own controller runs for a signed link, so a welcome mail or an
+   audit entry listening for it hears both ways in.
+
+Your user model has to implement `MustVerifyEmail`, or there is nothing to
+confirm and both screens send the visitor home.
+
+### A New Password From A Code
+
+The flow with the most moving parts and the least for you to do: turn
+`codes.reset_password` on and the existing reset screens change shape.
+
+1. The person asks for a reset on `/forgot-password`, exactly as before.
+2. The mail carries a **code** instead of a link. Laravel's broker still minted
+   its token; the code's row is what carries it.
+3. They land on `/reset-password-code` with their address already filled in — the
+   reset flow is the one that knows it, and it travels in the session rather than
+   in the URL, so it stays out of your access log.
+4. They type the code and the new password. The code is checked first, so a wrong
+   one costs an attempt and nothing else; then Fortify's own `NewPasswordController`
+   runs with the real token, and the password rules, the broker's verdict and
+   `ResetsUserPasswords` are the ones you already had.
+
+There is no token field on that screen, and that is deliberate: the token is what
+the code stands for. A screen showing both would be a screen where the code is
+decoration.
+
+Two bindings are replaced while this flow is on — Laravel's
+`ResetPassword::toMailUsing()` and Fortify's
+`SuccessfulPasswordResetLinkRequestResponse`. If your application binds either
+one, yours boots last and wins, and the codes then have no mail to travel in.
+
+### When No Code Arrives
+
+In the order worth checking, because each one fails silently:
+
+- **Is the flow routed at all?** `php artisan route:list --name=wire-auth` should
+  list the screens for every switch that is on. Nothing there means the switch is
+  off — or, for the second factor and the verification flow, that Fortify's
+  matching feature is.
+- **Does mail leave this application?** Anything else is guesswork until
+  `Mail::raw('x', fn ($m) => $m->to('you@example.com')->subject('x'))` arrives.
+- **Is a queue involved?** The code mail is deliberately not queued, but a
+  `ShouldQueue` of your own from `OneTimeCodeNotification::toMailUsing()` needs a
+  worker, and a code that arrives four minutes late is a code that has expired.
+- **Was one just sent?** Inside `resend_after`, the resend button says so and
+  mails nothing — by design, so a leaned-on button does not send five codes of
+  which four are already dead.
+- **Does the model use `Notifiable`?** Without it nothing is ever sent, and every
+  screen still says the code is on its way.
+- **Is the code simply wrong or expired?** They are the same reply on purpose.
+  After `attempts` wrong guesses the code is thrown away, so the right digits stop
+  working too — ask for a new one.
 
 ### Who Gets A Mailed Second Factor
 
