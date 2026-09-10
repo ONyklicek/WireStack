@@ -21,10 +21,20 @@ return new class extends Migration
             // already has that table can point the config at it and read both
             // through its own Notifiable::notifications() relation. A shape of
             // our own would have made the two mutually exclusive.
-            // Laravel's column name, holding a ULID: both are strings that fit,
-            // but a ULID sorts by the time it was made, which is what makes
-            // "newest first" survive a bulk job putting five rows in one second.
-            $table->uuid('id')->primary();
+            //
+            // `ulid()`, not Laravel's `uuid()`, because the driver writes a ULID
+            // — it sorts by the time it was made, which is what makes "newest
+            // first" survive a bulk job putting five rows in one second. The two
+            // are interchangeable only where a UUID column is a string: SQLite
+            // does not check, and MySQL's `uuid()` is a char(36) that swallows
+            // anything. Postgres and MariaDB have a real UUID type and reject a
+            // 26-character ULID outright — `invalid input syntax for type uuid`
+            // on every insert, which is what the database matrix caught.
+            //
+            // The same edge is why an application pointing this config at
+            // Laravel's own `notifications` table wants that table's id to be a
+            // string as well.
+            $table->ulid('id')->primary();
             $table->string('type');
 
             // String, not bigint: the recipient may key on a UUID/ULID. No FK —

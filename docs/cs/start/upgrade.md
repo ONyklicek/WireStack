@@ -213,6 +213,45 @@ resetuje. Řádky v databázi migrace převede.
 
 ---
 
+## Notifikace jsou nová tabulka a její id je ULID (2.0)
+
+Není co migrovat: `wire_notifications` v 1.x neexistuje. Přichází s historií
+notifikací ve 2.0 a jediné, co o jejím tvaru stojí za to vědět, je primární klíč.
+
+```php
+$table->ulid('id')->primary();   // ne uuid()
+```
+
+**Proč ne `uuid()`.** Driver zapisuje `Str::ulid()` — 26 znaků, které se řadí
+podle času vzniku, což je to, díky čemu „nejnovější první" drží i tehdy, když
+jedna dávková úloha podá pět notifikací ve stejné vteřině. Sloupec `uuid` to
+udrží jen tam, kde je to doopravdy string: SQLite nekontroluje nic a MySQL má za
+`uuid()` `char(36)`, který spolkne cokoliv. **Postgres a MariaDB mají skutečný
+UUID typ a ULID rovnou odmítnou** — `invalid input syntax for type uuid` při
+každém insertu, čímž se to taky našlo.
+
+Čistá instalace dostane správný sloupec a nepotřebuje nic. Se špatným se dá
+skončit dvěma cestami:
+
+1. **Pustili jste ranou 2.0**, ještě před touhle opravou. Publikovaná migrace
+   existující tabulku přeskakuje, takže sloupec jednou rozšiřte ručně:
+
+   ```sql
+   -- PostgreSQL
+   ALTER TABLE wire_notifications ALTER COLUMN id TYPE char(26) USING id::text;
+
+   -- MariaDB
+   ALTER TABLE wire_notifications MODIFY id char(26) NOT NULL;
+   ```
+
+2. **Nasměrovali jste `wire-core.notifications.database.table` na Laravelí
+   tabulku `notifications`.** To je záměrně podporované — obě strany pak vidí
+   jednu schránku — jenže Laravelí migrace deklaruje `uuid('id')`, takže na
+   Postgresu a MariaDB potřebuje totéž rozšíření, než do ní tenhle balíček smí
+   psát.
+
+MySQL a SQLite se to netýká ani v jednom případě.
+
 ## `TableWidget` se přestěhoval do wire-table a začal kreslit (2.0)
 
 `WireCore\Widgets\TableWidget` je nově `WireTable\Widgets\TableWidget`.

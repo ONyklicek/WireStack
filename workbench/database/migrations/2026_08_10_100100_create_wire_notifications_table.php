@@ -24,7 +24,7 @@ return new class extends Migration
             // Laravel's column name, holding a ULID: both are strings that fit,
             // but a ULID sorts by the time it was made, which is what makes
             // "newest first" survive a bulk job putting five rows in one second.
-            $table->uuid('id')->primary();
+            $table->ulid('id')->primary();
             $table->string('type');
 
             // String, not bigint: the recipient may key on a UUID/ULID. No FK —

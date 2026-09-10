@@ -66,7 +66,7 @@ beforeEach(function () {
     });
 
     Schema::create('wire_notifications', function (Blueprint $table) {
-        $table->uuid('id')->primary();
+        $table->ulid('id')->primary();
         $table->string('type');
         $table->string('notifiable_type');
         $table->string('notifiable_id');

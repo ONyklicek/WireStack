@@ -27,7 +27,7 @@ function storeNotification(string $message, int $daysAgo, bool $read = false): D
 
 beforeEach(function () {
     Schema::create('wire_notifications', function (Blueprint $t) {
-        $t->uuid('id')->primary();
+        $t->ulid('id')->primary();
         $t->string('type');
         $t->string('notifiable_type');
         $t->string('notifiable_id');

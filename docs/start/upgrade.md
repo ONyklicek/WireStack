@@ -216,6 +216,45 @@ once. Database rows are carried across by the migration.
 
 ---
 
+## Notifications are a new table, and its id is a ULID (2.0)
+
+Nothing to migrate: `wire_notifications` does not exist in 1.x. It arrives with
+2.0's notification history, and the one thing worth knowing about its shape is
+the primary key.
+
+```php
+$table->ulid('id')->primary();   // not uuid()
+```
+
+**Why it is not `uuid()`.** The driver writes a `Str::ulid()` — 26 characters
+that sort by the time they were made, which is what keeps "newest first" stable
+when one bulk job files five notifications in the same second. A `uuid` column
+holds that only where it is really a string: SQLite does not check, and MySQL's
+`uuid()` is a `char(36)` that swallows anything. **Postgres and MariaDB have a
+real UUID type and reject a ULID outright** — `invalid input syntax for type
+uuid` on every insert, which is how this was found.
+
+A fresh install gets the right column and needs nothing. Two ways to arrive with
+the wrong one:
+
+1. **You ran an early 2.0 build**, before this landed. The published migration
+   skips a table that already exists, so widen the column once, by hand:
+
+   ```sql
+   -- PostgreSQL
+   ALTER TABLE wire_notifications ALTER COLUMN id TYPE char(26) USING id::text;
+
+   -- MariaDB
+   ALTER TABLE wire_notifications MODIFY id char(26) NOT NULL;
+   ```
+
+2. **You pointed `wire-core.notifications.database.table` at Laravel's own
+   `notifications` table.** That is supported on purpose — both readers then see
+   one inbox — but Laravel's migration declares `uuid('id')`, so on Postgres and
+   MariaDB it needs the same widening before this package may write to it.
+
+MySQL and SQLite are unaffected either way.
+
 ## `TableWidget` moved to wire-table, and now renders (2.0)
 
 `WireCore\Widgets\TableWidget` is now `WireTable\Widgets\TableWidget`.
