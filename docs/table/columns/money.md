@@ -81,7 +81,7 @@ inferring one from a three-letter code would be wrong more often than not:
 
 ```php
 MoneyColumn::make('total')
-    ->money('$', 2, '.', ',')
+    ->money("$", 2, '.', ',')
     ->currencyBefore()
 // $ 1,234.50
 ```

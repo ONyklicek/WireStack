@@ -226,8 +226,8 @@ TextColumn::make('user')
 ```
 
 ```php
-TextColumn::make('price')
-    ->prefix('$')
+TextColumn::make('price')   // [tl! focus:3]
+    ->prefix("$")
     ->suffix(' USD')
     ->placeholder('N/A')
 

@@ -132,6 +132,28 @@ for (const md of mdFiles) {
     }
   }
 
+  // A `$` that JavaScript's String.replace() would read as a pattern, anywhere
+  // on the page. Torchlight's CLI puts the highlighted block back with
+  //
+  //     highlighted.replace(pristinePreElement, $.html($pre))
+  //
+  // and a *string* replacement still honours `$&`, `` $` ``, `$'` and `$$`. `$'`
+  // means "everything after the match", so one `'$'` in a money example — a
+  // dollar sign in single quotes, which is what a currency symbol looks like —
+  // re-inserts the whole rest of the document per occurrence until the string
+  // passes V8's half-gigabyte ceiling and node dies with `RangeError: Invalid
+  // string length`. The deploy failed on 12 pages that way, naming none of them.
+  //
+  // Double quotes are the fix: `"$"` is the same PHP and `$"` is not a pattern.
+  for (const d of text.matchAll(/\$(['`&$])/g)) {
+    const line = text.slice(0, d.index).split('\n').length;
+    fail(
+      `${rel(md)}:${line} — \`$${d[1]}\` is a String.replace() pattern, and Torchlight `
+      + `substitutes it while re-inserting the highlighted block: the build dies with `
+      + `"RangeError: Invalid string length". Write the string with double quotes ("$").`,
+    );
+  }
+
   // Same-page anchors. These rot silently: translating a heading changes its id,
   // and nothing but this check notices the link still points at the old English
   // slug (49 CS links had drifted this way).

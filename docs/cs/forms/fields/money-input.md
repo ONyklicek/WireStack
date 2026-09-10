@@ -67,7 +67,7 @@ MoneyInput::make('price')
 
 ```php
 MoneyInput::make('price')
-    ->currency('$')
+    ->currency("$")
     ->currencyBefore()         // $ 1 234,50
 ```
 
@@ -168,10 +168,10 @@ zdokumentované v [TextInput](text-input.md); sdílené API pole pak ve
 [Formulářová pole](index.md).
 
 ```php
-->currency(?string $currency, ?int $decimals = null)  // 'CZK'|'Kč'|'EUR'|'$'|null — výchozí: config('wire-forms.money.currency')
+->currency(?string $currency, ?int $decimals = null)  // 'CZK'|'Kč'|'EUR'|"$"|null — výchozí: config('wire-forms.money.currency')
 ->decimals(int $decimals)                             // přebije konvenci měny
 ->separators(string $decimal, string $thousands)      // výchozí: config('wire-forms.money.*_separator')
-->currencyBefore(bool $before = true)                 // '$ 1 234,50' místo '1 234,50 $'
+->currencyBefore(bool $before = true)                 // "$ 1 234,50" místo "1 234,50 $"
 ->storeAsMinorUnits(bool $condition = true)           // sloupec drží haléře/centy
 ->getCurrency(): ?string
 ->getDecimals(): int

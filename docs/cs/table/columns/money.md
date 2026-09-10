@@ -81,7 +81,7 @@ tabulka locale za tím není a odvozovat ji z třípísmenného kódu by bylo š
 
 ```php
 MoneyColumn::make('total')
-    ->money('$', 2, '.', ',')
+    ->money("$", 2, '.', ',')
     ->currencyBefore()
 // $ 1,234.50
 ```

@@ -42,7 +42,6 @@ docs/core/record-panels.md#dd000e9a
 docs/core/widgets/charts.md#c7e117f8
 docs/core/widgets/charts.md#11120dfb
 docs/core/widgets/charts.md#eac7e696
-docs/core/widgets/dashboards.md#8db44198
 docs/core/widgets/stats.md#6e774d48
 docs/core/widgets/stats.md#2c73a10d
 docs/forms/custom-fields.md#bf89e0c4
@@ -95,7 +94,6 @@ docs/table/columns/editing.md#51ad2350
 docs/table/columns/icon.md#9720c33f
 docs/table/columns/index.md#834a7bde
 docs/table/columns/index.md#eb4f6f56
-docs/table/columns/index.md#8457860c
 docs/table/columns/patterns.md#ca5badb8
 docs/table/columns/patterns.md#c87baab9
 docs/table/columns/patterns.md#c98a78b0

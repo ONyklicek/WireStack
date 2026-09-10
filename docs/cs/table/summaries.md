@@ -163,7 +163,7 @@ TextColumn::make('total')
 | *(žádná)*                                  | `1234.5` | `1234.5`      |
 | `->summaryDecimals(2)`                     | `1234.5` | `1 234,50`    |
 | `->summaryDecimals(2, '.', ',')`           | `1234.5` | `1,234.50`    |
-| `->prefix('$')->summaryDecimals(2,'.',',')`| `1500`   | `$1,500.00`   |
+| `->prefix("$")->summaryDecimals(2,'.',',')`| `1500`   | `$1,500.00`   |
 | `->suffix(' Kč')->summaryDecimals(2)`      | `1234.5` | `1 234,50 Kč` |
 
 `count` a `distinctCount` se nikdy nepřeformátují jako desetinná čísla — zůstanou

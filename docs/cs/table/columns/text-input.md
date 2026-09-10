@@ -147,7 +147,7 @@ TextInputColumn::make('phone')
 
 ```php
 TextInputColumn::make('price')
-    ->inputPrefix('$')
+    ->inputPrefix("$")
     ->inputSuffix('.00')
     ->helperText('Cena bez DPH')
     ->inputClass('font-mono text-right')

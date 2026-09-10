@@ -71,7 +71,7 @@ MoneyInput::make('price')
 
 ```php
 MoneyInput::make('price')
-    ->currency('$')
+    ->currency("$")
     ->currencyBefore()         // $ 1 234,50
 ```
 
@@ -172,10 +172,10 @@ in [TextInput](text-input.md), and the shared field API in
 [Form Fields](index.md).
 
 ```php
-->currency(?string $currency, ?int $decimals = null)  // 'CZK'|'Kč'|'EUR'|'$'|null — default: config('wire-forms.money.currency')
+->currency(?string $currency, ?int $decimals = null)  // 'CZK'|'Kč'|'EUR'|"$"|null — default: config('wire-forms.money.currency')
 ->decimals(int $decimals)                             // overrides the currency's convention
 ->separators(string $decimal, string $thousands)      // default: config('wire-forms.money.*_separator')
-->currencyBefore(bool $before = true)                 // '$ 1 234,50' rather than '1 234,50 $'
+->currencyBefore(bool $before = true)                 // "$ 1 234,50" rather than "1 234,50 $"
 ->storeAsMinorUnits(bool $condition = true)           // the column holds hellers/cents
 ->getCurrency(): ?string
 ->getDecimals(): int

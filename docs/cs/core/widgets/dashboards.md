@@ -26,7 +26,7 @@ class Dashboard extends Component implements HasWidgets
 {
     use WithWidgets;
 
-    protected function getWidgets(): array
+    protected function getWidgets(): array   // [tl! focus:start]
     {
         return [
             StatsOverviewWidget::make()
@@ -34,7 +34,7 @@ class Dashboard extends Component implements HasWidgets
                 ->stats([
                     Stat::make('Users', User::count()),
                     Stat::make('Orders', Order::count()),
-                    Stat::make('Revenue', '$' . number_format(Order::sum('total'), 2)),
+                    Stat::make('Revenue', "$" . number_format(Order::sum('total'), 2)),
                     Stat::make('Products', Product::count()),
                 ]),
 
@@ -49,7 +49,7 @@ class Dashboard extends Component implements HasWidgets
                 ->heading('Recent Orders')
                 ->table(fn ($table) => $this->configureRecentOrdersTable($table)),
         ];
-    }
+    }   // [tl! focus:end]
 
     protected function getWidgetColumns(): int
     {
