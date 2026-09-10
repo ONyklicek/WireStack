@@ -9,6 +9,7 @@ use NyonCode\WireCore\Core\Query\Search\LikePattern;
 use NyonCode\WireCore\Core\Query\SearchClause;
 use NyonCode\WireCore\Core\Query\Strategies\MySqlSearchStrategy;
 use NyonCode\WireCore\Core\Query\Strategies\PostgresSearchStrategy;
+use NyonCode\WireCore\Core\Query\Strategies\SearchStrategies;
 use NyonCode\WireCore\Core\Query\Strategies\SqliteSearchStrategy;
 
 beforeEach(function () {
@@ -191,4 +192,50 @@ it('casts a sql expression to text as well', function () {
     $strategy->apply($builder, $clause, LikePattern::contains('50'));
 
     expect($builder->toSql())->toContain('CAST(amount * 2 AS TEXT) ILIKE');
+});
+
+// ── Which strategy a connection gets ─────────────────────────
+
+/*
+ * The mapping used to be a private method on the query executor, so the only
+ * way to reach it was to run a whole table query — and the second caller that
+ * wanted the same answer wrote its own LIKE instead. It matched nothing on
+ * Postgres, where LIKE is case-sensitive, which is the failure this section
+ * exists to keep from coming back.
+ *
+ * The driver is read from configuration, not from a live server: Laravel resolves
+ * the PDO lazily, so a connection nobody queries needs nothing listening.
+ */
+function strategyFor(string $driver): object
+{
+    config()->set("database.connections.strategy_{$driver}", [
+        'driver' => $driver,
+        'host' => '127.0.0.1',
+        'database' => 'nothing',
+        'username' => 'nobody',
+        'password' => '',
+    ]);
+
+    $model = new class extends Model
+    {
+        protected $table = 'strategy_test_users';
+    };
+
+    return SearchStrategies::for($model->setConnection("strategy_{$driver}")->newQuery());
+}
+
+it('sends postgres to the strategy that says ILIKE', function () {
+    expect(strategyFor('pgsql'))->toBeInstanceOf(PostgresSearchStrategy::class);
+});
+
+it('sends mysql and mariadb to the same one', function () {
+    expect(strategyFor('mysql'))->toBeInstanceOf(MySqlSearchStrategy::class)
+        ->and(strategyFor('mariadb'))->toBeInstanceOf(MySqlSearchStrategy::class);
+});
+
+it('falls back to LIKE for anything else', function () {
+    // SQLite by name, and an engine nobody has taught it about: LIKE is the
+    // portable answer, and a driver this does not know is not a reason to fail.
+    expect(strategyFor('sqlite'))->toBeInstanceOf(SqliteSearchStrategy::class)
+        ->and(strategyFor('sqlsrv'))->toBeInstanceOf(SqliteSearchStrategy::class);
 });

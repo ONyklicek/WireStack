@@ -8,6 +8,9 @@ use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Core\Query\Search\LikePattern;
+use NyonCode\WireCore\Core\Query\SearchClause;
+use NyonCode\WireCore\Core\Query\Strategies\SearchStrategies;
 use NyonCode\WireCore\Foundation\Mentions\Contracts\Mentionable;
 use NyonCode\WireForms\Components\MorphToSelect\Type;
 
@@ -159,18 +162,25 @@ final class Source
             $query = ($this->modifyOptionsQueryUsing)($query) ?? $query;
         }
 
-        // `%` and `_` typed by a person are literals, not wildcards — unescaped,
-        // a lone `%` matches the entire table. The escape character is `!` rather
-        // than a backslash because a backslash is not portable here: SQLite takes
-        // string literals verbatim while MySQL unescapes them, so the same
-        // `ESCAPE '\\'` clause means two different things. `!` means itself
-        // everywhere.
-        $term = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search);
+        // Matched through the framework's own search strategy rather than a
+        // `LIKE` written here, and the difference is a whole engine: PostgreSQL's
+        // `LIKE` is case-sensitive, so the copy this replaces offered nothing at
+        // all for "cen" when the record was called "Ceník" — green on SQLite and
+        // MySQL, red the moment the suite met Postgres. The strategy says `ILIKE`
+        // there and `LIKE` elsewhere, and `LikePattern` owns the escaping: a `%`
+        // a person typed is a literal, under an escape character that means
+        // itself on every engine.
+        //
+        // Wrapped in a group because the predicate is OR-ed in — that is how a
+        // multi-term search builds up — and an OR alongside whatever
+        // `modifyOptionsQueryUsing()` added would widen the query instead of
+        // narrowing it.
+        $clause = new SearchClause(column: $this->getSearchAttribute());
+        $pattern = LikePattern::contains($search);
 
-        $query->whereRaw(
-            $query->getQuery()->getGrammar()->wrap($this->getSearchAttribute())." LIKE ? ESCAPE '!'",
-            ['%'.$term.'%'],
-        );
+        $query->where(function (Builder $inner) use ($clause, $pattern): void {
+            SearchStrategies::for($inner)->apply($inner, $clause, $pattern);
+        });
 
         $alias = $this->getMorphAlias();
         $group = $this->getLabel();

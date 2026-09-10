@@ -17,10 +17,7 @@ use NyonCode\WireCore\Core\Query\Pipes\ApplySearch;
 use NyonCode\WireCore\Core\Query\Pipes\ApplySoftDeletes;
 use NyonCode\WireCore\Core\Query\Pipes\ApplySorting;
 use NyonCode\WireCore\Core\Query\Search\SearchTerm;
-use NyonCode\WireCore\Core\Query\Strategies\MySqlSearchStrategy;
-use NyonCode\WireCore\Core\Query\Strategies\PostgresSearchStrategy;
-use NyonCode\WireCore\Core\Query\Strategies\SqliteSearchStrategy;
-use NyonCode\WireCore\Core\Support\DriverDetector;
+use NyonCode\WireCore\Core\Query\Strategies\SearchStrategies;
 
 /**
  * Executes a QueryPlan against an Eloquent Builder using a pipeline of QueryPipes.
@@ -121,20 +118,14 @@ final class QueryExecutor
     /**
      * Auto-detect the search strategy based on the database driver.
      *
+     * Delegated rather than answered here since a second caller appeared: the
+     * mention source needs the same answer, and the copy it wrote instead
+     * matched nothing on Postgres. {@see SearchStrategies}
+     *
      * @param  Builder<Model>  $builder
      */
     private function resolveSearchStrategy(Builder $builder): SearchStrategy
     {
-        $driver = DriverDetector::fromBuilder($builder);
-
-        if (DriverDetector::isPostgres($driver)) {
-            return new PostgresSearchStrategy;
-        }
-
-        if (DriverDetector::isMysql($driver)) {
-            return new MySqlSearchStrategy;
-        }
-
-        return new SqliteSearchStrategy;
+        return SearchStrategies::for($builder);
     }
 }
