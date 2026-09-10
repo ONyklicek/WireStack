@@ -1,10 +1,18 @@
 name: Static Analysis
 
+# Every branch, deliberately — matching tests.yml rather than naming branches.
+# This file gates PHPStan, the ADR-0021 `instanceof` check and Pint, and it used
+# to trigger on `main` only. Release work happens on a version branch (`2.0.0`,
+# `1.x`), so all three gates were dark for an entire release line while reading
+# as green, and a named-branch list is a thing that goes stale exactly when a new
+# release branch is cut. A wildcard cannot.
 on:
   push:
-    branches: [main]
+    branches:
+        - "*"
   pull_request:
-    branches: [main]
+    branches:
+        - "*"
 
 jobs:
   phpstan:

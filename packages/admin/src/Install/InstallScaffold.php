@@ -31,7 +31,7 @@ final readonly class InstallScaffold
      * and naming the vendor directory rather than one package so a module
      * installed tomorrow is covered without another edit.
      */
-    public const string SOURCE_LINE = '@source "../../vendor/nyoncode";';
+    public const SOURCE_LINE = '@source "../../vendor/nyoncode";';
 
     /**
      * The accent every wire component reaches for, mapped to Tailwind's blue.
@@ -49,7 +49,7 @@ final readonly class InstallScaffold
      * with a signal is an accent that has to be explained. It is a starting
      * point, not a decision — one edit here and the whole stack follows.
      */
-    public const string PRIMARY_THEME = <<<'CSS'
+    public const PRIMARY_THEME = <<<'CSS'
         @theme {
             /* wire-admin: the accent every wire component reaches for.
                Point these at any Tailwind palette to rebrand the whole stack. */

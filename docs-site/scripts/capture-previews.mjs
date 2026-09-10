@@ -76,9 +76,33 @@ const captures = [
     selector: '[data-testid="admin-auth"]',
     pad: 24,
   },
-  // The code screens, before the passkey one: they are behind `guest`, and the
-  // capture below signs the demo user in and leaves them signed in — captures
-  // share one browser.
+  {
+    slug: 'auth-register',
+    url: `${authBase}/register`,
+    selector: '[data-testid="admin-auth"]',
+    pad: 24,
+  },
+  {
+    slug: 'auth-two-factor',
+    // Fortify serves the challenge from a half-authenticated session, so this
+    // goes through the workbench route that puts its session key in place —
+    // visiting the URL cold is a redirect to the login form.
+    url: `${authBase}/previews/auth/two-factor`,
+    selector: '[data-testid="admin-auth"]',
+    pad: 24,
+    action: `
+      (() => {
+        const first = document.querySelector('[data-testid="form-otp-code-0"]');
+        first.focus();
+        first.value = '129';
+        first.dispatchEvent(new Event('input', { bubbles: true }));
+      })()
+    `,
+    wait: 600,
+  },
+  // The code screens, before the signed-in ones: they are behind `guest`, and
+  // the captures below sign the demo user in and leave them signed in — every
+  // capture shares one browser.
   {
     slug: 'auth-code-challenge',
     // Through the workbench route that puts Fortify's pending-sign-in key in
@@ -102,6 +126,14 @@ const captures = [
   {
     slug: 'auth-reset-code',
     url: `${authBase}/reset-password-code`,
+    selector: '[data-testid="admin-auth"]',
+    pad: 24,
+  },
+  {
+    slug: 'auth-verify-email',
+    // Signed in and *not* confirmed, which is a state rather than a URL: the
+    // workbench route clears the column and hands over to Fortify's own screen.
+    url: `${authBase}/previews/auth/verify-email`,
     selector: '[data-testid="admin-auth"]',
     pad: 24,
   },
@@ -185,6 +217,14 @@ try {
 
   await page('Page.enable');
   await page('Runtime.enable');
+
+  // Every preview on the site is a light one, and the panel follows the
+  // browser's preference before anything else — so pin it rather than inherit
+  // whatever headless Chrome defaults to this month. Two captures came back dark
+  // in the same run that produced light ones, which is the whole argument.
+  await page('Emulation.setEmulatedMedia', {
+    features: [{ name: 'prefers-color-scheme', value: 'light' }],
+  });
 
   for (const capture of activeCaptures) {
     const url = capture.url ?? `${previewBase}/${capture.path}`;

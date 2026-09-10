@@ -223,6 +223,9 @@ $converter = new MarkdownConverter($environment);
 // Metadata for each captured runtime preview image.
 $previewMeta = [
     'auth-login' => ['title' => 'Signing In', 'caption' => 'The sign-in screen with everything switched on: a password, a passkey, and a one-time code — each drawn from the switch that registers its routes.'],
+    'auth-register' => ['title' => 'Creating An Account', 'caption' => 'Routed only where Features::registration() is on — the fields are AuthForms::register(), so a company name is a closure rather than a published view.'],
+    'auth-two-factor' => ['title' => 'The Two-Factor Challenge', 'caption' => 'Between a correct password and the panel. Six boxes over one hidden field, so the code still posts with JavaScript off — and a toggle to a recovery code.'],
+    'auth-verify-email' => ['title' => 'Confirming An Address', 'caption' => 'The signed-out-looking screen with a signed-in user behind it. The way out is on it, because a screen you cannot leave is a trap.'],
     'auth-code-challenge' => ['title' => 'A Mailed Code', 'caption' => 'One screen for three flows — signing in without a password, a mailed second factor, confirming an address. The boxes advance themselves and post one value.'],
     'auth-reset-code' => ['title' => 'A New Password From A Code', 'caption' => 'No token field: the mail carries a code whose row carries the broker\'s token, and the reset itself is still Fortify\'s.'],
     'auth-passkeys' => ['title' => 'Passkeys', 'caption' => 'The profile card, with a key registered through a real WebAuthn ceremony. Adding one opens the platform\'s own dialog; removing goes through the package\'s own action.'],
@@ -275,8 +278,11 @@ $pagePreviews = [
     // from the running workbench like every other preview here — the passkey one
     // through a virtual authenticator, because the platform's own dialog cannot
     // be scripted and an empty card documents the state a reader is leaving.
-    'docs/modules/auth.md' => ['auth-login', 'auth-code-challenge', 'auth-reset-code'],
-    'docs/modules/teams-and-two-factor.md' => ['auth-passkeys'],
+    'docs/modules/auth.md' => [
+        'auth-login', 'auth-register', 'auth-verify-email',
+        'auth-code-challenge', 'auth-reset-code',
+    ],
+    'docs/modules/teams-and-two-factor.md' => ['auth-two-factor', 'auth-passkeys'],
 ];
 
 // Extra variant previews appended after a field page's primary preview, so one

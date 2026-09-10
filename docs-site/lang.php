@@ -46,6 +46,12 @@ return [
         // --- Preview captions (build.php $previewMeta) ----------------------
         'Signing In' => 'Přihlášení',
         'The sign-in screen with everything switched on: a password, a passkey, and a one-time code — each drawn from the switch that registers its routes.' => 'Přihlašovací obrazovka se vším zapnutým: heslo, passkey a jednorázový kód — každé se kreslí z přepínače, který mu registruje routy.',
+        'Creating An Account' => 'Založení účtu',
+        'Routed only where Features::registration() is on — the fields are AuthForms::register(), so a company name is a closure rather than a published view.' => 'Routuje se jen tam, kde je zapnuté Features::registration() — pole jsou AuthForms::register(), takže název firmy je closure, ne publikovaný view.',
+        'The Two-Factor Challenge' => 'Dvoufázová výzva',
+        'Between a correct password and the panel. Six boxes over one hidden field, so the code still posts with JavaScript off — and a toggle to a recovery code.' => 'Mezi správným heslem a panelem. Šest políček nad jedním skrytým polem, takže se kód odešle i s vypnutým JavaScriptem — a přepínač na recovery kód.',
+        'Confirming An Address' => 'Potvrzení adresy',
+        'The signed-out-looking screen with a signed-in user behind it. The way out is on it, because a screen you cannot leave is a trap.' => 'Obrazovka, která vypadá odhlášeně, ale stojí za ní přihlášený uživatel. Cesta ven je na ní, protože obrazovka, ze které se nedá odejít, je past.',
         'A Mailed Code' => 'Kód z e-mailu',
         'One screen for three flows — signing in without a password, a mailed second factor, confirming an address. The boxes advance themselves and post one value.' => 'Jedna obrazovka pro tři toky — přihlášení bez hesla, druhý faktor e-mailem, potvrzení adresy. Políčka se posouvají sama a odešlou jednu hodnotu.',
         'A New Password From A Code' => 'Nové heslo z kódu',

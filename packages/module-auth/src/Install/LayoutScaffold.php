@@ -32,9 +32,9 @@ final readonly class LayoutScaffold
      * what makes `layouts.auth` addressable, and `Frame` hands the component
      * name to `<x-dynamic-component>`. The pair is here so the two cannot drift.
      */
-    public const string PATH = 'resources/views/components/layouts/auth.blade.php';
+    public const PATH = 'resources/views/components/layouts/auth.blade.php';
 
-    public const string COMPONENT = 'layouts.auth';
+    public const COMPONENT = 'layouts.auth';
 
     public function __construct(private string $basePath) {}
 

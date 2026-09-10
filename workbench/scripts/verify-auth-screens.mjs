@@ -46,10 +46,12 @@ try {
   // The workbench enables password resets and leaves registration off, which is
   // what an admin panel looks like.
   check('a way to a forgotten password', await eval_(`!! document.querySelector('[data-testid="auth-forgot-link"]')`));
-  // Registration is off in the workbench, which is what an admin panel looks
-  // like — and the link has to be absent rather than leading to a 404.
-  check('and no invitation to register, which is not routed here', await eval_(`
-    ! document.querySelector('[data-testid="auth-register-link"]')
+  // Every feature Fortify can route is on in this workbench, so every link is
+  // drawn — which is the half a browser can check. That a link *disappears*
+  // with its feature is a question about config, and `ScreensTest` asks it
+  // where config questions belong.
+  check('and an invitation to register, which is routed here', await eval_(`
+    !! document.querySelector('[data-testid="auth-register-link"]')
   `));
 
   const forgot = await eval_(`document.querySelector('[data-testid="auth-forgot-link"]').href`);

@@ -118,11 +118,18 @@ class WorkbenchServiceProvider extends ServiceProvider
         // having one.
         config()->set('wire-module-users.model', User::class);
         config()->set('wire-module-users.profile.delete_account', true);
-        // Two-factor for the users module's profile card, password resets for the
-        // auth module's screens. Registration stays off, which is what an admin
-        // panel looks like — and is also what `verify-auth-screens.mjs` asserts
-        // the login screen does about a link it must not draw.
+        // Every screen Fortify can route, because this workbench is what the
+        // docs are photographed from and a screen nobody can reach is a screen
+        // the docs describe and nobody has seen.
+        //
+        // Registration included, which is a change of mind: it used to be off
+        // "because that is what an admin panel looks like", and that is still
+        // true of an admin panel — but it left `register.blade.php` as the one
+        // shipped screen with no preview and no browser check. What the *links*
+        // do when a feature is off is asserted from Pest instead
+        // (`ScreensTest`), which is where a question about config belongs.
         config()->set('fortify.features', [
+            Features::registration(),
             Features::resetPasswords(),
             // Verification, for the code flow below rather than for its own
             // sake: `codes.verify_email` routes nothing without it (ADR 0037),

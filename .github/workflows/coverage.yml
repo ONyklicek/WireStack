@@ -18,9 +18,14 @@ name: Coverage
 # Laravel is left at its default (11+): wire-boost depends on laravel/mcp and is
 # removed from the Laravel 10 matrix leg, and a run without it could not gate it.
 
+# `2.0.0` and `main` are named because they exist. `2.x` was the intended name
+# for the v2 line and no such branch was ever cut, so the push gate pointed at
+# nothing for the whole of v2 — the floors in scripts/coverage-floors.json only
+# ever ratcheted on pull requests. Kept in the list so it keeps working if that
+# branch is cut later; the point is that a real branch is listed too.
 on:
   push:
-    branches: [1.x, 2.x]
+    branches: [1.x, 2.x, 2.0.0, main]
   pull_request:
     branches: ['*']
   workflow_dispatch:

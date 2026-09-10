@@ -15,9 +15,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.3', '8.4', '8.5']
+        # 8.2 is the floor every manifest declares (`"php": "^8.2"`), so it is
+        # tested rather than assumed: the matrix used to start at 8.3 and two
+        # packages had quietly grown PHP 8.3 syntax — typed class constants in
+        # the install scaffolds — which parsed everywhere CI looked and fataled
+        # on the first `wire-*:install` an 8.2 application ran. A declared floor
+        # nothing runs is not a floor.
+        php: ['8.2', '8.3', '8.4', '8.5']
         laravel: ['12.*', '13.*']
         exclude:
+
+          # Laravel 13 requires PHP ^8.3, so its 8.2 leg cannot resolve.
+          - php: '8.2'
+            laravel: '13.*'
 
           - php: '8.3'
             laravel: '13.*'

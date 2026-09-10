@@ -399,6 +399,18 @@ Route::get('previews/auth/second-factor-code', function (Request $request): Redi
     return redirect()->route('wire-auth.second-factor');
 })->name('workbench.second-factor-code-preview');
 
+Route::get('previews/auth/verify-email', function (): RedirectResponse {
+    $user = WorkbenchUser::query()->orderBy('id')->first();
+
+    abort_if($user === null, 404, 'No seeded user to stand in for an unconfirmed address.');
+
+    $user->forceFill(['email_verified_at' => null])->save();
+
+    Auth::login($user);
+
+    return redirect()->route('verification.notice');
+})->name('workbench.verify-email-preview');
+
 Route::get('previews/auth/verify-email-code', function (): RedirectResponse {
     $user = WorkbenchUser::query()->orderBy('id')->first();
 
