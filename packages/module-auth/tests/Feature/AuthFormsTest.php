@@ -53,13 +53,23 @@ it('asks for what the Fortify action behind it reads', function (string $method,
     'confirm password' => ['confirmPassword', ['password']],
     'two-factor code' => ['twoFactorCode', ['code']],
     'two-factor recovery' => ['twoFactorRecovery', ['recovery_code']],
+    'login code' => ['loginCode', ['email']],
+    'code' => ['code', ['code']],
+    'reset password code' => ['resetPasswordCode', ['email', 'code', 'password', 'password_confirmation']],
 ]);
 
 it('renders every one of them for the browser, never for Livewire', function (string $method) {
     // The whole arrangement rests on this: the browser does the posting, so a
     // field bound by `wire:model` would carry no name and post nothing.
     expect(authForms()->{$method}()->submitsNatively())->toBeTrue();
-})->with(['login', 'register', 'forgotPassword', 'resetPassword', 'confirmPassword', 'twoFactorCode', 'twoFactorRecovery']);
+})->with([
+    'login', 'register', 'forgotPassword', 'resetPassword', 'confirmPassword',
+    'twoFactorCode', 'twoFactorRecovery',
+    // The code flows were missing here, which mattered more than it looked: the
+    // reset-password-code screen had no assertion anywhere that its fields carry
+    // names, so losing native mode there would have posted nothing, quietly.
+    'loginCode', 'code', 'resetPasswordCode',
+]);
 
 it('names the identity field whatever Fortify was told to read', function () {
     // `fortify.username` is a column and the request key that carries it, so an

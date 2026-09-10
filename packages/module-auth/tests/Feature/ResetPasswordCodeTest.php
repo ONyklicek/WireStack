@@ -139,3 +139,18 @@ it('fills the address in on the screen, without putting it in the URL', function
         ->assertSee('data-testid="auth-reset-code-form"', false)
         ->assertSee('value="ann@example.com"', false);
 });
+
+it('gives every field on it a name the browser will post', function () {
+    // The screen renders four fields and posts them itself. A field bound by
+    // `wire:model` would carry no name, so the form would submit nothing and
+    // nothing on the page would say so — this is the assertion that notices.
+    CodeWorld::user();
+
+    $this->post('/forgot-password', ['email' => 'ann@example.com']);
+
+    $this->get('/reset-password-code')
+        ->assertSee('name="email"', false)
+        ->assertSee('name="code"', false)
+        ->assertSee('name="password"', false)
+        ->assertSee('name="password_confirmation"', false);
+});
