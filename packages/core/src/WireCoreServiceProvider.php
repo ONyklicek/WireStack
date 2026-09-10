@@ -172,6 +172,14 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 // reason: ADR 0024 forbids delivering an interaction registrar
                 // late, and the bell can arrive on a `wire:navigate` visit.
                 Bundle::make('wire-core-notifications.js'),
+                // `wire-core-passkey.js` is deliberately NOT declared here, for
+                // the same reason as the sortable list below: it compiles
+                // Laravel's own passkey client in (12 kB), and every declared
+                // entry is rendered into the <head> of every page by
+                // `@wireStackScripts`. Two surfaces draw a passkey control — the
+                // auth module's sign-in button and the users module's profile
+                // card — and both include `wire-core::partials.passkey-assets`,
+                // which puts the tag on those pages and nowhere else.
                 // `wire-core-sortable-list.js` is deliberately NOT declared here.
                 // `@wireStackScripts` renders every declared entry, so declaring it
                 // would put 38 kB of compiled SortableJS into the <head> of every
