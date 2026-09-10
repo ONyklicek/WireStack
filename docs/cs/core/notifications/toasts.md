@@ -81,6 +81,40 @@ public function restore(int $id): void
 <x-wire-notifications::toast-container stack :max="5" />
 ```
 
+### Toasty, které přežijí stránku
+
+Toast je browser event a některé notifikace vyvolá request, který pak odejde:
+akce se `successRedirect()`, stránka se založením, která dopadne na právě podaný
+záznam, controller přesměrovávající po zápisu. Událost se odešle do dokumentu,
+který se za chvíli vymění, takže ji nikdo neukáže.
+
+[Session driver](index.md#drivery) — ten výchozí — tutéž notifikaci zároveň
+flashne a kontejner ji po příchodu vykreslí:
+
+```php
+NotificationManager::success('Faktura podána');
+
+$this->redirect($url, navigate: true);
+// toast se objeví na stránce, která se načte
+```
+
+Nic se nemusí zapínat a nic uklízet. **Toast nikdy nepřijde dvakrát**, a důvod
+patří Livewiru, ne tomuhle balíčku: update, který *ne*přesměroval, má svoje
+flashnuté klíče zapomenuté (`SupportRedirects`), takže obyčejné uložení už svůj
+toast ukázalo jako událost a další stránce nezůstane nic k opakování. Hranici
+přežije jen notifikace, kterou opravdu nešlo doručit.
+
+Kontejner flashnutý toast ukáže **jednou za render**, takže Livewirem
+nacachovaná kopie stránky pod tlačítkem zpět ho nevyvolá znovu.
+
+Dva důsledky, které stojí za zapamatování:
+
+- Driver, který jen odesílá událost a neflashne — `LivewireEventDriver` na
+  stránce, kde je komponenta, které odeslat — nemá co přes redirect přenést.
+  Párujte ho se session driverem, nebo použijte výchozí.
+- Jeden request, jeden přenesený toast: flash drží poslední odeslanou notifikaci.
+  Dvě notifikace a redirect dorazí jako jedna.
+
 ### Přístupnost
 
 Kontejner je `aria-live="polite"` region (error toasty používají `role="alert"`), takže screen readery toasty ohlašují, jak přicházejí. Ctí i **`prefers-reduced-motion`**: při požadavku na omezený pohyb se hromádka nikdy nesbaluje/nerozevírá a přechody karet jsou vypnuté.
@@ -140,6 +174,7 @@ Můžete přizpůsobit pozici, záložní trvání automatického zavření a br
 | `position` | `top-right` | `top-left` / `top-center` / `top-right` / `bottom-left` / `bottom-center` / `bottom-right` |
 | `duration` | `4000` | záložní automatické zavření (ms) pro notifikace bez vlastního `duration` |
 | `event-name` | `table-notification` | `window` událost, které naslouchá (`x-on:{eventName}.window`) |
+| `session-key` | `table-notification` | flashnutý klíč, který po příchodu vykreslí (viz [Toasty, které přežijí stránku](#toasty-ktere-preziji-stranku)); pokud jste přejmenovali `sessionKey` driveru, srovnejte je |
 | `progress` | `true` | zobrazit odpočtovou lištu u každého toastu (viz [Odpočtová lišta](#odpoctova-lista)) |
 | `stack` | `false` | sbalit toasty do hromádky, která se na hover rozevře |
 | `max` | `0` | omezit počet viditelných toastů (`0` = neomezeno); přebytek se sbalí do pillu „+N more“ |

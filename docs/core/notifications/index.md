@@ -36,7 +36,9 @@ The built-in default is **`CurrentComponentDriver`** wrapping `SessionDriver`: i
 | A **queued job** finishes and the user is looking at another tab, or another device. Pair it with `database` — on its own it announces something that was never stored. | `BroadcastDriver` |
 | You want to **disable notifications** — tests, queued/background jobs, or any context with no user to notify. | `NullDriver` |
 
-> **Which drivers feed the toast container?** `<x-wire-notifications::toast-container />` is an Alpine listener on a Livewire browser event, so only event-dispatching drivers reach it: the default **`CurrentComponentDriver`**, **`SessionDriver`**, and **`LivewireEventDriver`** — all forward the full `title`/`duration`/`icon`/`actions` payload. `FlasherDriver` renders its **own** UI and bypasses the container; `NullDriver` shows nothing.
+> **Which drivers feed the toast container?** `<x-wire-notifications::toast-container />` listens for a Livewire browser event, so event-dispatching drivers reach it: the default **`CurrentComponentDriver`**, **`SessionDriver`**, and **`LivewireEventDriver`** — all forward the full `title`/`duration`/`icon`/`actions` payload. `FlasherDriver` renders its **own** UI and bypasses the container; `NullDriver` shows nothing.
+>
+> It also renders what it finds **flashed**, which is the same notification arriving by the other road. See [Toasts that outlive the page](toasts.md#toasts-that-outlive-the-page) — that is what makes an action's `successRedirect()`, or a create page landing on the record it just filed, announce itself at all.
 
 ## Notification Builder
 

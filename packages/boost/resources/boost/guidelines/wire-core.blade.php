@@ -277,9 +277,11 @@ supports `->payload([...])`, `->color()`, `->keepOpen()`. The built-in drivers f
 titles/actions/persistence survive the server round-trip.
 
 Toast container: @verbatim`<x-wire-notifications::toast-container />`@endverbatim — props `position`, `duration`, `event-name`,
-`stack` (collapse into a pile that fans out on hover), `progress` (per-toast countdown bar, hover pauses it and
-the auto-dismiss), `max` (cap visible toasts, overflow into a "+N more" pill). Honors `prefers-reduced-motion`
-and exposes an `aria-live` region.
+`session-key`, `stack` (collapse into a pile that fans out on hover), `progress` (per-toast countdown bar, hover
+pauses it and the auto-dismiss), `max` (cap visible toasts, overflow into a "+N more" pill). Honors
+`prefers-reduced-motion` and exposes an `aria-live` region. It renders the flashed notification too, which is how
+a toast raised by a request that then redirected — `successRedirect()`, a create page landing on its new record —
+is shown at all: the event died with the document, the flash crossed.
 
 ### Infolists
 

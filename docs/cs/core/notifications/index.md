@@ -35,7 +35,9 @@ Vestavěný výchozí je **`CurrentComponentDriver`** obalující `SessionDriver
 | **Frontovaný job** doběhne a uživatel se dívá na jinou záložku nebo na jiné zařízení. Párujte s `database` — samotný ohlásí něco, co se nikdy neuložilo. | `BroadcastDriver` |
 | Chcete **vypnout notifikace** — testy, queued/background joby nebo jakýkoli kontext bez uživatele, kterého notifikovat. | `NullDriver` |
 
-> **Které drivery krmí toast kontejner?** `<x-wire-notifications::toast-container />` je Alpine listener na Livewire browser události, takže ho dosáhnou jen drivery odesílající události: výchozí **`CurrentComponentDriver`**, **`SessionDriver`** a **`LivewireEventDriver`** — všechny forwardují plný `title`/`duration`/`icon`/`actions` payload. `FlasherDriver` vykresluje **vlastní** UI a kontejner obchází; `NullDriver` nezobrazí nic.
+> **Které drivery krmí toast kontejner?** `<x-wire-notifications::toast-container />` naslouchá Livewire browser události, takže ho dosáhnou drivery odesílající události: výchozí **`CurrentComponentDriver`**, **`SessionDriver`** a **`LivewireEventDriver`** — všechny forwardují plný `title`/`duration`/`icon`/`actions` payload. `FlasherDriver` vykresluje **vlastní** UI a kontejner obchází; `NullDriver` nezobrazí nic.
+>
+> Vykreslí i to, co najde **flashnuté**, což je táž notifikace, jen druhou cestou. Viz [Toasty, které přežijí stránku](toasts.md#toasty-ktere-preziji-stranku) — právě díky tomu se vůbec ohlásí `successRedirect()` u akce nebo stránka se založením, která dopadne na právě podaný záznam.
 
 ## Notification builder
 

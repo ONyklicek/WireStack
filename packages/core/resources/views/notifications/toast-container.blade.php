@@ -29,6 +29,7 @@
         stack: @js($stack),
         progress: @js($progress),
         topAnchored: @js($topAnchored()),
+        flashed: @js($flashed()),
         defaultDuration: {{ $duration }},
         max: {{ $max }},
         raf: null,
@@ -101,6 +102,33 @@
             if (action.close !== false) this.remove(toast.id);
         },
 
+        showFlashed() {
+            // The toast the browser event could not deliver: its request
+            // redirected, so the document that would have shown it was replaced.
+            // Livewire drops a flash left by an update that did not redirect, so
+            // anything arriving here crossed a navigation on purpose.
+            if (! this.flashed) return;
+
+            // Once per server render. A wire:navigate back button restores a
+            // cached page and re-runs this init over the same markup, and the
+            // id is what tells that apart from a genuinely new notification.
+            // A list rather than the last id alone, because back and forward
+            // reach further than one page.
+            const key = 'wire-toast-flashed';
+            try {
+                const stored = JSON.parse(window.sessionStorage.getItem(key) ?? '[]');
+                const shown = Array.isArray(stored) ? stored : [];
+                if (shown.includes(this.flashed.id)) return;
+                window.sessionStorage.setItem(key, JSON.stringify([...shown, this.flashed.id].slice(-20)));
+            } catch (e) {
+                // Storage can be unavailable, full, or holding something else
+                // (private windows, blocked site data). Showing the toast is the
+                // better failure.
+            }
+
+            this.add(this.flashed.payload);
+        },
+
         ensureLoop() {
             if (this.raf !== null) return;
             this.lastTs = null;
@@ -130,6 +158,7 @@
 
         init() {
             this.reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
+            this.showFlashed();
             const eventName = @js($eventName);
             const dispatch = (payload) => window.dispatchEvent(
                 new CustomEvent(eventName, { detail: payload })

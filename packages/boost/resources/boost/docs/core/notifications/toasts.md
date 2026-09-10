@@ -81,6 +81,41 @@ public function restore(int $id): void
 <x-wire-notifications::toast-container stack :max="5" />
 ```
 
+### Toasts That Outlive The Page
+
+A toast is a browser event, and some notifications are raised by a request that
+then leaves: an action with `successRedirect()`, a create page landing on the
+record it just filed, a controller redirecting after a write. The event is
+dispatched into a document that is about to be replaced, so nothing shows it.
+
+The [session driver](index.md#drivers) — the default — flashes the same
+notification as well, and the container renders that on arrival:
+
+```php
+NotificationManager::success('Order filed');
+
+$this->redirect($url, navigate: true);
+// the toast appears on the page that loads next
+```
+
+Nothing has to be switched on, and nothing has to be cleaned up. **A toast never
+arrives twice**, and the reason is Livewire's rather than this package's: an
+update that did *not* redirect has its flashed keys forgotten
+(`SupportRedirects`), so an ordinary save has already shown its toast as an event
+and leaves nothing for the next page to show again. Only the notification that
+genuinely could not be delivered survives the boundary.
+
+The container shows a flashed toast **once per render**, so Livewire's cached
+back-button copy of a page does not raise it again.
+
+Two consequences worth knowing:
+
+- A driver that dispatches but does not flash — `LivewireEventDriver` on a page
+  with a component to dispatch to — has nothing to carry across a redirect. Pair
+  it with the session driver, or use the default.
+- One request, one carried toast: the flash holds the last notification sent. Two
+  notifications and a redirect arrive as one.
+
 ### Accessibility
 
 The container is an `aria-live="polite"` region (error toasts use `role="alert"`), so screen readers announce toasts as they arrive. It also honors **`prefers-reduced-motion`**: when reduced motion is requested, the stack never collapses/fans out and card transitions are disabled.
@@ -140,6 +175,7 @@ You can customize the position, the fallback auto-dismiss duration, and the brow
 | `position` | `top-right` | `top-left` / `top-center` / `top-right` / `bottom-left` / `bottom-center` / `bottom-right` |
 | `duration` | `4000` | fallback auto-dismiss (ms) for notifications without their own `duration` |
 | `event-name` | `table-notification` | the `window` event it listens for (`x-on:{eventName}.window`) |
+| `session-key` | `table-notification` | the flashed key it renders on arrival (see [Toasts That Outlive The Page](#toasts-that-outlive-the-page)); match it to the driver's `sessionKey` if you renamed that |
 | `progress` | `true` | show the per-toast countdown bar (see [Countdown bar](#countdown-bar)) |
 | `stack` | `false` | collapse toasts into a pile that fans out on hover |
 | `max` | `0` | cap the number of visible toasts (`0` = unlimited); the overflow collapses into a “+N more” pill |
