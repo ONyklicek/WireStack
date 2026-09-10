@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Workbench\App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -17,9 +16,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * SoftDeletes to a model dozens of tests query would change every one of those
  * queries.
  */
-#[Fillable(['title', 'brand_color', 'score', 'tags', 'is_published'])]
 class Document extends Model
 {
+    // A property rather than `#[Fillable]`: that attribute is Laravel 13's, and
+    // these packages support 12, where it is not read at all.
+    protected $fillable = ['title', 'brand_color', 'score', 'tags', 'is_published'];
+
     use SoftDeletes;
 
     /**
