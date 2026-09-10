@@ -10,7 +10,7 @@
             type="checkbox"
             id="{{ $field->getId() }}"
             data-testid="form-checkbox-{{ $field->getStatePath() }}"
-            {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
+            @if($field->submitsNatively()){!! $field->getNativeBindingHtml() !!}@else{{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"@endif
             {!! $field->getExtraInputAttributesHtml() !!}
             @if($field->isDisabled()) disabled @endif
             @if($field->isRequired()) required @endif

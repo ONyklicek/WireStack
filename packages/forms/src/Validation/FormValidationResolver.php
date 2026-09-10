@@ -7,6 +7,7 @@ namespace NyonCode\WireForms\Validation;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Core\Validation\ValidationResult;
 use NyonCode\WireCore\Foundation\Components\Component;
+use NyonCode\WireForms\Components\Hidden;
 use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Contracts\HasValidation;
 use NyonCode\WireForms\Contracts\ProvidesItemValidationRules;
@@ -168,9 +169,22 @@ final class FormValidationResolver
      * field the user cannot see must never block submit. Visibility is resolved
      * against live state, so a field toggled hidden by another field's value is
      * skipped while it stays hidden.
+     *
+     * `Hidden` is the exception, because it is a different kind of invisible.
+     * The rule above is about a field the user *could* have filled and cannot
+     * see right now — a `visibleWhen()` sibling, whose value is nobody's. A
+     * `Hidden` is never shown by design and its value is still filled, still
+     * carried in the snapshot the browser can edit, and still written on save:
+     * its rules are the only thing between the record and whatever came back.
+     * Skipping them made `Hidden::make('type')->rules(['in:post,page'])` — the
+     * form the docs page recommends — a rule that has never run.
      */
     private function isComponentVisible(object $component): bool
     {
+        if ($component instanceof Hidden) {
+            return true;
+        }
+
         return ! method_exists($component, 'isVisible') || $component->isVisible();
     }
 

@@ -27,6 +27,18 @@ the code is never trapped in a box the user cannot leave with the keyboard.
 field's length and the caret lands on the last filled box, which is what makes
 "copy from the SMS, paste" work in one gesture instead of six.
 
+**On a form the browser posts itself, the boxes are the enhancement.** They
+carry no `name` — six inputs would post six values — so in
+[native-submit mode](../overview.md#rendering) the field renders one real text
+input beside them, carrying the field's name and the value the boxes join.
+Alpine hides that input (`x-show="false"`, not `type="hidden"`) and cloaks the
+boxes until it has booted, which means a browser with no JavaScript shows the
+plain input and posts from it. That is what keeps a two-factor challenge
+answerable when Alpine never arrives, and it is how the
+[auth module](../../modules/auth.md#the-fields) renders the code from an
+authenticator app. The first box carries `autocomplete="one-time-code"`, so the
+platform offers the code straight from the message.
+
 **The length is structural, not a validation rule.** `length()` decides how many
 boxes render, and the field refuses a length below 1 — a zero-length OTP renders
 no boxes at all, which looks like a styling bug rather than a configuration one.

@@ -1,5 +1,5 @@
 ---
-summary: "Hodnota, kterou formulář veze bez ovládacího prvku: žádný label, žádný obal, žádný způsob, jak do ní psát."
+summary: "Hodnota, kterou formulář veze bez ovládacího prvku: žádný popisek, žádný obal, žádný způsob, jak do ní psát."
 ---
 
 # Hidden
@@ -24,6 +24,16 @@ každá vykreslovací smyčka ve frameworku — tělo formuláře, `Grid`, `Sect
 `isVisible()` je false, přeskočí se skryté pole všude. Prakticky nevypíše **žádný
 markup**, ani ten `<input type="hidden">`, který popisuje jeho view.
 
+**Kromě formuláře, který odesílá sám prohlížeč.** V
+[režimu nativního odeslání](../overview.md#rendering) není žádný Livewire
+snapshot, ve kterém by hodnota mohla cestovat — prohlížeč odešle to, co je
+v dokumentu, a nic jiného — takže input přestává být dekorací a stává se jediným
+způsobem, jak hodnotu unést. `Hidden` v nativním formuláři vykreslí
+`<input type="hidden" name="…" value="…">`, hodnotu bere z `old()` a pak ze svého
+`default()`, a nic jiného se na něm nemění: pořád je neviditelný a pořád ho
+uživatel nedostane na výběr. Přesně tohle veze token pro obnovu hesla od Fortify
+na obrazovce [modulu přihlášení](../../modules/auth.md#pole).
+
 **Hodnota žije ve stavu formuláře, ne v DOM**, a právě to je to, co skutečně
 funguje. Když se formulář plní, každé pole ve schématu se naplní — svým
 `default()`, když je nastavený, jinak typově správnou prázdnou hodnotou — a to se
@@ -34,17 +44,21 @@ jediný element.
 Dva důsledky, které je dobré mít na paměti:
 
 - **`->visible()` ho zpátky nedostane.** Smyčky čtou to `hidden()` z konstruktoru;
-  pole, které chceš podmíněně *ukazovat*, je obyčejné pole s podmínkou, ne
+  pole, které chcete podmíněně *ukazovat*, je obyčejné pole s podmínkou, ne
   `Hidden`.
 - **Uživatel ji pořád může změnit.** Hodnota sedí ve veřejném stavu komponenty jako
   každé jiné pole, takže je stejně důvěryhodná jako cokoli, co přišlo z prohlížeče.
   Hodnota, se kterou se nesmí manipulovat, patří do `mutateFormDataBeforeSave()`
   nebo na model — ne do skrytého pole.
 
-**Pořád se validuje.** Pravidla, `required` i validační hlášky platí, a to je smysl
-toho, že je to pole a ne zbloudilý klíč v poli. `Hidden`, který neprojde validací,
-vyrobí chybovou hlášku, která nemá kde být vykreslená, takže jeho pravidla drž
-u věcí, které legitimnímu uživateli spadnout nemůžou.
+**Pořád se validuje**, a je to jediné neviditelné pole, které ano. Každou jinou
+komponentu, jejíž `isVisible()` je false, validační resolver přeskočí, a to
+záměrně: `required()` na poli, které schovala podmínka, nesmí nikdy zablokovat
+odeslání. `Hidden` je jiný druh neviditelnosti — jeho hodnota se naplní, veze se
+ve snapshotu, který prohlížeč umí změnit, a při uložení se zapíše — takže jeho
+pravidla jsou jediné, co stojí mezi záznamem a tím, co se vrátilo. `Hidden`,
+který neprojde validací, vyrobí chybovou hlášku, která nemá kde být vykreslená,
+takže jeho pravidla držte u věcí, které legitimnímu uživateli spadnout nemůžou.
 
 ## Základní použití
 
@@ -120,7 +134,9 @@ věřit nesmí, by ho měla nastavit na modelu místo aby ho vezla tudy.
 
 `Hidden` nepřidává žádnou vlastní konfiguraci — je to sdílený povrch `Field` plus
 neviditelný konstruktor. Výchozí hodnoty, pravidla, validační hlášky a zbytek jsou
-ve [Společném API pole](index.md#spolecne-api-pole).
+ve [Společném API pole](index.md#spolecne-api-pole). Přepínač nativního odeslání
+patří formuláři, ne poli: `Form::nativeSubmit()` ho nastaví každému poli ve
+schématu.
 
 ## Související
 

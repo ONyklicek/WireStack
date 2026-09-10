@@ -10,16 +10,24 @@
  * The value is written through `$wire.set()` rather than entangled: the boxes
  * are the source of truth between keystrokes, and the joined string is what the
  * field's state holds.
+ *
+ * **In native-submit mode there is no `$wire` to write to**, and touching it
+ * would throw before the first box rendered. The view puts a real input on the
+ * page instead — the one carrying the field's `name` — bound with
+ * `:value="digits.join('')"`, so the boxes drive it without this controller
+ * knowing the element exists. What it needs from the view is the value the
+ * browser came back with, because there is no state to read it from.
  */
 const wireOtpInput = (config = {}) => ({
     length: config.length ?? 6,
     statePath: config.statePath ?? '',
     numericOnly: config.numericOnly ?? false,
+    native: config.native ?? false,
 
     digits: Array(config.length ?? 6).fill(''),
 
     init() {
-        const existing = this.$wire.get(this.statePath)
+        const existing = this.native ? config.value : this.$wire.get(this.statePath)
 
         if (existing) {
             String(existing)
@@ -29,6 +37,8 @@ const wireOtpInput = (config = {}) => ({
                     this.digits[index] = character
                 })
         }
+
+        if (this.native) return
 
         this.$watch('digits', () => {
             this.$wire.set(this.statePath, this.digits.join(''))

@@ -3,5 +3,5 @@
     {!! $field->getExtraInputAttributesHtml() !!}
     type="hidden"
     id="{{ $field->getId() }}"
-    wire:model{{ $field->getWireModelModifier() ? '.' . $field->getWireModelModifier() : '' }}="{{ $field->getWireModelAttribute() }}"
+    @if($field->submitsNatively()){!! $field->getNativeBindingHtml() !!}@else wire:model{{ $field->getWireModelModifier() ? '.' . $field->getWireModelModifier() : '' }}="{{ $field->getWireModelAttribute() }}"@endif
 />

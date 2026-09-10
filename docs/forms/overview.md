@@ -267,7 +267,49 @@ When `->authorize()` is enabled the form becomes read-only (and hides the save b
 ```php
 ->toHtml(): string                   // Blade output
 (string) $form                       // __toString()
+->nativeSubmit(bool $native = true)  // render the fields for a browser submit, not Livewire
+->submitsNatively(): bool            // which mode the fields are in
 ```
+
+#### Native submit
+
+`nativeSubmit()` renders the fields for the browser's own form submission:
+each carries `name` and `value=old(…)` instead of `wire:model`, and errors come
+from the shared `$errors` bag. Use it where the endpoint is not yours — a
+sign-in screen posting to Fortify's route is what it was built for.
+
+The `<form>` element stays with you. The action, the `@csrf` and the submit
+button are the page's decision, so the form object renders fields and nothing
+around them:
+
+```blade
+<form method="POST" action="{{ route('login') }}"> {{-- [tl! focus] --}}
+    @csrf
+    {{ $credentials }}
+    <button type="submit">{{ __('Sign in') }}</button>
+</form>
+```
+
+A field must declare it can do this, by implementing
+`Contracts\SupportsNativeSubmit`. A schema containing one that does not throws
+`FormConfigurationException` at render, naming the field — because a field bound
+only by `wire:model` has no `name`, so the browser would post nothing for it and
+the page would submit an empty value with no error anywhere. Anything needing a
+round-trip mid-form cannot qualify: `live()` and reactive fields, a `Select`
+searching on the server, `FileUpload`, `Repeater`. `TextInput`, `Checkbox`,
+`Hidden` and `OtpInput` implement it — the fields the signed-out screens are
+made of.
+
+A checkbox binds differently from an input and deliberately so: it carries a
+constant `value="1"` and answers with its *presence*, because an unticked box
+posts no key at all. Its tick comes back from the last submission when there was
+one — `old()` alone cannot tell "unticked" from "fresh page", so a box defaulted
+on would silently re-tick itself after a user cleared it.
+
+The mode is applied to the schema a form is **about** to render, after
+`form.configuring` has run — so a field a plugin added is switched with the rest,
+and one that cannot submit natively is refused whether it was declared or added.
+See [ADR 0036](https://github.com/nyoncode/wire/blob/main/architecture/decisions/0036-native-submit-forms.md).
 
 ### Factory
 

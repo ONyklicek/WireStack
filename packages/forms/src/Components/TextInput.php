@@ -10,13 +10,16 @@ use NyonCode\WireCore\Foundation\Concerns\CanBeNullable;
 use NyonCode\WireCore\Foundation\Concerns\HasExtraInputAttributes;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireForms\Concerns\CanSubmitNatively;
 use NyonCode\WireForms\Concerns\HasCharacterLimits;
+use NyonCode\WireForms\Contracts\SupportsNativeSubmit;
 use NyonCode\WireForms\Exceptions\FormConfigurationException;
 use NyonCode\WireForms\Support\FieldBounds;
 
-class TextInput extends Field implements DehydratesState
+class TextInput extends Field implements DehydratesState, SupportsNativeSubmit
 {
     use CanBeNullable;
+    use CanSubmitNatively;
     use HasCharacterLimits;
     use HasExtraInputAttributes;
 

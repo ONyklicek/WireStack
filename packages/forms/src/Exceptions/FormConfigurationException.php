@@ -22,6 +22,22 @@ final class FormConfigurationException extends InvalidArgumentException implemen
     }
 
     /**
+     * A field in a native-submit schema cannot render for one.
+     *
+     * Named rather than generic because the fix is a choice between two things
+     * — drop the field, or submit through Livewire after all — and the message
+     * has to carry which field forced it. See ADR 0036 §2.
+     */
+    public static function cannotSubmitNatively(string $field, string $type): self
+    {
+        return new self(
+            "Field [{$field}] of type [{$type}] cannot render for a native submit: it binds through "
+            .'wire:model and would post no value. Implement SupportsNativeSubmit on it, remove it from '
+            .'the schema, or drop ->nativeSubmit() and submit the form through Livewire.'
+        );
+    }
+
+    /**
      * `unique()` had no table to check and no record to take one from — a form
      * with no `->model()`, or a standalone field validated on its own.
      */

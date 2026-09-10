@@ -25,6 +25,17 @@ because every render loop in the framework — the form body, `Grid`, `Section`,
 emits **no markup at all**, not even the `<input type="hidden">` its view
 describes.
 
+**Except on a form the browser posts itself.** In
+[native-submit mode](../overview.md#rendering) there is no Livewire snapshot for
+a value to travel in — the browser sends what is in the document and nothing
+else — so the input stops being decoration and becomes the only way to carry the
+value. A `Hidden` in a native form renders
+`<input type="hidden" name="…" value="…">`, taking its value from `old()` and
+then its `default()`, and nothing else about it changes: it is still invisible,
+still not something the user is offered. This is what carries Fortify's reset
+token on the [auth module's](../../modules/auth.md#the-fields) set-a-new-password
+screen.
+
 **The value lives in form state, not in the DOM**, and that is what actually makes
 it work. When the form is filled, every field in the schema is seeded — its
 `default()` when set, otherwise a type-correct blank — and that happens in PHP,
@@ -41,8 +52,12 @@ Two consequences worth keeping in mind:
   the browser. A value that must not be tampered with belongs in `mutateFormDataBeforeSave()`
   or on the model — not in a hidden field.
 
-**It still validates.** Rules, required and validation messages all apply, which
-is the point of it being a field rather than a stray array key. A `Hidden` that
+**It still validates**, and it is the one invisible field that does. Every other
+component whose `isVisible()` is false is skipped by the validation resolver, on
+purpose: a `required()` on a field a condition has hidden must never block a
+submit. A `Hidden` is a different kind of invisible — its value is filled,
+carried in a snapshot the browser can edit, and written on save — so its rules
+are the only thing between the record and whatever came back. A `Hidden` that
 fails validation produces an error message with nowhere to render, so keep its
 rules to things that cannot fail for a legitimate user.
 
@@ -120,7 +135,9 @@ must not trust `author_id` should set it on the model instead of carrying it her
 
 `Hidden` adds no configuration of its own — it is the shared `Field` surface plus
 an invisible constructor. Defaults, rules, validation messages and the rest are
-in [Common Field API](index.md#common-field-api).
+in [Common Field API](index.md#common-field-api). The native-submit switch is
+the form's, not the field's: `Form::nativeSubmit()` sets it on every field in the
+schema.
 
 ## Related
 

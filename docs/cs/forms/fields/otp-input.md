@@ -24,7 +24,18 @@ neuvízne v políčku, ze kterého by uživatel klávesnicí neodešel.
 
 **Vložený kód vyplní celou řadu.** Bílé znaky se odstraní, kód se ořízne na délku
 pole a kurzor skončí na posledním vyplněném políčku — to je, co dělá „zkopírovat
-z SMS a vložit" jedním gestem místo šesti.
+z SMS a vložit“ jedním gestem místo šesti.
+
+**Na formuláři, který odesílá sám prohlížeč, jsou políčka jen nadstavba.**
+Nenesou `name` — šest inputů by odeslalo šest hodnot — takže
+v [režimu nativního odeslání](../overview.md#rendering) pole vykreslí vedle nich
+jeden skutečný textový input se jménem pole a s hodnotou, kterou políčka spojila.
+Alpine ten input schová (`x-show="false"`, ne `type="hidden"`) a políčka drží pod
+`x-cloak`, dokud nenaběhne — prohlížeč bez JavaScriptu tedy ukáže obyčejný input
+a odešle z něj. Právě to drží dvoufázovou výzvu zodpověditelnou i tam, kde Alpine
+nikdy nedorazí, a takhle vykresluje kód z autentizační aplikace
+[modul přihlášení](../../modules/auth.md#pole). První políčko nese
+`autocomplete="one-time-code"`, takže platforma nabídne kód rovnou ze zprávy.
 
 **Délka je struktura, ne validační pravidlo.** `length()` rozhoduje, kolik
 políček se vykreslí, a pole odmítne délku menší než 1 — nulová délka nevykreslí

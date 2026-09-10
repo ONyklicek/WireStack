@@ -1,5 +1,6 @@
 @php
 
+    use NyonCode\WireCore\Foundation\Support\TextControl;
     use NyonCode\WireForms\Components\TextInput;
 
     assert($field instanceof TextInput);
@@ -44,7 +45,7 @@
                     type="{{ $field->getInputType() }}"
                 @endif
                 id="{{ $field->getId() }}"
-        {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
+        @if($field->submitsNatively()){!! $field->getNativeBindingHtml() !!}@else{{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"@endif
         {!! $field->getExtraInputAttributesHtml() !!}
         @if($field->getPlaceholder())
             placeholder="{{ $field->getPlaceholder() }}"
@@ -91,12 +92,8 @@
             x-mask="{{ $field->getMask() }}"
         @endif
         @class([
-            'block w-full rounded-md border-gray-300 shadow-sm',
-            'focus:border-primary-500 focus:ring-primary-500',
-            'placeholder:text-gray-400 dark:placeholder:text-gray-500',
-            'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150',
-            'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm',
-            'border-red-500 focus:border-red-500 focus:ring-red-500' => $errors->has($field->getStatePath()),
+            TextControl::base(),
+            TextControl::rejected() => $errors->has($field->getStatePath()),
             'rounded-l-none' => $hasAffix && $field->hasPrefixContent(),
             'rounded-r-none' => $hasAffix && $field->hasSuffixContent(),
             // Room for the reveal button.

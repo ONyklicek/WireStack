@@ -4,14 +4,26 @@ declare(strict_types=1);
 
 namespace NyonCode\WireForms\Components;
 
+use NyonCode\WireForms\Concerns\CanSubmitNatively;
+use NyonCode\WireForms\Contracts\SupportsNativeSubmit;
 use NyonCode\WireForms\Exceptions\FormConfigurationException;
 use NyonCode\WireForms\Support\FieldBounds;
 
 /**
  * OTP / PIN input — N individual character boxes with automatic focus advance.
+ *
+ * **The boxes are the enhancement, not the field.** They carry no `name` of
+ * their own — six inputs would post six values — so the field itself is one
+ * control holding the joined string: `wire:model` state in a Livewire form, and
+ * in a native-submit one (ADR 0036) a real text input that the boxes write into
+ * and Alpine hides. Which is what keeps the two-factor challenge answerable with
+ * JavaScript off: no Alpine, no boxes, and the input they replace is still on
+ * the page with the code's own name on it.
  */
-class OtpInput extends Field
+class OtpInput extends Field implements SupportsNativeSubmit
 {
+    use CanSubmitNatively;
+
     protected int $length = 6;
 
     protected bool $numericOnly = false;

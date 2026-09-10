@@ -25,6 +25,7 @@ use NyonCode\WireForms\Forms\Runtime\FormRuntime;
 use NyonCode\WireForms\Forms\Runtime\StaleModelException;
 use NyonCode\WireForms\Forms\Runtime\StateManager;
 use NyonCode\WireForms\Rendering\FormRenderer;
+use NyonCode\WireForms\Support\NativeSubmit;
 use NyonCode\WireForms\Validation\FormValidationResolver;
 
 /**
@@ -57,6 +58,9 @@ class Form implements Htmlable, ModalForm
     private bool $usePolicy = false;
 
     private bool $fieldPartials = false;
+
+    /** Whether the fields render for a browser submit rather than for Livewire. */
+    private bool $nativeSubmit = false;
 
     private ?Closure $authorizeUsingCallback = null;
 
@@ -102,6 +106,33 @@ class Form implements Htmlable, ModalForm
     public function usesFieldPartials(): bool
     {
         return $this->fieldPartials;
+    }
+
+    /**
+     * Render the fields for the browser's own form submit instead of Livewire.
+     *
+     * The `<form>` element stays with whoever is rendering — a sign-in screen
+     * owns its action, its `@csrf` and its submit button — so this switches the
+     * fields and nothing around them. A field that cannot submit natively raises
+     * rather than rendering an input that posts nothing. See ADR 0036.
+     *
+     * Invalidates the memoized config, because the mode is decided on the
+     * schema: a form switched after something already read its config would
+     * otherwise render fields the switch never reached.
+     */
+    public function nativeSubmit(bool $native = true): static
+    {
+        $this->nativeSubmit = $native;
+
+        $this->invalidateConfig();
+
+        return $this;
+    }
+
+    /** Whether the fields render for a browser submit rather than for Livewire. */
+    public function submitsNatively(): bool
+    {
+        return $this->nativeSubmit;
     }
 
     // ─── Livewire binding ──────────────────────────────────────────
@@ -578,7 +609,19 @@ class Form implements Htmlable, ModalForm
         // Against null, not `?? $schema`: a callback that filters every field out
         // leaves an empty array, and the null-coalescing form would quietly put
         // the fields back.
-        return $payload !== null ? $payload->schema : $schema;
+        $schema = $payload !== null ? $payload->schema : $schema;
+
+        // After the hook, never before it. A field a plugin adds here is a field
+        // the browser has to post, and one switched on the declared schema would
+        // have left it bound with `wire:model` — an input that looks right and
+        // submits nothing, which is the exact failure ADR 0036 §2 refuses. The
+        // guard runs on what will actually render, so an unsupported field
+        // *added* by a callback is refused the same way a declared one is.
+        if ($this->nativeSubmit) {
+            NativeSubmit::prepare($schema);
+        }
+
+        return $schema;
     }
 
     private function getRuntime(): FormRuntime

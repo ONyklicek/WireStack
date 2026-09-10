@@ -136,7 +136,7 @@ class UserSettings extends Component
 
 ### Explicitní registrace formulářů
 
-Alternativa k auto-detekci — vraťte názvy metod přesně tak, jak jsou definované:
+Alternativa k automatické detekci — vraťte názvy metod přesně tak, jak jsou definované:
 
 ```php
 protected function getForms(): array
@@ -246,7 +246,7 @@ Ochrana proti souběžné editaci viz [Životní cyklus ukládání → Optimist
 ### Autorizace
 
 ```php
-->authorize(bool $usePolicy = true)              // zapnout auto-resolvování policy modelu (create/update)
+->authorize(bool $usePolicy = true)              // zapnout automatické resolvování policy modelu (create/update)
 ->authorizeUsing(?Closure $callback)             // fn(User $user, $record = null): bool — vlastní auth kontrola
 ->canSave(): bool                                // zda aktuální uživatel smí uložit
 ->isReadOnly(): bool                             // true když autorizace zamítne uložení
@@ -268,7 +268,48 @@ Když je `->authorize()` zapnuto, formulář se stane read-only (a skryje tlač�
 ```php
 ->toHtml(): string                   // Blade výstup
 (string) $form                       // __toString()
+->nativeSubmit(bool $native = true)  // vykreslit pole pro odeslání prohlížečem, ne pro Livewire
+->submitsNatively(): bool            // v jakém režimu pole jsou
 ```
+
+#### Nativní odeslání
+
+`nativeSubmit()` vykreslí pole pro odeslání formuláře samotným prohlížečem:
+každé nese `name` a `value=old(…)` místo `wire:model` a chyby se berou ze
+sdíleného bagu `$errors`. Sáhněte po něm tam, kde koncový bod není váš —
+přihlašovací obrazovka odesílající na routu Fortify je to, kvůli čemu vznikl.
+
+Element `<form>` zůstává vám. Akce, `@csrf` i odesílací tlačítko jsou rozhodnutí
+stránky, takže objekt formuláře vykreslí pole a nic kolem nich:
+
+```blade
+<form method="POST" action="{{ route('login') }}"> {{-- [tl! focus] --}}
+    @csrf
+    {{ $credentials }}
+    <button type="submit">{{ __('Sign in') }}</button>
+</form>
+```
+
+Pole musí deklarovat, že to umí, implementací `Contracts\SupportsNativeSubmit`.
+Schéma obsahující pole, které to neumí, vyhodí při renderu
+`FormConfigurationException` a pojmenuje ho — pole navázané jen přes `wire:model`
+totiž nemá `name`, takže by za něj prohlížeč neodeslal nic a stránka by poslala
+prázdnou hodnotu, aniž by o tom kdekoli byla zmínka. Nekvalifikuje se nic, co
+potřebuje round trip uprostřed formuláře: `live()` a reaktivní pole, `Select`
+hledající na serveru, `FileUpload`, `Repeater`. Implementují to `TextInput`,
+`Checkbox`, `Hidden` a `OtpInput` — pole, ze kterých jsou složené odhlášené
+obrazovky.
+
+Checkbox se váže jinak než input, a to záměrně: nese konstantní `value="1"`
+a odpovídá svou *přítomností*, protože nezaškrtnuté políčko neodešle vůbec žádný
+klíč. Zaškrtnutí se vrací z posledního odeslání, pokud nějaké bylo — samotné
+`old()` totiž nerozezná „odškrtnuto“ od „čerstvá stránka“, takže políčko zapnuté
+ve výchozím stavu by se po odškrtnutí tiše zaškrtlo znovu.
+
+Režim se aplikuje na schéma, které se **chystá** vykreslit, až po doběhnutí
+`form.configuring` — takže pole přidané pluginem se přepne se zbytkem a to, které
+nativně odeslat nejde, je odmítnuté, ať bylo deklarované, nebo přidané.
+Viz [ADR 0036](https://github.com/nyoncode/wire/blob/main/architecture/decisions/0036-native-submit-forms.md).
 
 ### Factory
 
@@ -288,7 +329,7 @@ Form::make()                         // statická factory přes container
 
 Trait `WithForms` poskytuje:
 
-1. **Auto-detekci** — skenuje metody končící na `Form` a registruje je
+1. **Automatickou detekci** — skenuje metody končící na `Form` a registruje je
 2. **Lazy resolvování** — formuláře se staví až při prvním přístupu
 3. **Cachování** — instance formulářů jsou cachované po dobu requestu
 4. **Magický přístup k vlastnosti** — `$this->profileForm` vyresolvuje formulář
@@ -313,7 +354,7 @@ class MyComponent extends Component
 
 - [TextInput](fields/text-input.md) — text, email, heslo, číslo, tel, url
 - [Textarea](fields/textarea.md) — víceřádkový text
-- [Select](fields/select.md) — dropdown, searchable, multiple, relace
+- [Select](fields/select.md) — rozbalovací seznam, hledání, více hodnot, relace
 - [Checkbox](fields/checkbox.md) — jeden checkbox
 - [CheckboxList](fields/checkbox-list.md) — skupina více checkboxů
 - [Radio](fields/radio.md) — skupina radio tlačítek
@@ -329,7 +370,7 @@ class MyComponent extends Component
 
 Layoutové a schema komponenty (Grid, Flex, Section, Fieldset, Tabs, Wizard,
 Callout, Empty State) žijí ve sdílené sekci [Schema](../core/schema/overview.md) —
-stejný slovník používají formuláře, infolisty i modály.
+stejný slovník používají formuláře, infolisty i modaly.
 
 - [Grid](../core/schema/layout/grid.md) — CSS grid layout
 - [Section](../core/schema/layout/section.md) — sbalitelná sekce s nadpisem
@@ -366,7 +407,7 @@ Každé pole dědí:
 ->extraAttributes(array $attrs)         // HTML atributy
 ->live()                                // wire:model.live
 ->debounce(int $ms = 500)              // přidá .debounce.{ms}ms k vazbě
-->afterStateUpdated(Closure $callback)  // reagovat na změny hodnoty (auto-zapne live)
+->afterStateUpdated(Closure $callback)  // reagovat na změny hodnoty (automaticky zapne live)
 ->rules(string|array $rules)            // Laravel validační pravidla
 ->unique(?string $table, ?string $column, bool $ignoreRecord = true, ?Closure $modifyRuleUsing) // [tl! focus]
 ->validationMessages(array $messages)   // vlastní validační zprávy
