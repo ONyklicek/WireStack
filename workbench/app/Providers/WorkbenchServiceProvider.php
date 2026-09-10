@@ -124,8 +124,26 @@ class WorkbenchServiceProvider extends ServiceProvider
         // the login screen does about a link it must not draw.
         config()->set('fortify.features', [
             Features::resetPasswords(),
+            // Verification, for the code flow below rather than for its own
+            // sake: `codes.verify_email` routes nothing without it (ADR 0037),
+            // and an unroutable screen is one no driver can drive.
+            Features::emailVerification(),
             Features::twoFactorAuthentication(['confirm' => true]),
         ]);
+        // Every code flow on, because the workbench stands in for the
+        // application that turned them on: four screens that are otherwise
+        // unroutable — and therefore unpreviewable, and unverifiable in a
+        // browser. Registration stays off above; these are not registration.
+        //
+        // The second factor needs Fortify's two-factor feature, which is already
+        // in the list above (ADR 0037 §5). Note what this makes the workbench's
+        // sign-in: password, then a mailed code, for a demo user with no
+        // authenticator app.
+        config()->set('wire-module-auth.codes.login', true);
+        config()->set('wire-module-auth.codes.second_factor', true);
+        config()->set('wire-module-auth.codes.verify_email', true);
+        config()->set('wire-module-auth.codes.reset_password', true);
+
         config()->set('permission.teams', true);
         config()->set('wire-module-users.teams.model', Team::class);
     }

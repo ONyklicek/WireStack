@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Workbench\App\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -14,7 +15,12 @@ use NyonCode\WireCore\Foundation\Contracts\HasAvatar;
 use NyonCode\WireModuleUsers\Concerns\InteractsWithAvatar;
 use Workbench\Database\Factories\UserFactory;
 
-class User extends Authenticatable implements HasAvatar
+// `MustVerifyEmail` because Fortify's verification feature is on in this
+// workbench (see WorkbenchServiceProvider): without it there is no address to
+// confirm, and both the link screen and the code screen send the visitor home —
+// which is the shape an application that turned the feature on and forgot this
+// interface is in.
+class User extends Authenticatable implements HasAvatar, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     // `HasRoles` is this stack's, from nyoncode/laravel-permission-extended, and

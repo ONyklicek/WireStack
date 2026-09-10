@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use NyonCode\WireCore\Core\Resources\Workspace;
 use Workbench\App\Http\Middleware\SignInDemoUser;
@@ -375,6 +376,41 @@ foreach ($resourcePages as $slug => [$title, $subtitle, $component, $params]) {
 // belongs in an application, for the same reason `SignInDemoUser` does not — and
 // note it is deliberately *outside* that middleware, because a signed-in visitor
 // is a `guest`-middleware redirect away from the screen this exists to show.
+// The two code screens that are only reachable from a state, reachable.
+//
+// The same problem as the two-factor challenge below, twice: a mailed second
+// factor is served from a half-authenticated session, and the address
+// confirmation from a signed-in account whose address is not confirmed yet.
+// Visiting either URL cold is a redirect, and a driver that took the redirect
+// for the screen would assert nothing while looking thorough.
+//
+// Both hand over to the **real** routes rather than rendering the views, because
+// what these previews exist to show is the controller's answer — and the
+// verification one leaves the demo user unverified, which nothing else in this
+// workbench reads and `migrate-fresh` puts back.
+Route::get('previews/auth/second-factor-code', function (Request $request): RedirectResponse {
+    $user = WorkbenchUser::query()->orderBy('id')->first();
+
+    abort_if($user === null, 404, 'No seeded user to stand in for a pending sign-in.');
+
+    $request->session()->put('login.id', $user->getKey());
+    $request->session()->put('login.remember', false);
+
+    return redirect()->route('wire-auth.second-factor');
+})->name('workbench.second-factor-code-preview');
+
+Route::get('previews/auth/verify-email-code', function (): RedirectResponse {
+    $user = WorkbenchUser::query()->orderBy('id')->first();
+
+    abort_if($user === null, 404, 'No seeded user to stand in for an unconfirmed address.');
+
+    $user->forceFill(['email_verified_at' => null])->save();
+
+    Auth::login($user);
+
+    return redirect()->route('wire-auth.verify-email-code');
+})->name('workbench.verify-email-code-preview');
+
 Route::get('previews/auth/two-factor', function (Request $request): RedirectResponse {
     $user = WorkbenchUser::query()->orderBy('id')->first();
 
