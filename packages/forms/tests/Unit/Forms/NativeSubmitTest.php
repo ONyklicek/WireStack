@@ -10,6 +10,7 @@ use NyonCode\WireCore\Foundation\Schema\Section;
 use NyonCode\WireForms\Components\Checkbox;
 use NyonCode\WireForms\Components\Hidden;
 use NyonCode\WireForms\Components\OtpInput;
+use NyonCode\WireForms\Components\Repeater;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Contracts\SupportsNativeSubmit;
@@ -92,6 +93,27 @@ test('a field that cannot submit natively is refused, by name and by type', func
             FormConfigurationException::class,
             'Field [country] of type [NyonCode\WireForms\Components\Select] cannot render for a native submit'
         );
+});
+
+test('a repeating layout is refused, not walked into', function () {
+    // A `Repeater` is a `LayoutComponent`, so a guard that recurses into every
+    // layout walks past it into its template children and lets the repeater
+    // itself render into a native form — where it dies as "Using $this when not
+    // in object context", from a view, naming nothing. The question that avoids
+    // that is not "is this a layout" but "does it carry state".
+    expect(fn () => NativeSubmit::prepare([
+        Repeater::make('rows')->schema([TextInput::make('label')]),
+    ]))->toThrow(FormConfigurationException::class, 'Field [rows]');
+});
+
+test('a grouping layout is still walked into', function () {
+    // The other half of the same question: a Section holds no state, so its
+    // children are ordinary fields and must be switched, not refused.
+    $inner = TextInput::make('email');
+
+    NativeSubmit::prepare([Section::make('Account')->schema([$inner])]);
+
+    expect($inner->submitsNatively())->toBeTrue();
 });
 
 test('a stray value in a schema is passed over, not refused', function () {

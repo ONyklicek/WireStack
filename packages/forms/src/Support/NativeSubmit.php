@@ -6,6 +6,7 @@ namespace NyonCode\WireForms\Support;
 
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Contracts\CanBeDehydrated;
 use NyonCode\WireForms\Contracts\SupportsNativeSubmit;
 use NyonCode\WireForms\Exceptions\FormConfigurationException;
 
@@ -23,6 +24,12 @@ use NyonCode\WireForms\Exceptions\FormConfigurationException;
  * `Repeater` deliberately — its children live at per-item wildcard paths — so a
  * repeater is exactly the kind of field that cannot submit natively *and* would
  * never reach a check written over the flat list.
+ *
+ * Reaching it is only half of catching it. A repeater is a `LayoutComponent`,
+ * so a walk that recurses into every layout walks straight past the repeater
+ * into its template children, switches those, and lets the repeater render into
+ * a native form — where it fails as `Using $this when not in object context`,
+ * from a view, naming nothing. Hence the state question below.
  */
 final class NativeSubmit
 {
@@ -36,15 +43,30 @@ final class NativeSubmit
     public static function prepare(array $schema): void
     {
         foreach ($schema as $component) {
-            // A layout holds fields rather than being one; recurse and let the
-            // leaves answer for themselves.
-            if ($component instanceof LayoutComponent) {
+            // A layout that only *groups* fields is recursed into and its leaves
+            // answer for themselves. One that carries state of its own is not:
+            // `Repeater` and `Builder` are `LayoutComponent`s too, and their
+            // children live at per-item paths a browser form cannot express. So
+            // the question is not "is this a layout" but "does it hold state" —
+            // asked as `CanBeDehydrated`, which is what having state to hand
+            // back means here, rather than as a list of two class names that the
+            // third repeating layout would not be on.
+            if ($component instanceof LayoutComponent && ! $component instanceof CanBeDehydrated) {
                 self::prepare($component->getSchema());
 
                 continue;
             }
 
-            if (! $component instanceof Component) {
+            // A stray value in a schema — it is `array<int, mixed>` and
+            // `FormRuntime` skips what is not a component; matching that keeps a
+            // loose value from becoming a "cannot submit natively" error about
+            // something that is not a field.
+            //
+            // `LayoutComponent` is named beside `Component` because it is not
+            // one: the two are separate bases, so a stateful layout that reached
+            // here would be skipped by a check that asked only about `Component`
+            // — and skipping is exactly the silence this class exists to avoid.
+            if (! $component instanceof Component && ! $component instanceof LayoutComponent) {
                 continue;
             }
 
