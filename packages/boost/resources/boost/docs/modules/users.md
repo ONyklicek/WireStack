@@ -245,6 +245,42 @@ page composing `SyncsRoles`. A save that *changes* the roles requires the
 `users.update` ability; a save that leaves them as they were does not, so fixing
 a typo in somebody's name never strips their roles.
 
+### A Changed Address Stops Being Verified
+
+Fortify's `UpdateUserProfileInformation` nulls `email_verified_at` and mails a
+fresh notification when somebody edits their address. This module replaces that
+action with its own form, so it restates the rule rather than losing it —
+otherwise a person could type an address they do not control and stay flagged
+verified on it, and anything behind Laravel's `verified` middleware, or any
+policy asking `hasVerifiedEmail()`, would then apply to an address nobody had
+proven.
+
+The rule lives on the **model**, not in a form hook, and that is deliberate:
+three screens here write the column — the profile page, the admin edit form, the
+create form — and `Form::afterSave()` holds exactly one closure, so a rule
+installed there is one the next page to add a hook silently removes. An
+application's own page, or a console command, would never have been covered.
+
+It is narrow. It fires only when the address actually changed, and it stands
+aside whenever the same save writes `email_verified_at` itself — a seeder, a
+migration backfill, or an admin tool marking an address verified has said what
+it wants:
+
+```php
+// Respected: the caller had an opinion.
+$user->forceFill(['email' => $new, 'email_verified_at' => now()])->save();
+
+// Cleared, and a fresh verification notification goes out.
+$user->forceFill(['email' => $new])->save();
+```
+
+Turn it off where an application clears the flag in its own way:
+
+```php
+// config/wire-module-users.php
+'reverify_on_email_change' => false, // [tl! focus]
+```
+
 ## Adapting The Screens
 
 `fields` maps three **column names**, and nothing more. It is there for a users

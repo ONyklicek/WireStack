@@ -242,6 +242,40 @@ route — hromadná akce, krok průvodce, vlastní stránka aplikace skládajíc
 uložení, které je nechává být, ne — takže oprava překlepu ve jméně nikdy nikomu
 role nesebere.
 
+### Změněná adresa přestane být ověřená
+
+Fortifyho `UpdateUserProfileInformation` při úpravě adresy vynuluje
+`email_verified_at` a pošle nové ověření. Tenhle modul tu akci nahrazuje vlastním
+formulářem, takže to pravidlo zopakuje, místo aby ho ztratil — jinak by si člověk
+mohl napsat adresu, kterou nevlastní, a zůstat na ní označený jako ověřený.
+Cokoli za Laravelím middleware `verified` nebo jakákoli policy ptající se
+`hasVerifiedEmail()` by pak platily pro adresu, kterou nikdo nedoložil.
+
+Pravidlo žije na **modelu**, ne ve form hooku, a to záměrně: ten sloupec tu
+zapisují tři obrazovky — profil, administrátorská úprava, vytvoření — a
+`Form::afterSave()` drží přesně jednu closure, takže pravidlo umístěné tam by
+příští stránka, která si přidá hook, tiše odstranila. Vlastní stránka aplikace
+nebo konzolový příkaz by pokryté nebyly nikdy.
+
+Je úzké. Spustí se jen když se adresa opravdu změnila, a ustoupí vždy, když
+tentýž zápis nastavuje i `email_verified_at` — seeder, doplnění dat v migraci
+nebo administrátorský nástroj označující adresu za ověřenou řekly, co chtějí:
+
+```php
+// Respektováno: volající měl názor.
+$user->forceFill(['email' => $new, 'email_verified_at' => now()])->save();
+
+// Vynulováno, a odejde nové ověření.
+$user->forceFill(['email' => $new])->save();
+```
+
+Vypněte tam, kde si aplikace ten příznak řeší po svém:
+
+```php
+// config/wire-module-users.php
+'reverify_on_email_change' => false, // [tl! focus]
+```
+
 ## Úpravy obrazovek
 
 `fields` mapuje tři **jména sloupců**, nic víc. Je tu pro tabulku uživatelů,

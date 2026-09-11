@@ -55,6 +55,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Re-verify A Changed Address
+    |--------------------------------------------------------------------------
+    |
+    | A verified flag belongs to the address it was granted for. Fortify's own
+    | `UpdateUserProfileInformation` nulls `email_verified_at` and mails a fresh
+    | notification when somebody edits their address; this module replaces that
+    | action with its own form, so it restates the rule rather than losing it.
+    |
+    | Without this, a person could type an address they do not control and stay
+    | flagged verified on it — and anything behind Laravel's `verified`
+    | middleware, or any policy asking `hasVerifiedEmail()`, would then apply to
+    | an address nobody had proven.
+    |
+    | It is narrow on purpose: it fires only when the address actually changed,
+    | and it stands aside whenever the same save writes `email_verified_at`
+    | itself. A seeder, a migration backfill, or an admin tool marking an address
+    | verified has said what it wants, and this does not overrule it.
+    |
+    | Turn it off where an application clears the flag in its own way.
+    |
+    */
+    'reverify_on_email_change' => env('WIRE_USERS_REVERIFY_ON_EMAIL_CHANGE', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Permissions
     |--------------------------------------------------------------------------
     |

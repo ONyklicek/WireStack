@@ -233,6 +233,12 @@ working:
 - **Verifying by code is what a signed link does.** `markEmailAsVerified()`, then
   `Illuminate\Auth\Events\Verified` — the same two lines Fortify's own controller
   runs, so anything listening hears both ways in. The link keeps working.
+- **A code confirms the address it was mailed to, and no other.** The code is
+  filed under the user's key so it survives somebody editing their address
+  mid-flow, but surviving must not mean following: the address rides along on
+  the code's payload and is compared before the flag is set. Otherwise
+  requesting a code, changing the address, and typing the digits would confirm
+  an address that was never sent anything.
 - **A code cannot walk past a second factor.** The passwordless flow ends at
   Fortify's two-factor challenge for anyone who has one. An inbox is one factor.
   That hand-off leaves a pending sign-in behind on purpose, and the mailed

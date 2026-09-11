@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireModuleUsers;
 
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Database\Eloquent\Model;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
@@ -12,6 +13,7 @@ use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireModuleUsers\Http\Middleware\SetCurrentTeam;
 use NyonCode\WireModuleUsers\Support\Avatars;
+use NyonCode\WireModuleUsers\Support\EmailVerification;
 use NyonCode\WireModuleUsers\Support\Permissions;
 use NyonCode\WireModuleUsers\Support\Roles;
 use NyonCode\WireModuleUsers\Support\Teams;
@@ -54,6 +56,7 @@ class WireModuleUsersServiceProvider extends PackageServiceProvider
             ->bootedPackage(function (): void {
                 $this->bootTeams();
                 $this->bootUserMenu();
+                $this->bootEmailVerification();
             })
             ->hasInstallCommand(function (InstallCommand $command): void {
                 $command
@@ -61,6 +64,46 @@ class WireModuleUsersServiceProvider extends PackageServiceProvider
                     ->afterInstallation(fn (InstallCommand $installer) => $this->reportEnvironment($installer));
             })
             ->hasAbout();
+    }
+
+    /**
+     * Keep a verified flag tied to the address it was granted for.
+     *
+     * Two Eloquent events rather than a form hook, for the reason
+     * {@see EmailVerification} gives: three screens in this module write the
+     * address, an application may add a fourth, and `Form::afterSave()` holds
+     * one closure — a rule installed there is a rule the next hook removes.
+     *
+     * `updating` clears the flag in the same statement that writes the address,
+     * so the row is never briefly a verified stranger. `updated` asks for the
+     * new address to be proven, and only then: a notification sent before the
+     * write would advertise an address that a failed save left unwritten.
+     *
+     * Registered on the configured model rather than globally — this is a rule
+     * about *this* application's user, and a listener on `Model` would clear a
+     * column on anything that happened to have one.
+     */
+    protected function bootEmailVerification(): void
+    {
+        if (! EmailVerification::resetsOnChange()) {
+            return;
+        }
+
+        $model = config('wire-module-users.model');
+
+        if (! is_string($model) || ! is_subclass_of($model, Model::class)) {
+            return;
+        }
+
+        $model::updating(static function (Model $user): void {
+            EmailVerification::forget($user);
+        });
+
+        $model::updated(static function (Model $user): void {
+            if ($user->wasChanged(EmailVerification::column())) {
+                EmailVerification::requestProof($user);
+            }
+        });
     }
 
     /**

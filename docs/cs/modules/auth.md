@@ -235,6 +235,11 @@ právě ony drží zbytek instalace v chodu:
   pak `Illuminate\Auth\Events\Verified` — dva řádky, které spouští i Fortifyho
   vlastní controller, takže cokoli naslouchá, uslyší obě cesty. Odkaz dál
   funguje.
+- **Kód potvrdí tu adresu, na kterou byl poslán, a žádnou jinou.** Zakládá se pod
+  klíčem uživatele, aby přežil úpravu adresy uprostřed toku — jenže přežít
+  neznamená následovat: adresa jede s kódem v payloadu a porovná se dřív, než se
+  příznak nastaví. Jinak by vyžádání kódu, změna adresy a zadání číslic potvrdily
+  adresu, které se nikdy nic neposlalo.
 - **Kódem se nedá obejít druhý faktor.** Passwordless tok skončí u dvoufázové
   výzvy Fortify pro každého, kdo ji má. Schránka je jeden faktor. To předání
   záměrně nechává za sebou rozpracované přihlášení a mailovaná výzva ho odmítne

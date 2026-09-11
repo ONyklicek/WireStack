@@ -62,10 +62,17 @@ class EmailVerificationCodeController extends Controller
 
         $user = $request->user();
 
+        // The address rides on the code. `identifierFor()` files it under the
+        // user *key* on purpose — a code should survive the person editing their
+        // address mid-flow — but "survive" must not mean "follow". Without the
+        // payload, a code requested for one address and typed after the address
+        // was changed marked the *new* one verified, which is a way to have an
+        // address you do not control confirmed on your account.
         $sent = $user === null ? false : ($this->send)(
             CodePurpose::VerifyEmail,
             $user,
             Codes::identifierFor($user),
+            ['email' => $this->addressOf($user)],
         );
 
         return redirect()->route('wire-auth.verify-email-code')->with('status', __($sent
@@ -96,6 +103,17 @@ class EmailVerificationCodeController extends Controller
             ]);
         }
 
+        // The code proves one address, and only the one it was mailed to. A
+        // mismatch is a wrong code rather than an error of its own: the two are
+        // worth telling apart only to somebody trying to get an address
+        // confirmed that was never sent anything. The row is consumed either
+        // way, so this is not a guess that can be repeated.
+        if (! $this->confirms($verified->payload('email'), $user)) {
+            throw ValidationException::withMessages([
+                'code' => [__('wire-module-auth::messages.code_invalid')],
+            ]);
+        }
+
         // `markEmailAsVerified()` returns false when the column was already set
         // — a second tab, a link followed on a phone — and firing `Verified` for
         // that would send the welcome mail twice.
@@ -104,6 +122,31 @@ class EmailVerificationCodeController extends Controller
         }
 
         return redirect()->intended($this->homePath().'?verified=1');
+    }
+
+    /**
+     * Whether the code was issued for the address this account carries now.
+     *
+     * Compared the way an address is compared everywhere else in this package —
+     * trimmed and lower-cased — so a code mailed to `Ann@Example.com` still
+     * confirms `ann@example.com`. Case is not a change of address.
+     *
+     * A code with no address on it fails this. Codes are minted and read by the
+     * same release and live minutes, so the only rows without one are from
+     * before this was carried at all; refusing them costs somebody one resend
+     * and is the safe direction to be wrong in.
+     */
+    protected function confirms(mixed $issuedFor, MustVerifyEmail $user): bool
+    {
+        return is_string($issuedFor)
+            && $issuedFor !== ''
+            && Codes::identifierFor($issuedFor) === Codes::identifierFor($this->addressOf($user));
+    }
+
+    /** The address being confirmed, as the model reports it. */
+    protected function addressOf(mixed $user): string
+    {
+        return $user instanceof MustVerifyEmail ? (string) $user->getEmailForVerification() : '';
     }
 
     /** Where Fortify sends somebody who has nothing left to do here. */
