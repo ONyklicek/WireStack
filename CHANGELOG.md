@@ -2,7 +2,7 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
-## [2.0.0-dev]
+## [2.0.0]
 
 ### Added
 - **A published stub was never read: `make:wire-dashboard` and `make:wire-widget` looked one directory above where `vendor:publish` puts them.** The toolkit namespaces published stubs by package — `stubs/wire-core/dashboard.stub` — so two packages shipping a `dashboard.stub` cannot overwrite each other; both generators looked in `stubs/`. Publishing the stubs and editing them therefore changed nothing at all, silently, and the generator kept producing the package's copy. The test covered it *wrongly*: it wrote to `stubs/`, the path the command read and the publish never wrote to, so it stayed green over a dead feature. Both generators now read `stubs/wire-core/` first and `stubs/` second (Laravel's own `stub:publish` convention, for a file put there by hand), and the tests write where `vendor:publish` actually writes.
