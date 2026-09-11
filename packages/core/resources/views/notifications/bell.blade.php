@@ -82,6 +82,7 @@
         width: 'md',
         stickyHeader: true,
         stickyFooter: true,
+        bottomSheetOnMobile: true,
         id: 'wire-notifications',
         wireModel: 'panelOpen',
         bodyView: 'wire-core::notifications.partials.panel',

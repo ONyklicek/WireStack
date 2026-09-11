@@ -226,7 +226,7 @@ it('renders the slide-over as a mobile bottom-sheet (full-width tray, slide-up) 
         ->assertSeeHtml('inset-x-0 bottom-0 sm:inset-x-auto sm:top-0 sm:bottom-0 sm:right-0 sm:pl-10')
         ->assertSeeHtml('w-full sm:w-screen')
         ->assertSeeHtml('translate-y-full sm:translate-y-0 sm:translate-x-full')
-        ->assertSeeHtml('max-h-[85vh] rounded-t-2xl sm:h-full sm:max-h-none sm:rounded-none')
+        ->assertSeeHtml('max-h-[85vh] overflow-hidden rounded-t-2xl sm:h-full sm:max-h-none sm:overflow-visible sm:rounded-none')
         // Width caps at ≥sm so the mobile tray is full-width.
         ->assertSeeHtml('sm:max-w-md');
 });

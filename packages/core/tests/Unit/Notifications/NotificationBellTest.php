@@ -164,6 +164,21 @@ it('opens a panel rather than a dropdown', function () {
         ->assertSeeHtml('data-testid="notification-tab-unread"');
 });
 
+it('is reachable by a thumb: a sheet on a phone, and row verbs that do not wait for a hover', function () {
+    $this->driver->send(Notification::success('Export ready'));
+
+    Livewire::test('wire-notification-bell')
+        // Below sm the panel is a bottom sheet rather than a side panel with a
+        // 40px gutter taken out of a 390px screen.
+        ->assertSeeHtml('inset-x-0 bottom-0 sm:inset-x-auto')
+        // `hover:` compiles to `@media (hover: hover)`: left hover-only, the two
+        // row verbs are unreachable on a touch screen rather than merely subtle.
+        ->assertSeeHtml('opacity-100 sm:opacity-0 sm:group-hover:opacity-100')
+        // And they get a corner of their own there, so they are not a translucent
+        // tray sitting on top of the title.
+        ->assertSeeHtml('pr-[5.5rem] transition-colors sm:px-6');
+});
+
 it('hides what has been read on the unread tab, and says so', function () {
     $this->driver->send(Notification::success('Export ready'));
     $this->driver->send(Notification::success('Import finished'));

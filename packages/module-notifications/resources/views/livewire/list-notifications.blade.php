@@ -41,7 +41,11 @@
     {{-- Tabs and search, on the page — not in a panel header. Three tabs rather
          than a Filters button: there are exactly three states an inbox has, and
          a button that opens a panel to choose between three is a button too
-         many. --}}
+         many.
+
+         The row wraps, and when the search box is the thing that wrapped it takes
+         the whole line: a 13rem field held to the right of a phone is a field
+         with a hand in front of it. --}}
     <div class="mb-4 flex flex-wrap items-center gap-3">
         <div class="inline-flex gap-0.5 rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800" role="group" aria-label="{{ __('wire-module-notifications::messages.state') }}">
             @foreach(['all' => __('wire-core::messages.notifications_all'), 'unread' => __('wire-core::messages.notifications_unread'), 'read' => __('wire-module-notifications::messages.read')] as $key => $label)
@@ -64,7 +68,7 @@
             @endforeach
         </div>
 
-        <label class="ml-auto flex min-w-[13rem] items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-400 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-800">
+        <label class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-400 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 sm:ml-auto sm:w-auto sm:min-w-[13rem] dark:border-gray-700 dark:bg-gray-800">
             {!! icon('outline:magnifying-glass', 'w-4 h-4') !!}
             <span class="sr-only">{{ __('wire-table::messages.search') }}</span>
             <input

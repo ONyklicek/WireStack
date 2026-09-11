@@ -4,7 +4,12 @@
      said three ways — tone, weight and an edge — because colour alone is a thing
      not every reader receives. The verbs live behind one quiet trigger that
      appears on hover and on keyboard focus, so a list of thirty is a list and
-     not a wall of buttons. --}}
+     not a wall of buttons.
+
+     Below `sm` the trigger is simply there. Tailwind's `hover:` compiles to
+     `@media (hover: hover)`, so on a phone the fade-in never fires: the button
+     stays at `opacity: 0`, which still takes taps — an invisible control the
+     reader has to find by guessing is worse than a visible one. --}}
 <div
     wire:key="notification-{{ $item['id'] }}"
     data-testid="notification-item" @wireEl('notification-item')
@@ -64,7 +69,7 @@
             :aria-expanded="open ? 'true' : 'false'"
             data-testid="notification-menu" @wireEl('notification-menu')
             aria-haspopup="true"
-            class="rounded-md p-1.5 text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-gray-600 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            class="rounded-md p-2.5 text-gray-400 opacity-100 transition hover:bg-gray-100 hover:text-gray-600 focus-visible:opacity-100 sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 dark:hover:bg-gray-700 dark:hover:text-gray-200"
             aria-label="{{ __('wire-module-notifications::messages.more_actions') }}"
         >{!! icon('outline:ellipsis-horizontal', 'w-4 h-4') !!}</button>
 

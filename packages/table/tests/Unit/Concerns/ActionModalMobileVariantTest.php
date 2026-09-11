@@ -106,7 +106,7 @@ it('composes slideOver() + slideOverOnMobile() into a desktop slide-over that be
         // Mobile bottom-sheet: full-width tray pinned to the bottom, slides up.
         ->assertSeeHtml('inset-x-0 bottom-0')
         ->assertSeeHtml('translate-y-full sm:translate-y-0 sm:translate-x-full')
-        ->assertSeeHtml('rounded-t-2xl sm:h-full sm:max-h-none sm:rounded-none')
+        ->assertSeeHtml('rounded-t-2xl sm:h-full sm:max-h-none sm:overflow-visible sm:rounded-none')
         // Desktop slide-over: edge-pinned right with the breathing gap.
         ->assertSeeHtml('sm:right-0 sm:pl-10');
 });

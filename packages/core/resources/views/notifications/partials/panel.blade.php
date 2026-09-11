@@ -9,8 +9,11 @@
 <div class="-mx-4 -my-4 sm:-mx-6" wire:loading.class="opacity-60" wire:target="setTab,markAsRead,markAsUnread,markAllAsRead,delete,clearRead">
     {{-- Tabs. Two `wire:click`s rather than a filter control: there are exactly
          two, they are the whole vocabulary of an inbox, and a select would put a
-         second interaction in front of the commonest one. --}}
-    <div class="flex items-center gap-1 border-b border-gray-100 px-4 pb-3 sm:px-6 dark:border-gray-700" role="tablist">
+         second interaction in front of the commonest one.
+
+         The pills are taller below `sm` — a tab is the first thing a thumb goes
+         for, and a 24px one is a miss waiting to happen. --}}
+    <div class="flex items-center gap-1 border-b border-gray-100 px-4 py-3 sm:px-6 dark:border-gray-700" role="tablist">
         <button
             type="button"
             role="tab"
@@ -18,7 +21,7 @@
             data-testid="notification-tab-all" @wireEl('notification-tab-all')
             aria-selected="{{ $tab === 'all' ? 'true' : 'false' }}"
             @class([
-                'rounded-md px-2.5 py-1 text-xs font-medium transition',
+                'rounded-md px-3 py-2 text-xs font-medium transition sm:px-2.5 sm:py-1',
                 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white' => $tab === 'all',
                 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200' => $tab !== 'all',
             ])
@@ -31,7 +34,7 @@
             data-testid="notification-tab-unread" @wireEl('notification-tab-unread')
             aria-selected="{{ $tab === 'unread' ? 'true' : 'false' }}"
             @class([
-                'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition',
+                'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition sm:px-2.5 sm:py-1',
                 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white' => $tab === 'unread',
                 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200' => $tab !== 'unread',
             ])

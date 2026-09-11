@@ -131,9 +131,14 @@
                 </div>
 
                 {{-- Footer --}}
+                {{-- The bottom padding carries the safe-area inset: a full-height
+                     slide-over and a mobile sheet both end at the bottom edge of
+                     the screen, which on a phone is where the home indicator is
+                     drawn. `env()` is 0 everywhere else, so this costs nothing on
+                     a desktop. --}}
                 @if(isset($footerView) || isset($footer))
                     <div @class([
-                        'px-4 py-4 sm:px-6 border-t border-gray-200 dark:border-gray-700',
+                        'px-4 pt-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))] sm:px-6 border-t border-gray-200 dark:border-gray-700',
                         'sticky bottom-0 z-10 bg-white dark:bg-gray-800' => $stickyFooter,
                     ])>
                         @isset($footerView)

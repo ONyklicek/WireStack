@@ -5,7 +5,7 @@
     wire:key="notification-{{ $item['id'] }}"
     data-testid="notification-item" @wireEl('notification-item')
     @class([
-        'group relative flex items-start gap-3 px-4 py-3 transition-colors sm:px-6',
+        'group relative flex items-start gap-3 py-3 pl-4 pr-[5.5rem] transition-colors sm:px-6',
         'hover:bg-gray-50 dark:hover:bg-gray-700/30' => $item['read'],
         'bg-primary-50/40 hover:bg-primary-50/70 dark:bg-primary-900/10 dark:hover:bg-primary-900/20' => ! $item['read'],
     ])
@@ -55,17 +55,28 @@
 
     {{-- The two verbs, on hover so a list of ten is a list and not a wall of
          buttons. `focus-within` keeps them reachable by keyboard, where hover is
-         not a thing that happens. --}}
+         not a thing that happens.
+
+         On a phone it is not a thing that happens either: Tailwind's `hover:`
+         compiles to `@media (hover: hover)`, so on a touch screen the verbs
+         would fade in never — the two buttons would be in the markup, in the
+         accessibility tree, and unreachable by the only pointer the device has.
+         So below `sm` they are simply there, and the row reserves the corner for
+         them (`pr-[5.5rem]` above) rather than letting them sit on top of the
+         title: the panel is translucent, and text under it is still text. --}}
     <div @class([
-        'absolute right-3 top-2 flex items-center gap-0.5 rounded-md bg-white/90 p-0.5 opacity-0 shadow-sm ring-1 ring-gray-200 backdrop-blur transition-opacity',
-        'group-hover:opacity-100 group-focus-within:opacity-100 sm:right-5 dark:bg-gray-800/90 dark:ring-gray-600',
+        'absolute right-3 top-2 flex items-center gap-0.5 rounded-md p-0.5 backdrop-blur transition-opacity',
+        'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 sm:right-5',
+        // The tray only needs to lift the icons off whatever they cover, and
+        // below sm they cover nothing: the row reserves their corner.
+        'sm:bg-white/90 sm:shadow-sm sm:ring-1 sm:ring-gray-200 sm:dark:bg-gray-800/90 sm:dark:ring-gray-600',
     ])>
         @if($item['read'])
             <button
                 type="button"
                 wire:click="markAsUnread('{{ $item['id'] }}')"
                 data-testid="notification-mark-unread" @wireEl('notification-mark-unread')
-                class="rounded-sm p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                class="rounded-sm p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 sm:p-1 dark:hover:bg-gray-700 dark:hover:text-gray-300"
                 aria-label="{{ __('wire-core::messages.mark_unread') }}"
             >{!! icon('outline:arrow-uturn-left', 'w-4 h-4') !!}</button>
         @else
@@ -73,7 +84,7 @@
                 type="button"
                 wire:click="markAsRead('{{ $item['id'] }}')"
                 data-testid="notification-mark-read" @wireEl('notification-mark-read')
-                class="rounded-sm p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                class="rounded-sm p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 sm:p-1 dark:hover:bg-gray-700 dark:hover:text-gray-300"
                 aria-label="{{ __('wire-core::messages.mark_read') }}"
             >{!! icon('outline:check', 'w-4 h-4') !!}</button>
         @endif
@@ -82,7 +93,7 @@
             type="button"
             wire:click="delete('{{ $item['id'] }}')"
             data-testid="notification-delete" @wireEl('notification-delete')
-            class="rounded-sm p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+            class="rounded-sm p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 sm:p-1 dark:hover:bg-red-900/30 dark:hover:text-red-400"
             aria-label="{{ __('wire-core::messages.delete_notification') }}"
         >{!! icon('outline:trash', 'w-4 h-4') !!}</button>
     </div>
