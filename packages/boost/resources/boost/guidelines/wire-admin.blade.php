@@ -34,7 +34,14 @@ resource pages and its own chrome simply does not install this (ADR 0028).
   changes.
 - **It reads seams, holds no state**: `Workspace::navigation($zone, $linkedOnly)` for the menu,
   `ResolvesPageUrls` for every link (null until a package owns routing), `Zone::current()` /
-  `Zone::currentKey()` for the zone and the active entry.
+  `Zone::currentKey()` for the zone and the active entry, and `ActiveNavigation` for what is
+  marked — built once in the component (`Sidebar::active()`, **protected**: a public method on a
+  Blade component is handed to its view as an `InvokableComponentVariable` under the same name and
+  would shadow the object) and passed to every row, never worked out in the Blade.
+- **`aria-current` is `page` for the page, `true` for the branch.** A resource row stays active on
+  that resource's edit screen without claiming to *be* it — the record's tabs above the form say
+  that. And a row with children renders as a disclosure `<button>`, which never says `page`: the
+  child that links there does.
 - **Zone and active key are read at page render, in the component constructor** — never re-derived per render.
   Inside a Livewire update `Route::currentRouteName()` is `livewire.update`, so a re-derived answer is right
   once and null forever after, while rendering perfectly (ADR 0027).

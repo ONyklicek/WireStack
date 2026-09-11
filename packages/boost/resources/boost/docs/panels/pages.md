@@ -281,6 +281,86 @@ implements the contract itself and returns whatever trail it has. A page inside
 nothing says so by not implementing it, rather than by returning an empty array
 from a method it was forced to have.
 
+## The Record's Other Pages
+
+An edit screen and the read-only one beside it are two pages of the same record,
+and until a page says so the only way between them is back through the list. The
+menu cannot help — it knows resources, not records — and breadcrumbs lead *up*
+rather than across. So a record's pages draw themselves as a row of tabs above
+the page's own content.
+
+**Nothing is declared for it.** `pages()` is already the list, and the router
+already knows which of those take a record — it is the same question it answers
+when it builds `{record}` into the URL. A page is a tab when its URI carries one:
+
+```php
+class OrderResource implements DescribesResource, ProvidesPages
+{
+    public static function pages(): array
+    {
+        return [
+            'index'   => ListOrders::class,          // no record → not a tab
+            'create'  => CreateOrder::class,         // no record → not a tab
+            'view'    => ViewOrder::class,           // [tl! focus:start]
+            'edit'    => EditOrder::class,
+            'history' => RoutePage::make(OrderHistory::class)
+                ->uri('{record}/history')            // this is what makes it a tab
+                ->icon('outline:clock')
+                ->permission('orders.audit')
+                ->sort(30),                          // [tl! focus:end]
+        ];
+    }
+}
+```
+
+A page that named itself nothing is named by the framework: `view` and `edit`
+carry a translation in every shipped locale, and anything else is its own key,
+humanised — `history` reads as *History*. `RoutePage::label()` overrides both.
+
+```php
+$page->subNavigation();
+// ['view' => NavigationItem('View'), 'edit' => NavigationItem('Edit'), 'history' => NavigationItem('History')]
+```
+
+The tabs are [`NavigationItem`s](navigation.md#navigationitem-api), like the
+crumbs above them, because "a label, an icon and a URL" has one owner here.
+
+**Three rules decide what is drawn**, and all three are about not drawing
+something misleading:
+
+- A page this reader may not open is **left out** — the same ability the route is
+  guarded by, asked before the link is drawn. A tab that lands on a 403 is worse
+  than no tab.
+- A page whose URL cannot be built is **left out**. Unlike a menu row, which
+  honestly says "registered, not routed here", a tab that goes nowhere is just
+  broken. This is also what empties the bar for a record that is not Eloquent:
+  there is no key to put in the URL.
+- **Fewer than two tabs is none.** A single tab is the page's own heading written
+  a second time — the rule the breadcrumb trail already follows for a trail of
+  one.
+
+The current tab is marked from the **page kind** — `Zone::currentPage()`, read off
+the route name — rather than by comparing the tab's URL with the current one,
+where a trailing slash or a query string decides whether a tab lights up. Like
+the zone beside it, it is read once at mount and kept in the public
+`$currentPage`, because during a Livewire update the route name is
+`livewire.update` ([ADR 0027](routing.md#zones)) and an edit page re-renders on
+every keystroke.
+
+The view and edit pages compose this already. A page of your own joins the row by
+composing the same trait:
+
+```php
+class OrderHistory extends Component
+{
+    use BelongsToResource;
+    use LinksToRecordPages;
+    use ResolvesOneRecord;
+
+    protected static ?string $resource = OrderResource::class;
+}
+```
+
 ## Reaching Its Other Pages
 
 A page links to its siblings with `pageUrl()`, and asks what they require with
@@ -339,6 +419,8 @@ Every resource page composes `BelongsToResource`, which is the half that is abou
 | `public ?string $breadcrumbZone` | `string\|null` | The zone read at mount and carried across the round trip |
 | `getTitle(): ?string` | `string\|null` | The heading; the trail's last crumb is it |
 | `breadcrumbs(): array` | `array<int, NavigationItem>` | Where the page sits — two crumbs at most |
+| `public ?string $currentPage` | `string\|null` | The kind of page this is — `view`, `edit`, or one the resource named — read at mount and carried |
+| `subNavigation(mixed $record = null): array` | `array<string, NavigationItem>` | The record's other pages, keyed by page kind. Empty below two |
 | `static resourceClass(): ?string` | `class-string\|null` | The declared resource, for anything asking from outside |
 | `hookKey(): ?string` | `string\|null` | The registered key a plugin hook addresses this page's surfaces by |
 | `pageUrl(string $page, mixed $record = null): ?string` | `string\|null` | *(protected)* Where one of this resource's pages is, in this page's zone |

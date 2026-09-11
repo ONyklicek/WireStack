@@ -69,6 +69,26 @@ final class Zone
     }
 
     /**
+     * The kind of page being rendered — `index`, `create`, `view`, `edit`, or a
+     * name the resource gave a page of its own — or null when the current route
+     * is not a page's.
+     *
+     * The last segment of the same name the two readers above split, and it was
+     * being thrown away: the pattern matched it to anchor the shape and did not
+     * name it. What needs it is a record's sub-navigation, which has to mark the
+     * tab you are standing on — and the alternative is comparing the tab's URL
+     * with the current one, which is a string question ({@see rtrim}, trailing
+     * slashes, a query string) standing in for one the route name answers
+     * exactly.
+     *
+     * Same warning as {@see current()}: read it while the **page** renders.
+     */
+    public static function currentPage(): ?string
+    {
+        return self::pageOf(Route::currentRouteName());
+    }
+
+    /**
      * The zone a route name belongs to, or null for an unzoned or non-wire name.
      *
      * Separate from {@see current()} so the rule is testable without a request,
@@ -93,6 +113,20 @@ final class Zone
     }
 
     /**
+     * The page kind inside a route name, or null for a name that is not a page's.
+     *
+     * Separate from {@see currentPage()} for the reason {@see keyOf()} is
+     * separate from {@see currentKey()}: the rule is testable without a request,
+     * and a caller holding a route name can ask directly.
+     */
+    public static function pageOf(?string $routeName): ?string
+    {
+        $page = self::parse($routeName)['page'] ?? '';
+
+        return $page === '' ? null : $page;
+    }
+
+    /**
      * The one place the page-route name shape is written.
      *
      * Anchored rather than searched for, because the obvious
@@ -100,7 +134,7 @@ final class Zone
      * contains `wire.`**. Both readers below get their answer from this match,
      * so neither can drift from the other.
      *
-     * @return array{zone?: string, key?: string}
+     * @return array{zone?: string, key?: string, page?: string}
      */
     private static function parse(?string $routeName): array
     {
@@ -108,11 +142,11 @@ final class Zone
             return [];
         }
 
-        if (preg_match('/^(?<zone>.+\.)?wire\.(?<key>[^.]+)\.[^.]+$/', $routeName, $m) !== 1) {
+        if (preg_match('/^(?<zone>.+\.)?wire\.(?<key>[^.]+)\.(?<page>[^.]+)$/', $routeName, $m) !== 1) {
             return [];
         }
 
-        return ['zone' => $m['zone'], 'key' => $m['key']];
+        return ['zone' => $m['zone'], 'key' => $m['key'], 'page' => $m['page']];
     }
 
     /**

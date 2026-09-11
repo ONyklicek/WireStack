@@ -30,10 +30,21 @@
 @php($url = $item->getUrl())
 @php($isChild = $child ?? false)
 @php($children = $isChild ? [] : $item->getChildren())
-@php($isActive = isset($itemKey) && $itemKey === $activeKey)
-@php($isCurrent = $url !== null && rtrim($url, '/') === rtrim(url()->current(), '/'))
-@php($hasActiveChild = collect($children)->contains(fn ($c) => $c->getUrl() !== null && rtrim((string) $c->getUrl(), '/') === rtrim(url()->current(), '/')))
-@php($isActive = $isActive || ($isCurrent && ! isset($itemKey)))
+{{-- Where the reader is, asked of the one object that knows — not worked out
+     here. This used to be three rules in four `@php` lines: a registered entry
+     matched the current key, a hand-written one matched the current URL exactly,
+     and a parent matched by scanning its children with a third copy of the
+     second rule. Three answers to one question, in a template, about to be
+     copied into a second menu shape. `ActiveNavigation` owns all three now, and
+     the entry that knows better says so with `activeWhen()`. --}}
+@php($isActive = $active->isActive($item, $itemKey ?? null))
+@php($hasActiveChild = ! $isChild && $active->hasActiveChild($item))
+@php($ariaCurrent = $active->ariaCurrent($item, $itemKey ?? null))
+{{-- A row with children is a disclosure button, not a link. `page` on it would
+     be a claim that pressing it takes you where you already are — and the row
+     that *does* take you there is usually the first child, which says `page`
+     itself. So the branch says only that it is the branch you are in. --}}
+@php($ariaCurrent = $children && $ariaCurrent === 'page' ? 'true' : $ariaCurrent)
 {{-- Resolved once, for both places a badge is drawn — the pill beside the label,
      and the dot on the icon when there is no label to sit beside. Written twice
      it drifted the moment the dot fell back to `primary` and the pill to `gray`:
@@ -131,7 +142,11 @@
             data-testid="admin-nav-child" @wireEl('admin-nav-child')
         @endif
         @if ($isActive || $hasActiveChild) data-active="true" @endif
-        @if ($isActive) aria-current="page" @endif
+        {{-- `page` only when this row *is* the page. A resource row stays active
+             on that resource's edit screen, and telling a screen reader that the
+             menu row is the current page — while the sub-navigation above the
+             form says the same about the tab — is two answers to one question. --}}
+        @if ($ariaCurrent) aria-current="{{ $ariaCurrent }}" @endif
         @if (! $isChild) data-rail-row @endif
         @class([
             'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition max-sm:py-2.5',
@@ -296,7 +311,7 @@
                                     @include('wire-admin::partials.nav-item', [
                                         'item' => $sub,
                                         'itemKey' => null,
-                                        'activeKey' => $activeKey,
+                                        'active' => $active,
                                         'child' => true,
                                     ])
                                 @endforeach
@@ -342,7 +357,7 @@
                 @include('wire-admin::partials.nav-item', [
                     'item' => $sub,
                     'itemKey' => null,
-                    'activeKey' => $activeKey,
+                    'active' => $active,
                     'child' => true,
                 ])
             @endforeach

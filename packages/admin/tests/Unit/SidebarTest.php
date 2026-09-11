@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use NyonCode\WireAdmin\View\Sidebar;
+use NyonCode\WireCore\Core\Plugin\Hooks\NavigationBuildingPayload;
+use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
@@ -13,6 +15,7 @@ use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\View\Badge;
 
@@ -107,7 +110,13 @@ final class SbUrls implements ResolvesPageUrls
 {
     public function urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
     {
-        return $key === 'sb-invoices' ? '/admin/sb-invoices' : null;
+        return match ($key) {
+            'sb-invoices' => '/admin/sb-invoices',
+            // Routed *and* carrying a submenu, which is the pair the disclosure
+            // rule needs: a row with children renders as a button.
+            'sb-catalogues' => '/admin/sb-catalogues',
+            default => null,
+        };
     }
 }
 
@@ -177,6 +186,70 @@ it('marks the entry whose page is being rendered', function () {
 
     expect($html)->toContain('data-resource="sb-invoices"')
         ->and($html)->toMatch('/data-resource="sb-invoices"[^>]*data-active="true"/');
+});
+
+it('stays marked on a page of that resource without claiming to be it', function () {
+    // The row is where you are *inside*, not the page you are on — and once the
+    // record's own tabs render above the form, saying `aria-current="page"` in
+    // both places is two answers to one question. `page` is reserved for the
+    // entry whose URL is the URL being rendered.
+    Route::get('/admin/sb-invoices', fn () => sbRender())->name('wire.sb-invoices.index');
+    Route::get('/admin/sb-invoices/{record}/edit', fn () => sbRender())->name('wire.sb-invoices.edit');
+
+    expect($this->get('/admin/sb-invoices')->getContent())
+        ->toMatch('/data-resource="sb-invoices"[^>]*aria-current="page"/');
+
+    expect($this->get('/admin/sb-invoices/7/edit')->getContent())
+        ->toMatch('/data-resource="sb-invoices"[^>]*data-active="true"/')
+        ->toMatch('/data-resource="sb-invoices"[^>]*aria-current="true"/')
+        ->not->toContain('aria-current="page"');
+});
+
+it('does not call a disclosure button the current page', function () {
+    // The row is a `<button>` — it opens the submenu rather than going anywhere,
+    // and the row that does go there is the child underneath it. `page` on the
+    // button would be a claim that pressing it lands you where you already are.
+    app(ResourceRegistry::class)->register(SbCatalogueResource::class);
+
+    Route::get('/admin/sb-catalogues', fn () => sbRender())->name('wire.sb-catalogues.index');
+
+    $html = $this->get('/admin/sb-catalogues')->getContent();
+
+    expect($html)->toMatch('/data-resource="sb-catalogues"[^>]*data-active="true"/')
+        ->toMatch('/data-resource="sb-catalogues"[^>]*aria-current="true"/')
+        ->not->toContain('aria-current="page"');
+});
+
+it('lets an entry say for itself which pages it belongs to', function () {
+    // The one thing the conventions cannot answer: a hand-written entry points
+    // at a page, and its section has pages underneath it that the entry has no
+    // way to name. `activeWhen()` is how it says so — matched against the path
+    // or the route name, whichever the author was thinking in.
+    app()->forgetInstance(ResourceRegistry::class);
+    app(ResourceRegistry::class)->register(SbInvoiceResource::class);
+
+    app(NavigationGroups::class)->register(NavigationGroup::make('billing')->label('Billing'));
+
+    Route::get('/admin/settings/general/edit', fn () => sbRender(
+        '<x-wire-admin::sidebar />',
+    ))->name('settings.general.edit');
+
+    // The entry arrives through the hook every menu is built through, which is
+    // also the honest way an application adds one that is not a resource.
+    app(PluginManager::class)->hook(
+        Hook::NavigationBuilding,
+        function (NavigationBuildingPayload $payload) {
+            $payload->items['settings'] = NavigationItem::make('Settings')
+                ->group('billing')
+                ->url('/admin/settings/general')
+                ->activeWhen('admin/settings/*');
+
+            return $payload;
+        },
+    );
+
+    expect($this->get('/admin/settings/general/edit')->getContent())
+        ->toMatch('/data-resource="settings"[^>]*data-active="true"/');
 });
 
 it('says so when nothing is registered at all', function () {

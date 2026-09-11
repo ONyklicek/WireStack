@@ -231,6 +231,54 @@ sidebar](../admin/sidebar.md), which draws the same three objects, marks the
 active entry from the route being rendered, and holds no state of its own. What
 is above is for an application rendering its own frame.
 
+## Which Entry Is Active
+
+One reading of the request, built once while the page renders and handed to every
+row: `ActiveNavigation`. Three rules decide, first answer wins.
+
+1. **What the entry declared.** `activeWhen()`, below. Nothing else is consulted.
+2. **Its registered key**, against the key of the route being rendered. This is
+   what keeps the *Orders* row lit on `wire.orders.edit`: the menu knows the
+   resource, not which of its pages you are on.
+3. **Its URL**, matched exactly — a trailing slash and a relative URL are
+   normalised away, a query string is not. Two entries over one list, an *All*
+   and an *Archived*, are two entries.
+
+`aria-current` follows the same reading and splits it in two: `page` for the entry
+whose URL *is* the URL being rendered, and `true` for the branch you are inside.
+That is not pedantry — a resource row stays active on that resource's edit screen,
+and [the record's tabs](pages.md#the-records-other-pages) above the form are
+already saying "this is the page you are on".
+
+### When the convention is wrong
+
+Rule 3 is deliberately **not** a prefix match. A prefix rule would light
+`/settings` on `/settings/general/edit` — which anyone would want — and would
+equally light a *Home* entry pointing at the shell's own mount path on every page
+under it, for ever, because nothing here can tell a section from a root. A row
+that is always highlighted is a louder defect than a row that is not highlighted
+when it could be.
+
+So the entry that knows says so, and gets exactly what it meant:
+
+```php
+NavigationItem::make('Settings')
+    ->url(route('settings.general'))
+    ->activeWhen('settings/*');          // and every page under it
+```
+
+A pattern is matched against the current **path** and the current **route name**,
+so both readings of the same intent work:
+
+```php
+->activeWhen('admin.settings.*');                                  // a route-name pattern
+->activeWhen(['orders/*', 'invoices/*']);                          // several
+->activeWhen(fn (ActiveNavigation $active): bool => $active->page === 'edit');
+```
+
+Declaring it **replaces** the convention rather than adding to it, which is what
+makes "never active here" possible to write at all.
+
 ## Changing A Menu You Did Not Register
 
 Installing a [module](modules.md) puts its entries in the menu, and an application
@@ -269,6 +317,7 @@ scope, so a scoped callback sits it out.
 | `badge(mixed $badge, string\|Closure\|null $color = null)` | `self` | A count or short string beside the label, with an optional colour |
 | `url(string\|Closure\|null $url)` | `self` | An explicit destination, which always beats the routed one |
 | `children(array\|Closure $children)` | `self` | Entries under this one — one level, filtered and sorted on read |
+| `activeWhen(Closure\|array\|string\|null $activeWhen)` | `self` | When this entry counts as the page you are on, when the convention is wrong: path or route-name patterns, or a Closure taking `ActiveNavigation`. **Replaces** the convention |
 | `visible(bool\|Closure $condition = true)` / `hidden(bool\|Closure $condition = true)` | `self` | Whether the entry is in the menu at all |
 | `getLabel(): ?string` | `string\|null` | The resolved text, or `null` when nothing named it |
 | `hasVisibleLabel(): bool` / `isLabelHidden(): bool` | `bool` | Whether to draw the text |
@@ -280,7 +329,21 @@ scope, so a scoped callback sits it out.
 | `getUrl(): ?string` | `string\|null` | Explicit URL, else the routed one, else `null` |
 | `getChildren(): array` | `array<int, NavigationItem>` | The visible children, in `sort()` order |
 | `hasChildren(): bool` | `bool` | Whether a row is a disclosure rather than a plain link |
+| `isActiveWhen(ActiveNavigation $active): ?bool` | `bool\|null` | The entry's own answer, or `null` when it declared none — three-valued, so a declared “no” cannot fall through to the conventions |
 | `isVisible(): bool` / `isHidden(): bool` | `bool` | The resolved visibility |
+
+## ActiveNavigation API
+
+| Method | Returns | Purpose |
+| --- | --- | --- |
+| `ActiveNavigation::current()` | `self` | The reading for the request being rendered — key, page kind, URL, path and route name. A **full page render** only: inside a Livewire update the route name is `livewire.update` |
+| `withKey(?string $key)` | `self` | The same reading with the key a host resolved for itself, which is what `<x-wire-admin::sidebar :active-key="…">` passes |
+| `isActive(NavigationItem $item, ?string $key = null): bool` | `bool` | Whether this entry is where you are, or where you are inside of |
+| `isExactly(NavigationItem $item): bool` | `bool` | Whether this entry *is* the page being rendered |
+| `hasActiveChild(NavigationItem $item): bool` | `bool` | Whether anything under it is |
+| `ariaCurrent(NavigationItem $item, ?string $key = null): ?string` | `string\|null` | `'page'`, `'true'`, or `null` |
+| `matchesPatterns(array $patterns): bool` | `bool` | Whether the request matches any pattern, by path or by route name |
+| `public ?string $key` / `$page` / `$url` / `$path` / `$routeName` | `string\|null` | The reading itself |
 
 ## NavigationGroup API
 

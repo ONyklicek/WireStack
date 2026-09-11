@@ -42,6 +42,23 @@ it('answers null for anything that is not a wire page route', function () {
         ->and(Zone::of('wire.invoices'))->toBeNull();
 });
 
+it('reads the page kind out of a route name', function () {
+    // The last segment, which the pattern matched to anchor the shape and then
+    // threw away. A record's sub-navigation marks the tab you are standing on
+    // with it — the alternative being a comparison of URL strings, which is a
+    // question about trailing slashes standing in for one this answers exactly.
+    expect(Zone::pageOf('wire.invoices.index'))->toBe('index')
+        ->and(Zone::pageOf('business.wire.invoices.edit'))->toBe('edit')
+        ->and(Zone::pageOf('ops.eu.wire.batches.history'))->toBe('history');
+});
+
+it('answers null for a page kind on anything that is not a page route', function () {
+    expect(Zone::pageOf(null))->toBeNull()
+        ->and(Zone::pageOf('livewire.update'))->toBeNull()
+        ->and(Zone::pageOf('dashboard'))->toBeNull()
+        ->and(Zone::pageOf('wire.invoices'))->toBeNull();
+});
+
 it('normalises a zone to a route-name prefix', function () {
     expect(Zone::prefix('business'))->toBe('business.')
         ->and(Zone::prefix('business.'))->toBe('business.')
@@ -54,16 +71,22 @@ class ZnProbe extends Component
 {
     public ?string $mounted = null;
 
+    public ?string $mountedPage = null;
+
     public ?string $asked = null;
+
+    public ?string $askedPage = null;
 
     public function mount(): void
     {
         $this->mounted = Zone::current();
+        $this->mountedPage = Zone::currentPage();
     }
 
     public function poke(): void
     {
         $this->asked = Zone::current() ?? 'NULL';
+        $this->askedPage = Zone::currentPage() ?? 'NULL';
     }
 
     public function render(): string
@@ -84,5 +107,9 @@ it('is a full-page-render call, and says null rather than something wrong later'
 
     $component = Livewire::test(ZnProbe::class)->call('poke');
 
-    expect($component->get('asked'))->toBe('NULL');
+    expect($component->get('asked'))->toBe('NULL')
+        // The page kind is read off the same name and carries the same warning:
+        // a sub-navigation that re-derived it per render would mark the current
+        // tab on the first paint and nothing afterwards.
+        ->and($component->get('askedPage'))->toBe('NULL');
 });

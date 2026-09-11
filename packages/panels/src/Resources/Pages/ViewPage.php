@@ -13,6 +13,7 @@ use NyonCode\WireCore\Infolists\Contracts\ProvidesResourceInfolist;
 use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
 use NyonCode\WirePanels\Resources\Concerns\EmbedsRelationManagers;
+use NyonCode\WirePanels\Resources\Concerns\LinksToRecordPages;
 use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
 
 /**
@@ -37,6 +38,7 @@ abstract class ViewPage extends Component implements IdentifiesHookTarget, Provi
 {
     use BelongsToResource;
     use EmbedsRelationManagers;
+    use LinksToRecordPages;
     use ResolvesOneRecord;
 
     /**
@@ -79,14 +81,20 @@ abstract class ViewPage extends Component implements IdentifiesHookTarget, Provi
 
     public function render(): View
     {
+        // Resolved once and passed on. Every tab of the sub-navigation needs the
+        // record's key to build its URL, and `resolveRecord()` is a query each
+        // time it is asked — a page that asked per tab would run three.
+        $record = $this->nativeRecord();
+
         return view('wire-panels::pages.view-page', [
             'title' => $this->getTitle(),
             'breadcrumbs' => $this->breadcrumbs(),
+            'subNavigation' => $this->subNavigation($record),
             'relationManagers' => $this->relationManagers(),
             // Not `record`: that is the public property holding the *key*, and
             // Livewire injects public properties into the view scope, where it
             // would shadow this.
-            'ownerRecord' => $this->nativeRecord(),
+            'ownerRecord' => $record,
             'infolist' => $this->infolist(),
         ]);
     }

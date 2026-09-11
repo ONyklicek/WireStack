@@ -6,6 +6,7 @@ namespace NyonCode\WireAdmin\View;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
+use NyonCode\WireCore\Core\Resources\Navigation\ActiveNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Workspace;
 use NyonCode\WireCore\Foundation\Routing\Zone;
@@ -57,10 +58,35 @@ class Sidebar extends Component
         return app(Workspace::class)->navigation($this->zone, $this->linkedOnly);
     }
 
+    /**
+     * Where the reader is, read once for the whole menu.
+     *
+     * Once, and handed down — not asked per row. It reads the route being
+     * rendered, which is the same reason the zone above it is read here: inside
+     * a Livewire update the answer is null, and a row that asked for itself
+     * would be right on the first paint and wrong afterwards (ADR 0027).
+     *
+     * `withKey()` rather than a second reading, so a host that passed an
+     * explicit `activeKey` still gets the request's URL for the other rules.
+     *
+     * **Protected, and that is not tidiness.** A public method on a class
+     * component is handed to its view as an `InvokableComponentVariable` under
+     * the same name, applied *after* the data `render()` passes — so a public
+     * `active()` would shadow the object below with a lazy wrapper that has none
+     * of its methods, and the first `$active->isActive(…)` in the menu would
+     * fatal. `Core\Resources\View\Breadcrumbs` has the same note for the same
+     * reason, found the same way.
+     */
+    protected function active(): ActiveNavigation
+    {
+        return ActiveNavigation::current()->withKey($this->activeKey);
+    }
+
     public function render(): View
     {
         return view('wire-admin::sidebar', [
             'groups' => $this->groups(),
+            'active' => $this->active(),
         ]);
     }
 }

@@ -66,6 +66,17 @@ either being repeated. `{record}` is a **key**, not a bound model: the pages res
 their own record, which is what keeps a soft-delete scope, a tenant guard or a
 non-Eloquent source the page's decision rather than the router's.
 
+A page kind the router does not know sits at its own name, and may say otherwise
+with `uri()`. That URI is also what decides whether the page is about **one
+record**: a `{record}` in it makes the route take one — and makes the page a tab
+in [the record's sub-navigation](pages.md#the-records-other-pages), whatever it
+is called.
+
+```php
+'history' => RoutePage::make(OrderHistory::class)->uri('{record}/history'),   // a record page
+'archive' => RoutePage::make(ArchivedOrders::class),                          // a list page
+```
+
 ## Authorization, middleware and domains
 
 `RoutePage::permission()` lands on the route as Laravel's own `can:` middleware.
@@ -281,9 +292,19 @@ ResourceRoutes::all(array $only = [], array $except = []): array   // every decl
 ResourceRoutes::for(string $class): array                          // one, or throws
 ResourceRoutes::urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
 ResourceRoutes::urls(string $page = 'index', ?string $zone = null): array
+ResourceRoutes::uriFor(string $name, string|RoutePage $page): string       // the segment it sits at
+ResourceRoutes::takesRecord(string $name, string|RoutePage $page): bool    // read off that URI, not off the kind
+```
 
+And the two readings of a page route's name, which every caller of either gets
+from one anchored pattern — `livewire.update` contains `wire.`, so a substring
+search reports a zone on exactly the request that has none:
+
+```php
 Zone::current(): ?string          // the zone of the page being rendered — full page renders only
 Zone::of(?string $routeName): ?string
+Zone::currentPage(): ?string      // its page kind — `index`, `view`, `edit`, or the resource's own
+Zone::pageOf(?string $routeName): ?string
 Zone::prefix(?string $zone): string
 ```
 

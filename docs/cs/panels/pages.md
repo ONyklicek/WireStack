@@ -279,6 +279,83 @@ implementuje kontrakt sama a vrátí, jakou stopu má. Stránka, která není uv
 ničeho, to řekne tím, že ho neimplementuje, ne tím, že vrátí prázdné pole z
 metody, kterou mít musela.
 
+## Ostatní stránky záznamu
+
+Editace a detail vedle ní jsou dvě stránky téhož záznamu — a dokud to stránka
+neřekne, vede mezi nimi jediná cesta: zpátky přes seznam. Menu nepomůže, zná
+resources, ne záznamy, a drobečky vedou *nahoru*, ne do strany. Stránky jednoho
+záznamu se proto vykreslí jako řada záložek nad vlastním obsahem stránky.
+
+**Nic se pro to nedeklaruje.** `pages()` už ten seznam je a router už ví, které
+z nich berou záznam — je to tatáž otázka, kterou odpovídá, když staví `{record}`
+do URL. Stránka je záložka, když má záznam ve své URI:
+
+```php
+class OrderResource implements DescribesResource, ProvidesPages
+{
+    public static function pages(): array
+    {
+        return [
+            'index'   => ListOrders::class,          // bez záznamu → není záložka
+            'create'  => CreateOrder::class,         // bez záznamu → není záložka
+            'view'    => ViewOrder::class,           // [tl! focus:start]
+            'edit'    => EditOrder::class,
+            'history' => RoutePage::make(OrderHistory::class)
+                ->uri('{record}/history')            // tohle z ní dělá záložku
+                ->icon('outline:clock')
+                ->permission('orders.audit')
+                ->sort(30),                          // [tl! focus:end]
+        ];
+    }
+}
+```
+
+Stránku, která se nijak nepojmenovala, pojmenuje framework: `view` a `edit` mají
+překlad v každém dodávaném jazyce, cokoli dalšího je vlastní klíč, čitelně
+přepsaný — `history` se zobrazí jako *History*. `RoutePage::label()` obojí přebíjí.
+
+```php
+$page->subNavigation();
+// ['view' => NavigationItem('Detail'), 'edit' => NavigationItem('Upravit'), 'history' => NavigationItem('History')]
+```
+
+Záložky jsou [`NavigationItem`y](navigation.md#navigationitem-api), stejně jako
+drobečky nad nimi — „popisek, ikona a URL" tu má jednoho vlastníka.
+
+**Co se vykreslí, rozhodují tři pravidla**, a všechna tři jsou o tom nevykreslit
+něco zavádějícího:
+
+- Stránka, kterou tenhle člověk nesmí otevřít, se **vynechá** — tatáž
+  pravomoc, kterou je hlídaná routa, ptaná dřív, než se odkaz nakreslí. Záložka,
+  která spadne na 403, je horší než žádná.
+- Stránka, jejíž URL nejde postavit, se **vynechá**. Na rozdíl od řádku v menu,
+  který poctivě říká „registrováno, tady nerouteno", je záložka, co nikam nevede,
+  prostě rozbitá. Totéž vyprázdní pruh pro záznam, který není Eloquent: není co
+  dát do URL místo klíče.
+- **Míň než dvě záložky je žádná.** Jedna záložka je nadpis stránky napsaný
+  podruhé — pravidlo, které drobečky pro stopu délky jedna už dodržují.
+
+Aktuální záložka se pozná podle **druhu stránky** — `Zone::currentPage()`, čtený
+ze jména routy — ne porovnáním URL záložky s aktuální, kde o rozsvícení rozhoduje
+lomítko na konci nebo query string. Stejně jako zóna vedle něj se čte jednou při
+mountu a drží se ve veřejném `$currentPage`, protože během Livewire updatu je
+jméno routy `livewire.update` ([ADR 0027](routing.md#zony)) a editační stránka se
+překresluje při každém stisku klávesy.
+
+Stránky detailu a editace to skládají samy. Vlastní stránka se do řady přidá tím,
+že složí tentýž trait:
+
+```php
+class OrderHistory extends Component
+{
+    use BelongsToResource;
+    use LinksToRecordPages;
+    use ResolvesOneRecord;
+
+    protected static ?string $resource = OrderResource::class;
+}
+```
+
 ## Cesta na její další stránky
 
 Na sourozence stránka odkazuje přes `pageUrl()` a na to, co vyžadují, se ptá přes
@@ -334,6 +411,8 @@ Každá resourcová stránka skládá `BelongsToResource` — tu polovinu, kter�
 | `public ?string $breadcrumbZone` | `string\|null` | Zóna přečtená při mountu a nesená přes round trip |
 | `getTitle(): ?string` | `string\|null` | Nadpis; poslední drobek stopy je on |
 | `breadcrumbs(): array` | `array<int, NavigationItem>` | Kde stránka sedí — nejvýš dva drobky |
+| `public ?string $currentPage` | `string\|null` | Druh téhle stránky — `view`, `edit`, nebo ten, který resource pojmenoval — čtený při mountu a nesený dál |
+| `subNavigation(mixed $record = null): array` | `array<string, NavigationItem>` | Ostatní stránky záznamu, klíčované druhem stránky. Pod dvěma prázdné |
 | `static resourceClass(): ?string` | `class-string\|null` | Deklarovaný resource, pro cokoli, co se ptá zvenčí |
 | `hookKey(): ?string` | `string\|null` | Registrovaný klíč, kterým hook pluginu adresuje povrchy téhle stránky |
 | `pageUrl(string $page, mixed $record = null): ?string` | `string\|null` | *(protected)* Kde je jedna ze stránek tohohle resource, v zóně téhle stránky |

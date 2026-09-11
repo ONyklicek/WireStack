@@ -155,7 +155,7 @@
                         @include('wire-admin::partials.nav-item', [
                             'item' => $item,
                             'itemKey' => $key,
-                            'activeKey' => $activeKey,
+                            'active' => $active,
                         ])
                     @endforeach
                 </ul>

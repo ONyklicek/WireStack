@@ -22,7 +22,9 @@ use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
  * because nothing renders it beside the others.
  *
  * What it adds is only what a *menu* needs and a component does not: which group
- * it sits in, where it sorts within that group, and an optional badge.
+ * it sits in, where it sorts within that group, an optional badge, and — when
+ * the convention is wrong about it — when the entry counts as the page you are
+ * on ({@see activeWhen()}).
  *
  *   NavigationItem::make('Orders')
  *       ->icon('outline:shopping-cart')
@@ -60,6 +62,9 @@ final class NavigationItem
     protected mixed $badge = null;
 
     protected string|Closure|null $badgeColor = null;
+
+    /** @var Closure|array<int, string>|null */
+    protected Closure|array|null $activeWhen = null;
 
     /** @var array<int, self>|Closure */
     protected array|Closure $children = [];
@@ -164,6 +169,62 @@ final class NavigationItem
         $value = $this->evaluate($this->badgeColor);
 
         return is_string($value) ? $value : null;
+    }
+
+    /**
+     * When this entry counts as the one you are on, if the convention is wrong.
+     *
+     * Nothing needs it in the common case. A registered entry is active on every
+     * page of its resource — the key says so — and a hand-written entry is
+     * active on the URL it points at. What neither covers is the entry that
+     * points at a *section*:
+     *
+     *   NavigationItem::make('Settings')
+     *       ->url(route('settings.general'))
+     *       ->activeWhen('settings/*');       // and on every page under it
+     *
+     * A pattern is matched against the current path **and** the current route
+     * name, so `settings/*` and `admin.settings.*` both mean what they look
+     * like. A Closure receives the {@see ActiveNavigation} reading and decides:
+     *
+     *   ->activeWhen(fn (ActiveNavigation $active): bool => $active->page === 'edit')
+     *
+     * Declaring this **replaces** the convention rather than adding to it. That
+     * is the point: the entry that says when it is active is the entry whose
+     * author knows something this framework does not, and a rule that still
+     * ored in the default would make "never active here" impossible to write.
+     *
+     * @param  Closure|array<int, string>|string|null  $activeWhen
+     */
+    public function activeWhen(Closure|array|string|null $activeWhen): self
+    {
+        $this->activeWhen = is_string($activeWhen) ? [$activeWhen] : $activeWhen;
+
+        return $this;
+    }
+
+    /**
+     * The entry's own answer, or null when it declared none.
+     *
+     * Three-valued on purpose. `false` is "I am not active, and I have said so",
+     * which must not fall through to the conventions — {@see ActiveNavigation}
+     * branches on the difference, and a bool return would have collapsed it.
+     *
+     * The Closure is resolved here rather than in the reader because resolving
+     * closures is this class's job ({@see EvaluatesClosures}); what a *request*
+     * matches is the reader's, and the patterns are handed straight to it.
+     */
+    public function isActiveWhen(ActiveNavigation $active): ?bool
+    {
+        if ($this->activeWhen === null) {
+            return null;
+        }
+
+        if ($this->activeWhen instanceof Closure) {
+            return (bool) $this->evaluate($this->activeWhen, ['active' => $active]);
+        }
+
+        return $active->matchesPatterns($this->activeWhen);
     }
 
     /**

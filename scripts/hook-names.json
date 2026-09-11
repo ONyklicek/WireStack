@@ -173,6 +173,8 @@
         "notification-tab-unread",
         "notification-unread-dot",
         "notification-view-all",
+        "panels-sub-nav",
+        "panels-sub-nav-item",
         "polling-toggle",
         "profile-delete-account",
         "profile-passkeys",

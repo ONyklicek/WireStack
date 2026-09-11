@@ -32,3 +32,9 @@
         @wireRenderHook('panels.page.header.end', ['title' => $title, 'breadcrumbs' => $breadcrumbs ?? []])
     </div>
 @endif
+
+{{-- Outside the block above, deliberately: the heading renders only when there
+     is a title or a trail, and a record's tabs do not depend on either. The
+     partial is inert on the pages that pass none — the list, the create screen,
+     the dashboard — so every page can include it without asking. --}}
+@include('wire-panels::pages.partials.sub-nav')

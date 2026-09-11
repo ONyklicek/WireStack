@@ -226,6 +226,53 @@ aplikace. Ptá se, kam je klíč routovaný; nerozhoduje o tom.
 kreslí tytéž tři objekty, aktivní položku pozná z právě vykreslované routy a žádný
 vlastní stav nedrží. To výše je pro aplikaci, která si kreslí vlastní rám.
 
+## Která položka je aktivní
+
+Jedno čtení požadavku, postavené jednou při renderu stránky a předané každému
+řádku: `ActiveNavigation`. Rozhodují tři pravidla, vyhrává první odpověď.
+
+1. **Co položka deklarovala.** `activeWhen()` níž. Nic dalšího se neptá.
+2. **Její registrovaný klíč**, proti klíči vykreslované routy. Tohle drží řádek
+   *Objednávky* rozsvícený i na `wire.orders.edit`: menu zná resource, ne to,
+   na které z jeho stránek stojíte.
+3. **Její URL**, na přesnou shodu — lomítko na konci a relativní URL se
+   normalizují pryč, query string ne. Dvě položky nad jedním seznamem, *Vše* a
+   *Archiv*, jsou dvě položky.
+
+`aria-current` čte totéž a dělí to na dvě: `page` pro položku, jejíž URL *je*
+vykreslovaná URL, a `true` pro větev, uvnitř které stojíte. To není puntičkářství
+— řádek resource zůstává aktivní i na jeho editační stránce a [záložky
+záznamu](pages.md#ostatni-stranky-zaznamu) nad formulářem už říkají „tohle je
+stránka, na které jste“.
+
+### Když je konvence vedle
+
+Pravidlo 3 **není** shoda na prefix, a to vědomě. Prefixové pravidlo by
+rozsvítilo `/settings` na `/settings/general/edit` — což by chtěl každý — a
+stejně tak by rozsvítilo položku *Domů*, mířící na vlastní cestu shellu, na
+každé stránce pod ní, napořád, protože odsud nejde poznat sekci od kořene. Řádek,
+který svítí vždycky, je hlasitější vada než řádek, který nesvítí, i když by mohl.
+
+Řekne to tedy položka, která to ví, a dostane přesně to, co myslela:
+
+```php
+NavigationItem::make('Settings')
+    ->url(route('settings.general'))
+    ->activeWhen('settings/*');          // a každá stránka pod ní
+```
+
+Vzor se porovnává s aktuální **cestou** i s aktuálním **jménem routy**, takže
+fungují obě čtení téhož záměru:
+
+```php
+->activeWhen('admin.settings.*');                                  // vzor na jméno routy
+->activeWhen(['orders/*', 'invoices/*']);                          // několik
+->activeWhen(fn (ActiveNavigation $active): bool => $active->page === 'edit');
+```
+
+Deklarace konvenci **nahrazuje**, nepřidává se k ní — což je to jediné, díky
+čemu jde větu „tady nikdy aktivní“ vůbec napsat.
+
 ## Změna menu, které jste neregistrovali
 
 Instalace [modulu](modules.md) dá jeho položky do menu a aplikace je upraví přes
@@ -263,6 +310,7 @@ zúžení nenese, takže zúžený callback vynechá.
 | `badge(mixed $badge, string\|Closure\|null $color = null)` | `self` | Počet nebo krátký text vedle popisku, volitelně s barvou |
 | `url(string\|Closure\|null $url)` | `self` | Explicitní cíl, který vždycky vyhraje nad routovaným |
 | `children(array\|Closure $children)` | `self` | Položky pod touhle — jedna úroveň, filtrované a seřazené při čtení |
+| `activeWhen(Closure\|array\|string\|null $activeWhen)` | `self` | Kdy položka platí za stránku, na které stojíte, když je konvence vedle: vzory na cestu nebo jméno routy, nebo Closure s `ActiveNavigation`. Konvenci **nahrazuje** |
 | `visible(bool\|Closure $condition = true)` / `hidden(bool\|Closure $condition = true)` | `self` | Jestli je položka v menu vůbec |
 | `getLabel(): ?string` | `string\|null` | Vyhodnocený text, nebo `null`, když ji nic nepojmenovalo |
 | `hasVisibleLabel(): bool` / `isLabelHidden(): bool` | `bool` | Jestli text vykreslit |
@@ -274,7 +322,21 @@ zúžení nenese, takže zúžený callback vynechá.
 | `getUrl(): ?string` | `string\|null` | Explicitní URL, jinak routované, jinak `null` |
 | `getChildren(): array` | `array<int, NavigationItem>` | Viditelné děti v pořadí `sort()` |
 | `hasChildren(): bool` | `bool` | Jestli je řádek rozbalovátko místo obyčejného odkazu |
+| `isActiveWhen(ActiveNavigation $active): ?bool` | `bool\|null` | Vlastní odpověď položky, nebo `null`, když žádnou nedeklarovala — trojhodnotové, aby deklarované „ne“ nepropadlo do konvencí |
 | `isVisible(): bool` / `isHidden(): bool` | `bool` | Vyhodnocená viditelnost |
+
+## ActiveNavigation API
+
+| Metoda | Vrací | K čemu |
+| --- | --- | --- |
+| `ActiveNavigation::current()` | `self` | Čtení vykreslovaného požadavku — klíč, druh stránky, URL, cesta a jméno routy. Jen při **renderu celé stránky**: uvnitř Livewire updatu je jméno routy `livewire.update` |
+| `withKey(?string $key)` | `self` | Totéž čtení s klíčem, který si hostitel vyřešil sám — to předává `<x-wire-admin::sidebar :active-key="…">` |
+| `isActive(NavigationItem $item, ?string $key = null): bool` | `bool` | Jestli je položka tam, kde stojíte, nebo tím, uvnitř čeho stojíte |
+| `isExactly(NavigationItem $item): bool` | `bool` | Jestli položka *je* vykreslovaná stránka |
+| `hasActiveChild(NavigationItem $item): bool` | `bool` | Jestli je jí něco pod ní |
+| `ariaCurrent(NavigationItem $item, ?string $key = null): ?string` | `string\|null` | `'page'`, `'true'`, nebo `null` |
+| `matchesPatterns(array $patterns): bool` | `bool` | Jestli požadavek odpovídá některému vzoru, cestou nebo jménem routy |
+| `public ?string $key` / `$page` / `$url` / `$path` / `$routeName` | `string\|null` | Samotné čtení |
 
 ## NavigationGroup API
 

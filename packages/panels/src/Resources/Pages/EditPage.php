@@ -15,6 +15,7 @@ use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
 use NyonCode\WirePanels\Resources\Concerns\EmbedsRelationManagers;
+use NyonCode\WirePanels\Resources\Concerns\LinksToRecordPages;
 use NyonCode\WirePanels\Resources\Concerns\RedirectsAfterSave;
 use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
 
@@ -41,6 +42,7 @@ abstract class EditPage extends Component implements IdentifiesHookTarget, Provi
 {
     use BelongsToResource;
     use EmbedsRelationManagers;
+    use LinksToRecordPages;
     use RedirectsAfterSave;
     use ResolvesOneRecord;
     use WithForms;
@@ -135,14 +137,18 @@ abstract class EditPage extends Component implements IdentifiesHookTarget, Provi
 
     public function render(): View
     {
+        // Resolved once and passed on — see the note on the view page's render.
+        $record = $this->nativeRecord();
+
         return view('wire-panels::pages.edit-page', [
             'title' => $this->getTitle(),
             'breadcrumbs' => $this->breadcrumbs(),
+            'subNavigation' => $this->subNavigation($record),
             'relationManagers' => $this->relationManagers(),
             // Not `record`: that is the public property holding the *key*, and
             // Livewire injects public properties into the view scope, where it
             // would shadow this.
-            'ownerRecord' => $this->nativeRecord(),
+            'ownerRecord' => $record,
         ]);
     }
 }

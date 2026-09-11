@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Routing;
 
 use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
+use NyonCode\WireCore\Foundation\Concerns\HasIcon;
+use NyonCode\WireCore\Foundation\Concerns\HasLabel;
+use NyonCode\WireCore\Foundation\Concerns\HasName;
+use NyonCode\WireCore\Foundation\Concerns\HasSortOrder;
+use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 
 /**
  * One page of a registered thing, with what its route needs beyond the component.
@@ -28,9 +33,33 @@ use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
  * on the route as Laravel's own `can:` middleware, so Gate, spatie/laravel-permission
  * and permission-extended all keep working exactly as they do everywhere else.
  * Nothing here re-implements an authorization check.
+ *
+ * ## What a page is called, and in what order
+ *
+ * A route needs none of that. A **record's sub-navigation** does: it draws the
+ * pages of one record as tabs, and a tab is a word and usually an icon.
+ *
+ *   'edit' => RoutePage::make(EditInvoice::class)->label(__('Edit'))->icon('outline:pencil')->sort(20),
+ *
+ * All three come from the canonical concerns rather than from properties of this
+ * class's own — `HasLabel`, `HasIcon`, `HasSortOrder` — which is deliberately
+ * *not* what `permission()` above did. That one predates the rule and restates a
+ * word `HasAuthorization` already owns; repeating the pattern for three more
+ * would be four vocabularies in one class.
+ *
+ * Declaring none of it is the common case and stays a one-liner. A page that
+ * names no label is named by whoever reads it — the sub-navigation translates
+ * the four known kinds and falls back to a humanised key — because the array key
+ * a page is declared under (`'edit'`) is not something this object is given.
  */
 final class RoutePage
 {
+    use EvaluatesClosures;
+    use HasIcon;
+    use HasLabel;
+    use HasName;
+    use HasSortOrder;
+
     /** @var array<int, string> */
     private array $middleware = [];
 
@@ -41,7 +70,15 @@ final class RoutePage
     /**
      * @param  class-string  $component  The Livewire page component.
      */
-    private function __construct(public readonly string $component) {}
+    private function __construct(public readonly string $component)
+    {
+        // `HasName` declares the property without a default, and `HasLabel`
+        // falls back to a humanised version of it — so an unnamed page would
+        // fatal on the first `getLabel()` rather than answer "nothing declared".
+        // Empty is that answer: a page is named by the array key it is declared
+        // under, which this object never sees.
+        $this->name = '';
+    }
 
     /**
      * @param  class-string  $component

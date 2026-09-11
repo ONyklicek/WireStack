@@ -65,6 +65,16 @@ kterýkoli z nich opakoval. `{record}` je **klíč**, ne navázaný model: strá
 záznam resolvují samy, což nechává soft-delete scope, tenant guard i
 non-Eloquent zdroj rozhodnutím stránky, ne routeru.
 
+Druh stránky, který router nezná, sedí na vlastním jméně a může říct jinak přes
+`uri()`. Ta URI zároveň rozhoduje, jestli je stránka o **jednom záznamu**:
+`{record}` v ní znamená, že ho routa bere — a že je stránka záložkou v
+[sub-navigaci záznamu](pages.md#ostatni-stranky-zaznamu), ať se jmenuje jakkoli.
+
+```php
+'history' => RoutePage::make(OrderHistory::class)->uri('{record}/history'),   // stránka záznamu
+'archive' => RoutePage::make(ArchivedOrders::class),                          // stránka seznamu
+```
+
 ## Oprávnění, middleware a domény
 
 `RoutePage::permission()` dosedne na routu jako Laravelí `can:` middleware. Nic
@@ -277,9 +287,19 @@ ResourceRoutes::all(array $only = [], array $except = []): array   // každý kl
 ResourceRoutes::for(string $class): array                          // jeden, nebo vyhodí výjimku
 ResourceRoutes::urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
 ResourceRoutes::urls(string $page = 'index', ?string $zone = null): array
+ResourceRoutes::uriFor(string $name, string|RoutePage $page): string       // the segment it sits at
+ResourceRoutes::takesRecord(string $name, string|RoutePage $page): bool    // read off that URI, not off the kind
+```
 
+A dvě čtení jména routy stránky, která každý volající dostane z jednoho
+ukotveného vzoru — `livewire.update` obsahuje `wire.`, takže hledání podřetězce
+hlásí zónu přesně na tom požadavku, který žádnou nemá:
+
+```php
 Zone::current(): ?string          // zóna právě vykreslované stránky — jen při plném renderu
 Zone::of(?string $routeName): ?string
+Zone::currentPage(): ?string      // druh té stránky — `index`, `view`, `edit`, nebo vlastní druh resource
+Zone::pageOf(?string $routeName): ?string
 Zone::prefix(?string $zone): string
 ```
 

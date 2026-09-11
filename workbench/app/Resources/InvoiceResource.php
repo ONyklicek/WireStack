@@ -37,6 +37,7 @@ use NyonCode\WireTable\Table;
 use Workbench\App\Enums\InvoiceStatus;
 use Workbench\App\Livewire\Resources\CreateInvoice;
 use Workbench\App\Livewire\Resources\EditInvoice;
+use Workbench\App\Livewire\Resources\InvoiceHistory;
 use Workbench\App\Livewire\Resources\InvoiceItemsRelationManager;
 use Workbench\App\Livewire\Resources\ListInvoices;
 use Workbench\App\Livewire\Resources\ViewInvoice;
@@ -65,6 +66,11 @@ final class InvoiceResource implements ConfiguresRoutes, DescribesResource, Glob
      * permission the others do not, which is the case the per-page shape exists
      * for — and it lands as Laravel's own `can:` middleware, so Gate answers it
      * the way it answers every other surface here.
+     *
+     * `history` is the other shape: a page the framework does not know, at a URI
+     * of the resource's own. The `{record}` in it is the whole declaration —
+     * the router builds the parameter from it, and the record's tab bar reads
+     * the same URI to decide that this page belongs in it.
      */
     public static function pages(): array
     {
@@ -73,6 +79,14 @@ final class InvoiceResource implements ConfiguresRoutes, DescribesResource, Glob
             'create' => CreateInvoice::class,
             'view' => ViewInvoice::class,
             'edit' => RoutePage::make(EditInvoice::class)->permission('invoices.update'),
+
+            // A page of the application's own, about one record: the `{record}`
+            // in the URI is what makes the router pass one — and what puts the
+            // page in the record's sub-navigation beside `view` and `edit`.
+            'history' => RoutePage::make(InvoiceHistory::class)
+                ->uri('{record}/history')
+                ->icon('outline:clock')
+                ->sort(30),
         ];
     }
 

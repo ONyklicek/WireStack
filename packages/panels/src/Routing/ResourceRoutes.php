@@ -51,16 +51,22 @@ use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
 final class ResourceRoutes
 {
     /**
-     * Where each known page kind sits, relative to the resource, and whether it
-     * takes a record. An unknown kind falls back to its own name as the segment.
+     * Where each known page kind sits, relative to the resource. An unknown kind
+     * falls back to its own name as the segment.
      *
-     * @var array<string, array{uri: string, record: bool}>
+     * It used to carry a second column saying whether the kind takes a record,
+     * and that column was a lie waiting to be told: a page may override the
+     * segment with `uri()`, so `'edit' => RoutePage::make(…)->uri('modify')`
+     * declared a record in the table and had none in the URL. The URI is the
+     * only thing that knows — see {@see takesRecord()}.
+     *
+     * @var array<string, string>
      */
     private const SHAPES = [
-        'index' => ['uri' => '', 'record' => false],
-        'create' => ['uri' => 'create', 'record' => false],
-        'view' => ['uri' => '{record}', 'record' => true],
-        'edit' => ['uri' => '{record}/edit', 'record' => true],
+        'index' => '',
+        'create' => 'create',
+        'view' => '{record}',
+        'edit' => '{record}/edit',
     ];
 
     /**
@@ -147,9 +153,8 @@ final class ResourceRoutes
         $routes = [];
 
         foreach ($resource::pages() as $name => $page) {
+            $uri = self::uriFor($name, $page);
             $page = $page instanceof RoutePage ? $page : RoutePage::make($page);
-            $shape = self::SHAPES[$name] ?? ['uri' => $name, 'record' => false];
-            $uri = $page->getUri() ?? $shape['uri'];
 
             // Merged, not chained: RouteRegistrar::middleware() *replaces* what
             // it was given, so setting the resource's and then the page's left
@@ -167,6 +172,40 @@ final class ResourceRoutes
         }
 
         return $routes;
+    }
+
+    /**
+     * The segment a page sits at, relative to its resource.
+     *
+     * Public because it is the shape itself, and two things now need it: this
+     * class, to register the route, and a record's sub-navigation, to know which
+     * of a resource's pages are about *one record* rather than about the list.
+     * The alternative was a second copy of the four defaults, which is the copy
+     * that stops matching the router the first time someone adds a page kind.
+     *
+     * @param  string  $name  The key the page was declared under.
+     * @param  string|RoutePage  $page  What it was declared as.
+     */
+    public static function uriFor(string $name, string|RoutePage $page): string
+    {
+        $declared = $page instanceof RoutePage ? $page->getUri() : null;
+
+        return $declared ?? self::SHAPES[$name] ?? $name;
+    }
+
+    /**
+     * Whether this page is about one record.
+     *
+     * Read off the URI rather than off a list of kinds, because the URI is what
+     * the router builds a parameter from: a declared `uri('{record}/history')`
+     * takes one however the page was named, and a `uri('modify')` does not
+     * however familiar its key looks.
+     *
+     * @param  string|RoutePage  $page  What the page was declared as.
+     */
+    public static function takesRecord(string $name, string|RoutePage $page): bool
+    {
+        return str_contains(self::uriFor($name, $page), '{record}');
     }
 
     /**
