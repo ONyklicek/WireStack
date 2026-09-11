@@ -134,7 +134,7 @@
         @if ($isActive) aria-current="page" @endif
         @if (! $isChild) data-rail-row @endif
         @class([
-            'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition',
+            'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition max-sm:py-2.5',
             'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950/60 dark:text-primary-200' => $isActive,
             'font-medium text-gray-900 dark:text-gray-100' => $hasActiveChild && ! $isActive,
             'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white' => ! $isActive,

@@ -9,7 +9,7 @@
             <button
                 type="button"
                 data-testid="team-switcher-trigger" @wireEl('team-switcher-trigger')
-                class="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1.5 text-sm text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                class="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-2.5 text-sm text-gray-600 transition sm:py-1.5 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
             >
                 {!! icon('outline:user-group', 'h-4 w-4 shrink-0') !!}
                 <span class="hidden max-w-32 truncate sm:block">{{ $currentLabel ?? __('wire-module-users::messages.switch_team') }}</span>

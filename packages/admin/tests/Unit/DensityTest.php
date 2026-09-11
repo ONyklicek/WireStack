@@ -61,8 +61,24 @@ it('carries the rules themselves, not only the attribute', function () {
         ->and($html)->toContain('--spacing');
 });
 
+it('stops at the chrome on a phone, where a thumb needs the target the switch just took away', function () {
+    // At 0.175rem the menu handle, the bell, both switches and a notification
+    // row's verbs all came out 27 pixels square, and the drawer 202 instead of
+    // 288 — a menu you have to aim at. Compact tightens what you read on a phone,
+    // not what you touch.
+    $html = densityHtml();
+
+    expect($html)->toContain('@media (width < 40rem)')
+        ->toContain('[data-density="compact"] :is(header, aside, [role="dialog"])');
+});
+
 it('leaves type alone, which is the one thing compact must not touch', function () {
-    $style = substr(densityHtml(), strpos(densityHtml(), '<style data-wire-density'), 1400);
+    // The whole block, not a fixed number of characters from the start of it: a
+    // rule added at the top used to push the ones this is about out of the window,
+    // and the test kept passing over text it was no longer reading.
+    $html = densityHtml();
+    $start = strpos($html, '<style data-wire-density');
+    $style = substr($html, $start, strpos($html, '</style>', $start) - $start);
 
     expect($style)->not->toContain('font-size')
         ->and($style)->not->toContain('--text-');

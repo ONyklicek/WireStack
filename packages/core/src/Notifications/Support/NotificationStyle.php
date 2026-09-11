@@ -67,7 +67,10 @@ final class NotificationStyle
      */
     public function actionClasses(?string $color): string
     {
-        $base = 'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ';
+        // Taller below `sm`: at `py-1` the button is 24 pixels, which is a
+        // comfortable target for a cursor and a miss for a thumb. The panel and
+        // the toast both draw it, and both are read on a phone.
+        $base = 'inline-flex items-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition sm:py-1 ';
 
         return $base.match ($color ?? $this->color) {
             'success' => 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50',

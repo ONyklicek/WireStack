@@ -196,9 +196,9 @@ To je celá fixní půlka. Řádek tabulky spadne z 65 px na 52 a pole create
 formuláře z 550 px na 446, přičemž písmo zůstane přesně tam, kde bylo — velikost
 písma jede přes vlastní tokeny, takže compact stáhne chrome a slova nechá být.
 
-### Jsou to tři změny, ne jedna
+### Jsou to čtyři změny, ne jedna
 
-Stojí za to je znát, protože dvě z nich nejsou samozřejmé a jinak byste je
+Stojí za to je znát, protože tři z nich nejsou samozřejmé a jinak byste je
 objevovali celé odpoledne:
 
 - **Klesne `--spacing`.** Každá utilita paddingu, mezery i velikosti se
@@ -211,6 +211,12 @@ objevovali celé odpoledne:
   `padding: .5rem .75rem` na každý text input, select i textarea jako literál ve
   své base vrstvě, takže na plochu, kde hustota znamená nejvíc, žádný token
   nedosáhne.
+- **Telefon si nechá svůj chrome.** Pod `sm` se token zastaví na `header`,
+  `aside` a `[role="dialog"]` — horní liště, vysouvacím menu a každém modalu,
+  sheetu i slide-overu. Bez pojistky vyšlo madlo menu, zvonek, oba přepínače i
+  slovesa u řádku notifikace na 27 px a zásuvka na 202 místo 288: menu, na které
+  se musíte trefovat. Compact je preference ukazovátka, takže na telefonu stáhne
+  to, co *čtete*, a nechá být to, čeho se *dotýkáte*.
 
 Tabulka má vlastní `->compact()` a ta dvě nastavení se skládají, místo aby se
 nahrazovala: celoaplikační compact vezme řádek z 65 px na 51, tabulka, která si
@@ -227,7 +233,8 @@ Všechno je v `wire-core::partials.density`, který shell dává do hlavičky.
 
 ### Když má volit člověk
 
-Shell dodává přepínač vedle přepínače tématu a ta dvě nastavení se skládají,
+Shell dodává přepínač vedle přepínače tématu — na telefonu na konci vysouvacího
+menu, kde na něj má lišta místo — a ta dvě nastavení se skládají,
 místo aby se přetahovala: **váš config je výchozí, volba člověka ho přebíjí.**
 Kdo se přepínače nikdy nedotkne, dostane to, co jste nastavili — včetně pozdější
 změny té hodnoty.

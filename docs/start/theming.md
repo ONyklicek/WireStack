@@ -192,9 +192,9 @@ fields of a create form from 550px to 446px, while the type stays exactly where
 it was — font size reads its own tokens, so compact tightens the chrome and
 leaves the words alone.
 
-### It is three changes, not one
+### It is four changes, not one
 
-Worth knowing, because two of them are not obvious and you would spend an
+Worth knowing, because three of them are not obvious and you would spend an
 afternoon rediscovering them:
 
 - **`--spacing` drops.** Every padding, gap and size utility compiles to
@@ -207,6 +207,12 @@ afternoon rediscovering them:
   `padding: .5rem .75rem` on every text input, select and textarea as a literal
   in its base layer, so no token can reach the surface where density matters
   most.
+- **A phone keeps its chrome.** Below `sm` the token stops at `header`, `aside`
+  and `[role="dialog"]` — the top bar, the menu drawer, and every modal, sheet
+  and slide-over. Unpinned, the menu handle, the bell, both switches and a
+  notification row's verbs all came out 27px square, with the drawer at 202px
+  instead of 288: a menu you have to aim at. Compact is a pointer's preference,
+  so on a phone it tightens what you *read* and leaves what you *touch* alone.
 
 A table has its own `->compact()`, and the two compose rather than replace each
 other: an application-wide compact takes a row from 65px to 51px, a table that
@@ -224,7 +230,8 @@ head. **A custom layout has to include it**, the way it has to carry
 
 ### Letting people choose
 
-The shell ships a switch beside the theme toggle, and the two settings compose
+The shell ships a switch beside the theme toggle — at the foot of the menu
+drawer on a phone, where the top bar has no room for it — and the two settings compose
 rather than fight: **your config is the default, a person's choice overrides
 it.** Somebody who never touches the switch keeps what you shipped, including a
 later change to it.

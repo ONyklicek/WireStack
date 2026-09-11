@@ -38,6 +38,31 @@
         min-height: 4rem;
     }
 
+    /* And the ones it must not reach on a phone.
+
+       Compact is a pointer's preference: it buys rows on a screen somebody is
+       aiming a mouse at. A thumb needs the same target whatever the setting
+       says, and at `--spacing: 0.175rem` the phone's own furniture came out 27
+       pixels square — the menu handle, the bell, both switches, a notification
+       row's verbs — with the drawer at 202 pixels instead of 288. That is a menu
+       you have to aim at, which is the one thing a menu on a phone may not be.
+
+       So below the mobile breakpoint the token tightens what you *read* — the
+       table, the form, the page — and leaves what you *touch* alone. `header`,
+       `aside` and `[role="dialog"]` are the top bar, the menu drawer, and every
+       modal, sheet and slide-over, named by element the way the pin above names
+       `header`. Restoring the variable on the element restores every utility
+       underneath it, because inheriting it is how they got the value at all.
+
+       Filament, which has no document-wide density, reaches the same place from
+       the other end: `compact()` is per component — a repeater, a table — and
+       never a token on `<html>`, so its chrome cannot shrink by accident. */
+    @media (width < 40rem) {
+        [data-density="compact"] :is(header, aside, [role="dialog"]) {
+            --spacing: 0.25rem;
+        }
+    }
+
     /* The one the token cannot reach at all. Matched the way the forms plugin
        matches, so this lands on the same controls and nothing else. */
     [data-density="compact"] :is(
