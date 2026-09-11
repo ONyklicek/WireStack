@@ -302,7 +302,7 @@ Pak se podívejte, co doopravdy máte. `about` vypíše každý zapnutý tok —
 pojmenuje ten jediný stav, který přepínač vyjádřit neumí: zapnuto a nemůže běžet:
 
 ```bash
-php artisan about --only=wire-module-auth
+php artisan about --only=wiremoduleauth
 # One-time codes ..... sign-in, second factor
 # One-time codes ..... second factor on, but Fortify two-factor is off
 ```
@@ -641,30 +641,35 @@ it('nastaví nové heslo z kódu v e-mailu', function () {
     // Dekorátor nad skutečným úložištěm: pořád se hashuje, expiruje a
     // počítají se pokusy — tohle si jen nechá číslice, které si databáze
     // záměrně nenechává.
-    app()->extend(OneTimeCodes::class, fn (OneTimeCodes $codes) => new class($codes, $issued) implements OneTimeCodes   // [tl! focus:start]
-    {
-        public function __construct(private OneTimeCodes $codes, public ?OneTimeCode &$last) {}
-
-        public function issue(CodePurpose $purpose, string $identifier, array $payload = []): OneTimeCode
+    // Uzávěr s `use (&$issued)`, nikdy arrow funkce: `fn () =>` zachytává
+    // hodnotou, takže parametr konstruktoru předávaný referencí níž by se navázal
+    // na kopii a `$issued` by v aserci pořád bylo null.
+    app()->extend(OneTimeCodes::class, function (OneTimeCodes $codes) use (&$issued) {   // [tl! focus:start]
+        return new class($codes, $issued) implements OneTimeCodes
         {
-            return $this->last = $this->codes->issue($purpose, $identifier, $payload);
-        }
+            public function __construct(private OneTimeCodes $codes, public ?OneTimeCode &$last) {}
 
-        public function verify(CodePurpose $purpose, string $identifier, string $code): ?OneTimeCode
-        {
-            return $this->codes->verify($purpose, $identifier, $code);
-        }
+            public function issue(CodePurpose $purpose, string $identifier, array $payload = []): OneTimeCode
+            {
+                return $this->last = $this->codes->issue($purpose, $identifier, $payload);
+            }
 
-        public function recentlyIssued(CodePurpose $purpose, string $identifier): bool
-        {
-            return $this->codes->recentlyIssued($purpose, $identifier);
-        }
+            public function verify(CodePurpose $purpose, string $identifier, string $code): ?OneTimeCode
+            {
+                return $this->codes->verify($purpose, $identifier, $code);
+            }
 
-        public function invalidate(CodePurpose $purpose, string $identifier): void
-        {
-            $this->codes->invalidate($purpose, $identifier);
-        }
-    });                                                                                                                 // [tl! focus:end]
+            public function recentlyIssued(CodePurpose $purpose, string $identifier): bool
+            {
+                return $this->codes->recentlyIssued($purpose, $identifier);
+            }
+
+            public function invalidate(CodePurpose $purpose, string $identifier): void
+            {
+                $this->codes->invalidate($purpose, $identifier);
+            }
+        };
+    });                                                                                                             // [tl! focus:end]
 
     User::factory()->create(['email' => 'ann@example.com']);
 

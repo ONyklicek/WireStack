@@ -11,10 +11,10 @@ summary: What the sortable package needs, what it adds to a table, and the asset
 | Dependency | Version |
 |---|---|
 | PHP | ^8.2 |
-| Laravel | ^10.0 / ^11.0 / ^12.0 / ^13.0 |
-| Livewire | ^3.0 |
-| wire-core | ^0.1 |
-| wire-table | ^0.1 |
+| Laravel | 12.61+ or 13.12+ |
+| Livewire | ^4.0 |
+| wire-core | ^2.0 |
+| wire-table | ^2.0 |
 | Tailwind CSS | ^3.0 / ^4.0 |
 
 ## Install via Composer

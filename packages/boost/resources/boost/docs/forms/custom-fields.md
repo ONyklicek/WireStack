@@ -506,7 +506,7 @@ the package boots automatically:
 {
     "name": "acme/wire-money-fields",
     "require": {
-        "nyoncode/wire-forms": "^0.1"
+        "nyoncode/wire-forms": "^2.0"
     },
     "autoload": {
         "psr-4": {

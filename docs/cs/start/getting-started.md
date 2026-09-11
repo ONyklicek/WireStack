@@ -13,7 +13,7 @@ Tento průvodce popisuje produkční nastavení Wire v Laravel aplikaci.
 |------------|---------|
 | PHP | ^8.2 |
 | Laravel | 12.61+ nebo 13.12+ |
-| Livewire | 3.x |
+| Livewire | 4.x |
 | Tailwind CSS | 3.x+ |
 | Alpine.js | 3.x+ (součástí Livewire) |
 | `nyoncode/laravel-package-toolkit` | ^2.4 (nainstaluje se sám) |
