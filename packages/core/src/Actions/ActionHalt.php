@@ -132,7 +132,7 @@ final class ActionHalt
             ? Trans::get('wire-core::actions.delete_description_named', ['name' => $recordName])
             : Trans::get('wire-core::actions.delete_description');
 
-        return static::make()
+        return self::make()
             ->heading(Trans::get('wire-core::actions.delete_heading'))
             ->description($description)
             ->icon('trash', Color::Danger)
@@ -145,7 +145,7 @@ final class ActionHalt
      */
     public static function confirmDanger(string $heading, ?string $description = null): static
     {
-        return static::make()
+        return self::make()
             ->heading($heading)
             ->description($description)
             ->icon('warning', Color::Danger)
@@ -157,7 +157,7 @@ final class ActionHalt
      */
     public static function confirmWarning(string $heading, ?string $description = null): static
     {
-        return static::make()
+        return self::make()
             ->heading($heading)
             ->description($description)
             ->icon('warning', Color::Warning);
@@ -168,7 +168,7 @@ final class ActionHalt
      */
     public static function info(string $heading, ?string $description = null): static
     {
-        return static::make()
+        return self::make()
             ->heading($heading)
             ->description($description)
             ->icon('info', Color::Info)
@@ -180,7 +180,7 @@ final class ActionHalt
      */
     public static function success(string $heading, ?string $description = null): static
     {
-        return static::make()
+        return self::make()
             ->heading($heading)
             ->description($description)
             ->icon('check-circle', Color::Success)
