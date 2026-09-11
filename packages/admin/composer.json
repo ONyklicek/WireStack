@@ -33,7 +33,7 @@
         "nyoncode/wire-panels": "self.version",
         "illuminate/support": "^12.0|^13.0",
         "livewire/livewire": "^4.0",
-        "nyoncode/laravel-package-toolkit": "^2.4.2"
+        "nyoncode/laravel-package-toolkit": "^2.5.0"
     },
     "require-dev": {
         "orchestra/testbench": "^10.0|^11.0",

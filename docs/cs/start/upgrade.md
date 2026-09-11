@@ -56,7 +56,7 @@ co drží sadu v zámku bez čtyř řádků, na které je potřeba myslet:
 | Laravel | 12.61+, 13.12+ |
 | Livewire | 4.x |
 | Tailwind CSS | 3.x nebo 4.x (témování poloměru a odsazení vyžaduje 4.x — viz [Vzhled → Rozsah](theming.md#rozsah)) |
-| `nyoncode/laravel-package-toolkit` | ^2.4 |
+| `nyoncode/laravel-package-toolkit` | ^2.5 |
 
 Před upgradem ověřte, že je vaše aplikace splňuje.
 
@@ -701,7 +701,7 @@ tagu, jehož je čtecí stranou. Toolkit stojí na
 aplikace pod ním balíčky Wire nenainstaluje, ať v jejich vlastním
 `composer.json` stojí `^12.0`. Nejdřív povyšte Laravel, pak Wire.
 
-**Constraint toolkitu je `^2.4`.** Přímo si ho nevyžadujete, takže v běžném
+**Constraint toolkitu je `^2.5`.** Přímo si ho nevyžadujete, takže v běžném
 případě ho `composer update "nyoncode/wire-*"` posune se vším ostatním a není co
 řešit. Viditelný je jen ve dvou situacích:
 

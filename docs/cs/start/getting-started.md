@@ -16,15 +16,15 @@ Tento průvodce popisuje produkční nastavení Wire v Laravel aplikaci.
 | Livewire | 4.x |
 | Tailwind CSS | 3.x+ |
 | Alpine.js | 3.x+ (součástí Livewire) |
-| `nyoncode/laravel-package-toolkit` | ^2.4 (nainstaluje se sám) |
+| `nyoncode/laravel-package-toolkit` | ^2.5 (nainstaluje se sám) |
 
 Poslední řádek si sami nepřidáváte — Composer ho stáhne spolu s balíčky Wire.
 Je tu proto, že rozhoduje o dvou řádcích nad ním. Toolkit vlastní zrcadlo do
 `public/vendor`, které dostane JavaScriptové bundly na disk (viz
-[JavaScriptové assety](#javascriptove-assety)), a verze 2.4 vyžaduje
+[JavaScriptové assety](#javascriptove-assety)), a verze 2.5 vyžaduje
 `illuminate/support ^12.61.1|^13.12.0` — takže právě tohle, a ne `^12.0`, které
 deklarují balíčky Wire, je verze Laravelu, vůči které se instalace opravdu
-řeší. Aplikace, která si toolkit připíná sama, mu musí povolit `^2.4`, jinak
+řeší. Aplikace, která si toolkit připíná sama, mu musí povolit `^2.5`, jinak
 `composer require nyoncode/wire-table` vůbec neprojde.
 
 ## Instalace

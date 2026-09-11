@@ -18,7 +18,7 @@ the composer constraints. This skill is the checklist to work through it.
 
 1. **Upgrade Laravel and Livewire first.** 2.0 requires **Livewire 4**; the 1.x line stays on Livewire 3
    and no release runs on both. Floors are PHP 8.2+, Laravel 12.61+ / 13.12+,
-   `nyoncode/laravel-package-toolkit` `^2.4`.
+   `nyoncode/laravel-package-toolkit` `^2.5`.
 
    ```bash
    composer require livewire/livewire:^4.0

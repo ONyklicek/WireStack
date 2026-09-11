@@ -56,7 +56,7 @@ for and what keeps the set in step without four lines to remember:
 | Laravel | 12.61+, 13.12+ |
 | Livewire | 4.x |
 | Tailwind CSS | 3.x or 4.x (radius and spacing theming needs 4.x — see [Theming → Scope](theming.md#scope)) |
-| `nyoncode/laravel-package-toolkit` | ^2.4 |
+| `nyoncode/laravel-package-toolkit` | ^2.5 |
 
 Confirm your app meets these before upgrading.
 
@@ -711,7 +711,7 @@ and a dependency's floor is your floor: an app below it cannot resolve the Wire
 packages, whatever the `^12.0` in their own `composer.json` says. Upgrade Laravel
 first, then Wire.
 
-**The toolkit constraint is `^2.4`.** You do not require it directly, so in the
+**The toolkit constraint is `^2.5`.** You do not require it directly, so in the
 normal case `composer update "nyoncode/wire-*"` moves it with everything else and
 there is nothing to do. It only becomes visible in two shapes:
 
