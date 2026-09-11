@@ -251,6 +251,14 @@ confirm an address cannot be typed into the sign-in challenge. Verifying consume
 it, whether it was right or one guess too many; expiry, the attempt counter on
 the row and the resend window are what make six digits acceptable at all.
 
+**The counter is incremented by the database, not by PHP.** That distinction is
+the whole reason it works: the route throttle is keyed per IP, so the row's own
+counter is the only bound left against guesses arriving from many addresses at
+once — and a counter read, added to and written back would let a burst of
+parallel guesses cost one attempt instead of one each. `codes.length` is free of
+a ceiling too; the digits are drawn one at a time rather than as a single number
+padded to width, which has no integer to overflow.
+
 ### Switching One On, Start To Finish
 
 Three steps, and the third is the one people forget.

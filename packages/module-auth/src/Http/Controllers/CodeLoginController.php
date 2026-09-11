@@ -59,11 +59,18 @@ class CodeLoginController extends Controller
     /** Mail a code — or do nothing at all, and say the same thing either way. */
     public function store(Request $request): RedirectResponse
     {
-        $address = $this->address($request);
+        // Normalised once, then used for all three things — the session key, the
+        // user lookup and the code's identifier. It used to look the user up with
+        // the address exactly as typed while filing the code under the lower-cased
+        // one, which agrees with itself on a case-insensitive collation and comes
+        // apart on PostgreSQL or a binary MySQL collation: `Ann@Example.com`
+        // matched no row, so no code was ever sent, while the screen said one was.
+        // `send()` and `verify()` were already keyed this way; only this one was not.
+        $identifier = Codes::identifierFor($this->address($request));
 
-        $request->session()->put(self::SESSION_KEY, Codes::identifierFor($address));
+        $request->session()->put(self::SESSION_KEY, $identifier);
 
-        ($this->send)(CodePurpose::Login, $this->user($address), Codes::identifierFor($address));
+        ($this->send)(CodePurpose::Login, $this->user($identifier), $identifier);
 
         return redirect()->route('wire-auth.login-code.challenge')
             ->with('status', __('wire-module-auth::messages.code_sent'));

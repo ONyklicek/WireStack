@@ -8,7 +8,6 @@ use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use NyonCode\WireModuleAuth\Contracts\OneTimeCodes;
 use NyonCode\WireModuleAuth\Enums\CodePurpose;
 use NyonCode\WireModuleAuth\ValueObjects\OneTimeCode;
@@ -91,7 +90,7 @@ final class DatabaseOneTimeCodes implements OneTimeCodes
         }
 
         if (! Hash::check($code, (string) $record->code)) {
-            $this->recordAttempt($purpose, $identifier, (int) $record->attempts + 1);
+            $this->recordAttempt($purpose, $identifier);
 
             return null;
         }
@@ -153,18 +152,28 @@ final class DatabaseOneTimeCodes implements OneTimeCodes
      * table after its last attempt is a code a slow attacker can come back to
      * once the route throttle has forgotten them.
      */
-    private function recordAttempt(CodePurpose $purpose, string $identifier, int $attempts): void
+    private function recordAttempt(CodePurpose $purpose, string $identifier): void
     {
+        $row = fn () => $this->table()
+            ->where('purpose', $purpose->value)
+            ->where('identifier', $identifier);
+
+        // The database does the addition, and that is the whole point. This used
+        // to read `attempts`, add one in PHP and write the result back, which is
+        // only correct when the guesses arrive one at a time: N requests that all
+        // read 0 all write 1, and a burst of parallel guesses cost one attempt
+        // instead of N. The route throttle does not cover that case — it is keyed
+        // per IP, and this counter is what the design leans on precisely when the
+        // guesses come from a hundred addresses at once.
+        $row()->increment('attempts');
+
+        // Read back rather than assume: another request may have incremented
+        // between the two statements, and the limit is about the total.
+        $attempts = (int) ($row()->value('attempts') ?? 0);
+
         if ($attempts >= (int) config('wire-module-auth.codes.attempts', 5)) {
             $this->invalidate($purpose, $identifier);
-
-            return;
         }
-
-        $this->table()
-            ->where('purpose', $purpose->value)
-            ->where('identifier', $identifier)
-            ->update(['attempts' => $attempts]);
     }
 
     /**
@@ -180,7 +189,20 @@ final class DatabaseOneTimeCodes implements OneTimeCodes
     {
         $length = max(4, (int) config('wire-module-auth.codes.length', 6));
 
-        return Str::padLeft((string) random_int(0, (10 ** $length) - 1), $length, '0');
+        // One digit at a time rather than one number padded to width. The old
+        // form drew `random_int(0, 10 ** $length - 1)`, and `max()` clamped only
+        // the bottom: at 19 digits `10 ** $length` passes PHP_INT_MAX, becomes a
+        // float, and `random_int()` rejects a float bound with a TypeError — an
+        // uncaught fatal on whichever screen was minting the code. Per-digit has
+        // no ceiling to fall off, needs no padding because every position is
+        // drawn, and is the same uniform distribution over the same space.
+        $code = '';
+
+        for ($i = 0; $i < $length; $i++) {
+            $code .= random_int(0, 9);
+        }
+
+        return $code;
     }
 
     /** @return array<string, mixed> */

@@ -253,6 +253,13 @@ spotřebuje, ať byl správný, nebo to byl pokus navíc; expirace, počítadlo 
 na řádku a okno pro opětovné odeslání jsou to, proč je šest číslic vůbec
 přijatelných.
 
+**Počítadlo navyšuje databáze, ne PHP.** Na tom rozdílu celé stojí: throttling
+na route je klíčovaný podle IP, takže počítadlo na řádku je jediná zbývající
+hranice proti hádání přicházejícímu z mnoha adres naráz — a počítadlo, které se
+přečte, v PHP se k němu přičte a zapíše se zpátky, by dávku paralelních pokusů
+spočítalo jako jeden. `codes.length` už nemá ani strop: číslice se losují po
+jedné místo jednoho čísla doplněného na šířku, takže není co přetéct.
+
 ### Zapnutí od začátku do konce
 
 Tři kroky a na ten třetí se nejčastěji zapomíná.
