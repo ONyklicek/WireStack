@@ -9,6 +9,7 @@ return [
     'skip_to_content' => 'Přejít na obsah',
     'empty' => 'Zatím není nic zaregistrované.',
     'theme' => 'Přepnout motiv',
+    'theme_label' => 'Motiv',
     'collapse_menu' => 'Sbalit menu',
     'expand_menu' => 'Rozbalit menu',
     'breadcrumbs' => 'Drobečková navigace',

@@ -236,7 +236,7 @@
                     x-data
                     x-on:click="$dispatch('open-global-search')"
                     data-testid="global-search-trigger" @wireEl('global-search-trigger')
-                    class="ms-auto inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 py-1.5 ps-3 pe-2 text-sm text-gray-500 transition hover:border-gray-300 hover:bg-white sm:w-64 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-700"
+                    class="ms-auto inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 py-2.5 ps-3 pe-2 text-sm sm:py-1.5 text-gray-500 transition hover:border-gray-300 hover:bg-white sm:w-64 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-700"
                 >
                     {!! icon('outline:magnifying-glass', 'h-4 w-4 shrink-0') !!}
                     <span class="hidden flex-1 text-start sm:block">{{ __('wire-admin::messages.search') }}</span>
@@ -262,65 +262,10 @@
                     @livewire('wire-notification-bell')
                 @endif
 
-                {{-- Three states, not a toggle, because the third is the one
-                     that carries its weight: a two-way switch forces a choice the
-                     moment it is touched and then keeps it for ever, so a laptop
-                     that dims itself in the evening stops being followed. The
-                     vocabulary is Theme's, not this file's. --}}
-                <div
-                    x-data
-                    role="radiogroup"
-                    aria-label="{{ __('wire-admin::messages.theme') }}"
-                    data-testid="admin-theme" @wireEl('admin-theme')
-                    class="inline-flex items-center gap-0.5 rounded-full border border-gray-200 p-0.5 dark:border-gray-700"
-                >
-                    @foreach (\NyonCode\WireCore\Foundation\Enums\Theme::cases() as $themeOption)
-                        <button
-                            type="button"
-                            role="radio"
-                            x-on:click="$store.wireAdmin.setTheme('{{ $themeOption->value }}')"
-                            x-bind:aria-checked="$store.wireAdmin.theme === '{{ $themeOption->value }}' ? 'true' : 'false'"
-                            x-bind:class="$store.wireAdmin.theme === '{{ $themeOption->value }}'
-                                ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-50'
-                                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
-                            data-testid="admin-theme-{{ $themeOption->value }}"
-                            title="{{ $themeOption->label() }}"
-                            class="inline-flex items-center rounded-full p-1.5 transition"
-                        >
-                            <span class="sr-only">{{ $themeOption->label() }}</span>
-                            {!! icon($themeOption->icon(), 'h-4 w-4') !!}
-                        </button>
-                    @endforeach
-                </div>
-
-                {{-- The same shape as the theme switch beside it, and for the
-                     same reason: a person's own answer to a question the
-                     application only set a default for. --}}
-                <div
-                    x-data
-                    role="radiogroup"
-                    aria-label="{{ __('wire-core::messages.density') }}"
-                    data-testid="admin-density" @wireEl('admin-density')
-                    class="inline-flex items-center gap-0.5 rounded-full border border-gray-200 p-0.5 dark:border-gray-700"
-                >
-                    @foreach (\NyonCode\WireCore\Foundation\Enums\Density::cases() as $densityOption)
-                        <button
-                            type="button"
-                            role="radio"
-                            x-on:click="$store.wireAdmin.setDensity('{{ $densityOption->value }}')"
-                            x-bind:aria-checked="$store.wireAdmin.density === '{{ $densityOption->value }}' ? 'true' : 'false'"
-                            x-bind:class="$store.wireAdmin.density === '{{ $densityOption->value }}'
-                                ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-50'
-                                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
-                            data-testid="admin-density-{{ $densityOption->value }}"
-                            title="{{ $densityOption->label() }}"
-                            class="inline-flex items-center rounded-full p-1.5 transition"
-                        >
-                            <span class="sr-only">{{ $densityOption->label() }}</span>
-                            {!! icon($densityOption->icon(), 'h-4 w-4') !!}
-                        </button>
-                    @endforeach
-                </div>
+                {{-- The theme and the density switch, from `sm` up: on a phone
+                     they are at the foot of the menu drawer instead, because
+                     this row cannot hold them and the user menu at 390px. --}}
+                @include('wire-admin::partials.preferences', ['variant' => 'topbar'])
 
                 {{-- The application's own menu, and a name when it has not written
                      one: an admin whose top bar cannot say who is signed in reads

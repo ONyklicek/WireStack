@@ -52,6 +52,14 @@ the head, because reading it later is the flash every dark-mode implementation i
 judged by. `system` keeps listening while the page is open, so the theme changes
 with the operating system rather than staying at whatever it was on load.
 
+On a phone the switch is not in the top bar. Seven controls do not fit a
+390-pixel strip: the bar overflowed, the page scrolled sideways, and the user
+menu — last in the row — sat off the edge of the screen. So below `sm` the theme
+switch and the density switch beside it move to the foot of the menu drawer,
+which is the one piece of chrome a phone always has and, unlike the user menu, is
+there whether or not the application passed its own. Nothing is configured to get
+this, and both switches keep working from either place.
+
 ## Changing How It Looks
 
 ```bash

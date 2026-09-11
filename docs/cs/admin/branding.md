@@ -52,6 +52,15 @@ implementace tmavého režimu posuzuje. `systém` navíc poslouchá dál, dokud 
 stránka otevřená, takže se motiv mění s operačním systémem místo aby zůstal
 takový, jaký byl při načtení.
 
+Na telefonu přepínač v horní liště není. Sedm ovládacích prvků se do pruhu
+širokého 390 pixelů nevejde: lišta přetékala, stránka se dala posouvat do strany
+a uživatelské menu — poslední v řadě — leželo za okrajem obrazovky. Pod `sm` se
+proto přepínač motivu i přepínač hustoty vedle něj stěhují na konec vysouvacího
+menu, které je jediným kusem chromu, jaký má telefon vždy, a které tam — na
+rozdíl od uživatelského menu — je bez ohledu na to, jestli si aplikace předala
+vlastní. Nic se kvůli tomu nenastavuje a oba přepínače fungují z obou míst
+stejně.
+
 ## Změna vzhledu
 
 ```bash

@@ -169,5 +169,21 @@
         @endforelse
     </nav>
 
+    {{-- The foot of the drawer, on a phone only. The top bar owns these two from
+         `sm` up and has no room for them below it; the drawer is the one piece of
+         shell chrome a phone always has, and it does not depend on whether the
+         application passed its own user menu. --}}
+    <div class="space-y-2 border-t border-gray-200 p-3 sm:hidden dark:border-gray-800">
+        <div class="flex items-center justify-between gap-3">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('wire-admin::messages.theme_label') }}</span>
+            @include('wire-admin::partials.preferences', ['variant' => 'nav', 'only' => 'theme'])
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('wire-core::messages.density') }}</span>
+            @include('wire-admin::partials.preferences', ['variant' => 'nav', 'only' => 'density'])
+        </div>
+    </div>
+
     @wireRenderHook('admin.sidebar.end')
 </aside>

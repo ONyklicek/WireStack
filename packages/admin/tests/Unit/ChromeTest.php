@@ -80,6 +80,28 @@ it('offers three themes, and decides which one before the page paints', function
         ->and($html)->toContain('prefers-color-scheme: dark');
 });
 
+it('takes the two preferences out of the top bar on a phone and puts them in the drawer', function () {
+    $html = chGet();
+
+    // Seven controls in a 390px strip is some seventy pixels more than there is:
+    // the bar overflowed, the page scrolled sideways, and the user menu — last in
+    // the row — sat off the edge of the screen.
+    expect($html)->toContain('data-testid="admin-theme"')
+        // The bar's copy starts hidden and appears at `sm`.
+        ->toContain('dark:border-gray-700 hidden sm:inline-flex')
+        // The drawer is the one piece of chrome a phone always has, and unlike
+        // the user menu it is there whether or not the application passed its own.
+        ->toContain('data-testid="admin-theme-nav"')
+        ->toContain('data-testid="admin-density-nav"')
+        ->toContain('sm:hidden');
+
+    // Both copies are in the document at every width and CSS hides one of them,
+    // which querySelector knows nothing about — so no two elements may answer to
+    // the same testid, or a driver clicks the invisible one and nothing happens.
+    expect(substr_count($html, 'data-testid="admin-theme-dark"'))->toBe(1)
+        ->and(substr_count($html, 'data-testid="admin-density-compact"'))->toBe(1);
+});
+
 it('puts the theme back after a wire:navigate swap', function () {
     // Livewire's navigate copies the fetched document's <html> attributes over
     // the live ones, and the server cannot know what this browser chose — so

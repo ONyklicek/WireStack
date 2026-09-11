@@ -9,6 +9,7 @@ return [
     'skip_to_content' => 'Skip to content',
     'empty' => 'Nothing is registered yet.',
     'theme' => 'Toggle theme',
+    'theme_label' => 'Theme',
     'collapse_menu' => 'Collapse the menu',
     'expand_menu' => 'Expand the menu',
     'breadcrumbs' => 'Breadcrumb',
