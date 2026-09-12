@@ -21,6 +21,17 @@
         "APP_ENV": "local",
         "APP_DEBUG": "true"
       }
+    },
+    "wire-boost": {
+      "type": "stdio",
+      "command": "vendor/bin/testbench",
+      "args": [
+        "wire-boost:mcp"
+      ],
+      "env": {
+        "APP_ENV": "local",
+        "APP_DEBUG": "true"
+      }
     }
   }
 }

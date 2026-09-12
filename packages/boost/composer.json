@@ -1,6 +1,6 @@
 {
     "name": "nyoncode/wire-boost",
-    "description": "AI tooling for the Wire ecosystem – an MCP server, AI guidelines and agent skills for wire-core, wire-forms, wire-table and wire-sortable.",
+    "description": "AI tooling for the Wire ecosystem – an MCP server, AI guidelines and agent skills for the whole wireStack: core, forms, tables, sortable, panels, the admin shell and the ready-made modules.",
     "keywords": [
         "laravel",
         "livewire",
@@ -42,10 +42,17 @@
         "pestphp/pest": "^4.0|^5.0"
     },
     "suggest": {
-        "nyoncode/wire-forms": "Enables form introspection tools.",
-        "nyoncode/wire-table": "Enables table introspection tools.",
-        "nyoncode/wire-panels": "Enables resource/page introspection (describe-resource reports their surfaces).",
-        "nyoncode/wire-sortable": "Enables sortable guidelines and skills."
+        "nyoncode/wire-forms": "Enables form introspection tools, guidelines and skills.",
+        "nyoncode/wire-table": "Enables table introspection tools, guidelines and skills.",
+        "nyoncode/wire-sortable": "Enables sortable guidelines and skills.",
+        "nyoncode/wire-panels": "Enables resource/page introspection (describe-resource reports their surfaces), guidelines and skills.",
+        "nyoncode/wire-admin": "Enables admin shell guidelines and skills (the layout, the sidebar, the chrome regions).",
+        "nyoncode/wire-module-users": "Enables module guidelines and skills; describe-module reports what it registers.",
+        "nyoncode/wire-module-auth": "Enables module guidelines and skills; describe-module reports what it registers.",
+        "nyoncode/wire-module-settings": "Enables module guidelines and skills; describe-module reports what it registers.",
+        "nyoncode/wire-module-audit": "Enables module guidelines and skills; describe-module reports what it registers.",
+        "nyoncode/wire-module-notifications": "Enables module guidelines and skills; describe-module reports what it registers.",
+        "nyoncode/wire-module-media": "Enables module guidelines and skills; describe-module reports what it registers."
     },
     "autoload": {
         "psr-4": {

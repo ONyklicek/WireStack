@@ -177,6 +177,15 @@ Before changing shared behavior, ask:
   Blade view** — scoping a theme to the admin through the `$head` slot, the
   token tiers, the `wire-*` hook classes, and the render hooks that do not yet
   exist: `architecture/plans/theming-and-customisation.md`
+- The AI tooling this repo ships for its own consumers — the MCP server, the
+  per-package guidelines and the agent skills: `packages/boost/`, then
+  `docs/boost/`. Which packages exist and which of them an application actually
+  has is `Support/WirePackages` and nothing else; a guideline or skill named
+  after a package ships only where that package is installed. Changing a public
+  surface under `packages/*/src` obliges a look at
+  `packages/boost/resources/boost/{guidelines,skills}` — the local Stop hook
+  nudges, it does not check. `composer boost:check-docs` verifies the bundled
+  docs mirror
 - Full analysis, inconsistency review, bug-hunting, or audit:
   `architecture/audit.md`
 - Writing or changing any page under `docs/`:

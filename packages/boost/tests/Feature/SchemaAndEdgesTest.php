@@ -56,7 +56,7 @@ it('creates missing directories when installing guidelines', function () {
     file_put_contents($dir.'/a.md', 'Nested guideline body');
 
     $target = $this->base.'/deeply/nested/CLAUDE.md';
-    (new GuidelineComposer([$dir]))->installInto($target);
+    (new GuidelineComposer([$dir], everyPackage()))->installInto($target);
 
     expect(is_file($target))->toBeTrue();
 });
@@ -67,7 +67,7 @@ it('copies skill modules that contain nested files', function () {
     file_put_contents($source.'/demo-skill/SKILL.md', "---\nname: demo-skill\n---\nBody");
     file_put_contents($source.'/demo-skill/reference/notes.md', 'Extra reference');
 
-    $installed = (new SkillInstaller($source))->install($this->base.'/skills');
+    $installed = (new SkillInstaller([$source], everyPackage()))->install($this->base.'/skills');
 
     expect($installed)->toBe(['demo-skill'])
         ->and(is_file($this->base.'/skills/demo-skill/reference/notes.md'))->toBeTrue();

@@ -15,6 +15,7 @@ use NyonCode\WireBoost\Mcp\Tools\ListWireComponents;
 use NyonCode\WireBoost\Mcp\Tools\SearchDocs;
 use NyonCode\WireBoost\Mcp\Tools\WireConfig;
 use NyonCode\WireBoost\Mcp\WireBoostServer;
+use NyonCode\WireBoost\Support\WirePackages;
 use NyonCode\WireBoost\Tests\Fixtures\DemoForm;
 use NyonCode\WireBoost\Tests\Fixtures\DemoInfolist;
 use NyonCode\WireBoost\Tests\Fixtures\DemoTable;
@@ -35,6 +36,17 @@ it('reports application info with wire package versions', function () {
         ->assertOk()
         ->assertSee('nyoncode/wire-core')
         ->assertSee('livewire/livewire');
+});
+
+it('reports the whole stack, not only the four packages 1.x shipped', function () {
+    // The list used to be a literal inside the tool, so `wire-panels` stayed
+    // unreported long after it shipped — and an agent told a package is absent
+    // writes around an API that is right there.
+    $response = WireBoostServer::tool(ApplicationInfo::class)->assertOk();
+
+    foreach (['wire-panels', 'wire-admin', 'wire-suite', 'wire-module-users', 'wire-module-auth'] as $package) {
+        $response->assertSee(WirePackages::composerName($package));
+    }
 });
 
 it('lists wire components from the configured scan paths', function () {

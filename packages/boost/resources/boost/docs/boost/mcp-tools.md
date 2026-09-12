@@ -23,7 +23,7 @@ component vocabulary.
 
 | Tool | Description |
 |------|-------------|
-| `application-info` | PHP / Laravel / Livewire versions, installed wire package versions, and key effective config. |
+| `application-info` | PHP / Laravel / Livewire versions, the installed wire package versions — the stack, the optional panel and admin layers, and the ready-made modules — the companion packages a module switches surfaces on for (Fortify, `laravel/passkeys`, the permission package), and key effective config. |
 | `list-wire-components` | Discover the app Livewire components that build a wire table, form, or infolist. |
 | `describe-table` | Resolve a table's columns, filters, header/row/bulk actions, default sort, and searchability. |
 | `describe-form` | Resolve a form's flattened field schema (name, label, type, wrapping layout). |
@@ -71,7 +71,10 @@ Pass that `id` to `fetch-wire-doc` to read the section in full. Passing a docume
 (`docs/table/columns/badge.md`) returns its outline instead — whole pages run to tens of kilobytes, so an
 outline plus targeted section fetches is cheaper and more accurate. Add `full: true` for the entire page.
 
-Filter by package with `package: wire-table` (the `wire-` prefix is optional). Add your own Markdown to the
+Filter by package with `package: wire-table` (the `wire-` prefix is optional). The accepted values are
+`wire-core`, `wire-forms`, `wire-table`, `wire-sortable`, `wire-panels`, `wire-admin`, `wire-modules` and
+`wire-boost` — `wire-modules` covers all six ready-made modules at once, because `docs/modules/` is where
+every one of them is documented and no single package owns that directory. Add your own Markdown to the
 index with `wire-boost.docs.paths`; see [Configuration](../start/configuration.md).
 
 ## Validation

@@ -15,6 +15,7 @@ use NyonCode\WireBoost\Support\ComponentScanner;
 use NyonCode\WireBoost\Support\Docs\DocsCorpus;
 use NyonCode\WireBoost\Support\Docs\DocsIndex;
 use NyonCode\WireBoost\Support\TypeCatalog;
+use NyonCode\WireBoost\Support\WirePackages;
 
 class WireBoostServiceProvider extends PackageServiceProvider
 {
@@ -27,6 +28,9 @@ class WireBoostServiceProvider extends PackageServiceProvider
             ->name('WireBoost')
             ->hasShortName('wire-boost')
             ->registeredPackage(function (): void {
+                // Singleton so Composer's installed-package metadata is read once
+                // per process; the answer cannot change while it runs.
+                $this->app->singleton(WirePackages::class, static fn (): WirePackages => WirePackages::detect());
                 $this->app->singleton(TypeCatalog::class);
                 $this->app->singleton(ComponentScanner::class);
                 // Singleton so the corpus is parsed and scored once per MCP

@@ -8,17 +8,24 @@ summary: AI nástroje pro ekosystém Wire — MCP server, AI guidelines a agent 
 
 Wire Boost je ekvivalent [Laravel Boost](https://github.com/laravel/boost) pro wireStack. Pomáhá
 AI kódovacím agentům (Claude Code, Cursor, Codex, Gemini CLI, GitHub Copilot, Junie) psát kvalitní
-aplikace s [wire-core](../core/foundation/index.md), [wire-forms](../forms/overview.md),
-[wire-table](../table/overview.md) a [wire-sortable](../sortable/overview.md).
+aplikace s celým stackem — [wire-core](../core/foundation/index.md),
+[wire-forms](../forms/overview.md), [wire-table](../table/overview.md) a
+[wire-sortable](../sortable/overview.md), volitelné vrstvy [wire-panels](../panels/overview.md) a
+[wire-admin](../admin/overview.md) a šest [hotových modulů](../modules/index.md).
 
 Dodává tři věci:
 
 - **MCP server** — introspektivní nástroje, které agent může volat k prozkoumání vašich wire tabulek, formulářů, infolistů,
   dostupného slovníku komponent, ikon, configu a dokumentace. Viz [MCP Server a nástroje](mcp-tools.md).
 - **AI guidelines** — stručný, vždy načtený kontext popisující wireStack konvence a API.
-- **Agent Skills** — on-demand znalostní moduly pro vývoj table, form, core a sortable.
+- **Agent Skills** — on-demand znalostní moduly pro vývoj table, form, core, sortable, resources,
+  admin shellu a modulů.
 
 Vrstvu AI kontextu viz [Guidelines a Skills](guidelines-and-skills.md).
+
+**Obojí se dodává per balíček.** Aplikace, která nainstalovala jen core a forms, dostane jen jejich
+guidelines a skills — agent, kterému řeknete o `ListPage` tam, kde žádný `wire-panels` není, napíše
+třídu, která neexistuje, a to je horší než mu to neříct vůbec.
 
 ## Proč
 
@@ -45,5 +52,6 @@ guidelines do souboru guideline agenta a nainstaluje skills. Viz [Instalace](ins
 | Objevit typy komponent a API | `list-component-types`, `describe-component-api` |
 | Najít existující wire komponenty | `list-wire-components` |
 | Prohledat korpus wire docs | `search-wire-docs` |
+| Prozkoumat resources, stránky a moduly | `describe-resource`, `describe-module` |
 | Introspekce aplikace a configu | `application-info`, `wire-config`, `list-icons` |
 | Obecné nástroje parity s Laravel | `database-schema`, `list-routes`, `last-error`, … |

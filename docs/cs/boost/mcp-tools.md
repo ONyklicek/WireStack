@@ -23,7 +23,7 @@ slovník komponent.
 
 | Nástroj | Popis |
 |------|-------------|
-| `application-info` | Verze PHP / Laravel / Livewire, nainstalované verze wire balíčků a klíčový efektivní config. |
+| `application-info` | Verze PHP / Laravel / Livewire, nainstalované verze wire balíčků — stack, volitelné vrstvy panels a admin i hotové moduly — doprovodné balíčky, podle kterých modul zapíná povrchy (Fortify, `laravel/passkeys`, permission balíček), a klíčový efektivní config. |
 | `list-wire-components` | Objevit app Livewire komponenty, které staví wire tabulku, formulář nebo infolist. |
 | `describe-table` | Vyresolvovat sloupce tabulky, filtry, header/row/bulk akce, výchozí řazení a searchability. |
 | `describe-form` | Vyresolvovat zploštělé schéma polí formuláře (název, popisek, typ, obalující layout). |
@@ -71,7 +71,10 @@ To `id` předejte do `fetch-wire-doc` a přečtete si celou sekci. Předání id
 (`docs/table/columns/badge.md`) vrátí místo toho jeho osnovu — celé stránky mají desítky kilobajtů, takže
 osnova plus cílené dotažení sekcí je levnější a přesnější. `full: true` vrátí celou stránku.
 
-Filtrovat podle balíčku lze přes `package: wire-table` (prefix `wire-` je volitelný). Vlastní Markdown
+Filtrovat podle balíčku lze přes `package: wire-table` (prefix `wire-` je volitelný). Přijímané hodnoty jsou
+`wire-core`, `wire-forms`, `wire-table`, `wire-sortable`, `wire-panels`, `wire-admin`, `wire-modules` a
+`wire-boost` — `wire-modules` pokrývá všech šest hotových modulů najednou, protože `docs/modules/` je místo,
+kde je dokumentovaný každý z nich, a žádný balíček ten adresář nevlastní sám. Vlastní Markdown
 přidáte do indexu přes `wire-boost.docs.paths`; viz [Konfigurace](../start/configuration.md).
 
 ## Validace

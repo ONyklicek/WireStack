@@ -117,3 +117,12 @@ it('disambiguates a configured root that collides with a bundled one', function 
     rmdir($collision);
     rmdir(dirname($collision));
 });
+
+it('lists every package the filter accepts', function () {
+    // Derived from the prefix map rather than restated: a package documented but
+    // missing from this list is documentation the filter cannot reach.
+    expect(DocsCorpus::packages())
+        ->toContain('wire-core', 'wire-forms', 'wire-table', 'wire-sortable')
+        ->toContain('wire-panels', 'wire-admin', 'wire-modules', 'wire-boost')
+        ->and(DocsCorpus::packages())->toBe(array_unique(DocsCorpus::packages()));
+});

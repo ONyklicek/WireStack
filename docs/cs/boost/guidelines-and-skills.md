@@ -21,9 +21,17 @@ balíček:
 | `wire-forms` | Pole, validace, layout, možnosti, životní cyklus ukládání. |
 | `wire-table` | Tabulky, sloupce, filtry, akce, souhrny, podřádky. |
 | `wire-sortable` | Řazení řádků a sloupců. |
+| `wire-panels` | Resources, stránky, registry, navigace a aktivní položka. |
+| `wire-admin` | Volitelný shell — layout, sidebar, chrome regiony, co je slot a co ne. |
+| `wire-modules` | Šest hotových oblastí, co která potřebuje a co zůstává odinstalovatelné. |
+| `wire-suite` | Meta-balíček a `wire:install` — co nastaví a co odmítá dělat. |
 
 Slučují se do souboru guideline agenta (`CLAUDE.md`, `AGENTS.md`, …) mezi stabilní markery, takže
 opětovné spuštění instalátoru čistě nahradí blok bez zásahu do vašeho vlastního obsahu.
+
+**Guideline pojmenovaná po balíčku se dodá jen tam, kde je ten balíček nainstalovaný.** Signálem je název
+souboru — `wire-panels.blade.php` se v aplikaci bez `wire-panels` přeskočí a `wire-modules` se dodá,
+jakmile je nainstalovaný kterýkoli z šesti modulů. `core` a vaše vlastní soubory se nikdy nefiltrují.
 
 ## Skills
 
@@ -36,7 +44,13 @@ když jsou relevantní, čímž drží kontext štíhlý:
 | `wire-forms-development` | Stavba nebo změna wire formuláře. |
 | `wire-core-development` | Práce s akcemi, modaly, notifikacemi, infolisty nebo widgety. |
 | `wire-sortable-development` | Přidání drag & drop řazení do tabulky. |
+| `wire-panels-development` | Deklarace resource, jeho stránek a navigační položky. |
+| `wire-admin-development` | Práce na admin shellu — layout, sidebar, uživatelské menu. |
+| `wire-modules-development` | Instalace, úprava nebo psaní hotového modulu. |
 | `wire-v2-upgrade` | Migrace aplikace z wireStacku 1.x na 2.0. |
+
+Skills se filtrují stejně jako guidelines: `wire-panels-development` se nainstaluje jen tam, kde je
+`wire-panels`. `wire-v2-upgrade` není pojmenovaný po balíčku, takže se dodává vždy.
 
 ## Přizpůsobení
 
@@ -45,6 +59,10 @@ při spuštění [`wire-boost:install`](installation.md) nebo `wire-boost:update
 
 - `.ai/guidelines/*.md` (nebo `.blade.php`) — extra guidelines.
 - `.ai/skills/<name>/SKILL.md` — extra skills.
+
+Projektový adresář se stejným názvem jako dodaný skill vyhrává **po jednotlivých souborech**: čte se až po
+dodaném modulu a přepíše to, co pojmenuje — takže můžete nahradit jediný `SKILL.md`, aniž byste znovu psali
+referenční soubory vedle něj.
 
 ## Guidelines vs. skills
 

@@ -9,6 +9,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
+use NyonCode\WireBoost\Support\Docs\DocsCorpus;
 use NyonCode\WireBoost\Support\Docs\DocsIndex;
 
 #[Name('search-wire-docs')]
@@ -45,9 +46,22 @@ class SearchDocs extends BoostTool
                 ->description('Free-text query, e.g. "badge column color" or "validate a repeater".')
                 ->required(),
             'package' => $schema->string()
-                ->description('Optional package filter: "wire-table", "wire-forms", "wire-core", "wire-sortable" or "wire-boost" (the "wire-" prefix is optional).'),
+                ->description('Optional package filter: '.$this->packageFilterValues().' (the "wire-" prefix is optional). "wire-modules" covers all six ready-made modules at once.'),
             'limit' => $schema->integer()
                 ->description('Maximum number of sections to return (default 5).'),
         ];
+    }
+
+    /**
+     * The filter vocabulary, quoted, straight from the corpus — a value listed
+     * here that nothing is tagged with would return an empty result set, and a
+     * package left out of the list is documentation the agent cannot reach.
+     */
+    private function packageFilterValues(): string
+    {
+        return implode(', ', array_map(
+            static fn (string $package): string => '"'.$package.'"',
+            DocsCorpus::packages(),
+        ));
     }
 }

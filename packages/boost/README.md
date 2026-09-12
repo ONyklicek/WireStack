@@ -7,7 +7,12 @@
 
 AI tooling for the Wire ecosystem — the wireStack equivalent of [laravel/boost](https://github.com/laravel/boost).
 It ships an **MCP server**, **AI guidelines** and **Agent Skills** that help AI coding agents build
-high-quality applications with `wire-core`, `wire-forms`, `wire-table` and `wire-sortable`.
+high-quality applications with the whole stack — `wire-core`, `wire-forms`, `wire-table`,
+`wire-sortable`, the optional `wire-panels` and `wire-admin` layers, and the six ready-made
+`wire-module-*` areas.
+
+Guidelines and skills are shipped **per package**: an application that installed only core and forms
+gets only those, so an agent is never told about a class that is not there.
 
 ## Installation
 
@@ -30,11 +35,13 @@ It exposes the following tools:
 
 | Tool | Purpose |
 | --- | --- |
-| `application-info` | PHP/Laravel/Livewire versions, installed wire package versions, key config |
+| `application-info` | PHP/Laravel/Livewire versions, installed wire package versions (stack, panels/admin, modules), key config |
 | `list-wire-components` | Discover app Livewire components that build wire tables/forms/infolists |
 | `describe-table` | Resolve a table's columns, filters, actions, default sort, searchability |
 | `describe-form` | Resolve a form's flattened field schema |
 | `describe-infolist` | Resolve an infolist's entry schema |
+| `describe-resource` | Registered resources — key, model, labels, the surfaces each declares, its navigation entry |
+| `describe-module` | Domain modules — id, dependencies, and the resources, dashboards and navigation group each declares |
 | `validate-wire-component` | Report unknown colors, unregistered icons and unresolvable attribute names |
 | `list-component-types` | Built-in types for a category (columns, fields, filters, actions, …) |
 | `describe-component-api` | Public fluent API of a component type — signatures, defaults, accepted values |

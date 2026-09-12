@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireBoost\Install;
 
 use Illuminate\Support\Facades\Blade;
+use NyonCode\WireBoost\Support\WirePackages;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -22,18 +23,19 @@ class GuidelineComposer
     /**
      * @param  array<int, string>  $directories
      */
-    public function __construct(private array $directories) {}
+    public function __construct(private array $directories, private WirePackages $packages) {}
 
     public static function default(): self
     {
         return new self([
             dirname(__DIR__, 2).'/resources/boost/guidelines',
             base_path('.ai/guidelines'),
-        ]);
+        ], app(WirePackages::class));
     }
 
     /**
-     * Render and concatenate every guideline document.
+     * Render and concatenate every guideline document whose package this
+     * application has.
      */
     public function compose(): string
     {
@@ -46,6 +48,10 @@ class GuidelineComposer
         $sections = [];
 
         foreach (Finder::create()->files()->in($directories)->name(['*.md', '*.blade.php'])->sortByName() as $file) {
+            if (! $this->packages->shipsResource($this->resourceName($file->getFilename()))) {
+                continue;
+            }
+
             $contents = (string) file_get_contents($file->getPathname());
 
             $sections[] = str_ends_with($file->getFilename(), '.blade.php')
@@ -54,6 +60,16 @@ class GuidelineComposer
         }
 
         return implode("\n\n", array_filter($sections));
+    }
+
+    /**
+     * The package a guideline file is named after — `wire-panels.blade.php` and
+     * `wire-panels.md` are the same guideline written two ways, so both extensions
+     * come off rather than only the last one `pathinfo()` would see.
+     */
+    private function resourceName(string $filename): string
+    {
+        return (string) preg_replace('/\.(md|blade\.php)$/', '', $filename);
     }
 
     /**
