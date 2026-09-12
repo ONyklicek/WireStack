@@ -17,7 +17,7 @@ use NyonCode\WireForms\Forms\WithForms;
  * database, not a unit test: the app zone, the field zone and the column type
  * interact, and SQLite stores datetimes as plain strings — it would happily
  * accept a wrong implementation. These run on the MySQL/MariaDB/PostgreSQL
- * matrix (.github/workflows/database-tests.yml), where DATETIME/TIMESTAMPTZ is
+ * legs of the CI matrix (.github/workflows/ci.yml), where DATETIME/TIMESTAMPTZ is
  * a real type that rejects a malformed value instead of storing it verbatim.
  *
  * The bug being guarded against is a *one-sided* conversion: hydrate into the

@@ -14,7 +14,7 @@ use NyonCode\WireForms\Components\DateTimePicker;
  * The unit tests next door prove hydrateState()/dehydrateState() convert; they
  * cannot prove the value survives a round trip through a column, where the app
  * zone, the field zone and Eloquent's cast all meet. Runs on the MySQL/Postgres
- * matrix (database-tests.yml).
+ * legs of the CI matrix (.github/workflows/ci.yml).
  *
  * Measured, not assumed: injecting the one-sided conversion fails 3 of these 6
  * on SQLite, MySQL 8 and Postgres 16 alike — the field converts in PHP and stores

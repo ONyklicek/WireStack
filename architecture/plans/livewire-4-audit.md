@@ -498,7 +498,7 @@ So a future audit does not redo this:
   the upgrade guides.)
 - Version windows agree: Livewire 4.4.0 allows `illuminate/* ^10–^13` and
   `php ^8.1`; the packages require `^12.0|^13.0` and `php ^8.2`. The
-  `tests.yml` matrix (Laravel `12.*`, `13.*`) is inside both.
+  `ci.yml` matrix (Laravel `12.*`, `13.*`) is inside both.
 - v4's richer interceptor API (`Livewire.intercept*`) is the replacement for the
   deprecated hooks — since we never used those, there is nothing to migrate.
 
