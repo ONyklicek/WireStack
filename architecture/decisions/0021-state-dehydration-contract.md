@@ -190,7 +190,7 @@ timezone is the corruption described above.
   only what a caller can reasonably meet — a pure function of its arguments.
 - Timezone correctness needs a round trip through a real column, not just a unit
   test on the two halves. Covered by `DateTimePickerTimezoneRoundTripTest` on the
-  MySQL/Postgres legs of `.github/workflows/ci.yml`.
+  MySQL/Postgres `database` job in `.github/workflows/ci.yml`.
 
   **This ADR originally claimed SQLite "would happily pass a wrong
   implementation". Measured, it does not** — the one-sided conversion was injected

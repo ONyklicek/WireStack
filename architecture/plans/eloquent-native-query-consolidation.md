@@ -138,7 +138,7 @@ the MySQL/Postgres matrix for dotted sort/filter, then the coverage gate.
 - Verified: full `core` (1568) + `table` (1233) + `Integration` (20) suites,
   Pint, PHPStan all green. Changed production lines covered (ApplyFilters 100%,
   planFilter morph branch covered). **Still to validate on the MySQL/Postgres
-  matrix (the `mysql`/`mariadb`/`pgsql` legs of CI `ci.yml`)** — `EXISTS` is standard SQL, lower risk than
+  matrix (the `database` job in CI `ci.yml`)** — `EXISTS` is standard SQL, lower risk than
   the alias/join path it replaces.
 - Deferred to later steps: deleting the now-unused join engine
   (`JoinRegistry`/`AliasGenerator`/`JoinScope`/`ApplyRelations`), `MorphTo`

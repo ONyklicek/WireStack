@@ -1,26 +1,20 @@
 name: CI
 
-# One workflow, one matrix, every gate.
+# One workflow, one run, the same blocks that used to be four files.
 #
-# This file replaces tests.yml, database-tests.yml, coverage.yml and
-# static-analysis.yml. They had drifted into four different answers to the same
-# four questions — which branches, which PHP, which extensions, which install
-# command — and the drift was the bug: coverage.yml's push gate named `2.x`, a
-# branch that was never cut, so the floors only ever ratcheted on pull requests,
-# and static-analysis.yml ran on `main` only for long enough that three gates
-# sat dark through an entire release line while reading as green.
+# This replaces tests.yml, database-tests.yml, coverage.yml and
+# static-analysis.yml. Each stays its own job — a failure still names itself,
+# and the database servers, the coverage tooling and the PHP × Laravel product
+# each keep the shape that suits them — but they now share one trigger, one
+# permission set and one extension list. That sharing is the point: four files
+# had drifted into four different answers to the same questions, and the drift
+# was the bug. coverage.yml's push gate named `2.x`, a branch that was never
+# cut, so the floors only ever ratcheted on pull requests; static-analysis.yml
+# ran on `main` alone for long enough that three gates sat dark through an
+# entire release line while reading as green.
 #
-# Every leg is now one `include` entry below. Adding a gate means adding a row,
-# not a file, and a row cannot quietly disagree with the others about when it
-# runs.
-#
-# The legs are deliberately written out rather than generated from a `php` ×
-# `laravel` product plus `exclude`. A cartesian base cannot be mixed with
-# `include` rows for the database, coverage and static legs without relying on
-# GitHub's merge rules — an `include` entry is appended as a new combination
-# only when it *conflicts* with an original key, so the database rows would have
-# to carry a deliberately wrong `laravel` value to avoid being folded into all
-# six compatibility legs. Six explicit rows beat that.
+# Adding a gate means adding a job here, not a file that can disagree about when
+# it runs.
 
 on:
   push:
@@ -35,256 +29,214 @@ permissions:
   contents: read
 
 env:
-  # The floor every leg gets. Database legs append their driver, and nothing
-  # subtracts: the static legs do not need pdo_sqlite, but composer refuses to
-  # install at all when openspout's fileinfo/xmlreader or dompdf's dom/mbstring
-  # are missing, so the shared list is the one that resolves everywhere.
+  # The one list, so it cannot drift per job. Composer refuses to install at all
+  # when a required extension is missing — openspout needs fileinfo and
+  # xmlreader, dompdf needs dom and mbstring — and PHPStan needs them present
+  # rather than merely resolvable, since it analyses the exporters against those
+  # libraries' real signatures now that the hand-written stub file is gone. The
+  # database job appends its driver on top.
   PHP_EXTENSIONS: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, fileinfo, xmlreader
 
 jobs:
-  ci:
-    name: ${{ matrix.name }}
+
+  # ── Compatibility ──────────────────────────────────────────────────────────
+
+  tests:
+    name: PHP ${{ matrix.php }} – Laravel ${{ matrix.laravel }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # 8.2 is the floor every manifest declares (`"php": "^8.2"`), so it is
+        # tested rather than assumed: the matrix used to start at 8.3 and two
+        # packages had quietly grown PHP 8.3 syntax — typed class constants in
+        # the install scaffolds — which parsed everywhere CI looked and fataled
+        # on the first `wire-*:install` an 8.2 application ran. A declared floor
+        # nothing runs is not a floor.
+        php: ['8.2', '8.3', '8.4', '8.5']
+        laravel: ['12.*', '13.*']
+        exclude:
+
+          # Laravel 13 requires PHP ^8.3, so its 8.2 leg cannot resolve.
+          - php: '8.2'
+            laravel: '13.*'
+
+          - php: '8.3'
+            laravel: '13.*'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - name: Adjust Laravel version
+        run: |
+          composer require "illuminate/support:${{ matrix.laravel }}" "illuminate/database:${{ matrix.laravel }}" --no-interaction --no-update
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Run tests
+        run: vendor/bin/pest
+
+  # ── Databases ──────────────────────────────────────────────────────────────
+
+  database:
+    # Runs the behaviour/result-based suites (Feature + Standalone + Integration
+    # — which execute real queries through the components) against live MySQL,
+    # MariaDB and PostgreSQL servers. The dialect-specific Unit suites that
+    # assert exact SQL strings keep running on SQLite in the `tests` job above.
+    name: ${{ matrix.db }}
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
         include:
-
-          # ── Compatibility ────────────────────────────────────────────────
-          #
-          # 8.2 is the floor every manifest declares (`"php": "^8.2"`), so it is
-          # tested rather than assumed: the matrix used to start at 8.3 and two
-          # packages had quietly grown PHP 8.3 syntax — typed class constants in
-          # the install scaffolds — which parsed everywhere CI looked and fataled
-          # on the first `wire-*:install` an 8.2 application ran. A declared floor
-          # nothing runs is not a floor.
-          #
-          # Laravel 13 requires PHP ^8.3, so it has no 8.2 leg; 8.3 is left on 12
-          # to keep the product from growing a leg per cell.
-          - name: PHP 8.2 – Laravel 12.*
-            php: '8.2'
-            laravel: '12.*'
-            run: vendor/bin/pest
-
-          - name: PHP 8.3 – Laravel 12.*
-            php: '8.3'
-            laravel: '12.*'
-            run: vendor/bin/pest
-
-          - name: PHP 8.4 – Laravel 12.*
-            php: '8.4'
-            laravel: '12.*'
-            run: vendor/bin/pest
-
-          - name: PHP 8.4 – Laravel 13.*
-            php: '8.4'
-            laravel: '13.*'
-            run: vendor/bin/pest
-
-          - name: PHP 8.5 – Laravel 12.*
-            php: '8.5'
-            laravel: '12.*'
-            run: vendor/bin/pest
-
-          - name: PHP 8.5 – Laravel 13.*
-            php: '8.5'
-            laravel: '13.*'
-            run: vendor/bin/pest
-
-          # ── Databases ────────────────────────────────────────────────────
-          #
-          # The behaviour/result-based suites (Feature + Standalone +
-          # Integration — the ones that execute real queries through the
-          # components) against live servers. The dialect-specific Unit suites
-          # that assert exact SQL strings, and Boost's schema introspection,
-          # keep running on SQLite in the compatibility legs above;
-          # TableQueryServiceTest is the one Unit file that earns a real server.
-          #
-          # These legs start their own container (see "Start the database
-          # server") instead of using `services:`. A job's `services` block is
-          # not matrix-expandable — it cannot be empty for a leg — so keeping it
-          # would have meant pulling and health-checking MySQL, MariaDB *and*
-          # Postgres before every one of the thirteen legs, including Pint.
-          - name: mysql
-            php: '8.3'
-            db: mysql
+          - db: mysql
             port: 3306
             username: root
-            extra-extensions: ', mysql, pdo_mysql'
-            run: >-
-              vendor/bin/pest
-              packages/core/tests/Feature
-              packages/forms/tests/Feature
-              packages/forms/tests/Standalone
-              packages/table/tests/Feature
-              packages/sortable/tests/Feature
-              tests/Integration
-              packages/table/tests/Unit/Services/TableQueryServiceTest.php
-
-          - name: mariadb
-            php: '8.3'
-            db: mariadb
+            driver: mysql, pdo_mysql
+          - db: mariadb
             port: 3307
             username: root
-            extra-extensions: ', mysql, pdo_mysql'
-            run: >-
-              vendor/bin/pest
-              packages/core/tests/Feature
-              packages/forms/tests/Feature
-              packages/forms/tests/Standalone
-              packages/table/tests/Feature
-              packages/sortable/tests/Feature
-              tests/Integration
-              packages/table/tests/Unit/Services/TableQueryServiceTest.php
-
-          - name: pgsql
-            php: '8.3'
-            db: pgsql
+            driver: mysql, pdo_mysql
+          - db: pgsql
             port: 5432
             username: postgres
-            extra-extensions: ', pgsql, pdo_pgsql'
-            run: >-
-              vendor/bin/pest
-              packages/core/tests/Feature
-              packages/forms/tests/Feature
-              packages/forms/tests/Standalone
-              packages/table/tests/Feature
-              packages/sortable/tests/Feature
-              tests/Integration
-              packages/table/tests/Unit/Services/TableQueryServiceTest.php
+            driver: pgsql, pdo_pgsql
 
-          # ── Coverage ─────────────────────────────────────────────────────
-          #
-          # Measured once, not per compatibility leg: coverage is a property of
-          # the code, not of the interpreter, so twelve slow runs would buy one
-          # number. pcov is several times faster than xdebug for a coverage-only
-          # run. `composer coverage:clover` carries the memory_limit=-1 that
-          # building the report over ~450 source files needs — without it the
-          # fatal still exits 0, a green run that measured nothing.
-          #
-          # Two gates follow (scripts/verify-coverage.php): no package drops
-          # below its recorded floor in scripts/coverage-floors.json — hard, and
-          # floors only ratchet upward — and every line a change adds or edits is
-          # covered, reported as advisory. Enforcing diff coverage on a release
-          # branch would demand covering the entire release, defensive paths
-          # included; the per-package floors are the real ratchet.
-          - name: Verify coverage
-            php: '8.3'
-            coverage: pcov
-            run: composer coverage:clover
+    # All three start on every leg: a `services` block is not matrix-expandable,
+    # so it cannot be narrowed to the one server the leg actually dials.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wire_test
+          MYSQL_ROOT_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
 
-          # ── Static analysis ──────────────────────────────────────────────
-          - name: PHPStan
-            php: '8.3'
-            run: vendor/bin/phpstan analyse --ansi
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_DATABASE: wire_test
+          MARIADB_ROOT_PASSWORD: password
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
 
-          # An `instanceof` against an unimported contract resolves to the
-          # current namespace, does not exist, and silently returns false — a
-          # seam that quietly stops working. PHPStan and Pint are both clean on
-          # that code, so it needs its own gate. See ADR 0021.
-          - name: instanceof imports
-            php: '8.3'
-            run: composer api:instanceof
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: wire_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
 
-          - name: Laravel Pint
-            php: '8.3'
-            run: vendor/bin/pint --test
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: ${{ env.PHP_EXTENSIONS }}, ${{ matrix.driver }}
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      # Behaviour/result-based tests that execute real queries (search, filters,
+      # sorting, exports, CRUD) — these are dialect-agnostic and validate the
+      # generated SQL against each server. The SQL-string Unit suites (exact
+      # toSql/toRawSql assertions) and Boost's schema-introspection tests stay on
+      # SQLite in the `tests` job.
+      - name: Run behaviour tests against ${{ matrix.db }}
+        env:
+          DB_CONNECTION: ${{ matrix.db }}
+          DB_HOST: 127.0.0.1
+          DB_PORT: ${{ matrix.port }}
+          DB_DATABASE: wire_test
+          DB_USERNAME: ${{ matrix.username }}
+          DB_PASSWORD: password
+        run: >-
+          vendor/bin/pest
+          packages/core/tests/Feature
+          packages/forms/tests/Feature
+          packages/forms/tests/Standalone
+          packages/table/tests/Feature
+          packages/sortable/tests/Feature
+          tests/Integration
+          packages/table/tests/Unit/Services/TableQueryServiceTest.php
+
+  # ── Coverage ───────────────────────────────────────────────────────────────
+
+  coverage:
+    # Measured once, not per compatibility leg: the `tests` job runs a PHP ×
+    # Laravel product with `coverage: none`, because compatibility is what that
+    # product is for. Coverage is a property of the code, not of the
+    # interpreter, so measuring it there would cost twelve slow runs to learn
+    # one number.
+    #
+    # Two gates (scripts/verify-coverage.php): no package drops below its
+    # recorded floor in scripts/coverage-floors.json — hard, and floors only
+    # ratchet upward — and every line a change adds or edits is covered,
+    # reported as advisory. Enforcing diff coverage on a release branch would
+    # demand covering the entire release, including defensive and edge paths
+    # that are deliberately left; the per-package floors are the real ratchet.
+    #
+    # Laravel is left at its default: wire-boost depends on laravel/mcp and is
+    # dropped from older matrix legs, and a run without it could not gate it.
+    name: Verify coverage
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          # Only the coverage leg needs history, and it needs all of it: the
-          # diff gate walks back to the base commit.
-          #
-          # Written as `!= && 1 || 0` rather than the obvious `== && 0 || 1`
-          # because 0 is falsy in a GitHub expression: `matrix.depth || 1` reads
-          # a declared depth of 0 as "unset" and hands back 1, which is a
-          # shallow clone and a coverage gate that cannot resolve its base. Only
-          # the truthy value may sit on the left of the `||`.
-          fetch-depth: ${{ matrix.coverage != 'pcov' && 1 || 0 }}
+          # The diff gate needs the history back to the base commit.
+          fetch-depth: 0
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php }}
-          extensions: ${{ env.PHP_EXTENSIONS }}${{ matrix.extra-extensions }}
-          coverage: ${{ matrix.coverage || 'none' }}
+          php-version: '8.3'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          # pcov is several times faster than xdebug for a coverage-only run.
+          coverage: pcov
 
-      - name: Pin Laravel to ${{ matrix.laravel }}
-        if: matrix.laravel != ''
-        run: composer require "illuminate/support:${{ matrix.laravel }}" "illuminate/database:${{ matrix.laravel }}" --no-interaction --no-update
-
-      # `update`, not `install`, on every leg: composer.lock is git-ignored here,
-      # so `install` would silently fall back to resolving anyway. Saying so is
-      # better than relying on the fallback.
       - name: Install dependencies
         run: composer update --prefer-dist --no-interaction --no-progress
 
-      - name: Start the database server
-        if: matrix.db != ''
-        run: |
-          case "${{ matrix.db }}" in
-            mysql)
-              docker run -d --name db -p ${{ matrix.port }}:3306 \
-                -e MYSQL_DATABASE=wire_test \
-                -e MYSQL_ROOT_PASSWORD=password \
-                mysql:8.0
-              probe='mysqladmin ping -h 127.0.0.1 -ppassword'
-              ;;
-            mariadb)
-              docker run -d --name db -p ${{ matrix.port }}:3306 \
-                -e MARIADB_DATABASE=wire_test \
-                -e MARIADB_ROOT_PASSWORD=password \
-                mariadb:11
-              probe='mariadb-admin ping -h 127.0.0.1 -ppassword'
-              ;;
-            pgsql)
-              docker run -d --name db -p ${{ matrix.port }}:5432 \
-                -e POSTGRES_DB=wire_test \
-                -e POSTGRES_USER=postgres \
-                -e POSTGRES_PASSWORD=password \
-                postgres:16
-              probe='pg_isready -U postgres'
-              ;;
-            *)
-              echo "::error::unknown database '${{ matrix.db }}'"
-              exit 1
-              ;;
-          esac
-
-          # The `services:` block this replaces allowed 15 retries at 10s. The
-          # probe runs inside the container, so it uses the client the image
-          # already ships rather than one the runner would have to install.
-          for _ in $(seq 1 75); do
-            if docker exec db sh -c "$probe" > /dev/null 2>&1; then
-              exit 0
-            fi
-            sleep 2
-          done
-
-          echo "::error::${{ matrix.db }} was not ready within 150s"
-          docker logs db
-          exit 1
-
-      - name: ${{ matrix.name }}
-        env:
-          # phpunit.xml's <env> entries do not force, so a real environment
-          # variable wins — which is how a leg swaps the in-memory SQLite the
-          # file declares for a live server. Non-database legs must therefore
-          # fall back to exactly what phpunit.xml would have set; an empty
-          # DB_CONNECTION is still a set DB_CONNECTION.
-          DB_CONNECTION: ${{ matrix.db || 'sqlite' }}
-          DB_DATABASE: ${{ matrix.db && 'wire_test' || ':memory:' }}
-          DB_HOST: 127.0.0.1
-          DB_PORT: ${{ matrix.port }}
-          DB_USERNAME: ${{ matrix.username }}
-          DB_PASSWORD: password
-        run: ${{ matrix.run }}
+      - name: Generate coverage report
+        # memory_limit=-1: building the report over ~450 source files exhausts
+        # the default limit, and the resulting fatal still exits 0 — a green
+        # run that measured nothing. `composer coverage:clover` carries it.
+        run: composer coverage:clover
 
       - name: Resolve the diff base
-        if: matrix.coverage == 'pcov'
         id: base
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -299,19 +251,84 @@ jobs:
           fi
 
       - name: Enforce coverage floors
-        if: matrix.coverage == 'pcov'
         run: php scripts/verify-coverage.php build/clover.xml
 
       - name: Report diff coverage (advisory)
-        if: matrix.coverage == 'pcov' && steps.base.outputs.ref != ''
+        if: ${{ steps.base.outputs.ref != '' }}
         continue-on-error: true
         run: php scripts/verify-coverage.php build/clover.xml --diff="${{ steps.base.outputs.ref }}"
 
-      - name: Upload the coverage report
-        if: always() && matrix.coverage == 'pcov'
+      - name: Upload the report
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: clover-coverage
           path: build/clover.xml
           retention-days: 7
           if-no-files-found: warn
+
+  # ── Static analysis ────────────────────────────────────────────────────────
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --ansi
+
+  instanceof:
+    # An `instanceof` against an unimported contract resolves to the current
+    # namespace, does not exist, and silently returns false — a seam that quietly
+    # stops working. PHPStan and Pint are both clean on that code, so it needs its
+    # own gate. See ADR 0021.
+    name: instanceof imports
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Verify every instanceof target resolves
+        run: composer api:instanceof
+
+  pint:
+    name: Laravel Pint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Run Pint
+        run: vendor/bin/pint --test

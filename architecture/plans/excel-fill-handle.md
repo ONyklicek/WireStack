@@ -375,7 +375,7 @@ budoucí rozšíření; v1 stačí Escape.)
 - auto-scroll u kraje viewportu
 
 **DB matice**: fill testy musí projít i na MySQL 8 a Postgres 16
-(databázové nohy `ci.yml`), ne jen na SQLite.
+(job `database` v `ci.yml`), ne jen na SQLite.
 
 Dvě chyby, které matice odhalila a SQLite ne:
 
