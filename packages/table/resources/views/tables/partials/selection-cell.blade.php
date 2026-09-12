@@ -11,6 +11,13 @@
     the markup and the vendor:publish override point, exactly as it was — it is the
     RENDER that moved out of the row loop, not the template.
 
+    $inert is the one thing about this cell that is NOT table-static, and it is
+    still not per-record: a table with Table::rowInactive(..., fn ($row) => $row
+    ->selectable(false)) compiles this partial twice — once plain, once inert —
+    and each row splices the shape it needs. Two shapes, not N: the inert copy is
+    the same markup for every inactive row. `inert` rather than a class, because
+    pointer-events alone leaves the box in the tab order and answering Space.
+
     Mind the whitespace: the tags below deliberately touch. A run of whitespace
     between two tags is one DOM text node, and the morph walks every one of them on
     every commit — this cell alone used to lay out ten of them per row. Whitespace
@@ -25,7 +32,7 @@
      data-select-cell marks the selection column for the sweep gesture (and the widened
      click target): the cell is found by this hook, never by column position — sortable
      prepends a drag-handle <td> and would shift every index. --}}
-<td wire:key="sel-{!! $key !!}" class="w-12 {{ $cellPadding }} cursor-pointer"
+<td wire:key="sel-{!! $key !!}" class="w-12 {{ $cellPadding }} {{ $inert ? 'opacity-40' : 'cursor-pointer' }}"@if($inert) inert aria-hidden="true"@endif
     data-select-cell
     x-on:click="{{ $usesRangeSelection ? '$event.shiftKey || $event.ctrlKey || $event.metaKey || ' : '' }}toggle({!! $keyJs !!})"><div
         class="flex items-center justify-center"><button {{-- No handler of its own: a

@@ -48,6 +48,7 @@ class Table implements Htmlable
     use Concerns\HasDataSource;
     use Concerns\HasGestures;
     use Concerns\HasGrouping;
+    use Concerns\HasInactiveRecords;
     use Concerns\HasPolling;
     use Concerns\HasRecordActions;
     use Concerns\HasSubRows;
@@ -101,8 +102,13 @@ class Table implements Htmlable
 
     protected bool $selectable = false;
 
-    /** The selection cell's compiled markup — {@see getSelectionCellSkeleton()}. */
-    protected ?Skeleton $selectionCellSkeleton = null;
+    /**
+     * The selection cell's compiled markup — {@see getSelectionCellSkeleton()} —
+     * keyed by its one shape beyond the record key: live or inert.
+     *
+     * @var array<string, Skeleton>
+     */
+    protected array $selectionCellSkeletons = [];
 
     /** The context-menu panel's compiled markup — {@see getRowContextMenuSkeleton()}. */
     protected ?Skeleton $rowContextMenuSkeleton = null;
@@ -420,6 +426,11 @@ class Table implements Htmlable
     {
         $this->columns = new ColumnSet($columns);
 
+        // The row-level inactive rule (if any) has to reach these columns too,
+        // and it may have been declared before them — see
+        // {@see Concerns\HasInactiveRecords::shareInactiveStateWithColumns()}.
+        $this->inactiveStatePending = true;
+
         return $this;
     }
 
@@ -444,7 +455,15 @@ class Table implements Htmlable
     /** This table's columns as a set, empty until {@see columns()} says otherwise. */
     protected function columnSet(): ColumnSet
     {
-        return $this->columns ??= new ColumnSet;
+        $set = $this->columns ??= new ColumnSet;
+
+        // The one place every consumer of a column passes through — the render,
+        // the Livewire host's `findColumn()`, the fill writer — so the table's
+        // row-level state reaches an editable column exactly once, whichever
+        // order the two were declared in.
+        $this->shareInactiveStateWithColumns($set);
+
+        return $set;
     }
 
     /**
@@ -718,18 +737,23 @@ class Table implements Htmlable
      * for the record key. The row loop then fills the key — the same "static once,
      * dynamic per row" move the `<tr>` and the `<td>` chrome already make.
      *
+     * The inert copy is the second and last shape: an inactive row whose state
+     * withholds the checkbox ({@see Support\InactiveRow::selectable()}) splices
+     * that one instead. Still O(shapes), not O(rows).
+     *
      * Worth it because this cell was the most expensive thing left in the row:
      * measured at 2 251 B and 10 whitespace text nodes per row, more than the entire
      * rest of a three-column row. Memoised per table instance, which is also per
      * render — Livewire rebuilds the Table on every request, so nothing goes stale.
      */
-    public function getSelectionCellSkeleton(): Skeleton
+    public function getSelectionCellSkeleton(bool $inert = false): Skeleton
     {
-        return $this->selectionCellSkeleton ??= Skeleton::compile(
+        return $this->selectionCellSkeletons[$inert ? 'inert' : 'live'] ??= Skeleton::compile(
             view('wire-table::tables.partials.selection-cell', [
                 'cellPadding' => $this->getCellPadding(),
                 'usesRangeSelection' => $this->usesRangeSelection(),
                 'checkIcon' => $this->getSelectionCheckIcon(),
+                'inert' => $inert,
                 'keyJs' => Skeleton::slot('keyJs'),
                 'key' => Skeleton::slot('key'),
             ])->render(),
@@ -1203,6 +1227,14 @@ class Table implements Htmlable
             ? ($record === null ? null : ($this->rowColor)($record))
             : $this->rowColor;
 
+        // An inactive row's tint is resolved here rather than beside the strike
+        // and the dimming, so it runs through the one row-tint owner every other
+        // coloured row uses — and so an explicit rowColor() always wins, which is
+        // what lets a table tint by status and still mark the cancelled ones.
+        if (($color === null || $color === '') && $this->isRecordInactive($record)) {
+            $color = $this->getInactiveRow()->getColor();
+        }
+
         return $color === null || $color === '' ? null : (string) $color;
     }
 
@@ -1231,7 +1263,10 @@ class Table implements Htmlable
 
         $cursor = $clickable ? 'cursor-pointer' : '';
 
-        return trim("{$base} {$cursor} {$this->activeRowMarkerGutter()} ".((string) $this->getRowClass($record)));
+        return trim(
+            "{$base} {$cursor} {$this->activeRowMarkerGutter()} {$this->getInactiveRowClasses($record)} "
+            .((string) $this->getRowClass($record))
+        );
     }
 
     /**

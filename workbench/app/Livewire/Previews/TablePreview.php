@@ -32,6 +32,7 @@ use NyonCode\WireTable\Columns\ToggleColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Filters\TrashedFilter;
+use NyonCode\WireTable\Support\InactiveRow;
 use NyonCode\WireTable\Support\RecordAction;
 use NyonCode\WireTable\Table;
 use Workbench\App\Models\Document;
@@ -174,6 +175,10 @@ class TablePreview extends Component
 
         if (in_array($this->variant, ['editable-fill', 'editable-fill-selectable', 'editable-fill-paged', 'editable-live', 'editable-row-partials'], true)) {
             return $this->editableFillTable($table);
+        }
+
+        if ($this->variant === 'inactive-rows') {
+            return $this->inactiveRowsTable($table);
         }
 
         if (in_array($this->variant, ['column-surfaces', 'trashed-filter'], true)) {
@@ -641,6 +646,59 @@ class TablePreview extends Component
         }
 
         return $table;
+    }
+
+    /**
+     * A record that stays in the list and stops being writable.
+     *
+     * The deactivated user is the fixture: `rowInactive()` dims and strikes that
+     * row, locks every editable cell on it, and withholds its checkbox — while
+     * the row action that would reactivate it stays live, which is the whole
+     * reason the actions are not locked by default.
+     *
+     * Every one of those is a browser fact rather than a markup one. Pest can
+     * see that the cell carries a disabled flag; only a driver can say whether
+     * clicking it opens an editor anyway, whether the `inert` checkbox still
+     * answers a click, and whether the action beside it still works.
+     *
+     * Editable columns on purpose, and all three kinds: each renders its own
+     * editor, and each has to refuse for the same reason.
+     */
+    private function inactiveRowsTable(Table $table): Table
+    {
+        return $table
+            ->model(User::class)
+            ->columns([
+                TextColumn::make('name')->label('Name'),
+                TextInputColumn::make('email')->label('Email'),
+                SelectColumn::make('role')
+                    ->label('Role')
+                    ->options(['admin' => 'Administrator', 'editor' => 'Editor', 'viewer' => 'Viewer']),
+                ToggleColumn::make('is_active')->label('Active'),
+            ])
+            ->actions([
+                Action::make('reactivate')
+                    ->label('Reactivate')
+                    ->icon('check')
+                    ->color('success')
+                    ->visible(fn (User $record) => ! $record->is_active)
+                    ->action(fn (User $record) => $record->update(['is_active' => true])),
+            ])
+            ->selectable()
+            ->bulkActions([
+                BulkAction::make('archive')->label('Archive')->icon('outline:archive-box')->color('warning'),
+            ])
+            ->rowInactive(
+                fn (User $record) => ! $record->is_active,
+                fn (InactiveRow $row) => $row
+                    ->strikethrough()
+                    ->color('danger')
+                    ->selectable(false),
+            )
+            ->searchable(false)
+            ->defaultSort('id', 'asc')
+            ->stackedOnMobile()
+            ->paginated(false);
     }
 
     /**

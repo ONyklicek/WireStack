@@ -100,6 +100,28 @@ declared record action is outside the layer** (`onClick()` survives
 `gestures(false)`; only `onKey()` needs the keyboard). Project-wide default in
 `config('wire-table.defaults.gestures')`.
 
+### `Concerns/HasInactiveRecords.php` + `Support/InactiveRow.php`
+
+Canonical owner of "is this record still writable". `Table::rowInactive($when,
+$configure)` declares the predicate; `InactiveRow` owns the vocabulary
+(`strikethrough`, `dim`, `color`, `editing`, `selectable`, `actions`), the
+defaults and both class strings.
+
+The lock is **not a second gate**. `Table::columnSet()` pushes the table's rule
+into every editable column through `Contracts/InheritsRecordState`, so the
+existing per-record `canEdit()` in `Services/CellEditPipeline::commit()` refuses
+the write — a forged request and a fill-handle drag included — and a column's own
+`disabled()` still applies alongside it (separate slots, either one disables).
+The push happens at the column set rather than in the setter, which is what makes
+the declaration order of `columns()` and `rowInactive()` irrelevant.
+
+The render split is the rule to keep: the **look is a value** (one class string
+spliced into the row's existing `rowClass` slot, plus a state-attribute slot the
+skeleton carries only for a table that declares the state) while the **two locks
+are a shape** — the selection cell and the action cell each compile a second,
+inert skeleton, so an inactive row costs one more shape and never one render per
+record. Project-wide default in `config('wire-table.defaults.inactive_rows')`.
+
 ### `Concerns/WithTable.php`
 
 Primary Livewire trait and one of the highest-risk files in the repo.

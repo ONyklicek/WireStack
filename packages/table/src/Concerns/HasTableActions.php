@@ -57,8 +57,13 @@ trait HasTableActions
     /** @var array<int, Action|HeaderAction> */
     protected array $emptyStateActions = [];
 
-    /** The row action cell's compiled markup — {@see getActionCellSkeleton()}. */
-    protected ?Skeleton $actionCellSkeleton = null;
+    /**
+     * The row action cell's compiled markup — {@see getActionCellSkeleton()} —
+     * keyed by its one shape: live or inert.
+     *
+     * @var array<string, Skeleton>
+     */
+    protected array $actionCellSkeletons = [];
 
     /** Which side of the row the actions column sits on: 'start' or 'end'. */
     protected string $actionsPosition = 'end';
@@ -425,12 +430,13 @@ trait HasTableActions
         return $actions;
     }
 
-    public function getActionCellSkeleton(): Skeleton
+    public function getActionCellSkeleton(bool $inert = false): Skeleton
     {
         $sticky = StickyColumn::forActions($this);
 
-        return $this->actionCellSkeleton ??= Skeleton::compile(
+        return $this->actionCellSkeletons[$inert ? 'inert' : 'live'] ??= Skeleton::compile(
             view('wire-table::tables.partials.action-cell', [
+                'inert' => $inert,
                 'cellPadding' => $this->getCellPadding(),
                 'borderClass' => $this->isBordered() ? 'border border-gray-200 dark:border-gray-700' : '',
                 'justifyClass' => $this->getActionsJustifyClass(),

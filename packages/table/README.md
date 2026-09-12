@@ -22,6 +22,7 @@ Enterprise-grade Livewire table component for Laravel. Inline editing, actions, 
 - **Notifications** - Pluggable notification drivers (session, Livewire events, Flasher)
 - **Responsive** - Stacked mobile layout, responsive column visibility
 - **Sub-rows** - Expandable row content with filtering
+- **Inactive records** - `rowInactive()`: a cancelled/archived row stays listed, dims (struck through and tinted on request) and stops being writable, enforced server-side
 - **Styling** - Striped, bordered, compact, hoverable, custom CSS classes
 
 ## Requirements

@@ -16,8 +16,15 @@
     that is what pairs them through a morph, in place of the `@foreach` markers
     this partial no longer emits.
 
+    $inert is the second shape, not a per-record value: with Table::rowInactive(
+    ..., fn ($row) => $row->actions(false)) the cell is compiled twice and each
+    row splices the one it needs. `inert` rather than pointer-events, so the
+    buttons leave the tab order too — and the host refuses the action anyway
+    (Concerns\InteractsWithTableActions), since an inert attribute is a client
+    fact and a forged request is not bound by it.
+
     Mind the whitespace: the tags touch on purpose. A run of whitespace between
     two tags is a DOM text node that the morph walks on every commit, and this
     cell is emitted once per row. Whitespace between attributes is free.
 --}}
-<td class="{{ $cellPadding }} {{ $borderClass }} {{ $stickyCellClass }}">{!! $stickyLayers !!}<div class="relative flex flex-wrap items-center gap-1 {{ $justifyClass }}">{!! $actions !!}</div></td>
+<td class="{{ $cellPadding }} {{ $borderClass }} {{ $stickyCellClass }}{{ $inert ? ' opacity-40' : '' }}"@if($inert) inert=""@endif>{!! $stickyLayers !!}<div class="relative flex flex-wrap items-center gap-1 {{ $justifyClass }}">{!! $actions !!}</div></td>

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireTable\Concerns\CanEditBooleanCell;
+use NyonCode\WireTable\Contracts\InheritsRecordState;
 
 /**
  * Checkbox column — an inline checkbox writing a boolean straight to the record.
@@ -16,7 +17,7 @@ use NyonCode\WireTable\Concerns\CanEditBooleanCell;
  * write path with {@see ToggleColumn}; use it where a checkbox reads more
  * naturally than a switch, or where a dense table has no room for a track.
  */
-class CheckboxColumn extends Column
+class CheckboxColumn extends Column implements InheritsRecordState
 {
     // canEdit() + the record-version/disabled wiring are shared with ToggleColumn.
     use CanEditBooleanCell;

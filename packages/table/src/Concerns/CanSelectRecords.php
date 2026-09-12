@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use NyonCode\WireTable\Services\AggregateSubqueries;
+use NyonCode\WireTable\Support\InactiveRow;
 use NyonCode\WireTable\Table;
 
 /**
@@ -50,6 +51,13 @@ trait CanSelectRecords
      */
     public function toggleRecordSelection(string $key): void
     {
+        // The inert checkbox an inactive row renders is a client fact; this is
+        // the server's half of the same rule. Unticking is always allowed —
+        // a row locked *after* it was selected has to be removable.
+        if (! $this->isRecordSelected($key) && $this->isSelectionLockedFor($key)) {
+            return;
+        }
+
         $selected = $this->tableState->get('selection.records', []);
         $index = array_search($key, $selected, true);
 
@@ -76,7 +84,7 @@ trait CanSelectRecords
      */
     public function selectAllRecords(): void
     {
-        $pageKeys = $this->getPageRecordKeys();
+        $pageKeys = $this->getSelectablePageRecordKeys();
 
         if ($this->selectsAllMatching()) {
             $this->tableState->set('selection.records', array_values(array_diff(
@@ -256,7 +264,10 @@ trait CanSelectRecords
      */
     public function areAllVisibleSelected(): bool
     {
-        $pageKeys = $this->getPageRecordKeys();
+        // The rows a tick could reach, not every row on the page: with a
+        // selection-locked inactive row present, the header box would otherwise
+        // never complete and "select page" would look broken.
+        $pageKeys = $this->getSelectablePageRecordKeys();
 
         if ($pageKeys === []) {
             return false;
@@ -304,6 +315,64 @@ trait CanSelectRecords
         }
 
         return $keys;
+    }
+
+    /**
+     * The page's keys a selection may actually take.
+     *
+     * Identical to {@see getPageRecordKeys()} unless the table locks the
+     * selection on inactive records ({@see InactiveRow::selectable()}).
+     * Deselection deliberately keeps the unfiltered list: dropping a row from the
+     * selection is never the thing a lock is protecting.
+     *
+     * @return array<int, string>
+     */
+    public function getSelectablePageRecordKeys(): array
+    {
+        $table = $this->getTable();
+
+        if (! $table->hasInactiveRecords() || $table->getInactiveRow()->allowsSelection()) {
+            return $this->getPageRecordKeys();
+        }
+
+        $primaryKey = $table->getPrimaryKey();
+        $keys = [];
+
+        foreach ($this->getTableRecords() as $record) {
+            if (! $table->isRecordSelectionLocked($record)) {
+                $keys[] = (string) $record->{$primaryKey};
+            }
+        }
+
+        return $keys;
+    }
+
+    /**
+     * Whether this key names a record the table keeps out of the selection.
+     *
+     * Resolved from the page first — the only records a click can name — and
+     * through the data source otherwise, since a forged key is exactly what this
+     * check exists for. Costs nothing on a table that never declared the state.
+     */
+    protected function isSelectionLockedFor(string $key): bool
+    {
+        $table = $this->getTable();
+
+        if (! $table->hasInactiveRecords() || $table->getInactiveRow()->allowsSelection()) {
+            return false;
+        }
+
+        $primaryKey = $table->getPrimaryKey();
+
+        foreach ($this->getTableRecords() as $record) {
+            if ((string) $record->{$primaryKey} === $key) {
+                return $table->isRecordSelectionLocked($record);
+            }
+        }
+
+        $record = $table->getDataSource()->resolveRecord($key)?->unwrap();
+
+        return $record !== null && $table->isRecordSelectionLocked($record);
     }
 
     /**

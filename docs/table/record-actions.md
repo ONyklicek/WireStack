@@ -219,6 +219,12 @@ override owns its own contrast:
 - **Expecting record actions on the mobile card or sub-rows** — record actions
   are a desktop pointer affordance on the main rows; touch cards use the visible
   action buttons, and sub-rows are intentionally excluded.
+- **Expecting a bound trigger to survive `actions(false)`** — a table that
+  withholds the actions of an inactive record
+  ([Inactive Records](inactive-records.md)) refuses them in
+  `executeTableAction()` / `openActionModal()`, which is where a bound
+  `onClick()` / `onDoubleClick()` runs too. The gesture still fires in the
+  browser and then does nothing; only `recordUrl()`, a plain link, is untouched.
 
 ## Migrating from `rowContextMenu()`
 

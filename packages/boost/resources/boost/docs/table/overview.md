@@ -529,6 +529,9 @@ selection-scope totals stay live.
 
 // Tint the whole row with a semantic color, static or computed per record
 ->rowColor(string|Closure|null $color)
+
+// Mark records inactive: dimmed, optionally struck through, and not writable
+->rowInactive(bool|Closure $when = true, Closure|InactiveRow|null $configure = null)
 ```
 
 **Sticky header.** `stickyHeader()` pins the `<thead>` so the column labels stay
@@ -600,6 +603,22 @@ be combined on the same table:
 ->rowColor(fn (Invoice $r) => $r->isOverdue() ? 'danger' : null)
 ->rowClass(fn (Invoice $r) => $r->isOverdue() ? 'font-semibold' : null)
 ```
+
+**Inactive records.** A cancelled, voided or archived record stays in the list
+and stops being writable: `rowInactive()` dims the row, locks every inline
+editor on it — server-side, so a forged write is refused too — and optionally
+strikes its text through or tints it. Its actions, its checkbox and a click that
+opens it keep working unless you say otherwise:
+
+```php
+->rowInactive(
+    fn (Invoice $r) => $r->status === 'cancelled',
+    fn (InactiveRow $row) => $row->strikethrough()->color('danger'),
+)
+```
+
+The whole state, including the two optional locks, is in
+[Inactive Records](inactive-records.md).
 
 ### Record URL (Clickable Rows)
 

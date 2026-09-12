@@ -10,8 +10,9 @@ use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireTable\Concerns\CanEditBooleanCell;
+use NyonCode\WireTable\Contracts\InheritsRecordState;
 
-class ToggleColumn extends Column
+class ToggleColumn extends Column implements InheritsRecordState
 {
     // canEdit() + the record-version/disabled wiring are shared with CheckboxColumn.
     use CanEditBooleanCell;

@@ -14,6 +14,7 @@ use NyonCode\WireCore\Foundation\View\CellSync;
 use NyonCode\WireTable\Concerns\HasRecordVersion;
 use NyonCode\WireTable\Concerns\HasView;
 use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
+use NyonCode\WireTable\Contracts\InheritsRecordState;
 
 /**
  * Inline editable select cell — always a browser-native <select>.
@@ -24,7 +25,7 @@ use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
  * native() / isNative() pair here could only ever be a no-op that reads like a
  * real switch. Better to not offer the choice than to offer a fake one.
  */
-class SelectColumn extends Column
+class SelectColumn extends Column implements InheritsRecordState
 {
     use HasRecordVersion;
     use HasRelationship;

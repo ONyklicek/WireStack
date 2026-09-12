@@ -89,6 +89,16 @@ final class TableConfigurationException extends InvalidArgumentException impleme
         );
     }
 
+    /**
+     * @param  array<int, string>  $valid
+     */
+    public static function unknownInactiveRowOption(string $option, array $valid): self
+    {
+        return new self(
+            "Unknown inactive-row option [{$option}]. Valid options: ".implode(', ', $valid).'.'
+        );
+    }
+
     public static function recordActionInRowActions(): self
     {
         return new self(

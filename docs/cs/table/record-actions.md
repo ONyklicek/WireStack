@@ -218,6 +218,11 @@ kontrast:
 - **Očekávání record akcí na mobilní kartě nebo sub-rows** — record akce jsou
   desktop pointer koncept na hlavních řádcích; touch karty používají viditelná
   tlačítka akcí a sub-rows jsou záměrně vyloučené.
+- **Očekávání, že navázaný trigger přežije `actions(false)`** — tabulka, která
+  neaktivnímu záznamu bere akce ([Neaktivní záznamy](inactive-records.md)), je
+  odmítne v `executeTableAction()` / `openActionModal()`, a tam běží i navázaný
+  `onClick()` / `onDoubleClick()`. Gesto v prohlížeči proběhne a pak neudělá nic;
+  nedotčené zůstává jen `recordUrl()`, což je prostý odkaz.
 
 ## Migrace z `rowContextMenu()`
 

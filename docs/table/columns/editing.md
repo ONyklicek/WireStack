@@ -139,6 +139,11 @@ all of this — text inputs, selects and toggles use it, so they behave consiste
 - **Server-side authorization.** The client `disabled()` state is only cosmetic — a per-record
   `disabled()` cell (and any column permission) is enforced again on the server in
   `updateTableCell`, so a forged request can't write to a locked cell.
+- **The table can lock the whole row.** `Table::rowInactive()` marks a record inactive — cancelled,
+  voided, archived — and every editable column on that row refuses through this same gate, the fill
+  handle included. It is a second, independent source of the per-record `disabled()` state above:
+  either one locks the cell, whichever was declared first. See
+  [Inactive Records](../inactive-records.md).
 
 ## Constraining An Edit You Do Not Own
 

@@ -60,7 +60,7 @@ final class RowRenderPlan
      *                                   the card view echoes the string rather
      *                                   than re-entering the icon directive.
      * @param  string|null  $rowClassBinding  Null when no row state is dynamic.
-     * @param  list<string>  $pageRecordKeys
+     * @param  list<string>  $pageRecordKeys  the page's keys a selection may take
      * @param  array<string, string>  $selectionAnnouncements
      */
     private function __construct(
@@ -104,6 +104,16 @@ final class RowRenderPlan
 
         if ($isSelectable) {
             foreach ($records as $pageRecord) {
+                // The keys a tick can reach, which is what the client's
+                // select-all, its ranges and its sweep all work from — an
+                // inactive record whose state withholds the selection is left
+                // out here for the same reason the server leaves it out of
+                // `selectAllRecords()`, and leaving it in was how "select page"
+                // ticked a row whose own checkbox refuses to.
+                if ($table->isRecordSelectionLocked($pageRecord)) {
+                    continue;
+                }
+
                 $pageRecordKeys[] = (string) $pageRecord->{$table->getPrimaryKey()};
             }
         }
@@ -145,6 +155,10 @@ final class RowRenderPlan
                 'partialAnchor' => $table->usesRowPartials()
                     ? ' wire:partial="row-'.Skeleton::slot('key').'"'
                     : '',
+                // Only a table that declares the state carries the slot, so an
+                // ordinary row pays neither the attribute nor the strtr pair.
+                'inactiveRows' => $table->hasInactiveRecords(),
+                'rowState' => Skeleton::slot('rowState'),
                 'rowClass' => Skeleton::slot('rowClass'),
                 'keyJs' => Skeleton::slot('keyJs'),
                 'tabindex' => Skeleton::slot('tabindex'),
@@ -152,7 +166,7 @@ final class RowRenderPlan
                 'ariaRowIndex' => Skeleton::slot('ariaRowIndex'),
                 'key' => Skeleton::slot('key'),
             ])->render(),
-            'rowClass', 'keyJs', 'tabindex', 'rowIndex', 'ariaRowIndex', 'key',
+            'rowClass', 'rowState', 'keyJs', 'tabindex', 'rowIndex', 'ariaRowIndex', 'key',
         );
     }
 }

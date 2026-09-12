@@ -67,7 +67,19 @@ final class RowRenderer
         $key = e($recordKey);
         $keyJs = Js::from($recordKey)->toHtml();
 
+        // The three decisions this renderer takes from the state — the row's
+        // own attributes, which checkbox cell and which action cell — share one
+        // resolution. The class string resolves the predicate again inside
+        // `getRowClasses()`, which is where the canonical composer lives and is
+        // worth the second call. The editors take none of it: a column carries
+        // the same rule itself, so the server refuses a write whether or not
+        // this render happened.
+        $inactive = $this->table->hasInactiveRecords() && $this->table->isRecordInactive($record);
+        $inactiveRow = $inactive ? $this->table->getInactiveRow() : null;
+        $actionsLocked = $inactiveRow !== null && ! $inactiveRow->allowsActions();
+
         $html = $row->rowSkeleton->fill([
+            'rowState' => $this->table->getRowStateAttributes($inactive),
             'rowClass' => e($this->table->getRowClasses($record, $rowIndex)),
             'keyJs' => $keyJs,
             'tabindex' => $rowIndex === 0 ? '0' : '-1',
@@ -77,11 +89,16 @@ final class RowRenderer
         ]);
 
         // The right-click menu. Empty for a record with no visible action, which
-        // is the one child of a row whose presence genuinely varies per record.
-        $html .= $this->table->getRowContextMenuPanel($record);
+        // is the one child of a row whose presence genuinely varies per record —
+        // a record whose actions are locked is simply another such record.
+        $html .= $actionsLocked ? '' : $this->table->getRowContextMenuPanel($record);
 
         if ($row->isSelectable) {
-            $html .= $row->selectionCellSkeleton->fill(['keyJs' => $keyJs, 'key' => $key]);
+            $selectionCell = $inactiveRow !== null && ! $inactiveRow->allowsSelection()
+                ? $this->table->getSelectionCellSkeleton(inert: true)
+                : $row->selectionCellSkeleton;
+
+            $html .= $selectionCell->fill(['keyJs' => $keyJs, 'key' => $key]);
         }
 
         if ($this->plan->shell()->hasSubRows) {
@@ -94,7 +111,7 @@ final class RowRenderer
         }
 
         $actionCell = $actions->hasAny
-            ? $this->table->getActionCellSkeleton()->fill(['actions' => $this->renderActions($record)])
+            ? $this->table->getActionCellSkeleton($actionsLocked)->fill(['actions' => $this->renderActions($record)])
             : '';
 
         if ($actions->position === 'start') {

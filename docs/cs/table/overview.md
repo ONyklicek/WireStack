@@ -525,6 +525,9 @@ v rozsahu výběru zůstaly živé.
 
 // Obarvení celého řádku sémantickou barvou, staticky nebo pro každý záznam
 ->rowColor(string|Closure|null $color)
+
+// Označení záznamů za neaktivní: ztlumené, volitelně přeškrtnuté a nezapisovatelné
+->rowInactive(bool|Closure $when = true, Closure|InactiveRow|null $configure = null)
 ```
 
 **Přišpendlená hlavička.** `stickyHeader()` připne `<thead>`, takže názvy sloupců
@@ -595,6 +598,22 @@ kombinovat na téže tabulce:
 ->rowColor(fn (Invoice $r) => $r->isOverdue() ? 'danger' : null)
 ->rowClass(fn (Invoice $r) => $r->isOverdue() ? 'font-semibold' : null)
 ```
+
+**Neaktivní záznamy.** Stornovaný, zrušený nebo archivovaný záznam zůstává v
+seznamu a přestává být zapisovatelný: `rowInactive()` řádek ztlumí, zamkne na
+něm každý inline editor — na straně serveru, takže podvržený zápis je odmítnut
+také — a volitelně jeho texty přeškrtne nebo je obarví. Akce, zaškrtávátko i
+kliknutí, které záznam otevře, fungují dál, dokud neřeknete jinak:
+
+```php
+->rowInactive(
+    fn (Invoice $r) => $r->status === 'cancelled',
+    fn (InactiveRow $row) => $row->strikethrough()->color('danger'),
+)
+```
+
+Celý stav včetně obou volitelných zámků je v
+[Neaktivní záznamy](inactive-records.md).
 
 ### URL záznamu (klikatelné řádky)
 

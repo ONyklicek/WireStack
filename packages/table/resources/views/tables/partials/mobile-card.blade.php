@@ -24,6 +24,13 @@
     Variables: $isSelectable, $cardTitle, $cardMetric, $cardSubtitle, $hasMeta,
     $hasDetails, $hasMobileActions, $collapseMobileActions, $detailsClass,
     $actionsClass (all table-level), plus the slots.
+
+    $inertSelection / $inertActions are the card's second shape, not per-record
+    values: a table with Table::rowInactive() compiles this shell twice — live and
+    inactive — and each record splices the one it needs, so it stays O(shapes).
+    Which of the two goes inert is the table's own switch
+    (Support\InactiveRow::selectable() / ::actions()); the strike, the dimming and
+    the tint arrive through $cardClasses instead, which is a value.
 --}}
 <div
         class="{!! $cardClasses !!}"
@@ -33,7 +40,7 @@
 >{{-- Header: identifier on the left, the figure the list is read
     for on the right, actions after it. --}}<div
         class="flex items-start gap-3 px-4 pt-4 {{ $hasDetails ? 'pb-3' : 'pb-4' }}"
->@if($isSelectable)<label class="flex items-center pt-0.5 flex-shrink-0" data-select-cell><input
+>@if($isSelectable)<label class="flex items-center pt-0.5 flex-shrink-0{{ $inertSelection ? ' opacity-40' : '' }}"@if($inertSelection) inert aria-hidden="true"@endif data-select-cell><input
         type="checkbox"
         x-on:change="toggle({!! $keyJs !!})"
         :checked="isSelected({!! $keyJs !!})"
@@ -52,10 +59,10 @@
 >{!! $subtitle !!}</div>@endif@if($hasMeta)<div
         class="mt-1.5 flex flex-wrap items-center gap-2"
 >{!! $meta !!}</div>@endif</div>@if($hasMobileActions && $collapseMobileActions)<div
-        class="flex items-center justify-end flex-shrink-0 -mr-1"
+        class="flex items-center justify-end flex-shrink-0 -mr-1{{ $inertActions ? ' opacity-40' : '' }}"@if($inertActions) inert=""@endif
 >{!! $groupActions !!}</div>@endif</div>@if($hasDetails)<dl
         class="{{ $detailsClass }}"
 >{!! $details !!}</dl>@endif@if($hasMobileActions && ! $collapseMobileActions)<div
-        class="{{ $actionsClass }}"
+        class="{{ $actionsClass }}{{ $inertActions ? ' opacity-40' : '' }}"@if($inertActions) inert=""@endif
         data-testid="table-card-actions" @wireEl('table-card-actions')
 >{!! $actions !!}</div>@endif{!! $subRows !!}</div>

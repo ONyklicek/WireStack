@@ -249,7 +249,10 @@ trait InteractsWithTableActions
         $table = $this->getTable();
         $record = $table->getQuery()->where($table->getPrimaryKey(), $recordKey)->first();
 
-        if (! $record) {
+        // An inactive record whose state withholds its actions refuses the modal
+        // too: the inert action cell is a client fact, and a modal opened from a
+        // forged mount would run the action at the end of it.
+        if (! $record || $table->isRecordActionLocked($record)) {
             return;
         }
 
@@ -340,7 +343,10 @@ trait InteractsWithTableActions
         // (ADR 0019 invariant 3, as amended).
         $record = $table->getDataSource()->resolveRecord($recordKey)?->unwrap();
 
-        if (! $record || ! $action->canExecute($record)) {
+        // The server's half of Support\InactiveRow::actions(false) — see
+        // openActionModal(). A bulk action is deliberately not covered: it acts
+        // on a selection, which is governed by selectable() instead.
+        if (! $record || $table->isRecordActionLocked($record) || ! $action->canExecute($record)) {
             return;
         }
 

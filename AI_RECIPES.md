@@ -261,6 +261,17 @@ composer test:table
 Use for sorting, pagination, search, row actions, selection, modals, grouping,
 sub-rows, polling, summaries, and Livewire state behavior.
 
+Inactive-record rule (a record that stays listed and stops being writable):
+never add a second gate for it. `Support\InactiveRow` + `Concerns\HasInactiveRecords`
+own the vocabulary and the predicate, and the lock reaches the cells by being
+**pushed into the columns** (`Contracts\InheritsRecordState`, applied at
+`Table::columnSet()`), so the existing per-record `Column::canEdit()` refuses the
+write — a single edit and a fill alike. A new switch is a setter plus an
+`allows*()` reader on `InactiveRow`, an `isRecord*Locked()` reader on the trait
+for the surface that enforces it, and a config key in `fromConfig()`. The look
+travels as a **value** (one class string per row), a lock as a **shape** (a second
+compiled skeleton for that cell) — never one render per record.
+
 Gesture-layer rule (keyboard nav, ranges, drag sweep, context menu, `?` help,
 fill handle): never add a local flag for one. `Support\TableGestures` +
 `Concerns\HasGestures` own the decision, the layer is **opt-in** (keyboard and

@@ -21,9 +21,12 @@
     just a token in the compiled string.
 
     Every condition below is a property of the TABLE, not of a record — keyboard
-    nav, the ARIA role, selection, the row-class binding are either on for the page
-    or off for it — so the row has exactly one shape and these `@if`s are decided
-    once instead of re-decided on every row. They sit INSIDE the tag, where Livewire
+    nav, the ARIA role, selection, the row-class binding, whether any record can be
+    inactive at all are either on for the page or off for it — so the row has
+    exactly one shape and these `@if`s are decided once instead of re-decided on
+    every row. $rowState is the one exception in spirit and not in shape: the SLOT
+    exists only for a table that declares the inactive state, and carries that
+    row's `aria-disabled`/`data-inactive` pair or an empty string. They sit INSIDE the tag, where Livewire
     deliberately injects no morph markers, which is what keeps a row free of them.
 
     The record key arrives through TWO slots because it appears under two encodings:
@@ -47,4 +50,4 @@
     about itself. aria-rowindex counts through the whole grid, not the page, so it
     carries the header rows plus this page's offset and survives paging.
 --}}
-<tr class="{!! $rowClass !!} {{ $keyboardNav ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500' : '' }}" @if($rowClassBinding):class="{!! str_replace('%key%', $keyJs, $rowClassBinding) !!}" @endif @if($keyboardNav)role="row" tabindex="{!! $tabindex !!}" :tabindex="rowTabindex({!! $keyJs !!}, {!! $rowIndex !!})" @endif @if($tableRole)aria-rowindex="{!! $ariaRowIndex !!}" @endif @if($isSelectable):aria-selected="isSelected({!! $keyJs !!}) ? 'true' : 'false'" @endif{!! $partialAnchor !!} wire:key="row-{!! $key !!}" data-testid="table-row" @wireEl('table-row') data-row-key="{!! $key !!}">
+<tr class="{!! $rowClass !!} {{ $keyboardNav ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500' : '' }}" @if($rowClassBinding):class="{!! str_replace('%key%', $keyJs, $rowClassBinding) !!}" @endif @if($keyboardNav)role="row" tabindex="{!! $tabindex !!}" :tabindex="rowTabindex({!! $keyJs !!}, {!! $rowIndex !!})" @endif @if($tableRole)aria-rowindex="{!! $ariaRowIndex !!}" @endif @if($isSelectable):aria-selected="isSelected({!! $keyJs !!}) ? 'true' : 'false'" @endif{!! $partialAnchor !!} wire:key="row-{!! $key !!}" data-testid="table-row" @wireEl('table-row') data-row-key="{!! $key !!}"@if($inactiveRows){!! $rowState !!}@endif>

@@ -107,6 +107,21 @@ Gesta fungují i v tomto režimu a čtou se tak, jak se od „všechno kromě…
 - Zaškrtávátko v hlavičce edituje výjimky a nikdy vás tiše nevrátí zpět k
   výčtovému výběru.
 
+## Řádek, který výběr nevezme
+
+`Table::rowInactive(…, fn (InactiveRow $row) => $row->selectable(false))` udrží
+stornovaný nebo archivovaný záznam mimo výběr: jeho zaškrtávátko je `inert`
+(nejen neklikatelné — vypadne i z pořadí tabulátoru), „vybrat stránku“ i
+zaškrtávátko v hlavičce ho přeskočí, rozsahy a tažení přes něj přejdou a
+podvržené přepnutí server odmítne. Odškrtnout jde dál, takže řádek zamčený *až
+poté*, co byl vybrán, jde pořád odebrat.
+
+Jediné, co to zúžit neumí, je režim z předchozí sekce: **„vybrat všech N“ je
+dotaz** a predikát napsaný v PHP dotaz neunese. Hromadná akce, která se
+neaktivních záznamů nesmí dotknout, si záznam ověří sama — stejně jako u
+jakéhokoli jiného pravidla, které databáze neumí vyjádřit. Celý stav je v
+[Neaktivní záznamy](inactive-records.md).
+
 ## Tažení po sloupci
 
 Stiskněte tlačítko ve sloupci se zaškrtávátky a táhněte: každý řádek, přes který

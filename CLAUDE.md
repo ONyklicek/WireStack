@@ -129,6 +129,10 @@ Before changing shared behavior, ask:
 - Row interaction — keyboard grid navigation, ranges, the drag sweep, the row
   context menu, `?` help, the fill handle (all opt-in through `Table::gestures()`):
   `architecture/table.md` § Gesture layer, then `docs/table/gestures.md`
+- A record that stays listed and stops being writable — the cancelled/voided/
+  archived row, its lock on inline editing (server-side) and the optional locks
+  on its checkbox and its actions: `architecture/table.md` § Inactive records,
+  then `docs/table/inactive-records.md`
 - Anything spanning package boundaries:
   `architecture/integrations.md`
 - Shared design-system ownership, canonical UI semantics, color/size/icon surface work:

@@ -20,8 +20,9 @@ use NyonCode\WireCore\Foundation\View\Primitives;
 use NyonCode\WireTable\Concerns\HasRecordVersion;
 use NyonCode\WireTable\Concerns\HasView;
 use NyonCode\WireTable\Concerns\InteractsWithRecordDisabledState;
+use NyonCode\WireTable\Contracts\InheritsRecordState;
 
-class TextInputColumn extends Column implements DehydratesState, HydratesState
+class TextInputColumn extends Column implements DehydratesState, HydratesState, InheritsRecordState
 {
     use CanBeNullable;
     use HasRecordVersion;

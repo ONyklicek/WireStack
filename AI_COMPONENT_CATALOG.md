@@ -603,6 +603,7 @@ Main concerns:
 - `Concerns\HasRecordActions` — whole-row interaction (see *Record actions* below)
 - `Concerns\HasRecordTriggers` — record-action trigger vocabulary (on the `RecordAction` wrapper)
 - `Concerns\HasGestures` — the table's side of the gesture layer
+- `Concerns\HasInactiveRecords` — the table's side of the inactive-record state (see *Inactive records* below)
 
 Gesture layer (which desktop pointer/keyboard gestures a table offers — OPT-IN):
 
@@ -611,6 +612,15 @@ Gesture layer (which desktop pointer/keyboard gestures a table offers — OPT-IN
 - Consumers to keep honest: `Table::usesGridSemantics()`, `mountsRecordActionController()`, `hasRowContextMenu()`, `isFillHandleEnabled()`, `Support\TableShortcutLegend`
 - Project default: `config('wire-table.defaults.gestures')` — `null` shipped default / `true` all / `false` none / map
 - Rule: a capability is a **permission, not a trigger**, and an explicitly declared record action is outside the layer (only `onKey()` needs the keyboard)
+
+Inactive records (a record that stays listed and stops being writable):
+
+- `Support\InactiveRow` — the canonical vocabulary and the classes: `strikethrough()` (off) / `dim()` (on) / `color(?string)` (null) / `editing()` (off — the lock) / `selectable()` (on) / `actions()` (on); `make()` / `fromConfig()`, plus `rowClasses()` and `cardClasses()` — the two surface-specific resolvers
+- `Concerns\HasInactiveRecords` — `Table::rowInactive(bool|Closure, Closure|InactiveRow|null)`, `hasInactiveRecords()`, `isRecordInactive()`, `getInactiveRow()`, the two lock readers (`isRecordSelectionLocked()` / `isRecordActionLocked()`), `getInactiveRowClasses()` / `getInactiveCardClasses()` / `getRowStateAttributes()`, and the push into the columns
+- `Contracts\InheritsRecordState` — the seam the push goes through; implemented for all four editable columns by `Concerns\InteractsWithRecordDisabledState::inheritDisabledState()`, which is what makes `Column::canEdit()` (and so `Services\CellEditPipeline::commit()`, single edit and fill alike) refuse the write
+- Consumers to keep honest: `Table::getRowColor()` (the tint falls back here), `Concerns\StacksOnMobile::getRowCardClasses()` / `getMobileCardSkeleton(MobileCard, bool $inactive)`, `Support\RowRenderer` (the row's state attributes plus the inert selection/action cells), `Concerns\CanSelectRecords::getSelectablePageRecordKeys()`, `Concerns\InteractsWithTableActions`
+- Project default: `config('wire-table.defaults.inactive_rows')` — `null` shipped defaults, or a map of the six options
+- Rule: the look is a *value* (one class string per row), the two locks are a *shape* (a second compiled skeleton for the cell, never one per record)
 
 Record actions (whole-row interaction — click/dblclick/right-click/keyboard):
 

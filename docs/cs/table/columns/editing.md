@@ -136,6 +136,11 @@ i toggly ji používají, takže se chovají konzistentně.
 - **Serverová autorizace.** Klientský `disabled()` stav je jen kosmetika — `disabled()` na úrovni záznamu
   buňka (i oprávnění sloupce) se znovu vynutí na serveru v `updateTableCell`, takže forged request
   nemůže zapsat do zamčené buňky.
+- **Tabulka umí zamknout celý řádek.** `Table::rowInactive()` označí záznam za neaktivní —
+  stornovaný, zrušený, archivovaný — a každý editovatelný sloupec na tom řádku odmítne zápis přes
+  tutéž bránu, fill handle včetně. Je to druhý, nezávislý zdroj per-record `disabled()` stavu
+  z předchozího bodu: buňku zamkne kterýkoli z nich, ať byl deklarován první nebo druhý. Viz
+  [Neaktivní záznamy](../inactive-records.md).
 
 ## Omezení editace, kterou nevlastníte
 

@@ -299,7 +299,10 @@ trait StacksOnMobile
             ? HasColor::getRowTintClasses($tint)
             : 'bg-white dark:bg-gray-800';
 
-        return trim("{$background} border-b border-gray-200 dark:border-gray-700 ".((string) $this->getRowClass($record)));
+        return trim(
+            "{$background} border-b border-gray-200 dark:border-gray-700 {$this->getInactiveCardClasses($record)} "
+            .((string) $this->getRowClass($record))
+        );
     }
 
     /**
@@ -318,11 +321,17 @@ trait StacksOnMobile
      *
      * @see CardRenderer
      */
-    public function getMobileCardSkeleton(MobileCard $card): Skeleton
+    public function getMobileCardSkeleton(MobileCard $card, bool $inactive = false): Skeleton
     {
-        return $this->mobileCardSkeletons[$card->shapeSignature()] ??= Skeleton::compile(
+        $signature = $card->shapeSignature().($inactive ? '|inactive' : '');
+
+        return $this->mobileCardSkeletons[$signature] ??= Skeleton::compile(
             view('wire-table::tables.partials.mobile-card', [
                 'isSelectable' => $this->isSelectable(),
+                // The inactive shell's two locks, decided from the table's own
+                // switches — the look travels as a value, in $cardClasses.
+                'inertSelection' => $inactive && ! $this->getInactiveRow()->allowsSelection(),
+                'inertActions' => $inactive && ! $this->getInactiveRow()->allowsActions(),
                 'cardTitle' => $card->title() !== null,
                 'cardMetric' => $card->metric() !== null,
                 'cardSubtitle' => $card->subtitle() !== null,

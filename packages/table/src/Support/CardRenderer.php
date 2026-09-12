@@ -51,7 +51,11 @@ final class CardRenderer
         $recordKey = (string) $record->{$this->table->getPrimaryKey()};
         $actions = $this->plan->actions();
 
-        return $this->table->getMobileCardSkeleton($this->card)->fill([
+        // The card's half of the row's inactive state, asked once — the shell's
+        // shape follows from it, and the look rides in with $cardClasses.
+        $inactive = $this->table->hasInactiveRecords() && $this->table->isRecordInactive($record);
+
+        return $this->table->getMobileCardSkeleton($this->card, $inactive)->fill([
             'cardClasses' => e($this->table->getRowCardClasses($record)),
             'key' => e($recordKey),
             'keyJs' => Js::from($recordKey)->toHtml(),
