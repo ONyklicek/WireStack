@@ -104,6 +104,54 @@
       });
     });
 
+    /* --------------------------------------------------------
+       Collapsible groups inside a section
+
+       A section is the heading above a block; a group is one
+       expandable item inside it, and they are not the same
+       control. The section's chevron is injected here, because
+       its heading is a plain `h2`; a group ships its own
+       `<button class="nav-group-toggle">` from the template,
+       already carrying `aria-expanded` and a chevron span. So
+       this half binds rather than builds — and until it did,
+       every group in the sidebar was markup with no listener:
+       the CSS hides `.nav-group > ul` until `.is-open`, and
+       nothing ever put that class on.
+
+       A real `<button>` answers Enter and Space itself, which
+       is why there is no keydown handler here and one above.
+       -------------------------------------------------------- */
+    let openGroups = new Set();
+    try {
+      openGroups = new Set(JSON.parse(localStorage.getItem('wire-docs-nav-groups') || '[]'));
+    } catch {}
+
+    document.querySelectorAll('.sidebar-nav .nav-group').forEach((group) => {
+      const toggle = group.querySelector('.nav-group-toggle');
+      const label = group.querySelector('.nav-group-label');
+      if (!toggle || !label) return;
+
+      const key = label.textContent.trim();
+
+      // The template opens the group holding the current page. That wins over
+      // a remembered state: a reader who lands deep in a group should see
+      // where they are, not the shape the sidebar had last time.
+      if (!group.classList.contains('is-open') && openGroups.has(key)) {
+        group.classList.add('is-open');
+        toggle.setAttribute('aria-expanded', 'true');
+      }
+
+      toggle.addEventListener('click', () => {
+        const isOpen = group.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+
+        if (isOpen) openGroups.add(key); else openGroups.delete(key);
+        try {
+          localStorage.setItem('wire-docs-nav-groups', JSON.stringify([...openGroups]));
+        } catch {}
+      });
+    });
+
     // Bring the active nav item into view inside the sidebar on load.
     const active = document.querySelector('.sidebar-nav a.is-active');
     active?.scrollIntoView({ block: 'center' });
