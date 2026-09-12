@@ -34,8 +34,22 @@
         min-height: 1rem;
     }
 
+    /* The shell's top band: the bar the search sits in, and the sidebar's own
+       `<header>` holding the logo. One element name and one rule, because the
+       two are one horizontal line across the page — written as two numbers they
+       drifted, and compact drew the rule under the logo 19 pixels above the one
+       it continues (64px bar, 44.8px logo row).
+
+       `--spacing` is restored rather than only the height pinned. The band is a
+       *fixed* 4rem at either setting, so tightening what is inside it buys no
+       rows anywhere — it only shrinks the targets in it: the search trigger 34
+       → 30px, the avatar 40 → 28px, the gaps between seven controls from 8px to
+       5.6px, and the bar's own inset from 16px to 11px. That is the same trade
+       the phone rule below refuses, and it is no better with a mouse. Compact
+       buys its rows from the page, which is where the rows are. */
     [data-density="compact"] header {
         min-height: 4rem;
+        --spacing: 0.25rem;
     }
 
     /* And the ones it must not reach on a phone.

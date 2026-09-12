@@ -27,7 +27,10 @@ try {
   await waitFor(`!! window.Alpine && !! document.querySelector('[data-testid="admin-theme"]')`);
 
   // ── 1. Three states, and each one holds ──────────────────────────────────
-  check('the switch offers three states', (await eval_(`document.querySelectorAll('[data-testid^="admin-theme-"]').length`)) === 3);
+  // Scoped to the bar's copy. The prefix on its own also catches the drawer's
+  // — `admin-theme-nav` and its three buttons — so this counted seven and had
+  // been failing silently since the drawer got the switch.
+  check('the switch offers three states', (await eval_(`document.querySelectorAll('[data-testid="admin-theme"] [data-testid^="admin-theme-"]').length`)) === 3);
   check('it is a radio group, not three unrelated buttons', (await eval_(`document.querySelector('[data-testid="admin-theme"]')?.getAttribute('role')`)) === 'radiogroup');
 
   await eval_(`document.querySelector('[data-testid="admin-theme-dark"]').click()`);

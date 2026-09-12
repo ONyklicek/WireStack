@@ -46,7 +46,17 @@
          it, so the two no longer compete on sheet order. --}}
     class="wire-admin-sidebar fixed inset-y-0 start-0 z-50 flex w-72 flex-col border-e border-gray-200 bg-white transition-transform duration-200 motion-reduce:transition-none lg:sticky lg:top-0 lg:z-auto lg:h-dvh lg:w-64 lg:shrink-0 lg:translate-x-0 lg:shadow-none lg:transition-[width] dark:border-gray-800 dark:bg-gray-900"
 >
-    <div class="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 dark:border-gray-800">
+    {{-- A `<header>`, not a `<div>`, and that is the whole of how the logo row
+         stays level with the top bar beside it. Both are the shell's top band;
+         both are `h-16`; and in compact `--spacing` drops, which takes a row
+         written as `h-16` to 44.8 pixels. The bar is pinned back by element name
+         in `wire-core::partials.density` — so the cheapest way for this row to
+         hold the same height is to *be* the same element, rather than to repeat
+         the number here and let the two drift apart.
+
+         Measured before: 64px bar against a 44.8px logo row, the rule under the
+         logo sitting 19 pixels above the one it continues. --}}
+    <header class="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 dark:border-gray-800">
         <x-wire-admin::brand />
 
         {{-- Closing from inside the drawer. A phone user whose thumb is on the
@@ -60,7 +70,7 @@
             <span class="sr-only">{{ __('wire-admin::messages.close_menu') }}</span>
             {!! icon('outline:x-mark', 'h-5 w-5') !!}
         </button>
-    </div>
+    </header>
 
     <nav
         id="wire-admin-nav"

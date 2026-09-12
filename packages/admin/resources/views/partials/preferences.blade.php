@@ -33,8 +33,13 @@
     $switch = $nav ? 'p-2' : 'p-1.5';
     // The drawer's copy is hidden from `sm` up and the bar's below it, so the
     // pair is never on the screen twice.
+    // `h-9` in the bar, and the same height the palette trigger, the bell and
+    // the two menu handles carry: a row of controls that each size themselves
+    // off their own padding lands on four different heights, and the eye reads
+    // that as a bar nobody laid out. The drawer keeps its natural height,
+    // where the two sit alone on a line with a caption.
     $group = 'items-center gap-0.5 rounded-full border border-gray-200 p-0.5 dark:border-gray-700'
-        .($nav ? ' inline-flex' : ' hidden sm:inline-flex');
+        .($nav ? ' inline-flex' : ' hidden h-9 sm:inline-flex');
 @endphp
 
 @if ($only !== 'density')

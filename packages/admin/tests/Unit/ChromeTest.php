@@ -87,8 +87,10 @@ it('takes the two preferences out of the top bar on a phone and puts them in the
     // the bar overflowed, the page scrolled sideways, and the user menu — last in
     // the row — sat off the edge of the screen.
     expect($html)->toContain('data-testid="admin-theme"')
-        // The bar's copy starts hidden and appears at `sm`.
-        ->toContain('dark:border-gray-700 hidden sm:inline-flex')
+        // The bar's copy starts hidden and appears at `sm` — and carries the
+        // bar's own control height, which the drawer's copy must not (there the
+        // two sit alone on a line beside a caption).
+        ->toContain('hidden h-9 sm:inline-flex')
         // The drawer is the one piece of chrome a phone always has, and unlike
         // the user menu it is there whether or not the application passed its own.
         ->toContain('data-testid="admin-theme-nav"')

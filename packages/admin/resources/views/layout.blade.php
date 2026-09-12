@@ -231,16 +231,32 @@
                      its zone from the route it was rendered on, so the same
                      markup links into `admin` on an admin page and into
                      `business` on a business one, with nothing declared. --}}
+                {{-- `me-auto`, not `ms-auto`. The margin that separates the two
+                     halves of the bar has to sit on *one* control, and putting
+                     it on the trailing side of the search is what puts the
+                     search where it is looked for: beside the menu it searches,
+                     at the start of the row. On the leading side it pushed the
+                     search into the cluster of six controls at the far end and
+                     left a third of the bar empty in the middle, which is a lot
+                     of bar to say nothing.
+
+                     The shortcut names the platform's own key rather than ⌘ on
+                     every machine — the same `modKey` the rail toggle reports,
+                     because a control that names a chord should name the one
+                     that works. --}}
                 <button
                     type="button"
                     x-data
                     x-on:click="$dispatch('open-global-search')"
                     data-testid="global-search-trigger" @wireEl('global-search-trigger')
-                    class="ms-auto inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 py-2.5 ps-3 pe-2 text-sm sm:py-1.5 text-gray-500 transition hover:border-gray-300 hover:bg-white sm:w-64 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-700"
+                    class="me-auto inline-flex h-9 items-center gap-2 rounded-full border border-gray-200 bg-gray-50 ps-3 pe-2 text-sm text-gray-500 transition hover:border-gray-300 hover:bg-white hover:shadow-xs sm:w-64 lg:w-72 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-700"
                 >
                     {!! icon('outline:magnifying-glass', 'h-4 w-4 shrink-0') !!}
                     <span class="hidden flex-1 text-start sm:block">{{ __('wire-admin::messages.search') }}</span>
-                    <kbd class="hidden rounded-sm border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] sm:block dark:border-gray-700 dark:bg-gray-900">⌘K</kbd>
+                    <kbd
+                        class="hidden rounded-sm border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] sm:block dark:border-gray-700 dark:bg-gray-900"
+                        x-text="$store.wireAdmin.modKey + 'K'"
+                    >⌘K</kbd>
                 </button>
 
                 {{ $topbar ?? '' }}
@@ -267,6 +283,16 @@
                      this row cannot hold them and the user menu at 390px. --}}
                 @include('wire-admin::partials.preferences', ['variant' => 'topbar'])
 
+                {{-- One hairline between what the shell owns — the palette, the
+                     bell, the two switches — and who is signed in. Six round
+                     controls in a row read as one undifferentiated cluster, and
+                     the identity is the one of them that is not a setting. Kept
+                     off the phone, where the switches are in the drawer and the
+                     rule would be dividing a row of two. --}}
+                @if (isset($user) || auth()->check())
+                    <span aria-hidden="true" class="mx-1 hidden h-6 w-px shrink-0 bg-gray-200 sm:block dark:bg-gray-700"></span>
+                @endif
+
                 {{-- The application's own menu, and a name when it has not written
                      one: an admin whose top bar cannot say who is signed in reads
                      as unfinished, and this is the smallest honest default. --}}
@@ -282,9 +308,9 @@
                             <button
                                 type="button"
                                 data-testid="admin-user" @wireEl('admin-user')
-                                class="flex items-center gap-2 rounded-full p-1 ps-1 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+                                class="flex h-9 items-center gap-2 rounded-full p-1 pe-1.5 transition hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
-                                <x-wire-admin::avatar :user="auth()->user()" class="h-8 w-8" />
+                                <x-wire-admin::avatar :user="auth()->user()" class="h-7 w-7" />
                                 <span class="hidden max-w-32 truncate text-sm text-gray-700 sm:block dark:text-gray-200">
                                     {{ auth()->user()->name ?? auth()->user()->email ?? '' }}
                                 </span>

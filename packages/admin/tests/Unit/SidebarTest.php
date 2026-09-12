@@ -395,3 +395,16 @@ it('is a drawer on a phone and a column on a desktop, as one element', function 
         ->and($html)->toContain('data-testid="admin-sidebar-close"')
         ->and($html)->toContain('-translate-x-full');
 });
+
+it('carries the logo in a header, so the band it shares with the top bar is one element', function () {
+    // The row under the logo and the rule under the top bar are one line across
+    // the page, and compact is where a second copy of "4rem" would show: the
+    // token drives `h-16`, so an unpinned row lands at 44.8px against a bar
+    // pinned to 64. The bar is pinned by *element name* in wire-core's density
+    // partial — so the row holds by being that element, not by repeating the
+    // number here.
+    $html = sbRender();
+
+    expect($html)->toContain('<header class="flex h-16 shrink-0 items-center')
+        ->and(substr_count($html, '<header'))->toBe(1);
+});

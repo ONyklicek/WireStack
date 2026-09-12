@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
 use NyonCode\WireCore\Foundation\Enums\Density;
 use NyonCode\WireCore\Foundation\Enums\Shape;
 
@@ -70,6 +71,23 @@ it('stops at the chrome on a phone, where a thumb needs the target the switch ju
 
     expect($html)->toContain('@media (width < 40rem)')
         ->toContain('[data-density="compact"] :is(header, aside, [role="dialog"])');
+});
+
+it('leaves the top band alone, height and furniture both', function () {
+    // The band is a fixed 4rem at either setting — the bar, and the sidebar's
+    // own <header> beside it. Tightening what is inside it therefore buys no
+    // rows anywhere and only shrinks the targets: the search trigger 34 → 30px,
+    // the avatar 40 → 28px, the bar's inset 16 → 11px. So the rule restores the
+    // scale as well as pinning the height, and it names an element rather than
+    // a class, which is what keeps the logo row level with the bar.
+    $html = densityHtml();
+
+    expect($html)->toContain('[data-density="compact"] header {')
+        ->and($html)->toContain('min-height: 4rem;');
+
+    $rule = Str::between($html, '[data-density="compact"] header {', '}');
+
+    expect($rule)->toContain('--spacing: 0.25rem;');
 });
 
 it('leaves type alone, which is the one thing compact must not touch', function () {

@@ -96,7 +96,24 @@
        not appear at all on a phone, whose drawer is never a rail. */
     [data-rail-only] { display: none; }
 
+    /* The column's width is a layout constant, not a density dial — and this is
+       the file that owns the column's width, so the pin belongs here rather than
+       in the shared density partial, which knows nothing about a sidebar.
+
+       `w-72` and `lg:w-64` read `--spacing` like every other utility, so compact
+       took the menu to 201px as a drawer and 179px as a column while the rail
+       beside it stayed the 4rem written below as a literal — a "narrow" menu
+       115 pixels wider than the narrow menu. What it cost was legible: group
+       headings clipped to "BILLING & INVOICI…". Compact's gain in a menu is
+       vertical (more entries on the screen), and the rules above keep it. */
+    [data-density="compact"] .wire-admin-sidebar { width: 18rem; }
+
     @media (min-width: 1024px) {
+        /* Ordered before the rail's own width below, not after: the two
+           selectors weigh the same, so whichever is written last would win — and
+           a collapsed compact menu 16rem wide is the rail not collapsing. */
+        [data-density="compact"] .wire-admin-sidebar { width: 16rem; }
+
         /* `wide` and `mobile` are not tested anywhere in here on purpose. Below
            this width the same element is a drawer, which is the whole of what
            those two flags were for — so the media query answers both, and the
