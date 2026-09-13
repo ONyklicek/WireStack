@@ -93,7 +93,7 @@ it('is pending while the link is missing', function () {
     $step = new LinkPublicDisk(lpdArtisan());
 
     expect($step->state())->toBe(SetupState::Pending)
-        ->and($step->summary())->toContain('404 that errors nowhere')
+        ->and($step->summary())->toContain('every upload is a silent 404')
         ->and($step->label())->toBe('Media links')
         ->and($step->sort())->toBe(500);
 });

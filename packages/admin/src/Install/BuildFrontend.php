@@ -57,7 +57,7 @@ final class BuildFrontend implements SetupStep
 
         return $this->built()
             ? 'assets are built'
-            : 'build the assets, or the admin renders with no styling and no error';
+            : 'build the assets, or the admin renders unstyled';
     }
 
     public function apply(SetupConsole $console): SetupOutcome

@@ -56,7 +56,7 @@ final readonly class RunMigrations implements SetupStep
     public function summary(): string
     {
         if (! $this->connects()) {
-            return 'no database connection — check .env, then run php artisan migrate';
+            return 'no database connection — check .env';
         }
 
         $pending = $this->pending();

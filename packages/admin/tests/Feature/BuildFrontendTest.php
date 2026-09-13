@@ -109,7 +109,7 @@ it('is pending while nothing has been compiled', function () {
         $step = new BuildFrontend;
 
         expect($step->state())->toBe(SetupState::Pending)
-            ->and($step->summary())->toContain('no styling and no error');
+            ->and($step->summary())->toContain('renders unstyled');
     });
 });
 

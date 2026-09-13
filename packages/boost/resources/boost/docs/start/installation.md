@@ -21,24 +21,20 @@ package's own installer rather than a copy of it.
    ╰─────╮      WireStack
  ●───────╯      the whole stack, set up in one pass
 
- INFO  Found in this application
-
-  • Core — nyoncode/wire-core
-  • Forms — nyoncode/wire-forms
-  • Tables — nyoncode/wire-table
-  • Admin shell — nyoncode/wire-admin
-
- INFO  Already set up, left alone
-
-  • Core
-  • Forms
-  Run with --force to set these up again and publish over what they wrote.
-
  ┌ Which parts should be set up? ───────────────┐
  │ › ◼ Tables                                   │
  │   ◼ Admin shell                              │
  └──────────────────────────────────────────────┘
   Space unticks one, enter confirms.
+
+ INFO  Installing packages
+
+  Core — nyoncode/wire-core ....................... ALREADY DONE
+  Forms — nyoncode/wire-forms ..................... ALREADY DONE
+  Tables — nyoncode/wire-table ............................ DONE
+  Resources & pages — nyoncode/wire-panels ...... NOTHING TO RUN
+  Admin shell — nyoncode/wire-admin ....................... DONE
+  Run with --force to set up the parts marked ALREADY DONE again.
 
  INFO  Available, not installed here
 
@@ -46,6 +42,11 @@ package's own installer rather than a copy of it.
   composer require nyoncode/wire-module-users
   …
 ```
+
+One line per part, ending in what happened to it — the same shape the setup
+phase below uses. It was three lists before: everything found, then everything
+already set up, then everything being run, which named most parts twice and some
+of them three times in three different vocabularies.
 
 Everything is offered pre-selected: an installer whose default is "nothing" makes
 the common case the tedious one, so the question is a multiselect with every box

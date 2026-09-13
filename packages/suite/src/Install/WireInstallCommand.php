@@ -58,50 +58,15 @@ class WireInstallCommand extends Command
         }
 
         $installed = $catalogue->installed();
-
-        $this->listing(
-            'Found in this application',
-            array_map(static fn (Component $c): string => $c->label.' — '.$c->package, $installed),
-        );
-
         $commands = Artisan::all();
         $force = (bool) $this->option('force');
         $dry = (bool) $this->option('dry-run');
 
         [$runnable, $settled] = $this->triage($installed, $commands, $setup, $force);
 
-        $this->reportSettled($settled);
-
         $chosen = $this->option('all') ? $runnable : $this->choose($runnable);
 
-        $failed = [];
-
-        foreach ($chosen as $component) {
-            /** @var string $name */
-            $name = $component->command;
-
-            if ($dry) {
-                $this->components->twoColumnDetail($component->label, "would run <fg=yellow>php artisan {$name}</>");
-
-                continue;
-            }
-
-            $options = $this->passthrough($commands[$name], $force);
-
-            $this->components->task($component->label, function () use ($name, $options, $component, &$failed): bool {
-                // The exit code is the installer's answer, and dropping it was
-                // how a failed publish came out as a green tick and a zero
-                // exit — the shape a CI run cannot see through.
-                $code = Artisan::call($name, $options, $this->getOutput());
-
-                if ($code !== self::SUCCESS) {
-                    $failed[] = $component->label;
-                }
-
-                return $code === self::SUCCESS;
-            });
-        }
-
+        $failed = $this->install($installed, $chosen, $settled, $commands, $force, $dry);
         $failed = array_merge($failed, $this->setUpApplication($dry));
 
         $this->offerMissing($catalogue->missing());
@@ -109,7 +74,7 @@ class WireInstallCommand extends Command
         $this->newLine();
 
         if ($failed !== []) {
-            $this->components->error('Did not install: '.implode(', ', $failed));
+            $this->components->error('Did not finish: '.implode(', ', $failed));
 
             return self::FAILURE;
         }
@@ -120,10 +85,8 @@ class WireInstallCommand extends Command
             return self::SUCCESS;
         }
 
-        if ($chosen === []) {
-            $this->components->info($runnable === []
-                ? 'Nothing needed setting up.'
-                : 'Nothing was picked, so nothing was set up.');
+        if ($settled !== [] && $chosen === []) {
+            $this->components->info('Everything was already set up. Run with --force to do it again.');
 
             return self::SUCCESS;
         }
@@ -131,6 +94,114 @@ class WireInstallCommand extends Command
         $this->components->info('Done.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Install the parts that were chosen, and account for every part that was not.
+     *
+     * One line per installed part, in catalogue order, each ending in what
+     * happened to it. This used to be three lists — everything found, then
+     * everything already set up, then everything being run — which named most
+     * parts twice and some of them three times, in three different vocabularies.
+     * A reader wanting to know the state of one package had to find it in all
+     * three and work it out.
+     *
+     * @param  array<int, Component>  $installed
+     * @param  array<int, Component>  $chosen
+     * @param  array<int, Component>  $settled
+     * @param  array<string, SymfonyCommand>  $commands
+     * @return array<int, string> The labels of the parts that failed.
+     */
+    protected function install(array $installed, array $chosen, array $settled, array $commands, bool $force, bool $dry): array
+    {
+        $this->newLine();
+        $this->components->info('Installing packages');
+
+        $failed = [];
+
+        foreach ($installed as $component) {
+            $name = $this->name($component);
+
+            if ($component->command === null) {
+                // Present and nothing to run: `wire-panels` publishes nothing of
+                // its own, and `wire-boost` asks which AI agents to configure,
+                // which is not a question to answer on anybody's behalf.
+                $this->report($name, 'gray', 'NOTHING TO RUN');
+
+                continue;
+            }
+
+            // A class can be autoloadable while its provider is not booted — a
+            // `dont-discover` entry, a package registered only in one
+            // environment. Calling a command that is not there aborts the whole
+            // run with a message about Symfony's console.
+            if (! array_key_exists($component->command, $commands)) {
+                $this->report($name, 'yellow', 'NOT REGISTERED');
+
+                continue;
+            }
+
+            if (in_array($component, $settled, true)) {
+                $this->report($name, 'gray', 'ALREADY DONE');
+
+                continue;
+            }
+
+            if (! in_array($component, $chosen, true)) {
+                $this->report($name, 'gray', 'LEFT ALONE');
+
+                continue;
+            }
+
+            if ($dry) {
+                $this->report($name, 'yellow', 'WOULD RUN');
+
+                continue;
+            }
+
+            $options = $this->passthrough($commands[$component->command], $force);
+
+            $this->components->task($name, function () use ($component, $options, &$failed): bool {
+                // The exit code is the installer's answer, and dropping it was
+                // how a failed publish came out as a green tick and a zero
+                // exit — the shape a CI run cannot see through.
+                $code = Artisan::call((string) $component->command, $options, $this->getOutput());
+
+                if ($code !== self::SUCCESS) {
+                    $failed[] = $component->label;
+                }
+
+                return $code === self::SUCCESS;
+            });
+        }
+
+        if ($settled !== [] && ! $force) {
+            $this->line('  <fg=gray>Run with --force to set up the parts marked ALREADY DONE again.</>');
+        }
+
+        return $failed;
+    }
+
+    /**
+     * What a part is called in the listing: its label, and the line to paste.
+     *
+     * The composer name earns its place here and nowhere else — this is the one
+     * moment somebody is deciding what this application is made of.
+     */
+    protected function name(Component $component): string
+    {
+        // Separated by a dash rather than by colour alone: the colour is gone
+        // the moment this is piped into a file, and `Core nyoncode/wire-core`
+        // reads as one mangled word.
+        return $component->label.' <fg=gray>— '.$component->package.'</>';
+    }
+
+    /**
+     * One row of the listing, in the shape `task()` leaves behind.
+     */
+    protected function report(string $name, string $colour, string $status): void
+    {
+        $this->components->twoColumnDetail($name, "<fg={$colour};options=bold>{$status}</>");
     }
 
     /**
@@ -256,14 +327,9 @@ class WireInstallCommand extends Command
                 continue;
             }
 
-            // A class can be autoloadable while its provider is not booted — a
-            // `dont-discover` entry, a package registered only in one
-            // environment. Calling a command that is not there aborts the whole
-            // run with a message about Symfony's console, so it is reported and
-            // skipped instead.
+            // Reported by the listing rather than here: this only decides what
+            // can be offered.
             if (! array_key_exists($component->command, $commands)) {
-                $this->components->warn("{$component->label}: {$component->command} is not registered — is its provider loaded?");
-
                 continue;
             }
 
@@ -355,32 +421,6 @@ class WireInstallCommand extends Command
     }
 
     /**
-     * Name what was left alone, and how to make it run anyway.
-     *
-     * Silence here would read as a part having been missed, and the one case
-     * where skipping is wrong — an installer whose published files are present
-     * but whose `afterInstallation` hook still has work — is only recoverable if
-     * the person can see it happened.
-     *
-     * @param  array<int, Component>  $settled
-     */
-    protected function reportSettled(array $settled): void
-    {
-        if ($settled === []) {
-            return;
-        }
-
-        $this->newLine();
-        $this->components->info('Already set up, left alone');
-
-        foreach ($settled as $component) {
-            $this->line("  • {$component->label}");
-        }
-
-        $this->line('  <fg=gray>Run with --force to set these up again and publish over what they wrote.</>');
-    }
-
-    /**
      * Show what this application does not have yet, and how to get it.
      *
      * @param  array<int, Component>  $missing
@@ -401,18 +441,5 @@ class WireInstallCommand extends Command
         }
 
         $this->line('  Run <fg=yellow>php artisan wire:install</> again afterwards to set them up.');
-    }
-
-    /**
-     * @param  array<int, string>  $items
-     */
-    protected function listing(string $heading, array $items): void
-    {
-        $this->newLine();
-        $this->components->info($heading);
-
-        foreach ($items as $item) {
-            $this->line("  • {$item}");
-        }
     }
 }

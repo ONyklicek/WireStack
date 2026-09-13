@@ -60,11 +60,11 @@ final readonly class CacheSettingsInMemory implements SetupStep
         }
 
         if ($this->candidates() === []) {
-            return 'cached in the database — the table it was meant to save a query on';
+            return 'cached in the database, with nowhere better configured';
         }
 
         return $this->env->exists()
-            ? 'move the cache off the database, where the lookup costs the query it saves'
+            ? 'move the cache off the database'
             : 'cached in the database and there is no .env to change it in';
     }
 

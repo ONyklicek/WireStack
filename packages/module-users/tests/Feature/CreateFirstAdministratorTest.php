@@ -112,7 +112,7 @@ it('is done the moment there is an account, and never offers a second', function
 
 it('is blocked, not offered, before the users table exists', function () {
     expect(cfaStep()->state())->toBe(SetupState::Blocked)
-        ->and(cfaStep()->summary())->toContain('not there yet');
+        ->and(cfaStep()->summary())->toBe('no users table yet');
 });
 
 it('is blocked when the application has no user model to point at', function () {
@@ -234,7 +234,7 @@ it('stands aside quietly when there is no database at all', function () {
     DB::purge();
 
     expect(cfaStep()->state())->toBe(SetupState::Blocked)
-        ->and(cfaStep()->summary())->toContain('not there yet');
+        ->and(cfaStep()->summary())->toBe('no users table yet');
 });
 
 it('says nothing about roles in an application that has none', function () {

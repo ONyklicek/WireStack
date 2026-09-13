@@ -104,7 +104,7 @@ it('is pending when it is on the database and there is somewhere better', functi
     $step = new CacheSettingsInMemory(csEnv());
 
     expect($step->state())->toBe(SetupState::Pending)
-        ->and($step->summary())->toContain('costs the query it saves');
+        ->and($step->summary())->toContain('move the cache off the database');
 });
 
 it('falls back to the application cache when this module names none', function () {
@@ -123,7 +123,7 @@ it('leaves an application alone when there is nowhere better to go', function ()
     $step = new CacheSettingsInMemory(csEnv());
 
     expect($step->state())->toBe(SetupState::Done)
-        ->and($step->summary())->toContain('the table it was meant to save a query on');
+        ->and($step->summary())->toContain('nowhere better configured');
 });
 
 it('offers only the stores this application has actually configured', function () {

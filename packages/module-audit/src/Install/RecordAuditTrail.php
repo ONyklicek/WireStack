@@ -50,7 +50,7 @@ final readonly class RecordAuditTrail implements SetupStep
         }
 
         return $this->env->exists()
-            ? 'switch recording on, or this module is a screen over an empty table'
+            ? 'switch recording on, or this screen stays empty'
             : 'recording is off and there is no .env to turn it on in';
     }
 

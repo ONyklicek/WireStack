@@ -360,9 +360,7 @@ it('leaves a part that is already set up alone, and publishes nothing twice', fu
         file_put_contents(config_path('wire-sortable.php'), '<?php return ["mine" => true];');
 
         $this->artisan('wire:install --all')
-            ->expectsOutputToContain('Already set up, left alone')
-            ->expectsOutputToContain('Sortable')
-            ->expectsOutputToContain('Nothing needed setting up')
+            ->expectsOutputToContain('ALREADY DONE')
             ->assertSuccessful();
 
         expect(glob(database_path('migrations/*create_reorderable_column_orders_table.php')) ?: [])
@@ -407,7 +405,7 @@ it('offers only the parts that still need something', function () {
         // is the only thing left to ask about.
         $this->artisan('wire:install --dry-run')
             ->expectsChoice('Which parts should be set up?', ['about'], ['about' => 'Core'])
-            ->expectsOutputToContain('Already set up, left alone')
+            ->expectsOutputToContain('ALREADY DONE')
             ->assertSuccessful();
     });
 });
@@ -431,7 +429,7 @@ it('fails when an installer it ran failed', function () {
     ));
 
     $this->artisan('wire:install --all')
-        ->expectsOutputToContain('Did not install: Breaks')
+        ->expectsOutputToContain('Did not finish: Breaks')
         ->assertFailed();
 });
 
@@ -480,12 +478,12 @@ it('does not hand --force to an installer that has no such option', function () 
 
 it('lists what is here and names the installer it would run', function () {
     $this->artisan('wire:install --all --dry-run')
-        ->expectsOutputToContain('Found in this application')
+        ->expectsOutputToContain('Installing packages')
         ->expectsOutputToContain('Admin shell')
         // Not the whole command line: the two-column layout pads to the terminal
         // width and truncates the right side, which is narrower under a test
         // runner than in a terminal.
-        ->expectsOutputToContain('would run')
+        ->expectsOutputToContain('WOULD RUN')
         ->assertSuccessful();
 });
 
@@ -546,7 +544,7 @@ it('reports a part whose provider is not loaded instead of aborting', function (
     // The users module is installed in this monorepo and its provider is not
     // registered in this suite's test application, which is exactly that case.
     $this->artisan('wire:install --all --dry-run')
-        ->expectsOutputToContain('is not registered')
+        ->expectsOutputToContain('NOT REGISTERED')
         ->assertSuccessful();
 });
 
@@ -559,8 +557,8 @@ it('asks nothing when nothing installed here has an installer', function () {
     ));
 
     $this->artisan('wire:install')
-        ->expectsOutputToContain('Found in this application')
-        ->expectsOutputToContain('Nothing needed setting up')
+        ->expectsOutputToContain('Installing packages')
+        ->expectsOutputToContain('NOTHING TO RUN')
         ->assertSuccessful();
 });
 
@@ -595,7 +593,7 @@ it('sets up nothing, and says so, when everything is unticked', function () {
 
     $this->artisan('wire:install')
         ->expectsChoice('Which parts should be set up?', [], ['about' => 'Something installable'])
-        ->expectsOutputToContain('Nothing was picked')
+        ->expectsOutputToContain('LEFT ALONE')
         ->assertSuccessful();
 });
 
@@ -806,7 +804,7 @@ it('fails the command when a step fails', function () {
 
     $this->artisan('wire:install --all')
         ->expectsConfirmation('Set it up now?', 'yes')
-        ->expectsOutputToContain('Did not install: Database tables')
+        ->expectsOutputToContain('Did not finish: Database tables')
         ->assertFailed();
 });
 

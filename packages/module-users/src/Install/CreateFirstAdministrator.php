@@ -56,13 +56,13 @@ final readonly class CreateFirstAdministrator implements SetupStep
     public function summary(): string
     {
         if ($this->accounts->model() === null) {
-            return 'no user model — point wire-module-users.model at yours';
+            return 'no user model — see wire-module-users.model';
         }
 
         if (! $this->accounts->ready()) {
             // The step above this one says what a missing database is, in its
             // own words; saying it twice would be noise.
-            return 'the users table is not there yet — run the migrations first';
+            return 'no users table yet';
         }
 
         if ($this->accounts->any()) {

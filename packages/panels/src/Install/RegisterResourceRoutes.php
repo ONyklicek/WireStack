@@ -67,7 +67,7 @@ final class RegisterResourceRoutes implements SetupStep
 
         return $this->alreadyRouted()
             ? 'routes/web.php already calls Route::wireResources()'
-            : 'add Route::wireResources() to routes/web.php, under a prefix and middleware you choose';
+            : 'add Route::wireResources() to routes/web.php';
     }
 
     public function apply(SetupConsole $console): SetupOutcome

@@ -50,7 +50,7 @@ final readonly class LinkPublicDisk implements SetupStep
 
         return $this->linked()
             ? 'public/storage is already linked'
-            : 'link public/storage, or every uploaded file is a 404 that errors nowhere';
+            : 'link public/storage, or every upload is a silent 404';
     }
 
     public function apply(SetupConsole $console): SetupOutcome

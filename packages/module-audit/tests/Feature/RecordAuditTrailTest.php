@@ -101,7 +101,7 @@ it('is pending while recording is off', function () {
     $step = new RecordAuditTrail(ratEnv());
 
     expect($step->state())->toBe(SetupState::Pending)
-        ->and($step->summary())->toContain('screen over an empty table');
+        ->and($step->summary())->toContain('this screen stays empty');
 });
 
 it('is blocked when there is no .env to turn it on in', function () {

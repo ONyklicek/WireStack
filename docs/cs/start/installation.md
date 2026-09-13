@@ -21,24 +21,20 @@ instalátor každého balíčku místo jeho kopie.
    ╰─────╮      WireStack
  ●───────╯      the whole stack, set up in one pass
 
- INFO  Found in this application
-
-  • Core — nyoncode/wire-core
-  • Forms — nyoncode/wire-forms
-  • Tables — nyoncode/wire-table
-  • Admin shell — nyoncode/wire-admin
-
- INFO  Already set up, left alone
-
-  • Core
-  • Forms
-  Run with --force to set these up again and publish over what they wrote.
-
  ┌ Which parts should be set up? ───────────────┐
  │ › ◼ Tables                                   │
  │   ◼ Admin shell                              │
  └──────────────────────────────────────────────┘
   Space unticks one, enter confirms.
+
+ INFO  Installing packages
+
+  Core — nyoncode/wire-core ....................... ALREADY DONE
+  Forms — nyoncode/wire-forms ..................... ALREADY DONE
+  Tables — nyoncode/wire-table ............................ DONE
+  Resources & pages — nyoncode/wire-panels ...... NOTHING TO RUN
+  Admin shell — nyoncode/wire-admin ....................... DONE
+  Run with --force to set up the parts marked ALREADY DONE again.
 
  INFO  Available, not installed here
 
@@ -46,6 +42,11 @@ instalátor každého balíčku místo jeho kopie.
   composer require nyoncode/wire-module-users
   …
 ```
+
+Jeden řádek na část, zakončený tím, co se s ní stalo — stejný tvar, jaký používá
+fáze nastavení níž. Dřív to byly tři seznamy: co se našlo, co už je nastavené a
+co se právě spouští — většina částí tam byla dvakrát a některé třikrát, pokaždé
+jiným slovníkem.
 
 Všechno je nabídnuté předvybrané: instalátor, jehož výchozí stav je „nic“, dělá
 z běžného případu ten zdlouhavý — otázka je tedy multiselect, kde je všechno už
