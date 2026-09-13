@@ -365,11 +365,21 @@ The one-require entry point and the interactive installer:
 
 - `Install\Catalogue` — every part of the stack, installed or not, answered by a
   marker class rather than by reading `installed.json`
+- `Install\Setup` — what a part's installer would still write, read off the
+  publish groups it declares. Empty means done; `null` means unknowable, and
+  unknowable is never "done"
 - `Install\WireInstallCommand` — runs each installed package's **own** installer,
   and prints a `composer require` line for what is missing
 
 It never runs composer: the command runs inside the application it is changing,
 and a part whose provider is not loaded is reported rather than fatal.
+
+It runs only what has something left to do, because `vendor:publish` is not
+idempotent where it matters — a timeless migration is stamped when the publish
+mapping is built, so re-publishing writes a second copy of one the application
+already has. `--force` overrides that; the exit code of each installer is the
+command's own; and `--no-interaction` is passed down, because every one of those
+installers prompts in production from inside a progress spinner.
 
 ### wire-boost
 

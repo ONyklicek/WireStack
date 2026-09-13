@@ -18,6 +18,18 @@ php artisan wire:install
 copy of it. Then it lists the modules this application does not have yet, with
 the `composer require` line for each.
 
+**It only runs what has something left to do.** A part whose installer has
+already written everything it publishes is named and skipped, which is a
+correctness rule rather than a speed one: a migration shipped without a date
+prefix is stamped when the publish mapping is built, so re-publishing writes a
+*second* copy of one the application already has and `migrate` then fails on it.
+Re-running after adding a module is therefore safe. `--force` sets up every part
+regardless and publishes over what it wrote.
+
+**A failed installer fails the command**, and `--no-interaction` reaches the
+installers it runs — each of them prompts before touching a production
+application, from inside a progress spinner where nobody can answer.
+
 **It never runs composer itself.** The command runs inside the application it is
 about to change — the autoloader in use is the one composer would rewrite — and
 the failure modes (memory, plugins, a production image without composer) are the
@@ -40,6 +52,7 @@ Each is its own require, because an application that wants users and nothing els
 should not carry a media library:
 
 ```bash
+composer require nyoncode/wire-module-auth
 composer require nyoncode/wire-module-users
 composer require nyoncode/wire-module-settings
 composer require nyoncode/wire-module-audit
@@ -48,7 +61,11 @@ composer require nyoncode/wire-module-media
 ```
 
 Then `php artisan wire:install` again — a module registers itself, so nothing
-goes into a config file.
+goes into a config file, and the parts already set up are left alone.
+
+`nyoncode/wire-boost` (AI agent guidelines, skills and the MCP server) is listed
+beside them and never run: `wire-boost:install` asks which agents to configure,
+and that is not a question this command should answer for anyone.
 
 ## Documentation
 

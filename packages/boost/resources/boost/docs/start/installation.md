@@ -17,6 +17,10 @@ package's own installer rather than a copy of it.
 ## What The Installer Does
 
 ```text
+   ╭───────●
+   ╰─────╮      WireStack
+ ●───────╯      the whole stack, set up in one pass
+
  INFO  Found in this application
 
   • Core — nyoncode/wire-core
@@ -24,18 +28,56 @@ package's own installer rather than a copy of it.
   • Tables — nyoncode/wire-table
   • Admin shell — nyoncode/wire-admin
 
- Which parts should be set up? [All of them]
+ INFO  Already set up, left alone
+
+  • Core
+  • Forms
+  Run with --force to set these up again and publish over what they wrote.
+
+ ┌ Which parts should be set up? ───────────────┐
+ │ › ◼ Tables                                   │
+ │   ◼ Admin shell                              │
+ └──────────────────────────────────────────────┘
+  Space unticks one, enter confirms.
 
  INFO  Available, not installed here
 
-  User administration, with roles where the application has them.
+  Users — User administration, with roles where the application has them.
   composer require nyoncode/wire-module-users
   …
 ```
 
 Everything is offered pre-selected: an installer whose default is "nothing" makes
-the common case the tedious one. `--all` skips the question, which is what a
-scripted setup wants.
+the common case the tedious one, so the question is a multiselect with every box
+already ticked and space unticks what you do not want. `--all` skips the question
+entirely, which is what a scripted setup wants, and `--dry-run` shows the whole
+plan without doing any of it. The mark is drawn only where somebody is watching —
+a banner in a deploy log is noise in the one place the output is read by a
+machine.
+
+**It only runs what has something left to do.** A part whose installer has
+already written everything it publishes is named and skipped — and that is a
+correctness rule, not a speed one. A migration this framework ships carries no
+date prefix, so it is stamped with the time the publish mapping was built: the
+destination path is different in every process, `vendor:publish` looks there,
+finds nothing, and writes a *second* copy of a migration the application already
+has. Two `create_wire_preferences_table` files, and `php artisan migrate` fails
+on the second. So re-running the command after adding a module is safe, and it is
+what the listing above shows: the module is set up, and everything already there
+is named and left alone.
+
+**`--force` sets up every part regardless**, and hands `--force` down so each
+installer publishes over what it wrote. That is the flag an upgrade wants, and
+the one to reach for when a part is skipped that you wanted run.
+
+**A failed installer fails the command.** The exit code each package's installer
+returns is this command's exit code too, and the parts that failed are named — a
+scripted setup that cannot see a failed publish is worse than no scripted setup.
+
+**`--no-interaction` reaches the installers it runs.** Each of them prompts
+before touching a production application, and that prompt is drawn on this
+command's own output from inside a running progress spinner, which is the one
+place nobody can answer it. A run told not to ask means it all the way down.
 
 **It never runs composer.** Offering a module that is not installed is the point
 of that second list, and the answer is a line to paste. An artisan command that
@@ -56,6 +98,7 @@ and nothing else should not carry a media library:
 
 | Module | Package |
 | --- | --- |
+| [Auth](../modules/auth.md) | `nyoncode/wire-module-auth` |
 | [Users](../modules/users.md) | `nyoncode/wire-module-users` |
 | [Settings](../modules/settings.md) | `nyoncode/wire-module-settings` |
 | [Audit log](../modules/audit.md) | `nyoncode/wire-module-audit` |
@@ -63,7 +106,12 @@ and nothing else should not carry a media library:
 | [Media](../modules/media.md) | `nyoncode/wire-module-media` |
 
 Install one and run `php artisan wire:install` again; it registers itself, so
-there is nothing to add to a config file.
+there is nothing to add to a config file, and the parts that were already set up
+are left alone.
+
+[`wire-boost`](../boost/guidelines-and-skills.md) is listed beside them and never
+run: `wire-boost:install` asks which AI agents to configure, and that is not a
+question this command should answer on anyone's behalf.
 
 ## What Is Left To You
 
@@ -85,6 +133,9 @@ its own, which is what an application adding one package later reaches for:
 
 ```bash
 php artisan wire:install                      # the interactive setup over everything installed
+php artisan wire:install --all --no-interaction  # …unattended: no question, no prompt underneath
+php artisan wire:install --dry-run            # …the whole plan, changing nothing
+php artisan wire:install --all --force        # …every part again, publishing over what it wrote
 php artisan wire-core:install                 # one package at a time — config, assets, translations
 php artisan wire-forms:install
 php artisan wire-table:install

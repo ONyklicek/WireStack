@@ -57,7 +57,6 @@ class Catalogue
                 description: 'Actions, modals, notifications, widgets, infolists, the engine.',
                 marker: 'NyonCode\\WireCore\\WireCoreServiceProvider',
                 command: 'wire-core:install',
-                core: true,
             ),
             new Component(
                 package: 'nyoncode/wire-forms',
@@ -65,7 +64,6 @@ class Catalogue
                 description: 'Schema-driven forms, fields, wizards, the save lifecycle.',
                 marker: 'NyonCode\\WireForms\\WireFormsServiceProvider',
                 command: 'wire-forms:install',
-                core: true,
             ),
             new Component(
                 package: 'nyoncode/wire-table',
@@ -73,7 +71,6 @@ class Catalogue
                 description: 'Tables, columns, filters, exports, gestures.',
                 marker: 'NyonCode\\WireTable\\WireTableServiceProvider',
                 command: 'wire-table:install',
-                core: true,
             ),
             new Component(
                 package: 'nyoncode/wire-sortable',
@@ -87,7 +84,6 @@ class Catalogue
                 label: 'Resources & pages',
                 description: 'Resources, their pages, routing and zones.',
                 marker: 'NyonCode\\WirePanels\\WirePanelsServiceProvider',
-                core: true,
             ),
             new Component(
                 package: 'nyoncode/wire-admin',
@@ -95,7 +91,6 @@ class Catalogue
                 description: 'The layout and the sidebar your pages render inside.',
                 marker: 'NyonCode\\WireAdmin\\WireAdminServiceProvider',
                 command: 'wire-admin:install',
-                core: true,
             ),
             new Component(
                 package: 'nyoncode/wire-module-auth',
@@ -138,6 +133,16 @@ class Catalogue
                 description: 'Uploads, a browsable list and previews.',
                 marker: 'NyonCode\\WireModuleMedia\\WireModuleMediaServiceProvider',
                 command: 'wire-module-media:install',
+            ),
+            // Listed, never run. `wire-boost:install` asks which AI agents to
+            // configure, and which editors someone uses is not a question this
+            // command should answer on their behalf — nor one it could answer
+            // from inside a task spinner.
+            new Component(
+                package: 'nyoncode/wire-boost',
+                label: 'AI tooling',
+                description: 'Agent guidelines, skills and the MCP server — `wire-boost:install --agent=…` picks the agents.',
+                marker: 'NyonCode\\WireBoost\\WireBoostServiceProvider',
             ),
         ];
     }

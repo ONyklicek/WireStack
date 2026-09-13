@@ -43,11 +43,13 @@
         "pestphp/pest": "^4.0|^5.0"
     },
     "suggest": {
+        "nyoncode/wire-module-auth": "Sign-in, password reset, verification and the two-factor challenge, over Fortify.",
         "nyoncode/wire-module-users": "User administration, with roles where the application has them.",
         "nyoncode/wire-module-audit": "A screen for the audit trail wire-core already records.",
         "nyoncode/wire-module-notifications": "The history behind the notification bell.",
         "nyoncode/wire-module-settings": "Typed application settings with a page to edit them.",
         "nyoncode/wire-module-media": "A media library with uploads and previews.",
+        "nyoncode/wire-boost": "AI agent guidelines, skills and the MCP server for this stack.",
         "nyoncode/laravel-permission-extended": "Roles and wildcard permissions, used by the users module."
     },
     "autoload": {
