@@ -10,8 +10,10 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireModuleUsers\Http\Middleware\SetCurrentTeam;
+use NyonCode\WireModuleUsers\Install\CreateFirstAdministrator;
 use NyonCode\WireModuleUsers\Support\Avatars;
 use NyonCode\WireModuleUsers\Support\EmailVerification;
 use NyonCode\WireModuleUsers\Support\Permissions;
@@ -49,6 +51,12 @@ class WireModuleUsersServiceProvider extends PackageServiceProvider
                         $manager->register(new UsersModule);
                     }
                 });
+
+                // In here rather than in a second `registeredPackage()`: the
+                // toolkit's lifecycle hooks hold one closure each and assign
+                // rather than append, so a second call would drop the module
+                // registration above without a word.
+                SetupRegistry::instance()->register(CreateFirstAdministrator::class);
             })
             ->hasConfig()
             ->hasViews()

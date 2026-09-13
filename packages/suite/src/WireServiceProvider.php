@@ -8,7 +8,9 @@ use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\Wire\Install\Catalogue;
 use NyonCode\Wire\Install\Setup;
+use NyonCode\Wire\Install\Steps\RunMigrations;
 use NyonCode\Wire\Install\WireInstallCommand;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 
 /**
  * The whole stack in one require.
@@ -39,6 +41,12 @@ class WireServiceProvider extends PackageServiceProvider
             ->registeredPackage(function (): void {
                 $this->app->singleton(Catalogue::class);
                 $this->app->singleton(Setup::class);
+
+                // The suite contributes the one step that is nobody's package
+                // in particular: three modules each ended their installer with
+                // "Run: php artisan migrate", and migrating is about the
+                // application rather than any of them.
+                SetupRegistry::instance()->register(RunMigrations::class);
             })
             ->hasCommand(WireInstallCommand::class)
             ->hasAbout();

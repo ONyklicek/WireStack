@@ -10,6 +10,11 @@ use NyonCode\Wire\Install\Banner;
 use NyonCode\Wire\Install\Catalogue;
 use NyonCode\Wire\Install\Component;
 use NyonCode\Wire\Install\Setup;
+use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
+use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
+use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
+use NyonCode\WireCore\Foundation\Setup\SetupState;
 
 /*
  * `php artisan wire:install` — a clean Laravel to a working admin in one pass.
@@ -311,7 +316,7 @@ it('runs the installer a part names, and says what is left afterwards', function
 
         $this->artisan('wire:install --all')
             ->expectsOutputToContain('Sortable')
-            ->expectsOutputToContain('Done. What is left is yours')
+            ->expectsOutputToContain('Done.')
             ->expectsOutputToContain('php artisan migrate')
             ->assertSuccessful();
 
@@ -356,7 +361,7 @@ it('sets up a part that is already done when told to force it', function () {
 
         $this->artisan('wire:install --all --force')
             ->doesntExpectOutputToContain('Already set up')
-            ->expectsOutputToContain('Done. What is left is yours')
+            ->expectsOutputToContain('Done.')
             ->assertSuccessful();
 
         // `--force` is passed down, so the published file is the package's again.
@@ -444,7 +449,7 @@ it('does not hand --force to an installer that has no such option', function () 
     ));
 
     $this->artisan('wire:install --all --force')
-        ->expectsOutputToContain('Done. What is left is yours')
+        ->expectsOutputToContain('Done.')
         ->assertSuccessful();
 });
 
@@ -464,12 +469,31 @@ it('lists what is here and names the installer it would run', function () {
 });
 
 it('changes nothing in a dry run, and says so', function () {
+    // Asserted on whether the installer ran at all, not on whether some file
+    // exists under `base_path()`. That skeleton is shared by every suite in the
+    // monorepo, so a test reading it is a test that passes or fails on what ran
+    // before it — which is how this one used to fail on a clean change.
+    $ran = false;
+
+    Artisan::command('wi:never', function () use (&$ran): int {
+        $ran = true;
+
+        return 0;
+    });
+
+    wiCatalogue(new Component(
+        package: 'nyoncode/wire-core',
+        label: 'Would be installed',
+        description: 'Its installer must not run.',
+        marker: 'NyonCode\\WireCore\\WireCoreServiceProvider',
+        command: 'wi:never',
+    ));
+
     $this->artisan('wire:install --all --dry-run')
         ->expectsOutputToContain('Nothing was changed')
         ->assertSuccessful();
 
-    expect(is_file(config_path('wire-core.php')))->toBeFalse()
-        ->and(is_file(base_path('resources/views/components/layouts/admin.blade.php')))->toBeFalse();
+    expect($ran)->toBeFalse();
 });
 
 it('offers what is not installed by name, as a line to paste', function () {
@@ -535,7 +559,7 @@ it('offers the pending parts with every one already ticked', function () {
 
     $this->artisan('wire:install')
         ->expectsChoice('Which parts should be set up?', ['about'], ['about' => 'Something installable'])
-        ->expectsOutputToContain('Done. What is left is yours')
+        ->expectsOutputToContain('Done.')
         ->assertSuccessful();
 });
 
@@ -621,4 +645,316 @@ it('sets up only the parts that were picked', function () {
         ->expectsOutputToContain('the first installer ran')
         ->doesntExpectOutputToContain('the second installer ran')
         ->assertSuccessful();
+});
+
+// ---------------------------------------------------------------------------
+// The second half: setting up the application, not just installing packages
+// ---------------------------------------------------------------------------
+
+/**
+ * A step that answers however the test needs, and records what happened to it.
+ *
+ * @param  array<string, mixed>  $spy
+ */
+function wiStep(string $label, SetupState $state, SetupOutcome $outcome, int $sort, array &$spy): string
+{
+    $step = new class($label, $state, $outcome, $sort, $spy) implements SetupStep
+    {
+        /** @param array<string, mixed> $spy */
+        public function __construct(
+            private string $label,
+            private SetupState $state,
+            private SetupOutcome $outcome,
+            private int $sort,
+            private array &$spy,
+        ) {}
+
+        public function label(): string
+        {
+            return $this->label;
+        }
+
+        public function state(): SetupState
+        {
+            return $this->state;
+        }
+
+        public function summary(): string
+        {
+            return 'do the thing for '.$this->label;
+        }
+
+        public function apply(SetupConsole $console): SetupOutcome
+        {
+            $this->spy['applied'][] = $this->label;
+
+            return $this->outcome;
+        }
+
+        public function sort(): int
+        {
+            return $this->sort;
+        }
+    };
+
+    // Under a unique alias, not `$step::class`. Both calls to this helper build
+    // the same anonymous class — one declaration site, one name — so registering
+    // by class name would hand the registry one step twice and it would rightly
+    // keep one. The container resolves an alias the same way, which is the path
+    // the command actually takes.
+    $alias = 'wi-step:'.$label;
+
+    app()->instance($alias, $step);
+    SetupRegistry::instance()->register($alias);
+
+    return $alias;
+}
+
+beforeEach(function () {
+    SetupRegistry::instance()->flush();
+});
+
+it('offers a pending step, and applies it when told to', function () {
+    $spy = ['applied' => []];
+    wiStep('First administrator', SetupState::Pending, SetupOutcome::Applied, 100, $spy);
+    wiCatalogue();
+
+    $this->artisan('wire:install --all')
+        ->expectsOutputToContain('Setting up this application')
+        ->expectsOutputToContain('First administrator')
+        ->expectsConfirmation('  Do that now?', 'yes')
+        ->assertSuccessful();
+
+    expect($spy['applied'])->toBe(['First administrator']);
+});
+
+it('leaves a pending step alone when told not to', function () {
+    $spy = ['applied' => []];
+    wiStep('First administrator', SetupState::Pending, SetupOutcome::Applied, 100, $spy);
+    wiCatalogue();
+
+    $this->artisan('wire:install --all')
+        ->expectsConfirmation('  Do that now?', 'no')
+        ->expectsOutputToContain('Left alone.')
+        ->assertSuccessful();
+
+    expect($spy['applied'])->toBe([]);
+});
+
+it('reports a step that is already done, and never offers it', function () {
+    $spy = ['applied' => []];
+    wiStep('Database tables', SetupState::Done, SetupOutcome::Applied, 100, $spy);
+    wiCatalogue();
+
+    // No confirmation is expected, which is the assertion: a question asked
+    // here would fail the test rather than pass unnoticed.
+    $this->artisan('wire:install --all')
+        ->expectsOutputToContain('Database tables')
+        ->assertSuccessful();
+
+    expect($spy['applied'])->toBe([]);
+});
+
+it('reports a blocked step rather than offering one that cannot work', function () {
+    // The state that keeps an installer from dying inside a task spinner with a
+    // PDO exception: "run migrations" on an application with no database is not
+    // a question worth asking.
+    $spy = ['applied' => []];
+    wiStep('Database tables', SetupState::Blocked, SetupOutcome::Applied, 100, $spy);
+    wiCatalogue();
+
+    $this->artisan('wire:install --all')
+        ->expectsOutputToContain('do the thing for Database tables')
+        ->assertSuccessful();
+
+    expect($spy['applied'])->toBe([]);
+});
+
+it('names what a step would do in a dry run, and applies nothing', function () {
+    $spy = ['applied' => []];
+    wiStep('First administrator', SetupState::Pending, SetupOutcome::Applied, 100, $spy);
+    wiCatalogue();
+
+    $this->artisan('wire:install --all --dry-run')
+        ->expectsOutputToContain('would do the thing for First administrator')
+        ->assertSuccessful();
+
+    expect($spy['applied'])->toBe([]);
+});
+
+it('fails the command when a step fails', function () {
+    $spy = ['applied' => []];
+    wiStep('Database tables', SetupState::Pending, SetupOutcome::Failed, 100, $spy);
+    wiCatalogue();
+
+    $this->artisan('wire:install --all')
+        ->expectsConfirmation('  Do that now?', 'yes')
+        ->expectsOutputToContain('Did not install: Database tables')
+        ->assertFailed();
+});
+
+it('runs the steps in the order they have to run', function () {
+    // Order is correctness, not presentation: creating the first administrator
+    // before the tables exist is a step that cannot work.
+    $spy = ['applied' => []];
+    wiStep('First administrator', SetupState::Pending, SetupOutcome::Applied, 300, $spy);
+    wiStep('Database tables', SetupState::Pending, SetupOutcome::Applied, 100, $spy);
+    wiCatalogue();
+
+    $this->artisan('wire:install --all')
+        ->expectsConfirmation('  Do that now?', 'yes')
+        ->expectsConfirmation('  Do that now?', 'yes')
+        ->assertSuccessful();
+
+    expect($spy['applied'])->toBe(['Database tables', 'First administrator']);
+});
+
+it('applies what it can unattended, without standing at a question', function () {
+    // `--no-interaction` means "make no choices for me that need an answer" —
+    // a step that can proceed on defaults does, and one that cannot declines
+    // from the inside rather than blocking on a prompt nobody is watching.
+    $spy = ['applied' => []];
+    wiStep('Database tables', SetupState::Pending, SetupOutcome::Applied, 100, $spy);
+    wiCatalogue();
+
+    $this->artisan('wire:install --all --no-interaction')->assertSuccessful();
+
+    expect($spy['applied'])->toBe(['Database tables']);
+});
+
+it('says nothing about setup when no package contributed a step', function () {
+    wiCatalogue();
+
+    $this->artisan('wire:install --all')
+        ->doesntExpectOutputToContain('Setting up this application')
+        ->assertSuccessful();
+});
+
+it('carries a step\'s questions through to the command, and its answers back', function () {
+    // The adapter is the only class in the stack that knows the answers come
+    // from a person — so it is worth driving through a real command rather than
+    // trusting that four Prompts calls line up with four expectations.
+    $answers = [];
+
+    $step = new class($answers) implements SetupStep
+    {
+        /** @param array<string, mixed> $answers */
+        public function __construct(private array &$answers) {}
+
+        public function label(): string
+        {
+            return 'Everything it can ask';
+        }
+
+        public function state(): SetupState
+        {
+            return SetupState::Pending;
+        }
+
+        public function summary(): string
+        {
+            return 'ask one of each';
+        }
+
+        public function apply(SetupConsole $console): SetupOutcome
+        {
+            $this->answers['interactive'] = $console->isInteractive();
+            $this->answers['text'] = $console->ask('Name?', 'Admin');
+            $this->answers['secret'] = $console->secret('Password?');
+            $this->answers['choice'] = $console->choose('Which disk?', ['public' => 'public', 's3' => 's3'], 'public');
+            $this->answers['confirm'] = $console->confirm('Sure?');
+
+            $console->note('noted');
+            $console->warn('warned');
+
+            return SetupOutcome::Applied;
+        }
+
+        public function sort(): int
+        {
+            return 100;
+        }
+    };
+
+    app()->instance('wi-step:asks', $step);
+    SetupRegistry::instance()->register('wi-step:asks');
+    wiCatalogue();
+
+    $this->artisan('wire:install --all')
+        ->expectsConfirmation('  Do that now?', 'yes')
+        ->expectsQuestion('Name?', 'Ondřej')
+        ->expectsQuestion('Password?', 'hunter2')
+        ->expectsChoice('Which disk?', 's3', ['public' => 'public', 's3' => 's3'])
+        ->expectsConfirmation('Sure?', 'yes')
+        ->expectsOutputToContain('noted')
+        ->expectsOutputToContain('warned')
+        ->assertSuccessful();
+
+    expect($answers)->toBe([
+        'interactive' => true,
+        'text' => 'Ondřej',
+        'secret' => 'hunter2',
+        'choice' => 's3',
+        'confirm' => true,
+    ]);
+});
+
+it('answers a step with defaults, and never a prompt, when unattended', function () {
+    // Laravel Prompts would stand at a question with no tty until something
+    // killed it. Every method short-circuits instead, so a step that cannot
+    // proceed on defaults declines from the inside.
+    $answers = [];
+
+    $step = new class($answers) implements SetupStep
+    {
+        /** @param array<string, mixed> $answers */
+        public function __construct(private array &$answers) {}
+
+        public function label(): string
+        {
+            return 'Asks nobody';
+        }
+
+        public function state(): SetupState
+        {
+            return SetupState::Pending;
+        }
+
+        public function summary(): string
+        {
+            return 'ask one of each';
+        }
+
+        public function apply(SetupConsole $console): SetupOutcome
+        {
+            $this->answers = [
+                'interactive' => $console->isInteractive(),
+                'text' => $console->ask('Name?', 'Admin'),
+                'secret' => $console->secret('Password?'),
+                'choice' => $console->choose('Which disk?', ['public' => 'public'], 'public'),
+                'confirm' => $console->confirm('Sure?', false),
+            ];
+
+            return SetupOutcome::Applied;
+        }
+
+        public function sort(): int
+        {
+            return 100;
+        }
+    };
+
+    app()->instance('wi-step:silent', $step);
+    SetupRegistry::instance()->register('wi-step:silent');
+    wiCatalogue();
+
+    $this->artisan('wire:install --all --no-interaction')->assertSuccessful();
+
+    expect($answers)->toBe([
+        'interactive' => false,
+        'text' => 'Admin',
+        'secret' => '',
+        'choice' => 'public',
+        'confirm' => false,
+    ]);
 });

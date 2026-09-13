@@ -6,6 +6,10 @@ namespace NyonCode\Wire\Install;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
+use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
+use NyonCode\WireCore\Foundation\Setup\SetupState;
 use Symfony\Component\Console\Command\Command as SymfonyCommand;
 
 use function Laravel\Prompts\multiselect;
@@ -91,21 +95,21 @@ class WireInstallCommand extends Command
                 $code = Artisan::call($name, $options, $this->getOutput());
 
                 if ($code !== self::SUCCESS) {
-                    $failed[] = $component;
+                    $failed[] = $component->label;
                 }
 
                 return $code === self::SUCCESS;
             });
         }
 
+        $failed = array_merge($failed, $this->setUpApplication($dry));
+
         $this->offerMissing($catalogue->missing());
 
         $this->newLine();
 
         if ($failed !== []) {
-            $this->components->error(
-                'Did not install: '.implode(', ', array_map(static fn (Component $c): string => $c->label, $failed))
-            );
+            $this->components->error('Did not install: '.implode(', ', $failed));
 
             return self::FAILURE;
         }
@@ -124,11 +128,96 @@ class WireInstallCommand extends Command
             return self::SUCCESS;
         }
 
-        $this->components->info('Done. What is left is yours:');
-        $this->line('  • php artisan migrate');
-        $this->line('  • Route::wireResources() in routes/web.php, inside the middleware you want');
+        $this->components->info('Done.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The second half: not "is the package here" but "does the application work".
+     *
+     * Every package installer in this framework already knew what was missing
+     * and said so — nine lines of "run migrate", "name an ability", "nothing is
+     * being recorded yet" across seven packages, each a diagnosis with no action
+     * behind it. A {@see SetupStep} is that action, and it stays with the
+     * package that knows: this method collects, orders and asks, and never
+     * learns what a media disk or a super-admin role is.
+     *
+     * @return array<int, string> The labels of the steps that failed.
+     */
+    protected function setUpApplication(bool $dry): array
+    {
+        $steps = $this->steps();
+
+        if ($steps === []) {
+            return [];
+        }
+
+        $this->newLine();
+        $this->components->info('Setting up this application');
+
+        $console = new CommandConsole($this, $this->input->isInteractive());
+        $failed = [];
+
+        foreach ($steps as $step) {
+            $state = $step->state();
+
+            // Blocked is reported and never offered. An installer that knows
+            // only done and not-done has to offer "run migrations" to an
+            // application with no database — and then the answer is yes and the
+            // run dies inside a task spinner with a PDO exception.
+            if ($state !== SetupState::Pending) {
+                $this->components->twoColumnDetail(
+                    $step->label(),
+                    $state === SetupState::Done
+                        ? '<fg=gray>'.$step->summary().'</>'
+                        : '<fg=yellow>'.$step->summary().'</>',
+                );
+
+                continue;
+            }
+
+            if ($dry) {
+                $this->components->twoColumnDetail($step->label(), '<fg=yellow>would '.$step->summary().'</>');
+
+                continue;
+            }
+
+            $this->line("  <options=bold>{$step->label()}</> — <fg=gray>{$step->summary()}</>");
+
+            if (! $console->confirm('  Do that now?')) {
+                $this->line('    <fg=gray>Left alone.</>');
+
+                continue;
+            }
+
+            if ($step->apply($console) === SetupOutcome::Failed) {
+                $failed[] = $step->label();
+            }
+        }
+
+        return $failed;
+    }
+
+    /**
+     * Every contributed step, in the order they have to run.
+     *
+     * Sorted here rather than in the registry because `sort()` lives on the
+     * step, and reading it means resolving it — which is also where a step
+     * picks up whatever it needs from the container.
+     *
+     * @return array<int, SetupStep>
+     */
+    protected function steps(): array
+    {
+        $steps = array_map(
+            fn (string $step): SetupStep => $this->laravel->make($step),
+            SetupRegistry::instance()->all(),
+        );
+
+        usort($steps, static fn (SetupStep $a, SetupStep $b): int => $a->sort() <=> $b->sort());
+
+        return $steps;
     }
 
     /**
