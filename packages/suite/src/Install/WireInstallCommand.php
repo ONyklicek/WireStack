@@ -11,6 +11,7 @@ use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
 use Symfony\Component\Console\Command\Command as SymfonyCommand;
+use Throwable;
 
 use function Laravel\Prompts\multiselect;
 
@@ -162,13 +163,30 @@ class WireInstallCommand extends Command
             $options = $this->passthrough($commands[$component->command], $force);
 
             $this->components->task($name, function () use ($component, $options, &$failed): bool {
+                // Into a buffer rather than onto this command's output. Each of
+                // these installers prints a banner, a numbered step per tag, a
+                // tick per published file and a "Next steps" list — a dozen
+                // lines per package, in the middle of a table of one line per
+                // package. Handing them `$this->getOutput()` is what made the
+                // listing unreadable, and worse, what left a row rendered with
+                // no label at all when the spinner came back to a cursor
+                // somebody else had moved.
+                //
                 // The exit code is the installer's answer, and dropping it was
                 // how a failed publish came out as a green tick and a zero
                 // exit — the shape a CI run cannot see through.
-                $code = Artisan::call((string) $component->command, $options, $this->getOutput());
+                $code = Artisan::call((string) $component->command, $options);
 
                 if ($code !== self::SUCCESS) {
                     $failed[] = $component->label;
+                }
+
+                // Kept where it can be read: quiet while it works, and the whole
+                // of what it said the moment it does not. `-v` asks for it
+                // anyway, which is what somebody debugging an install reaches
+                // for before anything else.
+                if ($code !== self::SUCCESS || $this->output->isVerbose()) {
+                    $this->line(Artisan::output());
                 }
 
                 return $code === self::SUCCESS;
@@ -269,7 +287,18 @@ class WireInstallCommand extends Command
                 continue;
             }
 
-            $outcome = $step->apply($console);
+            try {
+                $outcome = $step->apply($console);
+            } catch (Throwable $e) {
+                // A step is a package's code, and `Blocked` only covers what it
+                // could see coming. Everything else — a migration that collides
+                // with one already in the database, a disk that is not writable —
+                // arrives as an exception, and one escaping here takes the whole
+                // installer with it and prints a stack trace over the listing.
+                $console->warn($e->getMessage());
+
+                $outcome = SetupOutcome::Failed;
+            }
 
             if ($outcome === SetupOutcome::Failed) {
                 $failed[] = $step->label();

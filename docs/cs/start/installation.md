@@ -74,6 +74,11 @@ balíčku je zároveň návratovým kódem tohoto příkazu a části, které se
 vypíšou jménem — skriptované nasazení, které nevidí selhané publikování, je horší
 než žádné.
 
+**Vlastní výpis každého instalátoru jde stranou.** Tisknou banner, číslovaný krok
+na každý publish tag, fajfku na každý soubor a seznam dalších kroků — tucet řádků
+na balíček, tedy přesně to, co výpis výše nahrazuje. Odloží se do bufferu a vypíše
+celý ve chvíli, kdy některý selže, a s `-v` kdykoli si o něj řeknete.
+
 **`--no-interaction` dorazí až k instalátorům, které se spouští.** Každý z nich se
 před zásahem do produkční aplikace ptá, a ten dotaz se kreslí na výstup tohoto
 příkazu zevnitř běžícího progress spinneru — na jediném místě, kde ho nikdo
@@ -150,6 +155,11 @@ Druhá půlka `wire:install` je proto prochází, jeden po druhém:
 **Zjisti, zeptej se, udělej.** Krok se nejdřív podívá a nabídne se jen tehdy, když
 je potřeba — takže druhé spuštění příkazu je tiché. Co už platí, se pojmenuje a
 nechá být.
+
+**Krok, který vybuchne, se ohlásí, neshodí běh.** `Blocked` pokrývá to, co krok
+viděl dopředu; migrace, která koliduje s tou, kterou aplikace už spustila, přijde
+jako výjimka. Odchytí se, pojmenuje a běh pokračuje dalšími kroky — příkaz stejně
+skončí nenulově.
 
 **Krok, který nemůže proběhnout, to řekne, místo aby se nabídl.** Žádná databáze,
 žádný model uživatele, žádné `routes/web.php` — každé z toho se ohlásí jako věc

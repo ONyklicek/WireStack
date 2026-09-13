@@ -973,3 +973,75 @@ it('answers a step with defaults, and never a prompt, when unattended', function
         'confirm' => false,
     ]);
 });
+
+it('survives a step that throws, and names it', function () {
+    // A step is a package's code, and `Blocked` only covers what it could see
+    // coming. Everything else arrives as an exception, and one escaping here
+    // takes the whole installer with it and prints a stack trace over the
+    // listing — which is the failure the three states exist to keep away.
+    $step = new class implements SetupStep
+    {
+        public function label(): string
+        {
+            return 'Throws';
+        }
+
+        public function state(): SetupState
+        {
+            return SetupState::Pending;
+        }
+
+        public function summary(): string
+        {
+            return 'blow up';
+        }
+
+        public function apply(SetupConsole $console): SetupOutcome
+        {
+            throw new RuntimeException('table "audit_logs" already exists');
+        }
+
+        public function sort(): int
+        {
+            return 100;
+        }
+    };
+
+    app()->instance('wi-step:throws', $step);
+    SetupRegistry::instance()->register('wi-step:throws');
+    wiCatalogue();
+
+    $this->artisan('wire:install --all')
+        ->expectsConfirmation('Set it up now?', 'yes')
+        ->expectsOutputToContain('table "audit_logs" already exists')
+        ->expectsOutputToContain('Did not finish: Throws')
+        ->assertFailed();
+});
+
+it('hands over everything the installer said when it failed', function () {
+    // The installer's own output is buffered so it cannot flood the listing,
+    // which leaves this as the thing to hold: a buffered failure nobody can read
+    // is worse than the noise it was hiding.
+    //
+    // That the *successful* case is quiet cannot be asserted from here —
+    // `PendingCommand` binds `OutputStyle` into the container, so every nested
+    // command writes to the parent's mocked output whatever buffer it was given.
+    // It is checked by running the command.
+    Artisan::command('wi:loud', function (): int {
+        $this->getOutput()->writeln('Failed to publish config');
+
+        return 1;
+    });
+
+    wiCatalogue(new Component(
+        package: 'nyoncode/wire-core',
+        label: 'Loud',
+        description: 'An installer that fails with something to say.',
+        marker: 'NyonCode\\WireCore\\WireCoreServiceProvider',
+        command: 'wi:loud',
+    ));
+
+    $this->artisan('wire:install --all')
+        ->expectsOutputToContain('Failed to publish config')
+        ->assertFailed();
+});

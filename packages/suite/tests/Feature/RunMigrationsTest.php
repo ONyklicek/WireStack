@@ -86,6 +86,55 @@ function rmPlant(string $table): string
     return $path;
 }
 
+/**
+ * The silent console, but keeping what it was told.
+ *
+ * @param  array<int, string>  $said
+ */
+function wiSayingConsole(array &$said): SetupConsole
+{
+    return new class($said) implements SetupConsole
+    {
+        /** @param array<int, string> $said */
+        public function __construct(private array &$said) {}
+
+        public function ask(string $question, ?string $default = null): string
+        {
+            return (string) $default;
+        }
+
+        public function secret(string $question): string
+        {
+            return '';
+        }
+
+        public function confirm(string $question, bool $default = true): bool
+        {
+            return $default;
+        }
+
+        public function choose(string $question, array $options, ?string $default = null): string
+        {
+            return (string) $default;
+        }
+
+        public function note(string $message): void
+        {
+            $this->said[] = $message;
+        }
+
+        public function warn(string $message): void
+        {
+            $this->said[] = $message;
+        }
+
+        public function isInteractive(): bool
+        {
+            return false;
+        }
+    };
+}
+
 it('is pending while a migration has not run, and says how many', function () {
     rmIsolatingMigrations(function () {
         rmPlant('rm_things');
@@ -187,4 +236,22 @@ it('runs before anything that would write a row', function () {
     // until this has run.
     expect(rmStep()->sort())->toBe(100)
         ->and(rmStep()->label())->toBe('Database tables');
+});
+
+it('reports a migration that will not run, rather than dying on it', function () {
+    // `migrate` answers a broken migration by throwing, not with an exit code —
+    // a table that already exists, a column that does not, a duplicate published
+    // copy of one the application already ran. Before this, the exception went
+    // straight out of `wire:install` and printed a stack trace over the listing,
+    // which is the exact failure `Blocked` exists to keep away from a spinner.
+    rmIsolatingMigrations(function () {
+        $body = (string) file_get_contents(rmPlant('rm_clash'));
+        file_put_contents(database_path('migrations/2025_01_01_000000_create_rm_clash_table.php'), $body);
+
+        $said = [];
+
+        expect(rmStep()->apply(wiSayingConsole($said)))->toBe(SetupOutcome::Failed)
+            ->and(implode("\n", $said))->toContain('already exists')
+            ->and(implode("\n", $said))->toContain('Run php artisan migrate yourself');
+    });
 });

@@ -75,6 +75,11 @@ the one to reach for when a part is skipped that you wanted run.
 returns is this command's exit code too, and the parts that failed are named — a
 scripted setup that cannot see a failed publish is worse than no scripted setup.
 
+**Each installer's own output is kept out of the way.** They print a banner, a
+numbered step per publish tag, a tick per file and a list of next steps — a dozen
+lines per package, which is what the listing above replaces. It is buffered and
+shown in full the moment one of them fails, and with `-v` whenever you ask.
+
 **`--no-interaction` reaches the installers it runs.** Each of them prompts
 before touching a production application, and that prompt is drawn on this
 command's own output from inside a running progress spinner, which is the one
@@ -152,6 +157,11 @@ So the second half of `wire:install` works through them, one at a time:
 **Detect, then ask, then act.** A step looks first and is offered only while it is
 needed, so running the command twice is quiet. What is already true is named and
 left alone.
+
+**A step that blows up is reported, not fatal.** `Blocked` covers what a step
+could see coming; a migration that collides with one the application already ran
+arrives as an exception instead. It is caught, named, and the run carries on to
+the steps after it — the command still exits non-zero.
 
 **A step that cannot run says so instead of being offered.** No database, no user
 model, no `routes/web.php` — each is reported as something to go and fix rather

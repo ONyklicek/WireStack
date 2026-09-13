@@ -72,7 +72,21 @@ final readonly class RunMigrations implements SetupStep
         // has already been confirmed once, at the question above this, and
         // `migrate` would otherwise stop to ask again — from inside a step,
         // where the answer goes to a prompt this command is not driving.
-        if ($this->artisan->call('migrate', ['--force' => true]) !== 0) {
+        try {
+            $code = $this->artisan->call('migrate', ['--force' => true]);
+        } catch (Throwable $e) {
+            // `migrate` reports a broken migration by throwing, not by an exit
+            // code: a table that already exists, a column that does not, a
+            // duplicate published copy of a migration the application already
+            // ran. The first line is the useful one — the rest is a stack trace
+            // through the query builder.
+            $console->warn(explode("\n", $e->getMessage())[0]);
+            $console->warn('Run php artisan migrate yourself to see the whole of it.');
+
+            return SetupOutcome::Failed;
+        }
+
+        if ($code !== 0) {
             $console->warn('php artisan migrate did not finish — run it yourself to see why.');
 
             return SetupOutcome::Failed;
