@@ -139,7 +139,7 @@ Druhá půlka `wire:install` je proto prochází, jeden po druhém:
 | --- | --- |
 | Database tables | Spustí čekající migrace. Tři moduly si o to řekly ve vlastních instalátorech a ani jeden s tím nemohl nic udělat |
 | [Routes](../panels/modules.md) | Zapíše do `routes/web.php` skupinu s `Route::wireResources()`, pod prefixem a middlewarem, na které se zeptá. Bez toho je každá obrazovka 404 |
-| [First administrator](../modules/users.md) | Založí účet, kterým se přihlásíte — a super-admin roli tam, kde aplikace role má. Nic v celém stacku ho předtím nevytvořilo; odpovědí byl `php artisan tinker` |
+| [First administrator](../modules/users.md) | Založí účet, kterým se přihlásíte — a super-admin roli tam, kde aplikace role má. Nic v celém stacku ho předtím nevytvořilo; odpovědí byl `php artisan tinker`. Vždycky jen ten *první*; každý další účet je `php artisan wire:user` |
 | [Media links](../modules/media.md) | `storage:link`. Bez něj uploady fungují, náhledy se generují a každý obrázek je 404, které nikde nezahlásí chybu |
 | [Audit recording](../core/audit.md) | Zapne zaznamenávání, aby obrazovka auditu nebyla pohledem do prázdné tabulky |
 | [Stored notifications](../modules/notifications.md) | Přidá vedle toastu driver `database`, aby zvoneček měl co ukazovat |
@@ -159,6 +159,25 @@ k nápravě, ne jako otázka, jejíž „ano" skončí stack tracem. To je sloup
 vystačí s výchozími hodnotami, proběhne, a krok, který ne — první administrátor
 potřebuje heslo — se omluví a řekne proč, místo aby si heslo vymyslel do deploy
 logu.
+
+### Další účet, kdykoli později
+
+Krok výše založí jeden účet a skončí, protože instalátor, který by při každém
+spuštění nabízel dalšího administrátora, je instalátor, který nikdo nemůže
+bezpečně pustit dvakrát. Příkaz je druhá cesta dovnitř — neptá se sám od sebe,
+ptáte se ho vy:
+
+```bash
+php artisan wire:user
+php artisan wire:user --name=Jana --email=jana@example.com --password=… --admin
+php artisan wire:user --email=… --password=… --role=editor --role=support
+```
+
+Co nedostane, na to se zeptá; co nedostane **a** na co se nemá koho zeptat, běh
+zastaví, místo aby si to vymyslelo — vygenerované heslo v deploy logu je heslo
+v logu. Tam, kde aplikace role má, nabídne ty, které existují — se super-adminem
+předvybraným jen u prvního účtu, protože ten je někdo, kdo si otevírá dveře, a
+každý další je běžný uživatel, dokud se neřekne jinak.
 
 ### Jak přidat vlastní krok
 
@@ -200,6 +219,7 @@ php artisan wire-table:install
 php artisan wire-sortable:install
 php artisan wire-admin:install                # navíc zapíše layout a řádek @source pro Tailwind
 php artisan wire-module-users:install         # …a jeden na každý nainstalovaný modul
+php artisan wire:user                         # další účet, kdykoli — instalátor zakládá jen ten první
 php artisan wire-boost:install --agent=claude # AI guidelines a vstup pro MCP
 ```
 

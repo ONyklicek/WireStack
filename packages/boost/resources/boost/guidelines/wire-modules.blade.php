@@ -38,3 +38,8 @@ palette find the area without being told.
   Blade components.
 - **Writing your own module?** `packages/module-users` is the reference. Declare it like any other module;
   a package ships one by registering it from its provider instead of from the application's config.
+- **`php artisan wire:user` makes an account; the installer's step makes only the first.** Both go
+  through `WireModuleUsers\Support\Accounts` — the model (`wire-module-users.model`), the column
+  names (`.fields`) and the roles are the *application's*, so never hard-code `users`, `name` or
+  `email` in new code. `Accounts::superAdminRole()` is the name the permission gate checks; inventing
+  one makes an administrator the gate does not recognise.

@@ -25,6 +25,17 @@ All notable changes to the Wire ecosystem will be documented in this file.
   only done and not-done has to offer "run migrations?" to an application with no database, and then
   the answer is yes and the run dies inside a spinner with a PDO exception.
 
+- **`php artisan wire:user` — an account, whenever one is wanted.** The installer's step makes the
+  one that gets you in and stops there, because an installer that offered to add another
+  administrator on every run is one nobody could run twice safely — which left the *second* account
+  with no answer but `php artisan tinker`. `--name`, `--email`, `--password`, `--admin` and a
+  repeatable `--role` make it scriptable; anything not given is asked for, and anything not given and
+  not askable stops the command rather than being invented. Where the application has roles it offers
+  the ones it has, with super-admin pre-picked for the first account only.
+
+  Both ways in share `Support\Accounts` — the model, the column names and the roles, which are the
+  application's rather than the package's. The step keeps only the decision of *when* to offer.
+
 - **`WireCore\Foundation\Setup` — a package can contribute a setup step.** `SetupStep`,
   `SetupConsole`, the three states and a `SetupRegistry` a package registers into from its
   `registeredPackage()` hook. The steps live with the packages that know what they are about;

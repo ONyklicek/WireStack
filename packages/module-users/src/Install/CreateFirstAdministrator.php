@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Install;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
+use NyonCode\WireModuleUsers\Console\WireUserCommand;
+use NyonCode\WireModuleUsers\Support\Accounts;
 use NyonCode\WireModuleUsers\Support\Roles;
 use Throwable;
 
@@ -20,22 +19,26 @@ use Throwable;
  * The gap nothing in this framework covered. Every package installed, every
  * migration run, the shell scaffolded, the routes registered — and then the
  * login screen, with no account behind it and no command anywhere in the stack
- * that makes one. The documented answer was `php artisan tinker`.
+ * that made one. The documented answer was `php artisan tinker`.
  *
  * It belongs to this module and not to the installer that asks, because what a
  * user *is* here is the application's own model, its own column names
  * (`wire-module-users.fields`) and its own roles — three things `wire-suite` has
- * no business knowing.
+ * no business knowing. All three are {@see Accounts}, which is also what
+ * {@see WireUserCommand} asks; between them, this one decides *when* to offer
+ * and that one is simply asked.
  *
  * ## Only ever the first
  *
  * {@see state()} is Done the moment the table has a row in it. This creates the
  * account that gets you in; it is not a user-management command, and an
  * installer that offered to add another administrator on every run would be one
- * nobody could run twice safely.
+ * nobody could run twice safely. The second account is `php artisan wire:user`.
  */
-final class CreateFirstAdministrator implements SetupStep
+final readonly class CreateFirstAdministrator implements SetupStep
 {
+    public function __construct(private Accounts $accounts) {}
+
     public function label(): string
     {
         return 'First administrator';
@@ -43,43 +46,27 @@ final class CreateFirstAdministrator implements SetupStep
 
     public function state(): SetupState
     {
-        $model = $this->model();
-
-        if ($model === null || ! class_exists($model)) {
+        if (! $this->accounts->ready()) {
             return SetupState::Blocked;
         }
 
-        try {
-            if (! Schema::hasTable($this->table($model))) {
-                return SetupState::Blocked;
-            }
-
-            return $model::query()->exists() ? SetupState::Done : SetupState::Pending;
-        } catch (Throwable) {
-            // No database yet. The step above this one says so in its own words;
-            // saying it twice would be noise, so this just stands aside.
-            return SetupState::Blocked;
-        }
+        return $this->accounts->any() ? SetupState::Done : SetupState::Pending;
     }
 
     public function summary(): string
     {
-        $model = $this->model();
-
-        if ($model === null || ! class_exists($model)) {
+        if ($this->accounts->model() === null) {
             return 'no user model — point wire-module-users.model at yours';
         }
 
-        try {
-            if (! Schema::hasTable($this->table($model))) {
-                return 'the users table is not there yet — run the migrations first';
-            }
+        if (! $this->accounts->ready()) {
+            // The step above this one says what a missing database is, in its
+            // own words; saying it twice would be noise.
+            return 'the users table is not there yet — run the migrations first';
+        }
 
-            if ($model::query()->exists()) {
-                return 'an account already exists, so you can sign in';
-            }
-        } catch (Throwable) {
-            return 'no database connection yet';
+        if ($this->accounts->any()) {
+            return 'an account already exists, so you can sign in';
         }
 
         return 'create an account to sign in with'.(Roles::enabled() ? ', and give it the super-admin role' : '');
@@ -96,10 +83,6 @@ final class CreateFirstAdministrator implements SetupStep
             return SetupOutcome::Skipped;
         }
 
-        /** @var class-string<Model> $model */
-        $model = $this->model();
-        $fields = $this->fields();
-
         $name = $console->ask('Name', 'Administrator');
         $email = $console->ask('E-mail address');
         $password = $console->secret('Password');
@@ -111,11 +94,7 @@ final class CreateFirstAdministrator implements SetupStep
         }
 
         try {
-            $user = $model::query()->create([
-                $fields['name'] => $name,
-                $fields['email'] => $email,
-                $fields['password'] => Hash::make($password),
-            ]);
+            $user = $this->accounts->create($name, $email, $password);
         } catch (Throwable $e) {
             $console->warn('Could not create the account: '.$e->getMessage());
 
@@ -124,7 +103,18 @@ final class CreateFirstAdministrator implements SetupStep
 
         $console->note("Created {$email}.");
 
-        $this->makeSuperAdmin($user, $console);
+        try {
+            $role = $this->accounts->makeSuperAdmin($user);
+
+            if ($role !== null) {
+                $console->note("Gave it the `{$role}` role.");
+            }
+        } catch (Throwable $e) {
+            // The account is made and usable; only the role is missing, and
+            // that is a screen away rather than a reason to call the step
+            // failed and leave somebody wondering whether the user exists.
+            $console->warn("Created the account, but not the `{$this->accounts->superAdminRole()}` role: ".$e->getMessage());
+        }
 
         return SetupOutcome::Applied;
     }
@@ -134,77 +124,5 @@ final class CreateFirstAdministrator implements SetupStep
         // After the tables exist, and after the shell and the routes — this is
         // the last thing that has to be true before somebody can sign in.
         return 400;
-    }
-
-    /**
-     * Give the account the role that can reach everything.
-     *
-     * Silently absent where roles are: the module works without
-     * `nyoncode/laravel-permission-extended`, and an account with no role in an
-     * application with no roles is a complete account rather than a half-done
-     * one.
-     *
-     * The role name is the permission package's own
-     * (`permission-extended.super_admin_role`), because that is the name its
-     * gate checks — inventing one here would make an administrator the gate
-     * does not recognise.
-     */
-    private function makeSuperAdmin(Model $user, SetupConsole $console): void
-    {
-        if (! Roles::enabled() || ! method_exists($user, 'assignRole')) {
-            return;
-        }
-
-        $name = (string) config('permission-extended.super_admin_role', 'super-admin');
-        $role = Roles::roleModel();
-
-        try {
-            $user->assignRole($role::query()->firstOrCreate([
-                'name' => $name,
-                'guard_name' => (string) config('auth.defaults.guard', 'web'),
-            ]));
-
-            $console->note("Gave it the `{$name}` role.");
-        } catch (Throwable $e) {
-            // The account is made and usable; only the role is missing, and
-            // that is a screen away rather than a reason to call the step
-            // failed and leave somebody wondering whether the user exists.
-            $console->warn("Created the account, but not the `{$name}` role: ".$e->getMessage());
-        }
-    }
-
-    /** @return class-string<Model>|null */
-    private function model(): ?string
-    {
-        $model = config('wire-module-users.model');
-
-        return is_string($model) && $model !== '' ? $model : null;
-    }
-
-    /**
-     * The columns this application calls its own.
-     *
-     * `wire-module-users.fields` exists because a `users` table is the one
-     * table every application has changed, and a step that wrote `name` into a
-     * schema calling it `full_name` would fail at the last moment.
-     *
-     * @return array{name: string, email: string, password: string}
-     */
-    private function fields(): array
-    {
-        /** @var array<string, string> $fields */
-        $fields = (array) config('wire-module-users.fields', []);
-
-        return [
-            'name' => $fields['name'] ?? 'name',
-            'email' => $fields['email'] ?? 'email',
-            'password' => $fields['password'] ?? 'password',
-        ];
-    }
-
-    /** @param  class-string<Model>  $model */
-    private function table(string $model): string
-    {
-        return (new $model)->getTable();
     }
 }

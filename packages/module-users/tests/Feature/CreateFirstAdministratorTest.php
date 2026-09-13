@@ -12,6 +12,7 @@ use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
 use NyonCode\WireModuleUsers\Install\CreateFirstAdministrator;
 use NyonCode\WireModuleUsers\Tests\Fixtures\User;
+use NyonCode\WireModuleUsers\Tests\Support\Tables;
 use Spatie\Permission\Models\Role;
 
 /*
@@ -81,57 +82,9 @@ function cfaConsole(array $answers, array &$said = [], bool $interactive = true)
 
 function cfaStep(): CreateFirstAdministrator
 {
-    return new CreateFirstAdministrator;
-}
-
-function cfaUsersTable(): void
-{
-    Schema::create('users', function (Blueprint $table) {
-        $table->id();
-        $table->string('name');
-        $table->string('email')->unique();
-        $table->string('password');
-        $table->timestamps();
-    });
-}
-
-function cfaRoleTables(): void
-{
-    Schema::create('roles', function (Blueprint $table) {
-        $table->id();
-        $table->string('name');
-        $table->string('guard_name');
-        $table->timestamps();
-        $table->unique(['name', 'guard_name']);
-    });
-
-    Schema::create('permissions', function (Blueprint $table) {
-        $table->id();
-        $table->string('name');
-        $table->string('guard_name');
-        $table->timestamps();
-        $table->unique(['name', 'guard_name']);
-    });
-
-    Schema::create('model_has_roles', function (Blueprint $table) {
-        $table->unsignedBigInteger('role_id');
-        $table->string('model_type');
-        $table->unsignedBigInteger('model_id');
-        $table->primary(['role_id', 'model_id', 'model_type']);
-    });
-
-    Schema::create('model_has_permissions', function (Blueprint $table) {
-        $table->unsignedBigInteger('permission_id');
-        $table->string('model_type');
-        $table->unsignedBigInteger('model_id');
-        $table->primary(['permission_id', 'model_id', 'model_type']);
-    });
-
-    Schema::create('role_has_permissions', function (Blueprint $table) {
-        $table->unsignedBigInteger('permission_id');
-        $table->unsignedBigInteger('role_id');
-        $table->primary(['permission_id', 'role_id']);
-    });
+    // Resolved rather than constructed: what a user is here — the model, the
+    // column names, the roles — is `Accounts`, which the command shares.
+    return app(CreateFirstAdministrator::class);
 }
 
 it('is contributed by this module, so the installer never learns what a user is', function () {
@@ -139,7 +92,7 @@ it('is contributed by this module, so the installer never learns what a user is'
 });
 
 it('is pending while nobody can sign in', function () {
-    cfaUsersTable();
+    Tables::users();
 
     expect(cfaStep()->state())->toBe(SetupState::Pending)
         ->and(cfaStep()->summary())->toContain('create an account')
@@ -150,7 +103,7 @@ it('is pending while nobody can sign in', function () {
 it('is done the moment there is an account, and never offers a second', function () {
     // Not a user-management command: an installer that offered to add another
     // administrator on every run is one nobody could run twice safely.
-    cfaUsersTable();
+    Tables::users();
     User::create(['name' => 'Jane', 'email' => 'jane@example.com', 'password' => Hash::make('x')]);
 
     expect(cfaStep()->state())->toBe(SetupState::Done)
@@ -174,7 +127,7 @@ it('is blocked when the application has no user model to point at', function () 
 });
 
 it('creates the account, with the password hashed', function () {
-    cfaUsersTable();
+    Tables::users();
     $said = [];
 
     expect(cfaStep()->apply(cfaConsole(['Ondřej', 'o@example.com', 'hunter2'], $said)))
@@ -215,8 +168,8 @@ it('gives the account the role the permission gate actually checks', function ()
     // The name is the permission package's own, because that is what its
     // super-admin gate reads. Inventing one here would make an administrator
     // the gate does not recognise.
-    cfaUsersTable();
-    cfaRoleTables();
+    Tables::users();
+    Tables::roles();
 
     expect(cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'pw'])))->toBe(SetupOutcome::Applied);
 
@@ -229,7 +182,7 @@ it('gives the account the role the permission gate actually checks', function ()
 it('still makes the account when the role tables are not there', function () {
     // The module works without roles, and an account with no role in an
     // application with no roles is complete rather than half-done.
-    cfaUsersTable();
+    Tables::users();
     $said = [];
 
     expect(cfaStep()->apply(cfaConsole(['Solo', 'solo@example.com', 'pw'], $said)))->toBe(SetupOutcome::Applied)
@@ -240,7 +193,7 @@ it('still makes the account when the role tables are not there', function () {
 it('declines unattended rather than inventing a password', function () {
     // A generated password printed into a deploy log is a credential in a log,
     // and an empty one is an account anybody can use.
-    cfaUsersTable();
+    Tables::users();
     $said = [];
 
     expect(cfaStep()->apply(cfaConsole([], $said, interactive: false)))->toBe(SetupOutcome::Skipped)
@@ -249,7 +202,7 @@ it('declines unattended rather than inventing a password', function () {
 });
 
 it('declines when an answer it cannot do without is empty', function () {
-    cfaUsersTable();
+    Tables::users();
     $said = [];
 
     expect(cfaStep()->apply(cfaConsole(['Name', '', ''], $said)))->toBe(SetupOutcome::Skipped)
@@ -258,7 +211,7 @@ it('declines when an answer it cannot do without is empty', function () {
 });
 
 it('fails rather than pretending, when the row cannot be written', function () {
-    cfaUsersTable();
+    Tables::users();
     User::create(['name' => 'Taken', 'email' => 'taken@example.com', 'password' => Hash::make('x')]);
     $said = [];
 
@@ -269,9 +222,9 @@ it('fails rather than pretending, when the row cannot be written', function () {
 });
 
 it('stands aside quietly when there is no database at all', function () {
-    // The step above this one already says the connection is missing, in its own
-    // words. Saying it twice would be noise, so this reports rather than throws
-    // and leaves the explaining to the step that owns it.
+    // Reported rather than thrown, and in the same words as a missing table:
+    // the step above this one owns what "no database" means, and saying it
+    // twice in one listing was the thing worth avoiding.
     config()->set('database.connections.broken', [
         'driver' => 'sqlite',
         'database' => '/nonexistent/directory/database.sqlite',
@@ -281,14 +234,14 @@ it('stands aside quietly when there is no database at all', function () {
     DB::purge();
 
     expect(cfaStep()->state())->toBe(SetupState::Blocked)
-        ->and(cfaStep()->summary())->toBe('no database connection yet');
+        ->and(cfaStep()->summary())->toContain('not there yet');
 });
 
 it('says nothing about roles in an application that has none', function () {
     // The module works without `nyoncode/laravel-permission-extended`, so an
     // account with no role is complete rather than half-done — and the step must
     // not warn about a role nobody asked for.
-    cfaUsersTable();
+    Tables::users();
     config()->set('wire-module-users.roles', false);
     $said = [];
 

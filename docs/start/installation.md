@@ -141,7 +141,7 @@ So the second half of `wire:install` works through them, one at a time:
 | --- | --- |
 | Database tables | Runs the outstanding migrations. Three modules asked for this in their own installers and none could act on it |
 | [Routes](../panels/modules.md) | Writes a `Route::wireResources()` group into `routes/web.php`, under a prefix and middleware you are asked for. Without it every screen is a 404 |
-| [First administrator](../modules/users.md) | Creates the account you sign in with — and the super-admin role where the application has roles. Nothing in the stack made one before; the answer was `php artisan tinker` |
+| [First administrator](../modules/users.md) | Creates the account you sign in with — and the super-admin role where the application has roles. Nothing in the stack made one before; the answer was `php artisan tinker`. Only ever the *first*: every account after it is `php artisan wire:user` |
 | [Media links](../modules/media.md) | `storage:link`. Without it uploads work, thumbnails generate, and every image is a 404 that errors nowhere |
 | [Audit recording](../core/audit.md) | Switches recording on, so the audit screen is not a view over an empty table |
 | [Stored notifications](../modules/notifications.md) | Adds the `database` driver beside the toast, so the bell has a history to show |
@@ -161,6 +161,25 @@ above.
 that can proceed on defaults does, and one that cannot — the first administrator
 needs a password — declines and says why, rather than inventing one into a deploy
 log.
+
+### Another account, later
+
+The step above makes one account and stops, because an installer that offered to
+add another administrator on every run is one nobody could run twice safely. The
+command is the other way in, and it is asked rather than offering:
+
+```bash
+php artisan wire:user
+php artisan wire:user --name=Jane --email=jane@example.com --password=… --admin
+php artisan wire:user --email=… --password=… --role=editor --role=support
+```
+
+Anything not given is asked for; anything not given **and** not askable stops the
+command rather than being invented, because a generated password in a deploy log
+is a credential in a log. Where the application has roles, it offers the ones it
+has — with super-admin pre-picked for the first account only, since that one is
+somebody letting themselves in and every later one is an ordinary user until
+said otherwise.
 
 ### Contributing a step
 
@@ -202,6 +221,7 @@ php artisan wire-table:install
 php artisan wire-sortable:install
 php artisan wire-admin:install                # also writes the layout and the Tailwind @source line
 php artisan wire-module-users:install         # …and one per installed module
+php artisan wire:user                         # another account, any time — the installer only makes the first
 php artisan wire-boost:install --agent=claude # AI agent guidelines and the MCP entry
 ```
 
