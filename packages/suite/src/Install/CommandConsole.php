@@ -43,7 +43,14 @@ final readonly class CommandConsole implements SetupConsole
             return (string) $default;
         }
 
-        return text(label: $question, default: $default ?? '');
+        // A placeholder, not a default. Prompts pre-fills `default:` into the
+        // buffer and leaves the cursor after it, so somebody who types a name
+        // gets `AdministratorOndrej Nyklicek` — measured, on the first run that
+        // ever reached this prompt. The fallback happens here instead, where an
+        // empty answer means "the one you offered".
+        $answer = trim(text(label: $question, placeholder: $default ?? ''));
+
+        return $answer !== '' ? $answer : (string) $default;
     }
 
     public function secret(string $question): string

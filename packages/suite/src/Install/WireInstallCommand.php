@@ -68,7 +68,9 @@ class WireInstallCommand extends Command
         $chosen = $this->option('all') ? $runnable : $this->choose($runnable);
 
         $failed = $this->install($installed, $chosen, $settled, $commands, $force, $dry);
-        $failed = array_merge($failed, $this->setUpApplication($dry));
+
+        $applied = 0;
+        $failed = array_merge($failed, $this->setUpApplication($dry, $applied));
 
         $this->offerMissing($catalogue->missing());
 
@@ -86,7 +88,10 @@ class WireInstallCommand extends Command
             return self::SUCCESS;
         }
 
-        if ($settled !== [] && $chosen === []) {
+        // Only when nothing happened at all. Saying "everything was already set
+        // up" after creating the first administrator is the command describing
+        // a run it did not have.
+        if ($settled !== [] && $chosen === [] && $applied === 0) {
             $this->components->info('Everything was already set up. Run with --force to do it again.');
 
             return self::SUCCESS;
@@ -234,7 +239,7 @@ class WireInstallCommand extends Command
      *
      * @return array<int, string> The labels of the steps that failed.
      */
-    protected function setUpApplication(bool $dry): array
+    protected function setUpApplication(bool $dry, int &$applied = 0): array
     {
         $steps = $this->steps();
 
@@ -298,6 +303,10 @@ class WireInstallCommand extends Command
                 $console->warn($e->getMessage());
 
                 $outcome = SetupOutcome::Failed;
+            }
+
+            if ($outcome === SetupOutcome::Applied) {
+                $applied++;
             }
 
             if ($outcome === SetupOutcome::Failed) {
