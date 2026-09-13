@@ -2,6 +2,43 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.0.1]
+
+### Fixed
+
+- **`php artisan wire:install` no longer sets up what is already set up.** `vendor:publish` is not
+  idempotent where it matters: a migration shipped without a date prefix is stamped with the time the
+  publish mapping was built, so its destination path differs in every process. Publish looked there,
+  found nothing, and wrote a *second* copy of a migration the application already had — two
+  `create_wire_preferences_table` files, and `php artisan migrate` failing on the second. Re-running
+  after adding a module, which the docs ask for, was the way to hit it. `Install\Setup` now reads
+  each part's declared publish groups and their destinations; a part with nothing left to write is
+  named and left alone.
+- **A failing installer now fails the command.** The exit code each package's installer returns is
+  `wire:install`'s own, and the parts that failed are named. It used to come out as a green tick and
+  a zero exit, which a scripted setup cannot see through.
+- **`--no-interaction` reaches the installers it runs.** Each one prompts before touching a
+  production application, and the prompt was drawn on this command's output from inside a running
+  task spinner — the one place nobody can answer it.
+
+### Added
+
+- **`wire:install --force`** — set up every part regardless, publishing over what each wrote. The
+  flag an upgrade wants, and the way to run a part that was skipped. It requires
+  `nyoncode/laravel-package-toolkit` `^2.5.2`, which is where republishing a timeless migration stops
+  producing a duplicate; the constraint moved with it.
+- **`wire-boost` and `wire-module-auth` are in the installer's catalogue**, having been listed
+  nowhere and in the catalogue alone respectively. Boost is listed and never run: `wire-boost:install`
+  asks which AI agents to configure, which is not a question to answer on someone's behalf from
+  inside a spinner.
+
+### Changed
+
+- **The question is a Laravel Prompts multiselect** with every pending part already ticked, replacing
+  a `choice()` that carried a synthetic "All of them" row to mean the same thing. The WireStack mark
+  is drawn above it where the output is interactive — a banner in a deploy log is noise in the one
+  place the output is read by a machine.
+
 ## [2.0.0]
 
 ### Added

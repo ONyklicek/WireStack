@@ -16,7 +16,7 @@ This guide covers the production setup for Wire in a Laravel application.
 | Livewire | 4.x |
 | Tailwind CSS | 3.x+ |
 | Alpine.js | 3.x+ (included with Livewire) |
-| `nyoncode/laravel-package-toolkit` | ^2.5 (installed for you) |
+| `nyoncode/laravel-package-toolkit` | ^2.5.2 (installed for you) |
 
 The last row is not something you require yourself — Composer pulls it in with the
 Wire packages. It is listed because it decides the two rows above it. The toolkit

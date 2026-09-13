@@ -56,7 +56,7 @@ co drží sadu v zámku bez čtyř řádků, na které je potřeba myslet:
 | Laravel | 12.61+, 13.12+ |
 | Livewire | 4.x |
 | Tailwind CSS | 3.x nebo 4.x (témování poloměru a odsazení vyžaduje 4.x — viz [Vzhled → Rozsah](theming.md#rozsah)) |
-| `nyoncode/laravel-package-toolkit` | ^2.5 |
+| `nyoncode/laravel-package-toolkit` | ^2.5.2 |
 
 Před upgradem ověřte, že je vaše aplikace splňuje.
 

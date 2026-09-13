@@ -32,7 +32,7 @@ Monorepo for the Wire ecosystem – enterprise-grade Livewire components for Lar
 - Tailwind CSS 3.x
 - Node.js & npm (for Vite)
 
-`nyoncode/laravel-package-toolkit` `^2.4` comes with the packages and sets that
+`nyoncode/laravel-package-toolkit` `^2.5.2` comes with the packages and sets that
 Laravel floor — see [Getting Started → Requirements](docs/start/getting-started.md#requirements).
 
 ## Installation
