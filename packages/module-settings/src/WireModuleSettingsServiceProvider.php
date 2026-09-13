@@ -8,6 +8,8 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
+use NyonCode\WireModuleSettings\Install\CacheSettingsInMemory;
 use NyonCode\WireModuleSettings\Resources\SettingsResource;
 use NyonCode\WireModuleSettings\Support\SettingsGroups;
 use NyonCode\WireModuleSettings\Support\SettingsRegistry;
@@ -36,6 +38,10 @@ class WireModuleSettingsServiceProvider extends PackageServiceProvider
                         $manager->register(new SettingsModule);
                     }
                 });
+
+                // Settings are read on nearly every request; cached in the database the
+                // lookup costs the query it was meant to save.
+                SetupRegistry::instance()->register(CacheSettingsInMemory::class);
             })
             ->hasConfig()
             ->hasViews()

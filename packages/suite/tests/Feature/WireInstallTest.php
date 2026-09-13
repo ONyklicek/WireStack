@@ -170,6 +170,18 @@ function wiSortable(): Component
 // The catalogue
 // ---------------------------------------------------------------------------
 
+/*
+ * Every test in this file decides for itself which setup steps exist.
+ *
+ * The providers in this suite's test application register the real ones —
+ * running migrations, writing routes, building assets — and a test asserting on
+ * the installer's output would otherwise be reading lines from steps it never
+ * meant to involve, against an application they would really change.
+ */
+beforeEach(function () {
+    SetupRegistry::instance()->flush();
+});
+
 it('is registered', function () {
     expect(array_keys(app(Kernel::class)->all()))->toContain('wire:install');
 });
@@ -217,6 +229,15 @@ it('answers "installed" by asking the autoloader, not the lock file', function (
 
 it('names what a part has left to publish', function () {
     wiRestoring(wiSortablePaths(), function () {
+        // Cleared first. The skeleton is shared by every suite in the monorepo,
+        // so "has this been published" is a question about what ran before this
+        // test unless the test answers it itself; the restore puts it all back.
+        foreach (wiSortablePaths() as $glob) {
+            foreach (glob($glob) ?: [] as $path) {
+                wiDelete($path);
+            }
+        }
+
         $pending = app(Setup::class)->pending(wiSortable(), app(Kernel::class)->all()['wire-sortable:install']);
 
         expect($pending)->toBeArray()
@@ -710,10 +731,6 @@ function wiStep(string $label, SetupState $state, SetupOutcome $outcome, int $so
     return $alias;
 }
 
-beforeEach(function () {
-    SetupRegistry::instance()->flush();
-});
-
 it('offers a pending step, and applies it when told to', function () {
     $spy = ['applied' => []];
     wiStep('First administrator', SetupState::Pending, SetupOutcome::Applied, 100, $spy);
@@ -722,7 +739,7 @@ it('offers a pending step, and applies it when told to', function () {
     $this->artisan('wire:install --all')
         ->expectsOutputToContain('Setting up this application')
         ->expectsOutputToContain('First administrator')
-        ->expectsConfirmation('  Do that now?', 'yes')
+        ->expectsConfirmation('Set it up now?', 'yes')
         ->assertSuccessful();
 
     expect($spy['applied'])->toBe(['First administrator']);
@@ -734,8 +751,8 @@ it('leaves a pending step alone when told not to', function () {
     wiCatalogue();
 
     $this->artisan('wire:install --all')
-        ->expectsConfirmation('  Do that now?', 'no')
-        ->expectsOutputToContain('Left alone.')
+        ->expectsConfirmation('Set it up now?', 'no')
+        ->expectsOutputToContain('LEFT ALONE')
         ->assertSuccessful();
 
     expect($spy['applied'])->toBe([]);
@@ -776,7 +793,7 @@ it('names what a step would do in a dry run, and applies nothing', function () {
     wiCatalogue();
 
     $this->artisan('wire:install --all --dry-run')
-        ->expectsOutputToContain('would do the thing for First administrator')
+        ->expectsOutputToContain('do the thing for First administrator')
         ->assertSuccessful();
 
     expect($spy['applied'])->toBe([]);
@@ -788,7 +805,7 @@ it('fails the command when a step fails', function () {
     wiCatalogue();
 
     $this->artisan('wire:install --all')
-        ->expectsConfirmation('  Do that now?', 'yes')
+        ->expectsConfirmation('Set it up now?', 'yes')
         ->expectsOutputToContain('Did not install: Database tables')
         ->assertFailed();
 });
@@ -802,8 +819,8 @@ it('runs the steps in the order they have to run', function () {
     wiCatalogue();
 
     $this->artisan('wire:install --all')
-        ->expectsConfirmation('  Do that now?', 'yes')
-        ->expectsConfirmation('  Do that now?', 'yes')
+        ->expectsConfirmation('Set it up now?', 'yes')
+        ->expectsConfirmation('Set it up now?', 'yes')
         ->assertSuccessful();
 
     expect($spy['applied'])->toBe(['Database tables', 'First administrator']);
@@ -881,7 +898,7 @@ it('carries a step\'s questions through to the command, and its answers back', f
     wiCatalogue();
 
     $this->artisan('wire:install --all')
-        ->expectsConfirmation('  Do that now?', 'yes')
+        ->expectsConfirmation('Set it up now?', 'yes')
         ->expectsQuestion('Name?', 'Ondřej')
         ->expectsQuestion('Password?', 'hunter2')
         ->expectsChoice('Which disk?', 's3', ['public' => 'public', 's3' => 's3'])

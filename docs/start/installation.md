@@ -113,17 +113,77 @@ are left alone.
 run: `wire-boost:install` asks which AI agents to configure, and that is not a
 question this command should answer on anyone's behalf.
 
-## What Is Left To You
+## Setting Up The Application
 
-Two things the installer will not decide:
+Installing a package and having a working application are two different things,
+and until now only the first had a command. Every package installer knew what was
+still missing and said so — "Run: php artisan migrate", "name an ability in
+`wire-module-users.permissions`", "`wire-core.audit.enabled` is off — nothing is
+being recorded yet" — nine such lines across seven packages, each a diagnosis
+with nothing behind it.
 
-```php
-// routes/web.php — the middleware and the prefix are yours
-Route::middleware(['web', 'auth'])->prefix('admin')->group(fn () => Route::wireResources());
+So the second half of `wire:install` works through them, one at a time:
+
+```text
+ INFO  Setting up this application
+
+  Database tables ..................... run 2 pending migrations   WOULD RUN
+  Routes ........................ no routes/web.php to add them to   WAITING
+  First administrator . an account already exists, so you can sign in   DONE
+  Media links ...................... public/storage is already linked   DONE
+  Audit recording ........................ changes are being recorded   DONE
+  Stored notifications ............... notifications are being stored   DONE
+  Settings cache ................................... cached in `file`   DONE
+  Frontend build ...... no package.json, so there is nothing to build   DONE
 ```
 
-```bash
-php artisan migrate
+| Step | What it does, and why it is not a footnote |
+| --- | --- |
+| Database tables | Runs the outstanding migrations. Three modules asked for this in their own installers and none could act on it |
+| [Routes](../panels/modules.md) | Writes a `Route::wireResources()` group into `routes/web.php`, under a prefix and middleware you are asked for. Without it every screen is a 404 |
+| [First administrator](../modules/users.md) | Creates the account you sign in with — and the super-admin role where the application has roles. Nothing in the stack made one before; the answer was `php artisan tinker` |
+| [Media links](../modules/media.md) | `storage:link`. Without it uploads work, thumbnails generate, and every image is a 404 that errors nowhere |
+| [Audit recording](../core/audit.md) | Switches recording on, so the audit screen is not a view over an empty table |
+| [Stored notifications](../modules/notifications.md) | Adds the `database` driver beside the toast, so the bell has a history to show |
+| [Settings cache](../modules/settings.md) | Moves the settings cache off the database, where the lookup costs the query it was meant to save |
+| Frontend build | `npm install && npm run build`, so Tailwind compiles the classes in the packages' views. Until it runs the shell has no width, no colour and no error |
+
+**Detect, then ask, then act.** A step looks first and is offered only while it is
+needed, so running the command twice is quiet. What is already true is named and
+left alone.
+
+**A step that cannot run says so instead of being offered.** No database, no user
+model, no `routes/web.php` — each is reported as something to go and fix rather
+than a question whose "yes" ends in a stack trace. That is the `WAITING` column
+above.
+
+**Nothing is done without being asked**, and `--no-interaction` means it: a step
+that can proceed on defaults does, and one that cannot — the first administrator
+needs a password — declines and says why, rather than inventing one into a deploy
+log.
+
+### Contributing a step
+
+A package adds to that list by registering a step, the same way it registers
+anything else. The installer never learns what the step is about:
+
+```php
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
+
+$packager->registeredPackage(fn () => SetupRegistry::instance()->register(WarmTheIndex::class));
+```
+
+The class implements `NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep`:
+`label()`, `state()` (`Done`, `Pending` or `Blocked`), `summary()`, `apply()` and
+`sort()`. `state()` may only look — it runs under `--dry-run` too — and `apply()`
+asks through a `SetupConsole` rather than a command, which is what lets a step be
+tested without a terminal.
+
+## What Is Left To You
+
+```php
+// routes/web.php, if you would rather write it yourself than be asked
+Route::middleware(['web', 'auth'])->prefix('admin')->group(fn () => Route::wireResources());
 ```
 
 ## Every Command This Ships

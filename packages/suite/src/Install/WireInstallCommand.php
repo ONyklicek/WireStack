@@ -170,30 +170,45 @@ class WireInstallCommand extends Command
                 $this->components->twoColumnDetail(
                     $step->label(),
                     $state === SetupState::Done
-                        ? '<fg=gray>'.$step->summary().'</>'
-                        : '<fg=yellow>'.$step->summary().'</>',
+                        ? '<fg=gray>'.$step->summary().'</> <fg=green;options=bold>DONE</>'
+                        : '<fg=gray>'.$step->summary().'</> <fg=yellow;options=bold>WAITING</>',
                 );
 
                 continue;
             }
 
             if ($dry) {
-                $this->components->twoColumnDetail($step->label(), '<fg=yellow>would '.$step->summary().'</>');
+                $this->components->twoColumnDetail(
+                    $step->label(),
+                    '<fg=gray>'.$step->summary().'</> <fg=yellow;options=bold>WOULD RUN</>',
+                );
 
                 continue;
             }
 
-            $this->line("  <options=bold>{$step->label()}</> — <fg=gray>{$step->summary()}</>");
+            // The label and what it would do on one aligned line, then one
+            // question. Reading a column of labels and finding the state at the
+            // end of each is how every other Laravel installer reads, and it is
+            // the difference between a report and a wall of prose.
+            $this->components->twoColumnDetail($step->label(), '<fg=gray>'.$step->summary().'</>');
 
-            if (! $console->confirm('  Do that now?')) {
-                $this->line('    <fg=gray>Left alone.</>');
+            if (! $console->confirm('Set it up now?')) {
+                $this->components->twoColumnDetail($step->label(), '<fg=gray;options=bold>LEFT ALONE</>');
 
                 continue;
             }
 
-            if ($step->apply($console) === SetupOutcome::Failed) {
+            $outcome = $step->apply($console);
+
+            if ($outcome === SetupOutcome::Failed) {
                 $failed[] = $step->label();
             }
+
+            $this->components->twoColumnDetail($step->label(), match ($outcome) {
+                SetupOutcome::Applied => '<fg=green;options=bold>DONE</>',
+                SetupOutcome::Skipped => '<fg=yellow;options=bold>SKIPPED</>',
+                SetupOutcome::Failed => '<fg=red;options=bold>FAILED</>',
+            });
         }
 
         return $failed;

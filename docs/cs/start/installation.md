@@ -112,17 +112,76 @@ zůstanou nedotčené.
 nespouští: `wire-boost:install` se ptá, které AI agenty nakonfigurovat, a to není
 otázka, kterou by měl tento příkaz zodpovídat za někoho jiného.
 
-## Co zůstává na vás
+## Nastavení aplikace
 
-Dvě věci, které instalátor nerozhodne:
+Nainstalovat balíček a mít funkční aplikaci jsou dvě různé věci a doteď měla
+příkaz jen ta první. Každý instalátor balíčku věděl, co ještě chybí, a řekl to —
+„Run: php artisan migrate", „name an ability in `wire-module-users.permissions`",
+„`wire-core.audit.enabled` is off — nothing is being recorded yet" — devět
+takových řádků napříč sedmi balíčky, a za každým z nich nic.
 
-```php
-// routes/web.php — middleware a prefix jsou vaše
-Route::middleware(['web', 'auth'])->prefix('admin')->group(fn () => Route::wireResources());
+Druhá půlka `wire:install` je proto prochází, jeden po druhém:
+
+```text
+ INFO  Setting up this application
+
+  Database tables ..................... run 2 pending migrations   WOULD RUN
+  Routes ........................ no routes/web.php to add them to   WAITING
+  First administrator . an account already exists, so you can sign in   DONE
+  Media links ...................... public/storage is already linked   DONE
+  Audit recording ........................ changes are being recorded   DONE
+  Stored notifications ............... notifications are being stored   DONE
+  Settings cache ................................... cached in `file`   DONE
+  Frontend build ...... no package.json, so there is nothing to build   DONE
 ```
 
-```bash
-php artisan migrate
+| Krok | Co dělá a proč to není poznámka pod čarou |
+| --- | --- |
+| Database tables | Spustí čekající migrace. Tři moduly si o to řekly ve vlastních instalátorech a ani jeden s tím nemohl nic udělat |
+| [Routes](../panels/modules.md) | Zapíše do `routes/web.php` skupinu s `Route::wireResources()`, pod prefixem a middlewarem, na které se zeptá. Bez toho je každá obrazovka 404 |
+| [First administrator](../modules/users.md) | Založí účet, kterým se přihlásíte — a super-admin roli tam, kde aplikace role má. Nic v celém stacku ho předtím nevytvořilo; odpovědí byl `php artisan tinker` |
+| [Media links](../modules/media.md) | `storage:link`. Bez něj uploady fungují, náhledy se generují a každý obrázek je 404, které nikde nezahlásí chybu |
+| [Audit recording](../core/audit.md) | Zapne zaznamenávání, aby obrazovka auditu nebyla pohledem do prázdné tabulky |
+| [Stored notifications](../modules/notifications.md) | Přidá vedle toastu driver `database`, aby zvoneček měl co ukazovat |
+| [Settings cache](../modules/settings.md) | Přesune cache nastavení z databáze, kde ji čtení stojí zrovna ten dotaz, který měla ušetřit |
+| Frontend build | `npm install && npm run build`, aby Tailwind zkompiloval třídy z views balíčků. Dokud neproběhne, shell nemá šířku, barvu ani chybu |
+
+**Zjisti, zeptej se, udělej.** Krok se nejdřív podívá a nabídne se jen tehdy, když
+je potřeba — takže druhé spuštění příkazu je tiché. Co už platí, se pojmenuje a
+nechá být.
+
+**Krok, který nemůže proběhnout, to řekne, místo aby se nabídl.** Žádná databáze,
+žádný model uživatele, žádné `routes/web.php` — každé z toho se ohlásí jako věc
+k nápravě, ne jako otázka, jejíž „ano" skončí stack tracem. To je sloupec
+`WAITING` výše.
+
+**Nic se neudělá bez zeptání** a `--no-interaction` to myslí vážně: krok, který si
+vystačí s výchozími hodnotami, proběhne, a krok, který ne — první administrátor
+potřebuje heslo — se omluví a řekne proč, místo aby si heslo vymyslel do deploy
+logu.
+
+### Jak přidat vlastní krok
+
+Balíček do toho seznamu přispěje registrací kroku, stejně jako registruje cokoli
+jiného. Instalátor se nikdy nedozví, o co v tom kroku jde:
+
+```php
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
+
+$packager->registeredPackage(fn () => SetupRegistry::instance()->register(WarmTheIndex::class));
+```
+
+Třída implementuje `NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep`:
+`label()`, `state()` (`Done`, `Pending` nebo `Blocked`), `summary()`, `apply()` a
+`sort()`. `state()` se smí jen dívat — běží i pod `--dry-run` — a `apply()` se ptá
+přes `SetupConsole`, ne přes příkaz, což je to, co dovolí krok otestovat bez
+terminálu.
+
+## Co zůstává na vás
+
+```php
+// routes/web.php, pokud si to raději napíšete sami, než aby se vás příkaz ptal
+Route::middleware(['web', 'auth'])->prefix('admin')->group(fn () => Route::wireResources());
 ```
 
 ## Všechny příkazy, které se s tím vezou

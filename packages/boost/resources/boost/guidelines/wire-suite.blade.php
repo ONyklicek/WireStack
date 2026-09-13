@@ -17,6 +17,16 @@ running **each package's own installer**, never a copy of it.
   correctness, not speed: a migration shipped without a date prefix is stamped when the publish mapping is
   built, so re-publishing writes a *second* copy of one the application already has and `migrate` then
   fails. Never re-run a package installer to "make sure"; check first or pass `--force`.
+- **The second half is setup, not installation.** `wire:install` runs the package installers and then
+  works through `SetupStep`s: migrations, routes, the first administrator, `storage:link`, audit
+  recording, stored notifications, the settings cache, the frontend build. A package contributes one
+  with `SetupRegistry::instance()->register(...)` from its `registeredPackage()` hook — **inside the
+  one it already has**, because the toolkit's lifecycle hooks assign rather than append and a second
+  call drops the first. The contract is `WireCore\Foundation\Setup\Contracts\SetupStep`:
+  `state()` may only look (it runs under `--dry-run`), `Blocked` is how a step says "not yet, and
+  here is why" instead of being offered, and `apply()` asks through `SetupConsole` so the step is
+  testable without a terminal. **Never put step logic in wire-suite** — it belongs to the package
+  that knows what a media disk or a super-admin role is.
 - **A failed installer fails the command.** `Artisan::call()`'s exit code is the run's exit code, and the
   parts that failed are named. Do not drop it.
 - **Requiring the suite is not adopting the shell.** `wire-admin` still only renders a page once the

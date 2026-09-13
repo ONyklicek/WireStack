@@ -368,6 +368,11 @@ The one-require entry point and the interactive installer:
 - `Install\Setup` — what a part's installer would still write, read off the
   publish groups it declares. Empty means done; `null` means unknowable, and
   unknowable is never "done"
+- `Install\Steps\` + every package's `Install\*Step` — the second half: not
+  "is the package here" but "does the application work". The contract and the
+  registry are `WireCore\Foundation\Setup`; the steps belong to the packages
+  that know (the first administrator is wire-module-users', `storage:link` is
+  wire-module-media'), and the suite only collects, orders and asks
 - `Install\WireInstallCommand` — runs each installed package's **own** installer,
   and prints a `composer require` line for what is missing
 

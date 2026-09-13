@@ -11,11 +11,13 @@ use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireModuleMedia\Console\MakeThumbnailsCommand;
 use NyonCode\WireModuleMedia\Console\SyncUsageCommand;
 use NyonCode\WireModuleMedia\Contracts\MakesThumbnails;
 use NyonCode\WireModuleMedia\Http\Controllers\MediaController;
+use NyonCode\WireModuleMedia\Install\LinkPublicDisk;
 use NyonCode\WireModuleMedia\Livewire\MediaPicker;
 use NyonCode\WireModuleMedia\Support\GdThumbnailer;
 
@@ -46,6 +48,9 @@ class WireModuleMediaServiceProvider extends PackageServiceProvider
                         $manager->register(new MediaModule);
                     }
                 });
+
+                // Without the symlink every uploaded file is a 404 and nothing errors.
+                SetupRegistry::instance()->register(LinkPublicDisk::class);
             })
             ->hasViews()
             ->hasCommands([MakeThumbnailsCommand::class, SyncUsageCommand::class])

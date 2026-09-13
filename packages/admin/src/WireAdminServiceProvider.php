@@ -9,9 +9,11 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireAdmin\Exceptions\AdminInstallException;
+use NyonCode\WireAdmin\Install\BuildFrontend;
 use NyonCode\WireAdmin\Install\InstallOutcome;
 use NyonCode\WireAdmin\Install\InstallScaffold;
 use NyonCode\WireCore\Core\Resources\Workspace;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 
 /**
  * The optional admin shell.
@@ -42,6 +44,11 @@ class WireAdminServiceProvider extends PackageServiceProvider
         $packager
             ->name('WireAdmin')
             ->hasShortName('wire-admin')
+            // The build this package's own installer writes instructions for:
+            // it points Tailwind at `vendor/nyoncode` and defines `primary`,
+            // and until something compiles them the shell renders with no
+            // styling and no error anywhere.
+            ->registeredPackage(fn () => SetupRegistry::instance()->register(BuildFrontend::class))
             ->bootedPackage(function (): void {
                 // Class-based, the way core registers its own tags: the layout
                 // and the sidebar both resolve services, and a component class

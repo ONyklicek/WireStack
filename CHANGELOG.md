@@ -4,6 +4,45 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ## [2.0.1]
 
+### Added
+
+- **`php artisan wire:install` sets the application up, not just the packages.** Every package
+  installer already knew what was still missing and said so — nine lines across seven packages,
+  from "Run: php artisan migrate" to "`wire-core.audit.enabled` is off — nothing is being recorded
+  yet" — and none of them could act on it. They can now. The command works through eight steps after
+  the packages are installed: the outstanding migrations, a `Route::wireResources()` group written
+  into `routes/web.php` under a prefix and middleware it asks for, **the first administrator**
+  (with the super-admin role where the application has roles), `storage:link`, audit recording,
+  stored notifications, the settings cache, and the frontend build.
+
+  The first administrator is the one that was missing entirely: every package installed, every
+  migration run, the shell scaffolded — and then a login screen with no account behind it and no
+  command anywhere in the stack that made one. The documented answer was `php artisan tinker`.
+
+  Each step detects, then asks, then acts, so a second run is quiet; `state()` may only look, which
+  is what puts the whole phase under `--dry-run`. A step that *cannot* run — no database, no user
+  model, no `routes/web.php` — reports why instead of being offered, because an installer that knows
+  only done and not-done has to offer "run migrations?" to an application with no database, and then
+  the answer is yes and the run dies inside a spinner with a PDO exception.
+
+- **`WireCore\Foundation\Setup` — a package can contribute a setup step.** `SetupStep`,
+  `SetupConsole`, the three states and a `SetupRegistry` a package registers into from its
+  `registeredPackage()` hook. The steps live with the packages that know what they are about;
+  `wire-suite` collects, orders and asks, and never learns what a media disk or a super-admin role
+  is. `apply()` asks through a `SetupConsole` rather than a command, so a step is testable without a
+  terminal.
+
+- **`EnvFile`**, for the steps that flip a switch the config reads from the environment. `.env` is
+  key=value and is the file the config already defers to; a published config is PHP, and editing it
+  means a parser or a regular expression over somebody's source.
+
+### Changed
+
+- **`wire-core.notifications.default` accepts a comma-separated string.** An environment variable
+  carries a string and nothing else, so `WIRE_NOTIFICATIONS_DRIVER=session,database` had no way to
+  mean two drivers — which is what the notifications setup step needs to write. One name has no
+  comma and is unaffected.
+
 ### Fixed
 
 - **`php artisan wire:install` no longer sets up what is already set up.** `vendor:publish` is not
