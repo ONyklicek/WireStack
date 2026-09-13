@@ -35,6 +35,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The split action creates the target branch and pushes it before it has
+      # anything to commit, so a repository with no commits at all dies on
+      # "src refspec main does not match any". One commit is all it needs.
+      - name: Give a brand-new split repository its first commit
+        env:
+          GH_TOKEN: ${{ secrets.SPLIT_TOKEN }}
+          REPOSITORY: NyonCode/${{ matrix.package.split_repository }}
+        run: |
+          if gh api "repos/$REPOSITORY/commits?per_page=1" --silent 2>/dev/null; then
+            echo "$REPOSITORY already has history."
+            exit 0
+          fi
+
+          echo "$REPOSITORY is empty; seeding main."
+          gh api --method PUT "repos/$REPOSITORY/contents/README.md" \
+            --field message="Initialise the split repository" \
+            --field branch=main \
+            --field content="$(printf '# Placeholder\n\nThis repository is a read-only split of [WireStack](https://github.com/%s).\n' "$GITHUB_REPOSITORY" | base64 --wrap=0)" \
+            --silent
+
       - name: Split and push
         uses: danharrin/monorepo-split-github-action@v2.4.5
         env:
