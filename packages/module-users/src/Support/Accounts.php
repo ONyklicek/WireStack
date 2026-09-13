@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireModuleUsers\Console\WireUserCommand;
+use NyonCode\WireModuleUsers\Exceptions\AccountException;
 use NyonCode\WireModuleUsers\Install\CreateFirstAdministrator;
 use Throwable;
 
@@ -149,6 +150,21 @@ final class Accounts
     {
         if (! Roles::enabled() || ! method_exists($user, 'assignRole')) {
             return null;
+        }
+
+        // Where the application scopes roles to teams, the scope is whatever
+        // the registrar was last told about — and in a command nothing has told
+        // it anything. Assigning then writes a null into a column the permission
+        // package made NOT NULL, and what reaches the person is a constraint
+        // violation where an explanation belongs.
+        if (Teams::enabled()) {
+            $team = Teams::currentId($user);
+
+            if ($team === null) {
+                throw AccountException::roleNeedsATeam($role);
+            }
+
+            Teams::apply($team);
         }
 
         $model = Roles::roleModel();

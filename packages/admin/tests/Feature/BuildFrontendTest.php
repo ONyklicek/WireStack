@@ -74,14 +74,39 @@ function bfConsole(array $answers = [], array &$said = [], bool $interactive = t
 function bfRestoring(Closure $body): void
 {
     $package = base_path('package.json');
-    $build = public_path('build');
     $had = is_file($package) ? (string) file_get_contents($package) : null;
+
+    // Every manifest under `public/build`, and whether it was there at all.
+    //
+    // Deleting the directory was the obvious thing and it was wrong: the root
+    // `Pest.php` points `public_path()` at one throwaway directory for the
+    // *whole* monorepo run, so `public/build/manifest.json` there is the one
+    // `@vite` reads for every suite. Removing it left every later test that
+    // renders a layout answering 500 with a `ViteManifestNotFoundException`,
+    // several packages away from anything to do with this file.
+    $manifests = ['build/manifest.json', 'build/.vite/manifest.json'];
+    $before = [];
+
+    foreach ($manifests as $manifest) {
+        $path = public_path($manifest);
+        $before[$path] = is_file($path) ? (string) file_get_contents($path) : null;
+    }
 
     try {
         $body();
     } finally {
         $had === null ? @unlink($package) : file_put_contents($package, $had);
-        File::deleteDirectory($build);
+
+        foreach ($before as $path => $contents) {
+            if ($contents === null) {
+                @unlink($path);
+
+                continue;
+            }
+
+            File::ensureDirectoryExists(dirname($path));
+            file_put_contents($path, $contents);
+        }
     }
 }
 

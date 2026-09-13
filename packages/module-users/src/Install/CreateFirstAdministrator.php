@@ -69,7 +69,13 @@ final readonly class CreateFirstAdministrator implements SetupStep
             return 'an account already exists, so you can sign in';
         }
 
-        return 'create an account to sign in with'.(Roles::enabled() ? ', and give it the super-admin role' : '');
+        // Short enough to leave the status column its room: Laravel's two-column
+        // layout drops its leader dots rather than wrapping when a row will not
+        // fit, and a cramped line in a column of neat ones is what the listing
+        // was rebuilt to stop.
+        return Roles::enabled()
+            ? 'create an account, with the super-admin role'
+            : 'create an account to sign in with';
     }
 
     public function apply(SetupConsole $console): SetupOutcome
