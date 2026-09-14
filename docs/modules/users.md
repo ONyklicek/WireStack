@@ -205,7 +205,9 @@ same declaration:
 Nothing here re-implements an authorization check — `Gate` answers every one of
 these, which is why a wildcard (`users.*`), a policy, and the super-admin bypass
 in `nyoncode/laravel-permission-extended` all work without this module knowing
-they exist. On that package a super-admin passes regardless.
+they exist. On that package a super-admin passes regardless — with teams on, only
+one made globally (`php artisan wire:assign-role <email> --super-admin`). The
+roles select never offers the super-admin, and saving a user never removes it.
 
 **On an installation with no such ability defined, these screens answer 403.**
 That is deliberate: a visible problem with an obvious fix is better than a silent

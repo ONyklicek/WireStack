@@ -37,7 +37,7 @@ final class AccountException extends RuntimeException implements WireException
             // The command in backticks, and not last for that reason alone: Laravel's
             // warning component ends a message with a full stop, and a copied
             // `--role=super-admin.` names a role nobody has.
-            "roles here are scoped to a team and {$email} is in none — put it in one, then run `php artisan wire:user:role {$email} --role={$role}`"
+            "roles here are scoped to a team and {$email} is in none — put it in one, then run `php artisan wire:assign-role {$email} --role={$role}`"
         );
     }
 
@@ -54,14 +54,26 @@ final class AccountException extends RuntimeException implements WireException
     }
 
     /**
+     * The super-admin was asked for as a role.
+     *
+     * It can do everything, in every team, so it is never one role among
+     * others: with teams on, given in a team it would bypass nothing, and given
+     * alongside "editor" it is too easy to hand out by accident.
+     */
+    public static function superAdminIsNotARole(string $role, string $email): self
+    {
+        return new self("`{$role}` can do everything, in every team, so it is not given as a role — run `php artisan wire:assign-role {$email} --super-admin`");
+    }
+
+    /**
      * The fresh process that was to give the role did not finish.
      *
-     * What it printed is the reason, because that process is Spatie's
-     * `permission:assign-role` and it already says what went wrong — a missing
-     * table, a model it could not find — in its own words.
+     * What it printed is the reason: that process is `wire:assign-role`, and it
+     * already says what went wrong — a missing table, a model it could not
+     * find — in its own words.
      */
     public static function roleProcessFailed(string $output): self
     {
-        return new self($output !== '' ? $output : 'permission:assign-role did not finish');
+        return new self($output !== '' ? $output : 'wire:assign-role did not finish');
     }
 }

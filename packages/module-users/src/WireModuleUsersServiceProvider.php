@@ -12,8 +12,8 @@ use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\View\PageChrome;
+use NyonCode\WireModuleUsers\Console\WireAssignRoleCommand;
 use NyonCode\WireModuleUsers\Console\WireUserCommand;
-use NyonCode\WireModuleUsers\Console\WireUserRoleCommand;
 use NyonCode\WireModuleUsers\Http\Middleware\SetCurrentTeam;
 use NyonCode\WireModuleUsers\Install\CreateFirstAdministrator;
 use NyonCode\WireModuleUsers\Install\EnableRoles;
@@ -77,7 +77,7 @@ class WireModuleUsersServiceProvider extends PackageServiceProvider
             // `wire:user` rather than `wire-module-users:user`: it is typed by
             // hand and lives beside `wire:install`, the same way core ships
             // `make:wire-dashboard` rather than `wire-core:make-dashboard`.
-            ->hasCommands([WireUserCommand::class, WireUserRoleCommand::class])
+            ->hasCommands([WireUserCommand::class, WireAssignRoleCommand::class])
             ->hasInstallCommand(function (InstallCommand $command): void {
                 $command
                     ->publishConfig()

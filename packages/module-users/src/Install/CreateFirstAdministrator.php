@@ -14,7 +14,6 @@ use NyonCode\WireModuleUsers\Console\WireUserCommand;
 use NyonCode\WireModuleUsers\Exceptions\AccountException;
 use NyonCode\WireModuleUsers\Support\Accounts;
 use NyonCode\WireModuleUsers\Support\Roles;
-use NyonCode\WireModuleUsers\Support\Teams;
 use Throwable;
 
 /**
@@ -39,14 +38,13 @@ use Throwable;
  * installer that offered to add another administrator on every run would be one
  * nobody could run twice safely. The second account is `php artisan wire:user`.
  *
- * ## The role, when roles arrived in this same run
+ * ## The super-admin, asked and global
  *
- * The roles step patches the user model on disk after this process loaded it,
- * so the in-process check says there are no roles and the account would be made
- * without one — a 403 on the users screen for the only person who can sign in.
- * {@see Roles::waitingForRestart()} names that state, and the role is then given
- * by `permission:assign-role` in a fresh PHP process, which reads the patched
- * file.
+ * The first account is offered the super-admin — it can do everything, in every
+ * team — and it is given globally, so it needs no team. Where the roles step
+ * patched the user model earlier in this same run, the in-process check still
+ * says there are no roles; {@see Roles::waitingForRestart()} names that state,
+ * and the assignment runs through `wire:assign-role` in a fresh PHP process.
  */
 final readonly class CreateFirstAdministrator implements SetupStep
 {
@@ -87,7 +85,7 @@ final readonly class CreateFirstAdministrator implements SetupStep
         // fit, and a cramped line in a column of neat ones is what the listing
         // was rebuilt to stop.
         return Roles::enabled()
-            ? 'create an account, with the super-admin role'
+            ? 'create an account, and offer it the super-admin'
             : 'create an account to sign in with';
     }
 
@@ -122,62 +120,70 @@ final readonly class CreateFirstAdministrator implements SetupStep
 
         $console->note("Created {$email}.");
 
-        try {
-            $role = $this->accounts->makeSuperAdmin($user)
-                ?? (Roles::waitingForRestart() ? $this->superAdminInAFreshProcess($user) : null);
-
-            if ($role !== null) {
-                $console->note("Gave it the `{$role}` role.");
-            }
-        } catch (Throwable $e) {
-            // The account is made and usable; only the role is missing, and
-            // that is a screen away rather than a reason to call the step
-            // failed and leave somebody wondering whether the user exists.
-            $console->warn("Created the account, but not the `{$this->accounts->superAdminRole()}` role: ".$e->getMessage());
-        }
+        $this->offerSuperAdmin($console, $user);
 
         return SetupOutcome::Applied;
     }
 
     /**
-     * Give the super-admin role from a process that has loaded the patched model.
+     * Ask whether this account is the one that can do everything, then make it so.
      *
-     * Spatie's own `permission:assign-role`, rather than a command of this
-     * module's: it finds or creates the role and assigns it through the trait,
-     * which is everything {@see Accounts::assign()} does in-process. The team
-     * scope is decided here, where the account is, and refused the same way.
+     * Asked rather than assumed, and said in full: a super-admin can do
+     * everything, in every team. The default is yes, because this is the first
+     * account of an installation and somebody letting themselves in.
+     *
+     * Where roles were set up earlier in this same run the user model was
+     * patched after this process loaded it ({@see Roles::waitingForRestart()}),
+     * so the assignment runs in a fresh process through `wire:assign-role` — the
+     * same command a person would run, and the same code behind it.
      */
-    private function superAdminInAFreshProcess(Model $user): string
+    private function offerSuperAdmin(SetupConsole $console, Model $user): void
     {
-        $role = $this->accounts->superAdminRole();
+        $waiting = Roles::waitingForRestart();
 
-        $command = [
-            PHP_BINARY,
-            'artisan',
-            'permission:assign-role',
-            $role,
-            (string) $user->getKey(),
-            (string) config('auth.defaults.guard', 'web'),
-            $user::class,
-        ];
-
-        if ((bool) config('permission.teams')) {
-            $team = Teams::currentId($user);
-
-            if ($team === null) {
-                throw AccountException::roleNeedsATeam($role, $this->accounts->emailOf($user));
-            }
-
-            $command[] = '--team-id='.$team;
+        if ((! Roles::enabled() && ! $waiting) || Roles::superAdmin() === null) {
+            return;
         }
 
-        $result = Process::path(base_path())->run($command);
+        $email = $this->accounts->emailOf($user);
+
+        if (! $console->confirm("Make {$email} a super-admin? {$this->accounts->superAdminMeaning()}", true)) {
+            return;
+        }
+
+        try {
+            $role = $waiting ? $this->superAdminInAFreshProcess($email) : $this->accounts->makeSuperAdmin($user);
+
+            if ($role !== null) {
+                $console->note("Made it a super-admin (`{$role}`).");
+            }
+        } catch (Throwable $e) {
+            // The account is made and usable; only the super-admin is missing,
+            // and that is one command away rather than a reason to call the step
+            // failed and leave somebody wondering whether the user exists.
+            $console->warn("Created the account, but did not make it a super-admin: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * `wire:assign-role --super-admin`, from a process that has loaded the patched model.
+     */
+    private function superAdminInAFreshProcess(string $email): string
+    {
+        $result = Process::path(base_path())->run([
+            PHP_BINARY,
+            'artisan',
+            'wire:assign-role',
+            $email,
+            '--super-admin',
+            '--no-interaction',
+        ]);
 
         if (! $result->successful()) {
             throw AccountException::roleProcessFailed(trim($result->errorOutput().' '.$result->output()));
         }
 
-        return $role;
+        return $this->accounts->superAdminRole();
     }
 
     public function package(): string

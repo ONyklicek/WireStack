@@ -12,38 +12,39 @@ use NyonCode\WireModuleUsers\Support\Teams;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * `php artisan wire:user:role` — roles for an account that already exists.
+ * `php artisan wire:assign-role` — roles for an account that already exists.
  *
- * {@see WireUserCommand} gives roles to the account it has just made, and that
- * left no way to give one to an account made earlier. It mattered most in the
- * one place a person is told to do it: where roles are scoped to teams, a new
- * administrator belongs to no team, so the installer makes the account and
- * cannot give it a role — and the instruction it printed pointed at
- * `wire:user`, which makes a *new* account and refuses the existing address.
+ * {@see WireUserCommand} gives roles to the account it has just made; this one
+ * gives them to an account made earlier, and never touches its name or password.
  *
- * ## The team is the account's own
+ * ## The super-admin is not a role here
  *
- * Where roles are scoped to teams, a role is given in the team named by
- * `--team`, or in the account's current team when none is named. A team the
- * account is not a member of is refused rather than written: the role would be
- * stored, and it would sit in a team the switcher never offers this person.
- * Membership is the application's own relation, so putting somebody in a team
- * is the application's to do first.
+ * It can do everything, in every team, so it is `--super-admin` — confirmed
+ * where somebody can answer, given globally, and never combined with `--team`.
+ * `--role=super-admin` is refused: with teams on it would be a role of one team
+ * that bypasses nothing, and beside `--role=editor` it is too easy to type.
  *
- *   php artisan wire:user:role jane@example.com --admin
- *   php artisan wire:user:role jane@example.com --role=editor --role=support
- *   php artisan wire:user:role jane@example.com --admin --team=3
+ * ## Every other role is the account's team's
+ *
+ * Where roles are scoped to teams, a role goes in the team named by `--team`,
+ * or the account's current team when none is named. A team the account is not
+ * a member of is refused: the role would be stored where the switcher never
+ * offers it.
+ *
+ *   php artisan wire:assign-role jane@example.com --super-admin
+ *   php artisan wire:assign-role jane@example.com --role=editor --role=support
+ *   php artisan wire:assign-role jane@example.com --role=editor --team=3
  */
-#[AsCommand(name: 'wire:user:role')]
-class WireUserRoleCommand extends Command
+#[AsCommand(name: 'wire:assign-role')]
+class WireAssignRoleCommand extends Command
 {
     use InteractsWithRoles;
 
-    protected $signature = 'wire:user:role
+    protected $signature = 'wire:assign-role
         {email? : The address the account signs in with}
-        {--admin : Give the account the super-admin role}
         {--role=* : Roles to give the account, created where the application has none}
-        {--team= : Where roles are scoped to teams, the team to give them in}';
+        {--team= : Where roles are scoped to teams, the team to give them in}
+        {--super-admin : Make the account a super-admin, who can do everything in every team}';
 
     protected $description = 'Give roles to an account that already exists.';
 
@@ -61,21 +62,28 @@ class WireUserRoleCommand extends Command
             return self::FAILURE;
         }
 
+        if ($this->option('super-admin') && $this->option('team') !== null) {
+            $this->components->error('A super-admin can do everything in every team, so it takes no --team.');
+
+            return self::FAILURE;
+        }
+
         $email = $this->email();
         $user = $email === '' ? null : $accounts->find($email);
 
         if ($user === null) {
             $this->components->error($email === ''
-                ? 'Name the account: php artisan wire:user:role <e-mail> --admin'
+                ? 'Name the account: php artisan wire:assign-role <e-mail> --role=…'
                 : "No account signs in as {$email}. php artisan wire:user makes one.");
 
             return self::FAILURE;
         }
 
-        $roles = $this->requestedRoles($accounts);
+        $superAdmin = (bool) $this->option('super-admin');
+        $roles = $this->requestedRoles($accounts, offer: ! $superAdmin);
 
-        if ($roles === []) {
-            $this->components->error('No role named. Pass --admin or --role=…');
+        if ($roles === [] && ! $superAdmin) {
+            $this->components->error('No role named. Pass --role=… or --super-admin.');
 
             return self::FAILURE;
         }
@@ -87,7 +95,9 @@ class WireUserRoleCommand extends Command
             $team = null;
         }
 
-        return $this->grantRoles($accounts, $user, $roles, $team) ? self::SUCCESS : self::FAILURE;
+        $granted = ! $superAdmin || $this->grantSuperAdmin($accounts, $user);
+
+        return $this->grantRoles($accounts, $user, $roles, $team) && $granted ? self::SUCCESS : self::FAILURE;
     }
 
     /**

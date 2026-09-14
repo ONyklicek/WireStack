@@ -41,9 +41,10 @@ it('creates an account from options alone, so a script can call it', function ()
 it('asks for what it was not given', function () {
     Tables::users();
 
-    $this->artisan('wire:user', ['--password' => 'hunter2', '--admin' => true])
+    $this->artisan('wire:user', ['--password' => 'hunter2'])
         ->expectsQuestion('Name', 'Asked')
         ->expectsQuestion('E-mail address', 'asked@example.com')
+        ->expectsConfirmation('Make asked@example.com a super-admin? It can do everything.', 'no')
         ->assertSuccessful();
 
     expect(User::where('email', 'asked@example.com')->exists())->toBeTrue();
@@ -63,20 +64,47 @@ it('makes a second account, which the installer deliberately will not', function
     expect(User::count())->toBe(2);
 });
 
-it('gives the account the super-admin role when asked', function () {
+it('makes the account a super-admin, globally, when asked', function () {
     Tables::users();
     Tables::roles();
 
     $this->artisan('wire:user', [
         '--email' => 'boss@example.com',
         '--password' => 'pw',
-        '--admin' => true,
+        '--super-admin' => true,
         '--no-interaction' => true,
-    ])->assertSuccessful();
+    ])->expectsOutputToContain('Super-admin')->assertSuccessful();
 
     $name = (string) config('permission-extended.super_admin_role', 'super-admin');
 
-    expect(User::first()->hasRole($name))->toBeTrue();
+    expect(User::first()->hasGlobalRole($name))->toBeTrue();
+});
+
+it('never makes a later account a super-admin unless told to', function () {
+    Tables::users();
+    Tables::roles();
+    User::create(['name' => 'First', 'email' => 'first@example.com', 'password' => Hash::make('x')]);
+
+    $this->artisan('wire:user', ['--name' => 'Second', '--email' => 'second@example.com', '--password' => 'pw'])
+        ->assertSuccessful();
+
+    expect(User::where('email', 'second@example.com')->first()->hasGlobalRole('super-admin'))->toBeFalse();
+});
+
+it('refuses the super-admin as a role', function () {
+    // It can do everything, in every team: never one role among others.
+    Tables::users();
+    Tables::roles();
+
+    $this->artisan('wire:user', [
+        '--email' => 'sneaky@example.com',
+        '--password' => 'pw',
+        '--role' => ['super-admin'],
+        '--no-interaction' => true,
+    ])->expectsOutputToContain('wire:assign-role sneaky@example.com --super-admin')->assertSuccessful();
+
+    expect(User::first()->hasGlobalRole('super-admin'))->toBeFalse()
+        ->and(User::first()->hasRole('super-admin'))->toBeFalse();
 });
 
 it('gives it the roles that were named, creating ones this application has not', function () {
@@ -95,22 +123,21 @@ it('gives it the roles that were named, creating ones this application has not',
         ->and(Role::where('name', 'support')->exists())->toBeTrue();
 });
 
-it('offers the roles this application has, with super-admin picked for the first account only', function () {
+it('asks the first account about the super-admin, then offers the roles without it', function () {
     // The first one is somebody letting themselves in; every later one is an
-    // ordinary user until said otherwise.
+    // ordinary user until said otherwise. The super-admin is its own question.
     Tables::users();
     Tables::roles();
     Role::create(['name' => 'editor', 'guard_name' => 'web']);
+    Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
 
     $this->artisan('wire:user', ['--name' => 'One', '--email' => 'one@example.com', '--password' => 'pw'])
-        ->expectsChoice(
-            'Which roles should this account have?',
-            ['super-admin'],
-            ['editor' => 'editor', 'super-admin' => 'super-admin'],
-        )
+        ->expectsConfirmation('Make one@example.com a super-admin? It can do everything.', 'yes')
+        ->expectsChoice('Which roles should this account have?', ['editor'], ['editor' => 'editor'])
         ->assertSuccessful();
 
-    expect(User::first()->hasRole('super-admin'))->toBeTrue();
+    expect(User::first()->hasGlobalRole('super-admin'))->toBeTrue()
+        ->and(User::first()->hasRole('editor'))->toBeTrue();
 });
 
 it('refuses rather than inventing a password when nobody can be asked', function () {
@@ -158,7 +185,7 @@ it('keeps the account when only the role could not be given', function () {
     $this->artisan('wire:user', [
         '--email' => 'noroles@example.com',
         '--password' => 'pw',
-        '--admin' => true,
+        '--role' => ['editor'],
         '--no-interaction' => true,
     ])->expectsOutputToContain('Could not give it')->assertSuccessful();
 
@@ -172,7 +199,7 @@ it('says nothing about roles in an application that has none', function () {
     $this->artisan('wire:user', [
         '--email' => 'plain@example.com',
         '--password' => 'pw',
-        '--admin' => true,
+        '--super-admin' => true,
         '--no-interaction' => true,
     ])->doesntExpectOutputToContain('Role')->assertSuccessful();
 });

@@ -12,6 +12,7 @@ use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
 use NyonCode\WireCore\Foundation\Setup\EnvFile;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
+use NyonCode\WireModuleUsers\Support\Roles;
 use NyonCode\WireModuleUsers\Support\Teams;
 use Throwable;
 
@@ -57,9 +58,6 @@ use Throwable;
  */
 final readonly class EnableTeams implements SetupStep
 {
-    /** The toolkit names every installer after its package's short name. */
-    private const INSTALLER = 'permission-extended:install';
-
     public function __construct(private EnvFile $env, private Kernel $artisan) {}
 
     public function label(): string
@@ -198,7 +196,7 @@ final readonly class EnableTeams implements SetupStep
      */
     private function installed(): bool
     {
-        return array_key_exists(self::INSTALLER, $this->artisan->all());
+        return Roles::installable($this->artisan);
     }
 
     private function permission(): ConfigFile

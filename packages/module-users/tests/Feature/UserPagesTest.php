@@ -163,6 +163,38 @@ it('seeds the roles a user already has, and syncs what changed', function () {
     expect(User::first()->roles->pluck('name')->all())->toBe(['admin']);
 });
 
+it('never offers the super-admin in the roles select', function () {
+    // It can do everything, in every team: given on purpose from the command
+    // line, never picked beside "editor".
+    Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
+
+    expect(Roles::options())->toBe(['admin' => 'admin', 'editor' => 'editor']);
+});
+
+it('ignores a super-admin named in a forged save', function () {
+    Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
+
+    Livewire::test(EditUser::class, ['record' => 1])
+        ->set('data.roles', ['editor', 'super-admin'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(User::first()->roles->pluck('name')->all())->toBe(['editor']);
+});
+
+it('keeps the super-admin an account already has when its roles are saved', function () {
+    // Editing somebody's name must not strip the one role the form never shows.
+    Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
+    User::first()->syncRoles(['editor', 'super-admin']);
+
+    Livewire::test(EditUser::class, ['record' => 1])
+        ->set('data.roles', ['admin'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(User::first()->roles->pluck('name')->sort()->values()->all())->toBe(['admin', 'super-admin']);
+});
+
 it('shows one user, with the roles they hold', function () {
     User::first()->syncRoles(['editor']);
 

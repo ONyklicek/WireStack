@@ -177,7 +177,7 @@ Druhá půlka `wire:install` je proto prochází, jeden po druhém:
 | [Roles & permissions](../modules/teams-and-two-factor.md) | Spustí `permission-extended:install`, který publikuje config a migraci oprávnění, spustí ji a přidá `HasRoles` na váš model uživatele. Do té doby obrazovky rolí prostě chybí. Potřebuje `nyoncode/laravel-permission-extended` a řekne, když chybí |
 | Database tables | Spustí čekající migrace. Tři moduly si o to řekly ve vlastních instalátorech a ani jeden s tím nemohl nic udělat |
 | [Routes](../panels/modules.md) | Zapíše do `routes/web.php` skupinu s `Route::wireResources()`, pod prefixem a middlewarem, na které se zeptá. Bez toho je každá obrazovka 404 |
-| [First administrator](../modules/users.md) | Založí účet, kterým se přihlásíte — a super-admin roli tam, kde aplikace role má. Nic v celém stacku ho předtím nevytvořilo; odpovědí byl `php artisan tinker`. Vždycky jen ten *první*; každý další účet je `php artisan wire:user`. Když se role nastavily v tomtéž běhu, přiřadí se role z nového PHP procesu, protože tento načetl model uživatele ještě před úpravou. Když jsou role vázané na týmy, účet bez týmu roli nedostane a krok vypíše řádek s `wire:user:role`, který ji přidá |
+| [First administrator](../modules/users.md) | Založí účet, kterým se přihlásíte, a tam, kde aplikace role má, se zeptá, zda má být super-admin — ten může všechno, ve všech týmech. Nic v celém stacku ho předtím nevytvořilo; odpovědí byl `php artisan tinker`. Vždycky jen ten *první*; každý další účet je `php artisan wire:user`. Super-admin se přiděluje globálně, takže jím může být i první účet, který v žádném týmu není. Když se role nastavily v tomtéž běhu, přidělí ho `wire:assign-role` v novém PHP procesu, protože tento načetl model uživatele ještě před úpravou |
 | [Media links](../modules/media.md) | `storage:link`. Bez něj uploady fungují, náhledy se generují a každý obrázek je 404, které nikde nezahlásí chybu |
 | [Audit recording](../core/audit.md) | Zapne zaznamenávání, aby obrazovka auditu nebyla pohledem do prázdné tabulky |
 | [Stored notifications](../modules/notifications.md) | Přidá vedle toastu driver `database`, aby zvoneček měl co ukazovat |
@@ -220,30 +220,33 @@ ptáte se ho vy:
 
 ```bash
 php artisan wire:user
-php artisan wire:user --name=Jana --email=jana@example.com --password=… --admin
+php artisan wire:user --name=Jana --email=jana@example.com --password=… --super-admin
 php artisan wire:user --email=… --password=… --role=editor --role=support
 ```
 
 Co nedostane, na to se zeptá; co nedostane **a** na co se nemá koho zeptat, běh
 zastaví, místo aby si to vymyslelo — vygenerované heslo v deploy logu je heslo
-v logu. Tam, kde aplikace role má, nabídne ty, které existují — se super-adminem
-předvybraným jen u prvního účtu, protože ten je někdo, kdo si otevírá dveře, a
-každý další je běžný uživatel, dokud se neřekne jinak.
+v logu. Tam, kde aplikace role má, nabídne ty, které existují.
 
-Účet, který už existuje, dostane role přes `wire:user:role`, který nikdy nesahá na
-jméno ani heslo:
+**Super-admin mezi nimi nikdy není.** Může všechno, ve všech týmech, takže je to
+samostatná otázka: `--super-admin`, nebo — jen u prvního účtu, kterým si někdo
+otevírá dveře — potvrzení, které přesně tohle řekne. Přiděluje se globálně, takže
+nepotřebuje tým, a `--role=super-admin` se odmítne. Totéž platí na obrazovkách:
+výběr rolí ho nikdy nenabídne a uložení uživatele ho nikdy neodebere.
+
+Účet, který už existuje, dostane role přes `wire:assign-role`, který nikdy nesahá
+na jméno ani heslo:
 
 ```bash
-php artisan wire:user:role jana@example.com --admin
-php artisan wire:user:role jana@example.com --role=editor --role=support
-php artisan wire:user:role jana@example.com --admin --team=3
+php artisan wire:assign-role jana@example.com --super-admin
+php artisan wire:assign-role jana@example.com --role=editor --role=support
+php artisan wire:assign-role jana@example.com --role=editor --team=3
 ```
 
-Je to odpověď na ten jeden účet, který instalátor nedokončí. Když jsou role vázané
-na týmy, čerstvý administrátor nepatří do žádného týmu, takže krok účet založí,
-roli mu nedá a vypíše tenhle příkaz i s doplněnou adresou. Přidejte účet do týmu a
-pak ho spusťte. Bez `--team` jde role do aktuálního týmu účtu; tým, jehož členem
-není, se odmítne, protože role by ležela tam, kde ji přepínač nikdy nenabídne.
+`--super-admin` se všude, kde je kdo odpovědět, nejdřív zeptá, a `--team`
+nebere. Každá jiná role jde tam, kde jsou role vázané na týmy, do týmu z `--team`
+nebo do aktuálního týmu účtu; tým, jehož členem není, se odmítne, protože role by
+ležela tam, kde ji přepínač nikdy nenabídne.
 
 ### Jak přidat vlastní krok
 
@@ -302,7 +305,7 @@ php artisan wire-sortable:install
 php artisan wire-admin:install                # navíc zapíše layout a řádek @source pro Tailwind
 php artisan wire-module-users:install         # …a jeden na každý nainstalovaný modul
 php artisan wire:user                         # další účet, kdykoli — instalátor zakládá jen ten první
-php artisan wire:user:role jana@example.com --admin  # role pro účet, který už existuje
+php artisan wire:assign-role jana@example.com --role=editor  # role pro účet, který už existuje
 php artisan wire-boost:install --agent=claude # AI guidelines a vstup pro MCP
 ```
 

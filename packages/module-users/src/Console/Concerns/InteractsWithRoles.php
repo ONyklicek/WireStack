@@ -16,7 +16,7 @@ use function Laravel\Prompts\multiselect;
  * how each one went.
  *
  * Shared by `wire:user`, which gives roles to the account it has just made, and
- * `wire:user:role`, which gives them to one that already exists. Deciding
+ * `wire:assign-role`, which gives them to one that already exists. Deciding
  * whether a role *can* be given — the team it goes in, the role row that has to
  * exist — is {@see Accounts::assign()}, and nothing here second-guesses it.
  *
@@ -25,51 +25,64 @@ use function Laravel\Prompts\multiselect;
 trait InteractsWithRoles
 {
     /**
-     * The roles named by `--role` and `--admin`, or picked when nothing was named.
+     * The roles named by `--role`, or picked when nothing was named.
      *
-     * @param  array<int, string>  $preselected  Ticked when the list is offered.
+     * Never the super-admin: that is `--super-admin`, asked separately and given
+     * globally by {@see grantSuperAdmin()}.
+     *
      * @return array<int, string>
      */
-    protected function requestedRoles(Accounts $accounts, array $preselected = []): array
+    protected function requestedRoles(Accounts $accounts, bool $offer): array
     {
         /** @var array<int, string> $roles */
         $roles = array_values(array_filter((array) $this->option('role')));
 
-        if ($this->option('admin')) {
-            $roles[] = $accounts->superAdminRole();
-        }
-
-        if ($roles === [] && $this->input->isInteractive()) {
-            $roles = $this->pickRoles($accounts, $preselected);
+        if ($roles === [] && $offer && $this->input->isInteractive() && $accounts->roles() !== []) {
+            /** @var array<int, string> $roles */
+            $roles = multiselect(
+                label: 'Which roles should this account have?',
+                options: array_combine($accounts->roles(), $accounts->roles()),
+                hint: 'Space picks one, enter confirms.',
+            );
         }
 
         return array_values(array_unique($roles));
     }
 
     /**
-     * Offer the roles this application already has, and super-admin beside them.
+     * Make the account a super-admin, after saying what that means.
      *
-     * @param  array<int, string>  $preselected
-     * @return array<int, string>
+     * Asked even when `--super-admin` was passed, where somebody is there to
+     * answer: it can do everything, in every team, and a flag typed from shell
+     * history is not the same as meaning it. Unattended, the flag is the answer.
+     * Answers whether the account is a super-admin afterwards.
      */
-    protected function pickRoles(Accounts $accounts, array $preselected): array
+    protected function grantSuperAdmin(Accounts $accounts, Model $user): bool
     {
-        $superAdmin = $accounts->superAdminRole();
-        $available = $accounts->roles();
+        $email = $accounts->emailOf($user);
 
-        if (! in_array($superAdmin, $available, true)) {
-            $available[] = $superAdmin;
+        if ($this->input->isInteractive()
+            && ! $this->confirm("Make {$email} a super-admin? {$accounts->superAdminMeaning()}", true)) {
+            return false;
         }
 
-        /** @var array<int, string> $picked */
-        $picked = multiselect(
-            label: 'Which roles should this account have?',
-            options: array_combine($available, $available),
-            default: $preselected,
-            hint: 'Space picks one, enter confirms.',
-        );
+        try {
+            $role = $accounts->makeSuperAdmin($user);
+        } catch (Throwable $e) {
+            $this->components->warn("Could not make it a super-admin: {$e->getMessage()}");
 
-        return $picked;
+            return false;
+        }
+
+        if ($role === null) {
+            $this->components->warn('This application has no super-admin role to give.');
+
+            return false;
+        }
+
+        $this->components->twoColumnDetail('Super-admin', "<fg=green>{$role}</>");
+
+        return true;
     }
 
     /**

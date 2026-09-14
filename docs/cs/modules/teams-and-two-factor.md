@@ -211,20 +211,29 @@ jednoho týmu, middleware omezí každé čtení oprávnění v každém web req
 a `Gate::allows()` začne odpovídat po týmech, aniž by se změnilo jediné volací
 místo.
 
-### Jak někomu dát roli v týmu
+### Role v týmu a super-admin nad nimi
 
-Role tu patří týmu, takže účtu, který v žádném týmu není, ji dát nejde — balíček
-oprávnění dělá sloupec týmu na své pivotní tabulce `NOT NULL`. Přesně takový účet
-je první administrátor: `wire:install` ho založí a místo role vypíše řádek níže.
-Přidejte účet do týmu přes vlastní relaci a pak:
+Role tu patří týmu: balíček oprávnění ukládá tým ke každému přiřazení a počítá jen
+ta z aktuálního týmu. Účtu, který v žádném týmu není, ji tedy dát nejde, a tým,
+jehož členem není, se odmítne, protože role by ležela tam, kde ji přepínač nikdy
+nenabídne:
 
 ```bash
-php artisan wire:user:role admin@example.com --admin            # v jeho aktuálním týmu
-php artisan wire:user:role admin@example.com --admin --team=3   # v tomhle
+php artisan wire:assign-role jana@example.com --role=editor            # v jejím aktuálním týmu
+php artisan wire:assign-role jana@example.com --role=editor --team=3   # v tomhle
 ```
 
-Tým, jehož účet není členem, se odmítne, místo aby se zapsal, protože role by
-ležela v týmu, který tomu člověku přepínač nikdy nenabídne.
+**Super-admin je výjimka a nikdy není rolí týmu.** Může všechno, ve všech týmech,
+takže brána balíčku oprávnění uzná jen jeho *globální* přiřazení — přiřazení
+uvnitř týmu neobejde nic. Přiděluje se záměrně, z příkazové řádky, a nepotřebuje
+tým, a proto jím může být i první administrátor nové instalace:
+
+```bash
+php artisan wire:assign-role admin@example.com --super-admin
+```
+
+Výběr rolí ho nikdy nenabídne, `--role=super-admin` se odmítne a `--super-admin`
+nebere `--team`.
 
 ### Odkud se přepínač bere
 

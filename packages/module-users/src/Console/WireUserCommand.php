@@ -34,10 +34,10 @@ use Throwable;
  * a deploy log is a credential in a log.
  *
  *   php artisan wire:user
- *   php artisan wire:user --name=Jane --email=jane@example.com --password=… --admin
+ *   php artisan wire:user --name=Jane --email=jane@example.com --password=… --super-admin
  *   php artisan wire:user --email=… --password=… --role=editor --role=support
  *
- * Roles for an account that already exists are {@see WireUserRoleCommand}.
+ * Roles for an account that already exists are {@see WireAssignRoleCommand}.
  */
 #[AsCommand(name: 'wire:user')]
 class WireUserCommand extends Command
@@ -48,7 +48,7 @@ class WireUserCommand extends Command
         {--name= : The name to store}
         {--email= : The address they sign in with}
         {--password= : Their password, hashed before it is written}
-        {--admin : Give the account the super-admin role}
+        {--super-admin : Make the account a super-admin, who can do everything in every team}
         {--role=* : Roles to give the account, created where the application has none}';
 
     protected $description = 'Create a user for this application.';
@@ -131,17 +131,18 @@ class WireUserCommand extends Command
     }
 
     /**
-     * Give the account whatever roles were asked for.
+     * Give the account whatever was asked for.
      *
      * Silently nothing where the application has no roles: the module works
      * without `nyoncode/laravel-permission-extended`, and an account with no
      * role there is complete rather than half-made. A role that cannot be given
      * leaves the command successful — the account is made and usable, and the
-     * role is `wire:user:role` away.
+     * role is `wire:assign-role` away.
      *
-     * Super-admin is pre-picked only for the first account, because that one is
-     * somebody letting themselves in and every later one is an ordinary user
-     * until said otherwise.
+     * The super-admin is its own question, never a role in the list: asked with
+     * `--super-admin`, and offered unprompted only for the first account, since
+     * that one is somebody letting themselves in and every later one is an
+     * ordinary user until said otherwise.
      *
      * @param  bool  $existed  Whether anybody could already sign in before this ran.
      */
@@ -151,10 +152,10 @@ class WireUserCommand extends Command
             return;
         }
 
-        $this->grantRoles(
-            $accounts,
-            $user,
-            $this->requestedRoles($accounts, $existed ? [] : [$accounts->superAdminRole()]),
-        );
+        if ($this->option('super-admin') || (! $existed && $this->input->isInteractive())) {
+            $this->grantSuperAdmin($accounts, $user);
+        }
+
+        $this->grantRoles($accounts, $user, $this->requestedRoles($accounts, offer: true));
     }
 }

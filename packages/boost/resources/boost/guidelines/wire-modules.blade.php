@@ -38,9 +38,14 @@ palette find the area without being told.
   Blade components.
 - **Writing your own module?** `packages/module-users` is the reference. Declare it like any other module;
   a package ships one by registering it from its provider instead of from the application's config.
-- **`php artisan wire:user` makes an account; the installer's step makes only the first; `wire:user:role
-  <email> --admin|--role=… [--team=…]` gives roles to one that exists.** All three go
+- **`php artisan wire:user` makes an account; the installer's step makes only the first; `wire:assign-role
+  <email> --role=… [--team=…]` gives roles to one that exists.** All three go
   through `WireModuleUsers\Support\Accounts` — the model (`wire-module-users.model`), the column
   names (`.fields`) and the roles are the *application's*, so never hard-code `users`, `name` or
   `email` in new code. `Accounts::superAdminRole()` is the name the permission gate checks; inventing
   one makes an administrator the gate does not recognise.
+- **The super-admin is never a role among others.** It can do everything, in every team, so it is given
+  only through `Accounts::makeSuperAdmin()` — a *global* assignment (`assignGlobalRole()`), which is all
+  the permission gate honours with teams on — from `--super-admin` or the installer's confirmation.
+  `Accounts::assign()` refuses it, `Roles::options()` never lists it, and a user form save keeps it
+  rather than stripping it. Ask `$user->hasGlobalRole(Roles::superAdmin())`, never `hasRole()`.

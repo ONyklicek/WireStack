@@ -45,9 +45,6 @@ use NyonCode\WireModuleUsers\Support\Roles;
  */
 final readonly class EnableRoles implements SetupStep
 {
-    /** The toolkit names every installer after its package's short name. */
-    private const INSTALLER = 'permission-extended:install';
-
     public function __construct(private Kernel $artisan) {}
 
     public function label(): string
@@ -85,8 +82,8 @@ final readonly class EnableRoles implements SetupStep
         // before it patches somebody's model, and its prompt would be drawn
         // inside this command's own listing where there is nobody to answer it.
         // Its defaults are yes, which is what saying yes to this step meant.
-        if ($this->artisan->call(self::INSTALLER, ['--no-interaction' => true]) !== 0) {
-            $console->warn('php artisan '.self::INSTALLER.' did not finish — run it yourself to see why.');
+        if ($this->artisan->call(Roles::INSTALLER, ['--no-interaction' => true]) !== 0) {
+            $console->warn('php artisan '.Roles::INSTALLER.' did not finish — run it yourself to see why.');
 
             return SetupOutcome::Failed;
         }
@@ -125,7 +122,7 @@ final readonly class EnableRoles implements SetupStep
      */
     private function installed(): bool
     {
-        return array_key_exists(self::INSTALLER, $this->artisan->all());
+        return Roles::installable($this->artisan);
     }
 
     private function published(): bool

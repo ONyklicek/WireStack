@@ -28,10 +28,10 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **`php artisan wire:user` — an account, whenever one is wanted.** The installer's step makes the
   one that gets you in and stops there, because an installer that offered to add another
   administrator on every run is one nobody could run twice safely — which left the *second* account
-  with no answer but `php artisan tinker`. `--name`, `--email`, `--password`, `--admin` and a
+  with no answer but `php artisan tinker`. `--name`, `--email`, `--password`, `--super-admin` and a
   repeatable `--role` make it scriptable; anything not given is asked for, and anything not given and
   not askable stops the command rather than being invented. Where the application has roles it offers
-  the ones it has, with super-admin pre-picked for the first account only.
+  the ones it has; the first account is asked separately whether it is the super-admin.
 
   Both ways in share `Support\Accounts` — the model, the column names and the roles, which are the
   application's rather than the package's. The step keeps only the decision of *when* to offer.
@@ -74,14 +74,21 @@ All notable changes to the Wire ecosystem will be documented in this file.
   own, and Spatie's migration reads the switch as it makes the tables. Tables already made without
   teams count as "no", so the question is not put to every later run.
 
-- **`php artisan wire:user:role` — roles for an account that already exists.** `wire:user` gives
-  roles only to the account it has just made, so an existing account had no way to get one — and
-  the advice printed for an administrator in no team pointed at `wire:user --role=…`, which makes a
-  new account and refuses the address that has one. The new command takes the address, `--admin`,
-  a repeatable `--role` and `--team`, never touches the name or password, and the refusal now prints
-  it with the address filled in. `Accounts::assign()` takes the team; one the account is not a member
-  of is refused, because the role would sit where the switcher never offers it. The role prompt and
-  the per-role report are shared by both commands through `Console\Concerns\InteractsWithRoles`.
+- **`php artisan wire:assign-role` — roles for an account that already exists.** `wire:user` gives
+  roles only to the account it has just made, so an existing account had no way to get one. The
+  command takes the address, a repeatable `--role` and `--team`, and never touches the name or
+  password. `Accounts::assign()` takes the team; one the account is not a member of is refused
+  (`Teams::isMember()`), because the role would sit where the switcher never offers it.
+
+- **The super-admin is global, asked for, and never a role among others.** It can do everything, in
+  every team — and with teams on it could not: an assignment made inside a team only counted while
+  that team was current. It is now given only by `Accounts::makeSuperAdmin()`, as a global assignment
+  (`laravel-permission-extended` 1.1's `assignGlobalRole()`, the only kind its gate honours with teams
+  on), so it needs no team and the first administrator of a new installation can be one. It is its
+  own question: `--super-admin` on `wire:user` and `wire:assign-role` (confirmed wherever somebody can
+  answer, and never with `--team`), and a confirmation in the installer that says what it means.
+  `--role=super-admin` is refused, `wire:user --admin` is gone, the roles select never offers it, and
+  saving a user keeps it rather than stripping it.
 
 - **`SetupConsole::select()`**, the plural of `choose()` — "which of these" — returning its default
   unattended. **`Foundation\Setup\ConfigFile`** for the one config value with no `env()` behind it:
@@ -98,12 +105,12 @@ All notable changes to the Wire ecosystem will be documented in this file.
   e-mail address. `CommandConsole` points Prompts back at the terminal, and at a person, before each
   question.
 
-- **The first administrator gets the super-admin role in the run that set roles up.**
+- **The first administrator can be made a super-admin in the run that set roles up.**
   `permission-extended:install` patches the user model on disk after the application booted, and PHP
   cannot load a class twice, so the in-process check went on saying there were no roles. The account
   was made without one, and the only person who could sign in got a 403 on the users screen.
-  `Roles::waitingForRestart()` names that state, and the role is then given by
-  `permission:assign-role` in a fresh PHP process that reads the patched file.
+  `Roles::waitingForRestart()` names that state, and the super-admin is then given by
+  `wire:assign-role` in a fresh PHP process that reads the patched file.
 
 - **The settings cache step offers only stores that answer.** A fresh Laravel lists `redis`,
   `memcached` and `octane` in `config/cache.php` whether or not anything is behind them, so the step

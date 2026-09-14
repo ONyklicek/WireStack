@@ -50,6 +50,20 @@ trait SyncsRoles
             $selected = $this->data['roles'] ?? [];
             $selected = is_array($selected) ? $selected : [];
 
+            // The super-admin is not this form's to give or to take. It is not
+            // offered, so a forged request naming it is ignored; and where the
+            // account already has it as a plain role (no teams), the sync keeps
+            // it rather than stripping it from somebody who edited a name.
+            $superAdmin = Roles::superAdmin();
+
+            if ($superAdmin !== null) {
+                $selected = array_values(array_filter($selected, static fn (mixed $role): bool => $role !== $superAdmin));
+
+                if (method_exists($record, 'getRoleNames') && $record->getRoleNames()->contains($superAdmin)) {
+                    $selected[] = $superAdmin;
+                }
+            }
+
             // Refuse the whole write rather than silently syncing the part that
             // was allowed: a form that says "these are the roles" and saves a
             // different set is worse than one that saves nothing, because the

@@ -47,8 +47,8 @@ running **each package's own installer**, never a copy of it.
   "nobody is here" after `--no-interaction` — and `CommandConsole` is what restores both before each
   question. **A file changed on disk is not the class this process loaded**: after
   `permission-extended:install` patches the user model, `Roles::available()` still says no until a new
-  process; work that needs the patched class runs in one (`CreateFirstAdministrator` gives the role via
-  `permission:assign-role` under `Process`).
+  process; work that needs the patched class runs in one (`CreateFirstAdministrator` makes the super-admin via
+  `wire:assign-role --super-admin` under `Process`).
 - **A third-party config literal is edited only through `Foundation\Setup\ConfigFile`**, and only after
   `EnvFile` has no home for it. `set()` rewrites one single-line `'key' => value,` that occurs exactly once
   and returns false otherwise; never add a key or fall back to a wider regex — tell the user the line.

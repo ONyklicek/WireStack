@@ -179,7 +179,7 @@ So the second half of `wire:install` works through them, one at a time:
 | [Roles & permissions](../modules/teams-and-two-factor.md) | Runs `permission-extended:install`, which publishes the permission config and migration, migrates them and puts `HasRoles` on your user model. Until then the role screens are simply absent. Needs `nyoncode/laravel-permission-extended`, and says so when it is missing |
 | Database tables | Runs the outstanding migrations. Three modules asked for this in their own installers and none could act on it |
 | [Routes](../panels/modules.md) | Writes a `Route::wireResources()` group into `routes/web.php`, under a prefix and middleware you are asked for. Without it every screen is a 404 |
-| [First administrator](../modules/users.md) | Creates the account you sign in with — and the super-admin role where the application has roles. Nothing in the stack made one before; the answer was `php artisan tinker`. Only ever the *first*: every account after it is `php artisan wire:user`. Where roles were set up earlier in the same run, the role is given from a fresh PHP process, because this one loaded the user model before it was patched. Where roles are scoped to teams, an account in no team gets no role, and the step prints the `wire:user:role` line that gives it one |
+| [First administrator](../modules/users.md) | Creates the account you sign in with, and asks whether it is the super-admin — which can do everything, in every team — where the application has roles. Nothing in the stack made one before; the answer was `php artisan tinker`. Only ever the *first*: every account after it is `php artisan wire:user`. The super-admin is given globally, so a first account that belongs to no team can still be one. Where roles were set up earlier in the same run, it is given by `wire:assign-role` in a fresh PHP process, because this one loaded the user model before it was patched |
 | [Media links](../modules/media.md) | `storage:link`. Without it uploads work, thumbnails generate, and every image is a 404 that errors nowhere |
 | [Audit recording](../core/audit.md) | Switches recording on, so the audit screen is not a view over an empty table |
 | [Stored notifications](../modules/notifications.md) | Adds the `database` driver beside the toast, so the bell has a history to show |
@@ -221,32 +221,35 @@ command is the other way in, and it is asked rather than offering:
 
 ```bash
 php artisan wire:user
-php artisan wire:user --name=Jane --email=jane@example.com --password=… --admin
+php artisan wire:user --name=Jane --email=jane@example.com --password=… --super-admin
 php artisan wire:user --email=… --password=… --role=editor --role=support
 ```
 
 Anything not given is asked for; anything not given **and** not askable stops the
 command rather than being invented, because a generated password in a deploy log
 is a credential in a log. Where the application has roles, it offers the ones it
-has — with super-admin pre-picked for the first account only, since that one is
-somebody letting themselves in and every later one is an ordinary user until
-said otherwise.
+has.
 
-An account that already exists gets its roles from `wire:user:role`, which never
+**The super-admin is never one of them.** It can do everything, in every team, so
+it is its own question: `--super-admin`, or — for the first account only, the one
+somebody is letting themselves in with — a confirmation that says exactly that.
+It is given globally, so it needs no team, and `--role=super-admin` is refused.
+The same holds on the screens: the roles select never offers it, and saving a
+user never takes it away.
+
+An account that already exists gets its roles from `wire:assign-role`, which never
 touches the name or the password:
 
 ```bash
-php artisan wire:user:role jane@example.com --admin
-php artisan wire:user:role jane@example.com --role=editor --role=support
-php artisan wire:user:role jane@example.com --admin --team=3
+php artisan wire:assign-role jane@example.com --super-admin
+php artisan wire:assign-role jane@example.com --role=editor --role=support
+php artisan wire:assign-role jane@example.com --role=editor --team=3
 ```
 
-It is the answer to the one account the installer cannot finish. Where roles are
-scoped to teams, a brand-new administrator belongs to no team, so the step makes
-the account, gives it no role and prints this command with the address filled in.
-Put the account in a team, then run it. Without `--team`, the role goes in the
-account's current team; a team it is not a member of is refused, because the role
-would sit where the switcher never offers it.
+`--super-admin` asks before it acts wherever somebody can answer, and takes no
+`--team`. Every other role, where roles are scoped to teams, goes in the team
+named by `--team` or the account's current team; a team it is not a member of is
+refused, because the role would sit where the switcher never offers it.
 
 ### Contributing a step
 
@@ -305,7 +308,7 @@ php artisan wire-sortable:install
 php artisan wire-admin:install                # also writes the layout and the Tailwind @source line
 php artisan wire-module-users:install         # …and one per installed module
 php artisan wire:user                         # another account, any time — the installer only makes the first
-php artisan wire:user:role jane@example.com --admin  # roles for an account that already exists
+php artisan wire:assign-role jane@example.com --role=editor  # roles for an account that already exists
 php artisan wire-boost:install --agent=claude # AI agent guidelines and the MCP entry
 ```
 

@@ -134,18 +134,55 @@ final class Accounts
     }
 
     /**
-     * Give the account the role that can reach everything.
+     * Make the account a super-admin: it can do everything, in every team.
      *
-     * The name is the permission package's own
-     * (`permission-extended.super_admin_role`), because that is the name its
-     * gate checks — inventing one here would make an administrator the gate
-     * does not recognise.
+     * Always a global assignment ({@see assignGlobalRole()}), never a role of a
+     * team — with teams on, the permission package's gate honours nothing else.
+     * So it needs no team, which is also what lets the first administrator of a
+     * brand-new installation, who belongs to none, be one.
      *
-     * @return string|null The role given, or null where this application has no roles.
+     * The role is found or made as a role of no team; one of the same name that
+     * a team owns is not it. The name is the permission package's own
+     * (`permission-extended.super_admin_role`), because that is what its gate
+     * checks.
+     *
+     * @return string|null The role given, or null where this application has no
+     *                     roles or no super-admin.
      */
     public function makeSuperAdmin(Model $user): ?string
     {
-        return $this->assign($user, $this->superAdminRole());
+        $role = Roles::superAdmin();
+
+        if ($role === null || ! Roles::enabled() || ! method_exists($user, 'assignGlobalRole')) {
+            return null;
+        }
+
+        $model = Roles::roleModel();
+        $query = $model::query();
+
+        if ((bool) config('permission.teams')) {
+            $query->whereNull((string) config('permission.column_names.team_foreign_key', 'team_id'));
+        }
+
+        $user->assignGlobalRole($query->firstOrCreate([
+            'name' => $role,
+            'guard_name' => (string) config('auth.defaults.guard', 'web'),
+        ]));
+
+        return $role;
+    }
+
+    /**
+     * What a super-admin is, in the words a question about making one should use.
+     *
+     * "In every team" only where there are teams — said to an application
+     * without them it names a thing that does not exist.
+     */
+    public function superAdminMeaning(): string
+    {
+        return (bool) config('permission.teams')
+            ? 'It can do everything, in every team.'
+            : 'It can do everything.';
     }
 
     /**
@@ -157,11 +194,14 @@ final class Accounts
      */
     public function superAdminRole(): string
     {
-        return (string) config('permission-extended.super_admin_role', 'super-admin');
+        return Roles::superAdmin() ?? 'super-admin';
     }
 
     /**
      * Give the account a role, creating it when this application has not.
+     *
+     * Any role but the super-admin, which is {@see makeSuperAdmin()} and nothing
+     * else.
      *
      * @param  int|string|null  $team  Where roles are scoped to teams, the one to give it in —
      *                                 one the account belongs to. Null means the team it is in now.
@@ -173,6 +213,10 @@ final class Accounts
             return null;
         }
 
+        if ($role === Roles::superAdmin()) {
+            throw AccountException::superAdminIsNotARole($role, $this->emailOf($user));
+        }
+
         // Where the application scopes roles to teams, the scope is whatever
         // the registrar was last told about — and in a command nothing has told
         // it anything. Assigning then writes a null into a column the permission
@@ -181,7 +225,7 @@ final class Accounts
         if (Teams::enabled()) {
             if ($team === null) {
                 $team = Teams::currentId($user) ?? throw AccountException::roleNeedsATeam($role, $this->emailOf($user));
-            } elseif (! array_key_exists($team, Teams::optionsFor($user))) {
+            } elseif (! Teams::isMember($team, $user)) {
                 throw AccountException::notInTeam($this->emailOf($user), $team);
             }
 
@@ -215,7 +259,8 @@ final class Accounts
             /** @var array<int, string> $names */
             $names = $model::query()->pluck('name')->all();
 
-            return $names;
+            // The super-admin is its own question, never one to tick beside others.
+            return array_values(array_diff($names, [Roles::superAdmin()]));
         } catch (Throwable) {
             // The package is installed and its tables are not migrated yet,
             // which is an ordinary moment during a first install rather than

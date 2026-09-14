@@ -164,6 +164,17 @@ final class Teams
     }
 
     /**
+     * Whether the person belongs to this team.
+     *
+     * Asked of their own teams, the same list the switcher offers — so a team
+     * nobody could switch to is never one they count as a member of.
+     */
+    public static function isMember(int|string $team, mixed $user = null): bool
+    {
+        return array_key_exists($team, self::optionsFor($user));
+    }
+
+    /**
      * Switch, if they are a member. Answers whether it happened.
      *
      * Membership is re-checked here rather than trusted from the control that
@@ -171,7 +182,7 @@ final class Teams
      */
     public static function switchTo(int|string $team, mixed $user = null): bool
     {
-        if (! self::enabled() || ! array_key_exists($team, self::optionsFor($user))) {
+        if (! self::enabled() || ! self::isMember($team, $user)) {
             return false;
         }
 

@@ -202,7 +202,9 @@ skryje podle téže deklarace:
 Nic tady autorizační kontrolu neimplementuje znovu — na každou z nich odpovídá
 `Gate`, a právě proto funguje zástupný znak (`users.*`), policy i obejití pro
 super-admina z `nyoncode/laravel-permission-extended`, aniž by o nich tento modul
-věděl. Na tom balíčku super-admin projde vždy.
+věděl. Na tom balíčku super-admin projde vždy — se zapnutými týmy jen ten
+přidělený globálně (`php artisan wire:assign-role <email> --super-admin`). Výběr
+rolí super-admina nikdy nenabídne a uložení uživatele ho nikdy neodebere.
 
 **Na instalaci, kde žádné takové oprávnění definované není, tyto obrazovky
 odpoví 403.** To je záměr: viditelný problém se zřejmou opravou je lepší než

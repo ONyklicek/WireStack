@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Support;
 
+use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use ReflectionClass;
@@ -37,6 +38,9 @@ final class Roles
 {
     /** The trait an application's user model takes — this package's, never Spatie's directly. */
     public const EXTENDED_TRAIT = 'NyonCode\\PermissionExtended\\Traits\\HasRoles';
+
+    /** The permission layer's own installer — the toolkit names it after the package. */
+    public const INSTALLER = 'permission-extended:install';
 
     /**
      * The models are Spatie's, and that is not a contradiction.
@@ -116,6 +120,31 @@ final class Roles
     }
 
     /**
+     * The role that can do everything, as the permission package's gate names it.
+     *
+     * Null where the application switched the super-admin off
+     * (`permission-extended.super_admin_role` = null).
+     */
+    public static function superAdmin(): ?string
+    {
+        $role = config('permission-extended.super_admin_role', 'super-admin');
+
+        return is_string($role) && $role !== '' ? $role : null;
+    }
+
+    /**
+     * Whether the permission layer's installer is there to run.
+     *
+     * The command being registered rather than the trait autoloading: a package
+     * whose provider is excluded from discovery has the class and not the
+     * command, and calling it aborts the whole run.
+     */
+    public static function installable(Kernel $artisan): bool
+    {
+        return array_key_exists(self::INSTALLER, $artisan->all());
+    }
+
+    /**
      * The role model, taken from the permission package's own config so an
      * application that swapped it keeps its swap.
      *
@@ -153,7 +182,15 @@ final class Roles
         /** @var class-string<Model> $model */
         $model = self::roleModel();
 
-        return $model::query()->orderBy('name')->pluck('name', 'name')->all();
+        // Never the super-admin. It can do everything everywhere, so it is given
+        // on purpose from the command line, globally — not picked from a select
+        // beside "editor", where with teams on it would be a role of one team
+        // that bypasses nothing.
+        return $model::query()
+            ->when(self::superAdmin(), static fn ($q, string $role) => $q->where('name', '!=', $role))
+            ->orderBy('name')
+            ->pluck('name', 'name')
+            ->all();
     }
 
     /**
