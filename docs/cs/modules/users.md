@@ -130,6 +130,7 @@ současné heslo nemá. V tom je celý rozdíl.
     'relation' => 'teams',
     'label_attribute' => 'name',
     'session_key' => 'wire.team',
+    'admin_role' => 'team-admin',   // správce týmu; vznikne s oprávněními obrazovek
 ],                                               // [tl! focus:end]
 
 'navigation' => [

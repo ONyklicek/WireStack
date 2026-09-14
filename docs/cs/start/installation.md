@@ -306,6 +306,7 @@ php artisan wire-admin:install                # navíc zapíše layout a řádek
 php artisan wire-module-users:install         # …a jeden na každý nainstalovaný modul
 php artisan wire:user                         # další účet, kdykoli — instalátor zakládá jen ten první
 php artisan wire:assign-role jana@example.com --role=editor  # role pro účet, který už existuje
+php artisan wire:assign-role ada@example.com --role=admin --global  # administrátor všech týmů
 php artisan wire-boost:install --agent=claude # AI guidelines a vstup pro MCP
 ```
 

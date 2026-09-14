@@ -145,6 +145,34 @@ final class Roles
     }
 
     /**
+     * The role of a team's manager, given inside a team.
+     *
+     * Null where the application has none (`wire-module-users.teams.admin_role`).
+     */
+    public static function teamAdmin(): ?string
+    {
+        $role = config('wire-module-users.teams.admin_role', 'team-admin');
+
+        return is_string($role) && $role !== '' ? $role : null;
+    }
+
+    /**
+     * The permissions this module gives a role it makes, by the role's name.
+     *
+     * The administrator and team-manager roles carry the abilities of the user
+     * and role screens ({@see Permissions::abilities()}) — the one set that
+     * makes them what they are called. Every other role starts empty.
+     *
+     * @return array<int, string>
+     */
+    public static function defaultPermissions(string $role): array
+    {
+        return in_array($role, array_filter([self::admin(), self::teamAdmin()]), true)
+            ? Permissions::abilities()
+            : [];
+    }
+
+    /**
      * Whether this person is a super-admin — globally, the only way it counts.
      */
     public static function isSuperAdmin(mixed $actor): bool

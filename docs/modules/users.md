@@ -132,6 +132,7 @@ difference.
     'relation' => 'teams',
     'label_attribute' => 'name',
     'session_key' => 'wire.team',
+    'admin_role' => 'team-admin',   // a team's manager; made with the screens' abilities
 ],                                               // [tl! focus:end]
 
 'navigation' => [

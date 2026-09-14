@@ -309,6 +309,7 @@ php artisan wire-admin:install                # also writes the layout and the T
 php artisan wire-module-users:install         # …and one per installed module
 php artisan wire:user                         # another account, any time — the installer only makes the first
 php artisan wire:assign-role jane@example.com --role=editor  # roles for an account that already exists
+php artisan wire:assign-role ada@example.com --role=admin --global  # an administrator of every team
 php artisan wire-boost:install --agent=claude # AI agent guidelines and the MCP entry
 ```
 

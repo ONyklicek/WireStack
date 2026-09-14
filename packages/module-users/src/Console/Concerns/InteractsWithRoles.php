@@ -7,6 +7,7 @@ namespace NyonCode\WireModuleUsers\Console\Concerns;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireModuleUsers\Support\Accounts;
+use NyonCode\WireModuleUsers\Support\Teams;
 use Throwable;
 
 use function Laravel\Prompts\multiselect;
@@ -93,14 +94,14 @@ trait InteractsWithRoles
      *
      * @param  array<int, string>  $roles
      */
-    protected function grantRoles(Accounts $accounts, Model $user, array $roles, int|string|null $team = null): bool
+    protected function grantRoles(Accounts $accounts, Model $user, array $roles, int|string|null $team = null, bool $global = false): bool
     {
         $all = true;
 
         foreach ($roles as $role) {
             try {
-                $accounts->assign($user, $role, $team);
-                $this->components->twoColumnDetail('Role', "<fg=green>{$role}</>");
+                $global ? $accounts->assignGlobal($user, $role) : $accounts->assign($user, $role, $team);
+                $this->components->twoColumnDetail('Role', "<fg=green>{$role}</>".($global && Teams::enabled() ? ', in every team' : ''));
             } catch (Throwable $e) {
                 $this->components->warn("Could not give it `{$role}`: ".$e->getMessage());
                 $all = false;

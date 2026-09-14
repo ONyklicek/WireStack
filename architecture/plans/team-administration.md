@@ -12,7 +12,10 @@ přidá do týmu) a **2** (obrazovka rolí omezená na tým — globální role 
 čtení, role týmu ke změně; role super-admin se v UI nemění nikdy, role
 `admin` jen super-adminem; nová role správce týmu patří jeho týmu) a **3**
 (`Support\RoleGrants`: nikdo nerozdá víc, než sám má — formuláře nabízejí jen
-to, a uložení se zúží, neodmítne). Zbytek zatím není implementovaný.
+to, a uložení se zúží, neodmítne) a **4** (`team-admin` a `admin` vznikají při
+prvním přidělení s oprávněními obrazovek; `wire:assign-role --global`). Oprávnění
+`teams.*` z O7 zatím nejsou, protože modul žádnou obrazovku týmů nemá. Zbytek
+zatím není implementovaný.
 Hotové a pod nimi dostupné:
 
 - permission-extended 1.1 (větev `global-roles`): `assignGlobalRole()`,

@@ -211,6 +211,33 @@ jednoho týmu, middleware omezí každé čtení oprávnění v každém web req
 a `Gate::allows()` začne odpovídat po týmech, aniž by se změnilo jediné volací
 místo.
 
+### Správci týmů a administrátoři
+
+Dvě role, které tento modul zná jménem a vytvoří je, když se poprvé přidělují — s
+oprávněními obrazovek uživatelů a rolí (`users.viewAny`, `users.view`,
+`users.create`, `users.update` a totéž pro `roles`, jak je nakonfigurováno),
+přesnými jmény, ne `users.*`, protože přidělený wildcard je jméno a
+`can('users.viewAny')` se ptá na jméno:
+
+```bash
+# Správce týmu: členové a role týmu 3 a žádného jiného.
+php artisan wire:assign-role mia@example.com --role=team-admin --team=3
+
+# Administrátor všech týmů najednou: stejná oprávnění, držená globálně.
+php artisan wire:assign-role ada@example.com --role=admin --global
+```
+
+`team-admin` (`teams.admin_role`) je globální role přidělená v týmu, takže její
+oprávnění platí jen v tom týmu. `admin` (`admin_role`) přidělený s `--global`
+platí ve všech týmech — vidí členy a role všech týmů a obrazovka rolí ho bere
+jako někoho, kdo pracuje napříč týmy. Pořád to není super-admin: může, co role
+nese, a přijde o to, co se z role odebere. Výchozí oprávnění se zapíšou jen při
+vytvoření role; když roli potom upravíte, úpravy zůstanou. `--global` nebere
+`--team` a nikdy nedá super-admina, na to je `--super-admin`.
+
+Role přidělovaná jménem se hledá mezi globálními rolemi a rolemi týmu — přednost
+má role týmu — a nikdy mezi rolemi jiného týmu.
+
 ### Role v týmu a super-admin nad nimi
 
 Role tu patří týmu: balíček oprávnění ukládá tým ke každému přiřazení a počítá jen

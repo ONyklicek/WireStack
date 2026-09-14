@@ -256,6 +256,12 @@ return [
         // one is remembered under.
         'label_attribute' => 'name',
         'session_key' => 'wire.team',
+
+        // The role of a team's manager: a global role, given inside a team, that
+        // carries the abilities of the user and role screens — so its holder
+        // manages the members and roles of that team and no other. Made with
+        // those abilities the first time it is given; null for no such role.
+        'admin_role' => env('WIRE_USERS_TEAM_ADMIN_ROLE', 'team-admin'),
     ],
 
     /*

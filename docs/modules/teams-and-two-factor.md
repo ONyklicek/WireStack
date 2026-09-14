@@ -215,6 +215,34 @@ than one team, the middleware scopes every permission read on every web request,
 and `Gate::allows()` starts answering per team without a single call site
 changing.
 
+### Team managers and administrators
+
+Two roles this module knows by name, and makes the first time they are given —
+with the abilities of the user and role screens (`users.viewAny`, `users.view`,
+`users.create`, `users.update` and the same four for `roles`, as configured),
+exact names rather than `users.*`, because a granted wildcard is a name and
+`can('users.viewAny')` asks a name:
+
+```bash
+# A team's manager: the members and roles of team 3, and no other team.
+php artisan wire:assign-role mia@example.com --role=team-admin --team=3
+
+# An administrator of every team at once: the same abilities, held globally.
+php artisan wire:assign-role ada@example.com --role=admin --global
+```
+
+`team-admin` (`teams.admin_role`) is a global role given inside a team, so its
+abilities count in that team only. `admin` (`admin_role`) given with `--global`
+counts in every team — it sees every team's members and roles, and a role
+screen treats it as somebody who works across teams. It is still not a
+super-admin: it can do what the role carries, and loses what is taken from the
+role. The defaults are written only when the role is made; edit the role
+afterwards and they stay edited. `--global` takes no `--team`, and never the
+super-admin, which is `--super-admin`.
+
+A role given by name is found among the global roles and the team's own —
+preferring the team's — and never among another team's roles.
+
 ### Roles in a team, and the super-admin above them
 
 A role here belongs to a team: the permission package puts the team on every

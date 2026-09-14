@@ -108,6 +108,14 @@ All notable changes to the Wire ecosystem will be documented in this file.
   (`wire-module-users.admin_role`, `admin`) only by a super-admin — who alone is offered it in the
   user form's roles select.
 
+- **`team-admin` and `admin`, and `wire:assign-role --global`.** The team manager role
+  (`wire-module-users.teams.admin_role`) and the administrator role (`admin_role`) are made the first
+  time they are given, carrying the abilities of the user and role screens (`Permissions::abilities()`
+  — exact names, because a granted `users.*` is a name). `--global` gives roles in every team at once
+  (`Accounts::assignGlobal()`), which is how the administrator is held. A role given by name is now
+  found among the global roles and the team's own, preferring the team's; it used to be a
+  `firstOrCreate` by name that could pick up another team's role of that name.
+
 - **Nobody hands out more than they hold.** A team's manager could tick any permission into a role of
   their team, give it to themselves, and hold what nobody gave them; the role form did not check the
   permissions at all. `Support\RoleGrants` is the one owner of that rule: the role form offers only

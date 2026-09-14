@@ -34,6 +34,15 @@ use Symfony\Component\Console\Attribute\AsCommand;
  *   php artisan wire:assign-role jane@example.com --super-admin
  *   php artisan wire:assign-role jane@example.com --role=editor --role=support
  *   php artisan wire:assign-role jane@example.com --role=editor --team=3
+ *   php artisan wire:assign-role ada@example.com --role=admin --global
+ *
+ * ## `--global`, for the administrator
+ *
+ * A role given with `--global` counts in every team at once — the permission
+ * package stores it outside any team — which is how the administrator role is
+ * meant to be held, and never from a screen: only here, where the person typing
+ * has the server. The administrator and team-manager roles are made with the
+ * abilities of the user and role screens the first time they are given.
  */
 #[AsCommand(name: 'wire:assign-role')]
 class WireAssignRoleCommand extends Command
@@ -44,6 +53,7 @@ class WireAssignRoleCommand extends Command
         {email? : The address the account signs in with}
         {--role=* : Roles to give the account, created where the application has none}
         {--team= : Where roles are scoped to teams, the team to give them in}
+        {--global : Give the roles in every team at once — the administrator\'s way in}
         {--super-admin : Make the account a super-admin, who can do everything in every team}';
 
     protected $description = 'Give roles to an account that already exists.';
@@ -64,6 +74,12 @@ class WireAssignRoleCommand extends Command
 
         if ($this->option('super-admin') && $this->option('team') !== null) {
             $this->components->error('A super-admin can do everything in every team, so it takes no --team.');
+
+            return self::FAILURE;
+        }
+
+        if ($this->option('global') && $this->option('team') !== null) {
+            $this->components->error('--global gives the roles in every team, so it takes no --team.');
 
             return self::FAILURE;
         }
@@ -89,15 +105,20 @@ class WireAssignRoleCommand extends Command
         }
 
         $team = $this->team();
+        $global = (bool) $this->option('global');
 
-        if ($team !== null && ! Teams::enabled()) {
-            $this->components->warn('Roles here are not scoped to teams, so --team changes nothing.');
+        if (($team !== null || $global) && ! Teams::enabled()) {
+            $this->components->warn('Roles here are not scoped to teams, so '.($global ? '--global' : '--team').' changes nothing.');
             $team = null;
         }
 
         $granted = ! $superAdmin || $this->grantSuperAdmin($accounts, $user);
 
-        return $this->grantRoles($accounts, $user, $roles, $team) && $granted ? self::SUCCESS : self::FAILURE;
+        $given = $global
+            ? $this->grantRoles($accounts, $user, $roles, global: true)
+            : $this->grantRoles($accounts, $user, $roles, $team);
+
+        return $given && $granted ? self::SUCCESS : self::FAILURE;
     }
 
     /**

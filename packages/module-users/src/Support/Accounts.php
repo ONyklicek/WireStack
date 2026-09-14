@@ -232,14 +232,82 @@ final class Accounts
             Teams::apply($team);
         }
 
-        $model = Roles::roleModel();
-
-        $user->assignRole($model::query()->firstOrCreate([
-            'name' => $role,
-            'guard_name' => (string) config('auth.defaults.guard', 'web'),
-        ]));
+        $user->assignRole($this->role($role, $team));
 
         return $role;
+    }
+
+    /**
+     * Give the account a role that counts in every team.
+     *
+     * The global administrator's way in, and any bundle meant to follow a person
+     * everywhere. The role is a global one — made, with its defaults, when the
+     * application has none of that name — and never the super-admin, which is
+     * {@see makeSuperAdmin()}. Without teams every role is global already.
+     *
+     * @return string|null The role given, or null where this application has no roles.
+     */
+    public function assignGlobal(Model $user, string $role): ?string
+    {
+        if (! Roles::enabled() || ! method_exists($user, 'assignGlobalRole')) {
+            return null;
+        }
+
+        if ($role === Roles::superAdmin()) {
+            throw AccountException::superAdminIsNotARole($role, $this->emailOf($user));
+        }
+
+        $user->assignGlobalRole($this->role($role, null));
+
+        return $role;
+    }
+
+    /**
+     * The role of this name that a team can use, made when there is none.
+     *
+     * The team's own role of that name if it has one, otherwise the global one —
+     * the same lookup the permission package makes — and never a role of
+     * another team, which a bare `firstOrCreate` by name happily returned. A
+     * role that is not there is made global, carrying the permissions this
+     * module gives a role of that name ({@see Roles::defaultPermissions()}).
+     */
+    private function role(string $name, int|string|null $team): Model
+    {
+        /** @var class-string<Model> $model */
+        $model = Roles::roleModel();
+        $guard = (string) config('auth.defaults.guard', 'web');
+        $column = Teams::teamColumn();
+        $teams = (bool) config('permission.teams');
+
+        $query = $model::query()->where('name', $name)->where('guard_name', $guard);
+
+        if ($teams) {
+            $query->where(static fn ($q) => $team === null
+                ? $q->whereNull($column)
+                : $q->whereNull($column)->orWhere($column, $team))
+                ->orderByRaw("{$column} is null");
+        }
+
+        $found = $query->first();
+
+        if ($found instanceof Model) {
+            return $found;
+        }
+
+        $made = $model::query()->create(['name' => $name, 'guard_name' => $guard]);
+        $defaults = Roles::defaultPermissions($name);
+
+        if ($defaults !== [] && method_exists($made, 'givePermissionTo')) {
+            $permission = Roles::permissionModel();
+
+            foreach ($defaults as $ability) {
+                $permission::findOrCreate($ability, $guard);
+            }
+
+            $made->givePermissionTo($defaults);
+        }
+
+        return $made;
     }
 
     /**

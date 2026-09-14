@@ -58,6 +58,10 @@ palette find the area without being told.
   role gets its team from `Teams::placeNewRole()`, and whether a role may be edited or deleted is
   `Roles::mayChange()` — never the super-admin role, the admin role (`wire-module-users.admin_role`)
   only for a super-admin.
+- **Administrators are roles, not flags.** `team-admin` (given inside a team) and `admin` (given with
+  `wire:assign-role --role=admin --global`) are made on first assignment with `Permissions::abilities()`
+  — exact ability names, never `users.*`, which the permission layer reads as a name when granted.
+  Resolve a role by name through `Accounts` (global or the team's own), never a bare `firstOrCreate`.
 - **Nobody hands out more than they hold: `Support\RoleGrants`.** Any screen or action that writes a
   role's permissions or an account's roles offers `RoleGrants::mayGrantPermission()` /
   `mayGrantRole()` and writes `clampPermissions()` / `clampRoles()` — narrowing, not refusing, so
