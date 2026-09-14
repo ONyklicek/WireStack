@@ -7,6 +7,7 @@ namespace NyonCode\WireModuleUsers\Support;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
 use NyonCode\WireModuleUsers\Console\WireUserCommand;
 use NyonCode\WireModuleUsers\Exceptions\AccountException;
 use NyonCode\WireModuleUsers\Install\CreateFirstAdministrator;
@@ -93,6 +94,30 @@ final class Accounts
         } catch (Throwable) {
             return false;
         }
+    }
+
+    /**
+     * What is wrong with this address for a new account, or null when nothing is.
+     *
+     * The same `email` rule the user form holds a typed address to, so the
+     * installer and the command cannot make an account the screen would refuse —
+     * `admin` was accepted as an address and made an account nobody could sign
+     * in with. And an address somebody already signs in with is said as that,
+     * rather than as the database's unique-constraint error.
+     */
+    public function emailProblem(string $email): ?string
+    {
+        if (Validator::make(['email' => $email], ['email' => ['required', 'email']])->fails()) {
+            return "Not an e-mail address: {$email}";
+        }
+
+        $model = $this->model();
+
+        if ($model !== null && $this->ready() && $model::query()->where($this->fields()['email'], $email)->exists()) {
+            return "An account with {$email} already exists";
+        }
+
+        return null;
     }
 
     /**

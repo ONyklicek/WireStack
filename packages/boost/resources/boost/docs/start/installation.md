@@ -230,6 +230,12 @@ command rather than being invented, because a generated password in a deploy log
 is a credential in a log. Where the application has roles, it offers the ones it
 has.
 
+The address is held to the rule the user form holds it to — `admin` is not one —
+and an address that already has an account is said as that. Typed, it is asked
+again, three times at most; passed as `--email`, the command fails, because a
+script wants an exit code rather than a question. The installer's step asks the
+same way.
+
 **The super-admin is never one of them.** It can do everything, in every team, so
 it is its own question: `--super-admin`, or — for the first account only, the one
 somebody is letting themselves in with — a confirmation that says exactly that.

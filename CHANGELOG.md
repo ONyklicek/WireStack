@@ -187,6 +187,17 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **`--no-interaction` reaches the installers it runs.** Each one prompts before touching a
   production application, and the prompt was drawn on this command's output from inside a running
   task spinner — the one place nobody can answer it.
+- **A new application's first migration no longer dies on `duplicate column name: two_factor_secret`.**
+  The Fortify step runs `fortify:install`, which publishes Fortify's own migrations for the
+  two-factor columns and the passkeys table — into an application that may already have both, from
+  its own migration or a package's. The step now compares what the publish added with what is
+  already there (the table or column in the database, or the same schema change in another
+  registered migration) and removes the copy that would repeat it, saying so.
+- **The first administrator and `wire:user` check the e-mail address.** `admin` was accepted and
+  made an account nobody could sign in with, and an address already in use came back as the
+  database's unique-constraint error. Both now go through `Accounts::emailProblem()` — the user
+  form's `email` rule, then whether the address has an account: typed, it is asked again (three
+  times at most); passed as `--email`, the command fails.
 
 ### Added
 

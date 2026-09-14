@@ -101,8 +101,8 @@ final readonly class CreateFirstAdministrator implements SetupStep
         }
 
         $name = $console->ask('Name', 'Administrator');
-        $email = $console->ask('E-mail address');
-        $password = $console->secret('Password');
+        $email = $this->askEmail($console);
+        $password = $email === '' ? '' : $console->secret('Password');
 
         if ($email === '' || $password === '') {
             $console->warn('No e-mail or no password — nothing was created.');
@@ -123,6 +123,29 @@ final readonly class CreateFirstAdministrator implements SetupStep
         $this->offerSuperAdmin($console, $user);
 
         return SetupOutcome::Applied;
+    }
+
+    /**
+     * The address to sign in with, asked again while it is not one.
+     *
+     * Three tries, then nothing: a person who cannot type an address three times
+     * is better served by the step saying so than by a loop, and an empty answer
+     * stops at once — which is also what an unanswered console gives back.
+     */
+    private function askEmail(SetupConsole $console): string
+    {
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $email = trim($console->ask('E-mail address'));
+            $problem = $email === '' ? null : $this->accounts->emailProblem($email);
+
+            if ($problem === null) {
+                return $email;
+            }
+
+            $console->warn($problem.'.');
+        }
+
+        return '';
     }
 
     /**

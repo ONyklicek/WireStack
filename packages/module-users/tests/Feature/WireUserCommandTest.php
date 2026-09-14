@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use NyonCode\WireModuleUsers\Tests\Fixtures\User;
 use NyonCode\WireModuleUsers\Tests\Support\Tables;
 use Spatie\Permission\Models\Role;
@@ -167,14 +169,57 @@ it('sends you to migrate when the table is not there', function () {
 });
 
 it('fails rather than pretending, when the row cannot be written', function () {
-    Tables::users();
-    User::create(['name' => 'Taken', 'email' => 'taken@example.com', 'password' => Hash::make('x')]);
+    // A column the application requires and this command does not fill.
+    Schema::create('users', function (Blueprint $table): void {
+        $table->id();
+        $table->string('name');
+        $table->string('email')->unique();
+        $table->string('password');
+        $table->string('tenant');
+        $table->timestamps();
+    });
 
     $this->artisan('wire:user', [
-        '--email' => 'taken@example.com',
+        '--email' => 'jane@example.com',
         '--password' => 'pw',
         '--no-interaction' => true,
     ])->expectsOutputToContain('Could not create the account')->assertFailed();
+});
+
+it('refuses an address that is not one, or that already has an account, from an option', function () {
+    Tables::users();
+    User::create(['name' => 'Taken', 'email' => 'taken@example.com', 'password' => Hash::make('x')]);
+
+    $this->artisan('wire:user', ['--email' => 'admin', '--password' => 'pw', '--no-interaction' => true])
+        ->expectsOutputToContain('Not an e-mail address: admin')
+        ->assertFailed();
+
+    $this->artisan('wire:user', ['--email' => 'taken@example.com', '--password' => 'pw', '--no-interaction' => true])
+        ->expectsOutputToContain('An account with taken@example.com already exists')
+        ->assertFailed();
+
+    expect(User::query()->count())->toBe(1);
+});
+
+it('asks again for an address that is not one, and gives up after three', function () {
+    Tables::users();
+
+    $this->artisan('wire:user', ['--password' => 'pw', '--name' => 'Jane'])
+        ->expectsQuestion('E-mail address', 'admin')
+        ->expectsQuestion('E-mail address', 'jane@example.com')
+        ->expectsOutputToContain('Not an e-mail address: admin')
+        ->expectsConfirmation('Make jane@example.com a super-admin? It can do everything.', 'no')
+        ->assertSuccessful();
+
+    expect(User::query()->where('email', 'jane@example.com')->exists())->toBeTrue();
+
+    $this->artisan('wire:user', ['--password' => 'pw', '--name' => 'Jane'])
+        ->expectsQuestion('E-mail address', 'a')
+        ->expectsQuestion('E-mail address', 'b')
+        ->expectsQuestion('E-mail address', 'c')
+        ->assertFailed();
+
+    expect(User::query()->count())->toBe(1);
 });
 
 it('keeps the account when only the role could not be given', function () {

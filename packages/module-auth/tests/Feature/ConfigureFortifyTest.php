@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Fortify\FortifyServiceProvider;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
@@ -87,17 +89,25 @@ function cfConsole(array $answers = [], array &$said = [], bool $interactive = t
     };
 }
 
-/** An artisan that reports whatever the test wants of `fortify:install`. */
-function cfArtisan(int $exitCode = 0, ?string $writes = null): Kernel
+/**
+ * An artisan that reports whatever the test wants of `fortify:install`.
+ *
+ * @param  array<string, string>  $publishes  Migration name => contents, written the way Fortify publishes them.
+ */
+function cfArtisan(int $exitCode = 0, ?string $writes = null, array $publishes = []): Kernel
 {
     $artisan = Mockery::mock(Kernel::class);
     // The step asks what is registered before it asks anything to run: a
     // package in `vendor` whose provider is not discovered has no command here.
     $artisan->shouldReceive('all')->andReturn(['fortify:install' => true]);
     $artisan->shouldReceive('call')->with('fortify:install')->andReturnUsing(
-        static function () use ($exitCode, $writes): int {
+        static function () use ($exitCode, $writes, $publishes): int {
             if ($writes !== null) {
                 file_put_contents(config_path('fortify.php'), $writes);
+            }
+
+            foreach ($publishes as $name => $contents) {
+                file_put_contents(database_path('migrations/2099_01_01_000000_'.$name.'.php'), $contents);
             }
 
             return $exitCode;
@@ -127,6 +137,10 @@ beforeEach(function () {
 
 afterEach(function () {
     @unlink(config_path('fortify.php'));
+
+    foreach (glob(database_path('migrations/2099_01_01_000000_*.php')) ?: [] as $file) {
+        @unlink($file);
+    }
 });
 
 it('is registered, so the installer offers it', function () {
@@ -306,3 +320,66 @@ it('says where to switch them when it cannot write the file', function () {
 
     expect(implode(' ', $said))->toContain('by hand');
 })->skipOnWindows();
+
+// ---------------------------------------------------------------------------
+// Migrations the application already has
+// ---------------------------------------------------------------------------
+
+it('leaves out Fortify\'s two-factor migration when another migration already adds the columns', function () {
+    // The workbench's own profile migration adds them, and a `migrate` over both
+    // stopped on "duplicate column name: two_factor_secret".
+    $own = sys_get_temp_dir().'/wire-own-migrations-'.uniqid();
+    mkdir($own);
+    file_put_contents($own.'/2026_01_01_000000_add_profile_features_to_users_table.php', "<?php // \$table->text('two_factor_secret')");
+    app('migrator')->path($own);
+
+    $said = [];
+    $step = new ConfigureFortify(cfArtisan(0, cfShippedConfig(), [
+        'add_two_factor_columns_to_users_table' => "<?php // \$table->text('two_factor_secret')",
+        'create_passkeys_table' => "<?php // Schema::create('passkeys'",
+    ]));
+
+    $step->apply(cfConsole([], $said, false));
+
+    expect(glob(database_path('migrations/*_add_two_factor_columns_to_users_table.php')))->toBe([])
+        ->and(glob(database_path('migrations/2099_01_01_000000_create_passkeys_table.php')))->toHaveCount(1)
+        ->and(implode(' ', $said))->toContain("Left out Fortify's add_two_factor_columns_to_users_table migration");
+
+    @unlink($own.'/2026_01_01_000000_add_profile_features_to_users_table.php');
+    @rmdir($own);
+});
+
+it('leaves out Fortify\'s passkeys migration when the table is already there', function () {
+    Schema::create('passkeys', fn (Blueprint $table) => $table->id());
+    $said = [];
+
+    (new ConfigureFortify(cfArtisan(0, cfShippedConfig(), [
+        'create_passkeys_table' => "<?php // Schema::create('passkeys'",
+    ])))->apply(cfConsole([], $said, false));
+
+    expect(glob(database_path('migrations/2099_01_01_000000_create_passkeys_table.php')))->toBe([])
+        ->and(implode(' ', $said))->toContain("Left out Fortify's create_passkeys_table migration");
+});
+
+it('keeps Fortify\'s migrations where nothing else does their work', function () {
+    $said = [];
+
+    (new ConfigureFortify(cfArtisan(0, cfShippedConfig(), [
+        'add_two_factor_columns_to_users_table' => "<?php // \$table->text('two_factor_secret')",
+    ])))->apply(cfConsole([], $said, false));
+
+    expect(glob(database_path('migrations/2099_01_01_000000_add_two_factor_columns_to_users_table.php')))->toHaveCount(1)
+        ->and(implode(' ', $said))->not->toContain('Left out');
+});
+
+it('answers from the files when there is no database to ask', function () {
+    config()->set('database.connections.nowhere', ['driver' => 'sqlite', 'database' => '/nowhere/at/all.sqlite']);
+    config()->set('database.default', 'nowhere');
+    $said = [];
+
+    (new ConfigureFortify(cfArtisan(0, cfShippedConfig(), [
+        'create_passkeys_table' => "<?php // Schema::create('passkeys'",
+    ])))->apply(cfConsole([], $said, false));
+
+    expect(glob(database_path('migrations/2099_01_01_000000_create_passkeys_table.php')))->toHaveCount(1);
+});

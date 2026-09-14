@@ -240,14 +240,41 @@ it('declines when an answer it cannot do without is empty', function () {
 });
 
 it('fails rather than pretending, when the row cannot be written', function () {
+    // A column the application requires and this step does not fill.
+    Schema::create('users', function (Blueprint $table): void {
+        $table->id();
+        $table->string('name');
+        $table->string('email')->unique();
+        $table->string('password');
+        $table->string('tenant');
+        $table->timestamps();
+    });
+    $said = [];
+
+    expect(cfaStep()->apply(cfaConsole(['Clash', 'jane@example.com', 'pw'], $said)))
+        ->toBe(SetupOutcome::Failed)
+        ->and(implode("\n", $said))->toContain('Could not create the account');
+});
+
+it('asks again for an address that is not one, or that already has an account', function () {
     Tables::users();
     User::create(['name' => 'Taken', 'email' => 'taken@example.com', 'password' => Hash::make('x')]);
     $said = [];
 
-    // The same address twice, against a unique index.
-    expect(cfaStep()->apply(cfaConsole(['Clash', 'taken@example.com', 'pw'], $said)))
-        ->toBe(SetupOutcome::Failed)
-        ->and(implode("\n", $said))->toContain('Could not create the account');
+    expect(cfaStep()->apply(cfaConsole(['Ada', 'admin', 'taken@example.com', ' ada@example.com ', 'pw'], $said, superAdmin: false)))
+        ->toBe(SetupOutcome::Applied)
+        ->and(implode("\n", $said))->toContain('Not an e-mail address: admin.')
+        ->and(implode("\n", $said))->toContain('An account with taken@example.com already exists.')
+        ->and(User::query()->where('email', 'ada@example.com')->exists())->toBeTrue();
+});
+
+it('creates nothing after three addresses that are not one', function () {
+    Tables::users();
+    $said = [];
+
+    expect(cfaStep()->apply(cfaConsole(['Ada', 'a', 'b', 'c', 'pw'], $said)))
+        ->toBe(SetupOutcome::Skipped)
+        ->and(User::query()->count())->toBe(0);
 });
 
 it('stands aside quietly when there is no database at all', function () {

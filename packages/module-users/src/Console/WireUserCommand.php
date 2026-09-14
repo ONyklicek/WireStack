@@ -72,8 +72,13 @@ class WireUserCommand extends Command
         $existed = $accounts->any();
 
         $name = $this->answer('name', 'Name', 'Administrator');
-        $email = $this->answer('email', 'E-mail address');
-        $password = $this->password();
+        $email = $this->email($accounts);
+
+        if ($email === null) {
+            return self::FAILURE;
+        }
+
+        $password = $email === '' ? '' : $this->password();
 
         if ($email === '' || $password === '') {
             $this->components->error('An e-mail address and a password are both required.');
@@ -94,6 +99,38 @@ class WireUserCommand extends Command
         $this->grant($accounts, $user, $existed);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The address, held to the rule the user form holds it to.
+     *
+     * Asked again while it is not an address, when it was asked for; refused
+     * outright when it came from `--email`, because a script passing a bad one
+     * wants a failure, not a prompt it cannot answer.
+     *
+     * @return string|null The address; '' when none was given; null when it was refused.
+     */
+    protected function email(Accounts $accounts): ?string
+    {
+        $given = $this->option('email');
+        $asked = ! (is_string($given) && $given !== '') && $this->input->isInteractive();
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $email = trim($this->answer('email', 'E-mail address'));
+            $problem = $email === '' ? null : $accounts->emailProblem($email);
+
+            if ($problem === null) {
+                return $email;
+            }
+
+            $this->components->error($problem.'.');
+
+            if (! $asked) {
+                return null;
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -228,6 +228,11 @@ Co nedostane, na to se zeptá; co nedostane **a** na co se nemá koho zeptat, b�
 zastaví, místo aby si to vymyslelo — vygenerované heslo v deploy logu je heslo
 v logu. Tam, kde aplikace role má, nabídne ty, které existují.
 
+Adresa musí projít stejným pravidlem jako ve formuláři uživatele — `admin`
+adresa není — a adresa, která už účet má, se ohlásí právě takhle. Když ji píšete,
+zeptá se znovu, nejvýš třikrát; když přijde jako `--email`, příkaz selže, protože
+skript chce návratový kód, ne otázku. Krok instalátoru se ptá stejně.
+
 **Super-admin mezi nimi nikdy není.** Může všechno, ve všech týmech, takže je to
 samostatná otázka: `--super-admin`, nebo — jen u prvního účtu, kterým si někdo
 otevírá dveře — potvrzení, které přesně tohle řekne. Přiděluje se globálně, takže
