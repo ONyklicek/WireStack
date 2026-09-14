@@ -261,6 +261,34 @@ ve formuláři uživatele nabízí tytéž role. Kdo pracuje napříč týmy, vi
 všechny role — kromě dvou popsaných v
 [Uživatelích](users.md#dve-role-ktere-tyto-obrazovky-nerozdavaji-jen-tak).
 
+### Přístup složený z balíčků oprávnění
+
+Účet může mít **libovolný počet rolí** a jeho oprávnění jsou jejich sjednocením.
+Tak se přístup skládá: udělejte malé role, z nichž každá nese jeden balíček
+oprávnění, a dejte člověku tolik, kolik jeho práce potřebuje. Pro balíčky se
+nejlépe hodí globální role — nadefinované jednou, použitelné v každém týmu
+a přidělované po týmech:
+
+```php
+use Spatie\Permission\Models\Role;
+
+// Nadefinované jednou, globálně (bez týmu).
+Role::create(['name' => 'bundle-invoices-read'])->givePermissionTo('invoices.view');
+Role::create(['name' => 'bundle-invoices-write'])->givePermissionTo(['invoices.view', 'invoices.create']);
+Role::create(['name' => 'bundle-reports'])->givePermissionTo('reports.view');
+```
+
+```bash
+# Přidělené v týmu — Olga v týmu 3 čte faktury a reporty a nic víc.
+php artisan wire:assign-role olga@example.com --role=bundle-invoices-read --role=bundle-reports --team=3
+```
+
+Výběr rolí ve formuláři uživatele jich bere víc najednou a pravidlo proti
+eskalaci čte také sjednocení: správce týmu, který drží `invoices.view` přes jeden
+balíček a `reports.view` přes druhý, smí dát balíček, který nese obojí. Balíček se
+nikdy nevnořuje do jiné role — každá role nese vlastní oprávnění a člověk sbírá
+role.
+
 ### Odkud se přepínač bere
 
 Není v layoutu shellu a tenhle modul do toho souboru nikdy nesahá. Registruje

@@ -266,6 +266,33 @@ team creates none. The roles select on the user form offers the same roles.
 Somebody who works across every team sees and changes every role — except the
 two described in [Users](users.md#two-roles-these-screens-never-hand-out-casually).
 
+### Building access from permission bundles
+
+An account holds **any number of roles**, and its permissions are their union.
+That is the way to compose access: make small roles that each carry one bundle
+of permissions, and give a person as many as their work needs. Global roles suit
+bundles best — defined once, usable in every team, and assigned per team:
+
+```php
+use Spatie\Permission\Models\Role;
+
+// Defined once, globally (no team).
+Role::create(['name' => 'bundle-invoices-read'])->givePermissionTo('invoices.view');
+Role::create(['name' => 'bundle-invoices-write'])->givePermissionTo(['invoices.view', 'invoices.create']);
+Role::create(['name' => 'bundle-reports'])->givePermissionTo('reports.view');
+```
+
+```bash
+# Given per team — Olga reads invoices and reports in team 3, and nothing more there.
+php artisan wire:assign-role olga@example.com --role=bundle-invoices-read --role=bundle-reports --team=3
+```
+
+The roles select on the user form takes several at once, and the rule against
+escalation reads the union too: a team's manager who holds `invoices.view`
+through one bundle and `reports.view` through another may give a bundle that
+carries both. A bundle is never nested inside another role — each role carries
+its own permissions, and a person collects roles.
+
 ### Where the switcher comes from
 
 It is not in the shell's layout, and this module never edits that file. It
