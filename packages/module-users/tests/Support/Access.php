@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireModuleUsers\Tests\Support;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -28,6 +29,29 @@ final class Access
     public static function grantEveryAbility(): void
     {
         Gate::before(static fn (?Authenticatable $user): bool => true);
+    }
+
+    /**
+     * Sign in somebody who may hand out every role and permission.
+     *
+     * A super-admin as `RoleGrants` recognises one — `hasGlobalRole()` answering
+     * yes — without the tables a real account needs. For the tests about a form
+     * or a page, which are not tests about escalation and would otherwise find
+     * every option narrowed to what nobody signed in holds.
+     */
+    public static function actAsSuperAdmin(): void
+    {
+        // An authenticatable, authorisable model that is never saved: the Gate
+        // callbacks the permission package registers type their user as one.
+        $user = new class extends User
+        {
+            public function hasGlobalRole(mixed $role): bool
+            {
+                return true;
+            }
+        };
+
+        auth()->setUser($user->forceFill(['id' => 0]));
     }
 
     /**

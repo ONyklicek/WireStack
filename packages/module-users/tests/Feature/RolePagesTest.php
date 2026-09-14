@@ -11,6 +11,7 @@ use NyonCode\WireModuleUsers\Pages\CreateRole;
 use NyonCode\WireModuleUsers\Pages\EditRole;
 use NyonCode\WireModuleUsers\Pages\ListRoles;
 use NyonCode\WireModuleUsers\Pages\ViewRole;
+use NyonCode\WireModuleUsers\Tests\Support\Access;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -23,6 +24,10 @@ use Spatie\Permission\Models\Role;
  */
 
 beforeEach(function () {
+    // Somebody who may hand out every permission: these tests are about the
+    // form, and escalation has its own (TeamScopedRolesTest, RoleGrantsTest).
+    Access::actAsSuperAdmin();
+
     Schema::create('roles', function (Blueprint $table) {
         $table->id();
         $table->string('name');

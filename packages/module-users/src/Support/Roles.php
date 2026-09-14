@@ -239,19 +239,19 @@ final class Roles
         /** @var class-string<Model> $model */
         $model = self::roleModel();
 
-        // Never the super-admin. It can do everything everywhere, so it is given
-        // on purpose from the command line, globally — not picked from a select
-        // beside "editor", where with teams on it would be a role of one team
-        // that bypasses nothing.
-        // And only the roles this person can see: a team's manager is offered the
-        // global roles and their own team's, never another team's.
-        // The administrator role only to a super-admin, who alone may change it:
-        // anybody else handing it out, even inside one team, hands out the right
-        // to hand out everything else.
-        return Teams::scopeRoles($model::query())
-            ->when(self::superAdmin(), static fn ($q, string $role) => $q->where('name', '!=', $role))
-            ->when(self::admin() !== null && ! self::isSuperAdmin(auth()->user()), static fn ($q) => $q->where('name', '!=', self::admin()))
-            ->orderBy('name')
+        // Only the roles this person can see — a team's manager is offered the
+        // global roles and their own team's — and of those, only the ones they
+        // may hand out (RoleGrants): never the super-admin, the administrator
+        // role only to a super-admin, and no role carrying a permission the
+        // person does not hold.
+        $query = Teams::scopeRoles($model::query())->orderBy('name');
+
+        if (method_exists(new $model, 'permissions')) {
+            $query->with('permissions');
+        }
+
+        return $query->get()
+            ->filter(static fn (Model $role): bool => RoleGrants::mayGrantRole($role))
             ->pluck('name', 'name')
             ->all();
     }
@@ -270,7 +270,11 @@ final class Roles
         /** @var class-string<Model> $model */
         $model = self::permissionModel();
 
-        return $model::query()->orderBy('name')->pluck('name', 'name')->all();
+        // Only what this person may put into a role: what they hold themselves.
+        return array_filter(
+            $model::query()->orderBy('name')->pluck('name', 'name')->all(),
+            static fn (string $name): bool => RoleGrants::mayGrantPermission($name),
+        );
     }
 
     /**

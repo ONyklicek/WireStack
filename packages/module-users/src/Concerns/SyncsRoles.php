@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireModuleUsers\Support\Permissions;
+use NyonCode\WireModuleUsers\Support\RoleGrants;
 use NyonCode\WireModuleUsers\Support\Roles;
 
 /**
@@ -24,12 +25,13 @@ use NyonCode\WireModuleUsers\Support\Roles;
  * **This used to trust the select.** The docblock said "Nothing here decides who
  * may edit roles; that is the page's policy, through `Gate`" — and the page had
  * no policy, so nothing decided it at all. The names arrive as raw component
- * state from the browser, `Roles::options()` offers every role there is, and the
+ * state from the browser, the select offered every role there was, and the
  * write went through unread: anybody who reached the edit form could name the
  * super-admin role on their own account and become one.
  *
  * The route is guarded now ({@see Permissions}), and this is the second lock
- * rather than the same one twice. A pivot write that grants authority is worth
+ * rather than the same one twice — and the third is {@see RoleGrants}, which
+ * narrows the write to the roles the person may hand out at all. A pivot write that grants authority is worth
  * checking where it happens, because the ways to reach a form are many and they
  * are not all routes — a bulk action, a wizard step, an application's own page
  * composing this trait. Defence in depth, at the one line that hands out power.
@@ -61,19 +63,15 @@ trait SyncsRoles
         $selected = $this->data['roles'] ?? [];
         $selected = is_array($selected) ? $selected : [];
 
-        // The super-admin is not this form's to give or to take. It is not
-        // offered, so a forged request naming it is ignored; and where the
-        // account already has it as a plain role (no teams), the sync keeps
-        // it rather than stripping it from somebody who edited a name.
-        $superAdmin = Roles::superAdmin();
-
-        if ($superAdmin !== null) {
-            $selected = array_values(array_filter($selected, static fn (mixed $role): bool => $role !== $superAdmin));
-
-            if (method_exists($record, 'getRoleNames') && $record->getRoleNames()->contains($superAdmin)) {
-                $selected[] = $superAdmin;
-            }
-        }
+        // Only the change this person may make (RoleGrants): a role they may not
+        // hand out — the super-admin, the administrator role, one carrying a
+        // permission they lack — is kept where the account has it and ignored
+        // where a forged request adds it. Editing somebody's name never strips
+        // a role the form does not offer.
+        $selected = RoleGrants::clampRoles(
+            method_exists($record, 'getRoleNames') ? $record->getRoleNames()->all() : [],
+            $selected,
+        );
 
         // Refuse the whole write rather than silently syncing the part that
         // was allowed: a form that says "these are the roles" and saves a

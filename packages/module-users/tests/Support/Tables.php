@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Tests\Support;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\PermissionServiceProvider;
@@ -88,7 +89,7 @@ final class Tables
         // for the whole process. A test without teams made the roles table with
         // no team column, and would leave `team_id` silently dropped from every
         // Role created after this.
-        (new \ReflectionProperty(\Illuminate\Database\Eloquent\Model::class, 'guardableColumns'))->setValue(null, []);
+        (new \ReflectionProperty(Model::class, 'guardableColumns'))->setValue(null, []);
 
         self::users();
 

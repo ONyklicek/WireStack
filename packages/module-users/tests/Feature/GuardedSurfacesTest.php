@@ -126,7 +126,9 @@ it('treats an empty ability as none rather than as one nobody can hold', functio
 /* ------------------------------------------------- S2: escalation, not routes */
 
 it('will not let somebody grant a role they may not grant', function () {
-    Role::query()->create(['name' => 'admin', 'guard_name' => 'web']);
+    // A role that carries nothing, so RoleGrants has no objection to it — what
+    // refuses this write is the second lock, the ability to change roles at all.
+    Role::query()->create(['name' => 'reviewer', 'guard_name' => 'web']);
 
     $me = User::query()->create([
         'name' => 'Amelia', 'email' => 'a@example.com', 'password' => Hash::make('x'),
@@ -137,7 +139,7 @@ it('will not let somebody grant a role they may not grant', function () {
     // No ability granted: this is the low-privileged account that used to be
     // able to reach the form and name any role in it.
     Livewire::test(EditUser::class, ['record' => $me->getKey()])
-        ->set('data.roles', ['admin'])
+        ->set('data.roles', ['reviewer'])
         ->call('save');
 
     expect($me->fresh()->roles->pluck('name')->all())->toBe([]);

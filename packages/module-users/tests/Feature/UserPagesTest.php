@@ -39,6 +39,7 @@ beforeEach(function () {
     // and the list, so they run as somebody who is allowed; the guard has its
     // own tests, which deliberately do not do this.
     Access::grantEveryAbility();
+    Access::actAsSuperAdmin();
 
     Schema::create('users', function (Blueprint $table) {
         $table->id();
@@ -168,6 +169,10 @@ it('never offers the super-admin in the roles select, nor the administrator role
     // the command line, never picked beside "editor". The administrator role
     // hands out the others, so only a super-admin picks it for somebody.
     Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
+
+    expect(Roles::options())->toBe(['admin' => 'admin', 'editor' => 'editor']);
+
+    auth()->guard()->forgetUser();
 
     expect(Roles::options())->toBe(['editor' => 'editor']);
 });
@@ -335,6 +340,8 @@ it('edits the signed-in user and nobody else', function () {
 });
 
 it('refuses to be a profile page for nobody', function () {
+    auth()->guard()->forgetUser();
+
     // Asked of the page rather than of a render, because a render wraps whatever
     // it catches in a ViewException and the guarantee being asserted is this
     // method's. The route should sit behind `auth`; if it does not, this is the

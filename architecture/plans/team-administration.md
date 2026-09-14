@@ -10,8 +10,9 @@ Stav: **odsouhlaseno 2026-09-14** (rozhodnutí v §7). Hotové kroky §6: **0**
 omezená na tým: seznam, detail, úprava, akce řádků; nový účet správce týmu se
 přidá do týmu) a **2** (obrazovka rolí omezená na tým — globální role jen ke
 čtení, role týmu ke změně; role super-admin se v UI nemění nikdy, role
-`admin` jen super-adminem; nová role správce týmu patří jeho týmu). Zbytek zatím
-není implementovaný.
+`admin` jen super-adminem; nová role správce týmu patří jeho týmu) a **3**
+(`Support\RoleGrants`: nikdo nerozdá víc, než sám má — formuláře nabízejí jen
+to, a uložení se zúží, neodmítne). Zbytek zatím není implementovaný.
 Hotové a pod nimi dostupné:
 
 - permission-extended 1.1 (větev `global-roles`): `assignGlobalRole()`,

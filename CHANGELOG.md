@@ -108,6 +108,14 @@ All notable changes to the Wire ecosystem will be documented in this file.
   (`wire-module-users.admin_role`, `admin`) only by a super-admin — who alone is offered it in the
   user form's roles select.
 
+- **Nobody hands out more than they hold.** A team's manager could tick any permission into a role of
+  their team, give it to themselves, and hold what nobody gave them; the role form did not check the
+  permissions at all. `Support\RoleGrants` is the one owner of that rule: the role form offers only
+  the permissions its editor holds, the roles select only the roles whose every permission they hold,
+  and both saves are narrowed to that change — what the editor may not change is kept as it was, and
+  a forged addition is not written. It also carries the super-admin and administrator-role rules the
+  role sync used to spell out itself.
+
 - **`SetupConsole::select()`**, the plural of `choose()` — "which of these" — returning its default
   unattended. **`Foundation\Setup\ConfigFile`** for the one config value with no `env()` behind it:
   it rewrites a single-line `'key' => value,` that occurs exactly once and returns `false` for

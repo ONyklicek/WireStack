@@ -245,6 +245,18 @@ route — hromadná akce, krok průvodce, vlastní stránka aplikace skládajíc
 uložení, které je nechává být, ne — takže oprava překlepu ve jméně nikdy nikomu
 role nesebere.
 
+### Nic víc, než sami máte
+
+Pod oběma formuláři je třetí zámek: nikdo nerozdá víc, než sám má. Formulář role
+nabídne jen oprávnění, která upravující má — z role aktuálního týmu, z globální
+role nebo přímo — a výběr rolí jen role, jejichž všechna oprávnění upravující
+drží. Uložení se zúží, ne odmítne: oprávnění, které upravující nemá, se do role
+nepřidá ani z ní neodebere, a role, kterou dát nesmí, se nedá ani nesebere — takže
+podvržený požadavek nic nepřidá a úprava role nikdy nesmaže, co do ní dal někdo
+nad vámi. Wildcard je jméno jako každé jiné: `invoices.*` smí dát ten, kdo drží
+`invoices.*`. Super-admin smí rozdat všechno kromě super-admina. Příkazová řádka
+tomuto pravidlu nepodléhá.
+
 ### Dvě role, které tyto obrazovky nerozdávají jen tak
 
 **Super-admin** může všechno, ve všech týmech. Výběr rolí ho nikdy nenabídne,

@@ -248,6 +248,19 @@ page composing `SyncsRoles`. A save that *changes* the roles requires the
 `users.update` ability; a save that leaves them as they were does not, so fixing
 a typo in somebody's name never strips their roles.
 
+### No More Than You Hold
+
+A third lock sits under both forms: nobody hands out more than they hold. The
+role form offers only the permissions its editor holds — through a role of the
+current team, a global role, or directly — and the roles select offers only the
+roles whose every permission the editor holds. A save is narrowed rather than
+refused: a permission the editor does not hold is neither added to a role nor
+taken from it, and a role they may not give is neither given nor taken away, so
+a forged request adds nothing and editing a role never strips what somebody
+above you put there. A wildcard is a name like any other: holding `invoices.*`
+is what lets you give `invoices.*`. A super-admin may hand out everything except
+the super-admin. The command line is not held to this.
+
 ### Two Roles These Screens Never Hand Out Casually
 
 **The super-admin** can do everything, in every team. It is never offered in the

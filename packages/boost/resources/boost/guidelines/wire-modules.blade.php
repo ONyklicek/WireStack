@@ -58,3 +58,7 @@ palette find the area without being told.
   role gets its team from `Teams::placeNewRole()`, and whether a role may be edited or deleted is
   `Roles::mayChange()` — never the super-admin role, the admin role (`wire-module-users.admin_role`)
   only for a super-admin.
+- **Nobody hands out more than they hold: `Support\RoleGrants`.** Any screen or action that writes a
+  role's permissions or an account's roles offers `RoleGrants::mayGrantPermission()` /
+  `mayGrantRole()` and writes `clampPermissions()` / `clampRoles()` — narrowing, not refusing, so
+  what the actor may not change stays as it was. Never a local "is this allowed" beside it.
