@@ -163,12 +163,13 @@ it('seeds the roles a user already has, and syncs what changed', function () {
     expect(User::first()->roles->pluck('name')->all())->toBe(['admin']);
 });
 
-it('never offers the super-admin in the roles select', function () {
-    // It can do everything, in every team: given on purpose from the command
-    // line, never picked beside "editor".
+it('never offers the super-admin in the roles select, nor the administrator role to anybody else', function () {
+    // The super-admin can do everything, in every team: given on purpose from
+    // the command line, never picked beside "editor". The administrator role
+    // hands out the others, so only a super-admin picks it for somebody.
     Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
 
-    expect(Roles::options())->toBe(['admin' => 'admin', 'editor' => 'editor']);
+    expect(Roles::options())->toBe(['editor' => 'editor']);
 });
 
 it('ignores a super-admin named in a forged save', function () {

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Pages;
 
-use NyonCode\WireModuleUsers\Concerns\ResolvesTeamMember;
+use Illuminate\Database\Eloquent\Builder;
+use NyonCode\WireModuleUsers\Concerns\ResolvesScopedRecord;
 use NyonCode\WireModuleUsers\Resources\UserResource;
+use NyonCode\WireModuleUsers\Support\Teams;
 use NyonCode\WirePanels\Resources\Concerns\InteractsWithRecordTitle;
 use NyonCode\WirePanels\Resources\Pages\ViewPage;
 
@@ -13,7 +15,7 @@ use NyonCode\WirePanels\Resources\Pages\ViewPage;
 class ViewUser extends ViewPage
 {
     use InteractsWithRecordTitle;
-    use ResolvesTeamMember;
+    use ResolvesScopedRecord;
 
     protected static ?string $resource = UserResource::class;
 
@@ -21,5 +23,10 @@ class ViewUser extends ViewPage
     protected function recordTitleAttribute(): string
     {
         return UserResource::field('name');
+    }
+
+    protected function scopeRecordQuery(Builder $query): Builder
+    {
+        return Teams::scopeMembers($query);
     }
 }

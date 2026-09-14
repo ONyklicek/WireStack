@@ -106,6 +106,7 @@ difference.
 ],
 
 'roles' => 'auto',        // 'auto' looks; true and false answer for you [tl! focus]
+'admin_role' => 'admin',  // the global administrator role only a super-admin may change; null for none
 
 'avatar' => [                                    // [tl! focus:start]
     'enabled' => 'auto',   // 'auto' looks for the column below
@@ -246,6 +247,21 @@ not all of them are routes — a bulk action, a wizard step, an application's ow
 page composing `SyncsRoles`. A save that *changes* the roles requires the
 `users.update` ability; a save that leaves them as they were does not, so fixing
 a typo in somebody's name never strips their roles.
+
+### Two Roles These Screens Never Hand Out Casually
+
+**The super-admin** can do everything, in every team. It is never offered in the
+roles select, never removed by saving a user, and never edited or deleted on the
+role screens — by anybody, a super-admin included: it carries no permissions to
+edit, and renaming it is how the permission gate stops recognising every
+super-admin at once. It is given from the command line
+(`php artisan wire:assign-role <email> --super-admin`).
+
+**The administrator role** (`admin_role`, `admin` by default) is an ordinary
+role with permissions, held globally. It is the role that hands out the others,
+so only a super-admin may change it on the role screens or pick it for somebody
+in the roles select — an administrator editing it would grant themselves
+whatever they added.
 
 ### A Changed Address Stops Being Verified
 

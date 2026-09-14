@@ -255,6 +255,17 @@ ability from a role of one team manages that team only. An account created by a
 team's manager joins that team; one created by somebody who works across every
 team joins none, because they have not said which.
 
+### Who sees which roles
+
+The roles screen follows the same line. A team's manager sees the **global roles**
+— shared templates, to read and not to change — and **their own team's roles**,
+to change; another team's roles are not in the list, not by URL (404), and not to
+a forged row action. A role a team's manager creates belongs to their team; one
+created by somebody who works across every team is global, and a manager in no
+team creates none. The roles select on the user form offers the same roles.
+Somebody who works across every team sees and changes every role — except the
+two described in [Users](users.md#two-roles-these-screens-never-hand-out-casually).
+
 ### Where the switcher comes from
 
 It is not in the shell's layout, and this module never edits that file. It

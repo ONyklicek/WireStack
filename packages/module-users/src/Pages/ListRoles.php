@@ -10,6 +10,7 @@ use NyonCode\WireCore\Actions\EditAction;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Actions\ViewAction;
 use NyonCode\WireModuleUsers\Resources\RoleResource;
+use NyonCode\WireModuleUsers\Support\Roles;
 use NyonCode\WirePanels\Resources\Pages\ListPage;
 use NyonCode\WireTable\Table;
 
@@ -54,13 +55,19 @@ class ListRoles extends ListPage
                     ->permission($this->pagePermission('view'))
                     ->visible(fn (Model $record): bool => $this->pageUrl('view', $record) !== null),
 
+                // Edit and Delete only on a role this person may change: never the
+                // super-admin, the administrator role only for a super-admin, and
+                // a global role only for somebody who works across every team.
+                // Hidden is also refused — an action that is not visible does not
+                // execute, whatever key the browser sends.
                 EditAction::make()
                     ->url(fn (Model $record): ?string => $this->pageUrl('edit', $record))
                     ->permission($this->pagePermission('edit'))
-                    ->visible(fn (Model $record): bool => $this->pageUrl('edit', $record) !== null),
+                    ->visible(fn (Model $record): bool => $this->pageUrl('edit', $record) !== null && Roles::mayChange($record)),
 
                 DeleteAction::make()
                     ->permission($this->pagePermission('edit'))
+                    ->visible(fn (Model $record): bool => Roles::mayChange($record))
                     ->successNotification(__('wire-module-users::messages.role_deleted'))
                     ->action(fn (Model $record) => $record->delete()),
             ]);

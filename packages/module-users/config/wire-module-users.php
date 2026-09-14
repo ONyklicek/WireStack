@@ -55,6 +55,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | The administrator role
+    |--------------------------------------------------------------------------
+    |
+    | The role of an administrator across the whole application: ordinary
+    | permissions, assigned globally so they count in every team. Unlike the
+    | super-admin (`permission-extended.super_admin_role`) it bypasses nothing —
+    | but it is the role that hands out the others, so only a super-admin may
+    | change it on the role screens. Null when the application has no such role.
+    |
+    */
+    'admin_role' => env('WIRE_USERS_ADMIN_ROLE', 'admin'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Re-verify A Changed Address
     |--------------------------------------------------------------------------
     |

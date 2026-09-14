@@ -133,6 +133,63 @@ final class Roles
     }
 
     /**
+     * The administrator role — ordinary permissions, held globally.
+     *
+     * Null where the application has none (`wire-module-users.admin_role`).
+     */
+    public static function admin(): ?string
+    {
+        $role = config('wire-module-users.admin_role', 'admin');
+
+        return is_string($role) && $role !== '' ? $role : null;
+    }
+
+    /**
+     * Whether this person is a super-admin — globally, the only way it counts.
+     */
+    public static function isSuperAdmin(mixed $actor): bool
+    {
+        $role = self::superAdmin();
+
+        return $role !== null
+            && is_object($actor)
+            && method_exists($actor, 'hasGlobalRole')
+            && $actor->hasGlobalRole($role);
+    }
+
+    /**
+     * Whether this person may change or delete this role on the role screens.
+     *
+     * - The super-admin role — never. It carries no permissions to edit, and
+     *   renaming it is how the permission gate stops recognising every
+     *   super-admin at once.
+     * - The global administrator role — only a super-admin. It is the role that
+     *   hands out the others; an administrator editing it grants themselves
+     *   whatever they add.
+     * - Any other global role, with teams — only somebody who works across
+     *   every team. For a team's manager a global role is a template to read.
+     * - A role of a team — whoever may see it, which the list has already
+     *   narrowed to the current team.
+     */
+    public static function mayChange(Model $role, mixed $actor = null): bool
+    {
+        $actor ??= auth()->user();
+        $name = $role->getAttribute('name');
+        $global = $role->getAttribute(Teams::teamColumn()) === null;
+
+        if ($name === self::superAdmin()) {
+            return false;
+        }
+
+        if ($global && $name === self::admin()) {
+            return self::isSuperAdmin($actor);
+        }
+
+        return ! ($global && Teams::enabled())
+            || Teams::seesEveryTeam(Permissions::for('roles', 'update'), $actor);
+    }
+
+    /**
      * Whether the permission layer's installer is there to run.
      *
      * The command being registered rather than the trait autoloading: a package
@@ -186,8 +243,14 @@ final class Roles
         // on purpose from the command line, globally — not picked from a select
         // beside "editor", where with teams on it would be a role of one team
         // that bypasses nothing.
-        return $model::query()
+        // And only the roles this person can see: a team's manager is offered the
+        // global roles and their own team's, never another team's.
+        // The administrator role only to a super-admin, who alone may change it:
+        // anybody else handing it out, even inside one team, hands out the right
+        // to hand out everything else.
+        return Teams::scopeRoles($model::query())
             ->when(self::superAdmin(), static fn ($q, string $role) => $q->where('name', '!=', $role))
+            ->when(self::admin() !== null && ! self::isSuperAdmin(auth()->user()), static fn ($q) => $q->where('name', '!=', self::admin()))
             ->orderBy('name')
             ->pluck('name', 'name')
             ->all();

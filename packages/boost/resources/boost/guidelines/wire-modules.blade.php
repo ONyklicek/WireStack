@@ -51,6 +51,10 @@ palette find the area without being told.
   rather than stripping it. Ask `$user->hasGlobalRole(Roles::superAdmin())`, never `hasRole()`.
 - **With teams, a screen over people is scoped to the current team** through `Teams::scopeMembers()` —
   on the query (`modifyQueryUsing`), never a filter, so row actions resolve records through the same
-  scope — and a record page finds its record the same way (`Concerns\ResolvesTeamMember`, 404 outside).
+  scope — and a record page finds its record the same way (`Concerns\ResolvesScopedRecord`, 404 outside).
   Whether somebody works across every team is `Teams::seesEveryTeam($ability)`: a super-admin, or the
   ability held through a *global* role (`hasGlobalPermission()`), never the same ability from a team role.
+  Roles follow the same line through `Teams::scopeRoles()` (global roles + the current team's), a new
+  role gets its team from `Teams::placeNewRole()`, and whether a role may be edited or deleted is
+  `Roles::mayChange()` — never the super-admin role, the admin role (`wire-module-users.admin_role`)
+  only for a super-admin.

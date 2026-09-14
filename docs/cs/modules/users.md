@@ -104,6 +104,7 @@ současné heslo nemá. V tom je celý rozdíl.
 ],
 
 'roles' => 'auto',        // 'auto' se podívá, true a false odpoví za vás [tl! focus]
+'admin_role' => 'admin',  // globální role administrátora, kterou smí měnit jen super-admin; null pro žádnou
 
 'avatar' => [                                    // [tl! focus:start]
     'enabled' => 'auto',   // 'auto' hledá sloupec níž
@@ -243,6 +244,19 @@ route — hromadná akce, krok průvodce, vlastní stránka aplikace skládajíc
 `SyncsRoles`. Uložení, které role **mění**, vyžaduje oprávnění `users.update`;
 uložení, které je nechává být, ne — takže oprava překlepu ve jméně nikdy nikomu
 role nesebere.
+
+### Dvě role, které tyto obrazovky nerozdávají jen tak
+
+**Super-admin** může všechno, ve všech týmech. Výběr rolí ho nikdy nenabídne,
+uložení uživatele ho nikdy neodebere a na obrazovkách rolí ho nikdo neupraví ani
+nesmaže — ani super-admin: nemá žádná oprávnění k úpravě a jeho přejmenováním by
+brána oprávnění přestala poznávat všechny super-adminy naráz. Přiděluje se
+z příkazové řádky (`php artisan wire:assign-role <email> --super-admin`).
+
+**Role administrátora** (`admin_role`, výchozí `admin`) je obyčejná role
+s oprávněními, držená globálně. Je to role, která rozdává ty ostatní, takže ji na
+obrazovkách rolí smí měnit nebo ve výběru rolí někomu vybrat jen super-admin —
+administrátor, který by ji upravoval, by si přidělil cokoli, co do ní přidá.
 
 ### Změněná adresa přestane být ověřená
 

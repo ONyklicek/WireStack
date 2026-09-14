@@ -84,6 +84,12 @@ final class Tables
      */
     public static function teamsWithRoles(): void
     {
+        // Eloquent remembers which columns a model may mass-assign, per class and
+        // for the whole process. A test without teams made the roles table with
+        // no team column, and would leave `team_id` silently dropped from every
+        // Role created after this.
+        (new \ReflectionProperty(\Illuminate\Database\Eloquent\Model::class, 'guardableColumns'))->setValue(null, []);
+
         self::users();
 
         Schema::create('teams', function (Blueprint $table): void {

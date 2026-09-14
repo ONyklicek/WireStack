@@ -99,6 +99,15 @@ All notable changes to the Wire ecosystem will be documented in this file.
   `hasGlobalPermission()`) see every team. An account created by a team's manager joins that team
   (`Teams::admitToCurrentTeam()`). There is no switch to turn this off.
 
+- **The roles screen is scoped to the team, and two roles are guarded.** With teams, a team's
+  manager sees the global roles (read-only) and their own team's roles; another team's role is not in
+  the list, not by URL (404), not to a forged row action (`Teams::scopeRoles()`, shared by the role
+  pages through `Concerns\ResolvesScopedRecord`). A role a manager creates belongs to their team
+  (`Teams::placeNewRole()`). `Roles::mayChange()` decides Edit and Delete everywhere, teams or not:
+  the super-admin role is never changed on these screens, and the administrator role
+  (`wire-module-users.admin_role`, `admin`) only by a super-admin — who alone is offered it in the
+  user form's roles select.
+
 - **`SetupConsole::select()`**, the plural of `choose()` — "which of these" — returning its default
   unattended. **`Foundation\Setup\ConfigFile`** for the one config value with no `env()` behind it:
   it rewrites a single-line `'key' => value,` that occurs exactly once and returns `false` for

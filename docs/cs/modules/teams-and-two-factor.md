@@ -250,6 +250,17 @@ spravuje jen ten tým. Účet, který založí správce týmu, se do toho týmu 
 účet, který založí někdo, kdo pracuje napříč týmy, nepatří do žádného, protože
 neřekl, do kterého.
 
+### Kdo vidí které role
+
+Obrazovka rolí drží stejnou hranici. Správce týmu vidí **globální role** — sdílené
+šablony ke čtení, ne ke změně — a **role svého týmu** ke změně; role jiného týmu
+nejsou v seznamu, nejdou otevřít přes URL (404) ani podvrženou akcí na řádku.
+Roli, kterou správce týmu založí, patří jeho týmu; role, kterou založí někdo, kdo
+pracuje napříč týmy, je globální, a správce bez týmu nezaloží žádnou. Výběr rolí
+ve formuláři uživatele nabízí tytéž role. Kdo pracuje napříč týmy, vidí a mění
+všechny role — kromě dvou popsaných v
+[Uživatelích](users.md#dve-role-ktere-tyto-obrazovky-nerozdavaji-jen-tak).
+
 ### Odkud se přepínač bere
 
 Není v layoutu shellu a tenhle modul do toho souboru nikdy nesahá. Registruje

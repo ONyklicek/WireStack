@@ -214,17 +214,13 @@ final class Teams
         }
 
         $actor ??= Auth::user();
-        $superAdmin = Roles::superAdmin();
 
-        if (! is_object($actor)) {
-            return false;
-        }
-
-        if ($superAdmin !== null && method_exists($actor, 'hasGlobalRole') && $actor->hasGlobalRole($superAdmin)) {
+        if (Roles::isSuperAdmin($actor)) {
             return true;
         }
 
-        return $ability !== null
+        return is_object($actor)
+            && $ability !== null
             && method_exists($actor, 'hasGlobalPermission')
             && $actor->hasGlobalPermission($ability);
     }
@@ -252,6 +248,63 @@ final class Teams
         return $team === null
             ? $query->whereRaw('1 = 0')
             : $query->whereHas(self::relation(), static fn (Builder $teams) => $teams->whereKey($team));
+    }
+
+    /**
+     * Narrow a query over roles to the ones this person can see.
+     *
+     * The global roles, which are shared templates, and the current team's own
+     * — never another team's. Left alone for somebody who works across every
+     * team. The same rule Spatie uses to find a role by name, so what a team's
+     * manager is shown is exactly what they could assign.
+     *
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
+     * @return Builder<TModel>
+     */
+    public static function scopeRoles(Builder $query, mixed $actor = null): Builder
+    {
+        if (self::seesEveryTeam(Permissions::for('roles', 'viewAny'), $actor)) {
+            return $query;
+        }
+
+        $column = $query->getModel()->qualifyColumn(self::teamColumn());
+        $team = self::currentId($actor);
+
+        return $query->where(static fn (Builder $roles) => $team === null
+            ? $roles->whereNull($column)
+            : $roles->whereNull($column)->orWhere($column, $team));
+    }
+
+    /**
+     * The attributes of a role about to be created, placed in the right team.
+     *
+     * A team's manager makes a role of their team. Somebody who works across
+     * every team makes a global one. A manager in no team makes nothing — a
+     * global role from somebody who may not change global roles is the thing
+     * this refuses.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function placeNewRole(array $data, mixed $actor = null): array
+    {
+        if (self::seesEveryTeam(Permissions::for('roles', 'create'), $actor)) {
+            return $data;
+        }
+
+        $team = self::currentId($actor) ?? abort(403);
+
+        return [...$data, self::teamColumn() => $team];
+    }
+
+    /**
+     * The column the permission package puts a role's team in.
+     */
+    public static function teamColumn(): string
+    {
+        return (string) config('permission.column_names.team_foreign_key', 'team_id');
     }
 
     /**

@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Pages;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireForms\Forms\Form;
-use NyonCode\WireModuleUsers\Concerns\ResolvesTeamMember;
+use NyonCode\WireModuleUsers\Concerns\ResolvesScopedRecord;
 use NyonCode\WireModuleUsers\Concerns\SyncsRoles;
 use NyonCode\WireModuleUsers\Resources\UserResource;
 use NyonCode\WireModuleUsers\Support\Roles;
+use NyonCode\WireModuleUsers\Support\Teams;
 use NyonCode\WirePanels\Resources\Pages\EditPage;
 
 /**
@@ -21,7 +23,7 @@ use NyonCode\WirePanels\Resources\Pages\EditPage;
  */
 class EditUser extends EditPage
 {
-    use ResolvesTeamMember;
+    use ResolvesScopedRecord;
     use SyncsRoles;
 
     protected static ?string $resource = UserResource::class;
@@ -58,5 +60,10 @@ class EditUser extends EditPage
         }
 
         return $data;
+    }
+
+    protected function scopeRecordQuery(Builder $query): Builder
+    {
+        return Teams::scopeMembers($query);
     }
 }

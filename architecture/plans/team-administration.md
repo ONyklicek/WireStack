@@ -8,7 +8,10 @@ oprávnění.
 Stav: **odsouhlaseno 2026-09-14** (rozhodnutí v §7). Hotové kroky §6: **0**
 (permission-extended `hasGlobalPermission()`) a **1** (obrazovka uživatelů
 omezená na tým: seznam, detail, úprava, akce řádků; nový účet správce týmu se
-přidá do týmu). Zbytek zatím není implementovaný.
+přidá do týmu) a **2** (obrazovka rolí omezená na tým — globální role jen ke
+čtení, role týmu ke změně; role super-admin se v UI nemění nikdy, role
+`admin` jen super-adminem; nová role správce týmu patří jeho týmu). Zbytek zatím
+není implementovaný.
 Hotové a pod nimi dostupné:
 
 - permission-extended 1.1 (větev `global-roles`): `assignGlobalRole()`,
