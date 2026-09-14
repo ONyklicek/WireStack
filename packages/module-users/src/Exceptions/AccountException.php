@@ -31,11 +31,26 @@ final class AccountException extends RuntimeException implements WireException
      * which is a true statement about a database and no help at all to somebody
      * who has just installed an admin panel.
      */
-    public static function roleNeedsATeam(string $role): self
+    public static function roleNeedsATeam(string $role, string $email): self
     {
         return new self(
-            "roles here are scoped to a team and this account is in none — put it in one, then: php artisan wire:user --role={$role}"
+            // The command in backticks, and not last for that reason alone: Laravel's
+            // warning component ends a message with a full stop, and a copied
+            // `--role=super-admin.` names a role nobody has.
+            "roles here are scoped to a team and {$email} is in none — put it in one, then run `php artisan wire:user:role {$email} --role={$role}`"
         );
+    }
+
+    /**
+     * A team was named, and the account is not a member of it.
+     *
+     * Refused rather than written: the permission package would store the role,
+     * and it would be a role in a team the switcher never offers this person —
+     * granted, and unreachable.
+     */
+    public static function notInTeam(string $email, int|string $team): self
+    {
+        return new self("{$email} is not a member of team {$team} — add them to it first, or name one of theirs");
     }
 
     /**

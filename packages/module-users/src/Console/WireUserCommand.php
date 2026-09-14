@@ -6,13 +6,12 @@ namespace NyonCode\WireModuleUsers\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireModuleUsers\Console\Concerns\InteractsWithRoles;
 use NyonCode\WireModuleUsers\Install\CreateFirstAdministrator;
 use NyonCode\WireModuleUsers\Support\Accounts;
 use NyonCode\WireModuleUsers\Support\Roles;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Throwable;
-
-use function Laravel\Prompts\multiselect;
 
 /**
  * `php artisan wire:user` — an account, whenever one is wanted.
@@ -37,10 +36,14 @@ use function Laravel\Prompts\multiselect;
  *   php artisan wire:user
  *   php artisan wire:user --name=Jane --email=jane@example.com --password=… --admin
  *   php artisan wire:user --email=… --password=… --role=editor --role=support
+ *
+ * Roles for an account that already exists are {@see WireUserRoleCommand}.
  */
 #[AsCommand(name: 'wire:user')]
 class WireUserCommand extends Command
 {
+    use InteractsWithRoles;
+
     protected $signature = 'wire:user
         {--name= : The name to store}
         {--email= : The address they sign in with}
@@ -132,67 +135,26 @@ class WireUserCommand extends Command
      *
      * Silently nothing where the application has no roles: the module works
      * without `nyoncode/laravel-permission-extended`, and an account with no
-     * role there is complete rather than half-made.
-     *
-     * @param  Model  $user
-     * @param  bool  $existed  Whether anybody could already sign in before this ran.
-     */
-    protected function grant(Accounts $accounts, $user, bool $existed): void
-    {
-        if (! Roles::enabled()) {
-            return;
-        }
-
-        /** @var array<int, string> $roles */
-        $roles = array_values(array_filter((array) $this->option('role')));
-
-        if ($this->option('admin')) {
-            $roles[] = $accounts->superAdminRole();
-        }
-
-        if ($roles === [] && $this->input->isInteractive()) {
-            $roles = $this->choose($accounts, $existed);
-        }
-
-        foreach (array_unique($roles) as $role) {
-            try {
-                $accounts->assign($user, $role);
-                $this->components->twoColumnDetail('Role', "<fg=green>{$role}</>");
-            } catch (Throwable $e) {
-                // The account is made and usable; only the role is missing, and
-                // that is a screen away rather than a reason to call the whole
-                // command failed and leave somebody wondering.
-                $this->components->warn("Could not give it `{$role}`: ".$e->getMessage());
-            }
-        }
-    }
-
-    /**
-     * Offer the roles this application already has.
+     * role there is complete rather than half-made. A role that cannot be given
+     * leaves the command successful — the account is made and usable, and the
+     * role is `wire:user:role` away.
      *
      * Super-admin is pre-picked only for the first account, because that one is
      * somebody letting themselves in and every later one is an ordinary user
      * until said otherwise.
      *
-     * @return array<int, string>
+     * @param  bool  $existed  Whether anybody could already sign in before this ran.
      */
-    protected function choose(Accounts $accounts, bool $existed): array
+    protected function grant(Accounts $accounts, Model $user, bool $existed): void
     {
-        $superAdmin = $accounts->superAdminRole();
-        $available = $accounts->roles();
-
-        if (! in_array($superAdmin, $available, true)) {
-            $available[] = $superAdmin;
+        if (! Roles::enabled()) {
+            return;
         }
 
-        /** @var array<int, string> $picked */
-        $picked = multiselect(
-            label: 'Which roles should this account have?',
-            options: array_combine($available, $available),
-            default: $existed ? [] : [$superAdmin],
-            hint: 'Space picks one, enter confirms.',
+        $this->grantRoles(
+            $accounts,
+            $user,
+            $this->requestedRoles($accounts, $existed ? [] : [$accounts->superAdminRole()]),
         );
-
-        return $picked;
     }
 }

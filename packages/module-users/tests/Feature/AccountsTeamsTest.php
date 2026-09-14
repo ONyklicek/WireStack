@@ -113,3 +113,56 @@ it('says the same thing through the command, and keeps the account', function ()
 
     expect(TeamAdmin::where('email', 'nobody@example.com')->exists())->toBeTrue();
 });
+
+it('points at a command that gives the role to the account it could not give it to', function () {
+    // The advice used to be `wire:user --role=…`, which makes a new account and
+    // refuses this address. The account exists; the role is what is missing.
+    $user = TeamAdmin::query()->create(['name' => 'Nobody', 'email' => 'n@example.com', 'password' => Hash::make('secret')]);
+
+    expect(fn () => app(Accounts::class)->assign($user, 'super-admin'))
+        ->toThrow(AccountException::class, '`php artisan wire:user:role n@example.com --role=super-admin`');
+});
+
+it('gives the role in the team named, once the account is in it', function () {
+    $user = TeamAdmin::query()->create(['name' => 'Amelia', 'email' => 'a@example.com', 'password' => Hash::make('secret')]);
+    $first = Team::query()->create(['name' => 'Ops']);
+    $second = Team::query()->create(['name' => 'Billing']);
+    $user->teams()->attach([$first->getKey(), $second->getKey()]);
+
+    $this->artisan('wire:user:role', [
+        'email' => 'a@example.com',
+        '--admin' => true,
+        '--team' => (string) $second->getKey(),
+        '--no-interaction' => true,
+    ])->assertSuccessful();
+
+    expect(DB::table('model_has_roles')->value('team_id'))->toEqual($second->getKey());
+});
+
+it('refuses a team the account is not a member of', function () {
+    // The role would be stored, in a team the switcher never offers this person.
+    $user = TeamAdmin::query()->create(['name' => 'Amelia', 'email' => 'a@example.com', 'password' => Hash::make('secret')]);
+    $theirs = Team::query()->create(['name' => 'Ops']);
+    $other = Team::query()->create(['name' => 'Billing']);
+    $user->teams()->attach($theirs->getKey());
+
+    $this->artisan('wire:user:role', [
+        'email' => 'a@example.com',
+        '--admin' => true,
+        '--team' => (string) $other->getKey(),
+        '--no-interaction' => true,
+    ])->expectsOutputToContain('a@example.com is not a member of team '.$other->getKey())->assertFailed();
+
+    expect(DB::table('model_has_roles')->count())->toBe(0);
+});
+
+it('takes a team named by a key that is not a number as it is', function () {
+    $user = TeamAdmin::query()->create(['name' => 'Amelia', 'email' => 'a@example.com', 'password' => Hash::make('secret')]);
+
+    $this->artisan('wire:user:role', [
+        'email' => 'a@example.com',
+        '--admin' => true,
+        '--team' => 'ops-team',
+        '--no-interaction' => true,
+    ])->expectsOutputToContain('is not a member of team ops-team')->assertFailed();
+});

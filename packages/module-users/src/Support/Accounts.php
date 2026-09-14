@@ -115,6 +115,25 @@ final class Accounts
     }
 
     /**
+     * The account that signs in with this address, if there is one.
+     */
+    public function find(string $email): ?Model
+    {
+        /** @var class-string<Model> $model */
+        $model = $this->model();
+
+        return $model::query()->where($this->fields()['email'], $email)->first();
+    }
+
+    /**
+     * The address an account signs in with, as this application names the column.
+     */
+    public function emailOf(Model $user): string
+    {
+        return (string) $user->getAttribute($this->fields()['email']);
+    }
+
+    /**
      * Give the account the role that can reach everything.
      *
      * The name is the permission package's own
@@ -144,9 +163,11 @@ final class Accounts
     /**
      * Give the account a role, creating it when this application has not.
      *
+     * @param  int|string|null  $team  Where roles are scoped to teams, the one to give it in —
+     *                                 one the account belongs to. Null means the team it is in now.
      * @return string|null The role given, or null where this application has no roles.
      */
-    public function assign(Model $user, string $role): ?string
+    public function assign(Model $user, string $role, int|string|null $team = null): ?string
     {
         if (! Roles::enabled() || ! method_exists($user, 'assignRole')) {
             return null;
@@ -158,10 +179,10 @@ final class Accounts
         // package made NOT NULL, and what reaches the person is a constraint
         // violation where an explanation belongs.
         if (Teams::enabled()) {
-            $team = Teams::currentId($user);
-
             if ($team === null) {
-                throw AccountException::roleNeedsATeam($role);
+                $team = Teams::currentId($user) ?? throw AccountException::roleNeedsATeam($role, $this->emailOf($user));
+            } elseif (! array_key_exists($team, Teams::optionsFor($user))) {
+                throw AccountException::notInTeam($this->emailOf($user), $team);
             }
 
             Teams::apply($team);

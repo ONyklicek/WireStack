@@ -362,7 +362,7 @@ it('scopes the fresh process to the account\'s team, and refuses without one', f
     // No team: the same refusal the in-process path gives, and nothing run.
     cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'pw'], $said));
 
-    expect(implode("\n", $said))->toContain('scoped to a team and this account is in none');
+    expect(implode("\n", $said))->toContain('scoped to a team and boss@example.com is in none — put it in one, then run `php artisan wire:user:role boss@example.com --role=super-admin`');
     Process::assertNothingRan();
 
     // In one: the team goes with the command.

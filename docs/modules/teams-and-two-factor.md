@@ -215,6 +215,22 @@ than one team, the middleware scopes every permission read on every web request,
 and `Gate::allows()` starts answering per team without a single call site
 changing.
 
+### Giving somebody a role in a team
+
+A role here belongs to a team, so an account that is in no team cannot be given
+one — the permission package makes the team column on its pivot `NOT NULL`. The
+first administrator is exactly that account: `wire:install` makes it and prints
+the line below instead of a role. Put the account in a team through your own
+relation, then:
+
+```bash
+php artisan wire:user:role admin@example.com --admin            # in their current team
+php artisan wire:user:role admin@example.com --admin --team=3   # in this one
+```
+
+A team the account is not a member of is refused rather than written, because the
+role would be stored in a team the switcher never offers that person.
+
 ### Where the switcher comes from
 
 It is not in the shell's layout, and this module never edits that file. It

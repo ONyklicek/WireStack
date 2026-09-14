@@ -165,7 +165,7 @@ final readonly class CreateFirstAdministrator implements SetupStep
             $team = Teams::currentId($user);
 
             if ($team === null) {
-                throw AccountException::roleNeedsATeam($role);
+                throw AccountException::roleNeedsATeam($role, $this->accounts->emailOf($user));
             }
 
             $command[] = '--team-id='.$team;

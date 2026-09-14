@@ -211,6 +211,21 @@ jednoho týmu, middleware omezí každé čtení oprávnění v každém web req
 a `Gate::allows()` začne odpovídat po týmech, aniž by se změnilo jediné volací
 místo.
 
+### Jak někomu dát roli v týmu
+
+Role tu patří týmu, takže účtu, který v žádném týmu není, ji dát nejde — balíček
+oprávnění dělá sloupec týmu na své pivotní tabulce `NOT NULL`. Přesně takový účet
+je první administrátor: `wire:install` ho založí a místo role vypíše řádek níže.
+Přidejte účet do týmu přes vlastní relaci a pak:
+
+```bash
+php artisan wire:user:role admin@example.com --admin            # v jeho aktuálním týmu
+php artisan wire:user:role admin@example.com --admin --team=3   # v tomhle
+```
+
+Tým, jehož účet není členem, se odmítne, místo aby se zapsal, protože role by
+ležela v týmu, který tomu člověku přepínač nikdy nenabídne.
+
 ### Odkud se přepínač bere
 
 Není v layoutu shellu a tenhle modul do toho souboru nikdy nesahá. Registruje

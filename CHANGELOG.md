@@ -74,6 +74,15 @@ All notable changes to the Wire ecosystem will be documented in this file.
   own, and Spatie's migration reads the switch as it makes the tables. Tables already made without
   teams count as "no", so the question is not put to every later run.
 
+- **`php artisan wire:user:role` — roles for an account that already exists.** `wire:user` gives
+  roles only to the account it has just made, so an existing account had no way to get one — and
+  the advice printed for an administrator in no team pointed at `wire:user --role=…`, which makes a
+  new account and refuses the address that has one. The new command takes the address, `--admin`,
+  a repeatable `--role` and `--team`, never touches the name or password, and the refusal now prints
+  it with the address filled in. `Accounts::assign()` takes the team; one the account is not a member
+  of is refused, because the role would sit where the switcher never offers it. The role prompt and
+  the per-role report are shared by both commands through `Console\Concerns\InteractsWithRoles`.
+
 - **`SetupConsole::select()`**, the plural of `choose()` — "which of these" — returning its default
   unattended. **`Foundation\Setup\ConfigFile`** for the one config value with no `env()` behind it:
   it rewrites a single-line `'key' => value,` that occurs exactly once and returns `false` for

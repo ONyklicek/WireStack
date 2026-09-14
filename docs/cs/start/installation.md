@@ -177,7 +177,7 @@ Druhá půlka `wire:install` je proto prochází, jeden po druhém:
 | [Roles & permissions](../modules/teams-and-two-factor.md) | Spustí `permission-extended:install`, který publikuje config a migraci oprávnění, spustí ji a přidá `HasRoles` na váš model uživatele. Do té doby obrazovky rolí prostě chybí. Potřebuje `nyoncode/laravel-permission-extended` a řekne, když chybí |
 | Database tables | Spustí čekající migrace. Tři moduly si o to řekly ve vlastních instalátorech a ani jeden s tím nemohl nic udělat |
 | [Routes](../panels/modules.md) | Zapíše do `routes/web.php` skupinu s `Route::wireResources()`, pod prefixem a middlewarem, na které se zeptá. Bez toho je každá obrazovka 404 |
-| [First administrator](../modules/users.md) | Založí účet, kterým se přihlásíte — a super-admin roli tam, kde aplikace role má. Nic v celém stacku ho předtím nevytvořilo; odpovědí byl `php artisan tinker`. Vždycky jen ten *první*; každý další účet je `php artisan wire:user`. Když se role nastavily v tomtéž běhu, přiřadí se role z nového PHP procesu, protože tento načetl model uživatele ještě před úpravou. Když jsou role vázané na týmy, účet bez týmu roli nedostane a krok řekne, co dál |
+| [First administrator](../modules/users.md) | Založí účet, kterým se přihlásíte — a super-admin roli tam, kde aplikace role má. Nic v celém stacku ho předtím nevytvořilo; odpovědí byl `php artisan tinker`. Vždycky jen ten *první*; každý další účet je `php artisan wire:user`. Když se role nastavily v tomtéž běhu, přiřadí se role z nového PHP procesu, protože tento načetl model uživatele ještě před úpravou. Když jsou role vázané na týmy, účet bez týmu roli nedostane a krok vypíše řádek s `wire:user:role`, který ji přidá |
 | [Media links](../modules/media.md) | `storage:link`. Bez něj uploady fungují, náhledy se generují a každý obrázek je 404, které nikde nezahlásí chybu |
 | [Audit recording](../core/audit.md) | Zapne zaznamenávání, aby obrazovka auditu nebyla pohledem do prázdné tabulky |
 | [Stored notifications](../modules/notifications.md) | Přidá vedle toastu driver `database`, aby zvoneček měl co ukazovat |
@@ -229,6 +229,21 @@ zastaví, místo aby si to vymyslelo — vygenerované heslo v deploy logu je he
 v logu. Tam, kde aplikace role má, nabídne ty, které existují — se super-adminem
 předvybraným jen u prvního účtu, protože ten je někdo, kdo si otevírá dveře, a
 každý další je běžný uživatel, dokud se neřekne jinak.
+
+Účet, který už existuje, dostane role přes `wire:user:role`, který nikdy nesahá na
+jméno ani heslo:
+
+```bash
+php artisan wire:user:role jana@example.com --admin
+php artisan wire:user:role jana@example.com --role=editor --role=support
+php artisan wire:user:role jana@example.com --admin --team=3
+```
+
+Je to odpověď na ten jeden účet, který instalátor nedokončí. Když jsou role vázané
+na týmy, čerstvý administrátor nepatří do žádného týmu, takže krok účet založí,
+roli mu nedá a vypíše tenhle příkaz i s doplněnou adresou. Přidejte účet do týmu a
+pak ho spusťte. Bez `--team` jde role do aktuálního týmu účtu; tým, jehož členem
+není, se odmítne, protože role by ležela tam, kde ji přepínač nikdy nenabídne.
 
 ### Jak přidat vlastní krok
 
@@ -287,6 +302,7 @@ php artisan wire-sortable:install
 php artisan wire-admin:install                # navíc zapíše layout a řádek @source pro Tailwind
 php artisan wire-module-users:install         # …a jeden na každý nainstalovaný modul
 php artisan wire:user                         # další účet, kdykoli — instalátor zakládá jen ten první
+php artisan wire:user:role jana@example.com --admin  # role pro účet, který už existuje
 php artisan wire-boost:install --agent=claude # AI guidelines a vstup pro MCP
 ```
 
