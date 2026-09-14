@@ -372,7 +372,12 @@ The one-require entry point and the interactive installer:
   "is the package here" but "does the application work". The contract and the
   registry are `WireCore\Foundation\Setup`; the steps belong to the packages
   that know (the first administrator is wire-module-users', `storage:link` is
-  wire-module-media'), and the suite only collects, orders and asks
+  wire-module-media'), and the suite only collects, orders and asks. Each step
+  names its `package()`; a package offered and unticked in this run skips its
+  steps, anything never offered keeps them
+- `Install\ComponentGroup` — which question a catalogue part belongs to: the
+  stack is asked first, the modules only once `wire-admin` is chosen or already
+  set up, tooling is listed and never run
 - `Install\WireInstallCommand` — runs each installed package's **own** installer,
   and prints a `composer require` line for what is missing
 

@@ -98,6 +98,7 @@ class Catalogue
                 description: 'Login, password reset, verification and the two-factor challenge, over Fortify.',
                 marker: 'NyonCode\\WireModuleAuth\\WireModuleAuthServiceProvider',
                 command: 'wire-module-auth:install',
+                group: ComponentGroup::Module,
             ),
             new Component(
                 package: 'nyoncode/wire-module-users',
@@ -105,6 +106,7 @@ class Catalogue
                 description: 'User administration, with roles where the application has them.',
                 marker: 'NyonCode\\WireModuleUsers\\WireModuleUsersServiceProvider',
                 command: 'wire-module-users:install',
+                group: ComponentGroup::Module,
             ),
             new Component(
                 package: 'nyoncode/wire-module-settings',
@@ -112,6 +114,7 @@ class Catalogue
                 description: 'Typed application settings with a page to edit them.',
                 marker: 'NyonCode\\WireModuleSettings\\WireModuleSettingsServiceProvider',
                 command: 'wire-module-settings:install',
+                group: ComponentGroup::Module,
             ),
             new Component(
                 package: 'nyoncode/wire-module-audit',
@@ -119,6 +122,7 @@ class Catalogue
                 description: 'A screen for the trail wire-core already records.',
                 marker: 'NyonCode\\WireModuleAudit\\WireModuleAuditServiceProvider',
                 command: 'wire-module-audit:install',
+                group: ComponentGroup::Module,
             ),
             new Component(
                 package: 'nyoncode/wire-module-notifications',
@@ -126,6 +130,7 @@ class Catalogue
                 description: 'The history behind the notification bell.',
                 marker: 'NyonCode\\WireModuleNotifications\\WireModuleNotificationsServiceProvider',
                 command: 'wire-module-notifications:install',
+                group: ComponentGroup::Module,
             ),
             new Component(
                 package: 'nyoncode/wire-module-media',
@@ -133,6 +138,7 @@ class Catalogue
                 description: 'Uploads, a browsable list and previews.',
                 marker: 'NyonCode\\WireModuleMedia\\WireModuleMediaServiceProvider',
                 command: 'wire-module-media:install',
+                group: ComponentGroup::Module,
             ),
             // Listed, never run. `wire-boost:install` asks which AI agents to
             // configure, and which editors someone uses is not a question this
@@ -143,6 +149,7 @@ class Catalogue
                 label: 'AI tooling',
                 description: 'Agent guidelines, skills and the MCP server — `wire-boost:install --agent=…` picks the agents.',
                 marker: 'NyonCode\\WireBoost\\WireBoostServiceProvider',
+                group: ComponentGroup::Tooling,
             ),
         ];
     }

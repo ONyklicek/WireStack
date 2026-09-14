@@ -53,6 +53,16 @@ function lpdConsole(array $answers = [], array &$said = [], bool $interactive = 
             return array_shift($this->answers) ?? (string) $default;
         }
 
+        /**
+         * @param  array<int|string, string>  $options
+         * @param  array<int, int|string>  $default
+         * @return array<int, int|string>
+         */
+        public function select(string $question, array $options, array $default = []): array
+        {
+            return $default;
+        }
+
         public function note(string $message): void
         {
             $this->said[] = $message;
@@ -132,4 +142,9 @@ it('fails rather than pretending, when the link cannot be made', function () {
 
     expect((new LinkPublicDisk(lpdArtisan(1)))->apply(lpdConsole([], $said)))->toBe(SetupOutcome::Failed)
         ->and(implode("\n", $said))->toContain('storage:link did not finish');
+});
+
+it('belongs to its own package, so unticking that package skips it', function () {
+    // What the first half of the installer was told, the second half obeys.
+    expect((new LinkPublicDisk(lpdArtisan()))->package())->toBe('nyoncode/wire-module-media');
 });

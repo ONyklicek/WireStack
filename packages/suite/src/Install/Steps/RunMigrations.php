@@ -97,10 +97,25 @@ final readonly class RunMigrations implements SetupStep
         return SetupOutcome::Applied;
     }
 
+    /**
+     * The suite's own, and deliberately not any one package's.
+     *
+     * Every package's migrations land in the same directory and run in the same
+     * pass, so this is the one step that cannot belong to a part somebody might
+     * untick. `nyoncode/wire-suite` is not in the catalogue, is never offered,
+     * and so is never declined — which is how a step says "always".
+     */
+    public function package(): string
+    {
+        return 'nyoncode/wire-suite';
+    }
+
     public function sort(): int
     {
-        // First of everything. A step that writes a row — the first
-        // administrator — has nowhere to write it until this has run.
+        // Before anything that writes a row — the first administrator has
+        // nowhere to write it until this has run — and after the steps that
+        // publish a migration or set a switch one reads (Fortify, roles,
+        // teams), which a `migrate` that has already run never comes back for.
         return 100;
     }
 

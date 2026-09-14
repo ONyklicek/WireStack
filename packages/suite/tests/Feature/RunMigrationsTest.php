@@ -49,6 +49,16 @@ function wiSilentConsole(): SetupConsole
             return (string) $default;
         }
 
+        /**
+         * @param  array<int|string, string>  $options
+         * @param  array<int, int|string>  $default
+         * @return array<int, int|string>
+         */
+        public function select(string $question, array $options, array $default = []): array
+        {
+            return $default;
+        }
+
         public function note(string $message): void {}
 
         public function warn(string $message): void {}
@@ -116,6 +126,16 @@ function wiSayingConsole(array &$said): SetupConsole
         public function choose(string $question, array $options, ?string $default = null): string
         {
             return (string) $default;
+        }
+
+        /**
+         * @param  array<int|string, string>  $options
+         * @param  array<int, int|string>  $default
+         * @return array<int, int|string>
+         */
+        public function select(string $question, array $options, array $default = []): array
+        {
+            return $default;
         }
 
         public function note(string $message): void
@@ -254,4 +274,9 @@ it('reports a migration that will not run, rather than dying on it', function ()
             ->and(implode("\n", $said))->toContain('already exists')
             ->and(implode("\n", $said))->toContain('Run php artisan migrate yourself');
     });
+});
+
+it('belongs to its own package, so unticking that package skips it', function () {
+    // What the first half of the installer was told, the second half obeys.
+    expect((new RunMigrations(app(DatabaseManager::class), app('migrator'), app(Kernel::class)))->package())->toBe('nyoncode/wire-suite');
 });

@@ -53,6 +53,16 @@ function bfConsole(array $answers = [], array &$said = [], bool $interactive = t
             return array_shift($this->answers) ?? (string) $default;
         }
 
+        /**
+         * @param  array<int|string, string>  $options
+         * @param  array<int, int|string>  $default
+         * @return array<int, int|string>
+         */
+        public function select(string $question, array $options, array $default = []): array
+        {
+            return $default;
+        }
+
         public function note(string $message): void
         {
             $this->said[] = $message;
@@ -205,4 +215,9 @@ it('fails when the build does not finish', function () {
 
     expect((new BuildFrontend)->apply(bfConsole([], $said)))->toBe(SetupOutcome::Failed)
         ->and(implode("\n", $said))->toContain('`npm run build` did not finish');
+});
+
+it('belongs to its own package, so unticking that package skips it', function () {
+    // What the first half of the installer was told, the second half obeys.
+    expect((new BuildFrontend)->package())->toBe('nyoncode/wire-admin');
 });

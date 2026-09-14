@@ -191,6 +191,19 @@ patří profilové stránce modulu uživatelů. Viz
 [Týmy a dvoufázové ověření](teams-and-two-factor.md). Tenhle balíček vlastní jen
 výzvu na cestě dovnitř.
 
+**`php artisan wire:install` ten seznam napíše za vás.** Jeho krok Fortify spustí
+`fortify:install` — config, `App\Providers\FortifyServiceProvider` a jeho řádek
+v `bootstrap/providers.php`, bez kterých žádná z těchto obrazovek nemá routu — a
+pak se zeptá, které z funkcí registrace, obnova hesla, ověření e-mailu,
+dvoufázové ověření a passkeys mít. Seznam přijde zaškrtnutý tak, jak ho má
+publikovaný config — ověření e-mailu vypnuté, zbytek zapnutý — takže enter nic
+nezmění; zaškrtnutí funkci odkomentuje a odškrtnutí zakomentuje, i s celým polem
+voleb. `updateProfileInformation()` ani `updatePasswords()` nikdy nenabídne: stojí
+na nich profilové karty modulu uživatelů. Upravuje jen tvary, které Fortify
+publikuje, volání na jednom řádku nebo pole voleb přes víc řádků; seznam, který
+jste už přepsali, nechá být, a běh s `--no-interaction` nic nezmění. Viz
+[Instalace Wire](../start/installation.md#nastaveni-aplikace).
+
 ## Jednorázové kódy
 
 Šestimístný kód, poslaný e-mailem, zadaný do stejných políček jako dvoufázová

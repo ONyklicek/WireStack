@@ -94,6 +94,11 @@ final class RegisterResourceRoutes implements SetupStep
         return SetupOutcome::Applied;
     }
 
+    public function package(): string
+    {
+        return 'nyoncode/wire-panels';
+    }
+
     public function sort(): int
     {
         // After the tables and before the first administrator: the account is

@@ -14,12 +14,14 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Modules\Module;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireModuleAuth\Actions\MailResetCode;
 use NyonCode\WireModuleAuth\Actions\RedirectIfCodeRequired;
 use NyonCode\WireModuleAuth\Contracts\OneTimeCodes;
 use NyonCode\WireModuleAuth\Forms\AuthForms;
 use NyonCode\WireModuleAuth\Http\Responses\RedirectToResetCodeScreen;
+use NyonCode\WireModuleAuth\Install\ConfigureFortify;
 use NyonCode\WireModuleAuth\Install\LayoutScaffold;
 use NyonCode\WireModuleAuth\Services\DatabaseOneTimeCodes;
 use NyonCode\WireModuleAuth\Support\Codes;
@@ -79,6 +81,16 @@ class WireModuleAuthServiceProvider extends PackageServiceProvider
                 // handle inside a container singleton is a queue worker's
                 // problem later.
                 $this->app->bind(OneTimeCodes::class, fn ($app) => new DatabaseOneTimeCodes($app->make('db')->connection()));
+
+                // In here rather than in a second lifecycle hook: the toolkit's
+                // hooks hold one closure each and assign rather than append, so
+                // a second call would drop the two bindings above without a word.
+                //
+                // The screens this package registers are routed by Fortify, and
+                // Fortify routes nothing until its config and provider are
+                // published — an installation that skips it has a sign-in page
+                // that 404s.
+                SetupRegistry::instance()->register(ConfigureFortify::class);
             })
             ->bootedPackage(function (): void {
                 Blade::component('wire-module-auth::screen', Screen::class);

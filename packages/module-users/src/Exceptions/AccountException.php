@@ -37,4 +37,16 @@ final class AccountException extends RuntimeException implements WireException
             "roles here are scoped to a team and this account is in none — put it in one, then: php artisan wire:user --role={$role}"
         );
     }
+
+    /**
+     * The fresh process that was to give the role did not finish.
+     *
+     * What it printed is the reason, because that process is Spatie's
+     * `permission:assign-role` and it already says what went wrong — a missing
+     * table, a model it could not find — in its own words.
+     */
+    public static function roleProcessFailed(string $output): self
+    {
+        return new self($output !== '' ? $output : 'permission:assign-role did not finish');
+    }
 }

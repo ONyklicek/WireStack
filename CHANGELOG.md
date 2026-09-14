@@ -47,6 +47,64 @@ All notable changes to the Wire ecosystem will be documented in this file.
   key=value and is the file the config already defers to; a published config is PHP, and editing it
   means a parser or a regular expression over somebody's source.
 
+- **`wire:install` is a wizard in numbered steps, and it asks twice.** The stack first; the
+  ready-made areas second, and only when the admin shell is part of the answer — ticked now or set
+  up by an earlier run — because a module renders inside the panel and offering one without it is
+  offering a screen with nowhere to appear. Each stage prints `Step N — …`, counted as the run goes
+  rather than promised up front, since `--all` asks nothing and `--dry-run` installs nothing. The
+  catalogue says which question a part belongs to through `Install\ComponentGroup` (`Stack`,
+  `Module`, `Tooling`).
+
+- **A part you untick takes its setup steps with it.** `SetupStep::package()` names the composer
+  package a step belongs to; one that was offered and left out is not asked about afterwards —
+  unticking the media module no longer ends in a question about linking its public disk. A package
+  that was never a question (already set up, outside the catalogue) keeps its steps, and the
+  migrations belong to `nyoncode/wire-suite`, which nobody can untick.
+
+- **Three setup steps for what the sign-in and the role screens stand on.** `ConfigureFortify`
+  (wire-module-auth) runs `fortify:install` — without it the screens are registered and their routes
+  are not, so the login page is a 404 — and then asks which of registration, password reset, e-mail
+  verification, two-factor and passkeys to have, ticked as the published config has them, and
+  comments or uncomments each — a whole options array at a time, which is the shape Fortify
+  publishes two-factor and passkeys in. It never offers the two features the profile cards are
+  built on. `EnableTeams` (wire-module-users) asks whether roles are
+  scoped to teams and sets `permission.teams` — in the file and in the running process — the team
+  model and the relation; `EnableRoles` then runs `permission-extended:install` rather than a second
+  copy of its model patching. Teams comes first because that installer ends in a `migrate` of its
+  own, and Spatie's migration reads the switch as it makes the tables. Tables already made without
+  teams count as "no", so the question is not put to every later run.
+
+- **`SetupConsole::select()`**, the plural of `choose()` — "which of these" — returning its default
+  unattended. **`Foundation\Setup\ConfigFile`** for the one config value with no `env()` behind it:
+  it rewrites a single-line `'key' => value,` that occurs exactly once and returns `false` for
+  anything else, rather than adding a key or widening a regular expression over somebody's config.
+
+- **A question asked after a step ran another command is drawn where somebody can see it.** Laravel
+  Prompts keeps its output in a static that every command run points at its own, and only
+  `Command::call()` puts it back — `Artisan::call()` does not. The package installers and
+  `fortify:install` left it on their buffers, so every setup question after Step 3 was drawn into a
+  buffer and the wizard sat at a prompt nobody could see. A call with `--no-interaction` did worse:
+  Prompts then believed nobody was there, and every later question answered itself with its default —
+  the routes were written without asking and the first administrator was skipped for want of an
+  e-mail address. `CommandConsole` points Prompts back at the terminal, and at a person, before each
+  question.
+
+- **The first administrator gets the super-admin role in the run that set roles up.**
+  `permission-extended:install` patches the user model on disk after the application booted, and PHP
+  cannot load a class twice, so the in-process check went on saying there were no roles. The account
+  was made without one, and the only person who could sign in got a 403 on the users screen.
+  `Roles::waitingForRestart()` names that state, and the role is then given by
+  `permission:assign-role` in a fresh PHP process that reads the patched file.
+
+- **The settings cache step offers only stores that answer.** A fresh Laravel lists `redis`,
+  `memcached` and `octane` in `config/cache.php` whether or not anything is behind them, so the step
+  offered `redis` first — and on a PHP with no Redis extension wrote it into `.env`, after which every
+  settings read threw. Each store is now asked for one key before it is offered.
+
+- **`composer workbench:clean`** resets the testbench skeleton — published views that shadow the
+  packages' own, published migrations that collide with the workbench's, the layout scaffolds and
+  the Fortify and permission config the setup steps leave behind — and rebuilds it.
+
 ### Changed
 
 - **`wire-core.notifications.default` accepts a comma-separated string.** An environment variable

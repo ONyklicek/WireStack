@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace NyonCode\Wire\Install;
 
 use Illuminate\Console\Command;
+use Laravel\Prompts\Prompt;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 
 use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\password;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
@@ -48,6 +50,8 @@ final readonly class CommandConsole implements SetupConsole
         // gets `AdministratorOndrej Nyklicek` — measured, on the first run that
         // ever reached this prompt. The fallback happens here instead, where an
         // empty answer means "the one you offered".
+        $this->reclaim();
+
         $answer = trim(text(label: $question, placeholder: $default ?? ''));
 
         return $answer !== '' ? $answer : (string) $default;
@@ -59,6 +63,8 @@ final readonly class CommandConsole implements SetupConsole
             return '';
         }
 
+        $this->reclaim();
+
         return password(label: $question);
     }
 
@@ -67,6 +73,8 @@ final readonly class CommandConsole implements SetupConsole
         if (! $this->isInteractive()) {
             return $default;
         }
+
+        $this->reclaim();
 
         return confirm(label: $question, default: $default);
     }
@@ -77,7 +85,28 @@ final readonly class CommandConsole implements SetupConsole
             return (string) $default;
         }
 
+        $this->reclaim();
+
         return (string) select(label: $question, options: $options, default: $default);
+    }
+
+    public function select(string $question, array $options, array $default = []): array
+    {
+        if (! $this->isInteractive()) {
+            return $default;
+        }
+
+        $this->reclaim();
+
+        return multiselect(
+            label: $question,
+            options: $options,
+            default: $default,
+            // Same reason the installer's own lists are: a list that scrolls
+            // hides half of what is already ticked, and the ticks are the point.
+            scroll: 15,
+            hint: 'Space unticks one, enter confirms.',
+        );
     }
 
     public function note(string $message): void
@@ -88,6 +117,32 @@ final readonly class CommandConsole implements SetupConsole
     public function warn(string $message): void
     {
         $this->command->line("    <fg=yellow>{$message}</>");
+    }
+
+    /**
+     * Point Laravel Prompts back at this command's terminal, and at a person.
+     *
+     * Prompts keeps two statics that every command run sets to its own: where
+     * to draw, and whether anybody is there. A step that calls another command
+     * through `Artisan::call()` — `fortify:install`, the package installers
+     * before them — leaves both as that call left them, because only
+     * `Command::call()` puts them back. Two failures, both measured on the first
+     * runs in a real application:
+     *
+     * - the output pointed at the call's buffer, so every later question was
+     *   drawn where nobody could see it and the wizard sat at it;
+     * - after `permission-extended:install --no-interaction`, Prompts believed
+     *   nobody was there, so every later question answered itself with its
+     *   default — the routes were written without asking, and the first
+     *   administrator was skipped for want of an e-mail address.
+     *
+     * Only called on the interactive path, where the input already said a
+     * person is at a terminal.
+     */
+    private function reclaim(): void
+    {
+        Prompt::setOutput($this->command->getOutput());
+        Prompt::interactive(true);
     }
 
     public function isInteractive(): bool

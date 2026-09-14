@@ -4,17 +4,21 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\Artisan;
+use Laravel\Prompts\Prompt;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\Wire\Install\Banner;
 use NyonCode\Wire\Install\Catalogue;
 use NyonCode\Wire\Install\Component;
+use NyonCode\Wire\Install\ComponentGroup;
 use NyonCode\Wire\Install\Setup;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
+use Symfony\Component\Console\Output\BufferedOutput;
+use Symfony\Component\Console\Output\OutputInterface;
 
 /*
  * `php artisan wire:install` — a clean Laravel to a working admin in one pass.
@@ -404,7 +408,7 @@ it('offers only the parts that still need something', function () {
         // Sortable is done; the part whose installer cannot be read is not, and
         // is the only thing left to ask about.
         $this->artisan('wire:install --dry-run')
-            ->expectsChoice('Which parts should be set up?', ['about'], ['about' => 'Core'])
+            ->expectsChoice('Which parts of the stack?', ['about'], ['about' => 'Core — The engine.'])
             ->expectsOutputToContain('ALREADY DONE')
             ->assertSuccessful();
     });
@@ -478,7 +482,10 @@ it('does not hand --force to an installer that has no such option', function () 
 
 it('lists what is here and names the installer it would run', function () {
     $this->artisan('wire:install --all --dry-run')
-        ->expectsOutputToContain('Installing packages')
+        // The heading says which run this is: a dry run that announces
+        // "Installing packages" and then installs nothing has told the reader
+        // the one thing they most need not to believe.
+        ->expectsOutputToContain('What would be installed')
         ->expectsOutputToContain('Admin shell')
         // Not the whole command line: the two-column layout pads to the terminal
         // width and truncates the right side, which is narrower under a test
@@ -577,7 +584,7 @@ it('offers the pending parts with every one already ticked', function () {
     ));
 
     $this->artisan('wire:install')
-        ->expectsChoice('Which parts should be set up?', ['about'], ['about' => 'Something installable'])
+        ->expectsChoice('Which parts of the stack?', ['about'], ['about' => 'Something installable — Stands in for a package with an installer.'])
         ->expectsOutputToContain('Done.')
         ->assertSuccessful();
 });
@@ -592,7 +599,7 @@ it('sets up nothing, and says so, when everything is unticked', function () {
     ));
 
     $this->artisan('wire:install')
-        ->expectsChoice('Which parts should be set up?', [], ['about' => 'Something installable'])
+        ->expectsChoice('Which parts of the stack?', [], ['about' => 'Something installable — Stands in for a package with an installer.'])
         ->expectsOutputToContain('LEFT ALONE')
         ->assertSuccessful();
 });
@@ -657,9 +664,9 @@ it('sets up only the parts that were picked', function () {
     );
 
     $this->artisan('wire:install')
-        ->expectsChoice('Which parts should be set up?', ['wi:one'], [
-            'wi:one' => 'Picked',
-            'wi:two' => 'Passed over',
+        ->expectsChoice('Which parts of the stack?', ['wi:one'], [
+            'wi:one' => 'Picked — Chosen from the list.',
+            'wi:two' => 'Passed over — Left out of the list.',
         ])
         ->expectsOutputToContain('the first installer ran')
         ->doesntExpectOutputToContain('the second installer ran')
@@ -667,17 +674,186 @@ it('sets up only the parts that were picked', function () {
 });
 
 // ---------------------------------------------------------------------------
+// Two questions, and the second only where it means anything
+// ---------------------------------------------------------------------------
+
+/**
+ * A module, which is a part that renders inside the shell rather than beside it.
+ */
+function wiModule(string $package, string $label, string $command): Component
+{
+    return new Component(
+        package: $package,
+        label: $label,
+        description: 'A ready-made area.',
+        marker: 'NyonCode\\WireCore\\WireCoreServiceProvider',
+        command: $command,
+        group: ComponentGroup::Module,
+    );
+}
+
+function wiShell(string $command = 'about'): Component
+{
+    return new Component(
+        package: 'nyoncode/wire-admin',
+        label: 'Admin shell',
+        description: 'The layout and the sidebar your pages render inside.',
+        marker: 'NyonCode\\WireCore\\WireCoreServiceProvider',
+        command: $command,
+    );
+}
+
+it('asks about the modules only once the shell is part of the answer', function () {
+    // A ready-made area renders *inside* a panel. Offering "a users area" to
+    // somebody who has not taken one is offering them a screen with nowhere to
+    // appear.
+    wiCatalogue(wiShell(), wiModule('nyoncode/wire-module-users', 'Users', 'about'));
+
+    $this->artisan('wire:install --dry-run')
+        ->expectsChoice('Which parts of the stack?', ['about'], [
+            'about' => 'Admin shell — The layout and the sidebar your pages render inside.',
+        ])
+        ->expectsChoice('Which of these should the panel have?', ['about'], [
+            'about' => 'Users — A ready-made area.',
+        ])
+        ->assertSuccessful();
+});
+
+it('never asks the second question when the shell was unticked', function () {
+    wiCatalogue(wiShell(), wiModule('nyoncode/wire-module-users', 'Users', 'about'));
+
+    $this->artisan('wire:install --dry-run')
+        ->expectsChoice('Which parts of the stack?', [], [
+            'about' => 'Admin shell — The layout and the sidebar your pages render inside.',
+        ])
+        // And the module is left alone rather than silently installed: a part
+        // nobody was offered is a part nobody chose.
+        ->expectsOutputToContain('LEFT ALONE')
+        ->assertSuccessful();
+});
+
+it('asks about the modules when the shell was set up by an earlier run', function () {
+    // The documented way to add a module: require it and run this again. The
+    // shell is ALREADY DONE by then, so it is not in the first answer — and a
+    // second question keyed on that answer alone was never asked, leaving the
+    // new module LEFT ALONE.
+    wiRestoring(wiSortablePaths(), function () {
+        // Sortable's installer stands in for the shell's: it is the one this
+        // suite can publish for real, which is what makes a part settled.
+        wiCatalogue(
+            new Component(
+                package: 'nyoncode/wire-admin',
+                label: 'Admin shell',
+                description: 'The layout and the sidebar your pages render inside.',
+                marker: 'NyonCode\\WireSortable\\WireSortableServiceProvider',
+                command: 'wire-sortable:install',
+            ),
+            wiModule('nyoncode/wire-module-users', 'Users', 'about'),
+        );
+
+        $this->artisan('wire-sortable:install')->assertSuccessful();
+
+        $this->artisan('wire:install --dry-run')
+            ->doesntExpectOutputToContain('Which parts of the stack?')
+            ->expectsChoice('Which of these should the panel have?', ['about'], [
+                'about' => 'Users — A ready-made area.',
+            ])
+            ->expectsOutputToContain('ALREADY DONE')
+            ->assertSuccessful();
+    });
+});
+
+it('asks once where the shell is the whole of what is left', function () {
+    wiCatalogue(wiShell());
+
+    $this->artisan('wire:install --dry-run')
+        ->expectsChoice('Which parts of the stack?', ['about'], [
+            'about' => 'Admin shell — The layout and the sidebar your pages render inside.',
+        ])
+        ->assertSuccessful();
+});
+
+it('asks nothing at all when every part left is a module and there is no shell', function () {
+    // The first list is empty, so there is no question to put — and with no
+    // shell in the answer the second is never reached either.
+    Artisan::command('wi:users', fn (): int => 0);
+
+    wiCatalogue(wiModule('nyoncode/wire-module-users', 'Users', 'wi:users'));
+
+    $this->artisan('wire:install --dry-run')
+        ->doesntExpectOutputToContain('Which parts of the stack?')
+        ->doesntExpectOutputToContain('Which of these should the panel have?')
+        ->expectsOutputToContain('LEFT ALONE')
+        ->assertSuccessful();
+});
+
+it('numbers the stages, so a log says where a run stopped', function () {
+    wiCatalogue(wiShell());
+
+    $this->artisan('wire:install --all --dry-run')
+        ->expectsOutputToContain('Step 1 —')
+        ->assertSuccessful();
+});
+
+// ---------------------------------------------------------------------------
 // The second half: setting up the application, not just installing packages
 // ---------------------------------------------------------------------------
+
+it('never asks about a part that was just unticked', function () {
+    // What the first half was told, the second half obeys. Unticking the media
+    // module and then being asked to link a public disk for it is the installer
+    // asking a question it has already been answered — and the answer it would
+    // act on is the wrong one.
+    $spy = [];
+
+    Artisan::command('wi:shell', fn (): int => 0);
+    Artisan::command('wi:users', fn (): int => 0);
+
+    wiCatalogue(wiShell('wi:shell'), wiModule('nyoncode/wire-module-users', 'Users', 'wi:users'));
+    wiStep('Belongs to the module', SetupState::Pending, SetupOutcome::Applied, 100, $spy, 'nyoncode/wire-module-users');
+    wiStep('Belongs to nothing offered', SetupState::Pending, SetupOutcome::Applied, 200, $spy);
+
+    $this->artisan('wire:install')
+        ->expectsChoice('Which parts of the stack?', ['wi:shell'], [
+            'wi:shell' => 'Admin shell — The layout and the sidebar your pages render inside.',
+        ])
+        ->expectsChoice('Which of these should the panel have?', [], [
+            'wi:users' => 'Users — A ready-made area.',
+        ])
+        ->expectsConfirmation('Set it up now?', 'yes')
+        ->doesntExpectOutputToContain('Belongs to the module')
+        ->expectsOutputToContain('Belongs to nothing offered')
+        ->assertSuccessful();
+
+    expect($spy['applied'] ?? [])->toBe(['Belongs to nothing offered']);
+});
+
+it('still asks about a part that was already set up before this run', function () {
+    // Offered is the operative word. A part that was never a question — already
+    // done, no installer, not in the catalogue — is not declined, and an
+    // application whose media module was installed last month still has a public
+    // disk to link.
+    $spy = [];
+
+    wiCatalogue();
+    wiStep('Belongs to an installed module', SetupState::Pending, SetupOutcome::Applied, 100, $spy, 'nyoncode/wire-module-media');
+
+    $this->artisan('wire:install')
+        ->expectsConfirmation('Set it up now?', 'yes')
+        ->expectsOutputToContain('Belongs to an installed module')
+        ->assertSuccessful();
+
+    expect($spy['applied'] ?? [])->toBe(['Belongs to an installed module']);
+});
 
 /**
  * A step that answers however the test needs, and records what happened to it.
  *
  * @param  array<string, mixed>  $spy
  */
-function wiStep(string $label, SetupState $state, SetupOutcome $outcome, int $sort, array &$spy): string
+function wiStep(string $label, SetupState $state, SetupOutcome $outcome, int $sort, array &$spy, string $package = 'nyoncode/wire-test'): string
 {
-    $step = new class($label, $state, $outcome, $sort, $spy) implements SetupStep
+    $step = new class($label, $state, $outcome, $sort, $spy, $package) implements SetupStep
     {
         /** @param array<string, mixed> $spy */
         public function __construct(
@@ -686,6 +862,7 @@ function wiStep(string $label, SetupState $state, SetupOutcome $outcome, int $so
             private SetupOutcome $outcome,
             private int $sort,
             private array &$spy,
+            private string $package,
         ) {}
 
         public function label(): string
@@ -708,6 +885,11 @@ function wiStep(string $label, SetupState $state, SetupOutcome $outcome, int $so
             $this->spy['applied'][] = $this->label;
 
             return $this->outcome;
+        }
+
+        public function package(): string
+        {
+            return $this->package;
         }
 
         public function sort(): int
@@ -877,12 +1059,18 @@ it('carries a step\'s questions through to the command, and its answers back', f
             $this->answers['text'] = $console->ask('Name?', 'Admin');
             $this->answers['secret'] = $console->secret('Password?');
             $this->answers['choice'] = $console->choose('Which disk?', ['public' => 'public', 's3' => 's3'], 'public');
+            $this->answers['several'] = $console->select('Which of these?', ['a' => 'A', 'b' => 'B'], ['a', 'b']);
             $this->answers['confirm'] = $console->confirm('Sure?');
 
             $console->note('noted');
             $console->warn('warned');
 
             return SetupOutcome::Applied;
+        }
+
+        public function package(): string
+        {
+            return 'nyoncode/wire-test';
         }
 
         public function sort(): int
@@ -900,6 +1088,7 @@ it('carries a step\'s questions through to the command, and its answers back', f
         ->expectsQuestion('Name?', 'Ondřej')
         ->expectsQuestion('Password?', 'hunter2')
         ->expectsChoice('Which disk?', 's3', ['public' => 'public', 's3' => 's3'])
+        ->expectsChoice('Which of these?', ['b'], ['a' => 'A', 'b' => 'B'])
         ->expectsConfirmation('Sure?', 'yes')
         ->expectsOutputToContain('noted')
         ->expectsOutputToContain('warned')
@@ -910,9 +1099,85 @@ it('carries a step\'s questions through to the command, and its answers back', f
         'text' => 'Ondřej',
         'secret' => 'hunter2',
         'choice' => 's3',
+        'several' => ['b'],
         'confirm' => true,
     ]);
 });
+
+it('draws a step\'s question on its own terminal after the step has called another command', function () {
+    // Prompts keeps where it draws and whether anybody is there in statics that
+    // every command run sets to its own, and `Artisan::call()` never puts them
+    // back. After an installer, the real wizard drew questions into that
+    // installer's buffer; after one run with `--no-interaction`, every later
+    // question silently took its default.
+    $seen = [];
+
+    $step = new class($seen) implements SetupStep
+    {
+        /** @param array<string, mixed> $seen */
+        public function __construct(private array &$seen) {}
+
+        public function label(): string
+        {
+            return 'Calls a command, then asks';
+        }
+
+        public function state(): SetupState
+        {
+            return SetupState::Pending;
+        }
+
+        public function summary(): string
+        {
+            return 'run something, then ask';
+        }
+
+        public function apply(SetupConsole $console): SetupOutcome
+        {
+            // What `Artisan::call()` leaves behind, done by hand: under test
+            // every command shares one mocked output, so a real nested call
+            // would strand Prompts on the very object it should come back to.
+            $this->seen['stranded'] = new BufferedOutput;
+            Prompt::setOutput($this->seen['stranded']);
+            Prompt::interactive(false);
+
+            $console->confirm('Still there?');
+            $this->seen['asked'] = wiPromptOutput();
+            $this->seen['interactive'] = (new ReflectionProperty(Prompt::class, 'interactive'))->getValue();
+
+            return SetupOutcome::Applied;
+        }
+
+        public function package(): string
+        {
+            return 'nyoncode/wire-test';
+        }
+
+        public function sort(): int
+        {
+            return 100;
+        }
+    };
+
+    app()->instance('wi-step:nested', $step);
+    SetupRegistry::instance()->register('wi-step:nested');
+    wiCatalogue();
+
+    $this->artisan('wire:install --all')
+        ->expectsConfirmation('Set it up now?', 'yes')
+        ->expectsConfirmation('Still there?', 'yes')
+        ->assertSuccessful();
+
+    expect($seen['asked'])->not->toBe($seen['stranded'])
+        ->and($seen['asked'])->toBeInstanceOf(OutputInterface::class)
+        ->and($seen['interactive'])->toBeTrue();
+});
+
+/** Where Laravel Prompts would draw a question right now. */
+function wiPromptOutput(): ?object
+{
+    return (new ReflectionProperty(Prompt::class, 'output'))->getValue();
+}
 
 it('answers a step with defaults, and never a prompt, when unattended', function () {
     // Laravel Prompts would stand at a question with no tty until something
@@ -947,10 +1212,16 @@ it('answers a step with defaults, and never a prompt, when unattended', function
                 'text' => $console->ask('Name?', 'Admin'),
                 'secret' => $console->secret('Password?'),
                 'choice' => $console->choose('Which disk?', ['public' => 'public'], 'public'),
+                'several' => $console->select('Which of these?', ['a' => 'A', 'b' => 'B'], ['a']),
                 'confirm' => $console->confirm('Sure?', false),
             ];
 
             return SetupOutcome::Applied;
+        }
+
+        public function package(): string
+        {
+            return 'nyoncode/wire-test';
         }
 
         public function sort(): int
@@ -970,6 +1241,9 @@ it('answers a step with defaults, and never a prompt, when unattended', function
         'text' => 'Admin',
         'secret' => '',
         'choice' => 'public',
+        // The unattended answer to "which of these" is whatever the step said
+        // was safe to leave as it is.
+        'several' => ['a'],
         'confirm' => false,
     ]);
 });
@@ -999,6 +1273,11 @@ it('survives a step that throws, and names it', function () {
         public function apply(SetupConsole $console): SetupOutcome
         {
             throw new RuntimeException('table "audit_logs" already exists');
+        }
+
+        public function package(): string
+        {
+            return 'nyoncode/wire-test';
         }
 
         public function sort(): int

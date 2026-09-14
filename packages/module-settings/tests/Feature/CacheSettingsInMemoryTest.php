@@ -53,6 +53,16 @@ function csConsole(array $answers = [], array &$said = [], bool $interactive = t
             return array_shift($this->answers) ?? (string) $default;
         }
 
+        /**
+         * @param  array<int|string, string>  $options
+         * @param  array<int, int|string>  $default
+         * @return array<int, int|string>
+         */
+        public function select(string $question, array $options, array $default = []): array
+        {
+            return $default;
+        }
+
         public function note(string $message): void
         {
             $this->said[] = $message;
@@ -79,8 +89,17 @@ function csEnv(string $contents = "APP_NAME=Laravel\n"): EnvFile
     return new EnvFile($path);
 }
 
+/*
+ * Stores that answer. A store here is probed before it is offered, so a name
+ * without a working driver behind it would be — correctly — left out.
+ */
 beforeEach(function () {
-    config()->set('cache.stores', ['file' => [], 'database' => [], 'redis' => [], 'memcached' => []]);
+    config()->set('cache.stores', [
+        'file' => ['driver' => 'array'],
+        'database' => ['driver' => 'array'],
+        'redis' => ['driver' => 'array'],
+        'memcached' => ['driver' => 'array'],
+    ]);
 });
 
 it('is contributed by this module', function () {
@@ -118,7 +137,7 @@ it('leaves an application alone when there is nowhere better to go', function ()
     // Not blocked either: this is a working installation, just not a fast one,
     // and the answer is a server rather than a setting.
     config()->set('wire-module-settings.cache.store', 'database');
-    config()->set('cache.stores', ['file' => [], 'database' => []]);
+    config()->set('cache.stores', ['file' => ['driver' => 'array'], 'database' => ['driver' => 'array']]);
 
     $step = new CacheSettingsInMemory(csEnv());
 
@@ -130,11 +149,34 @@ it('offers only the stores this application has actually configured', function (
     // Naming `redis` in an application with no redis connection swaps a slow
     // cache for a broken one.
     config()->set('wire-module-settings.cache.store', 'database');
-    config()->set('cache.stores', ['file' => [], 'database' => [], 'memcached' => []]);
+    config()->set('cache.stores', ['file' => ['driver' => 'array'], 'database' => ['driver' => 'array'], 'memcached' => ['driver' => 'array']]);
     $env = csEnv();
 
     expect((new CacheSettingsInMemory($env))->apply(csConsole()))->toBe(SetupOutcome::Applied)
         ->and($env->get('WIRE_SETTINGS_CACHE_STORE'))->toBe('memcached');
+});
+
+it('does not offer a store that is configured and does not answer', function () {
+    // A fresh Laravel lists `redis` in config/cache.php whether or not there is
+    // a server or an extension behind it. The first real run wrote it as the
+    // default, and every settings read afterwards threw.
+    config()->set('wire-module-settings.cache.store', 'database');
+    config()->set('cache.stores', [
+        'database' => ['driver' => 'array'],
+        'redis' => ['driver' => 'no-such-driver'],
+        'memcached' => ['driver' => 'array'],
+    ]);
+    $env = csEnv();
+
+    expect((new CacheSettingsInMemory($env))->apply(csConsole()))->toBe(SetupOutcome::Applied)
+        ->and($env->get('WIRE_SETTINGS_CACHE_STORE'))->toBe('memcached');
+});
+
+it('leaves an application alone when every memory store it lists is dead', function () {
+    config()->set('wire-module-settings.cache.store', 'database');
+    config()->set('cache.stores', ['database' => ['driver' => 'array'], 'redis' => ['driver' => 'no-such-driver']]);
+
+    expect((new CacheSettingsInMemory(csEnv()))->state())->toBe(SetupState::Done);
 });
 
 it('writes the store that was picked', function () {
@@ -163,4 +205,9 @@ it('fails rather than pretending, when .env cannot be written', function () {
 
     expect($step->apply(csConsole([], $said)))->toBe(SetupOutcome::Failed)
         ->and(implode("\n", $said))->toContain('WIRE_SETTINGS_CACHE_STORE');
+});
+
+it('belongs to its own package, so unticking that package skips it', function () {
+    // What the first half of the installer was told, the second half obeys.
+    expect((new CacheSettingsInMemory(csEnv()))->package())->toBe('nyoncode/wire-module-settings');
 });

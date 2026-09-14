@@ -74,6 +74,11 @@ final readonly class StoreNotifications implements SetupStep
         return SetupOutcome::Applied;
     }
 
+    public function package(): string
+    {
+        return 'nyoncode/wire-module-notifications';
+    }
+
     public function sort(): int
     {
         return 700;

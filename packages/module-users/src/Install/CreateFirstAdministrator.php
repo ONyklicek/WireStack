@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Install;
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Process;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
 use NyonCode\WireModuleUsers\Console\WireUserCommand;
+use NyonCode\WireModuleUsers\Exceptions\AccountException;
 use NyonCode\WireModuleUsers\Support\Accounts;
 use NyonCode\WireModuleUsers\Support\Roles;
+use NyonCode\WireModuleUsers\Support\Teams;
 use Throwable;
 
 /**
@@ -34,6 +38,15 @@ use Throwable;
  * account that gets you in; it is not a user-management command, and an
  * installer that offered to add another administrator on every run would be one
  * nobody could run twice safely. The second account is `php artisan wire:user`.
+ *
+ * ## The role, when roles arrived in this same run
+ *
+ * The roles step patches the user model on disk after this process loaded it,
+ * so the in-process check says there are no roles and the account would be made
+ * without one — a 403 on the users screen for the only person who can sign in.
+ * {@see Roles::waitingForRestart()} names that state, and the role is then given
+ * by `permission:assign-role` in a fresh PHP process, which reads the patched
+ * file.
  */
 final readonly class CreateFirstAdministrator implements SetupStep
 {
@@ -110,7 +123,8 @@ final readonly class CreateFirstAdministrator implements SetupStep
         $console->note("Created {$email}.");
 
         try {
-            $role = $this->accounts->makeSuperAdmin($user);
+            $role = $this->accounts->makeSuperAdmin($user)
+                ?? (Roles::waitingForRestart() ? $this->superAdminInAFreshProcess($user) : null);
 
             if ($role !== null) {
                 $console->note("Gave it the `{$role}` role.");
@@ -123,6 +137,52 @@ final readonly class CreateFirstAdministrator implements SetupStep
         }
 
         return SetupOutcome::Applied;
+    }
+
+    /**
+     * Give the super-admin role from a process that has loaded the patched model.
+     *
+     * Spatie's own `permission:assign-role`, rather than a command of this
+     * module's: it finds or creates the role and assigns it through the trait,
+     * which is everything {@see Accounts::assign()} does in-process. The team
+     * scope is decided here, where the account is, and refused the same way.
+     */
+    private function superAdminInAFreshProcess(Model $user): string
+    {
+        $role = $this->accounts->superAdminRole();
+
+        $command = [
+            PHP_BINARY,
+            'artisan',
+            'permission:assign-role',
+            $role,
+            (string) $user->getKey(),
+            (string) config('auth.defaults.guard', 'web'),
+            $user::class,
+        ];
+
+        if ((bool) config('permission.teams')) {
+            $team = Teams::currentId($user);
+
+            if ($team === null) {
+                throw AccountException::roleNeedsATeam($role);
+            }
+
+            $command[] = '--team-id='.$team;
+        }
+
+        $result = Process::path(base_path())->run($command);
+
+        if (! $result->successful()) {
+            throw AccountException::roleProcessFailed(trim($result->errorOutput().' '.$result->output()));
+        }
+
+        return $role;
+    }
+
+    public function package(): string
+    {
+        return 'nyoncode/wire-module-users';
     }
 
     public function sort(): int

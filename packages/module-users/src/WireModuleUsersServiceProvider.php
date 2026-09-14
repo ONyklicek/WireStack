@@ -15,6 +15,8 @@ use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireModuleUsers\Console\WireUserCommand;
 use NyonCode\WireModuleUsers\Http\Middleware\SetCurrentTeam;
 use NyonCode\WireModuleUsers\Install\CreateFirstAdministrator;
+use NyonCode\WireModuleUsers\Install\EnableRoles;
+use NyonCode\WireModuleUsers\Install\EnableTeams;
 use NyonCode\WireModuleUsers\Support\Avatars;
 use NyonCode\WireModuleUsers\Support\EmailVerification;
 use NyonCode\WireModuleUsers\Support\Permissions;
@@ -57,7 +59,11 @@ class WireModuleUsersServiceProvider extends PackageServiceProvider
                 // toolkit's lifecycle hooks hold one closure each and assign
                 // rather than append, so a second call would drop the module
                 // registration above without a word.
-                SetupRegistry::instance()->register(CreateFirstAdministrator::class);
+                SetupRegistry::instance()->register(
+                    EnableRoles::class,
+                    EnableTeams::class,
+                    CreateFirstAdministrator::class,
+                );
             })
             ->hasConfig()
             ->hasViews()

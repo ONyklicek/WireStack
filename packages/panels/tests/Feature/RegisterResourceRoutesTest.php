@@ -53,6 +53,16 @@ function rrrConsole(array $answers = [], array &$said = [], bool $interactive = 
             return array_shift($this->answers) ?? (string) $default;
         }
 
+        /**
+         * @param  array<int|string, string>  $options
+         * @param  array<int, int|string>  $default
+         * @return array<int, int|string>
+         */
+        public function select(string $question, array $options, array $default = []): array
+        {
+            return $default;
+        }
+
         public function note(string $message): void
         {
             $this->said[] = $message;
@@ -188,4 +198,9 @@ it('fails rather than pretending, and hands over the group it could not write', 
             chmod($path, 0644);
         }
     });
+});
+
+it('belongs to its own package, so unticking that package skips it', function () {
+    // What the first half of the installer was told, the second half obeys.
+    expect((new RegisterResourceRoutes)->package())->toBe('nyoncode/wire-panels');
 });

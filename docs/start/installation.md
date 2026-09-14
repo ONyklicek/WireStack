@@ -11,8 +11,9 @@ php artisan wire:install
 ```
 
 The first line brings core, forms, tables, sortable, resources and the admin
-shell. The second sets them up — interactively, one part at a time, running each
-package's own installer rather than a copy of it.
+shell. The second sets them up — a wizard in numbered steps that asks what you
+want, runs each chosen package's own installer rather than a copy of it, and then
+sets up the application those packages need.
 
 ## What The Installer Does
 
@@ -21,13 +22,24 @@ package's own installer rather than a copy of it.
    ╰─────╮      WireStack
  ●───────╯      the whole stack, set up in one pass
 
- ┌ Which parts should be set up? ───────────────┐
- │ › ◼ Tables                                   │
- │   ◼ Admin shell                              │
- └──────────────────────────────────────────────┘
+ INFO  Step 1 — The framework.
+
+ ┌ Which parts of the stack? ─────────────────────────────────────────────┐
+ │ › ◼ Tables — Tables, columns, filters, exports, gestures.              │
+ │   ◼ Admin shell — The layout and the sidebar your pages render inside. │
+ └────────────────────────────────────────────────────────────────────────┘
   Space unticks one, enter confirms.
 
- INFO  Installing packages
+ INFO  Step 2 — Ready-made areas.
+
+ ┌ Which of these should the panel have? ────────────────────────────────────────────────────────┐
+ │ › ◼ Sign in — Login, password reset, verification and the two-factor challenge, over Fortify. │
+ │   ◼ Users — User administration, with roles where the application has them.                   │
+ │   ◻ Media library — Uploads, a browsable list and previews.                                   │
+ └───────────────────────────────────────────────────────────────────────────────────────────────┘
+  Space unticks one, enter confirms.
+
+ INFO  Step 3 — Installing packages.
 
   Core — nyoncode/wire-core ....................... ALREADY DONE
   Forms — nyoncode/wire-forms ..................... ALREADY DONE
@@ -47,6 +59,20 @@ One line per part, ending in what happened to it — the same shape the setup
 phase below uses. It was three lists before: everything found, then everything
 already set up, then everything being run, which named most parts twice and some
 of them three times in three different vocabularies.
+
+**Two questions, and the second only when it means something.** The stack comes
+first — forms, tables, sortable, resources, the shell. The ready-made areas come
+second, and only once the admin shell is part of the answer, either ticked now or
+already set up from an earlier run: a module renders *inside* the panel, and
+offering a users area to somebody who has not taken a panel is offering them a
+screen with nowhere to appear. Untick the shell and the modules are listed as
+`LEFT ALONE` rather than installed behind your back.
+
+**The steps are counted, not promised.** Each stage prints `Step N — …` as it
+starts, and the number is however many stages this run actually has: `--all`
+asks nothing, so its first heading is the install, and `--dry-run` says "What
+would be installed" instead of pretending to install it. A log that stops after
+`Step 3` says where the run stopped.
 
 Everything is offered pre-selected: an installer whose default is "nothing" makes
 the common case the tedious one, so the question is a multiselect with every box
@@ -131,8 +157,11 @@ with nothing behind it.
 So the second half of `wire:install` works through them, one at a time:
 
 ```text
- INFO  Setting up this application
+ INFO  Step 4 — Setting up this application.
 
+  Fortify .... publish its config and provider, or the sign-in screens have no routes   WOULD RUN
+  Teams ............................ scope roles to teams, if this application has them   WOULD RUN
+  Roles & permissions ........ publish the permission config and patch your user model   WOULD RUN
   Database tables ..................... run 2 pending migrations   WOULD RUN
   Routes ........................ no routes/web.php to add them to   WAITING
   First administrator . an account already exists, so you can sign in   DONE
@@ -145,18 +174,29 @@ So the second half of `wire:install` works through them, one at a time:
 
 | Step | What it does, and why it is not a footnote |
 | --- | --- |
+| [Fortify](../modules/auth.md) | Runs `fortify:install`, then asks which sign-in features to have — registration, password reset, e-mail verification, two-factor, passkeys — ticked as the published config has them, and comments or uncomments each in `config/fortify.php`, options block and all. Without it the sign-in screens are registered and their routes are not: the login page is a 404 |
+| [Teams](../modules/teams-and-two-factor.md#switching-on-teams) | Asks whether roles are scoped to teams; on yes, publishes the permission config if it is not there yet, sets `permission.teams` to `true`, writes `WIRE_USERS_TEAM_MODEL` and, if you name a different one, the relation. Asked before roles on purpose — the roles installer ends in a `migrate` of its own, and Spatie's migration reads `permission.teams` as it runs. Tables already made without teams count as "no", so it is not asked again |
+| [Roles & permissions](../modules/teams-and-two-factor.md) | Runs `permission-extended:install`, which publishes the permission config and migration, migrates them and puts `HasRoles` on your user model. Until then the role screens are simply absent. Needs `nyoncode/laravel-permission-extended`, and says so when it is missing |
 | Database tables | Runs the outstanding migrations. Three modules asked for this in their own installers and none could act on it |
 | [Routes](../panels/modules.md) | Writes a `Route::wireResources()` group into `routes/web.php`, under a prefix and middleware you are asked for. Without it every screen is a 404 |
-| [First administrator](../modules/users.md) | Creates the account you sign in with — and the super-admin role where the application has roles. Nothing in the stack made one before; the answer was `php artisan tinker`. Only ever the *first*: every account after it is `php artisan wire:user` |
+| [First administrator](../modules/users.md) | Creates the account you sign in with — and the super-admin role where the application has roles. Nothing in the stack made one before; the answer was `php artisan tinker`. Only ever the *first*: every account after it is `php artisan wire:user`. Where roles were set up earlier in the same run, the role is given from a fresh PHP process, because this one loaded the user model before it was patched. Where roles are scoped to teams, an account in no team gets no role, and the step says what to do |
 | [Media links](../modules/media.md) | `storage:link`. Without it uploads work, thumbnails generate, and every image is a 404 that errors nowhere |
 | [Audit recording](../core/audit.md) | Switches recording on, so the audit screen is not a view over an empty table |
 | [Stored notifications](../modules/notifications.md) | Adds the `database` driver beside the toast, so the bell has a history to show |
-| [Settings cache](../modules/settings.md) | Moves the settings cache off the database, where the lookup costs the query it was meant to save |
+| [Settings cache](../modules/settings.md) | Moves the settings cache off the database, where the lookup costs the query it was meant to save — offering only the memory stores that actually answer, because a fresh Laravel lists `redis` whether or not there is one |
 | Frontend build | `npm install && npm run build`, so Tailwind compiles the classes in the packages' views. Until it runs the shell has no width, no colour and no error |
 
 **Detect, then ask, then act.** A step looks first and is offered only while it is
 needed, so running the command twice is quiet. What is already true is named and
 left alone.
+
+**A part you unticked takes its steps with it.** Every step names the package it
+belongs to, and a package that was offered in the first half and left out is not
+asked about in the second — unticking the media module and then being asked to
+link a public disk for it would be the installer asking a question it has already
+been answered. *Offered* is the operative word: a module installed last month is
+not a question this run, so its steps still run, and the migrations belong to no
+part anyone can untick.
 
 **A step that blows up is reported, not fatal.** `Blocked` covers what a step
 could see coming; a migration that collides with one the application already ran
@@ -204,10 +244,26 @@ $packager->registeredPackage(fn () => SetupRegistry::instance()->register(WarmTh
 ```
 
 The class implements `NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep`:
-`label()`, `state()` (`Done`, `Pending` or `Blocked`), `summary()`, `apply()` and
-`sort()`. `state()` may only look — it runs under `--dry-run` too — and `apply()`
-asks through a `SetupConsole` rather than a command, which is what lets a step be
-tested without a terminal.
+`label()`, `state()` (`Done`, `Pending` or `Blocked`), `summary()`, `apply()`,
+`package()` and `sort()`. `state()` may only look — it runs under `--dry-run` too
+— and `apply()` asks through a `SetupConsole` rather than a command, which is what
+lets a step be tested without a terminal. The console has `confirm()`, `ask()`,
+`secret()`, `choose()` for "which one" and `select()` for "which of these"; each
+returns its default when nobody is there to answer, so the default is whatever
+the step decided was safe to leave as it is.
+
+`package()` is the composer name the step belongs to, and it is what ties the
+step to the tick box above: return your own package's name. `sort()` places it —
+lower runs first, and the migrations run at `100`, so a step that publishes a
+migration or sets a switch a migration reads sorts below that.
+
+A step that changes a published config file uses
+`NyonCode\WireCore\Foundation\Setup\ConfigFile`, and only for a value with no
+`env()` behind it — `EnvFile` is the first answer. `set('teams', 'true')` rewrites
+one single-line `'key' => value,` that occurs exactly once, and returns `false`
+for anything else: a key in two sections, a value spread over lines, a file the
+application has rewritten. A step that gets `false` tells the person which line
+to change.
 
 ## What Is Left To You
 

@@ -67,6 +67,11 @@ final readonly class RecordAuditTrail implements SetupStep
         return SetupOutcome::Applied;
     }
 
+    public function package(): string
+    {
+        return 'nyoncode/wire-module-audit';
+    }
+
     public function sort(): int
     {
         return 600;

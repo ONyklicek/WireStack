@@ -44,6 +44,11 @@ function srStep(string $label = 'Something', int $sort = 100): SetupStep
             return SetupOutcome::Applied;
         }
 
+        public function package(): string
+        {
+            return 'nyoncode/wire-test';
+        }
+
         public function sort(): int
         {
             return $this->sort;
@@ -128,6 +133,16 @@ it('describes a step by three questions and one action', function () {
             public function choose(string $question, array $options, ?string $default = null): string
             {
                 return (string) $default;
+            }
+
+            /**
+             * @param  array<int|string, string>  $options
+             * @param  array<int, int|string>  $default
+             * @return array<int, int|string>
+             */
+            public function select(string $question, array $options, array $default = []): array
+            {
+                return $default;
             }
 
             public function note(string $message): void {}

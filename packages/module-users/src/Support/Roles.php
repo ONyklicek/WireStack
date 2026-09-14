@@ -6,6 +6,7 @@ namespace NyonCode\WireModuleUsers\Support;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use ReflectionClass;
 
 /**
  * Whether this application can manage roles, and through what.
@@ -80,6 +81,38 @@ final class Roles
 
         return class_exists(self::roleModel())
             && in_array(self::EXTENDED_TRAIT, class_uses_recursive($model), true);
+    }
+
+    /**
+     * Whether the user model's file has the trait while this process's class does not.
+     *
+     * The state `permission-extended:install` leaves a running installer in. It
+     * patches `app/Models/User.php` on disk, but the application booted before
+     * that and PHP cannot load a class twice, so {@see available()} goes on
+     * answering about the source it loaded: no roles, in the very run that set
+     * them up. The first administrator made in that run got no role and a 403
+     * on the users screen. A caller that sees this has to do the role work in a
+     * process that starts after the patch.
+     *
+     * Read as the import line the permission installer writes, rather than as
+     * any mention of the trait, so a comment naming it does not count.
+     */
+    public static function waitingForRestart(): bool
+    {
+        $model = config('wire-module-users.model');
+
+        if (config('wire-module-users.roles', 'auto') === false
+            || ! self::hasExtendedPermissions()
+            || ! is_string($model)
+            || ! class_exists($model)
+            || self::available()) {
+            return false;
+        }
+
+        $file = (new ReflectionClass($model))->getFileName();
+
+        return is_string($file)
+            && preg_match('/^use\s+'.preg_quote(self::EXTENDED_TRAIT, '/').'\s*;/m', (string) file_get_contents($file)) === 1;
     }
 
     /**

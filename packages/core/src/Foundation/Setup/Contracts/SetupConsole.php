@@ -58,6 +58,20 @@ interface SetupConsole
     public function choose(string $question, array $options, ?string $default = null): string;
 
     /**
+     * Ask for any number of a fixed set, with some of them already chosen.
+     *
+     * The plural of {@see choose()}, and a different question: `choose` is "which
+     * one", this is "which of these" — a list of switches somebody unticks. It
+     * returns `$default` unattended, so the unattended answer is whatever the
+     * step decided was safe to leave as it is.
+     *
+     * @param  array<int|string, string>  $options  Value => label, or a plain list.
+     * @param  array<int, int|string>  $default  The values already chosen.
+     * @return array<int, int|string> The values chosen.
+     */
+    public function select(string $question, array $options, array $default = []): array;
+
+    /**
      * Say what happened. One line, already indented by the caller's layout.
      */
     public function note(string $message): void;

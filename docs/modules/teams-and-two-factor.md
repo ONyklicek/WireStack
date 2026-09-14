@@ -162,6 +162,18 @@ Teams need three things from your application: the setting, a team model, and a
 relation on the user that reaches it. This module ships none of them, because an
 application that has teams already has all three.
 
+`php artisan wire:install` does the setting and the naming. Its **Teams** step asks
+whether roles are scoped to teams, and on yes publishes the config below if it is
+not there yet, sets `teams` to `true` — in the file and in the running process —
+writes `WIRE_USERS_TEAM_MODEL` and, if you name a different one, the relation. Its
+**Roles & permissions** step comes after and runs `permission-extended:install`,
+which publishes the migration, migrates it and puts `HasRoles` on your user model.
+That order is the point: Spatie's migration reads `permission.teams` as it runs,
+and the roles installer runs it, so switching teams on afterwards leaves pivot
+tables with no team column. Tables already made without the column count as the
+answer "no" and are not asked about again; switching teams on later is a migration
+you write. The team model and the relation on the user are still yours to write.
+
 ```php
 // config/permission.php — spatie/laravel-permission's own, published by the
 // extended package's dependency

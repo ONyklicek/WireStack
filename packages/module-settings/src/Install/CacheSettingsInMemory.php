@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleSettings\Install;
 
+use Illuminate\Support\Facades\Cache;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
 use NyonCode\WireCore\Foundation\Setup\EnvFile;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
+use Throwable;
 
 /**
  * Somewhere to cache settings that is not the table they came from.
@@ -89,6 +91,11 @@ final readonly class CacheSettingsInMemory implements SetupStep
         return SetupOutcome::Applied;
     }
 
+    public function package(): string
+    {
+        return 'nyoncode/wire-module-settings';
+    }
+
     public function sort(): int
     {
         return 800;
@@ -105,11 +112,17 @@ final readonly class CacheSettingsInMemory implements SetupStep
     }
 
     /**
-     * The memory stores this application has actually configured.
+     * The memory stores this application has configured, and that answer.
      *
      * Read off `cache.stores` rather than offered from a list, because naming
      * `redis` in an application with no redis connection swaps a slow cache for
-     * a broken one.
+     * a broken one. And configured is not enough: a fresh Laravel application
+     * lists `redis`, `memcached` and `octane` in its `config/cache.php` whether
+     * or not there is a server, an extension or Octane behind them. Offered on
+     * the strength of the config alone, the first run in a real application
+     * wrote `redis` as the default into `.env` of a PHP with no Redis class, and
+     * every settings read after it threw. So each store is asked for one key,
+     * which is looking rather than changing, and one that throws is not offered.
      *
      * @return array<int, string>
      */
@@ -120,7 +133,18 @@ final readonly class CacheSettingsInMemory implements SetupStep
 
         return array_values(array_filter(
             self::PREFERRED,
-            static fn (string $name): bool => array_key_exists($name, $stores),
+            static fn (string $name): bool => array_key_exists($name, $stores) && self::answers($name),
         ));
+    }
+
+    private static function answers(string $store): bool
+    {
+        try {
+            Cache::store($store)->get('wire-module-settings:probe');
+
+            return true;
+        } catch (Throwable) {
+            return false;
+        }
     }
 }

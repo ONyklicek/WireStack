@@ -190,6 +190,20 @@ on — belongs to the users module's profile page. See
 [Teams and Two-Factor](teams-and-two-factor.md). This package owns only the
 challenge on the way in.
 
+**`php artisan wire:install` writes that list for you.** Its Fortify step runs
+`fortify:install` — the config, the `App\Providers\FortifyServiceProvider` and
+its line in `bootstrap/providers.php`, without which none of these screens has a
+route — and then asks which of registration, password reset, e-mail verification,
+two-factor and passkeys to have. The list arrives ticked as the published config
+has it — e-mail verification off, the rest on — so enter changes nothing; a tick
+uncomments a feature and an untick comments it out, options array and all. It
+never offers `updateProfileInformation()` or `updatePasswords()`: the users
+module's profile cards are built on them. It edits only the shapes Fortify
+publishes, a call on one line or an options array over several; a list you have
+already rewritten is left as it is, and a run with `--no-interaction` changes
+nothing. See
+[Installing Wire](../start/installation.md#setting-up-the-application).
+
 ## One-Time Codes
 
 A six-digit code, mailed, typed into the same boxes as the two-factor challenge.

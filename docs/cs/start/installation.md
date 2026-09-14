@@ -11,8 +11,9 @@ php artisan wire:install
 ```
 
 První řádek přinese core, formuláře, tabulky, sortable, resources a admin shell.
-Druhý je nastaví — interaktivně, část po části, a pouští přitom vlastní
-instalátor každého balíčku místo jeho kopie.
+Druhý je nastaví — průvodce v číslovaných krocích, který se zeptá, co chcete,
+spustí vlastní instalátor každého vybraného balíčku místo jeho kopie a pak
+nastaví aplikaci, kterou ty balíčky potřebují.
 
 ## Co instalátor dělá
 
@@ -21,13 +22,24 @@ instalátor každého balíčku místo jeho kopie.
    ╰─────╮      WireStack
  ●───────╯      the whole stack, set up in one pass
 
- ┌ Which parts should be set up? ───────────────┐
- │ › ◼ Tables                                   │
- │   ◼ Admin shell                              │
- └──────────────────────────────────────────────┘
+ INFO  Step 1 — The framework.
+
+ ┌ Which parts of the stack? ─────────────────────────────────────────────┐
+ │ › ◼ Tables — Tables, columns, filters, exports, gestures.              │
+ │   ◼ Admin shell — The layout and the sidebar your pages render inside. │
+ └────────────────────────────────────────────────────────────────────────┘
   Space unticks one, enter confirms.
 
- INFO  Installing packages
+ INFO  Step 2 — Ready-made areas.
+
+ ┌ Which of these should the panel have? ────────────────────────────────────────────────────────┐
+ │ › ◼ Sign in — Login, password reset, verification and the two-factor challenge, over Fortify. │
+ │   ◼ Users — User administration, with roles where the application has them.                   │
+ │   ◻ Media library — Uploads, a browsable list and previews.                                   │
+ └───────────────────────────────────────────────────────────────────────────────────────────────┘
+  Space unticks one, enter confirms.
+
+ INFO  Step 3 — Installing packages.
 
   Core — nyoncode/wire-core ....................... ALREADY DONE
   Forms — nyoncode/wire-forms ..................... ALREADY DONE
@@ -47,6 +59,20 @@ Jeden řádek na část, zakončený tím, co se s ní stalo — stejný tvar, j
 fáze nastavení níž. Dřív to byly tři seznamy: co se našlo, co už je nastavené a
 co se právě spouští — většina částí tam byla dvakrát a některé třikrát, pokaždé
 jiným slovníkem.
+
+**Dvě otázky, a druhá jen tehdy, když dává smysl.** Nejdřív stack — formuláře,
+tabulky, sortable, resources, shell. Hotové oblasti přijdou na řadu až potom, a
+jen když je admin shell součástí odpovědi — ať zaškrtnutý teď, nebo nastavený už
+dřívějším během: modul se vykresluje *uvnitř* panelu, a nabízet oblast uživatelů
+někomu, kdo si panel nevzal, je nabízet mu obrazovku, která nemá kde se objevit.
+Odškrtněte shell a moduly se vypíšou jako `LEFT ALONE`, místo aby se nainstalovaly
+za vašimi zády.
+
+**Kroky se počítají, neslibují.** Každá fáze na začátku vypíše `Step N — …` a
+číslo odpovídá tomu, kolik fází tento běh opravdu má: `--all` se na nic neptá,
+takže jeho prvním nadpisem je instalace, a `--dry-run` napíše „What would be
+installed“, místo aby předstíral, že instaluje. Log, který skončí po `Step 3`,
+říká, kde se běh zastavil.
 
 Všechno je nabídnuté předvybrané: instalátor, jehož výchozí stav je „nic“, dělá
 z běžného případu ten zdlouhavý — otázka je tedy multiselect, kde je všechno už
@@ -129,8 +155,11 @@ takových řádků napříč sedmi balíčky, a za každým z nich nic.
 Druhá půlka `wire:install` je proto prochází, jeden po druhém:
 
 ```text
- INFO  Setting up this application
+ INFO  Step 4 — Setting up this application.
 
+  Fortify .... publish its config and provider, or the sign-in screens have no routes   WOULD RUN
+  Teams ............................ scope roles to teams, if this application has them   WOULD RUN
+  Roles & permissions ........ publish the permission config and patch your user model   WOULD RUN
   Database tables ..................... run 2 pending migrations   WOULD RUN
   Routes ........................ no routes/web.php to add them to   WAITING
   First administrator . an account already exists, so you can sign in   DONE
@@ -143,18 +172,29 @@ Druhá půlka `wire:install` je proto prochází, jeden po druhém:
 
 | Krok | Co dělá a proč to není poznámka pod čarou |
 | --- | --- |
+| [Fortify](../modules/auth.md) | Spustí `fortify:install` a pak se zeptá, které funkce přihlášení mít — registraci, obnovu hesla, ověření e-mailu, dvoufázové ověření, passkeys — zaškrtnuté tak, jak je má publikovaný config, a každou v `config/fortify.php` zakomentuje nebo odkomentuje, i s celým blokem voleb. Bez toho jsou obrazovky přihlášení zaregistrované, ale jejich routy ne: přihlašovací stránka je 404 |
+| [Teams](../modules/teams-and-two-factor.md#jak-zapnout-tymy) | Zeptá se, zda jsou role vázané na týmy; při „ano“ publikuje config oprávnění, pokud ještě není, nastaví `permission.teams` na `true`, zapíše `WIRE_USERS_TEAM_MODEL` a — pokud zadáte jinou — i relaci. Ptá se schválně před rolemi: instalátor rolí končí vlastním `migrate` a Spatie migrace čte `permission.teams` ve chvíli, kdy běží. Tabulky vytvořené bez týmů se berou jako „ne“, takže se znovu neptá |
+| [Roles & permissions](../modules/teams-and-two-factor.md) | Spustí `permission-extended:install`, který publikuje config a migraci oprávnění, spustí ji a přidá `HasRoles` na váš model uživatele. Do té doby obrazovky rolí prostě chybí. Potřebuje `nyoncode/laravel-permission-extended` a řekne, když chybí |
 | Database tables | Spustí čekající migrace. Tři moduly si o to řekly ve vlastních instalátorech a ani jeden s tím nemohl nic udělat |
 | [Routes](../panels/modules.md) | Zapíše do `routes/web.php` skupinu s `Route::wireResources()`, pod prefixem a middlewarem, na které se zeptá. Bez toho je každá obrazovka 404 |
-| [First administrator](../modules/users.md) | Založí účet, kterým se přihlásíte — a super-admin roli tam, kde aplikace role má. Nic v celém stacku ho předtím nevytvořilo; odpovědí byl `php artisan tinker`. Vždycky jen ten *první*; každý další účet je `php artisan wire:user` |
+| [First administrator](../modules/users.md) | Založí účet, kterým se přihlásíte — a super-admin roli tam, kde aplikace role má. Nic v celém stacku ho předtím nevytvořilo; odpovědí byl `php artisan tinker`. Vždycky jen ten *první*; každý další účet je `php artisan wire:user`. Když se role nastavily v tomtéž běhu, přiřadí se role z nového PHP procesu, protože tento načetl model uživatele ještě před úpravou. Když jsou role vázané na týmy, účet bez týmu roli nedostane a krok řekne, co dál |
 | [Media links](../modules/media.md) | `storage:link`. Bez něj uploady fungují, náhledy se generují a každý obrázek je 404, které nikde nezahlásí chybu |
 | [Audit recording](../core/audit.md) | Zapne zaznamenávání, aby obrazovka auditu nebyla pohledem do prázdné tabulky |
 | [Stored notifications](../modules/notifications.md) | Přidá vedle toastu driver `database`, aby zvoneček měl co ukazovat |
-| [Settings cache](../modules/settings.md) | Přesune cache nastavení z databáze, kde ji čtení stojí zrovna ten dotaz, který měla ušetřit |
+| [Settings cache](../modules/settings.md) | Přesune cache nastavení z databáze, kde ji čtení stojí zrovna ten dotaz, který měla ušetřit — a nabídne jen paměťová úložiště, která opravdu odpovídají, protože čerstvý Laravel má `redis` v configu, ať už běží, nebo ne |
 | Frontend build | `npm install && npm run build`, aby Tailwind zkompiloval třídy z views balíčků. Dokud neproběhne, shell nemá šířku, barvu ani chybu |
 
 **Zjisti, zeptej se, udělej.** Krok se nejdřív podívá a nabídne se jen tehdy, když
 je potřeba — takže druhé spuštění příkazu je tiché. Co už platí, se pojmenuje a
 nechá být.
+
+**Odškrtnutá část si vezme své kroky s sebou.** Každý krok říká, ke kterému balíčku
+patří, a na balíček, který byl v první půlce nabídnutý a vynechaný, se druhá půlka
+neptá — odškrtnout modul médií a pak dostat otázku, zda pro něj propojit veřejný
+disk, by byl instalátor, který se ptá na něco, na co už dostal odpověď.
+*Nabídnutý* je tu klíčové slovo: modul nainstalovaný minulý měsíc v tomto běhu
+otázkou není, takže jeho kroky proběhnou dál, a migrace nepatří žádné části, kterou
+by šlo odškrtnout.
 
 **Krok, který vybuchne, se ohlásí, neshodí běh.** `Blocked` pokrývá to, co krok
 viděl dopředu; migrace, která koliduje s tou, kterou aplikace už spustila, přijde
@@ -202,10 +242,26 @@ $packager->registeredPackage(fn () => SetupRegistry::instance()->register(WarmTh
 ```
 
 Třída implementuje `NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep`:
-`label()`, `state()` (`Done`, `Pending` nebo `Blocked`), `summary()`, `apply()` a
-`sort()`. `state()` se smí jen dívat — běží i pod `--dry-run` — a `apply()` se ptá
-přes `SetupConsole`, ne přes příkaz, což je to, co dovolí krok otestovat bez
-terminálu.
+`label()`, `state()` (`Done`, `Pending` nebo `Blocked`), `summary()`, `apply()`,
+`package()` a `sort()`. `state()` se smí jen dívat — běží i pod `--dry-run` — a
+`apply()` se ptá přes `SetupConsole`, ne přes příkaz, což je to, co dovolí krok
+otestovat bez terminálu. Konzole má `confirm()`, `ask()`, `secret()`, `choose()`
+pro „který“ a `select()` pro „které z těchto“; každá metoda vrátí svou výchozí
+hodnotu, když není kdo by odpověděl, takže výchozí hodnota je to, co krok
+považuje za bezpečné nechat, jak je.
+
+`package()` je composer jméno balíčku, ke kterému krok patří, a právě to krok váže
+na zaškrtávací políčko výše: vraťte jméno svého balíčku. `sort()` určuje pořadí —
+nižší běží dřív a migrace běží na `100`, takže krok, který publikuje migraci nebo
+nastavuje přepínač, který migrace čte, musí mít nižší číslo.
+
+Krok, který mění publikovaný config soubor, použije
+`NyonCode\WireCore\Foundation\Setup\ConfigFile`, a jen pro hodnotu, za kterou
+nestojí žádné `env()` — první odpovědí je `EnvFile`. `set('teams', 'true')`
+přepíše jeden jednořádkový `'key' => value,`, který se v souboru vyskytuje právě
+jednou, a pro cokoli jiného vrátí `false`: klíč ve dvou sekcích, hodnotu přes víc
+řádků, soubor, který si aplikace přepsala. Krok, který dostane `false`, řekne
+člověku, který řádek má změnit.
 
 ## Co zůstává na vás
 

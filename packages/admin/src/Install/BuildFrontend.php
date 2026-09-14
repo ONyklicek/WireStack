@@ -91,6 +91,11 @@ final class BuildFrontend implements SetupStep
         return SetupOutcome::Applied;
     }
 
+    public function package(): string
+    {
+        return 'nyoncode/wire-admin';
+    }
+
     public function sort(): int
     {
         // Last. It is the slowest thing here and the only one that needs

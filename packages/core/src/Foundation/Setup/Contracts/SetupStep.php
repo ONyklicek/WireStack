@@ -77,6 +77,17 @@ interface SetupStep
     public function apply(SetupConsole $console): SetupOutcome;
 
     /**
+     * The composer package this step belongs to.
+     *
+     * A step is its package's own, and so is the decision to set that package
+     * up: somebody who unticks the media module in the installer is not then
+     * asked about a public disk. A step naming a package the installer never
+     * offered — an application's own, anything outside the catalogue — always
+     * runs, because there was no choice to respect.
+     */
+    public function package(): string;
+
+    /**
      * Where this sits among the others. Lower runs first.
      *
      * Order is correctness here, not presentation: creating the first

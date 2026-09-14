@@ -52,6 +52,16 @@ function snConsole(array $answers = [], array &$said = [], bool $interactive = t
             return array_shift($this->answers) ?? (string) $default;
         }
 
+        /**
+         * @param  array<int|string, string>  $options
+         * @param  array<int, int|string>  $default
+         * @return array<int, int|string>
+         */
+        public function select(string $question, array $options, array $default = []): array
+        {
+            return $default;
+        }
+
         public function note(string $message): void
         {
             $this->said[] = $message;
@@ -148,4 +158,9 @@ it('fails rather than pretending, when .env cannot be written', function () {
 
     expect($step->apply(snConsole([], $said)))->toBe(SetupOutcome::Failed)
         ->and(implode("\n", $said))->toContain('wire-core.notifications.default');
+});
+
+it('belongs to its own package, so unticking that package skips it', function () {
+    // What the first half of the installer was told, the second half obeys.
+    expect((new StoreNotifications(snEnv()))->package())->toBe('nyoncode/wire-module-notifications');
 });

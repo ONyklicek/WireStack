@@ -22,6 +22,9 @@ final readonly class Component
      *                                nothing to install — or whose setup is a choice
      *                                `wire:install` should not make for anyone — leaves
      *                                this null and is listed rather than run.
+     * @param  ComponentGroup  $group  Which of the installer's two questions this
+     *                                 belongs to. A module is offered only once the
+     *                                 shell is, because it renders inside one.
      */
     public function __construct(
         public string $package,
@@ -29,6 +32,7 @@ final readonly class Component
         public string $description,
         public string $marker,
         public ?string $command = null,
+        public ComponentGroup $group = ComponentGroup::Stack,
     ) {}
 
     public function installed(): bool

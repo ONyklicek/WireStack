@@ -5,12 +5,17 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
 use NyonCode\WireModuleUsers\Install\CreateFirstAdministrator;
+use NyonCode\WireModuleUsers\Support\Roles;
+use NyonCode\WireModuleUsers\Tests\Fixtures\PatchedOnDiskUser;
+use NyonCode\WireModuleUsers\Tests\Fixtures\SpatieOnlyUser;
+use NyonCode\WireModuleUsers\Tests\Fixtures\Team;
 use NyonCode\WireModuleUsers\Tests\Fixtures\User;
 use NyonCode\WireModuleUsers\Tests\Support\Tables;
 use Spatie\Permission\Models\Role;
@@ -61,6 +66,16 @@ function cfaConsole(array $answers, array &$said = [], bool $interactive = true)
         public function choose(string $question, array $options, ?string $default = null): string
         {
             return (string) $default;
+        }
+
+        /**
+         * @param  array<int|string, string>  $options
+         * @param  array<int, int|string>  $default
+         * @return array<int, int|string>
+         */
+        public function select(string $question, array $options, array $default = []): array
+        {
+            return $default;
         }
 
         public function note(string $message): void
@@ -249,4 +264,115 @@ it('says nothing about roles in an application that has none', function () {
         ->and(cfaStep()->apply(cfaConsole(['No roles', 'nr@example.com', 'pw'], $said)))
         ->toBe(SetupOutcome::Applied)
         ->and(implode("\n", $said))->not->toContain('role');
+});
+
+it('belongs to its own package, so unticking that package skips it', function () {
+    // What the first half of the installer was told, the second half obeys.
+    expect(cfaStep()->package())->toBe('nyoncode/wire-module-users');
+});
+
+// ---------------------------------------------------------------------------
+// Roles that arrived in this same run
+// ---------------------------------------------------------------------------
+
+it('knows a model patched on disk after this process loaded it', function () {
+    config()->set('wire-module-users.model', PatchedOnDiskUser::class);
+
+    expect(Roles::available())->toBeFalse()
+        ->and(Roles::waitingForRestart())->toBeTrue();
+});
+
+it('is not waiting on a model that already has roles, has none coming, or has bare Spatie', function () {
+    config()->set('wire-module-users.model', User::class);
+    expect(Roles::waitingForRestart())->toBeFalse();
+
+    config()->set('wire-module-users.model', SpatieOnlyUser::class);
+    expect(Roles::waitingForRestart())->toBeFalse();
+
+    config()->set('wire-module-users.model', PatchedOnDiskUser::class);
+    config()->set('wire-module-users.roles', false);
+    expect(Roles::waitingForRestart())->toBeFalse();
+});
+
+it('gives the first administrator the role from a fresh process when roles arrived in this run', function () {
+    // `permission-extended:install` patched the model after boot, so the
+    // in-process check sees no roles. Made without one, the only account that
+    // can sign in got a 403 on the users screen — measured in a real install.
+    config()->set('wire-module-users.model', PatchedOnDiskUser::class);
+    config()->set('auth.providers.users.model', PatchedOnDiskUser::class);
+    Tables::users();
+    Process::fake();
+    $said = [];
+
+    expect(cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'pw'], $said)))->toBe(SetupOutcome::Applied)
+        ->and(implode("\n", $said))->toContain('Gave it the `super-admin` role');
+
+    Process::assertRan(fn ($process): bool => array_slice((array) $process->command, 1) === [
+        'artisan',
+        'permission:assign-role',
+        'super-admin',
+        (string) PatchedOnDiskUser::query()->value('id'),
+        'web',
+        PatchedOnDiskUser::class,
+    ]);
+});
+
+it('says the role is missing when the fresh process fails', function () {
+    config()->set('wire-module-users.model', PatchedOnDiskUser::class);
+    Tables::users();
+    Process::fake(['*' => Process::result(errorOutput: 'no roles table', exitCode: 1)]);
+    $said = [];
+
+    expect(cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'pw'], $said)))->toBe(SetupOutcome::Applied)
+        ->and(PatchedOnDiskUser::query()->count())->toBe(1)
+        ->and(implode("\n", $said))->toContain('not the `super-admin` role: no roles table');
+});
+
+it('still names the command when the fresh process fails without a word', function () {
+    config()->set('wire-module-users.model', PatchedOnDiskUser::class);
+    Tables::users();
+    Process::fake(['*' => Process::result(exitCode: 1)]);
+    $said = [];
+
+    cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'pw'], $said));
+
+    expect(implode("\n", $said))->toContain('permission:assign-role did not finish');
+});
+
+it('scopes the fresh process to the account\'s team, and refuses without one', function () {
+    config()->set('wire-module-users.model', PatchedOnDiskUser::class);
+    config()->set('wire-module-users.teams.model', Team::class);
+    config()->set('permission.teams', true);
+    Tables::users();
+
+    Schema::create('teams', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->timestamps();
+    });
+
+    Schema::create('team_user', function (Blueprint $table) {
+        $table->unsignedBigInteger('team_id');
+        $table->unsignedBigInteger('user_id');
+    });
+
+    Process::fake();
+    $said = [];
+
+    // No team: the same refusal the in-process path gives, and nothing run.
+    cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'pw'], $said));
+
+    expect(implode("\n", $said))->toContain('scoped to a team and this account is in none');
+    Process::assertNothingRan();
+
+    // In one: the team goes with the command.
+    $team = Team::query()->create(['name' => 'Ops']);
+    DB::table('team_user')->insert(['team_id' => $team->getKey(), 'user_id' => PatchedOnDiskUser::query()->value('id')]);
+    $user = PatchedOnDiskUser::query()->firstOrFail();
+
+    $step = cfaStep();
+    $method = new ReflectionMethod($step, 'superAdminInAFreshProcess');
+
+    expect($method->invoke($step, $user))->toBe('super-admin');
+    Process::assertRan(fn ($process): bool => in_array('--team-id='.$team->getKey(), (array) $process->command, true));
 });

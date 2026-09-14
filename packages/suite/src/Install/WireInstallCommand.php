@@ -48,6 +48,19 @@ class WireInstallCommand extends Command
 
     protected $description = 'Set up the wire stack in this application, interactively.';
 
+    /** The part whose presence decides whether the modules are worth offering. */
+    private const SHELL = 'nyoncode/wire-admin';
+
+    /**
+     * How many headings have been printed.
+     *
+     * Counted rather than declared, because how many stages a run has is
+     * decided by the run: `--all` asks nothing and `--dry-run` sets nothing up,
+     * and a wizard that says "step 2 of 5" and then shows three is worse than
+     * one that never promised.
+     */
+    private int $stage = 0;
+
     public function handle(Catalogue $catalogue, Setup $setup, Banner $banner): int
     {
         // Only where somebody is watching. A banner in a deploy log is noise in
@@ -65,12 +78,12 @@ class WireInstallCommand extends Command
 
         [$runnable, $settled] = $this->triage($installed, $commands, $setup, $force);
 
-        $chosen = $this->option('all') ? $runnable : $this->choose($runnable);
+        $chosen = $this->option('all') ? $runnable : $this->choose($runnable, $settled);
 
         $failed = $this->install($installed, $chosen, $settled, $commands, $force, $dry);
 
         $applied = 0;
-        $failed = array_merge($failed, $this->setUpApplication($dry, $applied));
+        $failed = array_merge($failed, $this->setUpApplication($this->declined($runnable, $chosen), $dry, $applied));
 
         $this->offerMissing($catalogue->missing());
 
@@ -120,8 +133,7 @@ class WireInstallCommand extends Command
      */
     protected function install(array $installed, array $chosen, array $settled, array $commands, bool $force, bool $dry): array
     {
-        $this->newLine();
-        $this->components->info('Installing packages');
+        $this->stage($dry ? 'What would be installed' : 'Installing packages');
 
         $failed = [];
 
@@ -237,18 +249,18 @@ class WireInstallCommand extends Command
      * package that knows: this method collects, orders and asks, and never
      * learns what a media disk or a super-admin role is.
      *
+     * @param  array<int, string>  $declined  Composer names left out of this run.
      * @return array<int, string> The labels of the steps that failed.
      */
-    protected function setUpApplication(bool $dry, int &$applied = 0): array
+    protected function setUpApplication(array $declined, bool $dry, int &$applied = 0): array
     {
-        $steps = $this->steps();
+        $steps = $this->steps($declined);
 
         if ($steps === []) {
             return [];
         }
 
-        $this->newLine();
-        $this->components->info('Setting up this application');
+        $this->stage($dry ? 'What this application would still need' : 'Setting up this application');
 
         $console = new CommandConsole($this, $this->input->isInteractive());
         $failed = [];
@@ -330,18 +342,54 @@ class WireInstallCommand extends Command
      * step, and reading it means resolving it — which is also where a step
      * picks up whatever it needs from the container.
      *
+     * @param  array<int, string>  $declined  Composer names left out of this run.
      * @return array<int, SetupStep>
      */
-    protected function steps(): array
+    protected function steps(array $declined): array
     {
         $steps = array_map(
             fn (string $step): SetupStep => $this->laravel->make($step),
             SetupRegistry::instance()->all(),
         );
 
+        // What the first half was told, the second half obeys. Unticking the
+        // media module and then being asked to link a public disk for it is the
+        // installer asking a question it has already been answered — and the
+        // answer it would act on is the wrong one.
+        $steps = array_filter(
+            $steps,
+            static fn (SetupStep $step): bool => ! in_array($step->package(), $declined, true),
+        );
+
+        // Reindexed by `usort`, which is the only reason the filter above can
+        // leave holes without anyone minding.
         usort($steps, static fn (SetupStep $a, SetupStep $b): int => $a->sort() <=> $b->sort());
 
         return $steps;
+    }
+
+    /**
+     * The parts that were offered and left out.
+     *
+     * Offered is the operative word. A part that was never a question — one with
+     * no installer, one whose package is not in the catalogue at all, one already
+     * set up — is not declined, and its setup steps still run: an application
+     * whose media module was installed last month still has a public disk to
+     * link.
+     *
+     * @param  array<int, Component>  $runnable
+     * @param  array<int, Component>  $chosen
+     * @return array<int, string>
+     */
+    protected function declined(array $runnable, array $chosen): array
+    {
+        return array_values(array_map(
+            static fn (Component $c): string => $c->package,
+            array_filter(
+                $runnable,
+                static fn (Component $c): bool => ! in_array($c, $chosen, true),
+            ),
+        ));
     }
 
     /**
@@ -426,36 +474,102 @@ class WireInstallCommand extends Command
      * same are still two parts.
      *
      * @param  array<int, Component>  $runnable
+     * @param  array<int, Component>  $settled  Installed parts with nothing left to run.
      * @return array<int, Component>
      */
-    protected function choose(array $runnable): array
+    protected function choose(array $runnable, array $settled = []): array
     {
         if ($runnable === [] || ! $this->input->isInteractive()) {
             return $runnable;
         }
 
+        $stack = $this->offer('The framework', 'Which parts of the stack?', array_values(array_filter(
+            $runnable,
+            static fn (Component $c): bool => $c->group === ComponentGroup::Stack,
+        )));
+
+        // The second question, and only when the application has the shell —
+        // ticked just now, or set up by an earlier run. A ready-made area renders
+        // *inside* a panel, so offering "a users area" to somebody who has not
+        // taken one is offering them a screen with nowhere to appear. The earlier
+        // run counts because that is the documented way to add a module: require
+        // it, run this again, and the shell is ALREADY DONE rather than offered.
+        $shell = array_filter(
+            [...$stack, ...$settled],
+            static fn (Component $c): bool => $c->package === self::SHELL,
+        );
+
+        if ($shell === []) {
+            return $stack;
+        }
+
+        $modules = array_values(array_filter(
+            $runnable,
+            static fn (Component $c): bool => $c->group === ComponentGroup::Module,
+        ));
+
+        return $modules === []
+            ? $stack
+            : [...$stack, ...$this->offer('Ready-made areas', 'Which of these should the panel have?', $modules)];
+    }
+
+    /**
+     * One question, with everything already ticked.
+     *
+     * An installer whose default is "nothing" makes the common case the tedious
+     * one, so each list arrives answered and the work is unticking rather than
+     * ticking. Keyed by the installer rather than by the label, so two parts that
+     * read the same are still two parts.
+     *
+     * @param  array<int, Component>  $components
+     * @return array<int, Component>
+     */
+    protected function offer(string $heading, string $question, array $components): array
+    {
+        if ($components === []) {
+            return [];
+        }
+
+        $this->stage($heading);
+
         $options = [];
 
-        foreach ($runnable as $component) {
+        foreach ($components as $component) {
             /** @var string $name */
             $name = $component->command;
-            $options[$name] = $component->label;
+            $options[$name] = $component->label.' — '.$component->description;
         }
 
         $picked = multiselect(
-            label: 'Which parts should be set up?',
+            label: $question,
             options: $options,
             default: array_keys($options),
-            // Tall enough for the whole stack and every module at once: a list
-            // that scrolls hides the thing the pre-selection is trying to show.
+            // Tall enough for a whole list at once: one that scrolls hides the
+            // thing the pre-selection is trying to show.
             scroll: 15,
             hint: 'Space unticks one, enter confirms.',
         );
 
         return array_values(array_filter(
-            $runnable,
+            $components,
             static fn (Component $c): bool => in_array($c->command, $picked, true),
         ));
+    }
+
+    /**
+     * One stage of the wizard, announced.
+     *
+     * The heading is the whole of the structure: a person reading this back in a
+     * CI log needs to know which half of the install a line came from, and the
+     * numbering is what makes "it stopped here" a sentence somebody can say.
+     */
+    protected function stage(string $title): void
+    {
+        // `Step 1 — …` rather than `1. …`: Laravel's info component punctuates
+        // what it is given, and `1. The framework.` is two full stops arguing
+        // about which of them ends the sentence.
+        $this->newLine();
+        $this->components->info('Step '.++$this->stage.' — '.$title);
     }
 
     /**

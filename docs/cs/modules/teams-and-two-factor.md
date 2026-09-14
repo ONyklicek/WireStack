@@ -158,6 +158,18 @@ Týmy potřebují od vaší aplikace tři věci: nastavení, model týmu a relac
 uživateli, která se k němu dostane. Tenhle modul nedodává ani jednu, protože
 aplikace, která týmy má, má všechny tři.
 
+Nastavení a pojmenování za vás udělá `php artisan wire:install`. Jeho krok
+**Teams** se zeptá, zda jsou role vázané na týmy, a při „ano“ publikuje config
+níže, pokud ještě není, nastaví `teams` na `true` — v souboru i v běžícím procesu
+— zapíše `WIRE_USERS_TEAM_MODEL` a — pokud zadáte jinou — i relaci. Krok **Roles &
+permissions** přijde až po něm a spustí `permission-extended:install`, který
+publikuje migraci, spustí ji a přidá `HasRoles` na váš model uživatele. Právě o to
+pořadí jde: Spatie migrace čte `permission.teams` ve chvíli, kdy běží, a instalátor
+rolí ji spouští, takže zapnout týmy až potom znamená pivotní tabulky bez sloupce
+týmu. Tabulky vytvořené bez sloupce se berou jako odpověď „ne“ a znovu se na ně
+neptá; zapnout týmy později je migrace, kterou napíšete sami. Model týmu a relaci
+na uživateli si pořád píšete sami.
+
 ```php
 // config/permission.php — vlastní config spatie/laravel-permission, publikovaný
 // přes závislost rozšiřujícího balíčku
