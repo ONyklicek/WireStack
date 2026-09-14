@@ -66,6 +66,18 @@ final class AccountException extends RuntimeException implements WireException
     }
 
     /**
+     * The only super-admin there is, about to stop being one.
+     *
+     * Refused without being told twice: an installation with no super-admin has
+     * nobody who may change the administrator role or put a super-admin back,
+     * short of the database.
+     */
+    public static function lastSuperAdmin(string $email): self
+    {
+        return new self("{$email} is the only super-admin — make another one first, or pass --force if you mean to leave none");
+    }
+
+    /**
      * The fresh process that was to give the role did not finish.
      *
      * What it printed is the reason: that process is `wire:assign-role`, and it

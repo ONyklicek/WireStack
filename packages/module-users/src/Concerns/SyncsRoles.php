@@ -7,6 +7,7 @@ namespace NyonCode\WireModuleUsers\Concerns;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use NyonCode\WireForms\Forms\Form;
+use NyonCode\WireModuleUsers\Support\AccountGuard;
 use NyonCode\WireModuleUsers\Support\Permissions;
 use NyonCode\WireModuleUsers\Support\RoleGrants;
 use NyonCode\WireModuleUsers\Support\Roles;
@@ -56,7 +57,7 @@ trait SyncsRoles
      */
     protected function syncSelectedRoles(mixed $record): void
     {
-        if (! Roles::enabled() || ! $record instanceof Model || ! method_exists($record, 'syncRoles')) {
+        if (! Roles::enabled() || ! $record instanceof Model || ! method_exists($record, 'syncRoles') || AccountGuard::isProtected($record)) {
             return;
         }
 

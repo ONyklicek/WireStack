@@ -263,6 +263,77 @@ final class Accounts
     }
 
     /**
+     * Take a role from the account, in a team where roles are scoped to one.
+     *
+     * @param  int|string|null  $team  The team to take it from; null means the team the account is in now.
+     * @return bool Whether the account had the role there.
+     */
+    public function revoke(Model $user, string $role, int|string|null $team = null): bool
+    {
+        if (! Roles::enabled() || ! method_exists($user, 'removeRole') || ! method_exists($user, 'hasRole')) {
+            return false;
+        }
+
+        if (Teams::enabled()) {
+            Teams::apply($team ?? Teams::currentId($user));
+        }
+
+        $had = $user->hasRole($role);
+
+        if ($had) {
+            $user->removeRole($role);
+        }
+
+        return $had;
+    }
+
+    /**
+     * Take a role the account holds in every team.
+     *
+     * @return bool Whether the account held it globally.
+     */
+    public function revokeGlobal(Model $user, string $role): bool
+    {
+        if (! Roles::enabled() || ! method_exists($user, 'removeGlobalRole') || ! method_exists($user, 'hasGlobalRole')) {
+            return false;
+        }
+
+        if ($role === Roles::superAdmin()) {
+            throw AccountException::superAdminIsNotARole($role, $this->emailOf($user));
+        }
+
+        $had = $user->hasGlobalRole($role);
+
+        if ($had) {
+            $user->removeGlobalRole($role);
+        }
+
+        return $had;
+    }
+
+    /**
+     * Stop the account being a super-admin — never the last one, unless forced.
+     *
+     * @return bool Whether the account was a super-admin.
+     */
+    public function revokeSuperAdmin(Model $user, bool $force = false): bool
+    {
+        $role = Roles::superAdmin();
+
+        if ($role === null || ! Roles::isSuperAdmin($user) || ! method_exists($user, 'removeGlobalRole')) {
+            return false;
+        }
+
+        if (! $force && AccountGuard::isLastSuperAdmin($user)) {
+            throw AccountException::lastSuperAdmin($this->emailOf($user));
+        }
+
+        $user->removeGlobalRole($role);
+
+        return true;
+    }
+
+    /**
      * The role of this name that a team can use, made when there is none.
      *
      * The team's own role of that name if it has one, otherwise the global one —

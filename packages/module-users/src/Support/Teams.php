@@ -336,6 +336,39 @@ final class Teams
     }
 
     /**
+     * Take an account out of a team, and its roles in that team with it.
+     *
+     * Both, because either alone is wrong: a membership removed with its roles
+     * left behind comes back with them the day the account rejoins, and roles
+     * removed with the membership left behind leave somebody in a team with
+     * nothing to do there. Roles the account holds globally are not the team's
+     * and stay.
+     */
+    public static function removeMember(Model $member, int|string $team): void
+    {
+        $relation = self::relation();
+
+        if (method_exists($member, $relation) && ($teams = $member->{$relation}()) instanceof BelongsToMany) {
+            $teams->detach($team);
+        }
+
+        if (method_exists($member, 'roles')) {
+            $previous = class_exists(self::REGISTRAR) ? app(self::REGISTRAR)->getPermissionsTeamId() : null;
+
+            self::apply($team);
+            $member->roles()->detach();
+            $member->unsetRelation('roles');
+            self::apply($previous);
+
+            if (method_exists($member, 'flushWildcardCache')) {
+                $member->flushWildcardCache();
+            }
+
+            app(self::REGISTRAR)->forgetCachedPermissions();
+        }
+    }
+
+    /**
      * Tell the permission package which team this request is in.
      *
      * Every role and permission read after this is scoped by it, which is why it

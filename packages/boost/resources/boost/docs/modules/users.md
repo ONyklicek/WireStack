@@ -262,6 +262,34 @@ above you put there. A wildcard is a name like any other: holding `invoices.*`
 is what lets you give `invoices.*`. A super-admin may hand out everything except
 the super-admin. The command line is not held to this.
 
+### Whose Account May Be Touched
+
+A third question beside *who may see* and *what may be handed out*: which
+accounts may be changed, and how.
+
+- **A super-admin's account is a super-admin's to change.** Nobody else sees
+  Edit or Delete on it, and its edit page answers 403 — an administrator who
+  could set its password could sign in as it.
+- **The last super-admin is never deleted** — not from the list, and not by
+  itself from its own profile's "delete account".
+- **A team's manager manages membership, not people.** An account may belong to
+  several teams, so the manager of one gets **Remove from team** (which takes the
+  account's roles in that team with it, and leaves its other teams and its global
+  roles alone) instead of **Delete**, and **Send password reset link** instead of
+  the e-mail and password fields, which are locked on their form and ignored on
+  save. The name is theirs to correct.
+
+Somebody who works across every team — a super-admin, or an administrator whose
+ability is global — sees Delete and changes e-mail addresses and passwords. Only
+the command line takes a global role or the super-admin away:
+
+```bash
+php artisan wire:revoke-role ada@example.com --role=admin --global
+php artisan wire:revoke-role mia@example.com --role=team-admin --team=3
+php artisan wire:revoke-role root@example.com --super-admin          # refused for the last one…
+php artisan wire:revoke-role root@example.com --super-admin --force  # …unless you mean to leave none
+```
+
 ### Two Roles These Screens Never Hand Out Casually
 
 **The super-admin** can do everything, in every team. It is never offered in the

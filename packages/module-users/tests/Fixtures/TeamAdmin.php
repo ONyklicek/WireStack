@@ -6,6 +6,7 @@ namespace NyonCode\WireModuleUsers\Tests\Fixtures;
 
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use NyonCode\PermissionExtended\Traits\HasRoles;
 
 /**
@@ -20,6 +21,7 @@ use NyonCode\PermissionExtended\Traits\HasRoles;
 class TeamAdmin extends Authenticatable
 {
     use HasRoles;
+    use Notifiable;
 
     protected $table = 'users';
 

@@ -108,6 +108,15 @@ All notable changes to the Wire ecosystem will be documented in this file.
   (`wire-module-users.admin_role`, `admin`) only by a super-admin — who alone is offered it in the
   user form's roles select.
 
+- **Whose account may be touched: `Support\AccountGuard`.** A super-admin's account is changed only by
+  a super-admin — nobody else sees Edit or Delete on it, and its edit page is a 403 — and the last
+  super-admin is never deleted, not even by itself from its profile. A team's manager gets **Remove
+  from team** (`Teams::removeMember()`, which takes the account's roles in that team too) instead of
+  Delete, and **Send password reset link** instead of the e-mail and password fields, which are locked
+  on their form and stripped from the save. **`php artisan wire:revoke-role`** takes roles away —
+  team, `--global`, or `--super-admin`, refusing the last super-admin without `--force` — which had
+  no way back before but the database.
+
 - **`team-admin` and `admin`, and `wire:assign-role --global`.** The team manager role
   (`wire-module-users.teams.admin_role`) and the administrator role (`admin_role`) are made the first
   time they are given, carrying the abilities of the user and role screens (`Permissions::abilities()`

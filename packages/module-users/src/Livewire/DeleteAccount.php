@@ -10,9 +10,11 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
+use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
+use NyonCode\WireModuleUsers\Support\AccountGuard;
 
 /**
  * Closing your own account.
@@ -94,6 +96,15 @@ class DeleteAccount extends Component implements IdentifiesHookTarget
         }
 
         $this->form->validate();
+
+        // The only super-admin does not delete itself: an installation left
+        // without one has nobody who may put one back, short of the database.
+        if (AccountGuard::isLastSuperAdmin($user)) {
+            NotificationManager::error(__('wire-module-users::messages.last_super_admin'));
+            $this->cancel();
+
+            return null;
+        }
 
         Auth::logout();
 

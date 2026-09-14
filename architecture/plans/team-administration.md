@@ -14,8 +14,11 @@ přidá do týmu) a **2** (obrazovka rolí omezená na tým — globální role 
 (`Support\RoleGrants`: nikdo nerozdá víc, než sám má — formuláře nabízejí jen
 to, a uložení se zúží, neodmítne) a **4** (`team-admin` a `admin` vznikají při
 prvním přidělení s oprávněními obrazovek; `wire:assign-role --global`). Oprávnění
-`teams.*` z O7 zatím nejsou, protože modul žádnou obrazovku týmů nemá. Zbytek
-zatím není implementovaný.
+`teams.*` z O7 zatím nejsou, protože modul žádnou obrazovku týmů nemá. Hotový je
+i krok **5** (`Support\AccountGuard`: účet super-admina mění jen super-admin,
+poslední super-admin se nesmaže; správce týmu odebírá z týmu místo mazání (O1)
+a posílá odkaz na reset místo změny e-mailu a hesla (O2); `wire:revoke-role`
+s `--force` pro posledního super-admina (O9)). Zbývá krok 6.
 Hotové a pod nimi dostupné:
 
 - permission-extended 1.1 (větev `global-roles`): `assignGlobalRole()`,

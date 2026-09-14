@@ -29,6 +29,7 @@ use NyonCode\WireModuleUsers\Pages\EditProfile;
 use NyonCode\WireModuleUsers\Pages\EditUser;
 use NyonCode\WireModuleUsers\Pages\ListUsers;
 use NyonCode\WireModuleUsers\Pages\ViewUser;
+use NyonCode\WireModuleUsers\Support\AccountGuard;
 use NyonCode\WireModuleUsers\Support\Avatars;
 use NyonCode\WireModuleUsers\Support\Permissions;
 use NyonCode\WireModuleUsers\Support\Roles;
@@ -184,8 +185,20 @@ class UserResource implements DescribesResource, ProvidesNavigation, ProvidesPag
                 ->helperText(__('wire-module-users::messages.avatar_hint'));
         }
 
+        // A team's manager corrects a name and does not change what an account
+        // signs in with (AccountGuard) — the account may belong to other teams.
+        // Disabled here so the screen says so; stripped from the save below so a
+        // request that enables the field anyway changes nothing.
+        $record = $form->getModel();
+        $locked = $record instanceof Model && ! AccountGuard::mayChangeCredentials($record);
+
         $profile[] = TextInput::make(self::field('name'))->label(__('wire-module-users::messages.name'))->required();
-        $profile[] = TextInput::make(self::field('email'))->label(__('wire-module-users::messages.email'))->email()->required();
+        $profile[] = TextInput::make(self::field('email'))
+            ->label(__('wire-module-users::messages.email'))
+            ->email()
+            ->required()
+            ->disabled($locked)
+            ->helperText($locked ? __('wire-module-users::messages.credentials_locked_hint') : null);
 
         $schema = [
             // `make()` takes a key and `label()` the heading: passing the
@@ -207,7 +220,8 @@ class UserResource implements DescribesResource, ProvidesNavigation, ProvidesPag
                         ->label(__('wire-module-users::messages.password'))
                         ->password()
                         ->revealable()
-                        ->autocomplete('new-password'),
+                        ->autocomplete('new-password')
+                        ->disabled($locked),
                 ]),
         ];
 
@@ -230,8 +244,14 @@ class UserResource implements DescribesResource, ProvidesNavigation, ProvidesPag
             // real one, and store what was typed. Both happen here rather than
             // in a page, so every host that composes this form is covered —
             // including one an application writes itself.
-            ->mutateDataBeforeSave(static function (array $data) use ($password): array {
+            ->mutateDataBeforeSave(static function (array $data) use ($password, $locked): array {
                 unset($data['roles']);
+
+                if ($locked) {
+                    unset($data[self::field('email')], $data[$password]);
+
+                    return $data;
+                }
 
                 if (($data[$password] ?? '') === '' || ! isset($data[$password])) {
                     unset($data[$password]);

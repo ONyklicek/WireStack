@@ -62,6 +62,10 @@ palette find the area without being told.
   `wire:assign-role --role=admin --global`) are made on first assignment with `Permissions::abilities()`
   — exact ability names, never `users.*`, which the permission layer reads as a name when granted.
   Resolve a role by name through `Accounts` (global or the team's own), never a bare `firstOrCreate`.
+- **Whose account may be touched: `Support\AccountGuard`.** `mayEdit()` (never a super-admin's, unless
+  you are one), `mayDelete()` (never the last super-admin; not a team's manager), `mayRemoveFromTeam()`,
+  `mayChangeCredentials()` (not a team's manager). A new action on an account asks it; taking a role
+  away is `wire:revoke-role`, which refuses the last super-admin without `--force`.
 - **Nobody hands out more than they hold: `Support\RoleGrants`.** Any screen or action that writes a
   role's permissions or an account's roles offers `RoleGrants::mayGrantPermission()` /
   `mayGrantRole()` and writes `clampPermissions()` / `clampRoles()` — narrowing, not refusing, so

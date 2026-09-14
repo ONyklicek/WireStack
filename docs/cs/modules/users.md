@@ -258,6 +258,33 @@ nad vámi. Wildcard je jméno jako každé jiné: `invoices.*` smí dát ten, kd
 `invoices.*`. Super-admin smí rozdat všechno kromě super-admina. Příkazová řádka
 tomuto pravidlu nepodléhá.
 
+### Na čí účet se smí sáhnout
+
+Třetí otázka vedle *kdo co vidí* a *co se smí rozdat*: které účty se smějí měnit
+a jak.
+
+- **Účet super-admina mění jen super-admin.** Nikdo jiný u něj nevidí Upravit ani
+  Smazat a jeho editační stránka odpoví 403 — administrátor, který by mu nastavil
+  heslo, by se za něj mohl přihlásit.
+- **Posledního super-admina nejde smazat** — ani ze seznamu, ani jím samým přes
+  „smazat účet“ na vlastním profilu.
+- **Správce týmu spravuje členství, ne lidi.** Účet může patřit do více týmů, takže
+  správce jednoho dostane místo **Smazat** akci **Odebrat z týmu** (která vezme
+  i role účtu v tom týmu a ostatní týmy a globální role nechá být) a místo polí
+  e-mail a heslo, která jsou ve formuláři zamčená a při uložení se ignorují, akci
+  **Poslat odkaz na obnovu hesla**. Jméno opravit smí.
+
+Kdo pracuje napříč týmy — super-admin nebo administrátor s globálním oprávněním —
+vidí Smazat a mění e-maily i hesla. Globální roli nebo super-admina bere zpět jen
+příkazová řádka:
+
+```bash
+php artisan wire:revoke-role ada@example.com --role=admin --global
+php artisan wire:revoke-role mia@example.com --role=team-admin --team=3
+php artisan wire:revoke-role root@example.com --super-admin          # u posledního odmítnuto…
+php artisan wire:revoke-role root@example.com --super-admin --force  # …pokud nechcete nechat žádného
+```
+
 ### Dvě role, které tyto obrazovky nerozdávají jen tak
 
 **Super-admin** může všechno, ve všech týmech. Výběr rolí ho nikdy nenabídne,
