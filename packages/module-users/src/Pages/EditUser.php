@@ -6,6 +6,7 @@ namespace NyonCode\WireModuleUsers\Pages;
 
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireForms\Forms\Form;
+use NyonCode\WireModuleUsers\Concerns\ResolvesTeamMember;
 use NyonCode\WireModuleUsers\Concerns\SyncsRoles;
 use NyonCode\WireModuleUsers\Resources\UserResource;
 use NyonCode\WireModuleUsers\Support\Roles;
@@ -20,6 +21,7 @@ use NyonCode\WirePanels\Resources\Pages\EditPage;
  */
 class EditUser extends EditPage
 {
+    use ResolvesTeamMember;
     use SyncsRoles;
 
     protected static ?string $resource = UserResource::class;

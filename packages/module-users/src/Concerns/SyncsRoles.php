@@ -42,38 +42,48 @@ trait SyncsRoles
             return $form;
         }
 
-        return $form->afterSave(function (mixed $record): void {
-            if (! $record instanceof Model || ! method_exists($record, 'syncRoles')) {
-                return;
+        return $form->afterSave(fn (mixed $record) => $this->syncSelectedRoles($record));
+    }
+
+    /**
+     * Write the roles the form holds onto a saved record.
+     *
+     * Its own method so a page whose save does more than this — the create page
+     * also puts the account in a team — can call it from its one `afterSave`,
+     * which a form holds exactly one of.
+     */
+    protected function syncSelectedRoles(mixed $record): void
+    {
+        if (! Roles::enabled() || ! $record instanceof Model || ! method_exists($record, 'syncRoles')) {
+            return;
+        }
+
+        $selected = $this->data['roles'] ?? [];
+        $selected = is_array($selected) ? $selected : [];
+
+        // The super-admin is not this form's to give or to take. It is not
+        // offered, so a forged request naming it is ignored; and where the
+        // account already has it as a plain role (no teams), the sync keeps
+        // it rather than stripping it from somebody who edited a name.
+        $superAdmin = Roles::superAdmin();
+
+        if ($superAdmin !== null) {
+            $selected = array_values(array_filter($selected, static fn (mixed $role): bool => $role !== $superAdmin));
+
+            if (method_exists($record, 'getRoleNames') && $record->getRoleNames()->contains($superAdmin)) {
+                $selected[] = $superAdmin;
             }
+        }
 
-            $selected = $this->data['roles'] ?? [];
-            $selected = is_array($selected) ? $selected : [];
+        // Refuse the whole write rather than silently syncing the part that
+        // was allowed: a form that says "these are the roles" and saves a
+        // different set is worse than one that saves nothing, because the
+        // screen afterwards looks like it worked.
+        if (! $this->mayAssignRoles($record, $selected)) {
+            return;
+        }
 
-            // The super-admin is not this form's to give or to take. It is not
-            // offered, so a forged request naming it is ignored; and where the
-            // account already has it as a plain role (no teams), the sync keeps
-            // it rather than stripping it from somebody who edited a name.
-            $superAdmin = Roles::superAdmin();
-
-            if ($superAdmin !== null) {
-                $selected = array_values(array_filter($selected, static fn (mixed $role): bool => $role !== $superAdmin));
-
-                if (method_exists($record, 'getRoleNames') && $record->getRoleNames()->contains($superAdmin)) {
-                    $selected[] = $superAdmin;
-                }
-            }
-
-            // Refuse the whole write rather than silently syncing the part that
-            // was allowed: a form that says "these are the roles" and saves a
-            // different set is worse than one that saves nothing, because the
-            // screen afterwards looks like it worked.
-            if (! $this->mayAssignRoles($record, $selected)) {
-                return;
-            }
-
-            $record->syncRoles($selected);
-        });
+        $record->syncRoles($selected);
     }
 
     /**

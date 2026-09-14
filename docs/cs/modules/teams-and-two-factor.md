@@ -235,6 +235,21 @@ php artisan wire:assign-role admin@example.com --super-admin
 Výběr rolí ho nikdy nenabídne, `--role=super-admin` se odmítne a `--super-admin`
 nebere `--team`.
 
+### Kdo koho vidí na obrazovce uživatelů
+
+Se zapnutými týmy ukazuje obrazovka uživatelů **členy aktuálního týmu** — seznam,
+stránky detailu a úprav i každou akci na řádku. Účet jiného týmu otevřený přes
+URL vrátí 404, ne 403, takže odpověď neprozradí, že existuje, a podvržený klíč
+z jiného týmu nenajde nic ke smazání. Přepnutí týmu přepne seznam; kdo nepatří do
+žádného týmu, nevidí nikoho.
+
+Členy všech týmů vidí dva druhy lidí: super-admin a administrátor, jehož
+`users.viewAny` pochází z **globální** role — přiřazené přes `assignGlobalRole()`,
+jejíž oprávnění platí ve všech týmech. Stejné oprávnění z role jednoho týmu
+spravuje jen ten tým. Účet, který založí správce týmu, se do toho týmu přidá;
+účet, který založí někdo, kdo pracuje napříč týmy, nepatří do žádného, protože
+neřekl, do kterého.
+
 ### Odkud se přepínač bere
 
 Není v layoutu shellu a tenhle modul do toho souboru nikdy nesahá. Registruje

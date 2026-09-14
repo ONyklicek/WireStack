@@ -6,6 +6,7 @@ namespace NyonCode\WireModuleUsers\Tests\Support;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\PermissionServiceProvider;
 
 /**
  * The tables an account needs, in the shape the models expect.
@@ -74,5 +75,31 @@ final class Tables
             $table->unsignedBigInteger('role_id');
             $table->primary(['permission_id', 'role_id']);
         });
+    }
+
+    /**
+     * An application with teams: its own teams tables, and the permission tables
+     * made by Spatie's real migration with `permission.teams` on — so the team
+     * column is where the package puts it, not where a test guessed.
+     */
+    public static function teamsWithRoles(): void
+    {
+        self::users();
+
+        Schema::create('teams', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+
+        Schema::create('team_user', function (Blueprint $table): void {
+            $table->unsignedBigInteger('team_id');
+            $table->unsignedBigInteger('user_id');
+            $table->primary(['team_id', 'user_id']);
+        });
+
+        $provider = (new \ReflectionClass(PermissionServiceProvider::class))->getFileName();
+
+        (include dirname((string) $provider).'/../database/migrations/create_permission_tables.php.stub')->up();
     }
 }

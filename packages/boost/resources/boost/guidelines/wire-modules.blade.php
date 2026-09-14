@@ -49,3 +49,8 @@ palette find the area without being told.
   the permission gate honours with teams on — from `--super-admin` or the installer's confirmation.
   `Accounts::assign()` refuses it, `Roles::options()` never lists it, and a user form save keeps it
   rather than stripping it. Ask `$user->hasGlobalRole(Roles::superAdmin())`, never `hasRole()`.
+- **With teams, a screen over people is scoped to the current team** through `Teams::scopeMembers()` —
+  on the query (`modifyQueryUsing`), never a filter, so row actions resolve records through the same
+  scope — and a record page finds its record the same way (`Concerns\ResolvesTeamMember`, 404 outside).
+  Whether somebody works across every team is `Teams::seesEveryTeam($ability)`: a super-admin, or the
+  ability held through a *global* role (`hasGlobalPermission()`), never the same ability from a team role.

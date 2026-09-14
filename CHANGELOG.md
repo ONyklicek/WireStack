@@ -90,6 +90,15 @@ All notable changes to the Wire ecosystem will be documented in this file.
   `--role=super-admin` is refused, `wire:user --admin` is gone, the roles select never offers it, and
   saving a user keeps it rather than stripping it.
 
+- **The users screen shows the members of the current team.** With teams on, authorization was
+  per team — Spatie scopes every permission read — and the data was not: anybody who could list
+  users in one team listed everybody, and opened any account by its URL. The list, the view and
+  edit pages and every row action now go through `Teams::scopeMembers()`; an account outside it is
+  a 404, and a forged key finds nothing to act on. A super-admin and an administrator whose ability
+  comes from a global role (`Teams::seesEveryTeam()`, over permission-extended 1.1's
+  `hasGlobalPermission()`) see every team. An account created by a team's manager joins that team
+  (`Teams::admitToCurrentTeam()`). There is no switch to turn this off.
+
 - **`SetupConsole::select()`**, the plural of `choose()` — "which of these" — returning its default
   unattended. **`Foundation\Setup\ConfigFile`** for the one config value with no `env()` behind it:
   it rewrites a single-line `'key' => value,` that occurs exactly once and returns `false` for

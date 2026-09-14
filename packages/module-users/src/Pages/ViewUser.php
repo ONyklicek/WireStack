@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Pages;
 
+use NyonCode\WireModuleUsers\Concerns\ResolvesTeamMember;
 use NyonCode\WireModuleUsers\Resources\UserResource;
 use NyonCode\WirePanels\Resources\Concerns\InteractsWithRecordTitle;
 use NyonCode\WirePanels\Resources\Pages\ViewPage;
@@ -12,6 +13,7 @@ use NyonCode\WirePanels\Resources\Pages\ViewPage;
 class ViewUser extends ViewPage
 {
     use InteractsWithRecordTitle;
+    use ResolvesTeamMember;
 
     protected static ?string $resource = UserResource::class;
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Resources;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
@@ -31,6 +32,7 @@ use NyonCode\WireModuleUsers\Pages\ViewUser;
 use NyonCode\WireModuleUsers\Support\Avatars;
 use NyonCode\WireModuleUsers\Support\Permissions;
 use NyonCode\WireModuleUsers\Support\Roles;
+use NyonCode\WireModuleUsers\Support\Teams;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
 use NyonCode\WireTable\Columns\ImageColumn;
 use NyonCode\WireTable\Columns\TagsColumn;
@@ -142,7 +144,14 @@ class UserResource implements DescribesResource, ProvidesNavigation, ProvidesPag
                 ->wrap();
         }
 
-        return $table->columns($columns)->defaultSort(self::field('name'));
+        return $table->columns($columns)
+            ->defaultSort(self::field('name'))
+            // With teams, the members of the current team — unless the person
+            // looking works across every team. On the query rather than a filter,
+            // because a filter is a suggestion the browser can take away, and the
+            // table resolves a row's record for its actions through this same
+            // query, so a forged key from another team finds nothing to act on.
+            ->modifyQueryUsing(static fn (Builder $query): Builder => Teams::scopeMembers($query));
     }
 
     /**

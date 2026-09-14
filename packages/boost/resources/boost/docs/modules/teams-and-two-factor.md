@@ -240,6 +240,21 @@ php artisan wire:assign-role admin@example.com --super-admin
 The roles select never offers it, `--role=super-admin` is refused, and
 `--super-admin` takes no `--team`.
 
+### Who sees whom on the users screen
+
+With teams on, the users screen lists the **members of the current team** — the
+list, the view and edit pages, and every action a row carries. An account of
+another team opened by its URL is a 404, not a 403, so the answer does not say it
+exists, and a forged key from another team finds nothing to delete. Switching
+team switches the list; somebody who belongs to no team sees nobody.
+
+Two kinds of person see every team's members: a super-admin, and an
+administrator whose `users.viewAny` comes from a **global** role — one assigned
+with `assignGlobalRole()`, whose permissions count in every team. The same
+ability from a role of one team manages that team only. An account created by a
+team's manager joins that team; one created by somebody who works across every
+team joins none, because they have not said which.
+
 ### Where the switcher comes from
 
 It is not in the shell's layout, and this module never edits that file. It
