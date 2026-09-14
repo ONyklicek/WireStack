@@ -5,7 +5,7 @@ Vlastnící balíček: **wire-module-users** (obrazovky, `Support\Teams`,
 **nyoncode/laravel-permission-extended** nad Spatie teams — žádný druhý systém
 oprávnění.
 
-Stav: **odsouhlaseno 2026-09-14** (rozhodnutí v §7). Hotové kroky §6: **0**
+Stav: **hotovo 2026-09-14** (rozhodnutí v §7). Hotové kroky §6: **0**
 (permission-extended `hasGlobalPermission()`) a **1** (obrazovka uživatelů
 omezená na tým: seznam, detail, úprava, akce řádků; nový účet správce týmu se
 přidá do týmu) a **2** (obrazovka rolí omezená na tým — globální role jen ke
@@ -18,7 +18,9 @@ prvním přidělení s oprávněními obrazovek; `wire:assign-role --global`). O
 i krok **5** (`Support\AccountGuard`: účet super-admina mění jen super-admin,
 poslední super-admin se nesmaže; správce týmu odebírá z týmu místo mazání (O1)
 a posílá odkaz na reset místo změny e-mailu a hesla (O2); `wire:revoke-role`
-s `--force` pro posledního super-admina (O9)). Zbývá krok 6.
+s `--force` pro posledního super-admina (O9)) a **6** (závěrečné ověření: plná
+sada testů, prohlížečové drivery, čerstvá aplikace s týmy i bez; workbench seeder
+dává super-admina globálně a demo uživatelce globální `admin`). Plán je hotový.
 Hotové a pod nimi dostupné:
 
 - permission-extended 1.1 (větev `global-roles`): `assignGlobalRole()`,

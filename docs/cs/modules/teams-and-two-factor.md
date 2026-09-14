@@ -85,6 +85,13 @@ request a `TeamSwitcher` ho vyvolá.
 do kterých patříte, a `Teams::switchTo()` členství ověří znovu, než cokoli uloží.
 `<select>` je markup a markup je to, co doletělo do prohlížeče.
 
+**Obrazovky se řídí týmem, nejen autorizace.** Spatie omezuje, co člověk *smí*,
+na aktuální tým; obrazovky uživatelů a rolí stejně omezují, co *vidí* — členy
+aktuálního týmu, globální role a role týmu — pokud člověk nepracuje napříč týmy.
+Co se smí rozdat a na čí účet se smí sáhnout, jsou dvě další pravidla nad tím,
+každé s jedním vlastníkem: `Support\RoleGrants` a `Support\AccountGuard`. Sekce
+níže je probírají jedno po druhém.
+
 **Aktuální tým spadne zpátky, místo aby selhal.** Session jeden jmenuje; když
 jmenuje tým, ve kterém už nejste — nebo zatím nejmenuje nic — použije se první,
 do kterého patříte. Oba případy jsou běžné a ani jeden by neměl člověka poslat na
@@ -481,7 +488,7 @@ volitelných půlek tahle instalace opravdu dostala:
 | --- | --- | --- |
 | Hashování hesla, pravidlo `current_password` | Laravel | karta, která se ptá, a udržení session přihlášené po změně |
 | Dvoufázová tajemství, TOTP, záložní kódy, výzva při přihlášení | Fortify | třístavová karta, která volá Fortify akce |
-| Role, oprávnění, omezení na tým, permission cache | nyoncode/laravel-permission-extended, nad spatie/laravel-permission, který vyžaduje | obrazovky rolí a to, ve kterém týmu je tenhle request |
+| Role, oprávnění, omezení na tým, permission cache, globální role a brána super-admina | nyoncode/laravel-permission-extended (1.1+), nad spatie/laravel-permission, který vyžaduje | obrazovky rolí, to, ve kterém týmu je tenhle request, co obrazovka ukáže z jiných týmů, co smí člověk rozdat (`RoleGrants`) a na čí účet smí sáhnout (`AccountGuard`) |
 | Přihlášení, registrace, reset hesla, ověření e-mailu | Fortify nebo Breeze | nic — viz [admin shell](../admin/overview.md) |
 | Týmy samotné: tabulka, model, členství | vaše aplikace | přepínač nad tím, co už máte |
 

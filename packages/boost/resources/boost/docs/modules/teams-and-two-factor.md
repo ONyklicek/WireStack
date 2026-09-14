@@ -88,6 +88,14 @@ the teams you belong to, and `Teams::switchTo()` re-checks membership before
 storing anything. A `<select>` is markup, and markup is whatever reached the
 browser.
 
+**The screens follow the team, not only the authorization.** Spatie scopes what
+a person *may* do to the current team; the user and role screens scope what they
+*see* the same way — the members of the current team, the global roles and the
+team's own — unless the person works across every team. What may be handed out
+and whose account may be touched are two more rules on top, each with one owner:
+`Support\RoleGrants` and `Support\AccountGuard`. The sections below take them in
+turn.
+
 **The current team falls back rather than failing.** The session names one; if it
 names a team you are no longer in — or names nothing yet — the first team you
 belong to is used. Both cases are ordinary, and neither should land a person on a
@@ -487,7 +495,7 @@ optional halves this installation actually got:
 | --- | --- | --- |
 | Password hashing, the `current_password` rule | Laravel | the card that asks, and keeping the session signed in after |
 | Two-factor secrets, TOTP, recovery codes, the sign-in challenge | Fortify | the three-state card that drives Fortify's actions |
-| Roles, permissions, team scoping, the permission cache | nyoncode/laravel-permission-extended, over the spatie/laravel-permission it requires | the role screens, and which team this request is in |
+| Roles, permissions, team scoping, the permission cache, global roles and the super-admin gate | nyoncode/laravel-permission-extended (1.1+), over the spatie/laravel-permission it requires | the role screens, which team this request is in, what a screen shows of other teams, what a person may hand out (`RoleGrants`) and whose account they may touch (`AccountGuard`) |
 | Login, registration, password reset, e-mail verification | Fortify or Breeze | nothing — see [the admin shell](../admin/overview.md) |
 | Teams themselves: the table, the model, membership | your application | the switcher over what you already have |
 

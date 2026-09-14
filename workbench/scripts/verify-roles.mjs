@@ -43,17 +43,20 @@ try {
 
   // ── The way out of the list ──────────────────────────────────────────────
   // Both lists shipped with no row action at all: the edit pages were routed
-  // and unreachable from the screen in front of them.
-  check('every row offers a way into the record', await eval_(`
-    document.querySelectorAll('[data-testid="action-edit"]').length === document.querySelectorAll('[data-testid="admin-content"] tbody tr').length
-  `));
+  // and unreachable from the screen in front of them. Every row but a
+  // super-admin's: the demo user is an administrator, not a super-admin, and a
+  // super-admin's account is only a super-admin's to change.
+  const superAdminRows = await eval_(`[...document.querySelectorAll('[data-testid="admin-content"] tbody tr')].filter(r => /super-admin/.test(r.innerText) || r.innerText.includes('mason@example.com')).length`);
+  check('every row but a super-admin\'s offers a way into the record', await eval_(`
+    document.querySelectorAll('[data-testid="action-edit"]').length === document.querySelectorAll('[data-testid="admin-content"] tbody tr').length - ${superAdminRows}
+  `), `${superAdminRows} super-admin row(s)`);
   check('and a header action to add one', await eval_(`!! document.querySelector('[data-testid="header-action-create"]')`));
 
   // Not politeness: an administrator who removes their own row is signed out
   // mid-request into an application they can no longer reach.
   const deletes = await eval_(`document.querySelectorAll('[data-testid="action-delete"]').length`);
   const userRows = await eval_(`document.querySelectorAll('[data-testid="admin-content"] tbody tr').length`);
-  check('but no way to delete the person reading the page', deletes === userRows - 1, `${deletes} of ${userRows} rows`);
+  check('but no way to delete the person reading the page, or a super-admin', deletes === userRows - 1 - superAdminRows, `${deletes} of ${userRows} rows`);
   // The avatar column resolves through the same `StoredFileUrlResolver` the
   // chrome does, so a stored value that is already a complete source — the
   // `data:` URI the seeder writes — is drawn untouched.

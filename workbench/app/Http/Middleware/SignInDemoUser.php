@@ -46,6 +46,13 @@ class SignInDemoUser
                 // Nothing to fix in the middleware: a demo that signs somebody in
                 // after the fact is the thing that has to say so.
                 Teams::apply(Teams::currentId());
+
+                // Nobody typed a password to get here, so nothing has confirmed
+                // one — and the two-factor and passkey cards refuse without a
+                // recent confirmation. A demo that signs somebody in without a
+                // password confirms it for them in the same breath; the gate
+                // itself is proved by GuardedSurfacesTest, not by the preview.
+                $request->session()->put('auth.password_confirmed_at', time());
             }
         }
 
