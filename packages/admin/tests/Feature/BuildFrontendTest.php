@@ -164,6 +164,64 @@ it('reads the manifest rather than the directory around it', function () {
     });
 });
 
+it('asks for a rebuild when the stylesheet changed after the last build', function () {
+    // `laravel new` builds as it creates the application, and this package's
+    // installer edits `app.css` afterwards. A manifest was there, the step said
+    // Done, and the admin rendered unstyled.
+    bfRestoring(function () {
+        $stylesheet = resource_path('css/app.css');
+        $had = is_file($stylesheet) ? (string) file_get_contents($stylesheet) : null;
+
+        try {
+            file_put_contents(base_path('package.json'), '{}');
+            File::ensureDirectoryExists(public_path('build'));
+            file_put_contents(public_path('build/manifest.json'), '{}');
+            File::ensureDirectoryExists(dirname($stylesheet));
+            file_put_contents($stylesheet, '@import "tailwindcss";');
+            touch(public_path('build/manifest.json'), time() - 60);
+            touch($stylesheet, time());
+            clearstatcache();
+
+            expect((new BuildFrontend)->state())->toBe(SetupState::Pending)
+                ->and((new BuildFrontend)->summary())->toBe('rebuild the assets — resources/css/app.css changed since they were built');
+
+            touch(public_path('build/manifest.json'), time() + 60);
+            clearstatcache();
+
+            expect((new BuildFrontend)->state())->toBe(SetupState::Done);
+        } finally {
+            $had === null ? @unlink($stylesheet) : file_put_contents($stylesheet, $had);
+        }
+    });
+});
+
+it('asks for a rebuild when packages were installed after the last build', function () {
+    // A module required later ships views with classes the last build never saw.
+    bfRestoring(function () {
+        $installed = base_path('vendor/composer/installed.json');
+        $stamp = is_file($installed) ? (int) filemtime($installed) : null;
+
+        try {
+            file_put_contents(base_path('package.json'), '{}');
+            File::ensureDirectoryExists(public_path('build'));
+            file_put_contents(public_path('build/manifest.json'), '{}');
+            File::ensureDirectoryExists(dirname($installed));
+
+            if ($stamp === null) {
+                file_put_contents($installed, '{}');
+            }
+
+            touch(public_path('build/manifest.json'), time() - 60);
+            touch($installed, time());
+            clearstatcache();
+
+            expect((new BuildFrontend)->summary())->toBe('rebuild the assets — the installed packages changed since they were built');
+        } finally {
+            $stamp === null ? @unlink($installed) : touch($installed, $stamp);
+        }
+    });
+});
+
 it('finds a manifest Vite wrote under its own directory', function () {
     bfRestoring(function () {
         file_put_contents(base_path('package.json'), '{}');

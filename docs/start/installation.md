@@ -193,7 +193,7 @@ So the second half of `wire:install` works through them, one at a time:
 | [Audit recording](../core/audit.md) | Switches recording on, so the audit screen is not a view over an empty table |
 | [Stored notifications](../modules/notifications.md) | Adds the `database` driver beside the toast, so the bell has a history to show |
 | [Settings cache](../modules/settings.md) | Moves the settings cache off the database, where the lookup costs the query it was meant to save — offering only the memory stores that actually answer, because a fresh Laravel lists `redis` whether or not there is one |
-| Frontend build | `npm install && npm run build`, so Tailwind compiles the classes in the packages' views. Until it runs the shell has no width, no colour and no error |
+| Frontend build | `npm install && npm run build`, so Tailwind compiles the classes in the packages' views — offered again when `resources/css/app.css` or the installed packages changed after the last build, since `laravel new` builds before this installer edits the stylesheet. Until it runs the shell has no width, no colour and no error |
 
 **Detect, then ask, then act.** A step looks first and is offered only while it is
 needed, so running the command twice is quiet. What is already true is named and

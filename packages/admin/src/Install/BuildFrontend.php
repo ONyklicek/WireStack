@@ -46,7 +46,7 @@ final class BuildFrontend implements SetupStep
             return SetupState::Done;
         }
 
-        return $this->built() ? SetupState::Done : SetupState::Pending;
+        return $this->built() && $this->staleAgainst() === null ? SetupState::Done : SetupState::Pending;
     }
 
     public function summary(): string
@@ -55,9 +55,15 @@ final class BuildFrontend implements SetupStep
             return 'no package.json, so there is nothing to build';
         }
 
-        return $this->built()
+        if (! $this->built()) {
+            return 'build the assets, or the admin renders unstyled';
+        }
+
+        $newer = $this->staleAgainst();
+
+        return $newer === null
             ? 'assets are built'
-            : 'build the assets, or the admin renders unstyled';
+            : "rebuild the assets — {$newer} changed since they were built";
     }
 
     public function apply(SetupConsole $console): SetupOutcome
@@ -116,6 +122,37 @@ final class BuildFrontend implements SetupStep
         $directory = public_path('build');
 
         return is_file($directory.'/manifest.json') || is_file($directory.'/.vite/manifest.json');
+    }
+
+    /**
+     * What changed after the last build, or null when nothing did.
+     *
+     * A manifest is not a current build. `laravel new` builds the assets as it
+     * creates the application, and this package's installer edits `app.css`
+     * afterwards — the `@source` line and the `primary` palette — so the
+     * manifest was there, this step said Done, and the admin rendered unstyled:
+     * the exact installation it exists to prevent. The same goes for a module
+     * required later, whose views carry classes the last build never saw.
+     */
+    private function staleAgainst(): ?string
+    {
+        $built = max(array_map(
+            static fn (string $manifest): int => is_file($manifest) ? (int) filemtime($manifest) : 0,
+            [public_path('build/manifest.json'), public_path('build/.vite/manifest.json')],
+        ));
+
+        $sources = [
+            'resources/css/app.css' => resource_path('css/app.css'),
+            'the installed packages' => base_path('vendor/composer/installed.json'),
+        ];
+
+        foreach ($sources as $name => $path) {
+            if (is_file($path) && (int) filemtime($path) > $built) {
+                return $name;
+            }
+        }
+
+        return null;
     }
 
     private function hasNpm(): bool

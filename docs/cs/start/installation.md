@@ -191,7 +191,7 @@ Druhá půlka `wire:install` je proto prochází, jeden po druhém:
 | [Audit recording](../core/audit.md) | Zapne zaznamenávání, aby obrazovka auditu nebyla pohledem do prázdné tabulky |
 | [Stored notifications](../modules/notifications.md) | Přidá vedle toastu driver `database`, aby zvoneček měl co ukazovat |
 | [Settings cache](../modules/settings.md) | Přesune cache nastavení z databáze, kde ji čtení stojí zrovna ten dotaz, který měla ušetřit — a nabídne jen paměťová úložiště, která opravdu odpovídají, protože čerstvý Laravel má `redis` v configu, ať už běží, nebo ne |
-| Frontend build | `npm install && npm run build`, aby Tailwind zkompiloval třídy z views balíčků. Dokud neproběhne, shell nemá šířku, barvu ani chybu |
+| Frontend build | `npm install && npm run build`, aby Tailwind zkompiloval třídy z views balíčků — nabídne se znovu, když se `resources/css/app.css` nebo nainstalované balíčky změnily po posledním buildu, protože `laravel new` builduje dřív, než tento instalátor upraví stylesheet. Dokud neproběhne, shell nemá šířku, barvu ani chybu |
 
 **Zjisti, zeptej se, udělej.** Krok se nejdřív podívá a nabídne se jen tehdy, když
 je potřeba — takže druhé spuštění příkazu je tiché. Co už platí, se pojmenuje a

@@ -216,6 +216,10 @@ All notable changes to the Wire ecosystem will be documented in this file.
   middleware name, a class, a method — and asked again, three times at most, through the new
   `Foundation\Setup\Answers`, which the first administrator's questions now share. What is written is
   `var_export`ed.
+- **The frontend build step no longer calls a stale build done.** `laravel new` builds the assets
+  before `wire-admin:install` adds the `@source` line and the `primary` palette to `app.css`, so a
+  manifest was there, the step said DONE, and the admin rendered unstyled. It is offered again when
+  `resources/css/app.css` or the installed packages changed after the manifest was written.
 
 ### Added
 
