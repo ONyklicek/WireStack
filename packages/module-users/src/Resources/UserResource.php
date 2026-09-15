@@ -7,6 +7,7 @@ namespace NyonCode\WireModuleUsers\Resources;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
@@ -193,10 +194,17 @@ class UserResource implements DescribesResource, ProvidesNavigation, ProvidesPag
         $locked = $record instanceof Model && ! AccountGuard::mayChangeCredentials($record);
 
         $profile[] = TextInput::make(self::field('name'))->label(__('wire-module-users::messages.name'))->required();
+        $creating = ! ($record instanceof Model && $record->exists);
+
         $profile[] = TextInput::make(self::field('email'))
             ->label(__('wire-module-users::messages.email'))
             ->email()
             ->required()
+            // Checked here rather than left to the column's unique index, which
+            // answered an address already in use with a database exception and
+            // a 500. The table is named because a create form has no record to
+            // read it off, and the record being edited is left out of the check.
+            ->unique(table: self::usersTable($record), column: self::field('email'))
             ->disabled($locked)
             ->helperText($locked ? __('wire-module-users::messages.credentials_locked_hint') : null);
 
@@ -221,6 +229,13 @@ class UserResource implements DescribesResource, ProvidesNavigation, ProvidesPag
                         ->password()
                         ->revealable()
                         ->autocomplete('new-password')
+                        // A new account has no password to keep, and a row
+                        // without one failed at the column's NOT NULL. Left
+                        // empty on an edit it keeps the current one (below);
+                        // typed, it meets the policy the profile screen holds a
+                        // new password to.
+                        ->required($creating && ! $locked)
+                        ->rules(['nullable', Password::defaults()])
                         ->disabled($locked),
                 ]),
         ];
@@ -348,6 +363,20 @@ class UserResource implements DescribesResource, ProvidesNavigation, ProvidesPag
             ->map(static fn (mixed $name): string => (string) $name)
             ->values()
             ->all();
+    }
+
+    /**
+     * The users table, off the record being edited or the model this application names.
+     */
+    private static function usersTable(mixed $record): ?string
+    {
+        if ($record instanceof Model) {
+            return $record->getTable();
+        }
+
+        $model = self::modelClass();
+
+        return $model !== null && is_subclass_of($model, Model::class) ? (new $model)->getTable() : null;
     }
 
     /** The column an application uses for one of the three fields this touches. */
