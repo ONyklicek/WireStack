@@ -102,7 +102,7 @@ it('says the same thing through the command, and keeps the account', function ()
     $this->artisan('wire:user', [
         '--name' => 'Nobody',
         '--email' => 'nobody@example.com',
-        '--password' => 'secret',
+        '--password' => 'long-enough-secret',
         '--role' => ['editor'],
         '--no-interaction' => true,
     ])->expectsOutputToContain('scoped to a team')->assertSuccessful();

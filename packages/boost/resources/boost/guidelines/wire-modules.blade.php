@@ -43,7 +43,9 @@ palette find the area without being told.
   through `WireModuleUsers\Support\Accounts` — the model (`wire-module-users.model`), the column
   names (`.fields`) and the roles are the *application's*, so never hard-code `users`, `name` or
   `email` in new code. `Accounts::superAdminRole()` is the name the permission gate checks; inventing
-  one makes an administrator the gate does not recognise.
+  one makes an administrator the gate does not recognise. An address or password taken from a person or
+  an option goes through `Accounts::emailProblem()` / `passwordProblem()` first — the rules the user
+  screens hold them to.
 - **A setup step that publishes migrations publishes them through `Foundation\Setup\RedundantMigrations::around()`**,
   and one that writes an answer into a file asks it through `Foundation\Setup\Answers`. A published
   migration whose tables already exist, or a quote written into PHP source, is an application that

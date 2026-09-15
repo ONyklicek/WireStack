@@ -103,7 +103,7 @@ final readonly class CreateFirstAdministrator implements SetupStep
 
         $name = $console->ask('Name', 'Administrator');
         $email = $this->askEmail($console);
-        $password = $email === '' ? '' : $console->secret('Password');
+        $password = $email === '' ? '' : $this->askPassword($console);
 
         if ($email === '' || $password === '') {
             $console->warn('No e-mail or no password — nothing was created.');
@@ -138,6 +138,24 @@ final readonly class CreateFirstAdministrator implements SetupStep
         return (new Answers($console))->until(
             static fn (): string => trim($console->ask('E-mail address')),
             fn (string $email): ?string => $email === '' ? null : $this->accounts->emailProblem($email),
+        ) ?? '';
+    }
+
+    /**
+     * The password, held to the application's policy and typed twice.
+     *
+     * Twice because it is hidden, and a typo in the first administrator's
+     * password is an installation nobody can sign in to. Nothing typed stops at
+     * once, like the address.
+     */
+    private function askPassword(SetupConsole $console): string
+    {
+        return (new Answers($console))->until(
+            static fn (): string => $console->secret('Password'),
+            fn (string $password): ?string => $password === ''
+                ? null
+                : $this->accounts->passwordProblem($password)
+                    ?? ($console->secret('Password again') === $password ? null : 'The two passwords are not the same'),
         ) ?? '';
     }
 

@@ -203,6 +203,9 @@ All notable changes to the Wire ecosystem will be documented in this file.
   database's unique-constraint error. Both now go through `Accounts::emailProblem()` — the user
   form's `email` rule, then whether the address has an account: typed, it is asked again (three
   times at most); passed as `--email`, the command fails.
+- **…and the password.** `pw` was accepted, and no password at all. Both now go through
+  `Accounts::passwordProblem()` — `Password::defaults()`, the rule the profile screen already held a
+  new password to. Typed, it is asked for twice; passed as `--password`, a refused one fails.
 - **An answer can no longer leave `routes/web.php` or the users config a parse error.** The routes
   step wrote its prefix and middleware, and the teams step its relation, into PHP source unchecked:
   a quote in any of them took the application down. Each answer is held to its shape — a URL path, a

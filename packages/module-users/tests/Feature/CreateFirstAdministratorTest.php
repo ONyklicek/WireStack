@@ -147,15 +147,15 @@ it('creates the account, with the password hashed', function () {
     Tables::users();
     $said = [];
 
-    expect(cfaStep()->apply(cfaConsole(['Ondřej', 'o@example.com', 'hunter2'], $said)))
+    expect(cfaStep()->apply(cfaConsole(['Ondřej', 'o@example.com', 'hunter2hunter2', 'hunter2hunter2'], $said)))
         ->toBe(SetupOutcome::Applied);
 
     $user = User::first();
 
     expect($user->name)->toBe('Ondřej')
         ->and($user->email)->toBe('o@example.com')
-        ->and($user->password)->not->toBe('hunter2')
-        ->and(Hash::check('hunter2', $user->password))->toBeTrue()
+        ->and($user->password)->not->toBe('hunter2hunter2')
+        ->and(Hash::check('hunter2hunter2', $user->password))->toBeTrue()
         ->and($said)->toContain('Created o@example.com.');
 });
 
@@ -176,7 +176,7 @@ it('writes to the columns this application calls its own', function () {
         'password' => 'secret',
     ]);
 
-    expect(cfaStep()->apply(cfaConsole(['Renamed', 'r@example.com', 'pw'])))->toBe(SetupOutcome::Applied)
+    expect(cfaStep()->apply(cfaConsole(['Renamed', 'r@example.com', 'long-enough-pw', 'long-enough-pw'])))->toBe(SetupOutcome::Applied)
         ->and(User::first()->full_name)->toBe('Renamed')
         ->and(User::first()->login)->toBe('r@example.com');
 });
@@ -188,7 +188,7 @@ it('asks, in full, and makes the account a super-admin the permission gate recog
     Tables::roles();
     $said = [];
 
-    expect(cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'pw'], $said)))->toBe(SetupOutcome::Applied);
+    expect(cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'long-enough-pw', 'long-enough-pw'], $said)))->toBe(SetupOutcome::Applied);
 
     $name = (string) config('permission-extended.super_admin_role', 'super-admin');
 
@@ -202,7 +202,7 @@ it('leaves the account an ordinary one when the answer is no', function () {
     Tables::users();
     Tables::roles();
 
-    cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'pw'], superAdmin: false));
+    cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'long-enough-pw', 'long-enough-pw'], superAdmin: false));
 
     expect(User::first()->hasGlobalRole('super-admin'))->toBeFalse()
         ->and(Role::where('name', 'super-admin')->exists())->toBeFalse();
@@ -214,7 +214,7 @@ it('still makes the account when the role tables are not there', function () {
     Tables::users();
     $said = [];
 
-    expect(cfaStep()->apply(cfaConsole(['Solo', 'solo@example.com', 'pw'], $said)))->toBe(SetupOutcome::Applied)
+    expect(cfaStep()->apply(cfaConsole(['Solo', 'solo@example.com', 'long-enough-pw', 'long-enough-pw'], $said)))->toBe(SetupOutcome::Applied)
         ->and(User::where('email', 'solo@example.com')->exists())->toBeTrue()
         ->and(implode("\n", $said))->toContain('did not make it a super-admin');
 });
@@ -251,7 +251,7 @@ it('fails rather than pretending, when the row cannot be written', function () {
     });
     $said = [];
 
-    expect(cfaStep()->apply(cfaConsole(['Clash', 'jane@example.com', 'pw'], $said)))
+    expect(cfaStep()->apply(cfaConsole(['Clash', 'jane@example.com', 'long-enough-pw', 'long-enough-pw'], $said)))
         ->toBe(SetupOutcome::Failed)
         ->and(implode("\n", $said))->toContain('Could not create the account');
 });
@@ -261,7 +261,7 @@ it('asks again for an address that is not one, or that already has an account', 
     User::create(['name' => 'Taken', 'email' => 'taken@example.com', 'password' => Hash::make('x')]);
     $said = [];
 
-    expect(cfaStep()->apply(cfaConsole(['Ada', 'admin', 'taken@example.com', ' ada@example.com ', 'pw'], $said, superAdmin: false)))
+    expect(cfaStep()->apply(cfaConsole(['Ada', 'admin', 'taken@example.com', ' ada@example.com ', 'long-enough-pw', 'long-enough-pw'], $said, superAdmin: false)))
         ->toBe(SetupOutcome::Applied)
         ->and(implode("\n", $said))->toContain('Not an e-mail address: admin.')
         ->and(implode("\n", $said))->toContain('An account with taken@example.com already exists.')
@@ -272,7 +272,7 @@ it('creates nothing after three addresses that are not one', function () {
     Tables::users();
     $said = [];
 
-    expect(cfaStep()->apply(cfaConsole(['Ada', 'a', 'b', 'c', 'pw'], $said)))
+    expect(cfaStep()->apply(cfaConsole(['Ada', 'a', 'b', 'c', 'long-enough-pw', 'long-enough-pw'], $said)))
         ->toBe(SetupOutcome::Skipped)
         ->and(User::query()->count())->toBe(0);
 });
@@ -302,7 +302,7 @@ it('says nothing about roles in an application that has none', function () {
     $said = [];
 
     expect(cfaStep()->summary())->toBe('create an account to sign in with')
-        ->and(cfaStep()->apply(cfaConsole(['No roles', 'nr@example.com', 'pw'], $said)))
+        ->and(cfaStep()->apply(cfaConsole(['No roles', 'nr@example.com', 'long-enough-pw', 'long-enough-pw'], $said)))
         ->toBe(SetupOutcome::Applied)
         ->and(implode("\n", $said))->not->toContain('role');
 });
@@ -345,7 +345,7 @@ it('makes the first administrator a super-admin from a fresh process when roles 
     Process::fake();
     $said = [];
 
-    expect(cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'pw'], $said)))->toBe(SetupOutcome::Applied)
+    expect(cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'long-enough-pw', 'long-enough-pw'], $said)))->toBe(SetupOutcome::Applied)
         ->and(implode("\n", $said))->toContain('Made it a super-admin');
 
     Process::assertRan(fn ($process): bool => array_slice((array) $process->command, 1) === [
@@ -363,7 +363,7 @@ it('says the super-admin is missing when the fresh process fails', function () {
     Process::fake(['*' => Process::result(errorOutput: 'no roles table', exitCode: 1)]);
     $said = [];
 
-    expect(cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'pw'], $said)))->toBe(SetupOutcome::Applied)
+    expect(cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'long-enough-pw', 'long-enough-pw'], $said)))->toBe(SetupOutcome::Applied)
         ->and(PatchedOnDiskUser::query()->count())->toBe(1)
         ->and(implode("\n", $said))->toContain('did not make it a super-admin: no roles table');
 });
@@ -374,7 +374,7 @@ it('still names the command when the fresh process fails without a word', functi
     Process::fake(['*' => Process::result(exitCode: 1)]);
     $said = [];
 
-    cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'pw'], $said));
+    cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'long-enough-pw', 'long-enough-pw'], $said));
 
     expect(implode("\n", $said))->toContain('wire:assign-role did not finish');
 });
@@ -385,7 +385,31 @@ it('offers no super-admin where the application switched it off', function () {
     config()->set('permission-extended.super_admin_role', null);
     $said = [];
 
-    cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'pw'], $said));
+    cfaStep()->apply(cfaConsole(['Boss', 'boss@example.com', 'long-enough-pw', 'long-enough-pw'], $said));
 
     expect(implode("\n", $said))->not->toContain('super-admin');
+});
+
+it('asks again for a password the application\'s policy refuses, or one typed differently twice', function () {
+    // `Password::defaults()`, the rule the profile screen holds a new password
+    // to — and twice, because a typo in a hidden answer is an installation
+    // nobody can sign in to.
+    Tables::users();
+    $said = [];
+
+    expect(cfaStep()->apply(cfaConsole(['Ada', 'ada@example.com', 'pw', 'long-enough-pw', 'long-enough-typo', 'long-enough-pw', 'long-enough-pw'], $said, superAdmin: false)))
+        ->toBe(SetupOutcome::Applied)
+        ->and(implode("\n", $said))->toContain('at least 8 characters.')
+        ->and(implode("\n", $said))->toContain('The two passwords are not the same.')
+        ->and(Hash::check('long-enough-pw', User::query()->firstOrFail()->password))->toBeTrue();
+});
+
+it('creates nothing after three passwords it cannot use', function () {
+    Tables::users();
+    $said = [];
+
+    expect(cfaStep()->apply(cfaConsole(['Ada', 'ada@example.com', 'a', 'b', 'c'], $said)))
+        ->toBe(SetupOutcome::Skipped)
+        ->and(User::query()->count())->toBe(0)
+        ->and(implode("\n", $said))->toContain('nothing was created');
 });

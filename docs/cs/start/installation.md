@@ -242,6 +242,11 @@ adresa není — a adresa, která už účet má, se ohlásí právě takhle. Kd
 zeptá se znovu, nejvýš třikrát; když přijde jako `--email`, příkaz selže, protože
 skript chce návratový kód, ne otázku. Krok instalátoru se ptá stejně.
 
+Heslo musí projít `Password::defaults()` — vlastní politikou aplikace a pravidlem,
+kterým obrazovka profilu drží nové heslo. Když ho píšete, zeptá se dvakrát,
+protože je skryté a překlep znamená účet, do kterého se nikdo nepřihlásí; když
+přijde jako `--password`, odmítnuté heslo příkaz shodí.
+
 **Super-admin mezi nimi nikdy není.** Může všechno, ve všech týmech, takže je to
 samostatná otázka: `--super-admin`, nebo — jen u prvního účtu, kterým si někdo
 otevírá dveře — potvrzení, které přesně tohle řekne. Přiděluje se globálně, takže

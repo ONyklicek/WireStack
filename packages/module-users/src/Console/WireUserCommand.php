@@ -78,7 +78,11 @@ class WireUserCommand extends Command
             return self::FAILURE;
         }
 
-        $password = $email === '' ? '' : $this->password();
+        $password = $email === '' ? '' : $this->password($accounts);
+
+        if ($password === null) {
+            return self::FAILURE;
+        }
 
         if ($email === '' || $password === '') {
             $this->components->error('An e-mail address and a password are both required.');
@@ -150,21 +154,56 @@ class WireUserCommand extends Command
     }
 
     /**
-     * The password, which is never defaulted.
+     * The password, which is never defaulted, held to the application's policy.
      *
      * An empty one is an account anybody can use and a generated one printed
      * into a deploy log is a credential in a log, so an unattended run without
      * `--password` is refused by the caller rather than answered here.
+     *
+     * Typed, it is asked twice — it is hidden, and a typo is an account nobody
+     * can sign in as — and asked again while the policy refuses it. Passed as
+     * `--password`, a refused one fails the command, as `--email` does.
+     *
+     * @return string|null The password; '' when none was given; null when it was refused.
      */
-    protected function password(): string
+    protected function password(Accounts $accounts): ?string
     {
         $given = $this->option('password');
 
         if (is_string($given) && $given !== '') {
+            $problem = $accounts->passwordProblem($given);
+
+            if ($problem !== null) {
+                $this->components->error($problem.'.');
+
+                return null;
+            }
+
             return $given;
         }
 
-        return $this->input->isInteractive() ? (string) $this->components->secret('Password') : '';
+        if (! $this->input->isInteractive()) {
+            return '';
+        }
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $password = (string) $this->secret('Password');
+
+            if ($password === '') {
+                return '';
+            }
+
+            $problem = $accounts->passwordProblem($password)
+                ?? ((string) $this->secret('Password again') === $password ? null : 'The two passwords are not the same');
+
+            if ($problem === null) {
+                return $password;
+            }
+
+            $this->components->error($problem.'.');
+        }
+
+        return null;
     }
 
     /**

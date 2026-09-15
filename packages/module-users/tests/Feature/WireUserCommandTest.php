@@ -30,20 +30,20 @@ it('creates an account from options alone, so a script can call it', function ()
     $this->artisan('wire:user', [
         '--name' => 'Jane',
         '--email' => 'jane@example.com',
-        '--password' => 'hunter2',
+        '--password' => 'hunter2hunter2',
         '--no-interaction' => true,
     ])->expectsOutputToContain('Created jane@example.com.')->assertSuccessful();
 
     $user = User::first();
 
     expect($user->name)->toBe('Jane')
-        ->and(Hash::check('hunter2', $user->password))->toBeTrue();
+        ->and(Hash::check('hunter2hunter2', $user->password))->toBeTrue();
 });
 
 it('asks for what it was not given', function () {
     Tables::users();
 
-    $this->artisan('wire:user', ['--password' => 'hunter2'])
+    $this->artisan('wire:user', ['--password' => 'hunter2hunter2'])
         ->expectsQuestion('Name', 'Asked')
         ->expectsQuestion('E-mail address', 'asked@example.com')
         ->expectsConfirmation('Make asked@example.com a super-admin? It can do everything.', 'no')
@@ -59,7 +59,7 @@ it('makes a second account, which the installer deliberately will not', function
     $this->artisan('wire:user', [
         '--name' => 'Second',
         '--email' => 'second@example.com',
-        '--password' => 'pw',
+        '--password' => 'long-enough-pw',
         '--no-interaction' => true,
     ])->assertSuccessful();
 
@@ -72,7 +72,7 @@ it('makes the account a super-admin, globally, when asked', function () {
 
     $this->artisan('wire:user', [
         '--email' => 'boss@example.com',
-        '--password' => 'pw',
+        '--password' => 'long-enough-pw',
         '--super-admin' => true,
         '--no-interaction' => true,
     ])->expectsOutputToContain('Super-admin')->assertSuccessful();
@@ -87,7 +87,7 @@ it('never makes a later account a super-admin unless told to', function () {
     Tables::roles();
     User::create(['name' => 'First', 'email' => 'first@example.com', 'password' => Hash::make('x')]);
 
-    $this->artisan('wire:user', ['--name' => 'Second', '--email' => 'second@example.com', '--password' => 'pw'])
+    $this->artisan('wire:user', ['--name' => 'Second', '--email' => 'second@example.com', '--password' => 'long-enough-pw'])
         ->assertSuccessful();
 
     expect(User::where('email', 'second@example.com')->first()->hasGlobalRole('super-admin'))->toBeFalse();
@@ -100,7 +100,7 @@ it('refuses the super-admin as a role', function () {
 
     $this->artisan('wire:user', [
         '--email' => 'sneaky@example.com',
-        '--password' => 'pw',
+        '--password' => 'long-enough-pw',
         '--role' => ['super-admin'],
         '--no-interaction' => true,
     ])->expectsOutputToContain('wire:assign-role sneaky@example.com --super-admin')->assertSuccessful();
@@ -115,7 +115,7 @@ it('gives it the roles that were named, creating ones this application has not',
 
     $this->artisan('wire:user', [
         '--email' => 'editor@example.com',
-        '--password' => 'pw',
+        '--password' => 'long-enough-pw',
         '--role' => ['editor', 'support'],
         '--no-interaction' => true,
     ])->assertSuccessful();
@@ -133,7 +133,7 @@ it('asks the first account about the super-admin, then offers the roles without 
     Role::create(['name' => 'editor', 'guard_name' => 'web']);
     Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
 
-    $this->artisan('wire:user', ['--name' => 'One', '--email' => 'one@example.com', '--password' => 'pw'])
+    $this->artisan('wire:user', ['--name' => 'One', '--email' => 'one@example.com', '--password' => 'long-enough-pw'])
         ->expectsConfirmation('Make one@example.com a super-admin? It can do everything.', 'yes')
         ->expectsChoice('Which roles should this account have?', ['editor'], ['editor' => 'editor'])
         ->assertSuccessful();
@@ -181,7 +181,7 @@ it('fails rather than pretending, when the row cannot be written', function () {
 
     $this->artisan('wire:user', [
         '--email' => 'jane@example.com',
-        '--password' => 'pw',
+        '--password' => 'long-enough-pw',
         '--no-interaction' => true,
     ])->expectsOutputToContain('Could not create the account')->assertFailed();
 });
@@ -190,11 +190,11 @@ it('refuses an address that is not one, or that already has an account, from an 
     Tables::users();
     User::create(['name' => 'Taken', 'email' => 'taken@example.com', 'password' => Hash::make('x')]);
 
-    $this->artisan('wire:user', ['--email' => 'admin', '--password' => 'pw', '--no-interaction' => true])
+    $this->artisan('wire:user', ['--email' => 'admin', '--password' => 'long-enough-pw', '--no-interaction' => true])
         ->expectsOutputToContain('Not an e-mail address: admin')
         ->assertFailed();
 
-    $this->artisan('wire:user', ['--email' => 'taken@example.com', '--password' => 'pw', '--no-interaction' => true])
+    $this->artisan('wire:user', ['--email' => 'taken@example.com', '--password' => 'long-enough-pw', '--no-interaction' => true])
         ->expectsOutputToContain('An account with taken@example.com already exists')
         ->assertFailed();
 
@@ -204,7 +204,7 @@ it('refuses an address that is not one, or that already has an account, from an 
 it('asks again for an address that is not one, and gives up after three', function () {
     Tables::users();
 
-    $this->artisan('wire:user', ['--password' => 'pw', '--name' => 'Jane'])
+    $this->artisan('wire:user', ['--password' => 'long-enough-pw', '--name' => 'Jane'])
         ->expectsQuestion('E-mail address', 'admin')
         ->expectsQuestion('E-mail address', 'jane@example.com')
         ->expectsOutputToContain('Not an e-mail address: admin')
@@ -213,7 +213,7 @@ it('asks again for an address that is not one, and gives up after three', functi
 
     expect(User::query()->where('email', 'jane@example.com')->exists())->toBeTrue();
 
-    $this->artisan('wire:user', ['--password' => 'pw', '--name' => 'Jane'])
+    $this->artisan('wire:user', ['--password' => 'long-enough-pw', '--name' => 'Jane'])
         ->expectsQuestion('E-mail address', 'a')
         ->expectsQuestion('E-mail address', 'b')
         ->expectsQuestion('E-mail address', 'c')
@@ -229,7 +229,7 @@ it('keeps the account when only the role could not be given', function () {
 
     $this->artisan('wire:user', [
         '--email' => 'noroles@example.com',
-        '--password' => 'pw',
+        '--password' => 'long-enough-pw',
         '--role' => ['editor'],
         '--no-interaction' => true,
     ])->expectsOutputToContain('Could not give it')->assertSuccessful();
@@ -243,8 +243,58 @@ it('says nothing about roles in an application that has none', function () {
 
     $this->artisan('wire:user', [
         '--email' => 'plain@example.com',
-        '--password' => 'pw',
+        '--password' => 'long-enough-pw',
         '--super-admin' => true,
         '--no-interaction' => true,
     ])->doesntExpectOutputToContain('Role')->assertSuccessful();
+});
+
+it('refuses a password the application\'s policy refuses, when it came from --password', function () {
+    // `Password::defaults()` — the rule the profile screen holds a new password
+    // to. `pw` made an account nobody could have given themselves.
+    Tables::users();
+
+    $this->artisan('wire:user', ['--name' => 'Jane', '--email' => 'jane@example.com', '--password' => 'pw', '--no-interaction' => true])
+        ->expectsOutputToContain('at least 8 characters')
+        ->assertFailed();
+
+    expect(User::query()->count())->toBe(0);
+});
+
+it('asks for a typed password twice, and again while it is refused or mistyped', function () {
+    Tables::users();
+
+    $this->artisan('wire:user', ['--name' => 'Jane', '--email' => 'jane@example.com'])
+        ->expectsQuestion('Password', 'pw')
+        ->expectsOutputToContain('at least 8 characters')
+        ->expectsQuestion('Password', 'long-enough-pw')
+        ->expectsQuestion('Password again', 'long-enough-typo')
+        ->expectsOutputToContain('The two passwords are not the same')
+        ->expectsQuestion('Password', 'long-enough-pw')
+        ->expectsQuestion('Password again', 'long-enough-pw')
+        ->expectsConfirmation('Make jane@example.com a super-admin? It can do everything.', 'no')
+        ->assertSuccessful();
+
+    expect(Hash::check('long-enough-pw', User::query()->firstOrFail()->password))->toBeTrue();
+});
+
+it('creates nothing after three passwords it cannot use', function () {
+    Tables::users();
+
+    $this->artisan('wire:user', ['--name' => 'Jane', '--email' => 'jane@example.com'])
+        ->expectsQuestion('Password', 'a')
+        ->expectsQuestion('Password', 'b')
+        ->expectsQuestion('Password', 'c')
+        ->assertFailed();
+
+    expect(User::query()->count())->toBe(0);
+});
+
+it('stops at an empty typed password, as it always has', function () {
+    Tables::users();
+
+    $this->artisan('wire:user', ['--name' => 'Jane', '--email' => 'jane@example.com'])
+        ->expectsQuestion('Password', '')
+        ->expectsOutputToContain('e-mail address and a password are both required')
+        ->assertFailed();
 });

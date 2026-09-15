@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 use NyonCode\WireModuleUsers\Console\WireUserCommand;
 use NyonCode\WireModuleUsers\Exceptions\AccountException;
 use NyonCode\WireModuleUsers\Install\CreateFirstAdministrator;
@@ -118,6 +119,22 @@ final class Accounts
         }
 
         return null;
+    }
+
+    /**
+     * What is wrong with this password for a new account, or null when nothing is.
+     *
+     * `Password::defaults()`, which is the application's own policy — whatever
+     * its provider set, and Laravel's default where it set nothing — and the
+     * rule the profile screen already holds a new password to. The installer and
+     * the command took `pw`, and made an account the screen would not have let
+     * anybody give themselves.
+     */
+    public function passwordProblem(string $password): ?string
+    {
+        $validator = Validator::make(['password' => $password], ['password' => ['required', Password::defaults()]]);
+
+        return $validator->fails() ? rtrim((string) $validator->errors()->first('password'), '.') : null;
     }
 
     /**

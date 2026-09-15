@@ -245,6 +245,11 @@ again, three times at most; passed as `--email`, the command fails, because a
 script wants an exit code rather than a question. The installer's step asks the
 same way.
 
+The password is held to `Password::defaults()` — the application's own policy,
+and the rule the profile screen holds a new password to. Typed, it is asked for
+twice, because it is hidden and a typo is an account nobody can sign in as;
+passed as `--password`, a refused one fails the command.
+
 **The super-admin is never one of them.** It can do everything, in every team, so
 it is its own question: `--super-admin`, or — for the first account only, the one
 somebody is letting themselves in with — a confirmation that says exactly that.
