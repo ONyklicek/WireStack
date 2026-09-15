@@ -204,3 +204,36 @@ it('belongs to its own package, so unticking that package skips it', function ()
     // What the first half of the installer was told, the second half obeys.
     expect((new RegisterResourceRoutes)->package())->toBe('nyoncode/wire-panels');
 });
+
+it('asks again for a prefix that would break the file it is written into', function () {
+    // Both answers are PHP source in `routes/web.php`: a quote in either was a
+    // parse error, and every request to the application with it.
+    rrrRestoringRoutes(function () {
+        file_put_contents(base_path('routes/web.php'), "<?php\n");
+        $said = [];
+
+        expect((new RegisterResourceRoutes)->apply(rrrConsole(["o'neil", 'team/{tenant}', "web,we'b", 'web,App\\Http\\Middleware\\Admin,can:admin'], $said)))
+            ->toBe(SetupOutcome::Applied);
+
+        $written = (string) file_get_contents(base_path('routes/web.php'));
+
+        expect($written)->toContain("->prefix('team/{tenant}')")
+            ->and($written)->toContain("Route::middleware(['web', 'App\\\\Http\\\\Middleware\\\\Admin', 'can:admin'])")
+            ->and(implode("\n", $said))->toContain("Not a URL prefix: o'neil")
+            ->and(implode("\n", $said))->toContain("Not a middleware name: we'b");
+
+        exec(PHP_BINARY.' -l '.escapeshellarg(base_path('routes/web.php')), $output, $code);
+        expect($code)->toBe(0);
+    });
+});
+
+it('writes nothing after three answers it cannot use', function () {
+    rrrRestoringRoutes(function () {
+        file_put_contents(base_path('routes/web.php'), "<?php\n");
+        $said = [];
+
+        expect((new RegisterResourceRoutes)->apply(rrrConsole(['a b', "c'", 'd"'], $said)))->toBe(SetupOutcome::Skipped)
+            ->and((string) file_get_contents(base_path('routes/web.php')))->toBe("<?php\n")
+            ->and(implode("\n", $said))->toContain('Nothing was written');
+    });
+});

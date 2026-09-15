@@ -334,3 +334,48 @@ it('treats a database it cannot reach as one with no tables in it', function () 
     expect(etStep()->state())->toBe(SetupState::Pending)
         ->and(etStep()->summary())->toContain('scope roles to teams');
 });
+
+it('asks again for a relation that would break the config it is written into', function () {
+    // The relation is PHP source in the published config: a quote in it left the
+    // file a parse error.
+    etPublishPermissionConfig();
+    file_put_contents(config_path('wire-module-users.php'), "<?php\n\nreturn [\n    'teams' => [\n        'relation' => 'teams',\n    ],\n];\n");
+    $said = [];
+
+    etStep()->apply(etConsole([stdClass::class, "squad's", 'squads'], $said));
+
+    expect((string) file_get_contents(config_path('wire-module-users.php')))->toContain("'relation' => 'squads',")
+        ->and(implode(' ', $said))->toContain("Not a relation name: squad's");
+
+    @unlink(config_path('wire-module-users.php'));
+});
+
+it('writes no relation after three it cannot use, and still switches teams on', function () {
+    etPublishPermissionConfig();
+    file_put_contents(config_path('wire-module-users.php'), "<?php\n\nreturn [\n    'teams' => [\n        'relation' => 'teams',\n    ],\n];\n");
+    $said = [];
+
+    expect(etStep()->apply(etConsole([stdClass::class, 'a b', 'c-d', 'e.f'], $said)))->toBe(SetupOutcome::Applied)
+        ->and((string) file_get_contents(config_path('wire-module-users.php')))->toContain("'relation' => 'teams',");
+
+    @unlink(config_path('wire-module-users.php'));
+});
+
+it('asks again for a team class that is not a class name, and gives up after three', function () {
+    etPublishPermissionConfig();
+    $env = etEnv();
+    $said = [];
+
+    etStep($env)->apply(etConsole(['Team Model', '\\App\\Models\\Team', 'teams'], $said));
+
+    expect($env->get('WIRE_USERS_TEAM_MODEL'))->toBe('App\\Models\\Team')
+        ->and(implode(' ', $said))->toContain('Not a class name: Team Model');
+
+    $said = [];
+    $env = etEnv();
+
+    etStep($env)->apply(etConsole(['a b', 'c-d', "e'f"], $said));
+
+    expect($env->get('WIRE_USERS_TEAM_MODEL'))->toBeNull()
+        ->and(implode(' ', $said))->toContain('Set WIRE_USERS_TEAM_MODEL');
+});

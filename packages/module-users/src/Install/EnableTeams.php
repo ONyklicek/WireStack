@@ -6,6 +6,7 @@ namespace NyonCode\WireModuleUsers\Install;
 
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\Schema;
+use NyonCode\WireCore\Foundation\Setup\Answers;
 use NyonCode\WireCore\Foundation\Setup\ConfigFile;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
@@ -58,6 +59,12 @@ use Throwable;
  */
 final readonly class EnableTeams implements SetupStep
 {
+    /** A class name, namespaced, without the leading backslash. */
+    private const CLASS_NAME = '/^[A-Za-z_][A-Za-z0-9_]*(\\\\[A-Za-z_][A-Za-z0-9_]*)*$/';
+
+    /** A method on the user model. */
+    private const METHOD_NAME = '/^[A-Za-z_][A-Za-z0-9_]*$/';
+
     public function __construct(private EnvFile $env, private Kernel $artisan) {}
 
     public function label(): string
@@ -162,7 +169,20 @@ final readonly class EnableTeams implements SetupStep
      */
     private function nameTheModel(SetupConsole $console): void
     {
-        $model = $console->ask('Which class is a team?', (string) config('wire-module-users.teams.model', 'App\\Models\\Team'));
+        // Both answers are written into files — the model into `.env`, the
+        // relation into PHP source, where a quote left the config a parse error
+        // — so both are held to the shape of what they name first.
+        $answers = new Answers($console);
+        $model = $answers->until(
+            static fn (): string => ltrim($console->ask('Which class is a team?', (string) config('wire-module-users.teams.model', 'App\\Models\\Team')), '\\'),
+            static fn (string $class): ?string => preg_match(self::CLASS_NAME, $class) === 1 ? null : "Not a class name: {$class}",
+        );
+
+        if ($model === null) {
+            $console->warn('Set WIRE_USERS_TEAM_MODEL in .env to the class that is a team.');
+
+            return;
+        }
 
         if (! class_exists($model)) {
             $console->warn($model.' does not exist yet — the switcher stays empty until it does.');
@@ -174,15 +194,18 @@ final readonly class EnableTeams implements SetupStep
             $console->warn('Could not write to .env — set WIRE_USERS_TEAM_MODEL='.$model.' there yourself.');
         }
 
-        $relation = $console->ask('Which relation on the user reaches their teams?', Teams::relation());
+        $relation = $answers->until(
+            static fn (): string => $console->ask('Which relation on the user reaches their teams?', Teams::relation()),
+            static fn (string $relation): ?string => preg_match(self::METHOD_NAME, $relation) === 1 ? null : "Not a relation name: {$relation}",
+        );
 
-        if ($relation === Teams::relation()) {
+        if ($relation === null || $relation === Teams::relation()) {
             return;
         }
 
         $users = ConfigFile::forApplication('wire-module-users');
 
-        if (! $users->exists() || ! $users->set('relation', "'".$relation."'")) {
+        if (! $users->exists() || ! $users->set('relation', var_export($relation, true))) {
             $console->warn("Set `teams.relation` to '".$relation."' in config/wire-module-users.php yourself.");
         }
     }

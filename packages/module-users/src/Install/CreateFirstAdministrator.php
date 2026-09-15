@@ -6,6 +6,7 @@ namespace NyonCode\WireModuleUsers\Install;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Process;
+use NyonCode\WireCore\Foundation\Setup\Answers;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
@@ -134,18 +135,10 @@ final readonly class CreateFirstAdministrator implements SetupStep
      */
     private function askEmail(SetupConsole $console): string
     {
-        for ($attempt = 0; $attempt < 3; $attempt++) {
-            $email = trim($console->ask('E-mail address'));
-            $problem = $email === '' ? null : $this->accounts->emailProblem($email);
-
-            if ($problem === null) {
-                return $email;
-            }
-
-            $console->warn($problem.'.');
-        }
-
-        return '';
+        return (new Answers($console))->until(
+            static fn (): string => trim($console->ask('E-mail address')),
+            fn (string $email): ?string => $email === '' ? null : $this->accounts->emailProblem($email),
+        ) ?? '';
     }
 
     /**

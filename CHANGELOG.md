@@ -203,6 +203,12 @@ All notable changes to the Wire ecosystem will be documented in this file.
   database's unique-constraint error. Both now go through `Accounts::emailProblem()` — the user
   form's `email` rule, then whether the address has an account: typed, it is asked again (three
   times at most); passed as `--email`, the command fails.
+- **An answer can no longer leave `routes/web.php` or the users config a parse error.** The routes
+  step wrote its prefix and middleware, and the teams step its relation, into PHP source unchecked:
+  a quote in any of them took the application down. Each answer is held to its shape — a URL path, a
+  middleware name, a class, a method — and asked again, three times at most, through the new
+  `Foundation\Setup\Answers`, which the first administrator's questions now share. What is written is
+  `var_export`ed.
 
 ### Added
 

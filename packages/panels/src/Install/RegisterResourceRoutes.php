@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WirePanels\Install;
 
+use NyonCode\WireCore\Foundation\Setup\Answers;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
@@ -36,6 +37,12 @@ final class RegisterResourceRoutes implements SetupStep
 {
     /** What we look for to decide the application has already done this. */
     private const MACRO = 'wireResources';
+
+    /** A path under the application root: segments of URL-safe characters, route parameters included. */
+    private const PREFIX = '/^[A-Za-z0-9._~{}-]+(\/[A-Za-z0-9._~{}-]+)*$/';
+
+    /** A middleware alias, group or class, with its parameters. */
+    private const MIDDLEWARE = '/^[A-Za-z0-9_.:|\\\\-]+$/';
 
     public function label(): string
     {
@@ -72,8 +79,26 @@ final class RegisterResourceRoutes implements SetupStep
 
     public function apply(SetupConsole $console): SetupOutcome
     {
-        $prefix = trim($console->ask('URL prefix for the admin', 'admin'), '/');
-        $middleware = $console->ask('Middleware, comma separated', 'web,auth');
+        // Both answers are written into PHP source, so both are held to a shape
+        // first: a quote in either left `routes/web.php` a parse error, and every
+        // request to the application with it.
+        $answers = new Answers($console);
+        $prefix = $answers->until(
+            static fn (): string => trim($console->ask('URL prefix for the admin', 'admin'), '/'),
+            static fn (string $prefix): ?string => $prefix === '' || preg_match(self::PREFIX, $prefix) === 1
+                ? null
+                : "Not a URL prefix: {$prefix} — letters, digits, `-`, `_`, `.`, `{}` and `/` only",
+        );
+        $middleware = $prefix === null ? null : $answers->until(
+            static fn (): string => $console->ask('Middleware, comma separated', 'web,auth'),
+            fn (string $list): ?string => $this->middlewareProblem($list),
+        );
+
+        if ($prefix === null || $middleware === null) {
+            $console->warn('Nothing was written to routes/web.php.');
+
+            return SetupOutcome::Skipped;
+        }
 
         $group = $this->group($prefix, $middleware);
 
@@ -116,11 +141,11 @@ final class RegisterResourceRoutes implements SetupStep
     private function group(string $prefix, string $middleware): string
     {
         $list = implode(', ', array_map(
-            static fn (string $name): string => "'".trim($name)."'",
-            array_filter(explode(',', $middleware), static fn (string $name): bool => trim($name) !== ''),
+            static fn (string $name): string => var_export($name, true),
+            $this->middlewareNames($middleware),
         ));
 
-        $prefixCall = $prefix === '' ? '' : "->prefix('{$prefix}')";
+        $prefixCall = $prefix === '' ? '' : '->prefix('.var_export($prefix, true).')';
 
         return <<<PHP
 
@@ -132,6 +157,31 @@ final class RegisterResourceRoutes implements SetupStep
         });
 
         PHP;
+    }
+
+    /**
+     * What is wrong with a middleware list, or null when nothing is.
+     */
+    private function middlewareProblem(string $list): ?string
+    {
+        foreach ($this->middlewareNames($list) as $name) {
+            if (preg_match(self::MIDDLEWARE, $name) !== 1) {
+                return "Not a middleware name: {$name}";
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function middlewareNames(string $list): array
+    {
+        return array_values(array_filter(
+            array_map(trim(...), explode(',', $list)),
+            static fn (string $name): bool => $name !== '',
+        ));
     }
 
     private function alreadyRouted(): bool
