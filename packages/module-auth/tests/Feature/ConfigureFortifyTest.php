@@ -7,6 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Fortify\FortifyServiceProvider;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
+use NyonCode\WireCore\Foundation\Setup\RedundantMigrations;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
@@ -117,6 +118,18 @@ function cfArtisan(int $exitCode = 0, ?string $writes = null, array $publishes =
     return $artisan;
 }
 
+/** The step, over an artisan the test controls and the real migration check. */
+function cfStep(Kernel $artisan): ConfigureFortify
+{
+    return new ConfigureFortify($artisan, app(RedundantMigrations::class));
+}
+
+/** Fortify's two-factor migration, in the shape it publishes. */
+const CF_TWO_FACTOR = "<?php return new class { public function up(): void { Schema::table('users', function (Blueprint \$table) { \$table->text('two_factor_secret'); \$table->text('two_factor_recovery_codes'); \$table->timestamp('two_factor_confirmed_at'); }); } };";
+
+/** The passkeys migration Fortify publishes beside it. */
+const CF_PASSKEYS = "<?php return new class { public function up(): void { Schema::create('passkeys', function (Blueprint \$table) { \$table->id(); }); } };";
+
 /**
  * The config `fortify:install` publishes — read from Fortify's own stub.
  *
@@ -148,7 +161,7 @@ it('is registered, so the installer offers it', function () {
 });
 
 it('is pending while fortify has published nothing', function () {
-    $step = new ConfigureFortify(cfArtisan());
+    $step = cfStep(cfArtisan());
 
     expect($step->state())->toBe(SetupState::Pending)
         ->and($step->summary())->toContain('publish its config')
@@ -159,19 +172,19 @@ it('is pending while fortify has published nothing', function () {
 it('is done once the config is there', function () {
     file_put_contents(config_path('fortify.php'), cfShippedConfig());
 
-    expect((new ConfigureFortify(cfArtisan()))->state())->toBe(SetupState::Done)
-        ->and((new ConfigureFortify(cfArtisan()))->summary())->toContain('routes are registered');
+    expect((cfStep(cfArtisan()))->state())->toBe(SetupState::Done)
+        ->and((cfStep(cfArtisan()))->summary())->toContain('routes are registered');
 });
 
 it('runs before the migrations, because fortify ships one', function () {
     // Fortify's own migration adds the two-factor columns to the users table,
     // and a `migrate` that has already run does not come back for it.
-    expect((new ConfigureFortify(cfArtisan()))->sort())->toBeLessThan(100);
+    expect((cfStep(cfArtisan()))->sort())->toBeLessThan(100);
 });
 
 it('publishes fortify, and says what it did', function () {
     $said = [];
-    $step = new ConfigureFortify(cfArtisan(0, cfShippedConfig()));
+    $step = cfStep(cfArtisan(0, cfShippedConfig()));
 
     expect($step->apply(cfConsole([], $said, false)))->toBe(SetupOutcome::Applied)
         ->and(implode(' ', $said))->toContain('config/fortify.php');
@@ -179,7 +192,7 @@ it('publishes fortify, and says what it did', function () {
 
 it('fails rather than pretending, when fortify:install does not finish', function () {
     $said = [];
-    $step = new ConfigureFortify(cfArtisan(1));
+    $step = cfStep(cfArtisan(1));
 
     expect($step->apply(cfConsole([], $said, false)))->toBe(SetupOutcome::Failed)
         ->and(implode(' ', $said))->toContain('fortify:install');
@@ -189,7 +202,7 @@ it('changes nothing when nobody can be asked', function () {
     // Switching a feature without being asked is a sign-in page that has
     // silently lost its password reset. Unattended, the file stays as published.
     $said = [];
-    $step = new ConfigureFortify(cfArtisan(0, cfShippedConfig()));
+    $step = cfStep(cfArtisan(0, cfShippedConfig()));
     $step->apply(cfConsole([], $said, false));
 
     expect((string) file_get_contents(config_path('fortify.php')))->toBe(cfShippedConfig());
@@ -200,7 +213,7 @@ it('offers every feature the published config lists, ticked as it has them', fun
     // an options array over several lines: all five are still a question.
     $said = [];
     $offered = [];
-    $step = new ConfigureFortify(cfArtisan(0, cfShippedConfig()));
+    $step = cfStep(cfArtisan(0, cfShippedConfig()));
 
     $console = cfConsole([], $said, true, $offered);
     $step->apply($console);
@@ -216,7 +229,7 @@ it('offers every feature the published config lists, ticked as it has them', fun
 
 it('switches features off and on, a whole options block at a time', function () {
     $said = [];
-    $step = new ConfigureFortify(cfArtisan(0, cfShippedConfig()));
+    $step = cfStep(cfArtisan(0, cfShippedConfig()));
 
     $step->apply(cfConsole([['resetPasswords', 'emailVerification', 'twoFactorAuthentication']], $said));
 
@@ -240,7 +253,7 @@ it('leaves an application that rewrote the array alone, and says so', function (
     // A regular expression that keeps looking through somebody's edited config
     // eventually matches the wrong thing.
     $said = [];
-    $step = new ConfigureFortify(cfArtisan(0, "<?php\n\nreturn ['features' => Features::all()];\n"));
+    $step = cfStep(cfArtisan(0, "<?php\n\nreturn ['features' => Features::all()];\n"));
 
     $step->apply(cfConsole([['registration']], $said));
 
@@ -249,12 +262,12 @@ it('leaves an application that rewrote the array alone, and says so', function (
 
 it('does not comment out a comment on a second run', function () {
     $said = [];
-    $step = new ConfigureFortify(cfArtisan(0, cfShippedConfig()));
+    $step = cfStep(cfArtisan(0, cfShippedConfig()));
 
     $step->apply(cfConsole([[]], $said));
     $once = (string) file_get_contents(config_path('fortify.php'));
 
-    (new ConfigureFortify(cfArtisan()))->apply(cfConsole([[]], $said));
+    (cfStep(cfArtisan()))->apply(cfConsole([[]], $said));
 
     expect((string) file_get_contents(config_path('fortify.php')))->toBe($once);
 });
@@ -263,10 +276,10 @@ it('puts a block back exactly as it was, comments inside it included', function 
     // Two-factor ships with `// 'window' => 0,` inside its options. Off and on
     // again must not lose that comment or double it.
     $said = [];
-    $step = new ConfigureFortify(cfArtisan(0, cfShippedConfig()));
+    $step = cfStep(cfArtisan(0, cfShippedConfig()));
 
     $step->apply(cfConsole([['registration', 'resetPasswords', 'passkeys']], $said));
-    (new ConfigureFortify(cfArtisan()))->apply(cfConsole([['registration', 'resetPasswords', 'twoFactorAuthentication', 'passkeys']], $said));
+    (cfStep(cfArtisan()))->apply(cfConsole([['registration', 'resetPasswords', 'twoFactorAuthentication', 'passkeys']], $said));
 
     expect((string) file_get_contents(config_path('fortify.php')))->toBe(cfShippedConfig());
 });
@@ -278,7 +291,7 @@ it('says what to require when fortify is not installed at all', function () {
     $artisan = Mockery::mock(Kernel::class);
     $artisan->shouldReceive('all')->andReturn([]);
 
-    $step = new ConfigureFortify($artisan);
+    $step = cfStep($artisan);
 
     expect($step->state())->toBe(SetupState::Blocked)
         ->and($step->summary())->toContain('composer require laravel/fortify');
@@ -286,7 +299,7 @@ it('says what to require when fortify is not installed at all', function () {
 
 it('touches nothing when every feature was kept', function () {
     $said = [];
-    $step = new ConfigureFortify(cfArtisan(0, cfShippedConfig()));
+    $step = cfStep(cfArtisan(0, cfShippedConfig()));
 
     $step->apply(cfConsole([[
         'registration',
@@ -301,7 +314,7 @@ it('touches nothing when every feature was kept', function () {
 
 it('says where to switch them when it cannot write the file', function () {
     $said = [];
-    $step = new ConfigureFortify(cfArtisan(0, cfShippedConfig()));
+    $step = cfStep(cfArtisan(0, cfShippedConfig()));
 
     // Published, then made read-only — which is an application whose config is
     // owned by root, or deployed from an image. The second run is handed an
@@ -315,7 +328,7 @@ it('says where to switch them when it cannot write the file', function () {
     ]], $said));
 
     chmod(config_path('fortify.php'), 0444);
-    (new ConfigureFortify(cfArtisan()))->apply(cfConsole([['registration']], $said));
+    (cfStep(cfArtisan()))->apply(cfConsole([['registration']], $said));
     chmod(config_path('fortify.php'), 0644);
 
     expect(implode(' ', $said))->toContain('by hand');
@@ -330,13 +343,13 @@ it('leaves out Fortify\'s two-factor migration when another migration already ad
     // stopped on "duplicate column name: two_factor_secret".
     $own = sys_get_temp_dir().'/wire-own-migrations-'.uniqid();
     mkdir($own);
-    file_put_contents($own.'/2026_01_01_000000_add_profile_features_to_users_table.php', "<?php // \$table->text('two_factor_secret')");
+    file_put_contents($own.'/2026_01_01_000000_add_profile_features_to_users_table.php', CF_TWO_FACTOR);
     app('migrator')->path($own);
 
     $said = [];
-    $step = new ConfigureFortify(cfArtisan(0, cfShippedConfig(), [
-        'add_two_factor_columns_to_users_table' => "<?php // \$table->text('two_factor_secret')",
-        'create_passkeys_table' => "<?php // Schema::create('passkeys'",
+    $step = cfStep(cfArtisan(0, cfShippedConfig(), [
+        'add_two_factor_columns_to_users_table' => CF_TWO_FACTOR,
+        'create_passkeys_table' => CF_PASSKEYS,
     ]));
 
     $step->apply(cfConsole([], $said, false));
@@ -353,8 +366,8 @@ it('leaves out Fortify\'s passkeys migration when the table is already there', f
     Schema::create('passkeys', fn (Blueprint $table) => $table->id());
     $said = [];
 
-    (new ConfigureFortify(cfArtisan(0, cfShippedConfig(), [
-        'create_passkeys_table' => "<?php // Schema::create('passkeys'",
+    (cfStep(cfArtisan(0, cfShippedConfig(), [
+        'create_passkeys_table' => CF_PASSKEYS,
     ])))->apply(cfConsole([], $said, false));
 
     expect(glob(database_path('migrations/2099_01_01_000000_create_passkeys_table.php')))->toBe([])
@@ -364,8 +377,8 @@ it('leaves out Fortify\'s passkeys migration when the table is already there', f
 it('keeps Fortify\'s migrations where nothing else does their work', function () {
     $said = [];
 
-    (new ConfigureFortify(cfArtisan(0, cfShippedConfig(), [
-        'add_two_factor_columns_to_users_table' => "<?php // \$table->text('two_factor_secret')",
+    (cfStep(cfArtisan(0, cfShippedConfig(), [
+        'add_two_factor_columns_to_users_table' => CF_TWO_FACTOR,
     ])))->apply(cfConsole([], $said, false));
 
     expect(glob(database_path('migrations/2099_01_01_000000_add_two_factor_columns_to_users_table.php')))->toHaveCount(1)
@@ -377,8 +390,8 @@ it('answers from the files when there is no database to ask', function () {
     config()->set('database.default', 'nowhere');
     $said = [];
 
-    (new ConfigureFortify(cfArtisan(0, cfShippedConfig(), [
-        'create_passkeys_table' => "<?php // Schema::create('passkeys'",
+    (cfStep(cfArtisan(0, cfShippedConfig(), [
+        'create_passkeys_table' => CF_PASSKEYS,
     ])))->apply(cfConsole([], $said, false));
 
     expect(glob(database_path('migrations/2099_01_01_000000_create_passkeys_table.php')))->toHaveCount(1);

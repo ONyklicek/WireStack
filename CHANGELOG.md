@@ -187,12 +187,17 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **`--no-interaction` reaches the installers it runs.** Each one prompts before touching a
   production application, and the prompt was drawn on this command's output from inside a running
   task spinner — the one place nobody can answer it.
-- **A new application's first migration no longer dies on `duplicate column name: two_factor_secret`.**
-  The Fortify step runs `fortify:install`, which publishes Fortify's own migrations for the
-  two-factor columns and the passkeys table — into an application that may already have both, from
-  its own migration or a package's. The step now compares what the publish added with what is
-  already there (the table or column in the database, or the same schema change in another
-  registered migration) and removes the copy that would repeat it, saying so.
+- **A migration the application already has is no longer published into it a second time.** Every
+  installer that publishes one wrote it whatever the application held, and the next `migrate` died
+  on `duplicate column name: two_factor_secret` (Fortify's two-factor columns), `table "roles"
+  already exists` (the permission installer, which only looked in `database/migrations`), or on any
+  of this stack's own tables in an application that pruned its migrations into a schema dump.
+  `Foundation\Setup\RedundantMigrations` is now the one owner of the question: the Fortify and roles
+  steps and `wire:install`'s package installers publish through it, and each migration written is
+  compared, the moment its tag is published, with the database and with every other migration the
+  migrator will run (`MigrationFootprint` reads what it creates and adds). One whose schema is all
+  already there is removed, and said; a partial overlap still runs. `Install\Setup` asks the same
+  question, so a part whose tables are already in the database is not offered again for them.
 - **The first administrator and `wire:user` check the e-mail address.** `admin` was accepted and
   made an account nobody could sign in with, and an address already in use came back as the
   database's unique-constraint error. Both now go through `Accounts::emailProblem()` — the user

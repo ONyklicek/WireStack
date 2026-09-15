@@ -7,6 +7,7 @@ namespace NyonCode\Wire\Install;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
+use NyonCode\WireCore\Foundation\Setup\RedundantMigrations;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
@@ -178,8 +179,9 @@ class WireInstallCommand extends Command
             }
 
             $options = $this->passthrough($commands[$component->command], $force);
+            $leftOut = [];
 
-            $this->components->task($name, function () use ($component, $options, &$failed): bool {
+            $this->components->task($name, function () use ($component, $options, &$failed, &$leftOut): bool {
                 // Into a buffer rather than onto this command's output. Each of
                 // these installers prints a banner, a numbered step per tag, a
                 // tick per published file and a "Next steps" list — a dozen
@@ -192,7 +194,18 @@ class WireInstallCommand extends Command
                 // The exit code is the installer's answer, and dropping it was
                 // how a failed publish came out as a green tick and a zero
                 // exit — the shape a CI run cannot see through.
-                $code = Artisan::call((string) $component->command, $options);
+                //
+                // Every migration it publishes is checked against what the
+                // application already has as it lands: one whose tables are
+                // already in the database — pruned into a schema dump, made by
+                // another package — is a `migrate` that fails on the first of
+                // them, and is left out instead.
+                $code = $this->laravel->make(RedundantMigrations::class)->around(
+                    static fn (): int => Artisan::call((string) $component->command, $options),
+                    static function (string $migration) use (&$leftOut): void {
+                        $leftOut[] = $migration;
+                    },
+                );
 
                 if ($code !== self::SUCCESS) {
                     $failed[] = $component->label;
@@ -208,6 +221,12 @@ class WireInstallCommand extends Command
 
                 return $code === self::SUCCESS;
             });
+
+            // After the task rather than inside it, where a line would be drawn
+            // over the spinner that is still running.
+            foreach ($leftOut as $migration) {
+                $this->line("  <fg=gray>Left out the {$migration} migration — this application already has it.</>");
+            }
         }
 
         if ($settled !== [] && ! $force) {

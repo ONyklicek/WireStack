@@ -91,6 +91,15 @@ je v každém procesu jiná, `vendor:publish` se podívá tam, nic nenajde a zap
 Opakované spuštění po přidání modulu je proto bezpečné a vypadá přesně jako výpis
 výše: modul se nastaví a všechno, co už tam bylo, se pojmenuje a nechá být.
 
+**Migrace, kterou aplikace už má, se vynechá.** Soubor na disku není jediný způsob,
+jak ji mít: `schema:dump --prune` soubory smaže a tabulky nechá, stejnou tabulku
+může vytvářet jiný balíček a `fortify:install` i instalátor oprávnění publikují
+své migrace bez ohledu na to, co aplikace má. Každá migrace, kterou instalátor
+během běhu zapíše, se hned při zápisu porovná s databází a se všemi ostatními
+migracemi, které migrátor spustí — a ta, jejíž tabulky a sloupce už všechny
+existují, se odstraní a ohlásí. Částečný překryv zůstane a selže při `migrate`,
+kde je to vidět.
+
 **`--force` nastaví každou část bez ohledu na to** a předá `--force` dál, takže
 každý instalátor publikuje přes to, co zapsal. To je přepínač pro upgrade — a ten,
 po kterém sáhnout, když se přeskočila část, kterou jste spustit chtěli.
@@ -174,7 +183,7 @@ Druhá půlka `wire:install` je proto prochází, jeden po druhém:
 | --- | --- |
 | [Fortify](../modules/auth.md) | Spustí `fortify:install` a pak se zeptá, které funkce přihlášení mít — registraci, obnovu hesla, ověření e-mailu, dvoufázové ověření, passkeys — zaškrtnuté tak, jak je má publikovaný config, a každou v `config/fortify.php` zakomentuje nebo odkomentuje, i s celým blokem voleb. Bez toho jsou obrazovky přihlášení zaregistrované, ale jejich routy ne: přihlašovací stránka je 404 |
 | [Teams](../modules/teams-and-two-factor.md#jak-zapnout-tymy) | Zeptá se, zda jsou role vázané na týmy; při „ano“ publikuje config oprávnění, pokud ještě není, nastaví `permission.teams` na `true`, zapíše `WIRE_USERS_TEAM_MODEL` a — pokud zadáte jinou — i relaci. Ptá se schválně před rolemi: instalátor rolí končí vlastním `migrate` a Spatie migrace čte `permission.teams` ve chvíli, kdy běží. Tabulky vytvořené bez týmů se berou jako „ne“, takže se znovu neptá |
-| [Roles & permissions](../modules/teams-and-two-factor.md) | Spustí `permission-extended:install`, který publikuje config a migraci oprávnění, spustí ji a přidá `HasRoles` na váš model uživatele. Do té doby obrazovky rolí prostě chybí. Potřebuje `nyoncode/laravel-permission-extended` a řekne, když chybí |
+| [Roles & permissions](../modules/teams-and-two-factor.md) | Spustí `permission-extended:install`, který publikuje config a migraci oprávnění, spustí ji a přidá `HasRoles` na váš model uživatele. Migraci Spatie vynechá, pokud tabulky oprávnění už existují. Do té doby obrazovky rolí prostě chybí. Potřebuje `nyoncode/laravel-permission-extended` a řekne, když chybí |
 | Database tables | Spustí čekající migrace. Tři moduly si o to řekly ve vlastních instalátorech a ani jeden s tím nemohl nic udělat |
 | [Routes](../panels/modules.md) | Zapíše do `routes/web.php` skupinu s `Route::wireResources()`, pod prefixem a middlewarem, na které se zeptá. Bez toho je každá obrazovka 404 |
 | [First administrator](../modules/users.md) | Založí účet, kterým se přihlásíte, a tam, kde aplikace role má, se zeptá, zda má být super-admin — ten může všechno, ve všech týmech. Nic v celém stacku ho předtím nevytvořilo; odpovědí byl `php artisan tinker`. Vždycky jen ten *první*; každý další účet je `php artisan wire:user`. Super-admin se přiděluje globálně, takže jím může být i první účet, který v žádném týmu není. Když se role nastavily v tomtéž běhu, přidělí ho `wire:assign-role` v novém PHP procesu, protože tento načetl model uživatele ještě před úpravou |

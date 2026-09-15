@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace NyonCode\WireModuleUsers\Install;
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
+use NyonCode\WireCore\Foundation\Setup\MigrationFootprint;
+use NyonCode\WireCore\Foundation\Setup\RedundantMigrations;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
 use NyonCode\WireModuleUsers\Support\Roles;
+use Throwable;
 
 /**
  * Roles, which this module has screens for and no implementation of.
@@ -45,7 +49,7 @@ use NyonCode\WireModuleUsers\Support\Roles;
  */
 final readonly class EnableRoles implements SetupStep
 {
-    public function __construct(private Kernel $artisan) {}
+    public function __construct(private Kernel $artisan, private RedundantMigrations $migrations) {}
 
     public function label(): string
     {
@@ -82,17 +86,35 @@ final readonly class EnableRoles implements SetupStep
         // before it patches somebody's model, and its prompt would be drawn
         // inside this command's own listing where there is nobody to answer it.
         // Its defaults are yes, which is what saying yes to this step meant.
-        if ($this->artisan->call(Roles::INSTALLER, ['--no-interaction' => true]) !== 0) {
+        //
+        // The installer publishes Spatie's migration unless `database/migrations`
+        // has one by that name, and then runs `migrate` itself — so an
+        // application whose permission tables came from anywhere else (a schema
+        // dump, a registered path) stopped on "table roles already exists" before
+        // its user model was ever patched. The copy is left out as it is
+        // published, which is before that `migrate`.
+        $code = $this->migrations->around(
+            fn (): int => $this->artisan->call(Roles::INSTALLER, ['--no-interaction' => true]),
+            static fn (string $name) => $console->note("Left out the {$name} migration — this application already has the permission tables."),
+            ['create_permission_tables' => $this->permissionTables()],
+        );
+
+        if ($code !== 0) {
             $console->warn('php artisan '.Roles::INSTALLER.' did not finish — run it yourself to see why.');
 
             return SetupOutcome::Failed;
         }
 
-        // Said rather than checked. `class_uses_recursive` reads a class this
-        // process loaded before the file was patched, so asking again here
-        // would answer about the old source and report a failure that is not
-        // one. The next run is where it reads true.
-        $console->note('Published the permission config, migrated its tables and put `HasRoles` on your user model.');
+        // The model is said rather than checked. `class_uses_recursive` reads a
+        // class this process loaded before the file was patched, so asking
+        // again here would answer about the old source and report a failure
+        // that is not one. The next run is where it reads true.
+        //
+        // The tables are checked: the installer's own `migrate` asks before
+        // touching a production database, and unattended that answer is no.
+        $console->note($this->tablesExist()
+            ? 'Published the permission config, migrated its tables and put `HasRoles` on your user model.'
+            : 'Published the permission config and put `HasRoles` on your user model. Its tables are migrated with the rest.');
 
         return SetupOutcome::Applied;
     }
@@ -123,6 +145,31 @@ final readonly class EnableRoles implements SetupStep
     private function installed(): bool
     {
         return Roles::installable($this->artisan);
+    }
+
+    /**
+     * What Spatie's migration makes, which it names from config rather than in its source.
+     */
+    private function permissionTables(): MigrationFootprint
+    {
+        $names = (array) config('permission.table_names', []);
+        $tables = [];
+
+        foreach (['roles', 'permissions', 'model_has_permissions', 'model_has_roles', 'role_has_permissions'] as $key) {
+            $tables[] = (string) ($names[$key] ?? $key);
+        }
+
+        return new MigrationFootprint(creates: $tables);
+    }
+
+    private function tablesExist(): bool
+    {
+        try {
+            return Schema::hasTable((string) config('permission.table_names.roles', 'roles'));
+        } catch (Throwable) {
+            // No database to ask: nothing was migrated into it either.
+            return false;
+        }
     }
 
     private function published(): bool

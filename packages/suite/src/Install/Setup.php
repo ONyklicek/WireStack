@@ -6,6 +6,7 @@ namespace NyonCode\Wire\Install;
 
 use Illuminate\Support\ServiceProvider;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
+use NyonCode\WireCore\Foundation\Setup\RedundantMigrations;
 use Symfony\Component\Console\Command\Command as SymfonyCommand;
 
 /**
@@ -32,6 +33,8 @@ use Symfony\Component\Console\Command\Command as SymfonyCommand;
  */
 class Setup
 {
+    public function __construct(private readonly RedundantMigrations $migrations) {}
+
     /**
      * The destinations this part's installer would write that are not there yet.
      *
@@ -78,8 +81,8 @@ class Setup
                 return null;
             }
 
-            foreach (ServiceProvider::pathsToPublish(null, $group) as $destination) {
-                if ($this->exists($tag, $destination)) {
+            foreach (ServiceProvider::pathsToPublish(null, $group) as $source => $destination) {
+                if ($this->exists($tag, $destination, (string) $source)) {
                     continue;
                 }
 
@@ -96,10 +99,10 @@ class Setup
      * `file_exists` rather than `is_file`: translations and views publish a
      * directory, config and providers a file, and both are "already there".
      */
-    protected function exists(string $tag, string $destination): bool
+    protected function exists(string $tag, string $destination, string $source): bool
     {
         return $tag === 'migrations'
-            ? $this->migrationExists($destination)
+            ? $this->migrationExists($destination) || $this->migrations->alreadyThere($source)
             : file_exists($destination);
     }
 
@@ -109,6 +112,11 @@ class Setup
      * The stamp is assigned when the publish mapping is built, so the path
      * offered here is one this process invented and no earlier run can have
      * used. What "already published" means is the name underneath it.
+     *
+     * Not the only answer: an application that pruned its migrations into a
+     * schema dump has the tables and none of the files, and publishing them
+     * again is a `migrate` that fails on the first table —
+     * {@see RedundantMigrations::alreadyThere()} asks the schema as well.
      */
     protected function migrationExists(string $destination): bool
     {

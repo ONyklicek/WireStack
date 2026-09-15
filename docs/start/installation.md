@@ -93,6 +93,15 @@ on the second. So re-running the command after adding a module is safe, and it i
 what the listing above shows: the module is set up, and everything already there
 is named and left alone.
 
+**A migration the application already has is left out.** Being on disk is not the
+only way to have one: `schema:dump --prune` deletes the files and keeps the
+tables, another package may make the same table, and `fortify:install` or the
+permission installer publish their migrations whatever the application holds.
+Every migration an installer writes during the run is compared, as it lands, with
+the database and with every other migration the migrator will run — and one whose
+tables and columns are all already there is removed, with a line saying so. A
+partial overlap stays, and fails at `migrate` where you can see it.
+
 **`--force` sets up every part regardless**, and hands `--force` down so each
 installer publishes over what it wrote. That is the flag an upgrade wants, and
 the one to reach for when a part is skipped that you wanted run.
@@ -176,7 +185,7 @@ So the second half of `wire:install` works through them, one at a time:
 | --- | --- |
 | [Fortify](../modules/auth.md) | Runs `fortify:install`, then asks which sign-in features to have — registration, password reset, e-mail verification, two-factor, passkeys — ticked as the published config has them, and comments or uncomments each in `config/fortify.php`, options block and all. Without it the sign-in screens are registered and their routes are not: the login page is a 404 |
 | [Teams](../modules/teams-and-two-factor.md#switching-on-teams) | Asks whether roles are scoped to teams; on yes, publishes the permission config if it is not there yet, sets `permission.teams` to `true`, writes `WIRE_USERS_TEAM_MODEL` and, if you name a different one, the relation. Asked before roles on purpose — the roles installer ends in a `migrate` of its own, and Spatie's migration reads `permission.teams` as it runs. Tables already made without teams count as "no", so it is not asked again |
-| [Roles & permissions](../modules/teams-and-two-factor.md) | Runs `permission-extended:install`, which publishes the permission config and migration, migrates them and puts `HasRoles` on your user model. Until then the role screens are simply absent. Needs `nyoncode/laravel-permission-extended`, and says so when it is missing |
+| [Roles & permissions](../modules/teams-and-two-factor.md) | Runs `permission-extended:install`, which publishes the permission config and migration, migrates them and puts `HasRoles` on your user model. Spatie's migration is left out where the permission tables already exist. Until then the role screens are simply absent. Needs `nyoncode/laravel-permission-extended`, and says so when it is missing |
 | Database tables | Runs the outstanding migrations. Three modules asked for this in their own installers and none could act on it |
 | [Routes](../panels/modules.md) | Writes a `Route::wireResources()` group into `routes/web.php`, under a prefix and middleware you are asked for. Without it every screen is a 404 |
 | [First administrator](../modules/users.md) | Creates the account you sign in with, and asks whether it is the super-admin — which can do everything, in every team — where the application has roles. Nothing in the stack made one before; the answer was `php artisan tinker`. Only ever the *first*: every account after it is `php artisan wire:user`. The super-admin is given globally, so a first account that belongs to no team can still be one. Where roles were set up earlier in the same run, it is given by `wire:assign-role` in a fresh PHP process, because this one loaded the user model before it was patched |

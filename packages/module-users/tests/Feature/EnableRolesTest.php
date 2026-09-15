@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
+use NyonCode\WireCore\Foundation\Setup\RedundantMigrations;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
@@ -77,7 +80,16 @@ function erConsole(array &$said = [], bool $interactive = true): SetupConsole
     };
 }
 
-function erArtisan(int $exitCode = 0): Kernel
+/** The step, over an artisan the test controls and the real migration check. */
+function erStep(Kernel $artisan): EnableRoles
+{
+    return new EnableRoles($artisan, app(RedundantMigrations::class));
+}
+
+/**
+ * @param  (Closure(): void)|null  $publishes  What the installer writes before it returns.
+ */
+function erArtisan(int $exitCode = 0, ?Closure $publishes = null): Kernel
 {
     $artisan = Mockery::mock(Kernel::class);
     // Asked what is registered before anything is asked to run: a package in
@@ -85,17 +97,27 @@ function erArtisan(int $exitCode = 0): Kernel
     $artisan->shouldReceive('all')->andReturn(['permission-extended:install' => true]);
     $artisan->shouldReceive('call')
         ->with('permission-extended:install', ['--no-interaction' => true])
-        ->andReturn($exitCode);
+        ->andReturnUsing(static function () use ($exitCode, $publishes): int {
+            if ($publishes !== null) {
+                $publishes();
+            }
+
+            return $exitCode;
+        });
 
     return $artisan;
 }
+
+afterEach(function () {
+    @unlink(database_path('migrations/2099_01_01_000000_create_permission_tables.php'));
+});
 
 it('is registered, so the installer offers it', function () {
     expect(SetupRegistry::instance()->all())->toContain(EnableRoles::class);
 });
 
 it('names itself and the package it belongs to', function () {
-    $step = new EnableRoles(erArtisan());
+    $step = erStep(erArtisan());
 
     expect($step->label())->toBe('Roles & permissions')
         ->and($step->package())->toBe('nyoncode/wire-module-users');
@@ -104,21 +126,21 @@ it('names itself and the package it belongs to', function () {
 it('runs before the migrations, because it publishes one', function () {
     // Spatie's permission tables. A `migrate` that has already run does not come
     // back for a file that appeared afterwards.
-    expect((new EnableRoles(erArtisan()))->sort())->toBeLessThan(100);
+    expect((erStep(erArtisan()))->sort())->toBeLessThan(100);
 });
 
 it('is done where the permission layer is wired up', function () {
     // Which is this workbench: the user model carries the extended trait and the
     // tables are migrated, so the role screens are on.
     expect(Roles::available())->toBeTrue()
-        ->and((new EnableRoles(erArtisan()))->state())->toBe(SetupState::Done)
-        ->and((new EnableRoles(erArtisan()))->summary())->toContain('role screens are on');
+        ->and((erStep(erArtisan()))->state())->toBe(SetupState::Done)
+        ->and((erStep(erArtisan()))->summary())->toContain('role screens are on');
 });
 
 it('is pending where nothing has been published yet', function () {
     config()->set('wire-module-users.model', stdClass::class);
 
-    $step = new EnableRoles(erArtisan());
+    $step = erStep(erArtisan());
 
     expect($step->state())->toBe(SetupState::Pending)
         ->and($step->summary())->toContain('publish the permission config');
@@ -130,7 +152,7 @@ it('names the trait once the config is there and the model still is not', functi
     config()->set('wire-module-users.model', stdClass::class);
     file_put_contents(config_path('permission.php'), "<?php\n\nreturn [];\n");
 
-    $step = new EnableRoles(erArtisan());
+    $step = erStep(erArtisan());
 
     expect($step->state())->toBe(SetupState::Pending)
         ->and($step->summary())->toContain('HasRoles');
@@ -144,7 +166,7 @@ it('runs the permission package\'s own installer, rather than a second copy of i
     // "is the model patched" disagree the first time either changes.
     $said = [];
 
-    expect((new EnableRoles(erArtisan()))->apply(erConsole($said)))->toBe(SetupOutcome::Applied)
+    expect((erStep(erArtisan()))->apply(erConsole($said)))->toBe(SetupOutcome::Applied)
         ->and(implode(' ', $said))->toContain('HasRoles')
         ->and(implode(' ', $said))->toContain('migrated');
 });
@@ -152,7 +174,7 @@ it('runs the permission package\'s own installer, rather than a second copy of i
 it('fails rather than pretending, when that installer does not finish', function () {
     $said = [];
 
-    expect((new EnableRoles(erArtisan(1)))->apply(erConsole($said)))->toBe(SetupOutcome::Failed)
+    expect((erStep(erArtisan(1)))->apply(erConsole($said)))->toBe(SetupOutcome::Failed)
         ->and(implode(' ', $said))->toContain('permission-extended:install');
 });
 
@@ -165,8 +187,51 @@ it('says what to require when the permission layer is not installed', function (
     $artisan = Mockery::mock(Kernel::class);
     $artisan->shouldReceive('all')->andReturn([]);
 
-    $step = new EnableRoles($artisan);
+    $step = erStep($artisan);
 
     expect($step->state())->toBe(SetupState::Blocked)
         ->and($step->summary())->toContain('composer require nyoncode/laravel-permission-extended');
+});
+
+it('leaves out Spatie\'s migration where the permission tables are already there', function () {
+    // From a schema dump, or a path of their own: the installer only looks in
+    // `database/migrations` before publishing a second copy — which its own
+    // `migrate` then ran into "table roles already exists".
+    foreach (['roles', 'permissions', 'model_has_permissions', 'model_has_roles', 'role_has_permissions'] as $table) {
+        Schema::create($table, fn (Blueprint $blueprint) => $blueprint->id());
+    }
+
+    $published = database_path('migrations/2099_01_01_000000_create_permission_tables.php');
+    $said = [];
+
+    $outcome = erStep(erArtisan(0, static function () use ($published): void {
+        file_put_contents($published, "<?php // Schema::create(\$tableNames['roles'])");
+    }))->apply(erConsole($said));
+
+    expect($outcome)->toBe(SetupOutcome::Applied)
+        ->and(is_file($published))->toBeFalse()
+        ->and(implode(' ', $said))->toContain('Left out the create_permission_tables migration')
+        ->and(implode(' ', $said))->toContain('migrated its tables');
+});
+
+it('does not claim the tables were migrated when they were not', function () {
+    // The installer's own `migrate` asks before touching production, and
+    // unattended that answer is no.
+    config()->set('permission.table_names.roles', 'wire_roles_never_migrated');
+    $said = [];
+
+    erStep(erArtisan())->apply(erConsole($said));
+
+    expect(implode(' ', $said))->toContain('migrated with the rest')
+        ->and(implode(' ', $said))->not->toContain('Left out');
+});
+
+it('says nothing was migrated where there is no database to ask', function () {
+    config()->set('database.connections.nowhere', ['driver' => 'sqlite', 'database' => '/nowhere/at/all.sqlite']);
+    config()->set('database.default', 'nowhere');
+    $said = [];
+
+    erStep(erArtisan())->apply(erConsole($said));
+
+    expect(implode(' ', $said))->toContain('migrated with the rest');
 });

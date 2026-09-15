@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace NyonCode\WireModuleAuth\Install;
 
 use Illuminate\Contracts\Console\Kernel;
-use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
+use NyonCode\WireCore\Foundation\Setup\RedundantMigrations;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
-use Throwable;
 
 /**
  * Fortify, installed and turned down to what this application actually offers.
@@ -67,7 +66,7 @@ final readonly class ConfigureFortify implements SetupStep
         'passkeys' => 'Passkeys — signing in with a device rather than a password',
     ];
 
-    public function __construct(private Kernel $artisan) {}
+    public function __construct(private Kernel $artisan, private RedundantMigrations $migrations) {}
 
     public function label(): string
     {
@@ -96,17 +95,21 @@ final readonly class ConfigureFortify implements SetupStep
 
     public function apply(SetupConsole $console): SetupOutcome
     {
-        $before = $this->migrationFiles();
+        // `fortify:install` publishes the two-factor columns and the passkeys
+        // table whatever the application has, and an application that already
+        // has either failed its next `migrate` on a column or table that exists.
+        $code = $this->migrations->around(
+            fn (): int => $this->artisan->call('fortify:install'),
+            static fn (string $name) => $console->note("Left out Fortify's {$name} migration — this application already has it."),
+        );
 
-        if ($this->artisan->call('fortify:install') !== 0) {
+        if ($code !== 0) {
             $console->warn('php artisan fortify:install did not finish — run it yourself to see why.');
 
             return SetupOutcome::Failed;
         }
 
         $console->note('Published config/fortify.php and registered its provider.');
-
-        $this->leaveOutWhatIsAlreadyThere(array_values(array_diff($this->migrationFiles(), $before)), $console);
 
         $this->chooseFeatures($console);
 
@@ -124,88 +127,6 @@ final readonly class ConfigureFortify implements SetupStep
         // columns to the users table, and a `migrate` that has already run does
         // not come back for it.
         return 40;
-    }
-
-    /**
-     * Fortify's migrations, and the one thing in each that another migration may already do.
-     *
-     * `fortify:install` publishes them whatever the application has, and an
-     * application that already has the two-factor columns or the passkeys table
-     * — from a migration of its own, another package, or a schema made earlier —
-     * then fails the very next `migrate` on a column or table that exists.
-     *
-     * @var array<string, array{marker: string, table: string, column: string|null}>
-     */
-    private const OVERLAPS = [
-        'add_two_factor_columns_to_users_table' => ['marker' => 'two_factor_secret', 'table' => 'users', 'column' => 'two_factor_secret'],
-        'create_passkeys_table' => ['marker' => "create('passkeys'", 'table' => 'passkeys', 'column' => null],
-    ];
-
-    /**
-     * Remove a migration this run just published when its work is already done elsewhere.
-     *
-     * Only a file this step has just written, and only when another migration
-     * the migrator will run already carries the same change or the database
-     * already has it. The file is Fortify's copy, not the application's, and
-     * leaving it is a `migrate` that stops on "duplicate column".
-     *
-     * @param  array<int, string>  $published
-     */
-    private function leaveOutWhatIsAlreadyThere(array $published, SetupConsole $console): void
-    {
-        foreach ($published as $file) {
-            foreach (self::OVERLAPS as $name => $overlap) {
-                if (! str_ends_with($file, "_{$name}.php") || ! $this->alreadyDone($overlap, $file)) {
-                    continue;
-                }
-
-                @unlink($file);
-                $console->note("Left out Fortify's {$name} migration — this application already has it.");
-            }
-        }
-    }
-
-    /**
-     * @param  array{marker: string, table: string, column: string|null}  $overlap
-     */
-    private function alreadyDone(array $overlap, string $published): bool
-    {
-        try {
-            if ($overlap['column'] === null
-                ? Schema::hasTable($overlap['table'])
-                : Schema::hasColumn($overlap['table'], $overlap['column'])) {
-                return true;
-            }
-        } catch (Throwable) {
-            // No database to ask yet: the migration files below are the answer.
-        }
-
-        foreach ($this->migrationFiles() as $file) {
-            if ($file !== $published && str_contains((string) file_get_contents($file), $overlap['marker'])) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Every migration file the migrator will run: the application's own and the paths registered with it.
-     *
-     * @return array<int, string>
-     */
-    private function migrationFiles(): array
-    {
-        $paths = [database_path('migrations'), ...app('migrator')->paths()];
-        $files = [];
-
-        foreach (array_unique($paths) as $path) {
-            foreach (glob(rtrim((string) $path, '/').'/*.php') ?: [] as $file) {
-                $files[] = (string) realpath($file);
-            }
-        }
-
-        return array_values(array_unique($files));
     }
 
     /**

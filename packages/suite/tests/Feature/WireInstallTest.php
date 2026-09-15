@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Prompts\Prompt;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
@@ -371,6 +373,49 @@ it('leaves a part that is already set up alone, and publishes nothing twice', fu
             ->toHaveCount(1)
             ->and(file_get_contents(config_path('wire-sortable.php')))
             ->toBe('<?php return ["mine" => true];');
+    });
+});
+
+it('counts a migration whose table is already in the database as published', function () {
+    // `schema:dump --prune`: the table is there and the file that made it is
+    // not. Offering to publish it again is offering a `migrate` that fails.
+    wiRestoring(wiSortablePaths(), function () {
+        foreach (glob(database_path('migrations/*create_reorderable_column_orders_table.php')) ?: [] as $path) {
+            wiDelete($path);
+        }
+
+        Schema::dropIfExists('reorderable_column_orders');
+        Schema::create('reorderable_column_orders', fn (Blueprint $table) => $table->id());
+
+        $pending = app(Setup::class)->pending(wiSortable(), app(Kernel::class)->all()['wire-sortable:install']);
+
+        expect(implode("\n", (array) $pending))->not->toContain('reorderable_column_orders');
+
+        Schema::drop('reorderable_column_orders');
+    });
+});
+
+it('leaves out a migration it publishes when the application already has the table', function () {
+    wiRestoring(wiSortablePaths(), function () {
+        wiCatalogue(wiSortable());
+
+        foreach (wiSortablePaths() as $glob) {
+            foreach (glob($glob) ?: [] as $path) {
+                wiDelete($path);
+            }
+        }
+
+        Schema::dropIfExists('reorderable_column_orders');
+        Schema::create('reorderable_column_orders', fn (Blueprint $table) => $table->id());
+
+        $this->artisan('wire:install --all')
+            ->expectsOutputToContain('Left out the create_reorderable_column_orders_table migration')
+            ->assertSuccessful();
+
+        expect(is_file(config_path('wire-sortable.php')))->toBeTrue()
+            ->and(glob(database_path('migrations/*create_reorderable_column_orders_table.php')) ?: [])->toBe([]);
+
+        Schema::drop('reorderable_column_orders');
     });
 });
 
