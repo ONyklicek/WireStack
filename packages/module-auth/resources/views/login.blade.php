@@ -66,6 +66,7 @@
                     },
                     autofill: true,
                     failedMessage: @js(__('wire-module-auth::messages.passkey_failed')),
+                    cancelledMessage: @js(__('wire-module-auth::messages.passkey_cancelled')),
                 })"
                 x-show="supported"
                 x-cloak
@@ -86,6 +87,7 @@
                 </x-wire::button>
 
                 <p x-show="error" x-text="error" x-cloak class="text-sm text-red-600 dark:text-red-400" data-testid="auth-passkey-error"></p>
+                <p x-show="notice" x-text="notice" x-cloak class="text-sm text-gray-500 dark:text-gray-400" data-testid="auth-passkey-notice"></p>
             </div>
         @endif
 

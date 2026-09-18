@@ -39,6 +39,8 @@ function wirePasskey(config = {}) {
     return {
         busy: false,
         error: null,
+        // Said quietly, not as an error: see `ceremony()`.
+        notice: null,
         supported: Passkeys.isSupported(),
 
         /**
@@ -55,8 +57,19 @@ function wirePasskey(config = {}) {
                 return
             }
 
+            // `autofill()` answers `undefined` when nothing was signed in — the
+            // browser had no passkey for this site, or the ceremony was aborted
+            // because the button started one of its own. Treating that as an
+            // arrival sent the page to `/`, which a guest is bounced back from:
+            // the sign-in screen reloaded itself twice a second until the
+            // passkey limiter answered 429, and a press of the button was
+            // interrupted by the navigation its own abort caused.
             Passkeys.autofill({ remember: !! config.remember, routes: config.routes })
-                .then((response) => this.arrive(response))
+                .then((response) => {
+                    if (response) {
+                        this.arrive(response)
+                    }
+                })
                 .catch(() => {})
         },
 
@@ -117,13 +130,23 @@ function wirePasskey(config = {}) {
 
             this.busy = true
             this.error = null
+            this.notice = null
 
             try {
                 await run()
             } catch (error) {
-                this.error = error instanceof UserCancelledError
+                const cancelled = error instanceof UserCancelledError
+
+                this.error = cancelled
                     ? null
                     : (error?.message || config.failedMessage || null)
+
+                // A dismissed dialog is not a failure — but WebAuthn reports "this
+                // browser has no passkey for this site" the same way, on purpose,
+                // so a site cannot probe for accounts. Said nothing at all, that
+                // reads as a dead button to somebody who never added one. A
+                // surface that knows what to suggest passes it in.
+                this.notice = cancelled ? (config.cancelledMessage || null) : null
             } finally {
                 this.busy = false
             }

@@ -45,6 +45,28 @@ class PasskeyManagement extends Component implements IdentifiesHookTarget
     /** The label a new key is offered under, and the only thing anybody types. */
     public string $name = '';
 
+    public function mount(): void
+    {
+        // Registering is `laravel/passkeys`' own route, behind `password.confirm`,
+        // and the card sends a person to confirm first — so bring them back here.
+        if ($this->needsPasswordConfirmation()) {
+            $this->returnHereAfterPasswordConfirmation();
+        }
+    }
+
+    /**
+     * Whether this installation puts passkey management behind a confirmed
+     * password — Fortify's `confirmPassword` option on the passkeys feature,
+     * read with the default Fortify's own routes read it with. Switched off, the
+     * routes let the ceremony through, and a card that still sent people to
+     * confirm first would be the only thing refusing them.
+     */
+    protected function needsPasswordConfirmation(): bool
+    {
+        return (bool) config('fortify-options.passkeys.confirmPassword', true)
+            && ! $this->hasConfirmedPasswordRecently();
+    }
+
     /**
      * A passkey was registered in the browser; ask the database what it says now.
      *
@@ -68,7 +90,7 @@ class PasskeyManagement extends Component implements IdentifiesHookTarget
      */
     public function forget(int|string $passkey): void
     {
-        if (! $this->ensurePasswordConfirmed()) {
+        if ($this->needsPasswordConfirmation() && ! $this->ensurePasswordConfirmed()) {
             return;
         }
 
@@ -111,7 +133,7 @@ class PasskeyManagement extends Component implements IdentifiesHookTarget
             'usable' => Passkeys::usable($user),
             // Same as the two-factor card: the reason a delete button will not
             // work is worth saying before it is pressed.
-            'needsPasswordConfirmation' => ! $this->hasConfirmedPasswordRecently(),
+            'needsPasswordConfirmation' => $this->needsPasswordConfirmation(),
             'passwordConfirmationUrl' => $this->passwordConfirmationUrl(),
         ]);
     }
