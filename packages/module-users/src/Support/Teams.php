@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Support;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Auth;
 use Throwable;
@@ -36,6 +38,7 @@ use Throwable;
  *   - {@see optionsFor()} — the ones this person belongs to
  *   - {@see currentId()}  — the one they are looking at
  *   - {@see switchTo()}   — change it, if they are a member
+ *   - {@see scopeMembers()} — narrow a list of people to the current team
  *
  * Nothing here ships a teams table. An application that has teams already has
  * both the model and the relation, and one that does not is not using this.
@@ -164,6 +167,17 @@ final class Teams
     }
 
     /**
+     * Whether the person belongs to this team.
+     *
+     * Asked of their own teams, the same list the switcher offers — so a team
+     * nobody could switch to is never one they count as a member of.
+     */
+    public static function isMember(int|string $team, mixed $user = null): bool
+    {
+        return array_key_exists($team, self::optionsFor($user));
+    }
+
+    /**
      * Switch, if they are a member. Answers whether it happened.
      *
      * Membership is re-checked here rather than trusted from the control that
@@ -171,7 +185,7 @@ final class Teams
      */
     public static function switchTo(int|string $team, mixed $user = null): bool
     {
-        if (! self::enabled() || ! array_key_exists($team, self::optionsFor($user))) {
+        if (! self::enabled() || ! self::isMember($team, $user)) {
             return false;
         }
 
@@ -180,6 +194,178 @@ final class Teams
         self::apply($team);
 
         return true;
+    }
+
+    /**
+     * Whether this person works across every team, rather than in the current one.
+     *
+     * The line every team-scoped screen draws. A super-admin crosses it — the
+     * permission package's gate lets one through everywhere — and so does an
+     * administrator whose `$ability` comes from a **global** role. The same
+     * ability from a role of one team does not: that person manages that team.
+     * Without teams there is nothing to scope, so everybody sees everything.
+     *
+     * @param  string|null  $ability  What the screen requires; null when the application opened it.
+     */
+    public static function seesEveryTeam(?string $ability, mixed $actor = null): bool
+    {
+        if (! self::enabled()) {
+            return true;
+        }
+
+        $actor ??= Auth::user();
+
+        if (Roles::isSuperAdmin($actor)) {
+            return true;
+        }
+
+        return is_object($actor)
+            && $ability !== null
+            && method_exists($actor, 'hasGlobalPermission')
+            && $actor->hasGlobalPermission($ability);
+    }
+
+    /**
+     * Narrow a query over people to the members of the current team.
+     *
+     * Left alone for somebody who {@see seesEveryTeam()} for the users screen.
+     * Somebody who is in no team sees nobody: an empty list is the honest answer
+     * to "the members of your team", and every other answer shows somebody else's.
+     *
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
+     * @return Builder<TModel>
+     */
+    public static function scopeMembers(Builder $query, mixed $actor = null): Builder
+    {
+        if (self::seesEveryTeam(Permissions::for('users', 'viewAny'), $actor)) {
+            return $query;
+        }
+
+        $team = self::currentId($actor);
+
+        return $team === null
+            ? $query->whereRaw('1 = 0')
+            : $query->whereHas(self::relation(), static fn (Builder $teams) => $teams->whereKey($team));
+    }
+
+    /**
+     * Narrow a query over roles to the ones this person can see.
+     *
+     * The global roles, which are shared templates, and the current team's own
+     * — never another team's. Left alone for somebody who works across every
+     * team. The same rule Spatie uses to find a role by name, so what a team's
+     * manager is shown is exactly what they could assign.
+     *
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
+     * @return Builder<TModel>
+     */
+    public static function scopeRoles(Builder $query, mixed $actor = null): Builder
+    {
+        if (self::seesEveryTeam(Permissions::for('roles', 'viewAny'), $actor)) {
+            return $query;
+        }
+
+        $column = $query->getModel()->qualifyColumn(self::teamColumn());
+        $team = self::currentId($actor);
+
+        return $query->where(static fn (Builder $roles) => $team === null
+            ? $roles->whereNull($column)
+            : $roles->whereNull($column)->orWhere($column, $team));
+    }
+
+    /**
+     * The attributes of a role about to be created, placed in the right team.
+     *
+     * A team's manager makes a role of their team. Somebody who works across
+     * every team makes a global one. A manager in no team makes nothing — a
+     * global role from somebody who may not change global roles is the thing
+     * this refuses.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function placeNewRole(array $data, mixed $actor = null): array
+    {
+        if (self::seesEveryTeam(Permissions::for('roles', 'create'), $actor)) {
+            return $data;
+        }
+
+        $team = self::currentId($actor) ?? abort(403);
+
+        return [...$data, self::teamColumn() => $team];
+    }
+
+    /**
+     * The column the permission package puts a role's team in.
+     */
+    public static function teamColumn(): string
+    {
+        return (string) config('permission.column_names.team_foreign_key', 'team_id');
+    }
+
+    /**
+     * Put a new account in the current team, when the person who made it works in one.
+     *
+     * Somebody who manages one team and creates an account means a member of
+     * that team — made anywhere else, it would vanish from their own list the
+     * moment it was saved. Somebody who works across every team has not said
+     * which, so nothing is assumed.
+     */
+    public static function admitToCurrentTeam(Model $member, mixed $actor = null): void
+    {
+        if (self::seesEveryTeam(Permissions::for('users', 'viewAny'), $actor)) {
+            return;
+        }
+
+        $team = self::currentId($actor);
+        $relation = self::relation();
+
+        if ($team === null || ! method_exists($member, $relation)) {
+            return;
+        }
+
+        $teams = $member->{$relation}();
+
+        if ($teams instanceof BelongsToMany) {
+            $teams->syncWithoutDetaching([$team]);
+        }
+    }
+
+    /**
+     * Take an account out of a team, and its roles in that team with it.
+     *
+     * Both, because either alone is wrong: a membership removed with its roles
+     * left behind comes back with them the day the account rejoins, and roles
+     * removed with the membership left behind leave somebody in a team with
+     * nothing to do there. Roles the account holds globally are not the team's
+     * and stay.
+     */
+    public static function removeMember(Model $member, int|string $team): void
+    {
+        $relation = self::relation();
+
+        if (method_exists($member, $relation) && ($teams = $member->{$relation}()) instanceof BelongsToMany) {
+            $teams->detach($team);
+        }
+
+        if (method_exists($member, 'roles')) {
+            $previous = class_exists(self::REGISTRAR) ? app(self::REGISTRAR)->getPermissionsTeamId() : null;
+
+            self::apply($team);
+            $member->roles()->detach();
+            $member->unsetRelation('roles');
+            self::apply($previous);
+
+            if (method_exists($member, 'flushWildcardCache')) {
+                $member->flushWildcardCache();
+            }
+
+            app(self::REGISTRAR)->forgetCachedPermissions();
+        }
     }
 
     /**

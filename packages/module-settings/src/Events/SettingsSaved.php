@@ -22,6 +22,11 @@ namespace NyonCode\WireModuleSettings\Events;
  * `$values` is what was written in this call, not the whole group: a listener
  * that wants the rest asks {@see Settings::all()}, which by then answers with
  * these in it.
+ *
+ * **A removal is a write.** `Settings::remove()` and `Settings::clear()`
+ * dispatch this too, with each removed key mapped to what now answers for it —
+ * the group's declared default, or `null`. A listener that only heard values
+ * being set would keep configuring from a value somebody deleted.
  */
 final readonly class SettingsSaved
 {

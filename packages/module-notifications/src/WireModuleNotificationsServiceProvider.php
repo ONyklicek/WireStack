@@ -8,6 +8,8 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
+use NyonCode\WireModuleNotifications\Install\StoreNotifications;
 
 /** A module that arrives as a package; see wire-module-users for the shape. */
 class WireModuleNotificationsServiceProvider extends PackageServiceProvider
@@ -26,6 +28,10 @@ class WireModuleNotificationsServiceProvider extends PackageServiceProvider
                         $manager->register(new NotificationsModule);
                     }
                 });
+
+                // Same shape as the audit switch: a history screen whose history is
+                // turned on somewhere else.
+                SetupRegistry::instance()->register(StoreNotifications::class);
             })
             ->hasConfig()
             ->hasViews()

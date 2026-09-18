@@ -85,6 +85,13 @@ request a `TeamSwitcher` ho vyvolá.
 do kterých patříte, a `Teams::switchTo()` členství ověří znovu, než cokoli uloží.
 `<select>` je markup a markup je to, co doletělo do prohlížeče.
 
+**Obrazovky se řídí týmem, nejen autorizace.** Spatie omezuje, co člověk *smí*,
+na aktuální tým; obrazovky uživatelů a rolí stejně omezují, co *vidí* — členy
+aktuálního týmu, globální role a role týmu — pokud člověk nepracuje napříč týmy.
+Co se smí rozdat a na čí účet se smí sáhnout, jsou dvě další pravidla nad tím,
+každé s jedním vlastníkem: `Support\RoleGrants` a `Support\AccountGuard`. Sekce
+níže je probírají jedno po druhém.
+
 **Aktuální tým spadne zpátky, místo aby selhal.** Session jeden jmenuje; když
 jmenuje tým, ve kterém už nejste — nebo zatím nejmenuje nic — použije se první,
 do kterého patříte. Oba případy jsou běžné a ani jeden by neměl člověka poslat na
@@ -158,6 +165,18 @@ Týmy potřebují od vaší aplikace tři věci: nastavení, model týmu a relac
 uživateli, která se k němu dostane. Tenhle modul nedodává ani jednu, protože
 aplikace, která týmy má, má všechny tři.
 
+Nastavení a pojmenování za vás udělá `php artisan wire:install`. Jeho krok
+**Teams** se zeptá, zda jsou role vázané na týmy, a při „ano“ publikuje config
+níže, pokud ještě není, nastaví `teams` na `true` — v souboru i v běžícím procesu
+— zapíše `WIRE_USERS_TEAM_MODEL` a — pokud zadáte jinou — i relaci. Krok **Roles &
+permissions** přijde až po něm a spustí `permission-extended:install`, který
+publikuje migraci, spustí ji a přidá `HasRoles` na váš model uživatele. Právě o to
+pořadí jde: Spatie migrace čte `permission.teams` ve chvíli, kdy běží, a instalátor
+rolí ji spouští, takže zapnout týmy až potom znamená pivotní tabulky bez sloupce
+týmu. Tabulky vytvořené bez sloupce se berou jako odpověď „ne“ a znovu se na ně
+neptá; zapnout týmy později je migrace, kterou napíšete sami. Model týmu a relaci
+na uživateli si pořád píšete sami.
+
 ```php
 // config/permission.php — vlastní config spatie/laravel-permission, publikovaný
 // přes závislost rozšiřujícího balíčku
@@ -198,6 +217,111 @@ To je celé. V horní liště se objeví přepínač pro každého, kdo patří 
 jednoho týmu, middleware omezí každé čtení oprávnění v každém web requestu
 a `Gate::allows()` začne odpovídat po týmech, aniž by se změnilo jediné volací
 místo.
+
+### Správci týmů a administrátoři
+
+Dvě role, které tento modul zná jménem a vytvoří je, když se poprvé přidělují — s
+oprávněními obrazovek uživatelů a rolí (`users.viewAny`, `users.view`,
+`users.create`, `users.update` a totéž pro `roles`, jak je nakonfigurováno),
+přesnými jmény, ne `users.*`, protože přidělený wildcard je jméno a
+`can('users.viewAny')` se ptá na jméno:
+
+```bash
+# Správce týmu: členové a role týmu 3 a žádného jiného.
+php artisan wire:assign-role mia@example.com --role=team-admin --team=3
+
+# Administrátor všech týmů najednou: stejná oprávnění, držená globálně.
+php artisan wire:assign-role ada@example.com --role=admin --global
+```
+
+`team-admin` (`teams.admin_role`) je globální role přidělená v týmu, takže její
+oprávnění platí jen v tom týmu. `admin` (`admin_role`) přidělený s `--global`
+platí ve všech týmech — vidí členy a role všech týmů a obrazovka rolí ho bere
+jako někoho, kdo pracuje napříč týmy. Pořád to není super-admin: může, co role
+nese, a přijde o to, co se z role odebere. Výchozí oprávnění se zapíšou jen při
+vytvoření role; když roli potom upravíte, úpravy zůstanou. `--global` nebere
+`--team` a nikdy nedá super-admina, na to je `--super-admin`.
+
+Role přidělovaná jménem se hledá mezi globálními rolemi a rolemi týmu — přednost
+má role týmu — a nikdy mezi rolemi jiného týmu.
+
+### Role v týmu a super-admin nad nimi
+
+Role tu patří týmu: balíček oprávnění ukládá tým ke každému přiřazení a počítá jen
+ta z aktuálního týmu. Účtu, který v žádném týmu není, ji tedy dát nejde, a tým,
+jehož členem není, se odmítne, protože role by ležela tam, kde ji přepínač nikdy
+nenabídne:
+
+```bash
+php artisan wire:assign-role jana@example.com --role=editor            # v jejím aktuálním týmu
+php artisan wire:assign-role jana@example.com --role=editor --team=3   # v tomhle
+```
+
+**Super-admin je výjimka a nikdy není rolí týmu.** Může všechno, ve všech týmech,
+takže brána balíčku oprávnění uzná jen jeho *globální* přiřazení — přiřazení
+uvnitř týmu neobejde nic. Přiděluje se záměrně, z příkazové řádky, a nepotřebuje
+tým, a proto jím může být i první administrátor nové instalace:
+
+```bash
+php artisan wire:assign-role admin@example.com --super-admin
+```
+
+Výběr rolí ho nikdy nenabídne, `--role=super-admin` se odmítne a `--super-admin`
+nebere `--team`.
+
+### Kdo koho vidí na obrazovce uživatelů
+
+Se zapnutými týmy ukazuje obrazovka uživatelů **členy aktuálního týmu** — seznam,
+stránky detailu a úprav i každou akci na řádku. Účet jiného týmu otevřený přes
+URL vrátí 404, ne 403, takže odpověď neprozradí, že existuje, a podvržený klíč
+z jiného týmu nenajde nic ke smazání. Přepnutí týmu přepne seznam; kdo nepatří do
+žádného týmu, nevidí nikoho.
+
+Členy všech týmů vidí dva druhy lidí: super-admin a administrátor, jehož
+`users.viewAny` pochází z **globální** role — přiřazené přes `assignGlobalRole()`,
+jejíž oprávnění platí ve všech týmech. Stejné oprávnění z role jednoho týmu
+spravuje jen ten tým. Účet, který založí správce týmu, se do toho týmu přidá;
+účet, který založí někdo, kdo pracuje napříč týmy, nepatří do žádného, protože
+neřekl, do kterého.
+
+### Kdo vidí které role
+
+Obrazovka rolí drží stejnou hranici. Správce týmu vidí **globální role** — sdílené
+šablony ke čtení, ne ke změně — a **role svého týmu** ke změně; role jiného týmu
+nejsou v seznamu, nejdou otevřít přes URL (404) ani podvrženou akcí na řádku.
+Roli, kterou správce týmu založí, patří jeho týmu; role, kterou založí někdo, kdo
+pracuje napříč týmy, je globální, a správce bez týmu nezaloží žádnou. Výběr rolí
+ve formuláři uživatele nabízí tytéž role. Kdo pracuje napříč týmy, vidí a mění
+všechny role — kromě dvou popsaných v
+[Uživatelích](users.md#dve-role-ktere-tyto-obrazovky-nerozdavaji-jen-tak).
+
+### Přístup složený z balíčků oprávnění
+
+Účet může mít **libovolný počet rolí** a jeho oprávnění jsou jejich sjednocením.
+Tak se přístup skládá: udělejte malé role, z nichž každá nese jeden balíček
+oprávnění, a dejte člověku tolik, kolik jeho práce potřebuje. Pro balíčky se
+nejlépe hodí globální role — nadefinované jednou, použitelné v každém týmu
+a přidělované po týmech:
+
+```php
+use Spatie\Permission\Models\Role;
+
+// Nadefinované jednou, globálně (bez týmu).
+Role::create(['name' => 'bundle-invoices-read'])->givePermissionTo('invoices.view');
+Role::create(['name' => 'bundle-invoices-write'])->givePermissionTo(['invoices.view', 'invoices.create']);
+Role::create(['name' => 'bundle-reports'])->givePermissionTo('reports.view');
+```
+
+```bash
+# Přidělené v týmu — Olga v týmu 3 čte faktury a reporty a nic víc.
+php artisan wire:assign-role olga@example.com --role=bundle-invoices-read --role=bundle-reports --team=3
+```
+
+Výběr rolí ve formuláři uživatele jich bere víc najednou a pravidlo proti
+eskalaci čte také sjednocení: správce týmu, který drží `invoices.view` přes jeden
+balíček a `reports.view` přes druhý, smí dát balíček, který nese obojí. Balíček se
+nikdy nevnořuje do jiné role — každá role nese vlastní oprávnění a člověk sbírá
+role.
 
 ### Odkud se přepínač bere
 
@@ -364,7 +488,7 @@ volitelných půlek tahle instalace opravdu dostala:
 | --- | --- | --- |
 | Hashování hesla, pravidlo `current_password` | Laravel | karta, která se ptá, a udržení session přihlášené po změně |
 | Dvoufázová tajemství, TOTP, záložní kódy, výzva při přihlášení | Fortify | třístavová karta, která volá Fortify akce |
-| Role, oprávnění, omezení na tým, permission cache | nyoncode/laravel-permission-extended, nad spatie/laravel-permission, který vyžaduje | obrazovky rolí a to, ve kterém týmu je tenhle request |
+| Role, oprávnění, omezení na tým, permission cache, globální role a brána super-admina | nyoncode/laravel-permission-extended (1.1+), nad spatie/laravel-permission, který vyžaduje | obrazovky rolí, to, ve kterém týmu je tenhle request, co obrazovka ukáže z jiných týmů, co smí člověk rozdat (`RoleGrants`) a na čí účet smí sáhnout (`AccountGuard`) |
 | Přihlášení, registrace, reset hesla, ověření e-mailu | Fortify nebo Breeze | nic — viz [admin shell](../admin/overview.md) |
 | Týmy samotné: tabulka, model, členství | vaše aplikace | přepínač nad tím, co už máte |
 

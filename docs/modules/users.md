@@ -106,6 +106,7 @@ difference.
 ],
 
 'roles' => 'auto',        // 'auto' looks; true and false answer for you [tl! focus]
+'admin_role' => 'admin',  // the global administrator role only a super-admin may change; null for none
 
 'avatar' => [                                    // [tl! focus:start]
     'enabled' => 'auto',   // 'auto' looks for the column below
@@ -131,6 +132,7 @@ difference.
     'relation' => 'teams',
     'label_attribute' => 'name',
     'session_key' => 'wire.team',
+    'admin_role' => 'team-admin',   // a team's manager; made with the screens' abilities
 ],                                               // [tl! focus:end]
 
 'navigation' => [
@@ -205,7 +207,9 @@ same declaration:
 Nothing here re-implements an authorization check — `Gate` answers every one of
 these, which is why a wildcard (`users.*`), a policy, and the super-admin bypass
 in `nyoncode/laravel-permission-extended` all work without this module knowing
-they exist. On that package a super-admin passes regardless.
+they exist. On that package a super-admin passes regardless — with teams on, only
+one made globally (`php artisan wire:assign-role <email> --super-admin`). The
+roles select never offers the super-admin, and saving a user never removes it.
 
 **On an installation with no such ability defined, these screens answer 403.**
 That is deliberate: a visible problem with an obvious fix is better than a silent
@@ -244,6 +248,62 @@ not all of them are routes — a bulk action, a wizard step, an application's ow
 page composing `SyncsRoles`. A save that *changes* the roles requires the
 `users.update` ability; a save that leaves them as they were does not, so fixing
 a typo in somebody's name never strips their roles.
+
+### No More Than You Hold
+
+A third lock sits under both forms: nobody hands out more than they hold. The
+role form offers only the permissions its editor holds — through a role of the
+current team, a global role, or directly — and the roles select offers only the
+roles whose every permission the editor holds. A save is narrowed rather than
+refused: a permission the editor does not hold is neither added to a role nor
+taken from it, and a role they may not give is neither given nor taken away, so
+a forged request adds nothing and editing a role never strips what somebody
+above you put there. A wildcard is a name like any other: holding `invoices.*`
+is what lets you give `invoices.*`. A super-admin may hand out everything except
+the super-admin. The command line is not held to this.
+
+### Whose Account May Be Touched
+
+A third question beside *who may see* and *what may be handed out*: which
+accounts may be changed, and how.
+
+- **A super-admin's account is a super-admin's to change.** Nobody else sees
+  Edit or Delete on it, and its edit page answers 403 — an administrator who
+  could set its password could sign in as it.
+- **The last super-admin is never deleted** — not from the list, and not by
+  itself from its own profile's "delete account".
+- **A team's manager manages membership, not people.** An account may belong to
+  several teams, so the manager of one gets **Remove from team** (which takes the
+  account's roles in that team with it, and leaves its other teams and its global
+  roles alone) instead of **Delete**, and **Send password reset link** instead of
+  the e-mail and password fields, which are locked on their form and ignored on
+  save. The name is theirs to correct.
+
+Somebody who works across every team — a super-admin, or an administrator whose
+ability is global — sees Delete and changes e-mail addresses and passwords. Only
+the command line takes a global role or the super-admin away:
+
+```bash
+php artisan wire:revoke-role ada@example.com --role=admin --global
+php artisan wire:revoke-role mia@example.com --role=team-admin --team=3
+php artisan wire:revoke-role root@example.com --super-admin          # refused for the last one…
+php artisan wire:revoke-role root@example.com --super-admin --force  # …unless you mean to leave none
+```
+
+### Two Roles These Screens Never Hand Out Casually
+
+**The super-admin** can do everything, in every team. It is never offered in the
+roles select, never removed by saving a user, and never edited or deleted on the
+role screens — by anybody, a super-admin included: it carries no permissions to
+edit, and renaming it is how the permission gate stops recognising every
+super-admin at once. It is given from the command line
+(`php artisan wire:assign-role <email> --super-admin`).
+
+**The administrator role** (`admin_role`, `admin` by default) is an ordinary
+role with permissions, held globally. It is the role that hands out the others,
+so only a super-admin may change it on the role screens or pick it for somebody
+in the roles select — an administrator editing it would grant themselves
+whatever they added.
 
 ### A Changed Address Stops Being Verified
 

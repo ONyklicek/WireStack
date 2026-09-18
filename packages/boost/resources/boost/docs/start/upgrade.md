@@ -56,7 +56,7 @@ for and what keeps the set in step without four lines to remember:
 | Laravel | 12.61+, 13.12+ |
 | Livewire | 4.x |
 | Tailwind CSS | 3.x or 4.x (radius and spacing theming needs 4.x — see [Theming → Scope](theming.md#scope)) |
-| `nyoncode/laravel-package-toolkit` | ^2.5 |
+| `nyoncode/laravel-package-toolkit` | ^2.5.2 |
 
 Confirm your app meets these before upgrading.
 

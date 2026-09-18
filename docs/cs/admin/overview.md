@@ -28,6 +28,7 @@ Instalátor udělá tři věci, které `composer require` udělat nemůže, a u 
 | Zapíše `resources/views/components/layouts/admin.blade.php` | Váš layout, který jmenuje komponentu shellu a plní její sloty |
 | Zaregistruje provider v `bootstrap/providers.php` | Aby řádek výš vůbec běžel |
 | Přidá jeden řádek `@source` do `resources/css/app.css` | Aby Tailwind zkompiloval třídy, které views shellu používají |
+| Přidá tamtéž `@plugin "@tailwindcss/forms"` a `@custom-variant dark (&:where(.dark, .dark *))` a do `package.json` balíček `@tailwindcss/forms` | Pole formulářů berou rámeček a odsazení z forms pluginu a přepínač motivu funguje přes třídu `dark` — bez nich má čerstvá aplikace přihlašovací pole jako holé čáry a noční režim nedělá nic. Řádek, který už tam je, zůstane, jak je |
 | Publikuje překlady | Těch pár řetězců, které sidebar ukazuje |
 
 Nic se nepřepisuje, takže druhý běh je bezpečný: layout, který jste upravili, zůstane a nahlásí se jako už existující. Aplikace, která si providery drží jinde - Laravel 10 nebo vlastní konvence - dostane řádek k doplnění místo tichého úspěchu a zbytek instalace doběhne.

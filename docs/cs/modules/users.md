@@ -104,6 +104,7 @@ současné heslo nemá. V tom je celý rozdíl.
 ],
 
 'roles' => 'auto',        // 'auto' se podívá, true a false odpoví za vás [tl! focus]
+'admin_role' => 'admin',  // globální role administrátora, kterou smí měnit jen super-admin; null pro žádnou
 
 'avatar' => [                                    // [tl! focus:start]
     'enabled' => 'auto',   // 'auto' hledá sloupec níž
@@ -129,6 +130,7 @@ současné heslo nemá. V tom je celý rozdíl.
     'relation' => 'teams',
     'label_attribute' => 'name',
     'session_key' => 'wire.team',
+    'admin_role' => 'team-admin',   // správce týmu; vznikne s oprávněními obrazovek
 ],                                               // [tl! focus:end]
 
 'navigation' => [
@@ -202,7 +204,9 @@ skryje podle téže deklarace:
 Nic tady autorizační kontrolu neimplementuje znovu — na každou z nich odpovídá
 `Gate`, a právě proto funguje zástupný znak (`users.*`), policy i obejití pro
 super-admina z `nyoncode/laravel-permission-extended`, aniž by o nich tento modul
-věděl. Na tom balíčku super-admin projde vždy.
+věděl. Na tom balíčku super-admin projde vždy — se zapnutými týmy jen ten
+přidělený globálně (`php artisan wire:assign-role <email> --super-admin`). Výběr
+rolí super-admina nikdy nenabídne a uložení uživatele ho nikdy neodebere.
 
 **Na instalaci, kde žádné takové oprávnění definované není, tyto obrazovky
 odpoví 403.** To je záměr: viditelný problém se zřejmou opravou je lepší než
@@ -241,6 +245,58 @@ route — hromadná akce, krok průvodce, vlastní stránka aplikace skládajíc
 `SyncsRoles`. Uložení, které role **mění**, vyžaduje oprávnění `users.update`;
 uložení, které je nechává být, ne — takže oprava překlepu ve jméně nikdy nikomu
 role nesebere.
+
+### Nic víc, než sami máte
+
+Pod oběma formuláři je třetí zámek: nikdo nerozdá víc, než sám má. Formulář role
+nabídne jen oprávnění, která upravující má — z role aktuálního týmu, z globální
+role nebo přímo — a výběr rolí jen role, jejichž všechna oprávnění upravující
+drží. Uložení se zúží, ne odmítne: oprávnění, které upravující nemá, se do role
+nepřidá ani z ní neodebere, a role, kterou dát nesmí, se nedá ani nesebere — takže
+podvržený požadavek nic nepřidá a úprava role nikdy nesmaže, co do ní dal někdo
+nad vámi. Wildcard je jméno jako každé jiné: `invoices.*` smí dát ten, kdo drží
+`invoices.*`. Super-admin smí rozdat všechno kromě super-admina. Příkazová řádka
+tomuto pravidlu nepodléhá.
+
+### Na čí účet se smí sáhnout
+
+Třetí otázka vedle *kdo co vidí* a *co se smí rozdat*: které účty se smějí měnit
+a jak.
+
+- **Účet super-admina mění jen super-admin.** Nikdo jiný u něj nevidí Upravit ani
+  Smazat a jeho editační stránka odpoví 403 — administrátor, který by mu nastavil
+  heslo, by se za něj mohl přihlásit.
+- **Posledního super-admina nejde smazat** — ani ze seznamu, ani jím samým přes
+  „smazat účet“ na vlastním profilu.
+- **Správce týmu spravuje členství, ne lidi.** Účet může patřit do více týmů, takže
+  správce jednoho dostane místo **Smazat** akci **Odebrat z týmu** (která vezme
+  i role účtu v tom týmu a ostatní týmy a globální role nechá být) a místo polí
+  e-mail a heslo, která jsou ve formuláři zamčená a při uložení se ignorují, akci
+  **Poslat odkaz na obnovu hesla**. Jméno opravit smí.
+
+Kdo pracuje napříč týmy — super-admin nebo administrátor s globálním oprávněním —
+vidí Smazat a mění e-maily i hesla. Globální roli nebo super-admina bere zpět jen
+příkazová řádka:
+
+```bash
+php artisan wire:revoke-role ada@example.com --role=admin --global
+php artisan wire:revoke-role mia@example.com --role=team-admin --team=3
+php artisan wire:revoke-role root@example.com --super-admin          # u posledního odmítnuto…
+php artisan wire:revoke-role root@example.com --super-admin --force  # …pokud nechcete nechat žádného
+```
+
+### Dvě role, které tyto obrazovky nerozdávají jen tak
+
+**Super-admin** může všechno, ve všech týmech. Výběr rolí ho nikdy nenabídne,
+uložení uživatele ho nikdy neodebere a na obrazovkách rolí ho nikdo neupraví ani
+nesmaže — ani super-admin: nemá žádná oprávnění k úpravě a jeho přejmenováním by
+brána oprávnění přestala poznávat všechny super-adminy naráz. Přiděluje se
+z příkazové řádky (`php artisan wire:assign-role <email> --super-admin`).
+
+**Role administrátora** (`admin_role`, výchozí `admin`) je obyčejná role
+s oprávněními, držená globálně. Je to role, která rozdává ty ostatní, takže ji na
+obrazovkách rolí smí měnit nebo ve výběru rolí někomu vybrat jen super-admin —
+administrátor, který by ji upravoval, by si přidělil cokoli, co do ní přidá.
 
 ### Změněná adresa přestane být ověřená
 

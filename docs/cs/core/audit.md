@@ -41,6 +41,22 @@ class Order extends Model
 
 Trait zaznamenává Eloquent události `created`, `updated` a `deleted`.
 
+**Vidí to, co vidí model, a nic víc.** Zápis přes query builder žádnou událost
+modelu nevyvolá — tak je navržený Laravel, ne tenhle balíček — takže po sobě
+nezanechá záznam:
+
+```php
+$order->update(['status' => 'paid']);                    // zaznamená se
+Order::query()->where('region', 'EU')->update([...]);     // nezaznamená se
+Order::query()->where('status', 'draft')->delete();       // nezaznamená se
+```
+
+Totéž platí pro `insert()`, `upsert()` a `increment()` nad dotazem. Když má
+takový zápis v trailu být, projděte modely ve smyčce, nebo záznam vyvolejte sami
+jednou z [manuálních audit událostí](#manualni-audit-udalosti). Soft delete
+nepotřebuje ani jedno: `restore()` ukládá, takže je to záznam `updated`, kde se
+`deleted_at` vrací na `null`, a `forceDelete()` je záznam `deleted`.
+
 ## Vyloučení nebo zahrnutí sloupců
 
 Použijte `getAuditExclude()` pro skrytí šumivých nebo citlivých sloupců pro jeden model.
@@ -66,16 +82,25 @@ protected function getAuditInclude(): array
 }
 ```
 
-Globální vyloučení žijí v `config/wire-core.php`:
+Globální vyloučení žijí v `config/wire-core.php` a `*` je povolená:
 
 ```php
 'audit' => [
     'exclude_columns' => [
         'password',
         'remember_token',
+        'billing_*',
     ],
 ],
 ```
+
+**Tenhle seznam se k podlaze přidává, nedefinuje ji.** Hesla, cokoli končící na
+`_token` nebo `_secret`, sloupce dvoufaktoru, recovery kódy a `api_key` se do
+trailu nezapíšou nikdy a vyprázdnění seznamu je nevrátí. Trail je ve výchozím
+stavu dlouhověký a [modul auditu](../modules/audit.md) staré i nové hodnoty
+vykresluje na obrazovku — takže přihlašovací údaj, který se tam dostane, je
+přihlašovací údaj na stránce, a tři roky starý publikovaný config soubor nesmí
+být to jediné, co mezi vámi a tím stojí.
 
 ## Zobrazení audit záznamů
 
@@ -159,10 +184,13 @@ Vypněte audit logging během importů, seederů nebo údržbových jobů:
 ```php
 use NyonCode\WireCore\Audit\AuditLogger;
 
-AuditLogger::withoutAuditing(function () {
-    Order::query()->update(['synced_at' => now()]);
+AuditLogger::withoutAuditing(function () use ($orders) {
+    $orders->each->update(['synced_at' => now()]);
 });
 ```
+
+Umlčí zápisy přes model — ty, které by se jinak zaznamenaly. `update()` přes
+query builder obalovat netřeba, protože se nezaznamenal nikdy.
 
 ## Retence
 
@@ -192,6 +220,13 @@ Bez nakonfigurovaného `retention_days` (a bez `--days`) příkaz varuje a
 neprořeže nic. Programové prořezávání je stále dostupné přes
 `app(AuditLogger::class)->prune(?int $days = null)`.
 
+**Období, které by nenechalo nic, se odmítne.** `--days=0` by znamenalo „všechno
+zapsané před touto sekundou" a záporné sahá do budoucnosti, takže obojí — i
+prázdné `--days=` z proměnné plánovače, která nebyla nastavená — skončí nenulově
+a nesmaže nic. `prune()` pro stejné hodnoty hodí `InvalidRetentionException` a
+`retention_days` nastavené na `0` se odmítne stejně. Naplánovaný prune, který
+hlasitě selže, si někdo všimne; ten, který trail vymaže a nahlásí úspěch, ne.
+
 ## Konfigurace
 
 | Klíč | Výchozí | Popis |
@@ -200,7 +235,7 @@ neprořeže nic. Programové prořezávání je stále dostupné přes
 | `model` | `AuditEntry::class` | Vlastní model audit záznamu |
 | `user_model` | `App\Models\User` | Model uživatele pro relaci `user()` |
 | `events` | `null` | `null` loguje všechny podporované události; pole loguje jen vybrané typy událostí |
-| `exclude_columns` | `password`, `remember_token` | Globální vyloučení sloupců |
+| `exclude_columns` | `password`, `remember_token` | Globální vyloučení sloupců, `*` povolená — přidává se k vestavěné podlaze, která přihlašovací údaje redaguje vždy |
 | `retention_days` | `null` | Počet dní, po které se záznamy uchovávají |
 
 Podporované typy událostí jsou `created`, `updated`, `deleted`, `bulk_action` a `cell_updated`.

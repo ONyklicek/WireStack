@@ -447,6 +447,23 @@ it('offers more than one kind when the caller asks for more than one', function 
         ->assertDontSee('archive.zip');
 });
 
+it('keeps the folder it is standing in when it accepts more than one kind', function () {
+    // The `orWhere` of the test above has to be grouped, or it binds at the top
+    // level and `AND` binding tighter than `OR` detaches everything before it:
+    // the folder, and the search term too. The flat case above cannot see that —
+    // it has no folder and no search — which is exactly how it survived.
+    $folder = MediaFolder::createIn(null, 'Shoot');
+
+    Media::create(['disk' => 'public', 'path' => 'a.pdf', 'name' => 'elsewhere.pdf', 'mime_type' => 'application/pdf']);
+    Media::create(['disk' => 'public', 'path' => 'b.png', 'name' => 'inside.png', 'mime_type' => 'image/png', 'folder_id' => $folder->id]);
+
+    Livewire::test(MediaPicker::class)
+        ->dispatch('wire-media-picker-configure', multiple: true, accepts: 'image/,application/pdf')
+        ->call('openFolder', $folder->id)
+        ->assertSee('inside.png')
+        ->assertDontSee('elsewhere.pdf');
+});
+
 it('records nothing about a file it cannot reach on the disk', function () {
     // A remote disk answers a *key* from `path()`, not a filename, so there is
     // nothing local to hash or measure. Duplicate detection is a convenience,

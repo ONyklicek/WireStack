@@ -10,8 +10,15 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\View\PageChrome;
+use NyonCode\WireModuleUsers\Console\WireAssignRoleCommand;
+use NyonCode\WireModuleUsers\Console\WireRevokeRoleCommand;
+use NyonCode\WireModuleUsers\Console\WireUserCommand;
 use NyonCode\WireModuleUsers\Http\Middleware\SetCurrentTeam;
+use NyonCode\WireModuleUsers\Install\CreateFirstAdministrator;
+use NyonCode\WireModuleUsers\Install\EnableRoles;
+use NyonCode\WireModuleUsers\Install\EnableTeams;
 use NyonCode\WireModuleUsers\Support\Avatars;
 use NyonCode\WireModuleUsers\Support\EmailVerification;
 use NyonCode\WireModuleUsers\Support\Permissions;
@@ -49,6 +56,16 @@ class WireModuleUsersServiceProvider extends PackageServiceProvider
                         $manager->register(new UsersModule);
                     }
                 });
+
+                // In here rather than in a second `registeredPackage()`: the
+                // toolkit's lifecycle hooks hold one closure each and assign
+                // rather than append, so a second call would drop the module
+                // registration above without a word.
+                SetupRegistry::instance()->register(
+                    EnableRoles::class,
+                    EnableTeams::class,
+                    CreateFirstAdministrator::class,
+                );
             })
             ->hasConfig()
             ->hasViews()
@@ -58,6 +75,10 @@ class WireModuleUsersServiceProvider extends PackageServiceProvider
                 $this->bootUserMenu();
                 $this->bootEmailVerification();
             })
+            // `wire:user` rather than `wire-module-users:user`: it is typed by
+            // hand and lives beside `wire:install`, the same way core ships
+            // `make:wire-dashboard` rather than `wire-core:make-dashboard`.
+            ->hasCommands([WireUserCommand::class, WireAssignRoleCommand::class, WireRevokeRoleCommand::class])
             ->hasInstallCommand(function (InstallCommand $command): void {
                 $command
                     ->publishConfig()

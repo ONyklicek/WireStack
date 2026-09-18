@@ -126,7 +126,9 @@ it('treats an empty ability as none rather than as one nobody can hold', functio
 /* ------------------------------------------------- S2: escalation, not routes */
 
 it('will not let somebody grant a role they may not grant', function () {
-    Role::query()->create(['name' => 'admin', 'guard_name' => 'web']);
+    // A role that carries nothing, so RoleGrants has no objection to it — what
+    // refuses this write is the second lock, the ability to change roles at all.
+    Role::query()->create(['name' => 'reviewer', 'guard_name' => 'web']);
 
     $me = User::query()->create([
         'name' => 'Amelia', 'email' => 'a@example.com', 'password' => Hash::make('x'),
@@ -137,7 +139,7 @@ it('will not let somebody grant a role they may not grant', function () {
     // No ability granted: this is the low-privileged account that used to be
     // able to reach the form and name any role in it.
     Livewire::test(EditUser::class, ['record' => $me->getKey()])
-        ->set('data.roles', ['admin'])
+        ->set('data.roles', ['reviewer'])
         ->call('save');
 
     expect($me->fresh()->roles->pluck('name')->all())->toBe([]);
@@ -248,6 +250,33 @@ it('refuses every two-factor button on a stale confirmation, not just disable', 
             ->call($button)
             ->assertRedirect();
     }
+});
+
+it('comes back to the page, not to the Livewire endpoint, after the password is confirmed', function () {
+    // The button's round trip is a POST to /livewire/update, and that is what
+    // `url()->current()` answers inside it. Stored as the way back, it sent the
+    // person to a POST route with a GET straight after they typed their password.
+    $me = User::query()->create([
+        'name' => 'Amelia', 'email' => 'a@example.com', 'password' => Hash::make('x'),
+    ]);
+
+    $this->be($me);
+    Access::expirePasswordConfirmation();
+    session()->forget('url.intended');
+
+    $card = Livewire::test(TwoFactorAuthentication::class);
+
+    // On the way in: the card links to the confirmation screen, so it leaves
+    // the way back as the page loads.
+    $page = (string) session('url.intended');
+    expect($page)->not->toBe('');
+
+    // And pressing a button on it keeps that page as the way back — not the
+    // endpoint the button's request went to.
+    $card->call('enable')->assertRedirect(route('password.confirm'));
+
+    expect((string) session('url.intended'))->toBe($page)
+        ->not->toContain('livewire/update');
 });
 
 it('shows no recovery codes when the account simply has none', function () {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Resources;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
@@ -27,6 +28,7 @@ use NyonCode\WireModuleUsers\Pages\ListRoles;
 use NyonCode\WireModuleUsers\Pages\ViewRole;
 use NyonCode\WireModuleUsers\Support\Permissions;
 use NyonCode\WireModuleUsers\Support\Roles;
+use NyonCode\WireModuleUsers\Support\Teams;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\TagsColumn;
@@ -125,7 +127,11 @@ class RoleResource implements DescribesResource, ProvidesNavigation, ProvidesPag
                     ->limitList(4)
                     ->wrap(),
             ])
-            ->defaultSort('name');
+            ->defaultSort('name')
+            // The global roles and the current team's own, on the query — so a
+            // row action resolves its role through the same scope, and another
+            // team's role is not there to be deleted by a forged key.
+            ->modifyQueryUsing(static fn (Builder $query): Builder => Teams::scopeRoles($query));
     }
 
     public function form(Form $form): Form
@@ -181,15 +187,27 @@ class RoleResource implements DescribesResource, ProvidesNavigation, ProvidesPag
                         ->showSelected()
                         ->columns(['default' => 1, 'sm' => 2, 'xl' => 3]),
                 ]),
-        ])->mutateDataBeforeSave(static function (array $data): array {
-            unset($data['permissions']);
+        ])->mutateDataBeforeSave(static fn (array $data): array => self::prepareForSave($data));
+    }
 
-            if (($data['guard_name'] ?? '') === '') {
-                $data['guard_name'] = config('auth.defaults.guard', 'web');
-            }
+    /**
+     * The form's data, as the role row it writes.
+     *
+     * Public because the create page adds to it — the team a new role belongs to
+     * — and a form holds one `mutateDataBeforeSave`.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function prepareForSave(array $data): array
+    {
+        unset($data['permissions']);
 
-            return $data;
-        });
+        if (($data['guard_name'] ?? '') === '') {
+            $data['guard_name'] = config('auth.defaults.guard', 'web');
+        }
+
+        return $data;
     }
 
     /**

@@ -190,6 +190,20 @@ on — belongs to the users module's profile page. See
 [Teams and Two-Factor](teams-and-two-factor.md). This package owns only the
 challenge on the way in.
 
+**`php artisan wire:install` writes that list for you.** Its Fortify step runs
+`fortify:install` — the config, the `App\Providers\FortifyServiceProvider` and
+its line in `bootstrap/providers.php`, without which none of these screens has a
+route — and then asks which of registration, password reset, e-mail verification,
+two-factor and passkeys to have. The list arrives ticked as the published config
+has it — e-mail verification off, the rest on — so enter changes nothing; a tick
+uncomments a feature and an untick comments it out, options array and all. It
+never offers `updateProfileInformation()` or `updatePasswords()`: the users
+module's profile cards are built on them. It edits only the shapes Fortify
+publishes, a call on one line or an options array over several; a list you have
+already rewritten is left as it is, and a run with `--no-interaction` changes
+nothing. See
+[Installing Wire](../start/installation.md#setting-up-the-application).
+
 ## One-Time Codes
 
 A six-digit code, mailed, typed into the same boxes as the two-factor challenge.
@@ -225,11 +239,14 @@ working:
   already did: both branches write the same `login.id`, so a screen that checked
   only for a pending sign-in would let a TOTP user request a mailed code by
   posting to it directly, and an inbox would stand in for the app they set up.
-- **The reset keeps the broker's token.** The mail carries a code; the code's row
-  carries the token. Typing the code hands the request to Fortify's own
-  `NewPasswordController` with the real token in it, so expiry, single use and
-  `ResetsUserPasswords` never move. Six digits are a short-lived key to a token
-  nobody can guess, not a replacement for one.
+- **The reset keeps the broker's token, and does not keep it anywhere.** The mail
+  carries a code; a correct code asks the broker for a token in the same request
+  that spends it, and hands that to Fortify's own `NewPasswordController` — so
+  expiry, single use and `ResetsUserPasswords` never move. Six digits are a
+  short-lived key to a token nobody can guess, not a replacement for one. The
+  token is never written down in readable form: Laravel files it hashed, and a
+  second table holding the original would hand an attacker the reset without the
+  digits, past the attempt counter and the throttle alike.
 - **Verifying by code is what a signed link does.** `markEmailAsVerified()`, then
   `Illuminate\Auth\Events\Verified` — the same two lines Fortify's own controller
   runs, so anything listening hears both ways in. The link keeps working.
@@ -475,18 +492,32 @@ The flow with the most moving parts and the least for you to do: turn
 
 1. The person asks for a reset on `/forgot-password`, exactly as before.
 2. The mail carries a **code** instead of a link. Laravel's broker still minted
-   its token; the code's row is what carries it.
+   its token, and that one is dropped — the code's row carries nothing secret.
 3. They land on `/reset-password-code` with their address already filled in — the
    reset flow is the one that knows it, and it travels in the session rather than
    in the URL, so it stays out of your access log.
 4. They type the code and the new password. The code is checked first, so a wrong
-   one costs an attempt and nothing else; then Fortify's own `NewPasswordController`
-   runs with the real token, and the password rules, the broker's verdict and
-   `ResetsUserPasswords` are the ones you already had.
+   one costs an attempt and nothing else; a right one mints a token from the
+   broker's own repository, and then Fortify's `NewPasswordController` runs with
+   it — the password rules, the broker's verdict and `ResetsUserPasswords` are
+   the ones you already had.
 
 There is no token field on that screen, and that is deliberate: the token is what
 the code stands for. A screen showing both would be a screen where the code is
 decoration.
+
+Minting at step 4 rather than carrying from step 2 is what keeps the readable
+token inside one request. `createToken()` replaces any token the account already
+had, so a link and a code cannot both be live for it — which is the property the
+link flow has always had.
+
+A refused password does not cost the code. Verifying spends it, and the new
+password is judged after that — so a confirmation that did not match used to send
+a person back to `/forgot-password`. Now the session keeps a proof of the code
+it just verified: the address, a keyed fingerprint of the digits and the code's
+own expiry. The form comes back with the code filled in, and the corrected
+attempt goes through on that proof. Another browser, another address, other
+digits or a code past its time are all refused as before.
 
 Two bindings are replaced while this flow is on — Laravel's
 `ResetPassword::toMailUsing()` and Fortify's
@@ -824,7 +855,8 @@ $this->app->bind(
 
 The value the two methods hand back is a `OneTimeCode`: `purpose`, `identifier`,
 `code` (empty on the way out of `verify()`), `expiresAt`, and `payload(string
-$key)` for whatever the flow carried — the reset flow's broker token rides there.
+$key)` for whatever the flow carried — the verification flow's address rides
+there. Nothing secret may: the row stores the payload as plain JSON.
 
 ### Asking In Code
 

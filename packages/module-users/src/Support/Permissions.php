@@ -42,6 +42,29 @@ final class Permissions
     }
 
     /**
+     * Every ability the user and role screens require, as configured.
+     *
+     * What an administrator role carries when this module makes one: exact
+     * names, because a granted `users.*` is a name and not a rule — the
+     * permission layer matches wildcards when it is *asked* a pattern, and
+     * `can('users.viewAny')` asks a name.
+     *
+     * @return array<int, string>
+     */
+    public static function abilities(): array
+    {
+        $abilities = [];
+
+        foreach (['users', 'roles'] as $resource) {
+            foreach (['viewAny', 'view', 'create', 'update'] as $page) {
+                $abilities[] = self::for($resource, $page);
+            }
+        }
+
+        return array_values(array_unique(array_filter($abilities)));
+    }
+
+    /**
      * A page declaration carrying its ability, or the bare component without one.
      *
      * Bare rather than `RoutePage::make($c)->permission(null)` so an unguarded

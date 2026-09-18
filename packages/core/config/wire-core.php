@@ -298,7 +298,14 @@ return [
         // Available: 'created', 'updated', 'deleted', 'bulk_action', 'cell_updated'
         'events' => null,
 
-        // Columns to never log (applied globally, in addition to per-model exclusions)
+        // Columns to never log (applied globally, in addition to per-model
+        // exclusions). `*` is allowed: 'billing_*' excludes the lot.
+        //
+        // This list ADDS to a floor the logger applies on its own — passwords,
+        // anything ending in _token or _secret, two-factor columns, recovery
+        // codes and api_key are never written to the trail, and emptying this
+        // list does not bring them back. Editing a published config file must
+        // not be able to put a credential on the audit screen.
         'exclude_columns' => [
             'password',
             'remember_token',

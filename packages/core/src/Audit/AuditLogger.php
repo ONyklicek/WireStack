@@ -7,7 +7,9 @@ namespace NyonCode\WireCore\Audit;
 use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Str;
 use NyonCode\WireCore\Audit\Contracts\AuditableEvent;
+use NyonCode\WireCore\Exceptions\InvalidRetentionException;
 use Throwable;
 
 /**
@@ -86,6 +88,14 @@ class AuditLogger
      * Prune audit entries older than the retention period — the given number of
      * days, or the configured `wire-core.audit.retention_days` when omitted.
      * Returns the number of deleted entries (0 when no period is set).
+     *
+     * **At least one day, or nothing happens.** `now()->subDays(0)` is this
+     * second, so a zero wiped every entry and reported it as a success; a
+     * negative reached into the future and did the same. Both are what a
+     * misconfigured schedule produces, and the trail is the one table where
+     * "delete everything" is never what somebody meant.
+     *
+     * @throws InvalidRetentionException for a period under one day
      */
     public function prune(?int $days = null): int
     {
@@ -93,6 +103,10 @@ class AuditLogger
 
         if ($days === null) {
             return 0;
+        }
+
+        if ($days < 1) {
+            throw InvalidRetentionException::keepsNothing($days);
         }
 
         $modelClass = $this->getAuditEntryModel();
@@ -126,6 +140,40 @@ class AuditLogger
     }
 
     /**
+     * Columns never written to the trail, whatever the configuration says.
+     *
+     * **A floor, not a default.** `exclude_columns` is a published config file,
+     * so a list of defaults protects only applications that never published one
+     * — and the ones that did, years ago, keep whatever was current then. The
+     * trail is long-lived by design and the audit screen renders these pairs to
+     * anyone who can open it, so a secret that reaches it is a secret on a page.
+     *
+     * Patterns rather than names because the names are not knowable: an
+     * application's `api_token`, `stripe_secret` and `two_factor_recovery_codes`
+     * are all columns this package has never heard of. Matched with `Str::is()`,
+     * so `exclude_columns` may use `*` too.
+     *
+     * Removal rather than a `[redacted]` marker, to match what `password` has
+     * always done here — and because a trail that records *that* a token
+     * rotated, without the value, is what the remaining columns already say.
+     *
+     * @var array<int, string>
+     */
+    protected const NEVER_LOGGED = [
+        'password*',
+        'secret',
+        '*_secret',
+        '*_secrets',
+        'token',
+        '*_token',
+        '*_tokens',
+        'two_factor_*',
+        '*recovery_codes',
+        'api_key',
+        '*_api_key',
+    ];
+
+    /**
      * Filter out excluded columns from values array.
      *
      * @param  array<string, mixed>|null  $values
@@ -137,13 +185,19 @@ class AuditLogger
             return null;
         }
 
-        /** @var array<int, string> $excluded */
-        $excluded = config('wire-core.audit.exclude_columns', [
+        /** @var array<int, string> $configured */
+        $configured = config('wire-core.audit.exclude_columns', [
             'password',
             'remember_token',
         ]);
 
-        return array_diff_key($values, array_flip($excluded));
+        $patterns = [...self::NEVER_LOGGED, ...$configured];
+
+        return array_filter(
+            $values,
+            static fn (string $column): bool => ! Str::is($patterns, $column),
+            ARRAY_FILTER_USE_KEY,
+        );
     }
 
     /**
@@ -211,9 +265,11 @@ class AuditLogger
      */
     protected function getRetentionDays(): ?int
     {
-        /** @var int|null $days */
         $days = config('wire-core.audit.retention_days');
 
-        return $days;
+        // Read from `.env` more often than not, so a string: "30" is thirty
+        // days, and anything that is not a number is no period at all rather
+        // than a zero that would prune the lot.
+        return is_numeric($days) ? (int) $days : null;
     }
 }

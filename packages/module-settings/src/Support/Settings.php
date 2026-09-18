@@ -108,23 +108,72 @@ final class Settings
         event(new SettingsSaved($group, $values));
     }
 
-    /** Remove one stored value, so the group's declared default answers again. */
+    /**
+     * Remove one stored value, so the group's declared default answers again.
+     *
+     * Announced as a {@see SettingsSaved}, because to anything listening it is
+     * one: the value that answers for this key changed. A listener that rebuilds
+     * a mail transport when the `mail` group is written has to hear the custom
+     * host being removed just as much as being set — before, it heard only the
+     * second, and mail kept going to the removed server until something else
+     * wrote to the group. Nothing is announced when nothing was stored.
+     */
     public static function remove(string $key, string $group = 'general'): void
     {
-        Setting::query()->where('group', $group)->where('key', $key)->delete();
+        $removed = Setting::query()->where('group', $group)->where('key', $key)->delete();
 
         self::forget($group);
+
+        if ($removed > 0) {
+            self::announceRemoved([$key], $group);
+        }
     }
 
-    /** Remove everything stored for a group. */
+    /** Remove everything stored for a group, announced as {@see remove()} is. */
     public static function clear(string $group = 'general'): void
     {
+        $keys = Setting::query()->where('group', $group)->pluck('key')->all();
+
         Setting::query()->where('group', $group)->delete();
 
         self::forget($group);
+
+        if ($keys !== []) {
+            self::announceRemoved($keys, $group);
+        }
     }
 
-    /** Drop a group's cached values, leaving what is stored alone. */
+    /**
+     * Tell listeners what now answers for keys that were removed.
+     *
+     * The group's declared default where it has one, `null` where it does not —
+     * which is exactly what {@see get()} answers from here on, so a listener
+     * reading `$event->values` and one calling `Settings::all()` agree.
+     *
+     * @param  array<int, string>  $keys
+     */
+    private static function announceRemoved(array $keys, string $group): void
+    {
+        $defaults = SettingsGroups::defaultsFor($group);
+
+        $values = [];
+
+        foreach ($keys as $key) {
+            $values[$key] = $defaults[$key] ?? null;
+        }
+
+        event(new SettingsSaved($group, $values));
+    }
+
+    /**
+     * Drop a group's cached values, leaving what is stored alone.
+     *
+     * **Call it after a write the model did not make.** A group is cached for
+     * ever and dropped by the model's own events, so a query-builder write —
+     * `Setting::query()->update()`, a `DB::table()` insert in a data migration,
+     * a `truncate()` — changes the rows and leaves every worker answering the
+     * old values until something clears them. That is what this is for.
+     */
     public static function forget(string $group = 'general'): void
     {
         self::cache()->forget(self::CACHE_PREFIX.$group);

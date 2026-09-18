@@ -88,6 +88,14 @@ the teams you belong to, and `Teams::switchTo()` re-checks membership before
 storing anything. A `<select>` is markup, and markup is whatever reached the
 browser.
 
+**The screens follow the team, not only the authorization.** Spatie scopes what
+a person *may* do to the current team; the user and role screens scope what they
+*see* the same way — the members of the current team, the global roles and the
+team's own — unless the person works across every team. What may be handed out
+and whose account may be touched are two more rules on top, each with one owner:
+`Support\RoleGrants` and `Support\AccountGuard`. The sections below take them in
+turn.
+
 **The current team falls back rather than failing.** The session names one; if it
 names a team you are no longer in — or names nothing yet — the first team you
 belong to is used. Both cases are ordinary, and neither should land a person on a
@@ -162,6 +170,18 @@ Teams need three things from your application: the setting, a team model, and a
 relation on the user that reaches it. This module ships none of them, because an
 application that has teams already has all three.
 
+`php artisan wire:install` does the setting and the naming. Its **Teams** step asks
+whether roles are scoped to teams, and on yes publishes the config below if it is
+not there yet, sets `teams` to `true` — in the file and in the running process —
+writes `WIRE_USERS_TEAM_MODEL` and, if you name a different one, the relation. Its
+**Roles & permissions** step comes after and runs `permission-extended:install`,
+which publishes the migration, migrates it and puts `HasRoles` on your user model.
+That order is the point: Spatie's migration reads `permission.teams` as it runs,
+and the roles installer runs it, so switching teams on afterwards leaves pivot
+tables with no team column. Tables already made without the column count as the
+answer "no" and are not asked about again; switching teams on later is a migration
+you write. The team model and the relation on the user are still yours to write.
+
 ```php
 // config/permission.php — spatie/laravel-permission's own, published by the
 // extended package's dependency
@@ -202,6 +222,112 @@ That is enough. A switcher appears in the top bar for anyone who belongs to more
 than one team, the middleware scopes every permission read on every web request,
 and `Gate::allows()` starts answering per team without a single call site
 changing.
+
+### Team managers and administrators
+
+Two roles this module knows by name, and makes the first time they are given —
+with the abilities of the user and role screens (`users.viewAny`, `users.view`,
+`users.create`, `users.update` and the same four for `roles`, as configured),
+exact names rather than `users.*`, because a granted wildcard is a name and
+`can('users.viewAny')` asks a name:
+
+```bash
+# A team's manager: the members and roles of team 3, and no other team.
+php artisan wire:assign-role mia@example.com --role=team-admin --team=3
+
+# An administrator of every team at once: the same abilities, held globally.
+php artisan wire:assign-role ada@example.com --role=admin --global
+```
+
+`team-admin` (`teams.admin_role`) is a global role given inside a team, so its
+abilities count in that team only. `admin` (`admin_role`) given with `--global`
+counts in every team — it sees every team's members and roles, and a role
+screen treats it as somebody who works across teams. It is still not a
+super-admin: it can do what the role carries, and loses what is taken from the
+role. The defaults are written only when the role is made; edit the role
+afterwards and they stay edited. `--global` takes no `--team`, and never the
+super-admin, which is `--super-admin`.
+
+A role given by name is found among the global roles and the team's own —
+preferring the team's — and never among another team's roles.
+
+### Roles in a team, and the super-admin above them
+
+A role here belongs to a team: the permission package puts the team on every
+assignment and only counts the ones of the current team. So an account in no team
+cannot be given one, and a team it is not a member of is refused, because the
+role would be stored where the switcher never offers it:
+
+```bash
+php artisan wire:assign-role jane@example.com --role=editor            # in her current team
+php artisan wire:assign-role jane@example.com --role=editor --team=3   # in this one
+```
+
+**The super-admin is the exception, and never a role of a team.** It can do
+everything, in every team, so the permission package's gate honours only a
+*global* assignment of it — one made inside a team bypasses nothing. It is given
+on purpose, from the command line, and needs no team, which is why the first
+administrator of a new installation can be one:
+
+```bash
+php artisan wire:assign-role admin@example.com --super-admin
+```
+
+The roles select never offers it, `--role=super-admin` is refused, and
+`--super-admin` takes no `--team`.
+
+### Who sees whom on the users screen
+
+With teams on, the users screen lists the **members of the current team** — the
+list, the view and edit pages, and every action a row carries. An account of
+another team opened by its URL is a 404, not a 403, so the answer does not say it
+exists, and a forged key from another team finds nothing to delete. Switching
+team switches the list; somebody who belongs to no team sees nobody.
+
+Two kinds of person see every team's members: a super-admin, and an
+administrator whose `users.viewAny` comes from a **global** role — one assigned
+with `assignGlobalRole()`, whose permissions count in every team. The same
+ability from a role of one team manages that team only. An account created by a
+team's manager joins that team; one created by somebody who works across every
+team joins none, because they have not said which.
+
+### Who sees which roles
+
+The roles screen follows the same line. A team's manager sees the **global roles**
+— shared templates, to read and not to change — and **their own team's roles**,
+to change; another team's roles are not in the list, not by URL (404), and not to
+a forged row action. A role a team's manager creates belongs to their team; one
+created by somebody who works across every team is global, and a manager in no
+team creates none. The roles select on the user form offers the same roles.
+Somebody who works across every team sees and changes every role — except the
+two described in [Users](users.md#two-roles-these-screens-never-hand-out-casually).
+
+### Building access from permission bundles
+
+An account holds **any number of roles**, and its permissions are their union.
+That is the way to compose access: make small roles that each carry one bundle
+of permissions, and give a person as many as their work needs. Global roles suit
+bundles best — defined once, usable in every team, and assigned per team:
+
+```php
+use Spatie\Permission\Models\Role;
+
+// Defined once, globally (no team).
+Role::create(['name' => 'bundle-invoices-read'])->givePermissionTo('invoices.view');
+Role::create(['name' => 'bundle-invoices-write'])->givePermissionTo(['invoices.view', 'invoices.create']);
+Role::create(['name' => 'bundle-reports'])->givePermissionTo('reports.view');
+```
+
+```bash
+# Given per team — Olga reads invoices and reports in team 3, and nothing more there.
+php artisan wire:assign-role olga@example.com --role=bundle-invoices-read --role=bundle-reports --team=3
+```
+
+The roles select on the user form takes several at once, and the rule against
+escalation reads the union too: a team's manager who holds `invoices.view`
+through one bundle and `reports.view` through another may give a bundle that
+carries both. A bundle is never nested inside another role — each role carries
+its own permissions, and a person collects roles.
 
 ### Where the switcher comes from
 
@@ -369,7 +495,7 @@ optional halves this installation actually got:
 | --- | --- | --- |
 | Password hashing, the `current_password` rule | Laravel | the card that asks, and keeping the session signed in after |
 | Two-factor secrets, TOTP, recovery codes, the sign-in challenge | Fortify | the three-state card that drives Fortify's actions |
-| Roles, permissions, team scoping, the permission cache | nyoncode/laravel-permission-extended, over the spatie/laravel-permission it requires | the role screens, and which team this request is in |
+| Roles, permissions, team scoping, the permission cache, global roles and the super-admin gate | nyoncode/laravel-permission-extended (1.1+), over the spatie/laravel-permission it requires | the role screens, which team this request is in, what a screen shows of other teams, what a person may hand out (`RoleGrants`) and whose account they may touch (`AccountGuard`) |
 | Login, registration, password reset, e-mail verification | Fortify or Breeze | nothing — see [the admin shell](../admin/overview.md) |
 | Teams themselves: the table, the model, membership | your application | the switcher over what you already have |
 

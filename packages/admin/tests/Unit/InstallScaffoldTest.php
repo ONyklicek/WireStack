@@ -309,3 +309,129 @@ it('refuses a stylesheet that is not a Tailwind entrypoint', function () {
         isRemove($base);
     }
 });
+
+it('switches on the forms plugin and the class-based dark variant in a fresh stylesheet', function () {
+    // What `laravel new` writes: Tailwind, sources, a theme — and neither rule.
+    // Without the plugin the field views have no border and no padding; without
+    // the variant the shell's theme switch never reaches a `dark:` class.
+    $base = isBase();
+
+    try {
+        mkdir($base.'/resources/css', 0755, true);
+        file_put_contents($base.'/resources/css/app.css', <<<'CSS'
+        @import 'tailwindcss';
+
+        @source '../../storage/framework/views/*.php';
+
+        @theme {
+            --font-sans: 'Instrument Sans', ui-sans-serif;
+        }
+
+        CSS);
+
+        expect((new InstallScaffold($base))->stylesheetBase())->toBe(InstallOutcome::Created);
+
+        $contents = (string) file_get_contents($base.'/resources/css/app.css');
+
+        expect($contents)->toContain(InstallScaffold::BASE_RULES['@tailwindcss/forms'])
+            ->toContain(InstallScaffold::BASE_RULES['@custom-variant dark'])
+            // Below the leading at-rules and above the theme, where Tailwind reads them.
+            ->and(strpos($contents, '@plugin'))->toBeGreaterThan(strpos($contents, '@source'))
+            ->and(strpos($contents, '@custom-variant'))->toBeLessThan(strpos($contents, '@theme'));
+
+        // Idempotent: a second run finds both.
+        expect((new InstallScaffold($base))->stylesheetBase())->toBe(InstallOutcome::AlreadyPresent)
+            ->and(substr_count((string) file_get_contents($base.'/resources/css/app.css'), '@plugin'))->toBe(1);
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('adds only the rule the stylesheet is missing, and keeps one written in the application s words', function () {
+    $base = isBase();
+
+    try {
+        mkdir($base.'/resources/css', 0755, true);
+        file_put_contents($base.'/resources/css/app.css', "@import \"tailwindcss\";\n@custom-variant dark (&:is(.dark *));\n");
+
+        expect((new InstallScaffold($base))->stylesheetBase())->toBe(InstallOutcome::Created);
+
+        $contents = (string) file_get_contents($base.'/resources/css/app.css');
+
+        expect($contents)->toContain('@plugin "@tailwindcss/forms";')
+            ->toContain('@custom-variant dark (&:is(.dark *));')
+            ->and(substr_count($contents, '@custom-variant'))->toBe(1);
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('refuses the base rules for a missing stylesheet and for one that is not Tailwind', function () {
+    $base = isBase();
+
+    try {
+        expect(fn () => (new InstallScaffold($base))->stylesheetBase())
+            ->toThrow(AdminInstallException::class, '@tailwindcss/forms');
+
+        mkdir($base.'/resources/css', 0755, true);
+        file_put_contents($base.'/resources/css/app.css', "body { margin: 0; }\n");
+
+        expect(fn () => (new InstallScaffold($base))->stylesheetBase())
+            ->toThrow(AdminInstallException::class);
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('puts the forms plugin into package.json, so the build that follows installs it', function () {
+    $base = isBase();
+
+    try {
+        file_put_contents($base.'/package.json', json_encode([
+            'private' => true,
+            'devDependencies' => ['vite' => '^7.0.0', 'tailwindcss' => '^4.0.0'],
+        ]));
+
+        expect((new InstallScaffold($base))->formsPackage())->toBe(InstallOutcome::Created);
+
+        $json = json_decode((string) file_get_contents($base.'/package.json'), true);
+
+        expect($json['devDependencies'])->toHaveKey('@tailwindcss/forms')
+            ->and($json['devDependencies']['vite'])->toBe('^7.0.0')
+            ->and($json['private'])->toBeTrue()
+            // Sorted, the way npm itself writes the section.
+            ->and(array_key_first($json['devDependencies']))->toBe('@tailwindcss/forms');
+
+        expect((new InstallScaffold($base))->formsPackage())->toBe(InstallOutcome::AlreadyPresent);
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('leaves the forms plugin alone where the application already depends on it', function () {
+    $base = isBase();
+
+    try {
+        file_put_contents($base.'/package.json', json_encode(['dependencies' => ['@tailwindcss/forms' => '0.5.7']]));
+
+        expect((new InstallScaffold($base))->formsPackage())->toBe(InstallOutcome::AlreadyPresent);
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('reports a package.json it cannot read instead of writing into it', function () {
+    $base = isBase();
+
+    try {
+        expect(fn () => (new InstallScaffold($base))->formsPackage())
+            ->toThrow(AdminInstallException::class, 'npm install -D @tailwindcss/forms');
+
+        file_put_contents($base.'/package.json', '{ not json');
+
+        expect(fn () => (new InstallScaffold($base))->formsPackage())
+            ->toThrow(AdminInstallException::class, 'not valid JSON');
+    } finally {
+        isRemove($base);
+    }
+});

@@ -67,6 +67,16 @@
                  two lines are missing instead of offering a button that works
                  and achieves nothing. --}}
             @if ($usable)
+                @php
+                    // Registering is behind `password.confirm`, and the ceremony
+                    // is a fetch — which gets a 423, not the confirmation screen.
+                    // So with a stale password the button goes there first, and
+                    // the card brings the person back. Decided here because a
+                    // directive cannot sit inside a component's attribute list.
+                    $addAction = $needsPasswordConfirmation && $passwordConfirmationUrl
+                        ? 'window.location.href = '.\Illuminate\Support\Js::from($passwordConfirmationUrl)
+                        : 'register($refs.name.value)';
+                @endphp
                 <div
                     x-data="wirePasskey({
                         routes: {
@@ -101,7 +111,7 @@
                         <x-wire::button
                             type="button"
                             icon="outline:finger-print"
-                            x-on:click="register($refs.name.value)"
+                            x-on:click="{{ $addAction }}"
                             x-bind:disabled="busy"
                             data-testid="passkey-add"
                         >

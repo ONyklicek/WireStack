@@ -10,7 +10,9 @@ use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
+use NyonCode\WirePanels\Install\RegisterResourceRoutes;
 use NyonCode\WirePanels\Routing\ConfiguredRoutes;
 use NyonCode\WirePanels\Routing\RegisteredPageUrls;
 use NyonCode\WirePanels\Routing\ResourceRoutes;
@@ -53,6 +55,11 @@ class WirePanelsServiceProvider extends PackageServiceProvider
                 // rather than depending on which provider the manifest lists
                 // first — see ConfiguredRoutes.
                 $this->app->bind(RegistersPageRoutes::class, ConfiguredRoutes::class);
+
+                // The last thing between a complete installation and a 404 on every
+                // screen. The prefix and the middleware are the application's to
+                // choose, so the step asks rather than guessing.
+                SetupRegistry::instance()->register(RegisterResourceRoutes::class);
             })
             ->hasConfig()
             ->hasViews()

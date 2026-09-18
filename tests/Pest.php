@@ -87,6 +87,7 @@ uses(AdminTestCase::class)->in(
 uses(ModuleAuthTestCase::class)->in(
     __DIR__.'/../packages/module-auth/tests/Unit',
     __DIR__.'/../packages/module-auth/tests/Feature',
+    __DIR__.'/../packages/module-auth/tests/Browser',
 );
 
 uses(ModuleUsersTestCase::class)->in(

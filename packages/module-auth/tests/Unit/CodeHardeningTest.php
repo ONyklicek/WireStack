@@ -151,3 +151,90 @@ it('draws digits that are not all the same one', function () {
     expect(count(array_unique($seen)))->toBeGreaterThan(1)
         ->and(count(array_unique(str_split(implode('', $seen)))))->toBeGreaterThan(1);
 });
+
+/* ---------------------------------------- issuing and spending, under a race */
+
+it('lets exactly one of two requests spend the same right code', function () {
+    // Two requests carrying the same right digits both read the row and both
+    // pass the hash. The delete used to be by purpose and identifier, with its
+    // count thrown away, so both came back successful: one mailed code, two
+    // sessions. Here the other request wins in between — its delete lands the
+    // moment this one has read the row — and this one must come back empty.
+    $codes = app(OneTimeCodes::class);
+    $issued = $codes->issue(CodePurpose::Login, 'ann@example.com');
+
+    $table = (string) config('wire-module-auth.codes.table', 'wire_auth_one_time_codes');
+    $wonElsewhere = false;
+
+    DB::listen(function ($query) use (&$wonElsewhere, $table): void {
+        if (! $wonElsewhere && str_starts_with($query->sql, 'select') && str_contains($query->sql, $table)) {
+            $wonElsewhere = true;
+            DB::table($table)->delete();
+        }
+    });
+
+    expect($codes->verify(CodePurpose::Login, 'ann@example.com', $issued->code))->toBeNull();
+});
+
+it('does not throw away a newer code on the strength of an older one', function () {
+    // An issue that lands between another request's read and its delete
+    // replaces the code in place: same row, new hash. Spending must be tied to
+    // the hash that was checked, or the older digits delete the newer mail.
+    $codes = app(OneTimeCodes::class);
+    $older = $codes->issue(CodePurpose::Login, 'ann@example.com');
+    $newer = null;
+
+    $table = (string) config('wire-module-auth.codes.table', 'wire_auth_one_time_codes');
+
+    DB::listen(function ($query) use (&$newer, $codes, $table): void {
+        if ($newer === null && str_starts_with($query->sql, 'select') && str_contains($query->sql, $table)) {
+            $newer = $codes->issue(CodePurpose::Login, 'ann@example.com');
+        }
+    });
+
+    expect($codes->verify(CodePurpose::Login, 'ann@example.com', $older->code))->toBeNull()
+        ->and($codes->verify(CodePurpose::Login, 'ann@example.com', $newer->code))->not->toBeNull();
+});
+
+it('issues in one statement, so two first requests cannot collide', function () {
+    // It was a delete and then an insert against a unique index. Two requests
+    // for the first code both deleted nothing and both inserted, and the second
+    // insert was an uncaught 500 on the sign-in screen. One statement has no
+    // window between the two; which statement it is depends on the driver.
+    $codes = app(OneTimeCodes::class);
+
+    $table = (string) config('wire-module-auth.codes.table', 'wire_auth_one_time_codes');
+    $writes = [];
+
+    DB::listen(function ($query) use (&$writes, $table): void {
+        if (str_contains($query->sql, $table)) {
+            $writes[] = $query->sql;
+        }
+    });
+
+    $codes->issue(CodePurpose::Login, 'ann@example.com');
+    $codes->issue(CodePurpose::Login, 'ann@example.com');
+
+    expect($writes)->toHaveCount(2)
+        ->and(DB::table($table)->count())->toBe(1);
+});
+
+it('gives a replacement code its own attempts, not the ones spent on the last', function () {
+    // The reason the upsert was once avoided: an update keeps what it does not
+    // overwrite, and a person who asked again would inherit their own wrong
+    // guesses. `attempts` is among the columns the upsert writes.
+    config()->set('wire-module-auth.codes.attempts', 3);
+
+    $codes = app(OneTimeCodes::class);
+    $codes->issue(CodePurpose::Login, 'ann@example.com');
+
+    $codes->verify(CodePurpose::Login, 'ann@example.com', 'wrong-1');
+    $codes->verify(CodePurpose::Login, 'ann@example.com', 'wrong-2');
+
+    $fresh = $codes->issue(CodePurpose::Login, 'ann@example.com');
+
+    $codes->verify(CodePurpose::Login, 'ann@example.com', 'wrong-3');
+    $codes->verify(CodePurpose::Login, 'ann@example.com', 'wrong-4');
+
+    expect($codes->verify(CodePurpose::Login, 'ann@example.com', $fresh->code))->not->toBeNull();
+});

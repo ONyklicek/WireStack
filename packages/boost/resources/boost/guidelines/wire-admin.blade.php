@@ -8,7 +8,10 @@ resource pages and its own chrome simply does not install this (ADR 0028).
   shell only once the application's own layout view says so, and the sidebar works alone inside any frame.
 - **`php artisan wire-admin:install` is how an application asks.** It publishes `App\Providers\WireAdminServiceProvider`
   (which holds that one config line), writes `resources/views/components/layouts/admin.blade.php`, registers the
-  provider in `bootstrap/providers.php` and publishes translations. Idempotent and never overwriting; an app with
+  provider in `bootstrap/providers.php` and publishes translations. It also edits `resources/css/app.css`: the
+  `@source "../../vendor/nyoncode"` line, `@plugin "@tailwindcss/forms"` (the field views take their border and
+  padding from it) and `@custom-variant dark (&:where(.dark, .dark *))` (the theme switch sets the `dark` class),
+  and adds `@tailwindcss/forms` to `package.json`. Idempotent and never overwriting; an app with
   no `bootstrap/providers.php` is told the line to add (`AdminInstallException`, caught and warned) and the rest
   still completes. Failures are exceptions, never a status nobody checks.
 @verbatim

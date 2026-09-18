@@ -282,8 +282,23 @@ The reference module package — what ADR 0029 describes, with a consumer:
   else's* installation, each with an `auto` that looks for the thing itself: a
   role class and the trait, a column on the users table, Fortify with its feature
   on, `permission.teams`
+- With teams, the screens are scoped to the current team — `Teams::scopeMembers()`
+  and `Teams::scopeRoles()` on the table query, `Concerns\ResolvesScopedRecord`
+  on the record pages (404 outside) — unless `Teams::seesEveryTeam()`: a
+  super-admin, or the ability held through a *global* role
+- Three rules with one owner each: `Support\RoleGrants` (nobody hands out more
+  than they hold; saves are narrowed, not refused), `Support\AccountGuard` (a
+  super-admin's account only by a super-admin, never the last one deleted, a
+  team's manager removes from the team and sends a reset link), `Roles::mayChange()`
+  (never the super-admin role on a screen, the `admin` role only by a super-admin)
+- `Support\Accounts` — making accounts and giving/taking roles for the installer
+  and the commands: `wire:user`, `wire:assign-role` (`--team`, `--global`,
+  `--super-admin`), `wire:revoke-role` (`--force` for the last super-admin). The
+  super-admin is always a global assignment; `team-admin` and `admin` are made on
+  first use with `Permissions::abilities()`
 
-It owns no authorization (`Gate::allows()` does), no authentication (Fortify or
+It owns no authorization engine (`Gate::allows()` does — the rules above decide
+what a *screen* shows and writes, never whether an ability is held), no authentication (Fortify or
 Breeze do), no two-factor (Fortify), no roles-and-teams engine
 (`nyoncode/laravel-permission-extended`, over the Spatie it requires — bare
 Spatie is deliberately not detected) and no teams table (the application). What it owns is the **screens** over those, and
@@ -297,7 +312,11 @@ Start files:
 - `packages/module-users/src/UsersModule.php`
 - `packages/module-users/src/Resources/UserResource.php`
 - `packages/module-users/src/Support/Roles.php`
+- `packages/module-users/src/Support/Teams.php`
+- `packages/module-users/src/Support/RoleGrants.php`
+- `packages/module-users/src/Support/AccountGuard.php`
 - `packages/module-users/src/Pages/EditProfile.php`
+- `architecture/plans/team-administration.md` — the agreed model and its decisions
 
 ### wire-module-auth
 
@@ -365,11 +384,31 @@ The one-require entry point and the interactive installer:
 
 - `Install\Catalogue` — every part of the stack, installed or not, answered by a
   marker class rather than by reading `installed.json`
+- `Install\Setup` — what a part's installer would still write, read off the
+  publish groups it declares. Empty means done; `null` means unknowable, and
+  unknowable is never "done"
+- `Install\Steps\` + every package's `Install\*Step` — the second half: not
+  "is the package here" but "does the application work". The contract and the
+  registry are `WireCore\Foundation\Setup`; the steps belong to the packages
+  that know (the first administrator is wire-module-users', `storage:link` is
+  wire-module-media'), and the suite only collects, orders and asks. Each step
+  names its `package()`; a package offered and unticked in this run skips its
+  steps, anything never offered keeps them
+- `Install\ComponentGroup` — which question a catalogue part belongs to: the
+  stack is asked first, the modules only once `wire-admin` is chosen or already
+  set up, tooling is listed and never run
 - `Install\WireInstallCommand` — runs each installed package's **own** installer,
   and prints a `composer require` line for what is missing
 
 It never runs composer: the command runs inside the application it is changing,
 and a part whose provider is not loaded is reported rather than fatal.
+
+It runs only what has something left to do, because `vendor:publish` is not
+idempotent where it matters — a timeless migration is stamped when the publish
+mapping is built, so re-publishing writes a second copy of one the application
+already has. `--force` overrides that; the exit code of each installer is the
+command's own; and `--no-interaction` is passed down, because every one of those
+installers prompts in production from inside a progress spinner.
 
 ### wire-boost
 

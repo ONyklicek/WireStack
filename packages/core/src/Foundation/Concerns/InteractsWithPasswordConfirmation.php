@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 
 /**
  * Laravel's confirmed-password window, for a surface that is not a route.
@@ -89,11 +90,45 @@ trait InteractsWithPasswordConfirmation
         // path uses, so the confirmation screen returns the person to the card
         // they pressed a button on rather than to a dashboard.
         if ($url !== null && method_exists($this, 'redirect')) {
-            session()->put('url.intended', url()->current());
+            session()->put('url.intended', $this->pageUrl());
 
             $this->redirect($url);
         }
 
         return false;
+    }
+
+    /**
+     * Come back to this page once the password is confirmed.
+     *
+     * For the card that shows a "confirm your password" link rather than a
+     * button that redirects: the link goes to Fortify's screen, which answers
+     * with `redirect()->intended(fortify.home)` — so without this, confirming
+     * from the profile landed on the application's home, and the person had to
+     * find their way back to the button they had just been refused at.
+     *
+     * Called from `mount()`, on the full page load, and only while a
+     * confirmation is actually needed.
+     */
+    protected function returnHereAfterPasswordConfirmation(): void
+    {
+        if (! $this->hasConfirmedPasswordRecently() && $this->passwordConfirmationUrl() !== null) {
+            session()->put('url.intended', $this->pageUrl());
+        }
+    }
+
+    /**
+     * The page the person is on — not the endpoint answering this request.
+     *
+     * On a Livewire round trip `url()->current()` is `/livewire/update`, which is
+     * where a confirmation used to send the person back to: a POST route, opened
+     * with a GET, straight after typing their password. Livewire remembers the
+     * page the component was mounted on.
+     */
+    protected function pageUrl(): string
+    {
+        return class_exists(Livewire::class)
+            ? Livewire::originalUrl()
+            : url()->current();
     }
 }

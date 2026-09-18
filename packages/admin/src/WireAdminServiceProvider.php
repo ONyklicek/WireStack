@@ -9,9 +9,11 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireAdmin\Exceptions\AdminInstallException;
+use NyonCode\WireAdmin\Install\BuildFrontend;
 use NyonCode\WireAdmin\Install\InstallOutcome;
 use NyonCode\WireAdmin\Install\InstallScaffold;
 use NyonCode\WireCore\Core\Resources\Workspace;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 
 /**
  * The optional admin shell.
@@ -42,6 +44,11 @@ class WireAdminServiceProvider extends PackageServiceProvider
         $packager
             ->name('WireAdmin')
             ->hasShortName('wire-admin')
+            // The build this package's own installer writes instructions for:
+            // it points Tailwind at `vendor/nyoncode` and defines `primary`,
+            // and until something compiles them the shell renders with no
+            // styling and no error anywhere.
+            ->registeredPackage(fn () => SetupRegistry::instance()->register(BuildFrontend::class))
             ->bootedPackage(function (): void {
                 // Class-based, the way core registers its own tags: the layout
                 // and the sidebar both resolve services, and a component class
@@ -104,6 +111,24 @@ class WireAdminServiceProvider extends PackageServiceProvider
             $command->comment(match ($scaffold->stylesheetSources()) {
                 InstallOutcome::Created => '  ✅ Pointed Tailwind at the packages'."'".' views in resources/css/app.css',
                 InstallOutcome::AlreadyPresent => '  ↩︎  Tailwind already scans vendor/nyoncode',
+            });
+        } catch (AdminInstallException $e) {
+            $command->warn('  ⚠️  '.$e->getMessage());
+        }
+
+        try {
+            $command->comment(match ($scaffold->stylesheetBase()) {
+                InstallOutcome::Created => '  ✅ Switched on the forms plugin and the class-based dark mode in resources/css/app.css',
+                InstallOutcome::AlreadyPresent => '  ↩︎  The forms plugin and the dark variant are already there',
+            });
+        } catch (AdminInstallException $e) {
+            $command->warn('  ⚠️  '.$e->getMessage());
+        }
+
+        try {
+            $command->comment(match ($scaffold->formsPackage()) {
+                InstallOutcome::Created => '  ✅ Added @tailwindcss/forms to package.json — the next npm install brings it',
+                InstallOutcome::AlreadyPresent => '  ↩︎  @tailwindcss/forms is already in package.json',
             });
         } catch (AdminInstallException $e) {
             $command->warn('  ⚠️  '.$e->getMessage());

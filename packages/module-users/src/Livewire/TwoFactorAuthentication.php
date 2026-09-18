@@ -65,6 +65,13 @@ class TwoFactorAuthentication extends Component implements IdentifiesHookTarget
      * `$code` because with no state path the binding is this component's own
      * property.
      */
+    public function mount(): void
+    {
+        // The card links to the confirmation screen when the password is stale;
+        // this is what brings the person back to it afterwards.
+        $this->returnHereAfterPasswordConfirmation();
+    }
+
     public function codeField(): Form
     {
         return Form::make()->schema([

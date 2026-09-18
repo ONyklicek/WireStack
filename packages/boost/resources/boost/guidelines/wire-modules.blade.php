@@ -38,3 +38,43 @@ palette find the area without being told.
   Blade components.
 - **Writing your own module?** `packages/module-users` is the reference. Declare it like any other module;
   a package ships one by registering it from its provider instead of from the application's config.
+- **`php artisan wire:user` makes an account; the installer's step makes only the first; `wire:assign-role
+  <email> --role=… [--team=…]` gives roles to one that exists.** All three go
+  through `WireModuleUsers\Support\Accounts` — the model (`wire-module-users.model`), the column
+  names (`.fields`) and the roles are the *application's*, so never hard-code `users`, `name` or
+  `email` in new code. `Accounts::superAdminRole()` is the name the permission gate checks; inventing
+  one makes an administrator the gate does not recognise. An address or password taken from a person or
+  an option goes through `Accounts::emailProblem()` / `passwordProblem()` first — the rules the user
+  screens hold them to.
+- **A setup step that publishes migrations publishes them through `Foundation\Setup\RedundantMigrations::around()`**,
+  and one that writes an answer into a file asks it through `Foundation\Setup\Answers`. A published
+  migration whose tables already exist, or a quote written into PHP source, is an application that
+  no longer migrates or no longer boots.
+- **The super-admin is never a role among others.** It can do everything, in every team, so it is given
+  only through `Accounts::makeSuperAdmin()` — a *global* assignment (`assignGlobalRole()`), which is all
+  the permission gate honours with teams on — from `--super-admin` or the installer's confirmation.
+  `Accounts::assign()` refuses it, `Roles::options()` never lists it, and a user form save keeps it
+  rather than stripping it. Ask `$user->hasGlobalRole(Roles::superAdmin())`, never `hasRole()`.
+- **With teams, a screen over people is scoped to the current team** through `Teams::scopeMembers()` —
+  on the query (`modifyQueryUsing`), never a filter, so row actions resolve records through the same
+  scope — and a record page finds its record the same way (`WirePanels\Resources\Concerns\ResolvesScopedRecord`,
+  404 outside). That trait lives in `wire-panels`, not in this module: a scoped list without a scoped
+  page is a URL that reaches past it, which is every resource's question and not only this one's.
+  Whether somebody works across every team is `Teams::seesEveryTeam($ability)`: a super-admin, or the
+  ability held through a *global* role (`hasGlobalPermission()`), never the same ability from a team role.
+  Roles follow the same line through `Teams::scopeRoles()` (global roles + the current team's), a new
+  role gets its team from `Teams::placeNewRole()`, and whether a role may be edited or deleted is
+  `Roles::mayChange()` — never the super-admin role, the admin role (`wire-module-users.admin_role`)
+  only for a super-admin.
+- **Administrators are roles, not flags.** `team-admin` (given inside a team) and `admin` (given with
+  `wire:assign-role --role=admin --global`) are made on first assignment with `Permissions::abilities()`
+  — exact ability names, never `users.*`, which the permission layer reads as a name when granted.
+  Resolve a role by name through `Accounts` (global or the team's own), never a bare `firstOrCreate`.
+- **Whose account may be touched: `Support\AccountGuard`.** `mayEdit()` (never a super-admin's, unless
+  you are one), `mayDelete()` (never the last super-admin; not a team's manager), `mayRemoveFromTeam()`,
+  `mayChangeCredentials()` (not a team's manager). A new action on an account asks it; taking a role
+  away is `wire:revoke-role`, which refuses the last super-admin without `--force`.
+- **Nobody hands out more than they hold: `Support\RoleGrants`.** Any screen or action that writes a
+  role's permissions or an account's roles offers `RoleGrants::mayGrantPermission()` /
+  `mayGrantRole()` and writes `clampPermissions()` / `clampRoles()` — narrowing, not refusing, so
+  what the actor may not change stays as it was. Never a local "is this allowed" beside it.

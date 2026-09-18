@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Pages;
 
+use Illuminate\Database\Eloquent\Builder;
 use NyonCode\WireModuleUsers\Resources\RoleResource;
+use NyonCode\WireModuleUsers\Support\Teams;
 use NyonCode\WirePanels\Resources\Concerns\InteractsWithRecordTitle;
+use NyonCode\WirePanels\Resources\Concerns\ResolvesScopedRecord;
 use NyonCode\WirePanels\Resources\Pages\ViewPage;
 
 /**
@@ -24,11 +27,17 @@ use NyonCode\WirePanels\Resources\Pages\ViewPage;
 class ViewRole extends ViewPage
 {
     use InteractsWithRecordTitle;
+    use ResolvesScopedRecord;
 
     protected static ?string $resource = RoleResource::class;
 
     protected function recordTitleAttribute(): string
     {
         return 'name';
+    }
+
+    protected function scopeRecordQuery(Builder $query): Builder
+    {
+        return Teams::scopeRoles($query);
     }
 }

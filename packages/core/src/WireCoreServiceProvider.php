@@ -53,6 +53,7 @@ use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
+use NyonCode\WireCore\Foundation\Setup\EnvFile;
 use NyonCode\WireCore\Foundation\Support\IslandViewScope;
 use NyonCode\WireCore\Foundation\Support\PartialRenderHook;
 use NyonCode\WireCore\Foundation\Support\RecordVersion;
@@ -227,6 +228,12 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
     protected function registerFoundation(): void
     {
+        // The application's `.env`, for the setup steps that flip a switch in
+        // it. Bound because the path is a constructor string the container
+        // cannot invent, and bound here rather than left to each step so an
+        // application under test can point it somewhere disposable.
+        $this->app->bind(EnvFile::class, static fn (): EnvFile => EnvFile::forApplication());
+
         // Row-granular rendering: a write can render the regions it touched
         // instead of the view. Inert until something calls renderPartial().
         //
@@ -471,7 +478,16 @@ class WireCoreServiceProvider extends PackageServiceProvider
             // A list is the ordinary case, not an edge one: showing the toast
             // *and* keeping it in the bell is what an application usually wants,
             // and neither driver needs to know about the other.
-            $names = is_array($configured) ? array_values($configured) : [$configured];
+            //
+            // A string is split on commas, so the list can also come from the
+            // environment — `WIRE_NOTIFICATIONS_DRIVER=session,database`. An
+            // env var carries a string and nothing else, so without this the
+            // only way to ask for two drivers was to edit the published config,
+            // and `wire:install` had no way to turn storage on for the
+            // notifications module. One name has no comma and is unaffected.
+            $names = is_array($configured)
+                ? array_values($configured)
+                : array_values(array_filter(array_map(trim(...), explode(',', (string) $configured))));
             $drivers = array_map(fn (mixed $name): NotificationDriver => $this->makeNotificationDriver((string) $name), $names);
 
             return count($drivers) === 1 ? $drivers[0] : new StackDriver(...$drivers);

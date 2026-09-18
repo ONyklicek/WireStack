@@ -61,6 +61,10 @@ are written by the notification driver, which knows nothing about this module.
 which wants a permission on the page rather than a config key alone. Signed out,
 `own` resolves to nothing at all, which is the safe half of the choice.
 
+The scope holds on the detail page as well as the list, so a notification id in
+a URL is not permission to read it — under `own`, somebody else's answers 404
+rather than rendering and quietly marking itself read on their behalf.
+
 The wording is a published translation file and the markup a published view —
 `wire-module-notifications::translations` and `…::views`, with what each costs in
 [Theming → Localization](../start/theming.md#localization) and

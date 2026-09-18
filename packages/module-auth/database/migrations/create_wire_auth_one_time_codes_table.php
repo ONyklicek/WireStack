@@ -26,10 +26,10 @@ return new class extends Migration
             // then a list of dead hashes rather than a set of live credentials.
             $table->string('code');
 
-            // What the flow has to carry from the mail to the form. Today that
-            // is the reset broker's token, which is why this column exists at
-            // all: the code stands in for the token and the token still does the
-            // resetting.
+            // What the flow has to carry from the mail to the form — the
+            // address an e-mail verification code was asked for. Plain JSON, so
+            // never a secret: the reset flow once kept the broker's token here,
+            // which put a credential Laravel stores hashed back in readable form.
             $table->text('payload')->nullable();
 
             // Wrong guesses, counted on the code itself. The route throttle

@@ -8,6 +8,8 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
+use NyonCode\WireModuleAudit\Install\RecordAuditTrail;
 use NyonCode\WireModuleAudit\Support\AuditLog;
 
 /**
@@ -34,6 +36,10 @@ class WireModuleAuditServiceProvider extends PackageServiceProvider
                         $manager->register(new AuditModule);
                     }
                 });
+
+                // Recording lives in another package's config, so this module can be
+                // installed, work perfectly, and show an empty table for ever.
+                SetupRegistry::instance()->register(RecordAuditTrail::class);
             })
             ->hasConfig()
             ->hasTranslations()

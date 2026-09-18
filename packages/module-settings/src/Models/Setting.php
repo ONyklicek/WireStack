@@ -19,14 +19,18 @@ class Setting extends Model
     protected $guarded = [];
 
     /**
-     * Any write drops the group's cached values.
+     * Any write through the model drops the group's cached values.
      *
-     * On the model rather than only in {@see Settings}, because the model is
-     * what everything ends up going through and the support class is not: a
-     * seeder, a factory, a data migration or a console command writing a row
-     * directly would otherwise leave the cache holding the old value forever —
-     * `rememberForever` means forever. Invalidation belongs where the write
-     * happens.
+     * On the model rather than only in {@see Settings}, because a seeder, a
+     * factory or a console command that saves a `Setting` does not go through
+     * the support class — and without this it would leave the cache holding the
+     * old value for ever. Invalidation belongs where the write happens.
+     *
+     * **Through the model, and only through it.** This docblock used to claim a
+     * data migration writing a row directly was covered too; it is not, and
+     * cannot be. `Setting::query()->update()`, `DB::table(...)->insert()` and
+     * `truncate()` fire no model event, so nothing here hears them. A write
+     * like that has to be followed by {@see Settings::forget()} for its group.
      */
     protected static function booted(): void
     {

@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Pages;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Data\RecordContract;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireModuleUsers\Concerns\SyncsRoles;
 use NyonCode\WireModuleUsers\Resources\UserResource;
+use NyonCode\WireModuleUsers\Support\AccountGuard;
 use NyonCode\WireModuleUsers\Support\Roles;
+use NyonCode\WireModuleUsers\Support\Teams;
+use NyonCode\WirePanels\Resources\Concerns\ResolvesScopedRecord;
 use NyonCode\WirePanels\Resources\Pages\EditPage;
 
 /**
@@ -20,6 +25,9 @@ use NyonCode\WirePanels\Resources\Pages\EditPage;
  */
 class EditUser extends EditPage
 {
+    use ResolvesScopedRecord {
+        resolveRecord as resolveScopedRecord;
+    }
     use SyncsRoles;
 
     protected static ?string $resource = UserResource::class;
@@ -56,5 +64,28 @@ class EditUser extends EditPage
         }
 
         return $data;
+    }
+
+    protected function scopeRecordQuery(Builder $query): Builder
+    {
+        return Teams::scopeMembers($query);
+    }
+
+    /**
+     * The account, if this person may see it — and a 403 if it is a super-admin they are not.
+     *
+     * On every request the page makes, the save included, for the reason the
+     * role page gives: the form cannot be built without the record, so an
+     * account opened by replaying a request is refused the same way.
+     */
+    protected function resolveRecord(): Model|RecordContract|null
+    {
+        $record = $this->resolveScopedRecord();
+
+        if ($record instanceof Model && ! AccountGuard::mayEdit($record)) {
+            abort(403);
+        }
+
+        return $record;
     }
 }

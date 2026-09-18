@@ -7,6 +7,7 @@ namespace Workbench\Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use NyonCode\WireModuleUsers\Support\Permissions;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -218,6 +219,12 @@ class DatabaseSeeder extends Seeder
         // So the demo user is a manager whose wildcard is over `tasks`, and
         // super-admin belongs to somebody else — which is also how an
         // application usually looks.
+        //
+        // The demo user is also the administrator of every team (the `admin`
+        // role, given globally), because the user and role screens require
+        // their abilities and the preview is mostly those screens. That role
+        // carries the screens' abilities and nothing else, so `invoices.update`
+        // — the one guard the preview proves — is still not hers.
         $roles = [
             'manager' => ['tasks.*', 'invoices.view', 'users.view'],
             'super-admin' => [],                                    // the gate grants everything
@@ -256,10 +263,23 @@ class DatabaseSeeder extends Seeder
         app(PermissionRegistrar::class)->setPermissionsTeamId($teamId);
 
         foreach (array_combine(array_keys($roles), $users) as $role => $user) {
-            $user->assignRole($role);
+            // The super-admin is global or it is nothing: with teams on, the
+            // permission gate honours only a global assignment of it.
+            $role === 'super-admin' ? $user->assignGlobalRole($role) : $user->assignRole($role);
         }
 
         app(PermissionRegistrar::class)->setPermissionsTeamId(null);
+
+        $abilities = Permissions::abilities();
+
+        foreach ($abilities as $ability) {
+            Permission::findOrCreate($ability, 'web');
+        }
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        Role::findOrCreate('admin', 'web')->syncPermissions($abilities);
+        $users[0]->assignGlobalRole('admin');
     }
 
     /**

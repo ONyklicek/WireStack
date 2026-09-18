@@ -49,6 +49,32 @@ final readonly class InstallScaffold
      * with a signal is an accent that has to be explained. It is a starting
      * point, not a decision — one edit here and the whole stack follows.
      */
+    /**
+     * The two at-rules every view of the stack is written against.
+     *
+     * `@tailwindcss/forms` is what gives a text input, a select and a textarea
+     * their border and padding: the field views carry `border-gray-300` and
+     * `rounded-md` and leave the rest to the plugin's base layer, as Breeze and
+     * Jetstream do. The class-based `dark` variant is what makes the shell's
+     * theme switch reach the page — Tailwind 4's default follows the operating
+     * system and ignores the `dark` class the switch sets.
+     *
+     * The monorepo's own stylesheet has had both from the start, which is why
+     * nothing here showed the gap: every preview and every browser check ran
+     * with them. A fresh application had neither — a sign-in screen whose
+     * fields were bare lines, and a night mode that did nothing.
+     *
+     * Keyed by what identifies the rule, so a line the application already
+     * wrote in its own words counts as present.
+     */
+    public const BASE_RULES = [
+        '@tailwindcss/forms' => '@plugin "@tailwindcss/forms";',
+        '@custom-variant dark' => '@custom-variant dark (&:where(.dark, .dark *));',
+    ];
+
+    /** The npm package the `@plugin` line names, and the range written for it. */
+    public const FORMS_PACKAGE = ['@tailwindcss/forms', '^0.5.10'];
+
     public const PRIMARY_THEME = <<<'CSS'
         @theme {
             /* wire-admin: the accent every wire component reaches for.
@@ -160,6 +186,80 @@ final readonly class InstallScaffold
      *
      * @throws AdminInstallException When there is no Tailwind entrypoint to edit.
      */
+    /**
+     * Add the at-rules in {@see BASE_RULES} that the stylesheet does not have.
+     *
+     * Written where the source line goes, after the last leading at-rule, and
+     * only what is missing: an application that switched either on itself is
+     * `AlreadyPresent`, and so is one that has both.
+     */
+    public function stylesheetBase(string $relativePath = 'resources/css/app.css'): InstallOutcome
+    {
+        $file = $this->basePath.'/'.ltrim($relativePath, '/');
+        $lines = implode("\n", self::BASE_RULES);
+
+        if (! is_file($file)) {
+            throw AdminInstallException::stylesheetMissing($file, $lines);
+        }
+
+        $contents = (string) file_get_contents($file);
+
+        $missing = array_values(array_filter(
+            self::BASE_RULES,
+            static fn (string $rule, string $marker): bool => ! str_contains($contents, $marker),
+            ARRAY_FILTER_USE_BOTH,
+        ));
+
+        if ($missing === []) {
+            return InstallOutcome::AlreadyPresent;
+        }
+
+        if (preg_match('/^\s*@import\s+["\']tailwindcss/m', $contents) !== 1) {
+            throw AdminInstallException::stylesheetNotTailwind($file, $lines);
+        }
+
+        preg_match_all('/^@(?:import|plugin|source|custom-variant)[^\n]*\n/m', $contents, $m, PREG_OFFSET_CAPTURE);
+        $last = $m[0][array_key_last($m[0])];
+        $at = $last[1] + strlen($last[0]);
+
+        file_put_contents($file, substr($contents, 0, $at).implode("\n", $missing)."\n".substr($contents, $at));
+
+        return InstallOutcome::Created;
+    }
+
+    /**
+     * Put `@tailwindcss/forms` into package.json's devDependencies, so the
+     * `npm install` the frontend build runs next brings the plugin the
+     * stylesheet now names. Without the package, the `@plugin` line fails the
+     * build outright.
+     */
+    public function formsPackage(): InstallOutcome
+    {
+        $file = $this->basePath.'/package.json';
+        [$name, $range] = self::FORMS_PACKAGE;
+
+        if (! is_file($file)) {
+            throw AdminInstallException::packageJsonMissing($file, $name);
+        }
+
+        $json = json_decode((string) file_get_contents($file), true);
+
+        if (! is_array($json)) {
+            throw AdminInstallException::packageJsonNotEditable($file, $name);
+        }
+
+        if (isset($json['dependencies'][$name]) || isset($json['devDependencies'][$name])) {
+            return InstallOutcome::AlreadyPresent;
+        }
+
+        $json['devDependencies'] = [...($json['devDependencies'] ?? []), $name => $range];
+        ksort($json['devDependencies']);
+
+        file_put_contents($file, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
+
+        return InstallOutcome::Created;
+    }
+
     public function stylesheetPrimary(string $relativePath = 'resources/css/app.css'): InstallOutcome
     {
         $file = $this->basePath.'/'.ltrim($relativePath, '/');

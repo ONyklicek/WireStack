@@ -197,3 +197,56 @@ it('is targetable by a plugin, like every other card', function () {
 
     expect((new PasskeyManagement)->hookKey())->toBe('users.passkeys');
 });
+
+it('sends a stale password to the confirmation screen first, and remembers to come back', function () {
+    // Registering is `laravel/passkeys`' route behind `password.confirm`, and the
+    // ceremony is a fetch — which gets a 423, not the screen. The card used to
+    // print "Password confirmation required." under the button and leave it
+    // there, and the link beside it returned the person to the home page.
+    passkeyUser();
+    Access::expirePasswordConfirmation();
+    session()->forget('url.intended');
+
+    $html = Livewire::test(PasskeyManagement::class)->html();
+
+    expect($html)->toContain('data-testid="passkeys-needs-password"')
+        ->toContain('x-on:click="window.location.href =')
+        ->toContain(route('password.confirm'))
+        ->not->toContain('x-on:click="register($refs.name.value)"');
+
+    expect(session('url.intended'))->not->toBeNull();
+});
+
+it('starts the ceremony straight away once the password is fresh', function () {
+    passkeyUser();
+    session()->forget('url.intended');
+
+    Livewire::test(PasskeyManagement::class)
+        ->assertSeeHtml('x-on:click="register($refs.name.value)"')
+        ->assertDontSeeHtml('data-testid="passkeys-needs-password"');
+
+    // Nothing to come back from.
+    expect(session('url.intended'))->toBeNull();
+});
+
+it('asks for no confirmation where the application switched it off for passkeys', function () {
+    // `Features::passkeys(['confirmPassword' => false])`: the package's routes
+    // let the ceremony through, and a card that still sent people to confirm
+    // first was the only thing refusing them.
+    config()->set('fortify-options.passkeys.confirmPassword', false);
+
+    $user = passkeyUser();
+    Access::expirePasswordConfirmation();
+    session()->forget('url.intended');
+    $key = aPasskey($user);
+
+    $html = Livewire::test(PasskeyManagement::class)
+        ->call('forget', $key->getKey())
+        ->assertNoRedirect()
+        ->html();
+
+    expect($html)->toContain('x-on:click="register($refs.name.value)"')
+        ->not->toContain('data-testid="passkeys-needs-password"')
+        ->and(session('url.intended'))->toBeNull()
+        ->and($user->passkeys()->count())->toBe(0);
+});

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireModuleAuth\ValueObjects;
 
 use Carbon\CarbonInterface;
+use NyonCode\WireModuleAuth\Actions\MailResetCode;
 use NyonCode\WireModuleAuth\Contracts\OneTimeCodes;
 use NyonCode\WireModuleAuth\Enums\CodePurpose;
 
@@ -13,8 +14,14 @@ use NyonCode\WireModuleAuth\Enums\CodePurpose;
  *
  * Issuing returns this; verifying returns it again with `$code` empty, because
  * by then the plain digits are the thing the caller typed and the row holds only
- * a hash. What survives the round trip is the `payload` — for the reset flow,
- * the broker token the code stands in for (ADR 0037 §2).
+ * a hash. What survives the round trip is the `payload` — for the e-mail
+ * verification flow, the address the code was asked for, so a code requested for
+ * one address cannot confirm another.
+ *
+ * **Nothing secret belongs in it.** The row stores it as plain JSON, so a
+ * payload is readable by anybody who can read the table — which is the whole
+ * reason the reset flow stopped carrying the broker's token there
+ * ({@see MailResetCode}).
  *
  * Readonly because a code that can be edited after it is issued is a code the
  * notification and the row can disagree about.

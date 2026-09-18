@@ -206,6 +206,26 @@ Every mutating method on the manager asks before it acts, rather than the view
 hiding a button — a Livewire method is a public endpoint, and a hidden button is
 not a check.
 
+**The question carries the file.** `view`, `update`, `delete` and `replace` are
+asked about a record, so the ordinary shape of a media policy works:
+
+```php
+public function delete(User $user, Media $media): bool
+{
+    return $media->uploaded_by === $user->id;
+}
+```
+
+`viewAny` and `create` are asked about the class, because there is no record to
+ask about yet. A selection is asked one row at a time: deleting ten files where
+the policy refuses three deletes the other seven and says so once.
+
+**The picker is a chooser, not the library.** The picker modal is rendered on
+every page of the panel, so a form field can open it — which means its methods
+are reachable from every page too. It refuses `update`, `delete` and `replace`
+outright, whatever the policy says. `create` stays open: fetching the file you
+came to pick is what it is for.
+
 **With no policy registered, nothing is refused.** Laravel's gate denies an
 ability nobody defined, so asking it unconditionally would have locked every
 existing library out of its own files the moment it upgraded. Not writing a

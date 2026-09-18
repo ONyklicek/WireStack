@@ -191,6 +191,19 @@ patří profilové stránce modulu uživatelů. Viz
 [Týmy a dvoufázové ověření](teams-and-two-factor.md). Tenhle balíček vlastní jen
 výzvu na cestě dovnitř.
 
+**`php artisan wire:install` ten seznam napíše za vás.** Jeho krok Fortify spustí
+`fortify:install` — config, `App\Providers\FortifyServiceProvider` a jeho řádek
+v `bootstrap/providers.php`, bez kterých žádná z těchto obrazovek nemá routu — a
+pak se zeptá, které z funkcí registrace, obnova hesla, ověření e-mailu,
+dvoufázové ověření a passkeys mít. Seznam přijde zaškrtnutý tak, jak ho má
+publikovaný config — ověření e-mailu vypnuté, zbytek zapnutý — takže enter nic
+nezmění; zaškrtnutí funkci odkomentuje a odškrtnutí zakomentuje, i s celým polem
+voleb. `updateProfileInformation()` ani `updatePasswords()` nikdy nenabídne: stojí
+na nich profilové karty modulu uživatelů. Upravuje jen tvary, které Fortify
+publikuje, volání na jednom řádku nebo pole voleb přes víc řádků; seznam, který
+jste už přepsali, nechá být, a běh s `--no-interaction` nic nezmění. Viz
+[Instalace Wire](../start/installation.md#nastaveni-aplikace).
+
 ## Jednorázové kódy
 
 Šestimístný kód, poslaný e-mailem, zadaný do stejných políček jako dvoufázová
@@ -226,11 +239,14 @@ právě ony drží zbytek instalace v chodu:
   která by kontrolovala jen rozpracované přihlášení, by uživateli s TOTP dovolila
   vyžádat si mailovaný kód přímým požadavkem — a schránka by zastoupila aplikaci,
   kterou si nastavil.
-- **Obnova hesla si nechává token brokeru.** V e-mailu je kód, v řádku kódu je
-  token. Zadaný kód předá požadavek Fortifyho vlastnímu `NewPasswordController`
-  i se skutečným tokenem, takže expirace, jednorázovost i `ResetsUserPasswords`
-  zůstávají tam, kde byly. Šest číslic je krátkodobý klíč k tokenu, který nikdo
-  neuhodne — ne jeho náhrada.
+- **Obnova hesla si nechává token brokeru, a nikde si ho neschovává.** V e-mailu
+  je kód; správný kód si řekne brokeru o token v tomtéž požadavku, ve kterém ho
+  utratí, a předá ho Fortifyho vlastnímu `NewPasswordController` — takže expirace,
+  jednorázovost i `ResetsUserPasswords` zůstávají tam, kde byly. Šest číslic je
+  krátkodobý klíč k tokenu, který nikdo neuhodne — ne jeho náhrada. Token se
+  nikde nezapisuje čitelně: Laravel ho zakládá zahashovaný a druhá tabulka
+  s originálem by útočníkovi dala obnovu hesla bez číslic, mimo počítadlo pokusů
+  i mimo throttle.
 - **Potvrzení kódem dělá totéž co podepsaný odkaz.** `markEmailAsVerified()` a
   pak `Illuminate\Auth\Events\Verified` — dva řádky, které spouští i Fortifyho
   vlastní controller, takže cokoli naslouchá, uslyší obě cesty. Odkaz dál
@@ -473,16 +489,28 @@ Tok s nejvíc pohyblivými díly a nejmíň prací pro vás: zapněte
 
 1. Člověk požádá o obnovu na `/forgot-password`, přesně jako dosud.
 2. V e-mailu přijde **kód** místo odkazu. Laravelův broker svůj token vygeneroval
-   pořád stejně; nese ho řádek toho kódu.
+   pořád stejně, a ten se zahodí — řádek kódu nenese nic tajného.
 3. Přistane na `/reset-password-code` s předvyplněnou adresou — tenhle tok ji jako
    jediný zná a jede v session, ne v URL, takže se nedostane do access logu.
 4. Zadá kód a nové heslo. Kód se kontroluje první, takže špatný stojí jeden pokus
-   a nic víc; pak běží vlastní `NewPasswordController` Fortify se skutečným
-   tokenem a pravidla na heslo, verdikt brokeru i `ResetsUserPasswords` jsou ta,
-   která jste měli doteď.
+   a nic víc; správný vyrobí token z brokerova vlastního repository a pak s ním
+   běží Fortifyho `NewPasswordController` — pravidla na heslo, verdikt brokeru
+   i `ResetsUserPasswords` jsou ta, která jste měli doteď.
 
 Na té obrazovce není pole s tokenem, a to je záměr: token je to, co kód zastupuje.
 Obrazovka s obojím by byla obrazovka, kde je kód ozdoba.
+
+Vyrobit token až ve čtvrtém kroku, místo abychom ho nesli z druhého, je právě to,
+co čitelný token drží uvnitř jednoho požadavku. `createToken()` nahradí token,
+který už účet měl, takže odkaz a kód nemůžou být živé zároveň — což je vlastnost,
+kterou tok s odkazem měl odjakživa.
+
+Odmítnuté heslo kód nestojí. Ověření kód spotřebuje a nové heslo se posuzuje až
+potom — takže nesouhlasící potvrzení dřív poslalo člověka zpátky na
+`/forgot-password`. Teď si session drží důkaz kódu, který právě ověřila: adresu,
+klíčovaný otisk číslic a expiraci kódu. Formulář se vrátí s vyplněným kódem
+a opravený pokus projde na ten důkaz. Jiný prohlížeč, jiná adresa, jiné číslice
+nebo kód po své době se odmítnou jako dřív.
 
 Se zapnutým tokem se nahrazují dva bindingy — Laravelův
 `ResetPassword::toMailUsing()` a `SuccessfulPasswordResetLinkRequestResponse` z
@@ -823,7 +851,8 @@ $this->app->bind(
 
 Hodnota, kterou obě metody vracejí, je `OneTimeCode`: `purpose`, `identifier`,
 `code` (na cestě z `verify()` prázdný), `expiresAt` a `payload(string $key)` na
-to, co si tok nesl — token brokeru u obnovy hesla jede právě tam.
+to, co si tok nesl — adresa u potvrzování e-mailu jede právě tam. Nic tajného
+tam jet nesmí: řádek payload ukládá jako holé JSON.
 
 ### Dotazy z kódu
 

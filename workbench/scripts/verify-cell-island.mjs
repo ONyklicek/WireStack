@@ -16,6 +16,15 @@ import { openPage, checker } from './lib/cdp.mjs';
  * really happened, since a call that changed nothing would satisfy a
  * payload-only test.
  *
+ * The written value has to be a real e-mail address, and that is not decoration.
+ * The only editable text cell on this fixture is `email`, and the workbench user
+ * is `MustVerifyEmail`: module-users' `updated` hook mails a fresh verification
+ * to whatever was just written, from inside the transaction `updateTableCell()`
+ * opened. A token like `driver-wrote-this` never reaches the mailer as an
+ * address — Symfony throws on it, the transaction rolls back, and the write
+ * comes back `success: false` with the island routing (which is what this driver
+ * is actually about) untested.
+ *
  * Usage:
  *   vendor/bin/testbench serve --host=127.0.0.1 --port=8085   # in background
  *   node workbench/scripts/verify-cell-island.mjs
@@ -81,7 +90,7 @@ try {
     const cell = window.$cell();
     window.__wire = [];
 
-    await window.Alpine.$data(cell).commit('driver-wrote-this');
+    await window.Alpine.$data(cell).commit('driver-wrote-this@example.test');
     await new Promise((r) => setTimeout(r, 1500));
 
     return JSON.stringify({
@@ -96,7 +105,7 @@ try {
   // The write has to have landed — serverValue is only advanced by a response
   // the server confirmed.
   check('the cell save reaches the server and is confirmed',
-    save.value === 'driver-wrote-this', saved);
+    save.value === 'driver-wrote-this@example.test', saved);
 
   check('…and comes back as the data region, not the page',
     save.wire.length > 0

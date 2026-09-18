@@ -100,4 +100,5 @@ return [
     // Passkeys, where Fortify routes them.
     'passkey_sign_in' => 'Sign in with a passkey',
     'passkey_failed' => 'That passkey did not work. Try again, or sign in with your password.',
+    'passkey_cancelled' => 'No passkey was used. If this account does not have one yet, sign in with your password and add one under your account.',
 ];

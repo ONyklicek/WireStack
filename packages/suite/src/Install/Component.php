@@ -15,8 +15,16 @@ final readonly class Component
 {
     /**
      * @param  string  $package  The composer name, which is what a person types to get it.
+     * @param  string  $label  What the installer calls it, in the listing and in the question.
+     * @param  string  $description  One line, shown when the part is offered rather than found.
      * @param  string  $marker  A class that exists only when the package is installed.
-     * @param  string|null  $command  Its own installer, when it has one.
+     * @param  string|null  $command  Its own installer, when it has one. A part with
+     *                                nothing to install — or whose setup is a choice
+     *                                `wire:install` should not make for anyone — leaves
+     *                                this null and is listed rather than run.
+     * @param  ComponentGroup  $group  Which of the installer's two questions this
+     *                                 belongs to. A module is offered only once the
+     *                                 shell is, because it renders inside one.
      */
     public function __construct(
         public string $package,
@@ -24,7 +32,7 @@ final readonly class Component
         public string $description,
         public string $marker,
         public ?string $command = null,
-        public bool $core = false,
+        public ComponentGroup $group = ComponentGroup::Stack,
     ) {}
 
     public function installed(): bool

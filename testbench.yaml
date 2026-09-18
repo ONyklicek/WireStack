@@ -16,6 +16,16 @@ providers:
   - Laravel\Fortify\FortifyServiceProvider
 
 migrations:
+  # The workbench's own fixtures only — invoices, tasks, documents, and the users
+  # table the packages' migrations hang off.
+  #
+  # It used to keep a copy of eleven of the packages' migrations too, and they
+  # had to go: `wire:install` publishes those same files, so every table already
+  # existed under a different migration name and `migrate` met each of them
+  # twice. Listing the packages' own directories here instead only moved the
+  # collision — the installer still publishes copies, and `migrate` then sees
+  # each migration under two names rather than one. The workbench publishes them
+  # instead, in the build step below, which is what an application does.
   - workbench/database/migrations
 
 seeders:
@@ -36,6 +46,11 @@ workbench:
     - asset-publish
     - create-sqlite-db
     - db-wipe
+    # Before the migration, because this is what it runs: the packages'
+    # migrations, published into `database/migrations` the way an application
+    # has them rather than copied into `workbench/database/migrations` where
+    # they would collide with the installer publishing the same files.
+    - workbench:publish-package-migrations
     - migrate-fresh
   assets:
     - laravel-assets

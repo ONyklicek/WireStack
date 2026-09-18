@@ -2,6 +2,312 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.0.1]
+
+### Added
+
+- **`php artisan wire:install` sets the application up, not just the packages.** Every package
+  installer already knew what was still missing and said so — nine lines across seven packages,
+  from "Run: php artisan migrate" to "`wire-core.audit.enabled` is off — nothing is being recorded
+  yet" — and none of them could act on it. They can now. The command works through eight steps after
+  the packages are installed: the outstanding migrations, a `Route::wireResources()` group written
+  into `routes/web.php` under a prefix and middleware it asks for, **the first administrator**
+  (with the super-admin role where the application has roles), `storage:link`, audit recording,
+  stored notifications, the settings cache, and the frontend build.
+
+  The first administrator is the one that was missing entirely: every package installed, every
+  migration run, the shell scaffolded — and then a login screen with no account behind it and no
+  command anywhere in the stack that made one. The documented answer was `php artisan tinker`.
+
+  Each step detects, then asks, then acts, so a second run is quiet; `state()` may only look, which
+  is what puts the whole phase under `--dry-run`. A step that *cannot* run — no database, no user
+  model, no `routes/web.php` — reports why instead of being offered, because an installer that knows
+  only done and not-done has to offer "run migrations?" to an application with no database, and then
+  the answer is yes and the run dies inside a spinner with a PDO exception.
+
+- **`php artisan wire:user` — an account, whenever one is wanted.** The installer's step makes the
+  one that gets you in and stops there, because an installer that offered to add another
+  administrator on every run is one nobody could run twice safely — which left the *second* account
+  with no answer but `php artisan tinker`. `--name`, `--email`, `--password`, `--super-admin` and a
+  repeatable `--role` make it scriptable; anything not given is asked for, and anything not given and
+  not askable stops the command rather than being invented. Where the application has roles it offers
+  the ones it has; the first account is asked separately whether it is the super-admin.
+
+  Both ways in share `Support\Accounts` — the model, the column names and the roles, which are the
+  application's rather than the package's. The step keeps only the decision of *when* to offer.
+
+- **`WireCore\Foundation\Setup` — a package can contribute a setup step.** `SetupStep`,
+  `SetupConsole`, the three states and a `SetupRegistry` a package registers into from its
+  `registeredPackage()` hook. The steps live with the packages that know what they are about;
+  `wire-suite` collects, orders and asks, and never learns what a media disk or a super-admin role
+  is. `apply()` asks through a `SetupConsole` rather than a command, so a step is testable without a
+  terminal.
+
+- **`EnvFile`**, for the steps that flip a switch the config reads from the environment. `.env` is
+  key=value and is the file the config already defers to; a published config is PHP, and editing it
+  means a parser or a regular expression over somebody's source.
+
+- **`wire:install` is a wizard in numbered steps, and it asks twice.** The stack first; the
+  ready-made areas second, and only when the admin shell is part of the answer — ticked now or set
+  up by an earlier run — because a module renders inside the panel and offering one without it is
+  offering a screen with nowhere to appear. Each stage prints `Step N — …`, counted as the run goes
+  rather than promised up front, since `--all` asks nothing and `--dry-run` installs nothing. The
+  catalogue says which question a part belongs to through `Install\ComponentGroup` (`Stack`,
+  `Module`, `Tooling`).
+
+- **A part you untick takes its setup steps with it.** `SetupStep::package()` names the composer
+  package a step belongs to; one that was offered and left out is not asked about afterwards —
+  unticking the media module no longer ends in a question about linking its public disk. A package
+  that was never a question (already set up, outside the catalogue) keeps its steps, and the
+  migrations belong to `nyoncode/wire-suite`, which nobody can untick.
+
+- **Three setup steps for what the sign-in and the role screens stand on.** `ConfigureFortify`
+  (wire-module-auth) runs `fortify:install` — without it the screens are registered and their routes
+  are not, so the login page is a 404 — and then asks which of registration, password reset, e-mail
+  verification, two-factor and passkeys to have, ticked as the published config has them, and
+  comments or uncomments each — a whole options array at a time, which is the shape Fortify
+  publishes two-factor and passkeys in. It never offers the two features the profile cards are
+  built on. `EnableTeams` (wire-module-users) asks whether roles are
+  scoped to teams and sets `permission.teams` — in the file and in the running process — the team
+  model and the relation; `EnableRoles` then runs `permission-extended:install` rather than a second
+  copy of its model patching. Teams comes first because that installer ends in a `migrate` of its
+  own, and Spatie's migration reads the switch as it makes the tables. Tables already made without
+  teams count as "no", so the question is not put to every later run.
+
+- **`php artisan wire:assign-role` — roles for an account that already exists.** `wire:user` gives
+  roles only to the account it has just made, so an existing account had no way to get one. The
+  command takes the address, a repeatable `--role` and `--team`, and never touches the name or
+  password. `Accounts::assign()` takes the team; one the account is not a member of is refused
+  (`Teams::isMember()`), because the role would sit where the switcher never offers it.
+
+- **The super-admin is global, asked for, and never a role among others.** It can do everything, in
+  every team — and with teams on it could not: an assignment made inside a team only counted while
+  that team was current. It is now given only by `Accounts::makeSuperAdmin()`, as a global assignment
+  (`laravel-permission-extended` 1.1's `assignGlobalRole()`, the only kind its gate honours with teams
+  on), so it needs no team and the first administrator of a new installation can be one. It is its
+  own question: `--super-admin` on `wire:user` and `wire:assign-role` (confirmed wherever somebody can
+  answer, and never with `--team`), and a confirmation in the installer that says what it means.
+  `--role=super-admin` is refused, `wire:user --admin` is gone, the roles select never offers it, and
+  saving a user keeps it rather than stripping it.
+
+- **The users screen shows the members of the current team.** With teams on, authorization was
+  per team — Spatie scopes every permission read — and the data was not: anybody who could list
+  users in one team listed everybody, and opened any account by its URL. The list, the view and
+  edit pages and every row action now go through `Teams::scopeMembers()`; an account outside it is
+  a 404, and a forged key finds nothing to act on. A super-admin and an administrator whose ability
+  comes from a global role (`Teams::seesEveryTeam()`, over permission-extended 1.1's
+  `hasGlobalPermission()`) see every team. An account created by a team's manager joins that team
+  (`Teams::admitToCurrentTeam()`). There is no switch to turn this off.
+
+- **The roles screen is scoped to the team, and two roles are guarded.** With teams, a team's
+  manager sees the global roles (read-only) and their own team's roles; another team's role is not in
+  the list, not by URL (404), not to a forged row action (`Teams::scopeRoles()`, shared by the role
+  pages through `Concerns\ResolvesScopedRecord`). A role a manager creates belongs to their team
+  (`Teams::placeNewRole()`). `Roles::mayChange()` decides Edit and Delete everywhere, teams or not:
+  the super-admin role is never changed on these screens, and the administrator role
+  (`wire-module-users.admin_role`, `admin`) only by a super-admin — who alone is offered it in the
+  user form's roles select.
+
+- **Whose account may be touched: `Support\AccountGuard`.** A super-admin's account is changed only by
+  a super-admin — nobody else sees Edit or Delete on it, and its edit page is a 403 — and the last
+  super-admin is never deleted, not even by itself from its profile. A team's manager gets **Remove
+  from team** (`Teams::removeMember()`, which takes the account's roles in that team too) instead of
+  Delete, and **Send password reset link** instead of the e-mail and password fields, which are locked
+  on their form and stripped from the save. **`php artisan wire:revoke-role`** takes roles away —
+  team, `--global`, or `--super-admin`, refusing the last super-admin without `--force` — which had
+  no way back before but the database.
+
+- **`team-admin` and `admin`, and `wire:assign-role --global`.** The team manager role
+  (`wire-module-users.teams.admin_role`) and the administrator role (`admin_role`) are made the first
+  time they are given, carrying the abilities of the user and role screens (`Permissions::abilities()`
+  — exact names, because a granted `users.*` is a name). `--global` gives roles in every team at once
+  (`Accounts::assignGlobal()`), which is how the administrator is held. A role given by name is now
+  found among the global roles and the team's own, preferring the team's; it used to be a
+  `firstOrCreate` by name that could pick up another team's role of that name.
+
+- **Nobody hands out more than they hold.** A team's manager could tick any permission into a role of
+  their team, give it to themselves, and hold what nobody gave them; the role form did not check the
+  permissions at all. `Support\RoleGrants` is the one owner of that rule: the role form offers only
+  the permissions its editor holds, the roles select only the roles whose every permission they hold,
+  and both saves are narrowed to that change — what the editor may not change is kept as it was, and
+  a forged addition is not written. It also carries the super-admin and administrator-role rules the
+  role sync used to spell out itself.
+
+- **`SetupConsole::select()`**, the plural of `choose()` — "which of these" — returning its default
+  unattended. **`Foundation\Setup\ConfigFile`** for the one config value with no `env()` behind it:
+  it rewrites a single-line `'key' => value,` that occurs exactly once and returns `false` for
+  anything else, rather than adding a key or widening a regular expression over somebody's config.
+
+- **A question asked after a step ran another command is drawn where somebody can see it.** Laravel
+  Prompts keeps its output in a static that every command run points at its own, and only
+  `Command::call()` puts it back — `Artisan::call()` does not. The package installers and
+  `fortify:install` left it on their buffers, so every setup question after Step 3 was drawn into a
+  buffer and the wizard sat at a prompt nobody could see. A call with `--no-interaction` did worse:
+  Prompts then believed nobody was there, and every later question answered itself with its default —
+  the routes were written without asking and the first administrator was skipped for want of an
+  e-mail address. `CommandConsole` points Prompts back at the terminal, and at a person, before each
+  question.
+
+- **The first administrator can be made a super-admin in the run that set roles up.**
+  `permission-extended:install` patches the user model on disk after the application booted, and PHP
+  cannot load a class twice, so the in-process check went on saying there were no roles. The account
+  was made without one, and the only person who could sign in got a 403 on the users screen.
+  `Roles::waitingForRestart()` names that state, and the super-admin is then given by
+  `wire:assign-role` in a fresh PHP process that reads the patched file.
+
+- **The settings cache step offers only stores that answer.** A fresh Laravel lists `redis`,
+  `memcached` and `octane` in `config/cache.php` whether or not anything is behind them, so the step
+  offered `redis` first — and on a PHP with no Redis extension wrote it into `.env`, after which every
+  settings read threw. Each store is now asked for one key before it is offered.
+
+- **`composer workbench:clean`** resets the testbench skeleton — published views that shadow the
+  packages' own, published migrations that collide with the workbench's, the layout scaffolds and
+  the Fortify and permission config the setup steps leave behind — and rebuilds it.
+
+- **`composer test:browser` — a pilot of Pest browser tests.** `pestphp/pest-plugin-browser` runs a
+  real Chromium through Playwright from inside a Pest test, against the same Testbench application
+  the feature tests use. One journey is ported — the password reset by code, typed digit by digit
+  into the OTP boxes — beside its CDP driver, and `architecture/plans/pest-browser-pilot.md` records
+  what each is worth. The plugin needs PHP 8.4 and Symfony 8, so it is not in `composer.json`:
+  `composer test:browser` says how to install it where it is missing. Neither `composer test` nor CI
+  runs it yet.
+
+### Changed
+
+- **`wire-core.notifications.default` accepts a comma-separated string.** An environment variable
+  carries a string and nothing else, so `WIRE_NOTIFICATIONS_DRIVER=session,database` had no way to
+  mean two drivers — which is what the notifications setup step needs to write. One name has no
+  comma and is unaffected.
+
+### Fixed
+
+- **`php artisan wire:install` no longer sets up what is already set up.** `vendor:publish` is not
+  idempotent where it matters: a migration shipped without a date prefix is stamped with the time the
+  publish mapping was built, so its destination path differs in every process. Publish looked there,
+  found nothing, and wrote a *second* copy of a migration the application already had — two
+  `create_wire_preferences_table` files, and `php artisan migrate` failing on the second. Re-running
+  after adding a module, which the docs ask for, was the way to hit it. `Install\Setup` now reads
+  each part's declared publish groups and their destinations; a part with nothing left to write is
+  named and left alone.
+- **A failing installer now fails the command.** The exit code each package's installer returns is
+  `wire:install`'s own, and the parts that failed are named. It used to come out as a green tick and
+  a zero exit, which a scripted setup cannot see through.
+- **`--no-interaction` reaches the installers it runs.** Each one prompts before touching a
+  production application, and the prompt was drawn on this command's output from inside a running
+  task spinner — the one place nobody can answer it.
+- **A migration the application already has is no longer published into it a second time.** Every
+  installer that publishes one wrote it whatever the application held, and the next `migrate` died
+  on `duplicate column name: two_factor_secret` (Fortify's two-factor columns), `table "roles"
+  already exists` (the permission installer, which only looked in `database/migrations`), or on any
+  of this stack's own tables in an application that pruned its migrations into a schema dump.
+  `Foundation\Setup\RedundantMigrations` is now the one owner of the question: the Fortify and roles
+  steps and `wire:install`'s package installers publish through it, and each migration written is
+  compared, the moment its tag is published, with the database and with every other migration the
+  migrator will run (`MigrationFootprint` reads what it creates and adds). One whose schema is all
+  already there is removed, and said; a partial overlap still runs. `Install\Setup` asks the same
+  question, so a part whose tables are already in the database is not offered again for them.
+- **The first administrator and `wire:user` check the e-mail address.** `admin` was accepted and
+  made an account nobody could sign in with, and an address already in use came back as the
+  database's unique-constraint error. Both now go through `Accounts::emailProblem()` — the user
+  form's `email` rule, then whether the address has an account: typed, it is asked again (three
+  times at most); passed as `--email`, the command fails.
+- **…and the password.** `pw` was accepted, and no password at all. Both now go through
+  `Accounts::passwordProblem()` — `Password::defaults()`, the rule the profile screen already held a
+  new password to. Typed, it is asked for twice; passed as `--password`, a refused one fails.
+- **The Users screen refuses an address already in use, and a new account without a password.** The
+  first reached the column's unique index and the second its `NOT NULL`, each as a 500. The e-mail
+  field is `unique()` (the record being edited left out), and the password is required on create
+  and held to `Password::defaults()` whenever it is typed.
+- **An answer can no longer leave `routes/web.php` or the users config a parse error.** The routes
+  step wrote its prefix and middleware, and the teams step its relation, into PHP source unchecked:
+  a quote in any of them took the application down. Each answer is held to its shape — a URL path, a
+  middleware name, a class, a method — and asked again, three times at most, through the new
+  `Foundation\Setup\Answers`, which the first administrator's questions now share. What is written is
+  `var_export`ed.
+- **The frontend build step no longer calls a stale build done.** `laravel new` builds the assets
+  before `wire-admin:install` adds the `@source` line and the `primary` palette to `app.css`, so a
+  manifest was there, the step said DONE, and the admin rendered unstyled. It is offered again when
+  `resources/css/app.css` or the installed packages changed after the manifest was written.
+- **`wire-core:audit-prune` no longer empties the trail on a zero.** `--days=0` computed a cut-off
+  of this very second, deleted every entry and reported success; a negative period did the same.
+  A period under one day — or an empty, fractional or non-numeric one — is refused, nothing is
+  deleted and the command exits non-zero; `AuditLogger::prune()` throws
+  `InvalidRetentionException`. `retention_days` read from `.env` is taken as a number. The docs now
+  say what the trail cannot see: builder-level writes (`query()->update()`, `insert()`, `upsert()`)
+  fire no model event, and wrapping one in `withoutAuditing()` never did anything.
+- **The settings migration honours `wire-module-settings.table`**, and is guarded with `hasTable`
+  for an application restored from a schema dump. `Settings::remove()` and `clear()` dispatch
+  `SettingsSaved` with what now applies to each removed key, so a listener stops serving the old
+  value. A builder-level write behind the model still fires nothing; `Settings::forget()` is
+  documented as the step to take after one.
+- **A password refused on the reset-by-code screen no longer costs the code.** Verifying spent it
+  and the password was judged afterwards, so a confirmation that did not match sent the person back
+  to `/forgot-password`. The session keeps a proof of the code it verified — the address, a keyed
+  fingerprint of the digits and the code's own expiry — and the corrected attempt goes through on
+  it. The address is normalised once, so a capitalised one no longer fails against the code filed
+  under the lower-cased address.
+- **A view or edit page on a key that resolves no record is a 404.** It rendered around nothing —
+  an empty page with a 200, or a 500 from inside an infolist entry — so `/admin/media/1` on a fresh
+  installation was a server error.
+- **Confirming the password comes back to the page.** A refused button stored
+  `url()->current()`, which inside a Livewire round trip is `/livewire/update`, and sent the person
+  to a POST route with a GET. A card showing a "confirm your password" link stored nothing, and the
+  person landed on the application's home. `InteractsWithPasswordConfirmation` stores the page URL
+  Livewire remembers, and `returnHereAfterPasswordConfirmation()` does it on mount.
+- **The sign-in screen no longer reloads itself when the browser holds no passkey.** The autofill
+  ceremony's "nothing signed in" was taken for an arrival: a navigation to `/`, a bounce back to
+  `/login`, a new ceremony, about twice a second, until the limiter answered 429. Only a real
+  response signs in now, and a cancelled ceremony says what to do instead. The profile's passkey
+  card follows Fortify's `confirmPassword` option instead of always sending people to confirm first.
+- **`wire-admin:install` switches on what the field views need.** It adds
+  `@plugin "@tailwindcss/forms"` and `@custom-variant dark (&:where(.dark, .dark *))` to
+  `resources/css/app.css` and `@tailwindcss/forms` to `package.json`. Without them every form of a
+  fresh install drew without borders or padding, and the theme switch's `dark` class did nothing.
+
+### Security
+
+- **The password reset token is no longer readable in the one-time codes table.** The reset code's
+  row carried the broker's token as plain JSON, undoing the hash Laravel files it under: anybody who
+  could read that table could post the address and the token to `/reset-password` without the six
+  digits. The token is dropped; a correct code asks the broker for a fresh one in the request that
+  spends it.
+- **One-time codes can no longer be verified twice.** A code is consumed by its id and its hash,
+  and a request that deleted nothing lost the race. `issue()` is a single `upsert`, so a
+  double-submitted request no longer trips the unique index between a delete and an insert.
+- **The media policy is asked about the file, and the picker cannot change the library.** Every
+  check asked about the `Media` class, so a policy written the way `make:policy` writes it threw on
+  every rename, move, replace and delete, and a per-record rule could not be written. The records
+  are asked about now, one at a time for a selection. The picker extended the manager and is
+  rendered on every page, so `deleteSelected` on it deleted the library: `picking` is `#[Locked]` and
+  a picker refuses update, delete and replace whatever the policy says.
+- **A notification page is scoped the way its list is.** The page found its record with a plain
+  `find()`, so an id was permission: another person's notification rendered in full and was marked
+  read. It resolves through `scopeToViewer()` now, and one outside the scope is a 404.
+  `ResolvesScopedRecord` moves from module-users to wire-panels.
+- **Credentials stay out of the audit trail whatever the config says.** `exclude_columns` was an
+  exact list of `password` and `remember_token`, so two-factor secrets, recovery codes and rotated
+  tokens were written into entries the audit screen shows. The logger drops passwords, anything
+  ending in `_token` or `_secret`, two-factor columns, recovery codes and `api_key` on its own, as a
+  floor under the list, which now accepts `*` patterns.
+
+### Added
+
+- **`wire:install --force`** — set up every part regardless, publishing over what each wrote. The
+  flag an upgrade wants, and the way to run a part that was skipped. It requires
+  `nyoncode/laravel-package-toolkit` `^2.5.2`, which is where republishing a timeless migration stops
+  producing a duplicate; the constraint moved with it.
+- **`wire-boost` and `wire-module-auth` are in the installer's catalogue**, having been listed
+  nowhere and in the catalogue alone respectively. Boost is listed and never run: `wire-boost:install`
+  asks which AI agents to configure, which is not a question to answer on someone's behalf from
+  inside a spinner.
+
+### Changed
+
+- **The question is a Laravel Prompts multiselect** with every pending part already ticked, replacing
+  a `choice()` that carried a synthetic "All of them" row to mean the same thing. The WireStack mark
+  is drawn above it where the output is interactive — a banner in a deploy log is noise in the one
+  place the output is read by a machine.
+
 ## [2.0.0]
 
 ### Added

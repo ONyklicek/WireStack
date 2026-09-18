@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleUsers\Support;
 
+use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use ReflectionClass;
 
 /**
  * Whether this application can manage roles, and through what.
@@ -36,6 +38,9 @@ final class Roles
 {
     /** The trait an application's user model takes — this package's, never Spatie's directly. */
     public const EXTENDED_TRAIT = 'NyonCode\\PermissionExtended\\Traits\\HasRoles';
+
+    /** The permission layer's own installer — the toolkit names it after the package. */
+    public const INSTALLER = 'permission-extended:install';
 
     /**
      * The models are Spatie's, and that is not a contradiction.
@@ -83,6 +88,148 @@ final class Roles
     }
 
     /**
+     * Whether the user model's file has the trait while this process's class does not.
+     *
+     * The state `permission-extended:install` leaves a running installer in. It
+     * patches `app/Models/User.php` on disk, but the application booted before
+     * that and PHP cannot load a class twice, so {@see available()} goes on
+     * answering about the source it loaded: no roles, in the very run that set
+     * them up. The first administrator made in that run got no role and a 403
+     * on the users screen. A caller that sees this has to do the role work in a
+     * process that starts after the patch.
+     *
+     * Read as the import line the permission installer writes, rather than as
+     * any mention of the trait, so a comment naming it does not count.
+     */
+    public static function waitingForRestart(): bool
+    {
+        $model = config('wire-module-users.model');
+
+        if (config('wire-module-users.roles', 'auto') === false
+            || ! self::hasExtendedPermissions()
+            || ! is_string($model)
+            || ! class_exists($model)
+            || self::available()) {
+            return false;
+        }
+
+        $file = (new ReflectionClass($model))->getFileName();
+
+        return is_string($file)
+            && preg_match('/^use\s+'.preg_quote(self::EXTENDED_TRAIT, '/').'\s*;/m', (string) file_get_contents($file)) === 1;
+    }
+
+    /**
+     * The role that can do everything, as the permission package's gate names it.
+     *
+     * Null where the application switched the super-admin off
+     * (`permission-extended.super_admin_role` = null).
+     */
+    public static function superAdmin(): ?string
+    {
+        $role = config('permission-extended.super_admin_role', 'super-admin');
+
+        return is_string($role) && $role !== '' ? $role : null;
+    }
+
+    /**
+     * The administrator role — ordinary permissions, held globally.
+     *
+     * Null where the application has none (`wire-module-users.admin_role`).
+     */
+    public static function admin(): ?string
+    {
+        $role = config('wire-module-users.admin_role', 'admin');
+
+        return is_string($role) && $role !== '' ? $role : null;
+    }
+
+    /**
+     * The role of a team's manager, given inside a team.
+     *
+     * Null where the application has none (`wire-module-users.teams.admin_role`).
+     */
+    public static function teamAdmin(): ?string
+    {
+        $role = config('wire-module-users.teams.admin_role', 'team-admin');
+
+        return is_string($role) && $role !== '' ? $role : null;
+    }
+
+    /**
+     * The permissions this module gives a role it makes, by the role's name.
+     *
+     * The administrator and team-manager roles carry the abilities of the user
+     * and role screens ({@see Permissions::abilities()}) — the one set that
+     * makes them what they are called. Every other role starts empty.
+     *
+     * @return array<int, string>
+     */
+    public static function defaultPermissions(string $role): array
+    {
+        return in_array($role, array_filter([self::admin(), self::teamAdmin()]), true)
+            ? Permissions::abilities()
+            : [];
+    }
+
+    /**
+     * Whether this person is a super-admin — globally, the only way it counts.
+     */
+    public static function isSuperAdmin(mixed $actor): bool
+    {
+        $role = self::superAdmin();
+
+        return $role !== null
+            && is_object($actor)
+            && method_exists($actor, 'hasGlobalRole')
+            && $actor->hasGlobalRole($role);
+    }
+
+    /**
+     * Whether this person may change or delete this role on the role screens.
+     *
+     * - The super-admin role — never. It carries no permissions to edit, and
+     *   renaming it is how the permission gate stops recognising every
+     *   super-admin at once.
+     * - The global administrator role — only a super-admin. It is the role that
+     *   hands out the others; an administrator editing it grants themselves
+     *   whatever they add.
+     * - Any other global role, with teams — only somebody who works across
+     *   every team. For a team's manager a global role is a template to read.
+     * - A role of a team — whoever may see it, which the list has already
+     *   narrowed to the current team.
+     */
+    public static function mayChange(Model $role, mixed $actor = null): bool
+    {
+        $actor ??= auth()->user();
+        $name = $role->getAttribute('name');
+        $global = $role->getAttribute(Teams::teamColumn()) === null;
+
+        if ($name === self::superAdmin()) {
+            return false;
+        }
+
+        if ($global && $name === self::admin()) {
+            return self::isSuperAdmin($actor);
+        }
+
+        return ! ($global && Teams::enabled())
+            || Teams::seesEveryTeam(Permissions::for('roles', 'update'), $actor);
+    }
+
+    /**
+     * Whether the permission layer's installer is there to run.
+     *
+     * The command being registered rather than the trait autoloading: a package
+     * whose provider is excluded from discovery has the class and not the
+     * command, and calling it aborts the whole run.
+     */
+    public static function installable(Kernel $artisan): bool
+    {
+        return array_key_exists(self::INSTALLER, $artisan->all());
+    }
+
+    /**
      * The role model, taken from the permission package's own config so an
      * application that swapped it keeps its swap.
      *
@@ -120,7 +267,21 @@ final class Roles
         /** @var class-string<Model> $model */
         $model = self::roleModel();
 
-        return $model::query()->orderBy('name')->pluck('name', 'name')->all();
+        // Only the roles this person can see — a team's manager is offered the
+        // global roles and their own team's — and of those, only the ones they
+        // may hand out (RoleGrants): never the super-admin, the administrator
+        // role only to a super-admin, and no role carrying a permission the
+        // person does not hold.
+        $query = Teams::scopeRoles($model::query())->orderBy('name');
+
+        if (method_exists(new $model, 'permissions')) {
+            $query->with('permissions');
+        }
+
+        return $query->get()
+            ->filter(static fn (Model $role): bool => RoleGrants::mayGrantRole($role))
+            ->pluck('name', 'name')
+            ->all();
     }
 
     /**
@@ -137,7 +298,11 @@ final class Roles
         /** @var class-string<Model> $model */
         $model = self::permissionModel();
 
-        return $model::query()->orderBy('name')->pluck('name', 'name')->all();
+        // Only what this person may put into a role: what they hold themselves.
+        return array_filter(
+            $model::query()->orderBy('name')->pluck('name', 'name')->all(),
+            static fn (string $name): bool => RoleGrants::mayGrantPermission($name),
+        );
     }
 
     /**

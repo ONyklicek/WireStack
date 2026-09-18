@@ -208,11 +208,13 @@
         "test:module-audit": "vendor/bin/pest --configuration packages/module-audit/phpunit.xml",
         "test:sortable": "vendor/bin/pest --configuration packages/sortable/phpunit.xml",
         "test:boost": "vendor/bin/pest --configuration packages/boost/phpunit.xml",
+        "test:browser": "bash scripts/test-browser.sh",
         "lint": "vendor/bin/pint",
         "analyse": "vendor/bin/phpstan analyse --ansi",
         "api:dead": "php scripts/verify-dead-api.php .",
         "duplicates": "php scripts/find-duplicate-bodies.php .",
         "api:instanceof": "php scripts/verify-instanceof-imports.php .",
+        "workbench:clean": "bash scripts/workbench-clean.sh",
         "boost:sync-docs": "php scripts/sync-boost-docs.php .",
         "boost:check-docs": "php scripts/sync-boost-docs.php . --check"
     },

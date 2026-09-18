@@ -1,0 +1,243 @@
+<?php
+
+declare(strict_types=1);
+
+namespace NyonCode\WireModuleUsers\Install;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Process;
+use NyonCode\WireCore\Foundation\Setup\Answers;
+use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
+use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
+use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
+use NyonCode\WireCore\Foundation\Setup\SetupState;
+use NyonCode\WireModuleUsers\Console\WireUserCommand;
+use NyonCode\WireModuleUsers\Exceptions\AccountException;
+use NyonCode\WireModuleUsers\Support\Accounts;
+use NyonCode\WireModuleUsers\Support\Roles;
+use Throwable;
+
+/**
+ * Somebody to sign in as.
+ *
+ * The gap nothing in this framework covered. Every package installed, every
+ * migration run, the shell scaffolded, the routes registered — and then the
+ * login screen, with no account behind it and no command anywhere in the stack
+ * that made one. The documented answer was `php artisan tinker`.
+ *
+ * It belongs to this module and not to the installer that asks, because what a
+ * user *is* here is the application's own model, its own column names
+ * (`wire-module-users.fields`) and its own roles — three things `wire-suite` has
+ * no business knowing. All three are {@see Accounts}, which is also what
+ * {@see WireUserCommand} asks; between them, this one decides *when* to offer
+ * and that one is simply asked.
+ *
+ * ## Only ever the first
+ *
+ * {@see state()} is Done the moment the table has a row in it. This creates the
+ * account that gets you in; it is not a user-management command, and an
+ * installer that offered to add another administrator on every run would be one
+ * nobody could run twice safely. The second account is `php artisan wire:user`.
+ *
+ * ## The super-admin, asked and global
+ *
+ * The first account is offered the super-admin — it can do everything, in every
+ * team — and it is given globally, so it needs no team. Where the roles step
+ * patched the user model earlier in this same run, the in-process check still
+ * says there are no roles; {@see Roles::waitingForRestart()} names that state,
+ * and the assignment runs through `wire:assign-role` in a fresh PHP process.
+ */
+final readonly class CreateFirstAdministrator implements SetupStep
+{
+    public function __construct(private Accounts $accounts) {}
+
+    public function label(): string
+    {
+        return 'First administrator';
+    }
+
+    public function state(): SetupState
+    {
+        if (! $this->accounts->ready()) {
+            return SetupState::Blocked;
+        }
+
+        return $this->accounts->any() ? SetupState::Done : SetupState::Pending;
+    }
+
+    public function summary(): string
+    {
+        if ($this->accounts->model() === null) {
+            return 'no user model — see wire-module-users.model';
+        }
+
+        if (! $this->accounts->ready()) {
+            // The step above this one says what a missing database is, in its
+            // own words; saying it twice would be noise.
+            return 'no users table yet';
+        }
+
+        if ($this->accounts->any()) {
+            return 'an account already exists, so you can sign in';
+        }
+
+        // Short enough to leave the status column its room: Laravel's two-column
+        // layout drops its leader dots rather than wrapping when a row will not
+        // fit, and a cramped line in a column of neat ones is what the listing
+        // was rebuilt to stop.
+        return Roles::enabled()
+            ? 'create an account, and offer it the super-admin'
+            : 'create an account to sign in with';
+    }
+
+    public function apply(SetupConsole $console): SetupOutcome
+    {
+        if (! $console->isInteractive()) {
+            // A generated password printed into a deploy log is a credential in
+            // a log, and an empty one is an account anybody can use. Neither is
+            // better than saying so and leaving it.
+            $console->warn('Needs a name, an e-mail and a password — run wire:install again without --no-interaction.');
+
+            return SetupOutcome::Skipped;
+        }
+
+        $name = $console->ask('Name', 'Administrator');
+        $email = $this->askEmail($console);
+        $password = $email === '' ? '' : $this->askPassword($console);
+
+        if ($email === '' || $password === '') {
+            $console->warn('No e-mail or no password — nothing was created.');
+
+            return SetupOutcome::Skipped;
+        }
+
+        try {
+            $user = $this->accounts->create($name, $email, $password);
+        } catch (Throwable $e) {
+            $console->warn('Could not create the account: '.$e->getMessage());
+
+            return SetupOutcome::Failed;
+        }
+
+        $console->note("Created {$email}.");
+
+        $this->offerSuperAdmin($console, $user);
+
+        return SetupOutcome::Applied;
+    }
+
+    /**
+     * The address to sign in with, asked again while it is not one.
+     *
+     * Three tries, then nothing: a person who cannot type an address three times
+     * is better served by the step saying so than by a loop, and an empty answer
+     * stops at once — which is also what an unanswered console gives back.
+     */
+    private function askEmail(SetupConsole $console): string
+    {
+        return (new Answers($console))->until(
+            static fn (): string => trim($console->ask('E-mail address')),
+            fn (string $email): ?string => $email === '' ? null : $this->accounts->emailProblem($email),
+        ) ?? '';
+    }
+
+    /**
+     * The password, held to the application's policy and typed twice.
+     *
+     * Twice because it is hidden, and a typo in the first administrator's
+     * password is an installation nobody can sign in to. Nothing typed stops at
+     * once, like the address.
+     */
+    private function askPassword(SetupConsole $console): string
+    {
+        return (new Answers($console))->until(
+            static fn (): string => $console->secret('Password'),
+            function (string $password) use ($console): ?string {
+                // Nothing typed is the way out, and `Answers` reads a null as
+                // "that will do" — the caller turns the empty answer into
+                // "nothing was created". A statement rather than a ternary arm
+                // because a bare `? null` is not one, and the coverage tool
+                // cannot see a line that never executes anything.
+                if ($password === '') {
+                    return null;
+                }
+
+                return $this->accounts->passwordProblem($password)
+                    ?? ($console->secret('Password again') === $password ? null : 'The two passwords are not the same');
+            },
+        ) ?? '';
+    }
+
+    /**
+     * Ask whether this account is the one that can do everything, then make it so.
+     *
+     * Asked rather than assumed, and said in full: a super-admin can do
+     * everything, in every team. The default is yes, because this is the first
+     * account of an installation and somebody letting themselves in.
+     *
+     * Where roles were set up earlier in this same run the user model was
+     * patched after this process loaded it ({@see Roles::waitingForRestart()}),
+     * so the assignment runs in a fresh process through `wire:assign-role` — the
+     * same command a person would run, and the same code behind it.
+     */
+    private function offerSuperAdmin(SetupConsole $console, Model $user): void
+    {
+        $waiting = Roles::waitingForRestart();
+
+        if ((! Roles::enabled() && ! $waiting) || Roles::superAdmin() === null) {
+            return;
+        }
+
+        $email = $this->accounts->emailOf($user);
+
+        if (! $console->confirm("Make {$email} a super-admin? {$this->accounts->superAdminMeaning()}", true)) {
+            return;
+        }
+
+        try {
+            $role = $waiting ? $this->superAdminInAFreshProcess($email) : $this->accounts->makeSuperAdmin($user);
+
+            if ($role !== null) {
+                $console->note("Made it a super-admin (`{$role}`).");
+            }
+        } catch (Throwable $e) {
+            // The account is made and usable; only the super-admin is missing,
+            // and that is one command away rather than a reason to call the step
+            // failed and leave somebody wondering whether the user exists.
+            $console->warn("Created the account, but did not make it a super-admin: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * `wire:assign-role --super-admin`, from a process that has loaded the patched model.
+     */
+    private function superAdminInAFreshProcess(string $email): string
+    {
+        $result = Process::path(base_path())->run([
+            PHP_BINARY,
+            'artisan',
+            'wire:assign-role',
+            $email,
+            '--super-admin',
+            '--no-interaction',
+        ]);
+
+        if (! $result->successful()) {
+            throw AccountException::roleProcessFailed(trim($result->errorOutput().' '.$result->output()));
+        }
+
+        return $this->accounts->superAdminRole();
+    }
+
+    public function package(): string
+    {
+        return 'nyoncode/wire-module-users';
+    }
+
+    public function sort(): int
+    {
+        // After the tables exist, and after the shell and the routes — this is
+        // the last thing that has to be true before somebody can sign in.
+        return 400;
+    }
+}

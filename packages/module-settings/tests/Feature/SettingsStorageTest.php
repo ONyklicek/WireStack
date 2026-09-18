@@ -7,9 +7,13 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireModuleSettings\Contracts\ProvidesSettingsDefaults;
+use NyonCode\WireModuleSettings\Contracts\SettingsGroup;
 use NyonCode\WireModuleSettings\Events\SettingsSaved;
 use NyonCode\WireModuleSettings\Models\Setting;
 use NyonCode\WireModuleSettings\Support\Settings;
+use NyonCode\WireModuleSettings\WireModuleSettingsServiceProvider;
 
 /*
  * Storage: the cache, the write, and the two ways each of them used to be wrong.
@@ -57,9 +61,10 @@ it('does not remember that the table was missing', function () {
 });
 
 it('drops the cache when a row is written past the support class', function () {
-    // A seeder, a data migration, a console command, tinker. Invalidation lives
-    // on the model because the model is what every write goes through and the
-    // support class is not.
+    // A seeder, a console command, tinker — anything that saves the model.
+    // Invalidation lives on the model because that is what those writes go
+    // through and the support class is not. A query-builder write is another
+    // matter; see the test below that pins it.
     Settings::set('company_name', 'Acme', 'branding');
 
     Setting::query()->where('group', 'branding')->where('key', 'company_name')->first()
@@ -129,6 +134,137 @@ it('clears a whole group', function () {
 
     expect(Settings::all('branding'))->toBe([])
         ->and(Settings::all('mail'))->toBe(['from' => 'a@b.test']);
+});
+
+/** A group with a declared default, so a removal has something to fall back to. */
+class SsMailWithDefaults implements ProvidesSettingsDefaults, SettingsGroup
+{
+    public static function group(): string
+    {
+        return 'mail';
+    }
+
+    public static function label(): string
+    {
+        return 'Mail';
+    }
+
+    public static function schema(): array
+    {
+        return [TextInput::make('host')];
+    }
+
+    public static function defaults(): array
+    {
+        return ['host' => 'smtp.default'];
+    }
+}
+
+it('announces a removal, with what answers for the key now', function () {
+    // A listener that rebuilds the mail transport when the `mail` group is
+    // written heard the custom host being set and never heard it being removed,
+    // so mail kept going to a server nobody had configured any more.
+    config()->set('wire-module-settings.groups', [SsMailWithDefaults::class]);
+
+    Settings::fill(['host' => 'smtp.custom', 'port' => 2525], 'mail');
+
+    Event::fake([SettingsSaved::class]);
+
+    Settings::remove('host', 'mail');
+    Settings::remove('port', 'mail');
+
+    Event::assertDispatched(
+        SettingsSaved::class,
+        fn (SettingsSaved $event): bool => $event->group === 'mail' && $event->values === ['host' => 'smtp.default'],
+    );
+    Event::assertDispatched(
+        SettingsSaved::class,
+        fn (SettingsSaved $event): bool => $event->group === 'mail' && $event->values === ['port' => null],
+    );
+});
+
+it('announces a cleared group, key by key', function () {
+    config()->set('wire-module-settings.groups', [SsMailWithDefaults::class]);
+
+    Settings::fill(['host' => 'smtp.custom', 'port' => 2525], 'mail');
+
+    Event::fake([SettingsSaved::class]);
+
+    Settings::clear('mail');
+
+    Event::assertDispatchedTimes(SettingsSaved::class, 1);
+    Event::assertDispatched(
+        SettingsSaved::class,
+        fn (SettingsSaved $event): bool => $event->group === 'mail'
+            && $event->values === ['host' => 'smtp.default', 'port' => null],
+    );
+});
+
+it('announces nothing when there was nothing to remove', function () {
+    Event::fake([SettingsSaved::class]);
+
+    Settings::remove('host', 'mail');
+    Settings::clear('mail');
+
+    Event::assertNotDispatched(SettingsSaved::class);
+});
+
+it('keeps answering the cached value after a write the model did not make, until the group is forgotten', function () {
+    // The model's events are what clear a group, and a query-builder write fires
+    // none. That is the boundary the docs now state rather than hide, with
+    // `Settings::forget()` as the thing to call after such a write.
+    Settings::set('logo', 'old.png', 'branding');
+    Settings::get('logo', null, 'branding');
+
+    Setting::query()->where('group', 'branding')->where('key', 'logo')
+        ->update(['value' => json_encode('new.png')]);
+
+    expect(Settings::get('logo', null, 'branding'))->toBe('old.png');
+
+    Settings::forget('branding');
+
+    expect(Settings::get('logo', null, 'branding'))->toBe('new.png');
+});
+
+// ─── The table it lives in ───────────────────────────────────────────────────
+
+it('creates the table the configuration names', function () {
+    // The model read its table from `wire-module-settings.table` and the
+    // migration wrote `wire_settings` whatever it said: every read answered the
+    // defaults without a word, and the first write threw.
+    config()->set('wire-module-settings.table', 'app_settings');
+
+    (require __DIR__.'/../../database/migrations/create_wire_settings_table.php')->up();
+
+    expect(Schema::hasTable('app_settings'))->toBeTrue();
+
+    Settings::set('logo', 'a.png', 'branding');
+
+    expect(Settings::get('logo', null, 'branding'))->toBe('a.png')
+        ->and(DB::table('app_settings')->count())->toBe(1);
+
+    (require __DIR__.'/../../database/migrations/create_wire_settings_table.php')->down();
+
+    expect(Schema::hasTable('app_settings'))->toBeFalse();
+});
+
+it('leaves an existing table alone when the migration is handed to it again', function () {
+    // The name comes from config, so the installer cannot read it off the
+    // source to see the table is already there — an application restored from a
+    // schema dump can be handed this migration a second time.
+    Settings::set('logo', 'kept.png', 'branding');
+
+    (require __DIR__.'/../../database/migrations/create_wire_settings_table.php')->up();
+
+    expect(Settings::get('logo', null, 'branding'))->toBe('kept.png');
+});
+
+it('names the table it uses in the about output', function () {
+    config()->set('wire-module-settings.table', 'app_settings');
+
+    $about = (new WireModuleSettingsServiceProvider(app()))->aboutData();
+
+    expect($about['Table'])->toBe('app_settings');
 });
 
 it('caches in the store the application named', function () {

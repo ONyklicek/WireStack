@@ -39,6 +39,7 @@ beforeEach(function () {
     // and the list, so they run as somebody who is allowed; the guard has its
     // own tests, which deliberately do not do this.
     Access::grantEveryAbility();
+    Access::actAsSuperAdmin();
 
     Schema::create('users', function (Blueprint $table) {
         $table->id();
@@ -161,6 +162,43 @@ it('seeds the roles a user already has, and syncs what changed', function () {
     $page->set('data.roles', ['admin'])->call('save')->assertHasNoErrors();
 
     expect(User::first()->roles->pluck('name')->all())->toBe(['admin']);
+});
+
+it('never offers the super-admin in the roles select, nor the administrator role to anybody else', function () {
+    // The super-admin can do everything, in every team: given on purpose from
+    // the command line, never picked beside "editor". The administrator role
+    // hands out the others, so only a super-admin picks it for somebody.
+    Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
+
+    expect(Roles::options())->toBe(['admin' => 'admin', 'editor' => 'editor']);
+
+    auth()->guard()->forgetUser();
+
+    expect(Roles::options())->toBe(['editor' => 'editor']);
+});
+
+it('ignores a super-admin named in a forged save', function () {
+    Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
+
+    Livewire::test(EditUser::class, ['record' => 1])
+        ->set('data.roles', ['editor', 'super-admin'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(User::first()->roles->pluck('name')->all())->toBe(['editor']);
+});
+
+it('keeps the super-admin an account already has when its roles are saved', function () {
+    // Editing somebody's name must not strip the one role the form never shows.
+    Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
+    User::first()->syncRoles(['editor', 'super-admin']);
+
+    Livewire::test(EditUser::class, ['record' => 1])
+        ->set('data.roles', ['admin'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(User::first()->roles->pluck('name')->sort()->values()->all())->toBe(['admin', 'super-admin']);
 });
 
 it('shows one user, with the roles they hold', function () {
@@ -302,6 +340,8 @@ it('edits the signed-in user and nobody else', function () {
 });
 
 it('refuses to be a profile page for nobody', function () {
+    auth()->guard()->forgetUser();
+
     // Asked of the page rather than of a render, because a render wraps whatever
     // it catches in a ViewException and the guarantee being asserted is this
     // method's. The route should sit behind `auth`; if it does not, this is the
@@ -424,4 +464,41 @@ it('shows no roles for a user model that has no such relation', function () {
     Livewire::test(ViewUser::class, ['record' => $user->getKey()])
         ->assertOk()
         ->assertSee(__('wire-module-users::messages.no_roles'));
+});
+
+it('refuses an address that already has an account, rather than failing at the unique index', function () {
+    Livewire::test(CreateUser::class)
+        ->set('data.'.UserResource::field('name'), 'Second Jane')
+        ->set('data.'.UserResource::field('email'), 'jane@example.com')
+        ->set('data.'.UserResource::field('password'), 'long-enough-secret')
+        ->call('save')
+        ->assertHasErrors(['data.'.UserResource::field('email')]);
+
+    expect(User::query()->where('email', 'jane@example.com')->count())->toBe(1);
+});
+
+it('lets an edit keep its own address', function () {
+    Livewire::test(EditUser::class, ['record' => User::query()->firstOrFail()->getKey()])
+        ->set('data.'.UserResource::field('name'), 'Jane Roe')
+        ->call('save')
+        ->assertHasNoErrors();
+});
+
+it('asks a new account for a password, held to the application\'s policy', function () {
+    // No password was a NOT NULL failure and a 500; a short one was accepted
+    // here while the profile screen refused it.
+    Livewire::test(CreateUser::class)
+        ->set('data.'.UserResource::field('name'), 'No Password')
+        ->set('data.'.UserResource::field('email'), 'nopass@example.com')
+        ->call('save')
+        ->assertHasErrors(['data.'.UserResource::field('password')]);
+
+    Livewire::test(CreateUser::class)
+        ->set('data.'.UserResource::field('name'), 'Short Password')
+        ->set('data.'.UserResource::field('email'), 'short@example.com')
+        ->set('data.'.UserResource::field('password'), 'pw')
+        ->call('save')
+        ->assertHasErrors(['data.'.UserResource::field('password')]);
+
+    expect(User::query()->whereIn('email', ['nopass@example.com', 'short@example.com'])->exists())->toBeFalse();
 });

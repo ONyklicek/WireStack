@@ -100,4 +100,5 @@ return [
     // Passkeys tam, kde je Fortify routuje.
     'passkey_sign_in' => 'Přihlásit se passkeyem',
     'passkey_failed' => 'S tímhle passkeyem to nešlo. Zkuste to znovu, nebo se přihlaste heslem.',
+    'passkey_cancelled' => 'Žádný passkey nebyl použit. Pokud ho k tomuto účtu ještě nemáte, přihlaste se heslem a přidejte si ho v nastavení svého účtu.',
 ];

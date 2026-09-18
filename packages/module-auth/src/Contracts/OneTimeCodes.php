@@ -34,8 +34,10 @@ interface OneTimeCodes
      * Mint a code for this purpose and this identifier, replacing any it has.
      *
      * @param  array<string, mixed>  $payload  Carried on the row and handed back
-     *                                         by {@see verify()} — the reset
-     *                                         flow's broker token rides here.
+     *                                         by {@see verify()} — the e-mail
+     *                                         verification flow's address rides
+     *                                         here. Never a secret: a store may
+     *                                         keep it readable.
      */
     public function issue(CodePurpose $purpose, string $identifier, array $payload = []): OneTimeCode;
 

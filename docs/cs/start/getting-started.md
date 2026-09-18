@@ -16,7 +16,7 @@ Tento průvodce popisuje produkční nastavení Wire v Laravel aplikaci.
 | Livewire | 4.x |
 | Tailwind CSS | 3.x+ |
 | Alpine.js | 3.x+ (součástí Livewire) |
-| `nyoncode/laravel-package-toolkit` | ^2.5 (nainstaluje se sám) |
+| `nyoncode/laravel-package-toolkit` | ^2.5.2 (nainstaluje se sám) |
 
 Poslední řádek si sami nepřidáváte — Composer ho stáhne spolu s balíčky Wire.
 Je tu proto, že rozhoduje o dvou řádcích nad ním. Toolkit vlastní zrcadlo do
