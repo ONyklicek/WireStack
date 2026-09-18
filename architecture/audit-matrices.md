@@ -140,7 +140,7 @@ Six siblings implementing the same `Module` contract. Added 2026-09-17; findings
 | Menu entry hidden when permission refused | n/a | OK | OPEN | OK | **GAP** | OPEN |
 | Record page re-scopes on resolve | n/a | OK | fixed 2026-09-17 | n/a | OK | fixed 2026-09-17 |
 | Mutation authorized at the wire method | n/a | OK | fixed 2026-09-17 (per record) | **GAP** (group only) | n/a (read-only) | **GAP** in `all` scope |
-| Config table name honoured by migration | OK | n/a | **GAP** | **GAP** | OK | OK |
+| Config table name honoured by migration | OK | n/a | **GAP** | fixed 2026-09-18 | OK | OK |
 | Install idempotent on re-run | OK | OK (bar `teams.relation`) | OK | OK | OK | OK |
 | Missing-table guard before querying | OK | OK | OPEN | OK | OK | **GAP** |
 | `suggest` names the shell | OK | GAP | GAP | GAP | GAP | GAP |
@@ -157,12 +157,12 @@ Six siblings implementing the same `Module` contract. Added 2026-09-17; findings
 | `SaveHandler` / `RelationshipSaveHandler` | repeater rows added+removed in one save; dotted field names; missing relationship | OPEN — no adversarial probes recorded yet |
 | `EnumResolver` | non-enum class-string; enum without contract; mixed scalar/enum arrays | OK (tested 2026-06-21/23) |
 | `exportTable` | export with hidden columns; export under active sub-row filters | OK (tested); summaries-in-export tested 2026-06-11 |
-| `DatabaseOneTimeCodes` (auth) | two verifications of one code; double-submitted issue against the unique index; attempts past the `tinyint` ceiling | **GAP** 2026-09-17 — blind delete, no transaction, unclamped attempts |
+| `DatabaseOneTimeCodes` (auth) | two verifications of one code; double-submitted issue against the unique index; attempts past the `tinyint` ceiling | race + double issue fixed 2026-09-18 (consume by id and hash, single upsert); unclamped attempts still **GAP** |
 | `StoreUpload` (media) | disallowed MIME/extension; size over `max_size`; same checksum on a second disk; concurrent identical uploads | **GAP** 2026-09-17 — nothing validated, dedup unscoped to disk |
 | `SyncsMediaUsage` (media) | `data-media-id` naming a deleted or invented row, against a `cascadeOnDelete` FK | **GAP** 2026-09-17 (PLAUSIBLE; SQLite hides it without the pragma) |
-| `Settings::fill/remove/clear` | empty payload; write behind the model (query builder, seeder, truncate); `false`/`null`/`''`/`[]` round-trip | mixed 2026-09-17 — casts + match set OK, cache invalidation **GAP** |
+| `Settings::fill/remove/clear` | empty payload; write behind the model (query builder, seeder, truncate); `false`/`null`/`''`/`[]` round-trip | casts + match set OK; remove/clear announce 2026-09-18; builder writes are a documented boundary (`Settings::forget()`), pinned by a test |
 | `AuditLogger::filterExcludedColumns` | `*_token`, `*_secret`, recovery codes, nested arrays | fixed 2026-09-17 — pattern floor under the configurable list |
-| `AuditLogger::prune` | `--days=0`, negative days, unset env expanding to empty | **GAP** 2026-09-17 — wipes the trail, reports success |
+| `AuditLogger::prune` | `--days=0`, negative days, unset env expanding to empty | fixed 2026-09-18 — refused under one day, nothing deleted, non-zero exit |
 
 ### Viewport axis (mobile / tablet / desktop)
 

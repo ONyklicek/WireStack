@@ -467,10 +467,44 @@ padá. Brány po nich: `composer test` 8681 zelených, `coverage:verify` OK
 `docs:api`, `docs:examples`, `hooks:verify` a `verify:drivers -- media`
 (5 driverů, 98 kontrol).
 
+### §3 hotovo 2026-09-18
+
+- **audit #11** — `wire-core:audit-prune` odmítne `--days` pod jeden den,
+  prázdné, desetinné i nečíselné, nic nesmaže a skončí nenulově; `prune()` hází
+  `InvalidRetentionException`. `retention_days` z `.env` se čte jako číslo.
+- **audit #9** — nález byl napůl mylný: `restore()` jde přes `save()` a
+  `forceDelete()` přes `delete()`, takže obojí trail vidí (ověřeno testem).
+  Skutečná hranice jsou builder-level zápisy, a ty Laravel neohlašuje. Oprava
+  je poctivě ji popsat — docblock `HasAuditable`, `docs/core/audit.md`, boost
+  guideline — a přibít testem. Příklad s `withoutAuditing()` obaloval builder
+  update, který se nezaznamenal nikdy; učil opak.
+- **auth F3** — kód se konzumuje podle `id` *a* hashe; kdo nic nesmazal,
+  prohrál závod. Hash proto, že `issue()` teď nahrazuje na místě: delete podle
+  páru nebo jen podle klíče by starší číslice smazaly novější mail.
+- **auth F4** — `issue()` je jeden `upsert`, `attempts` mezi přepisovanými
+  sloupci. Okno mezi delete a insert zmizelo na všech driverech.
+- **auth F5** — správný kód nechá v session důkaz (adresa, HMAC číslic, expirace
+  kódu). Oprava hesla v téže session ho přijme místo spotřebovaného řádku;
+  `OtpInput` kód po přesměrování vyplní sám. Kontrakt `OneTimeCodes` ani view se
+  nemění. Token vyražený pro pokus se ve `finally` vždy zruší a z inputu se před
+  flashnutím vyřadí.
+- **settings #2** — migrace čte `wire-module-settings.table` a je chráněná
+  `hasTable`, protože config název instalátor ze zdrojáku nepřečte a aplikace ze
+  schema dumpu ji může dostat podruhé. `about` hlásí tabulku.
+- **settings #12** — `remove()` a `clear()` vysílají `SettingsSaved` s tím, co
+  za odebraný klíč platí teď (deklarovaný default, jinak `null`). Nic, když nic
+  nebylo.
+- **settings #13** — nejde opravit, builder zápis model eventy nevyvolá. Oprava
+  je přestat to zapírat: docblock modelu tvrdil, že data migrace je pokrytá;
+  `Settings::forget()` je zdokumentovaná jako krok po takovém zápisu a test
+  hranici hlídá.
+
+Každá oprava má test, který proti starému kódu padá; charakterizační testy
+hranic (builder, restore, prázdné remove) procházejí oběma cestami záměrně.
+
 ### Zbývá
 
-Pak §3 (ztráta dat) a §4 (seamy). §5 chce vlastní runtime ověření dřív, než se
-na něj sáhne.
+§4 (seamy). §5 chce vlastní runtime ověření dřív, než se na něj sáhne.
 
 ---
 
