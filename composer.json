@@ -57,8 +57,7 @@
         "barryvdh/laravel-dompdf": "^3.0",
         "nyoncode/laravel-permission-extended": "^1.0",
         "laravel/fortify": "^1.0|^2.0",
-        "larastan/larastan": "^3.0",
-        "pestphp/pest-plugin-browser": "^5.0"
+        "larastan/larastan": "^3.0"
     },
     "repositories": [
         {
@@ -209,7 +208,7 @@
         "test:module-audit": "vendor/bin/pest --configuration packages/module-audit/phpunit.xml",
         "test:sortable": "vendor/bin/pest --configuration packages/sortable/phpunit.xml",
         "test:boost": "vendor/bin/pest --configuration packages/boost/phpunit.xml",
-        "test:browser": "vendor/bin/pest --configuration packages/module-auth/phpunit.xml packages/module-auth/tests/Browser",
+        "test:browser": "bash scripts/test-browser.sh",
         "lint": "vendor/bin/pint",
         "analyse": "vendor/bin/phpstan analyse --ansi",
         "api:dead": "php scripts/verify-dead-api.php .",
