@@ -239,6 +239,19 @@ it('declines when an answer it cannot do without is empty', function () {
         ->and(implode("\n", $said))->toContain('nothing was created');
 });
 
+it('takes an empty password as the way out, rather than asking again for ever', function () {
+    // The other empty answer, and it reaches a different branch: the case above
+    // stops at the address and never gets as far as the password. Pressing enter
+    // here has to end the step — a validator that refused it would re-ask a
+    // question the person has already declined to answer.
+    Tables::users();
+    $said = [];
+
+    expect(cfaStep()->apply(cfaConsole(['Name', 'ann@example.com', ''], $said)))->toBe(SetupOutcome::Skipped)
+        ->and(User::count())->toBe(0)
+        ->and(implode("\n", $said))->toContain('nothing was created');
+});
+
 it('fails rather than pretending, when the row cannot be written', function () {
     // A column the application requires and this step does not fill.
     Schema::create('users', function (Blueprint $table): void {

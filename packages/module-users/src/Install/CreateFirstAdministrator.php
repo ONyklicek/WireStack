@@ -152,10 +152,19 @@ final readonly class CreateFirstAdministrator implements SetupStep
     {
         return (new Answers($console))->until(
             static fn (): string => $console->secret('Password'),
-            fn (string $password): ?string => $password === ''
-                ? null
-                : $this->accounts->passwordProblem($password)
-                    ?? ($console->secret('Password again') === $password ? null : 'The two passwords are not the same'),
+            function (string $password) use ($console): ?string {
+                // Nothing typed is the way out, and `Answers` reads a null as
+                // "that will do" — the caller turns the empty answer into
+                // "nothing was created". A statement rather than a ternary arm
+                // because a bare `? null` is not one, and the coverage tool
+                // cannot see a line that never executes anything.
+                if ($password === '') {
+                    return null;
+                }
+
+                return $this->accounts->passwordProblem($password)
+                    ?? ($console->secret('Password again') === $password ? null : 'The two passwords are not the same');
+            },
         ) ?? '';
     }
 
