@@ -61,6 +61,10 @@ driver notifikací, který o tomhle modulu neví.
 chce oprávnění na stránce, ne jen klíč v konfiguraci. Odhlášenému `own`
 neodpovídá nic, což je ta bezpečná půlka volby.
 
+Scope drží i na detailu, nejen ve výpisu, takže id notifikace v URL není
+oprávnění ji číst — pod `own` cizí odpoví 404, místo aby se vykreslila a tiše se
+za toho člověka označila jako přečtená.
+
 Texty jsou publikovatelný překladový soubor a markup publikovatelný pohled —
 `wire-module-notifications::translations` a `…::views`; co to stojí, říká
 [Vzhled → Lokalizace](../start/theming.md#lokalizace) a

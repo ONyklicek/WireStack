@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NyonCode\WireModuleUsers\Concerns;
+namespace NyonCode\WirePanels\Resources\Concerns;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -11,11 +11,20 @@ use NyonCode\WireCore\Core\Data\RecordContract;
 /**
  * A record page that finds its record among the ones the viewer may see.
  *
- * A list scoped to the current team is not enough, because a URL is not a list:
- * without this, `users/42/edit` opened an account of another team for anybody
- * who could edit accounts in their own. The record is looked up through the
- * same scope the page's list uses ({@see scopeRecordQuery()}), and one outside
- * it is a 404 rather than a 403, so the answer does not say that it exists.
+ * **A scoped list is not a scoped page, because a URL is not a list.** Without
+ * this, `users/42/edit` opened an account of another team for anybody who could
+ * edit accounts in their own, and `notifications/{id}` handed over — and marked
+ * read — somebody else's. Both pages had the right scope; neither applied it
+ * where the key arrives.
+ *
+ * The record is looked up through the same scope the page's list uses
+ * ({@see scopeRecordQuery()}), and one outside it is a **404 rather than a
+ * 403**, so the answer does not say that it exists.
+ *
+ * It lives here rather than beside its first caller because its second caller is
+ * in another module, and a module may not require a module: any resource page
+ * with a scoped list has this question, so `wire-panels` is the lowest layer
+ * that can own it.
  */
 trait ResolvesScopedRecord
 {

@@ -139,6 +139,35 @@ it('leaves an already-read notification alone', function () {
     expect($notification->fresh()->read_at->toDateTimeString())->toBe($readAt->toDateTimeString());
 });
 
+it('will not open somebody else s notification on the id alone', function () {
+    // The list was scoped and the page was not, so a URL was permission: the
+    // whole payload rendered, and the read-on-open hook below then took the item
+    // out of *their* unread tab. A read they never made, on a message they never
+    // saw. 404 rather than 403, so the answer does not say that it exists.
+    $theirs = nmNotification('2');
+
+    Auth::setUser(NmUser::find(1));
+
+    Livewire::test(ViewNotification::class, ['record' => $theirs->id])
+        ->assertNotFound();
+
+    expect($theirs->fresh()->read_at)->toBeNull();
+});
+
+it('opens anybody s notification once the screen is the administrative one', function () {
+    // `scope => all` is the documented administrative view, and the page has to
+    // follow the list rather than keep its own idea of whose things these are.
+    config()->set('wire-module-notifications.scope', 'all');
+
+    $theirs = nmNotification('2');
+
+    Auth::setUser(NmUser::find(1));
+
+    Livewire::test(ViewNotification::class, ['record' => $theirs->id])->assertOk();
+
+    expect($theirs->fresh()->read_at)->not->toBeNull();
+});
+
 it('filters by read state', function () {
     Auth::setUser(NmUser::find(1));
     nmNotification('1');

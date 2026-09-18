@@ -75,5 +75,15 @@ parameters:
         # Same fact about this list: its two users are CreatePage and EditPage,
         # both excluded above as Livewire hosts.
         - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/RedirectsAfterSave.php }
+        # Every user is a resource page in wire-module-users or
+        # wire-module-notifications, all outside the analysed paths. No
+        # @phpstan-require-extends to keep the body checked, unlike
+        # InteractsWithRecordTitle: this trait overrides a method it inherits
+        # from a *sibling* trait and calls `parent::resolveRecord()`, which
+        # resolves through the host class rather than through any base this
+        # could name. ViewPage and EditPage both compose ResolvesOneRecord and
+        # share no record-page ancestor, so there is no honest constraint to
+        # write — and writing Component would be a claim the body contradicts.
+        - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/ResolvesScopedRecord.php }
         - { identifier: trait.unused, path: packages/core/src/Core/Resources/Concerns/DescribesRecords.php }
         - { identifier: trait.unused, path: packages/core/src/Core/Tenancy/Concerns/BelongsToTenant.php }

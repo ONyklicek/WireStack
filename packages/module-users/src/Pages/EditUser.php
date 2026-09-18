@@ -8,12 +8,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Data\RecordContract;
 use NyonCode\WireForms\Forms\Form;
-use NyonCode\WireModuleUsers\Concerns\ResolvesScopedRecord;
 use NyonCode\WireModuleUsers\Concerns\SyncsRoles;
 use NyonCode\WireModuleUsers\Resources\UserResource;
 use NyonCode\WireModuleUsers\Support\AccountGuard;
 use NyonCode\WireModuleUsers\Support\Roles;
 use NyonCode\WireModuleUsers\Support\Teams;
+use NyonCode\WirePanels\Resources\Concerns\ResolvesScopedRecord;
 use NyonCode\WirePanels\Resources\Pages\EditPage;
 
 /**

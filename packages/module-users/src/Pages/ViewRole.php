@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace NyonCode\WireModuleUsers\Pages;
 
 use Illuminate\Database\Eloquent\Builder;
-use NyonCode\WireModuleUsers\Concerns\ResolvesScopedRecord;
 use NyonCode\WireModuleUsers\Resources\RoleResource;
 use NyonCode\WireModuleUsers\Support\Teams;
 use NyonCode\WirePanels\Resources\Concerns\InteractsWithRecordTitle;
+use NyonCode\WirePanels\Resources\Concerns\ResolvesScopedRecord;
 use NyonCode\WirePanels\Resources\Pages\ViewPage;
 
 /**
