@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use Closure;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Contracts\Auth\PasswordBroker as PasswordBrokerContract;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 use Laravel\Fortify\Features;
 use NyonCode\WireModuleAuth\Tests\Fixtures\CodeUser;
@@ -127,6 +130,96 @@ it('refuses the same code twice', function () {
     ])->assertSessionHasErrors('code');
 
     expect(Hash::check('a-brand-new-one', $user->fresh()->password))->toBeTrue();
+});
+
+it('keeps no readable credential in the codes table', function () {
+    // The defect this pins: the code's payload used to carry the broker's token
+    // verbatim. Laravel files that token hashed precisely so a copy of the table
+    // is not a set of live credentials — and a second table holding the readable
+    // original hands an attacker the reset without the six digits, past the
+    // attempt counter, the resend window and the route throttle alike.
+    CodeWorld::user();
+
+    $this->post('/forgot-password', ['email' => 'ann@example.com']);
+
+    $row = DB::table('wire_auth_one_time_codes')->where('purpose', 'reset-password')->first();
+    $filed = (string) DB::table('password_reset_tokens')->where('email', 'ann@example.com')->value('token');
+
+    $payload = json_decode((string) ($row->payload ?? '{}'), true);
+
+    expect($payload)->toBe([])
+        // Belt and braces: whatever a later flow decides to carry, nothing in
+        // the row may verify against the token the broker filed.
+        ->and(Hash::check((string) $row->code, $filed))->toBeFalse();
+});
+
+it('mints the token it resets with, rather than carrying one', function () {
+    // The token is the broker's either way — what changed is when it exists in
+    // readable form. It is asked for at the moment the code is redeemed, so the
+    // reset still runs on Laravel's own expiry, single use and rules.
+    $user = CodeWorld::user();
+
+    $this->post('/forgot-password', ['email' => 'ann@example.com']);
+
+    $code = mailedResetCode();
+
+    // Whatever `sendResetLink` filed is thrown away, exactly as a second request
+    // for a link would throw it away. Nobody can have been holding it.
+    DB::table('password_reset_tokens')->delete();
+
+    $this->post('/reset-password-code', [
+        'email' => 'ann@example.com',
+        'code' => $code,
+        'password' => 'a-brand-new-one',
+        'password_confirmation' => 'a-brand-new-one',
+    ])->assertSessionHasNoErrors();
+
+    expect(Hash::check('a-brand-new-one', $user->fresh()->password))->toBeTrue();
+});
+
+it('refuses rather than fatals when the application swapped the broker out', function () {
+    // `createToken()` is on Laravel's concrete PasswordBroker, not on the
+    // contract `Password::broker()` is typed against — so an application that
+    // bound a broker of its own would otherwise reach a fatal on a call that is
+    // not there. It cannot mint, so the code cannot be redeemed, and the honest
+    // report is that the code did not work.
+    $user = CodeWorld::user();
+
+    $this->post('/forgot-password', ['email' => 'ann@example.com']);
+
+    $code = mailedResetCode();
+
+    // The facade caches the manager it already resolved for `/forgot-password`,
+    // so binding alone would change nothing.
+    Password::clearResolvedInstances();
+
+    app()->instance('auth.password', new class
+    {
+        public function broker(?string $name = null): PasswordBrokerContract
+        {
+            return new class implements PasswordBrokerContract
+            {
+                public function sendResetLink(array $credentials, ?Closure $callback = null)
+                {
+                    return PasswordBrokerContract::RESET_LINK_SENT;
+                }
+
+                public function reset(array $credentials, Closure $callback)
+                {
+                    return PasswordBrokerContract::PASSWORD_RESET;
+                }
+            };
+        }
+    });
+
+    $this->post('/reset-password-code', [
+        'email' => 'ann@example.com',
+        'code' => $code,
+        'password' => 'a-brand-new-one',
+        'password_confirmation' => 'a-brand-new-one',
+    ])->assertSessionHasErrors('code');
+
+    expect(Hash::check('a-brand-new-one', $user->fresh()->password))->toBeFalse();
 });
 
 it('fills the address in on the screen, without putting it in the URL', function () {

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleAuth\Http\Controllers;
 
+use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
@@ -19,16 +21,31 @@ use NyonCode\WireModuleAuth\Support\Codes;
  * A new password, from a code instead of a link.
  *
  * **The broker's token is untouched, and it is still what resets the password.**
- * The mail carries a code; the code's payload *is* that token
- * (`Actions\MailResetCode`), and this controller's whole job is to swap one for
- * the other and hand the request to Fortify's own `NewPasswordController`. So
- * the token's expiry, its single use, the broker's rules and
- * `ResetsUserPasswords` all keep working exactly as they do behind a link
- * (ADR 0037 §2).
+ * The mail carries a code; a correct code mints a token from the broker's own
+ * repository, and this controller hands the request to Fortify's own
+ * `NewPasswordController`. So the token's expiry, its single use, the broker's
+ * rules and `ResetsUserPasswords` all keep working exactly as they do behind a
+ * link (ADR 0037 §2).
  *
  * That indirection is what makes six digits acceptable here at all: the code is
  * a short-lived, attempt-counted key to a token nobody can guess, rather than a
  * replacement for it.
+ *
+ * ## Why the token is minted here and not carried
+ *
+ * It used to ride in the code's payload, which meant the readable original of a
+ * secret Laravel stores hashed sat in a second table until somebody used or
+ * replaced it. The code is the thing that proves possession of the mailbox; once
+ * it has, there is no reason not to ask the broker for a token in the same
+ * breath. `createToken()` replaces any token the user already had, so the link
+ * flow and this one cannot both be live for the same account — which is the
+ * property the link flow has always had.
+ *
+ * The throttle `sendResetLink()` applies before minting is deliberately not
+ * repeated here: it exists to stop an unauthenticated stranger mailing somebody
+ * repeatedly, and by this point the caller has already answered a code that only
+ * reached that mailbox. The attempt counter on the code row is the limit that
+ * belongs on this end.
  */
 class PasswordResetCodeController extends Controller
 {
@@ -68,7 +85,8 @@ class PasswordResetCodeController extends Controller
         $address = Codes::identifierFor((string) $request->input($field));
 
         $verified = $this->codes->verify(CodePurpose::ResetPassword, $address, (string) $request->input('code'));
-        $token = $verified?->payload('token');
+
+        $token = $verified === null ? null : $this->mintToken($request->input($field));
 
         if (! is_string($token) || $token === '') {
             throw ValidationException::withMessages([
@@ -79,5 +97,27 @@ class PasswordResetCodeController extends Controller
         $request->merge(['token' => $token]);
 
         return app(NewPasswordController::class)->store($request);
+    }
+
+    /**
+     * A token for the account this address belongs to, from the broker Fortify
+     * will check it against.
+     *
+     * `null` when the address reaches nobody. A code was issued against it, so
+     * this is the account having gone away between the mail and the form — rare,
+     * and reported as the code being no good rather than as an account that does
+     * or does not exist.
+     */
+    private function mintToken(mixed $address): ?string
+    {
+        $broker = Password::broker(config('fortify.passwords'));
+
+        if (! $broker instanceof PasswordBroker) {
+            return null;
+        }
+
+        $user = $broker->getUser([Fortify::email() => $address]);
+
+        return $user === null ? null : $broker->createToken($user);
     }
 }
