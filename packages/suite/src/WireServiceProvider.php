@@ -9,6 +9,7 @@ use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\Wire\Install\Catalogue;
 use NyonCode\Wire\Install\Setup;
 use NyonCode\Wire\Install\Steps\RunMigrations;
+use NyonCode\Wire\Install\Steps\SendSignInToPanel;
 use NyonCode\Wire\Install\WireInstallCommand;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 
@@ -47,6 +48,11 @@ class WireServiceProvider extends PackageServiceProvider
                 // "Run: php artisan migrate", and migrating is about the
                 // application rather than any of them.
                 SetupRegistry::instance()->register(RunMigrations::class);
+
+                // And the one that needs two packages that may not know each
+                // other: Fortify's `home` is module-auth's file, the admin's
+                // root is wire-panels' route. See the step for why.
+                SetupRegistry::instance()->register(SendSignInToPanel::class);
             })
             ->hasCommand(WireInstallCommand::class)
             ->hasAbout();
