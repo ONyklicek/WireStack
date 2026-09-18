@@ -4,6 +4,8 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ## [2.1.0]
 
+Includes everything listed under [2.0.1], which was not released on its own.
+
 ### Added
 
 - **A person lands in their zone after signing in — `Route::wireZoneEntry()`.** With several zones,
