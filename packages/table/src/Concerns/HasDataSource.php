@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Data\DataSource;
 use NyonCode\WireTable\Data\EloquentDataSource;
+use NyonCode\WireTable\Exceptions\CustomDataSourceException;
 use NyonCode\WireTable\Exceptions\TableHasNoDataSourceException;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Table;
@@ -132,6 +133,8 @@ trait HasDataSource
             $query = clone $this->query;
         } elseif ($this->model) {
             $query = $this->model::query();
+        } elseif ($this->customDataSource && $this->dataSource !== null) {
+            throw CustomDataSourceException::needsQuery($this->dataSource::class);
         } else {
             throw TableHasNoDataSourceException::make();
         }

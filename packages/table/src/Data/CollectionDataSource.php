@@ -170,6 +170,26 @@ final class CollectionDataSource implements DataSource
             $rows = $rows->filter(fn (array $row): bool => $this->matches($row, $filter));
         }
 
+        // The term rides on the plan (QueryPlan::$searchTerm) because a source
+        // has nothing else to go on; the clauses say which columns to look in.
+        // Any column containing it keeps the row, case-insensitively — what the
+        // Eloquent path's LIKE does for a plain term.
+        $term = trim((string) $plan->searchTerm);
+
+        if ($term !== '' && $plan->searchClauses !== []) {
+            $needle = mb_strtolower($term);
+
+            $rows = $rows->filter(function (array $row) use ($plan, $needle): bool {
+                foreach ($plan->searchClauses as $clause) {
+                    if (str_contains(mb_strtolower(self::text($row[$clause->column] ?? null)), $needle)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+        }
+
         foreach (array_reverse($plan->sortClauses) as $sort) {
             // Reversed, because a stable sort applied last wins: sorting by the
             // least significant clause first leaves the most significant one on
@@ -212,24 +232,66 @@ final class CollectionDataSource implements DataSource
      */
     private function matches(array $row, FilterClause $filter): bool
     {
-        $value = $row[$filter->column] ?? null;
+        $value = self::scalar($row[$filter->column] ?? null);
+        $operand = $filter->value;
 
-        return match ($filter->operator) {
-            '=' => $value == $filter->value,
-            '!=', '<>' => $value != $filter->value,
-            '>' => $value > $filter->value,
-            '>=' => $value >= $filter->value,
-            '<' => $value < $filter->value,
-            '<=' => $value <= $filter->value,
-            'like' => is_string($value) && str_contains(
-                mb_strtolower($value),
-                mb_strtolower(trim((string) $filter->value, '%')),
-            ),
-            'in' => is_array($filter->value) && in_array($value, $filter->value, false),
+        // Operators arrive as the filters write them — TextFilter says `LIKE`,
+        // NumberRangeFilter `BETWEEN` — so they are compared case-insensitively.
+        return match (strtolower($filter->operator)) {
+            '=' => $value == self::scalar($operand),
+            '!=', '<>' => $value != self::scalar($operand),
+            '>' => $value > $operand,
+            '>=' => $value >= $operand,
+            '<' => $value < $operand,
+            '<=' => $value <= $operand,
+            'like' => self::like($value, (string) $operand),
+            'not like' => ! self::like($value, (string) $operand),
+            'in' => is_array($operand) && in_array($value, array_map(self::scalar(...), $operand), false),
+            'not in' => is_array($operand) && ! in_array($value, array_map(self::scalar(...), $operand), false),
+            // Either bound may be missing: "at least 100" is [100, null].
+            'between' => is_array($operand)
+                && (($operand[0] ?? null) === null || $value >= $operand[0])
+                && (($operand[1] ?? null) === null || $value <= $operand[1]),
+            'is null' => $value === null,
+            'is not null' => $value !== null,
             default => throw UnsupportedQueryAspectException::notDeclared(
                 "filter operator [{$filter->operator}]",
                 self::class,
             ),
+        };
+    }
+
+    /**
+     * SQL's LIKE over a PHP value: `%` is any run, `_` one character, and the
+     * comparison ignores case, the way the default collations do.
+     */
+    private static function like(mixed $value, string $pattern): bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        $regex = '/^'.strtr(preg_quote($pattern, '/'), ['%' => '.*', '_' => '.']).'$/iu';
+
+        return preg_match($regex, self::text($value)) === 1;
+    }
+
+    /** A backed enum compares by its value, the way it is stored. */
+    private static function scalar(mixed $value): mixed
+    {
+        return $value instanceof \BackedEnum ? $value->value : $value;
+    }
+
+    private static function text(mixed $value): string
+    {
+        $value = self::scalar($value);
+
+        return match (true) {
+            $value === null => '',
+            $value instanceof \UnitEnum => $value->name,
+            is_bool($value) => $value ? '1' : '0',
+            is_scalar($value), $value instanceof \Stringable => (string) $value,
+            default => '',
         };
     }
 }

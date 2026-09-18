@@ -24,6 +24,12 @@ final readonly class QueryPlan
      * @param  array<int, SortClause>  $sortClauses
      * @param  array<int, string>  $scopes
      * @param  bool  $withSoftDeletes  Whether to include soft-deleted records
+     * @param  string|null  $searchTerm  What was typed into the search box. The
+     *                                   Eloquent path hands the parsed term to its
+     *                                   executor separately; a DataSource has
+     *                                   nothing but the plan, so the term rides
+     *                                   here — without it the search clauses name
+     *                                   the columns and never say what to find.
      */
     public function __construct(
         public array $joins = [],
@@ -35,6 +41,7 @@ final readonly class QueryPlan
         public array $scopes = [],
         public ?RelationGraph $relationGraph = null,
         public bool $withSoftDeletes = false,
+        public ?string $searchTerm = null,
     ) {}
 
     public function hasJoins(): bool
@@ -100,6 +107,7 @@ final readonly class QueryPlan
             scopes: $this->scopes,
             relationGraph: $this->relationGraph,
             withSoftDeletes: $this->withSoftDeletes,
+            searchTerm: $this->searchTerm,
         );
     }
 
@@ -126,6 +134,7 @@ final readonly class QueryPlan
             scopes: $this->scopes,
             relationGraph: $this->relationGraph,
             withSoftDeletes: $this->withSoftDeletes,
+            searchTerm: $this->searchTerm,
         );
     }
 
@@ -146,6 +155,7 @@ final readonly class QueryPlan
             scopes: $this->scopes,
             relationGraph: $this->relationGraph,
             withSoftDeletes: $this->withSoftDeletes,
+            searchTerm: $this->searchTerm,
         );
     }
 
@@ -166,6 +176,7 @@ final readonly class QueryPlan
             scopes: $this->scopes,
             relationGraph: $this->relationGraph,
             withSoftDeletes: $this->withSoftDeletes,
+            searchTerm: $this->searchTerm,
         );
     }
 }

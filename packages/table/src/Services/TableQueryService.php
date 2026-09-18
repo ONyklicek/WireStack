@@ -18,16 +18,20 @@ use NyonCode\WireCore\Core\Plugin\Hooks\TableQueriedPayload;
 use NyonCode\WireCore\Core\Plugin\Hooks\TableQueryingPayload;
 use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\Query\FilterClause;
 use NyonCode\WireCore\Core\Query\FilterDefinition;
 use NyonCode\WireCore\Core\Query\JoinRegistry;
 use NyonCode\WireCore\Core\Query\QueryExecutor;
 use NyonCode\WireCore\Core\Query\QueryPlan;
 use NyonCode\WireCore\Core\Query\QueryPlanner;
 use NyonCode\WireCore\Core\Query\Search\SearchTermParser;
+use NyonCode\WireCore\Core\Query\SearchClause;
+use NyonCode\WireCore\Core\Query\SortClause;
 use NyonCode\WireCore\Core\Query\SortDefinition;
 use NyonCode\WireCore\Core\Query\StableOrder;
 use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Exceptions\CustomDataSourceException;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Support\SearchTypeGuard;
@@ -403,6 +407,114 @@ final class TableQueryService
      * Get the last QueryPlan built by buildQuery().
      * Useful for debugging and the debugQueryPlan() feature.
      */
+    /**
+     * The table's state as a plan a custom data source can answer.
+     *
+     * The Eloquent path plans against a model (metadata, joins, casts) and
+     * executes on a builder; a `DataSource` gets neither — only the plan. So
+     * this builds one from the same model-agnostic definitions that path starts
+     * from (`Filter::toPlannerDefinitions()`, the column's sort target, its
+     * searchable columns) and stops there. A dotted column is marked as a
+     * relation, which a source that cannot join refuses by name.
+     *
+     * Whatever exists only as an Eloquent callback — a filter's `query()`, a
+     * DateFilter, a column's `searchUsing()` / `sortUsing()` — has nothing to
+     * say to a source, and is refused the moment it is used rather than
+     * silently ignored.
+     *
+     * @param  array<string, mixed>  $filterValues
+     * @param  array<string, mixed>  $columnFilterValues
+     */
+    public function planForSource(
+        Table $table,
+        ?string $search = null,
+        array $filterValues = [],
+        ?string $sortColumn = null,
+        string $sortDirection = 'asc',
+        array $columnFilterValues = [],
+    ): QueryPlan {
+        $source = $table->getDataSource()::class;
+        $columns = $table->getColumns();
+
+        $filters = [];
+
+        foreach ($table->getFilters() as $filter) {
+            $raw = data_get($filterValues, $filter->getName());
+
+            if ($raw === null || $raw === '' || $raw === [] || ! $filter->canView()) {
+                continue;
+            }
+
+            // Emptiness is asked of the extracted value, not the raw state: a
+            // DateFilter's untouched state is ['from' => null, 'to' => null],
+            // and a filter nobody set must cost nothing, whatever it maps to.
+            $value = $filter->extractValue($raw);
+
+            if ($value === null || $value === '' || $value === [] || (is_array($value) && array_filter($value, static fn ($v): bool => $v !== null && $v !== '') === [])) {
+                continue;
+            }
+
+            if ($filter->getQueryCallback() !== null || $filter->bypassesPlanner()) {
+                throw CustomDataSourceException::filterNeedsQuery($filter->getName(), $source);
+            }
+
+            array_push($filters, ...$filter->toPlannerDefinitions($value));
+        }
+
+        array_push($filters, ...$this->buildPlannerColumnFilters($columns, $columnFilterValues));
+
+        $term = $search !== null && trim($search) !== '' ? $search : null;
+        $searchClauses = [];
+
+        if ($term !== null) {
+            foreach ($columns as $column) {
+                if (! $column->isSearchable()) {
+                    continue;
+                }
+
+                if ($column->getSearchCallback() !== null) {
+                    throw CustomDataSourceException::needsQuery($source);
+                }
+
+                $targets = $column->getSearchColumns() !== [] ? $column->getSearchColumns() : [$column->getName()];
+
+                foreach ($targets as $target) {
+                    $searchClauses[] = new SearchClause(column: $target, isRelation: str_contains($target, '.'));
+                }
+            }
+        }
+
+        if ($sortColumn !== null && $this->findColumn($columns, $sortColumn)?->getSortCallback() !== null) {
+            throw CustomDataSourceException::needsQuery($source);
+        }
+
+        $sorts = array_map(
+            static fn (SortDefinition $sort): SortClause => new SortClause(
+                column: $sort->column,
+                direction: $sort->direction,
+                sqlExpression: $sort->sqlExpression,
+                isRelation: $sort->relationPath !== null,
+            ),
+            $this->buildPlannerSorts($sortColumn, $sortDirection, $columns, false),
+        );
+
+        return $this->lastPlan = new QueryPlan(
+            filters: array_map(
+                static fn (FilterDefinition $filter): FilterClause => new FilterClause(
+                    column: $filter->column,
+                    operator: $filter->operator,
+                    value: $filter->value,
+                    sqlExpression: $filter->sqlExpression,
+                    isRelation: $filter->relationPath !== null,
+                ),
+                $filters,
+            ),
+            searchClauses: $searchClauses,
+            sortClauses: $sorts,
+            searchTerm: $term,
+        );
+    }
+
     public function getLastPlan(): ?QueryPlan
     {
         return $this->lastPlan;

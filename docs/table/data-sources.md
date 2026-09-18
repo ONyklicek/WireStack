@@ -60,7 +60,14 @@ public function table(Table $table): Table
 ```
 
 No `->model()`, no `->query()`. Search, filters, sorting and pagination all work;
-the source answers them over the array.
+the source answers them over the array. So do the parts built on top of them:
+footer summaries total everything the filters match, not only the page, and
+"select all matching" hands a bulk action every matching row.
+
+Each row reaches the columns, actions and bulk actions as a `CollectionRow` — a
+read-only model keyed the way the source keys it, so `$record->name` and
+`$record->getKey()` read as they would on Eloquent. Calling `save()` or `delete()`
+on one throws: it has no table to write to.
 
 ## What a collection-backed table cannot do
 
@@ -74,6 +81,17 @@ refusal raises `UnsupportedQueryAspectException` with the aspect named:
 | Subquery aggregates | `->sums()`, `->counts()` rollups | throws `[aggregateable]` |
 | Cursor pagination | `->paginationMode('cursor')` | throws `[cursor paging]` |
 | Change detection for polling | `->poll()` | returns `null`; polling compares rows instead |
+
+The table itself refuses what only an Eloquent builder can do. Declaring it
+costs nothing; the moment it is **used**, `CustomDataSourceException` names it
+instead of failing on a missing model:
+
+| Asking for | Where it comes from | Result |
+|------------|--------------------|--------|
+| A filter that applies itself as a query | `DateFilter`, `Filter::query(fn ($query) => …)` | throws once a value is set |
+| A search or a sort written as a callback | `->searchable(true, fn ($query, $term) => …)`, `->sortable(true, fn …)` | throws once searched or sorted |
+| The selection as a builder | `selectedRecordsQuery()` | throws; `getSelectedRecords()` reads rows instead |
+| Writing a row back | `$record->save()`, `$record->delete()` | throws |
 
 None of these are limitations to work around silently. A table over an in-memory
 list is a **restricted table**, and the restriction is visible the first time you
@@ -124,9 +142,10 @@ Action::make('archive')
     ->action(fn (Model $record) => $record->archive());
 ```
 
-The consequence is worth stating plainly: over a source with no model to unwrap,
-an action written that way is not available. That is the same degradation the
-query side applies, one level up.
+Over `CollectionDataSource` there is no model to unwrap, so the table hands the
+closure a `CollectionRow` built from the array. The signature holds; what the
+closure does with the row is up to it — `$record->archive()` does not exist on
+it, and `$record->save()` throws rather than pretending to write.
 
 ## What stays Eloquent-only
 

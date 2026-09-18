@@ -44,8 +44,10 @@ use NyonCode\WireForms\Concerns\InteractsWithSelectCreation;
 use NyonCode\WireForms\Concerns\InteractsWithWizards;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Data\CollectionRow;
 use NyonCode\WireTable\Data\EloquentDataSource;
 use NyonCode\WireTable\Events\TableRecordsChanged;
+use NyonCode\WireTable\Exceptions\CustomDataSourceException;
 use NyonCode\WireTable\Export\ExportAction;
 use NyonCode\WireTable\Export\ExportFormat;
 use NyonCode\WireTable\Export\Jobs\RunExportJob;
@@ -649,6 +651,13 @@ trait WithTable
      */
     protected function computePollChecksum(bool|callable $detector): ?string
     {
+        // No query to COUNT/MAX over; a null token makes the poll compare the
+        // rows it drew instead, which is what a source's own changeToken() of
+        // null already means.
+        if ($this->getTable()->hasCustomDataSource()) {
+            return null;
+        }
+
         $query = (clone $this->buildTableQuery())->reorder();
 
         if ($detector !== true) {
@@ -943,6 +952,10 @@ trait WithTable
      */
     protected function fetchTableRecords(Table $table): LengthAwarePaginator|Paginator|CursorPaginator|Collection
     {
+        if ($table->hasCustomDataSource()) {
+            return $this->fetchFromSource($table);
+        }
+
         $query = $this->buildTableQuery();
 
         if ($table->isQueryCached()) {
@@ -1083,6 +1096,76 @@ trait WithTable
         return (new EloquentDataSource($query))->get(
             $this->getQueryService()->getLastPlan() ?? new QueryPlan,
         );
+    }
+
+    /**
+     * The table's state as a plan for its custom data source.
+     *
+     * Rebuilt on every ask rather than memoised: it is a handful of value
+     * objects, and a memo would be one more thing to forget to clear when the
+     * search, a filter or the sort changes mid-request.
+     */
+    protected function sourcePlan(): QueryPlan
+    {
+        $table = $this->getTable();
+        $sortColumn = $this->tableState->get('sort.column', '') ?: ($table->getDefaultSort() ?? '');
+
+        return $this->getQueryService()->planForSource(
+            table: $table,
+            search: $this->tableState->get('search'),
+            filterValues: $this->tableState->get('filters', []),
+            sortColumn: $sortColumn !== '' ? $sortColumn : null,
+            sortDirection: $this->tableState->get('sort.direction', '') ?: ($table->getDefaultSortDirection() ?? 'asc'),
+            columnFilterValues: $this->tableState->get('columnFilters', []),
+        );
+    }
+
+    /**
+     * One page — or every row — of a custom data source, as the rows the table
+     * draws.
+     *
+     * A source answers with arrays or record contracts; everything that renders
+     * a row is written against a model, so each row is handed over as a
+     * {@see CollectionRow}. This is the path `->dataSource()` was documented to
+     * take and never did: the fetch always planned an Eloquent query, and a
+     * table with a source but no model threw before it drew.
+     */
+    protected function fetchFromSource(Table $table): LengthAwarePaginator|Paginator|CursorPaginator|Collection
+    {
+        $source = $table->getDataSource();
+        $plan = $this->sourcePlan();
+        $key = $table->getPrimaryKey();
+
+        if (! $table->isPaginated()) {
+            return $source->get($plan)->map(fn (mixed $row) => CollectionRow::from($row, $key))->values();
+        }
+
+        $perPage = (int) $this->tableState->get('pagination.perPage', 10);
+
+        $page = $source->paginate($plan, match ($table->getPaginationMode()) {
+            'simple' => PagingRequest::simple($perPage),
+            'cursor' => PagingRequest::cursor($perPage, $this->tableState->get('pagination.cursor')),
+            default => PagingRequest::lengthAware($perPage),
+        });
+
+        return $page->setCollection(
+            collect($page->items())->map(fn (mixed $row) => CollectionRow::from($row, $key)),
+        );
+    }
+
+    /**
+     * Every row of a custom data source the current state matches — for the
+     * footer's query-scope summaries and an "all matching" selection.
+     *
+     * @return Collection<int, Model>
+     */
+    protected function allSourceRows(): Collection
+    {
+        $table = $this->getTable();
+
+        return $table->getDataSource()->get($this->sourcePlan())
+            ->map(fn (mixed $row) => CollectionRow::from($row, $table->getPrimaryKey()))
+            ->values();
     }
 
     /**
@@ -1254,6 +1337,13 @@ trait WithTable
         }
 
         $table = $this->getTable();
+
+        // A table over a custom source has no query to build. What asked for
+        // one is a feature built on SQL (grouping, sub-rows, exports, …) and is
+        // told so by name, rather than with "No model or query defined".
+        if ($table->hasCustomDataSource()) {
+            throw CustomDataSourceException::needsQuery($table->getDataSource()::class);
+        }
         $baseQuery = $table->getQuery();
         $tableId = static::class;
 
@@ -1505,6 +1595,12 @@ trait WithTable
             'selection' => $this->getSelectedRecords(),
             default => collect(),
         };
+
+        // A custom source has no query to aggregate in SQL: the query-scope
+        // totals are computed over every row it matches instead.
+        if ($scope === 'query' && $table->hasCustomDataSource()) {
+            return $set->build($table->getColumns(), $this->allSourceRows(), null);
+        }
 
         return $set->build(
             $table->getColumns(),

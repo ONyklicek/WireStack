@@ -36,7 +36,11 @@ matters when the rows are not in a database.
 **`->dataSource(new CollectionDataSource([...]))` gives a table with no model and
 no builder.** Search, filters, sorting and paging all work — the source answers
 them over the array, because `QueryPlan` states a filter as a column, an operator
-and a value rather than a closure.
+and a value rather than a closure. Footer summaries and "select all matching"
+work over it too. Anything written as an Eloquent callback — `DateFilter`,
+`Filter::query(fn …)`, a search or sort callback — throws
+`CustomDataSourceException` the moment it is used; give such a table plain
+Select/Text/NumberRange filters instead.
 
 **A source declares what it can do, and an undeclared aspect throws.** That is
 the safety property, not a limitation to route around: a table that sorts by
@@ -46,8 +50,9 @@ paging, and returns `null` from `changeToken()` so polling compares rows instead
 
 **User code still receives models.** The framework unwraps `RecordContract` at
 the boundary, so `->action(fn (Model $record) => …)` is unchanged — including on
-standalone actions. Over a source with no model to unwrap, such an action is
-simply not available.
+standalone actions. Over `CollectionDataSource` the row arrives as a read-only
+`CollectionRow` model built from the array: `$record->name` reads, `save()` and
+`delete()` throw.
 
 **Two paths stay Eloquent-only**, because the contract cannot express them:
 selection rollups replay aggregate subqueries, and the fill handle's writes take
