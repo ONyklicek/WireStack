@@ -6,12 +6,16 @@ namespace Workbench\App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Contracts\CreatesNewUsers;
+use Laravel\Fortify\Contracts\ResetsUserPasswords;
 use Laravel\Fortify\Features;
 use Livewire\Livewire;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireModuleSettings\Support\SettingsRegistry;
+use Workbench\App\Actions\Fortify\CreateNewUser;
+use Workbench\App\Actions\Fortify\ResetUserPassword;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
@@ -174,6 +178,17 @@ class WorkbenchServiceProvider extends ServiceProvider
         config()->set('wire-module-auth.codes.second_factor', true);
         config()->set('wire-module-auth.codes.verify_email', true);
         config()->set('wire-module-auth.codes.reset_password', true);
+
+        // What an application's own `FortifyServiceProvider` binds — the two
+        // actions behind screens this workbench routes. Without them the reset
+        // and register screens render and every submit is a 500.
+        $this->app->singleton(ResetsUserPasswords::class, ResetUserPassword::class);
+        $this->app->singleton(CreatesNewUsers::class, CreateNewUser::class);
+
+        // Where Fortify sends somebody who just signed in or registered. Its
+        // default is `/home`, which nothing here routes, so a successful sign-in
+        // landed on a 404. The workbench's own front door instead.
+        config()->set('fortify.home', '/');
 
         config()->set('permission.teams', true);
         config()->set('wire-module-users.teams.model', Team::class);
