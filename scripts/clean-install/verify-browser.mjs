@@ -88,6 +88,11 @@ try {
   // Night, chosen with the shell's own switch. The switch puts `dark` on the
   // document; only a class-based `dark` variant in the stylesheet turns that
   // into a dark page — without it, Tailwind 4 follows the operating system.
+  // Day first, chosen explicitly: the default is `system`, and on a machine in
+  // dark mode that already starts dark — nothing would change and the check
+  // would fail on the machine rather than on the code.
+  await eval_(`window.wireAdminTheme.set('light')`);
+  await waitFor(`! document.documentElement.classList.contains('dark')`, 3000).catch(() => {});
   const lightBackground = await eval_(`getComputedStyle(document.querySelector('[data-wire="admin-sidebar"]')).backgroundColor`);
   await eval_(`window.wireAdminTheme.set('dark')`);
   await waitFor(`document.documentElement.classList.contains('dark')`, 3000).catch(() => {});
