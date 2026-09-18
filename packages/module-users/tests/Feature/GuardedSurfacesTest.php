@@ -252,6 +252,33 @@ it('refuses every two-factor button on a stale confirmation, not just disable', 
     }
 });
 
+it('comes back to the page, not to the Livewire endpoint, after the password is confirmed', function () {
+    // The button's round trip is a POST to /livewire/update, and that is what
+    // `url()->current()` answers inside it. Stored as the way back, it sent the
+    // person to a POST route with a GET straight after they typed their password.
+    $me = User::query()->create([
+        'name' => 'Amelia', 'email' => 'a@example.com', 'password' => Hash::make('x'),
+    ]);
+
+    $this->be($me);
+    Access::expirePasswordConfirmation();
+    session()->forget('url.intended');
+
+    $card = Livewire::test(TwoFactorAuthentication::class);
+
+    // On the way in: the card links to the confirmation screen, so it leaves
+    // the way back as the page loads.
+    $page = (string) session('url.intended');
+    expect($page)->not->toBe('');
+
+    // And pressing a button on it keeps that page as the way back — not the
+    // endpoint the button's request went to.
+    $card->call('enable')->assertRedirect(route('password.confirm'));
+
+    expect((string) session('url.intended'))->toBe($page)
+        ->not->toContain('livewire/update');
+});
+
 it('shows no recovery codes when the account simply has none', function () {
     $me = User::query()->create([
         'name' => 'Amelia', 'email' => 'a@example.com', 'password' => Hash::make('x'),
