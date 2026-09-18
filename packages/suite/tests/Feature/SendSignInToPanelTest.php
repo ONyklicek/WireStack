@@ -123,7 +123,8 @@ afterEach(function () {
 it('is one of the steps the installer runs, after Fortify and the routes', function () {
     expect(SetupRegistry::instance()->all())->toContain(SendSignInToPanel::class)
         ->and($this->step->sort())->toBeGreaterThan(200)
-        ->and($this->step->package())->toBe('nyoncode/wire-suite');
+        ->and($this->step->package())->toBe('nyoncode/wire-suite')
+        ->and($this->step->label())->toBe('Sign-in destination');
 });
 
 it('waits for Fortify, and says so', function () {
@@ -145,7 +146,8 @@ it('points Fortify s home at the admin the installer just routed', function () {
     sspFortifyConfig();
     sspInstallerGroup();
 
-    expect($this->step->state())->toBe(SetupState::Pending);
+    expect($this->step->state())->toBe(SetupState::Pending)
+        ->and($this->step->summary())->toContain("instead of Fortify's /home");
 
     $said = [];
     expect($this->step->apply(sspConsole($said)))->toBe(SetupOutcome::Applied);
