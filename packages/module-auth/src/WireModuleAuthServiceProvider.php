@@ -23,6 +23,7 @@ use NyonCode\WireModuleAuth\Forms\AuthForms;
 use NyonCode\WireModuleAuth\Http\Responses\RedirectToResetCodeScreen;
 use NyonCode\WireModuleAuth\Install\ConfigureFortify;
 use NyonCode\WireModuleAuth\Install\LayoutScaffold;
+use NyonCode\WireModuleAuth\Install\PrepareUserModel;
 use NyonCode\WireModuleAuth\Services\DatabaseOneTimeCodes;
 use NyonCode\WireModuleAuth\Support\Codes;
 use NyonCode\WireModuleAuth\Support\Frame;
@@ -91,6 +92,7 @@ class WireModuleAuthServiceProvider extends PackageServiceProvider
                 // published — an installation that skips it has a sign-in page
                 // that 404s.
                 SetupRegistry::instance()->register(ConfigureFortify::class);
+                SetupRegistry::instance()->register(PrepareUserModel::class);
             })
             ->bootedPackage(function (): void {
                 Blade::component('wire-module-auth::screen', Screen::class);
