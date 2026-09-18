@@ -134,6 +134,30 @@ it('points Tailwind at the packages, once', function () {
     });
 });
 
+it('adds the forms plugin to package.json, once', function () {
+    // The field views take their borders and padding from @tailwindcss/forms;
+    // the stylesheet line is no use until the package is installed.
+    icRestoring([
+        base_path('package.json'),
+        base_path('resources/views/components/layouts/admin.blade.php'),
+        base_path('bootstrap/providers.php'),
+        app_path('Providers/WireAdminServiceProvider.php'),
+    ], function () {
+        file_put_contents(base_path('package.json'), json_encode(['private' => true, 'devDependencies' => ['vite' => '^7.0']]));
+
+        $this->artisan('wire-admin:install')
+            ->expectsOutputToContain('Added @tailwindcss/forms to package.json')
+            ->assertSuccessful();
+
+        expect(json_decode((string) file_get_contents(base_path('package.json')), true)['devDependencies'])
+            ->toHaveKey('@tailwindcss/forms');
+
+        $this->artisan('wire-admin:install')
+            ->expectsOutputToContain('@tailwindcss/forms is already in package.json')
+            ->assertSuccessful();
+    });
+});
+
 it('finishes with a warning when there is no provider list to edit', function () {
     // A Laravel 10 application. Everything else the command did still stands, so
     // it prints the line to add rather than failing the run — the one
