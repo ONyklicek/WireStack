@@ -101,8 +101,12 @@ try {
     const alpine = window.Alpine.$data(cell.closest('[data-record-key]'));
 
     // A value this run has not written before, so a leftover from the last run
-    // cannot pass for a fresh morph.
-    const written = 'partial-' + Date.now();
+    // cannot pass for a fresh morph — and an address, because the cell this
+    // picks is the email column on a MustVerifyEmail user: module-users mails a
+    // fresh verification from the model's updated hook, inside the write's own
+    // transaction, so anything the mailer cannot parse rolls the write back.
+    // See verify-cell-island.mjs, where that cost a whole driver.
+    const written = 'partial-' + Date.now() + '@example.test';
 
     // The sync node is the server-rendered child the editable cell reconciles
     // from — it holds what the SERVER last said, so it changes only if the

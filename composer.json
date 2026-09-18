@@ -213,6 +213,7 @@
         "api:dead": "php scripts/verify-dead-api.php .",
         "duplicates": "php scripts/find-duplicate-bodies.php .",
         "api:instanceof": "php scripts/verify-instanceof-imports.php .",
+        "workbench:clean": "bash scripts/workbench-clean.sh",
         "boost:sync-docs": "php scripts/sync-boost-docs.php .",
         "boost:check-docs": "php scripts/sync-boost-docs.php . --check"
     },

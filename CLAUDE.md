@@ -294,6 +294,16 @@ vendor/bin/testbench serve --host=127.0.0.1 --port=8085
 npm run dev
 npm run build
 
+# Reset the testbench skeleton the workbench runs on, then rebuild it. Package
+# installs publish views, config and migrations into it and never clean up: the
+# views shadow packages/*/resources/views (a Blade edit stops taking effect) and
+# the migrations collide with workbench/database/migrations (migrate-fresh dies,
+# the preview database is left unseeded, every CDP driver fails). Reach for it
+# when a Blade change does nothing, or the drivers go red wholesale.
+composer workbench:clean
+composer workbench:clean -- --keep-db    # leave the database alone
+composer workbench:clean -- --no-build   # clean only, rebuild yourself
+
 # Browser gate. The CDP drivers in workbench/scripts are the only check over
 # Alpine/Livewire behaviour — Pest sees the markup, not what the browser does
 # with it. Starts its own preview server, or reuses one already running.
