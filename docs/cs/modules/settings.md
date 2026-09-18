@@ -269,6 +269,11 @@ Event::listen(SettingsSaved::class, function (SettingsSaved $event): void {
 `$event->values` je to, co nesl tenhle zápis, ne celá skupina; posluchač, který
 chce zbytek, se zeptá `Settings::all()` — ta už tyhle hodnoty v odpovědi má.
 
+Odebrání je taky zápis. `Settings::remove()` a `Settings::clear()` vyšlou tutéž
+událost, kde každý odebraný klíč nese to, co za něj odpovídá teď — deklarovanou
+výchozí hodnotu skupiny, nebo `null` — takže posluchač, který přestavuje mailový
+transport, uslyší smazání vlastního hostitele stejně jako jeho nastavení.
+
 ## Kde se to cachuje
 
 ```php
@@ -286,6 +291,18 @@ provozujete, a čtení nastavení přestane sahat do databáze — instalátor t
 když najde výchozí `database`.
 
 Vypnutí cache je na ladění a na testy, které kontrolují přímo tabulku.
+
+**Skupina se cachuje navždy a zahazuje ji model.** Uložení nebo smazání
+`Setting` skupinu vyčistí, což pokryje obrazovku, `Settings::set()`, seeder
+i factory. Zápis přes query builder není zápis přes model a nic nevyvolá, takže
+cache dál na každém workeru odpovídá starou hodnotou. Po takovém zápisu skupinu
+vyčistěte sami:
+
+```php
+Setting::query()->where('group', 'branding')->update([...]);
+
+Settings::forget('branding');
+```
 
 ## Zbytek souboru
 
@@ -307,7 +324,10 @@ Vypnutí cache je na ladění a na testy, které kontrolují přímo tabulku.
 ```
 
 `table` je tu pro aplikaci, která už tabulku `settings` měla, když tahle přišla;
-modul čte a zapisuje jen do té, o které ví. `navigation` rozhoduje, kde položka
+modul čte a zapisuje jen do té, o které ví, a jeho migrace vytvoří právě tu.
+Nastavte ji před migrací — přejmenování potom namíří modul na tabulku, která
+ještě neexistuje, a každé čtení pak odpoví výchozími hodnotami. `php artisan
+about` tabulku, kterou modul používá, vypíše. `navigation` rozhoduje, kde položka
 v menu sedí, ne kdo na ni smí kliknout — to je `permission`.
 
 Texty jsou publikovatelný překladový soubor a markup publikovatelný pohled —

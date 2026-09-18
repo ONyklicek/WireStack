@@ -10,6 +10,7 @@ use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireModuleSettings\Install\CacheSettingsInMemory;
+use NyonCode\WireModuleSettings\Models\Setting;
 use NyonCode\WireModuleSettings\Resources\SettingsResource;
 use NyonCode\WireModuleSettings\Support\SettingsGroups;
 use NyonCode\WireModuleSettings\Support\SettingsRegistry;
@@ -84,6 +85,10 @@ class WireModuleSettingsServiceProvider extends PackageServiceProvider
             'Settings groups' => (string) count(SettingsGroups::all()),
             'From packages' => (string) count(SettingsRegistry::instance()->all()),
             'Permission' => SettingsResource::permission() ?? 'none',
+            // Named because it is configurable and a wrong one fails silently:
+            // every read answers the defaults, which looks exactly like nobody
+            // having set anything yet.
+            'Table' => (new Setting)->getTable(),
             'Cache store' => (string) (config('wire-module-settings.cache.store') ?? config('cache.default')),
         ];
     }

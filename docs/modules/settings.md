@@ -271,6 +271,11 @@ Event::listen(SettingsSaved::class, function (SettingsSaved $event): void {
 `$event->values` is what this write carried, not the whole group; a listener that
 wants the rest asks `Settings::all()`, which by then answers with these in it.
 
+A removal is a write. `Settings::remove()` and `Settings::clear()` dispatch the
+same event, with each removed key mapped to what answers for it now — the group's
+declared default, or `null` — so a listener that rebuilds the mail transport
+hears a custom host being deleted as well as being set.
+
 ## Where It Is Cached
 
 ```php
@@ -289,6 +294,18 @@ installer says so when it finds the default is `database`.
 
 Turning caching off is for debugging and for tests that assert against the table
 directly.
+
+**A group is cached for ever and dropped by the model.** Saving or deleting a
+`Setting` clears its group, which covers the screen, `Settings::set()`, a seeder
+and a factory. A query-builder write is not a model write and fires nothing, so
+the cache keeps answering the old value on every worker. After one, clear the
+group yourself:
+
+```php
+Setting::query()->where('group', 'branding')->update([...]);
+
+Settings::forget('branding');
+```
 
 ## The Rest Of The File
 
@@ -310,7 +327,10 @@ Four keys, each covered by a section above except the two at the bottom:
 ```
 
 `table` is there for an application that already had a `settings` table when this
-one arrived; the module reads and writes only the one it is told about.
+one arrived; the module reads and writes only the one it is told about, and its
+migration creates that one. Set it before you migrate — renaming it afterwards
+points the module at a table that does not exist yet, and every read then
+answers the defaults. `php artisan about` names the table in use.
 `navigation` decides where the entry sits in the menu, not who may click it —
 that is `permission`.
 
