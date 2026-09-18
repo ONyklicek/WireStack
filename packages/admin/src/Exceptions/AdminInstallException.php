@@ -70,4 +70,21 @@ final class AdminInstallException extends RuntimeException implements WireExcept
             'this installer does not understand. Add it by hand.'
         );
     }
+
+    public static function packageJsonMissing(string $file, string $package): self
+    {
+        return new self(
+            "[{$file}] does not exist, so [{$package}] was not added to it. The stylesheet ".
+            "names it as a Tailwind plugin — run `npm install -D {$package}` wherever this ".
+            'application builds its assets, or the build fails on the missing plugin.'
+        );
+    }
+
+    public static function packageJsonNotEditable(string $file, string $package): self
+    {
+        return new self(
+            "[{$file}] is not valid JSON, so [{$package}] was not written into it. ".
+            "Run `npm install -D {$package}` yourself."
+        );
+    }
 }

@@ -29,6 +29,7 @@ The installer does the three things `composer require` cannot, and says what it 
 | Writes `resources/views/components/layouts/admin.blade.php` | Your layout, naming the shell component and filling its slots |
 | Registers the provider in `bootstrap/providers.php` | So the line above runs |
 | Adds one `@source` line to `resources/css/app.css` | So Tailwind compiles the classes the shell's views use |
+| Adds `@plugin "@tailwindcss/forms"` and `@custom-variant dark (&:where(.dark, .dark *))` there, and `@tailwindcss/forms` to `package.json` | The field views take their border and padding from the forms plugin, and the theme switch works through the `dark` class — without these a fresh application's sign-in fields are bare lines and night mode does nothing. Either line already there is left as it is |
 | Publishes translations | The handful of strings the sidebar shows |
 
 Nothing is overwritten, so a second run is safe: a layout you have edited is left alone and reported as already there. An application that keeps its providers somewhere else - Laravel 10, or its own convention - gets the line to add rather than a silent success, and the rest of the install still completes.

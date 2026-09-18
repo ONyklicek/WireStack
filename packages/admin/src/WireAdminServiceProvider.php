@@ -117,6 +117,24 @@ class WireAdminServiceProvider extends PackageServiceProvider
         }
 
         try {
+            $command->comment(match ($scaffold->stylesheetBase()) {
+                InstallOutcome::Created => '  ✅ Switched on the forms plugin and the class-based dark mode in resources/css/app.css',
+                InstallOutcome::AlreadyPresent => '  ↩︎  The forms plugin and the dark variant are already there',
+            });
+        } catch (AdminInstallException $e) {
+            $command->warn('  ⚠️  '.$e->getMessage());
+        }
+
+        try {
+            $command->comment(match ($scaffold->formsPackage()) {
+                InstallOutcome::Created => '  ✅ Added @tailwindcss/forms to package.json — the next npm install brings it',
+                InstallOutcome::AlreadyPresent => '  ↩︎  @tailwindcss/forms is already in package.json',
+            });
+        } catch (AdminInstallException $e) {
+            $command->warn('  ⚠️  '.$e->getMessage());
+        }
+
+        try {
             $command->comment(match ($scaffold->stylesheetPrimary()) {
                 InstallOutcome::Created => '  ✅ Set `primary` to Tailwind blue in resources/css/app.css',
                 InstallOutcome::AlreadyPresent => '  ↩︎  `primary` is already defined — left as it is',
