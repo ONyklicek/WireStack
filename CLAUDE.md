@@ -304,6 +304,14 @@ composer workbench:clean
 composer workbench:clean -- --keep-db    # leave the database alone
 composer workbench:clean -- --no-build   # clean only, rebuild yourself
 
+# Clean-install gate: laravel/laravel → every package from packages/* →
+# wire:install --all → sign in → every sidebar entry → a browser pass. The only
+# check that starts where a new user starts; the skeleton and the workbench are
+# both wired by hand and cannot see an installer gap. ~1 min, needs network.
+# CI: .github/workflows/clean-install.yml
+composer verify:install
+bash scripts/verify-clean-install.sh --keep   # leave the app behind to poke at
+
 # Browser gate. The CDP drivers in workbench/scripts are the only check over
 # Alpine/Livewire behaviour — Pest sees the markup, not what the browser does
 # with it. Starts its own preview server, or reuses one already running.
