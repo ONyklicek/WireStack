@@ -66,16 +66,25 @@ protected function getAuditInclude(): array
 }
 ```
 
-Global exclusions live in `config/wire-core.php`:
+Global exclusions live in `config/wire-core.php`, and `*` is allowed:
 
 ```php
 'audit' => [
     'exclude_columns' => [
         'password',
         'remember_token',
+        'billing_*',
     ],
 ],
 ```
+
+**This list adds to a floor; it does not define one.** Passwords, anything
+ending in `_token` or `_secret`, two-factor columns, recovery codes and
+`api_key` are never written to the trail, and emptying the list does not bring
+them back. The trail is long-lived by default and the [audit
+module](../modules/audit.md) renders old and new values on a screen — so a
+credential reaching it is a credential on a page, and a published config file
+from three years ago must not be what stands between you and that.
 
 ## View Audit Entries
 
@@ -200,7 +209,7 @@ prunes nothing. Programmatic pruning is still available via
 | `model` | `AuditEntry::class` | Custom audit entry model |
 | `user_model` | `App\Models\User` | User model for the `user()` relation |
 | `events` | `null` | `null` logs all supported events; array logs only selected event types |
-| `exclude_columns` | `password`, `remember_token` | Global column exclusions |
+| `exclude_columns` | `password`, `remember_token` | Global column exclusions, `*` allowed — added to a built-in floor that always redacts credentials |
 | `retention_days` | `null` | Number of days to keep entries |
 
 Supported event types are `created`, `updated`, `deleted`, `bulk_action`, and `cell_updated`.

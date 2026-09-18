@@ -104,6 +104,72 @@ it('allows all events when events config is null', function () {
     expect($logger->isEnabled())->toBeTrue();
 });
 
+// ─── Redaction ───────────────────────────────────────────────────────────────
+
+/** The filter, reached directly: it is protected, and it is the whole subject. */
+function auditRedactor(): AuditLogger
+{
+    return new class extends AuditLogger
+    {
+        /**
+         * @param  array<string, mixed>  $values
+         * @return array<string, mixed>
+         */
+        public function redact(array $values): array
+        {
+            return $this->filterExcludedColumns($values) ?? [];
+        }
+    };
+}
+
+it('never writes a credential to the trail, whatever the config says', function () {
+    // The defect: `exclude_columns` was an exact-key list of two, so a 2FA
+    // enrolment wrote `two_factor_secret` and the recovery codes into the entry,
+    // and a token rotation wrote both the old and the new one — onto a screen
+    // the audit module renders to anyone who can open the log, in a trail whose
+    // retention defaults to forever.
+    //
+    // Emptied deliberately: the floor is not a default. A published config file
+    // must not be able to put a credential on that screen.
+    config(['wire-core.audit.exclude_columns' => []]);
+
+    expect(auditRedactor()->redact([
+        'name' => 'Ann',
+        'password' => 'hashed',
+        'password_confirmation' => 'hashed',
+        'api_token' => 'live-token',
+        'stripe_secret' => 'sk_live_x',
+        'two_factor_secret' => 'SEED',
+        'two_factor_recovery_codes' => '["a","b"]',
+        'api_key' => 'k',
+    ]))->toBe(['name' => 'Ann']);
+});
+
+it('still honours the columns an application excludes', function () {
+    config(['wire-core.audit.exclude_columns' => ['salary', 'billing_*']]);
+
+    expect(auditRedactor()->redact([
+        'name' => 'Ann',
+        'salary' => 100,
+        'billing_address' => 'Somewhere',
+    ]))->toBe(['name' => 'Ann']);
+});
+
+it('keeps the columns an audit trail exists to record', function () {
+    // The other half: a floor that swallows ordinary columns is a trail that
+    // does not work. `token_count` and `secretary_id` are not secrets.
+    config(['wire-core.audit.exclude_columns' => []]);
+
+    $values = [
+        'status' => 'sent',
+        'token_count' => 12,
+        'secretary_id' => 4,
+        'keynote' => 'x',
+    ];
+
+    expect(auditRedactor()->redact($values))->toBe($values);
+});
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function createMockAuditEvent(string $type = 'created'): AuditableEvent

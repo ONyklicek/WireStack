@@ -329,6 +329,13 @@ rows automatically — the package registers the event subscriber itself, gated 
 `wire-core.audit.retention_days` and schedule `wire-core:audit-prune` (or run with `--days=N`).
 Suppress logging in seeders/imports with `AuditLogger::withoutAuditing(fn () => …)`.
 
+**Credentials never reach the trail.** Passwords, anything ending in `_token` or `_secret`,
+two-factor columns, recovery codes and `api_key` are dropped by the logger itself — a floor, not a
+default, so emptying `wire-core.audit.exclude_columns` does not bring them back. That list adds
+application-specific columns on top and accepts `*` (`'billing_*'`). Do not add the credential names
+to it "to be safe"; do add your own (`salary`, `national_id`). The entries are rendered old-value
+beside new-value on the audit module's screen, so anything you leave in is on a page.
+
 ### JavaScript assets
 
 Put `@@wireStackScripts` once in the layout `<head>`. It emits every registered wireStack Alpine
