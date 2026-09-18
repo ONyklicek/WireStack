@@ -613,6 +613,29 @@ card on a settings page of its own puts it there and turns it off here:
 </x-wire-admin::layout>
 ```
 
+### In An Application With Zones
+
+The page is everybody's own account, so its link sits beside every sign-out —
+in whichever zone the person is. Route just that page into each zone, without
+the user management beside it:
+
+```php
+foreach (['sales', 'warehouse'] as $zone) {
+    Route::middleware(['web', 'auth', "can:zone.{$zone}"])
+        ->name("{$zone}.")->prefix($zone)
+        ->group(function () use ($zone): void {
+            Route::wireResources(only: $modules[$zone]);
+            Route::wireResource(UserResource::class, pages: ['profile']);   // [tl! focus]
+        });
+}
+```
+
+The *Profile* entry in the user menu then links to the page in the zone being
+rendered; failing that, to one outside any zone; failing that, to any zone that
+routes it **and** lets this person in — its `can:` middleware is asked first,
+so an account page that lives only behind an administrators' zone is not a
+link into a 403 for everybody else (`Support\ProfileLink`).
+
 ## Giving Your Users a Photo
 
 Add a nullable string column to your own users table and the upload appears —
