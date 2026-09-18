@@ -18,8 +18,12 @@ One flow was written both ways as a comparison: resetting a password by code.
 
 ## What got installed
 
-- `pestphp/pest-plugin-browser ^5.0` (require-dev). It pulled Pest from 5.1.4
-  to 5.2.1 within the existing constraint. `composer.lock` is not tracked.
+- `pestphp/pest-plugin-browser ^5.0`, **installed by hand and not in
+  `composer.json`**. It needs PHP 8.4 and Symfony 8; as a require-dev it made
+  `composer install` unresolvable on every CI job below PHP 8.4 or on Laravel
+  12. `composer test:browser` (`scripts/test-browser.sh`) says how to install
+  it where it is missing. It pulled Pest from 5.1.4 to 5.2.1 within the
+  existing constraint. `composer.lock` is not tracked.
 - `playwright ^1.63` (devDependencies) and `npx playwright install chromium`,
   about 100 MB in the user's cache.
 - `tests/Pest.php` binds `module-auth/tests/Browser` to `ModuleAuthTestCase`.

@@ -220,7 +220,9 @@ All notable changes to the Wire ecosystem will be documented in this file.
   real Chromium through Playwright from inside a Pest test, against the same Testbench application
   the feature tests use. One journey is ported — the password reset by code, typed digit by digit
   into the OTP boxes — beside its CDP driver, and `architecture/plans/pest-browser-pilot.md` records
-  what each is worth. Neither `composer test` nor CI runs it yet.
+  what each is worth. The plugin needs PHP 8.4 and Symfony 8, so it is not in `composer.json`:
+  `composer test:browser` says how to install it where it is missing. Neither `composer test` nor CI
+  runs it yet.
 
 ### Changed
 
