@@ -30,6 +30,8 @@ trait ResolvesOneRecord
     {
         $this->record = $record;
 
+        $this->abortUnlessRecordExists();
+
         $this->mountedRecord();
 
         $this->mountActionFromRequest();
@@ -82,6 +84,35 @@ trait ResolvesOneRecord
      * its form here, the view page needs nothing.
      */
     protected function mountedRecord(): void {}
+
+    /**
+     * A key in the URL that reaches no record is a missing page.
+     *
+     * It used to be a page anyway: `find()` answered null and the page rendered
+     * around nothing — an empty view with a 200, or, where an infolist entry
+     * needs the record, a 500 from deep inside a Blade view. Asked once, on the
+     * way in, through the page's own `resolveRecord()`, so a page that scopes
+     * its lookup ({@see ResolvesScopedRecord}) is asked its own question.
+     *
+     * Only on mount. A record deleted while the page is open is the page's to
+     * deal with on the next round trip, as it always was.
+     */
+    private function abortUnlessRecordExists(): void
+    {
+        if ($this->record === null || $this->record instanceof Model || $this->record instanceof RecordContract) {
+            return;
+        }
+
+        $resource = static::$resource;
+
+        if ($resource === null || $resource::modelClass() === null) {
+            return;
+        }
+
+        if ($this->resolveRecord() === null) {
+            abort(404);
+        }
+    }
 
     /**
      * The record this page is about.
