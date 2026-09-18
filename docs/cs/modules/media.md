@@ -201,6 +201,26 @@ Schopnosti jsou Laravelovy vlastní: `viewAny`, `view`, `create`, `update`,
 schovalo tlačítko. Livewire metoda je veřejný endpoint a schované tlačítko není
 kontrola.
 
+**Otázka s sebou nese soubor.** `view`, `update`, `delete` i `replace` se ptají
+na konkrétní záznam, takže obvyklý tvar policy nad médii funguje:
+
+```php
+public function delete(User $user, Media $media): bool
+{
+    return $media->uploaded_by === $user->id;
+}
+```
+
+`viewAny` a `create` se ptají na třídu, protože záznam, na který by se dalo
+ptát, ještě není. Výběru se ptá po řádcích: smazání deseti souborů, kde policy
+tři odmítne, smaže zbylých sedm a jednou to řekne.
+
+**Výběr souboru není knihovna.** Modal s výběrem se renderuje na každé stránce
+panelu, aby ho pole formuláře mohlo otevřít — což znamená, že i jeho metody jsou
+z každé stránky dosažitelné. `update`, `delete` a `replace` odmítá rovnou, ať
+policy říká cokoli. `create` zůstává otevřený: přinést soubor, pro který si
+člověk přišel, je přesně to, k čemu je.
+
 **Bez zaregistrované policy se neodmítá nic.** Laravelova brána zamítá schopnost,
 kterou nikdo nedefinoval, takže ptát se jí bezpodmínečně by při upgradu zamklo
 každou existující knihovnu před jejími vlastními soubory. Nenapsat policy je

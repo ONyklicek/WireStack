@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleMedia\Livewire;
 
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 
 /**
@@ -21,6 +22,16 @@ use Livewire\Attributes\On;
  */
 class MediaPicker extends MediaManager
 {
+    /**
+     * Also what stops this being a delete button on every page of the panel.
+     *
+     * The modal is rendered into `PageChrome`, so this component is addressable
+     * from wherever a form field might want it — and a Livewire method is a
+     * public endpoint whether or not a view drew a button for it. `picking` is
+     * `#[Locked]` on the parent and {@see MediaManager::mayMutate()} reads it,
+     * so a chooser refuses `update`, `delete` and `replace` outright.
+     */
+    #[Locked]
     public bool $picking = true;
 
     /**

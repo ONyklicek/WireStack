@@ -8,6 +8,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -162,7 +163,13 @@ class MediaManager extends Component
      * empty state, different search, folders that work in one and not the other.
      * What changes is what a tile does when it is clicked and whether there is a
      * button to confirm with.
+     *
+     * `#[Locked]` because it is also what {@see self::mayMutate()} reads, and a
+     * flag that decides an authorization question must not be one the browser
+     * can send back. Nothing sets it at runtime — each class declares its own
+     * value — so locking costs nothing.
      */
+    #[Locked]
     public bool $picking = false;
 
     public bool $multiple = false;
@@ -197,6 +204,14 @@ class MediaManager extends Component
     {
         $media = Media::findOrFail($id);
 
+        // An id is not permission. The grid only draws tiles the policy allows,
+        // but this method is reachable without the grid.
+        if (MediaAccess::denies('view', $media)) {
+            $this->notifyError(__('wire-module-media::messages.not_allowed'));
+
+            return;
+        }
+
         $this->detailId = $id;
         $this->detailAlt = (string) $media->alt;
         $this->detailTitle = (string) $media->title;
@@ -209,11 +224,20 @@ class MediaManager extends Component
 
     public function saveDetail(): void
     {
-        if ($this->detailId === null || $this->refuse('update')) {
+        if ($this->detailId === null) {
             return;
         }
 
-        Media::findOrFail($this->detailId)->update([
+        // Loaded before the question, not after: `update` on this library is not
+        // the same question as `update` on this file, and a policy that answers
+        // per record has nothing to answer about until the record is in hand.
+        $media = Media::findOrFail($this->detailId);
+
+        if ($this->refuse('update', $media)) {
+            return;
+        }
+
+        $media->update([
             'alt' => trim($this->detailAlt) ?: null,
             'title' => trim($this->detailTitle) ?: null,
         ]);
@@ -233,11 +257,11 @@ class MediaManager extends Component
      */
     public function openEditor(int $id): void
     {
-        if ($this->refuse('update')) {
+        $media = Media::findOrFail($id);
+
+        if ($this->refuse('update', $media)) {
             return;
         }
-
-        $media = Media::findOrFail($id);
 
         // There are no pixels to resample in an SVG, and `processImage` hands
         // such a file straight back — so the button is not offered and this
@@ -295,7 +319,7 @@ class MediaManager extends Component
 
     protected function replaceOriginal(Media $original): void
     {
-        if ($this->refuse('replace')) {
+        if ($this->refuse('replace', $original)) {
             return;
         }
 
@@ -469,6 +493,10 @@ class MediaManager extends Component
 
     public function createFolder(): void
     {
+        if ($this->refuse('create')) {
+            return;
+        }
+
         $this->guarded(function (): void {
             $folder = MediaFolder::createIn($this->currentFolder(), $this->newFolderName);
 
@@ -481,6 +509,10 @@ class MediaManager extends Component
 
     public function renameFolder(int $id, string $name): void
     {
+        if ($this->refuse('update')) {
+            return;
+        }
+
         $this->guarded(function () use ($id, $name): void {
             MediaFolder::findOrFail($id)->rename($name);
 
@@ -490,6 +522,10 @@ class MediaManager extends Component
 
     public function deleteFolder(int $id): void
     {
+        if ($this->refuse('delete')) {
+            return;
+        }
+
         $this->guarded(function () use ($id): void {
             $folder = MediaFolder::findOrFail($id);
             $parentId = $folder->parent_id;
@@ -507,6 +543,10 @@ class MediaManager extends Component
     /** Drag a folder onto another folder. */
     public function moveFolder(int $id, ?int $intoId): void
     {
+        if ($this->refuse('update')) {
+            return;
+        }
+
         $this->guarded(function () use ($id, $intoId): void {
             MediaFolder::findOrFail($id)->moveTo($intoId === null ? null : MediaFolder::findOrFail($intoId));
 
@@ -609,11 +649,17 @@ class MediaManager extends Component
 
     public function saveRename(): void
     {
-        if ($this->renamingId === null || $this->refuse('update')) {
+        if ($this->renamingId === null) {
             return;
         }
 
-        Media::findOrFail($this->renamingId)->rename($this->renamingName);
+        $media = Media::findOrFail($this->renamingId);
+
+        if ($this->refuse('update', $media)) {
+            return;
+        }
+
+        $media->rename($this->renamingName);
 
         $this->renamingId = null;
 
@@ -637,17 +683,21 @@ class MediaManager extends Component
      */
     protected function moveIds(array $ids, ?int $folderId): void
     {
-        if ($ids === [] || $this->refuse('update')) {
+        $movable = $this->permitted($ids, 'update');
+
+        if ($movable->isEmpty()) {
             return;
         }
 
         $folder = $folderId === null ? null : MediaFolder::find($folderId);
 
-        Media::query()->whereIn('id', $ids)->update(['folder_id' => $folder?->id]);
+        Media::query()->whereKey($movable->modelKeys())->update(['folder_id' => $folder?->id]);
 
         $this->selected = [];
 
-        $this->notifySuccess(trans_choice('wire-module-media::messages.moved', count($ids), ['count' => count($ids)]));
+        $moved = $movable->count();
+
+        $this->notifySuccess(trans_choice('wire-module-media::messages.moved', $moved, ['count' => $moved]));
     }
 
     /**
@@ -699,16 +749,12 @@ class MediaManager extends Component
 
     public function deleteSelected(): void
     {
-        if ($this->refuse('delete')) {
-            return;
-        }
-
         $count = 0;
 
         // One at a time, not a mass delete: the model's `deleted` hook is what
         // removes the file from the disk, and a mass delete does not fire it —
         // which would leave the bytes behind with no row pointing at them.
-        foreach (Media::query()->whereIn('id', $this->selected)->get() as $media) {
+        foreach ($this->permitted($this->selected, 'delete') as $media) {
             $media->delete();
             $count++;
         }
@@ -856,6 +902,12 @@ class MediaManager extends Component
     {
         /** @var LengthAwarePaginator<int, Media> $files */
         $query = Media::query()
+            // Nothing at all to somebody the policy refuses. A filter rather
+            // than an early return, because the screen around it — the folder
+            // tree, the empty state, the upload zone — is the same screen either
+            // way, and a page that renders half of itself is harder to read than
+            // one that renders empty.
+            ->when(! MediaAccess::allows('viewAny'), fn ($q) => $q->whereRaw('1 = 0'))
             // The list draws a folder name per row, and without this that is a
             // query per row on a page of twenty-four.
             ->with('folder')
@@ -867,14 +919,20 @@ class MediaManager extends Component
             // Only what the caller can use. A picker asked for an image that
             // offers a PDF is a picker that produces a broken page later, and
             // "later" is after somebody published it.
-            ->when($this->accepts !== '', function ($q) {
+            // Grouped, and that is not style: `when()` hands the callback this
+            // same builder, so an `orWhere` written straight onto it binds at
+            // the top level — and `AND` binding tighter than `OR` then detaches
+            // the folder and the search that came before it. Two accepted kinds
+            // inside a folder listed every file of the second kind in the
+            // library.
+            ->when($this->accepts !== '', fn ($q) => $q->where(function ($inner) {
                 foreach (explode(',', $this->accepts) as $index => $prefix) {
                     $prefix = trim($prefix);
                     $index === 0
-                        ? $q->where('mime_type', 'like', $prefix.'%')
-                        : $q->orWhere('mime_type', 'like', $prefix.'%');
+                        ? $inner->where('mime_type', 'like', $prefix.'%')
+                        : $inner->orWhere('mime_type', 'like', $prefix.'%');
                 }
-            })
+            }))
             ->when($this->type === 'image', fn ($q) => $q->where('mime_type', 'like', 'image/%'))
             ->when($this->type === 'document', fn ($q) => $q->where(
                 fn ($inner) => $inner->whereNull('mime_type')->orWhere('mime_type', 'not like', 'image/%'),
@@ -935,15 +993,68 @@ class MediaManager extends Component
      * A library with no policy registered refuses nothing, exactly as it did
      * before there was anything to ask — see {@see MediaAccess}.
      */
-    protected function refuse(string $ability): bool
+    protected function refuse(string $ability, ?Media $on = null): bool
     {
-        if (MediaAccess::allows($ability)) {
+        if ($this->mayMutate($ability) && MediaAccess::allows($ability, $on ?? Media::class)) {
             return false;
         }
 
         $this->notifyError(__('wire-module-media::messages.not_allowed'));
 
         return true;
+    }
+
+    /**
+     * Whether this screen is one that changes things at all.
+     *
+     * The library is a screen; the picker is a chooser wearing the same class
+     * ({@see MediaPicker}), and it is mounted on *every* page of the panel
+     * because a form field may need it. That makes every wire method on here a
+     * public endpoint on every page — so a chooser that inherits `delete` is a
+     * delete button on a screen nobody thought of as the library.
+     *
+     * `create` is the exception and stays open: uploading the file you came to
+     * pick is what a picker is for. What it may not do is change or destroy what
+     * is already there.
+     */
+    protected function mayMutate(string $ability): bool
+    {
+        return ! $this->picking || $ability === 'create';
+    }
+
+    /**
+     * The rows of this selection the person may actually do that to.
+     *
+     * A selection is not one decision. A policy answering per record — "your own
+     * uploads, not everybody's" — has to be able to refuse three files out of
+     * ten and let the other seven through, and a single question about the class
+     * cannot say that. So the rows are loaded and asked about one at a time.
+     *
+     * Silence is not one of the answers: if anything was held back, the person is
+     * told once, because a delete that quietly does less than it said is worse
+     * than one that refuses.
+     *
+     * @param  array<int, int>  $ids
+     * @return Collection<int, Media>
+     */
+    protected function permitted(array $ids, string $ability): Collection
+    {
+        if ($ids === [] || ! $this->mayMutate($ability)) {
+            if ($ids !== []) {
+                $this->notifyError(__('wire-module-media::messages.not_allowed'));
+            }
+
+            return new Collection;
+        }
+
+        $found = Media::query()->whereIn('id', $ids)->get();
+        $allowed = $found->filter(static fn (Media $one): bool => MediaAccess::allows($ability, $one));
+
+        if ($allowed->count() < $found->count()) {
+            $this->notifyError(__('wire-module-media::messages.not_allowed'));
+        }
+
+        return $allowed;
     }
 
     protected function guarded(callable $action): void

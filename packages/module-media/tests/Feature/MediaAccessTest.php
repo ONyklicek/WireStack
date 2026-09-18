@@ -13,7 +13,9 @@ use NyonCode\WireModuleMedia\Actions\MakeThumbnail;
 use NyonCode\WireModuleMedia\Actions\StoreUpload;
 use NyonCode\WireModuleMedia\Jobs\GenerateThumbnail;
 use NyonCode\WireModuleMedia\Livewire\MediaManager;
+use NyonCode\WireModuleMedia\Livewire\MediaPicker;
 use NyonCode\WireModuleMedia\Models\Media;
+use NyonCode\WireModuleMedia\Models\MediaFolder;
 use NyonCode\WireModuleMedia\Support\MediaAccess;
 use NyonCode\WireModuleMedia\WireModuleMediaServiceProvider;
 
@@ -190,6 +192,128 @@ it('lets everything through for a policy that allows it', function () {
         ->call('deleteSelected');
 
     expect(Media::count())->toBe(0);
+});
+
+it('survives the policy signature Laravel tells you to write', function () {
+    // The defect this pins: the ability was asked about the *class*, so Laravel
+    // shifted the argument off and called `update($user)` on a policy declaring
+    // `update(User $user, Media $media)` — an ArgumentCountError, i.e. a 500 on
+    // every rename, move, replace and delete. The policies in this file declare
+    // no parameters at all, which is why nothing caught it.
+    Gate::policy(Media::class, get_class(new class
+    {
+        public function view(AuthUser $user, Media $media): bool
+        {
+            return true;
+        }
+
+        public function update(AuthUser $user, Media $media): bool
+        {
+            return true;
+        }
+
+        public function delete(AuthUser $user, Media $media): bool
+        {
+            return true;
+        }
+    }));
+
+    $media = Media::create(['disk' => 'public', 'path' => 'media/a.png', 'name' => 'a.png']);
+
+    Livewire::test(MediaManager::class)
+        ->call('startRenaming', $media->id)
+        ->set('renamingName', 'renamed.png')
+        ->call('saveRename')
+        ->assertOk();
+
+    expect($media->refresh()->name)->toBe('renamed.png');
+});
+
+it('asks the policy about the file, not only about the library', function () {
+    // "You may delete your own uploads" is the ordinary shape of a media policy,
+    // and it cannot be expressed at all if the question never carries a record.
+    // A selection is not one decision either: three refused must not take the
+    // other seven down with them.
+    Gate::policy(Media::class, get_class(new class
+    {
+        public function delete(AuthUser $user, Media $media): bool
+        {
+            return $media->name === 'mine.png';
+        }
+    }));
+
+    $mine = Media::create(['disk' => 'public', 'path' => 'media/a.png', 'name' => 'mine.png']);
+    $theirs = Media::create(['disk' => 'public', 'path' => 'media/b.png', 'name' => 'theirs.png']);
+
+    Livewire::test(MediaManager::class)
+        ->set('selected', [$mine->id, $theirs->id])
+        ->call('deleteSelected')
+        ->assertOk();
+
+    expect(Media::find($mine->id))->toBeNull()
+        ->and(Media::find($theirs->id))->not->toBeNull();
+});
+
+it('shows nothing at all to someone who may not see the library', function () {
+    maPolicyRefusing('viewAny', 'view');
+
+    Media::create(['disk' => 'public', 'path' => 'media/a.png', 'name' => 'secret.png']);
+
+    Livewire::test(MediaManager::class)
+        ->assertOk()
+        ->assertDontSee('secret.png');
+});
+
+it('will not open one file s details on an id alone', function () {
+    maPolicyRefusing('view');
+
+    $media = Media::create(['disk' => 'public', 'path' => 'media/a.png', 'name' => 'a.png']);
+
+    Livewire::test(MediaManager::class)
+        ->call('showDetail', $media->id)
+        ->assertSet('detailId', null)
+        ->assertOk();
+});
+
+it('refuses the folder methods for the same reasons as the files', function () {
+    // Folders had no check at all: `guarded()` catches a MediaException and says
+    // so, which is error handling, not authorization. A tree is as much of the
+    // library as the files hanging in it.
+    maPolicyRefusing('create', 'update');
+
+    $folder = MediaFolder::createIn(null, 'Shoot');
+    $other = MediaFolder::createIn(null, 'Elsewhere');
+
+    Livewire::test(MediaManager::class)
+        ->set('newFolderName', 'Third')
+        ->call('createFolder')
+        ->call('renameFolder', $folder->id, 'Renamed')
+        ->call('moveFolder', $folder->id, $other->id)
+        ->assertOk();
+
+    expect(MediaFolder::count())->toBe(2)
+        ->and($folder->refresh()->name)->toBe('Shoot')
+        ->and($folder->parent_id)->toBeNull();
+});
+
+it('does not let the picker change or destroy the library', function () {
+    // The picker modal is rendered into PageChrome, so it is addressable from
+    // every page of the panel — which made `deleteSelected` a delete button on
+    // all of them. Uploading stays open: fetching the file you came to pick is
+    // what a chooser is for.
+    $media = Media::create(['disk' => 'public', 'path' => 'media/a.png', 'name' => 'a.png']);
+
+    Livewire::test(MediaPicker::class)
+        ->set('selected', [$media->id])
+        ->call('deleteSelected')
+        ->call('startRenaming', $media->id)
+        ->set('renamingName', 'renamed.png')
+        ->call('saveRename')
+        ->call('deleteFolder', 1)
+        ->assertOk();
+
+    expect(Media::find($media->id))->not->toBeNull()
+        ->and($media->refresh()->name)->toBe('a.png');
 });
 
 /* ── Serving a private file ───────────────────────────────────────────────── */
