@@ -164,6 +164,12 @@ All notable changes to the Wire ecosystem will be documented in this file.
   packages' own, published migrations that collide with the workbench's, the layout scaffolds and
   the Fortify and permission config the setup steps leave behind — and rebuilds it.
 
+- **`composer test:browser` — a pilot of Pest browser tests.** `pestphp/pest-plugin-browser` runs a
+  real Chromium through Playwright from inside a Pest test, against the same Testbench application
+  the feature tests use. One journey is ported — the password reset by code, typed digit by digit
+  into the OTP boxes — beside its CDP driver, and `architecture/plans/pest-browser-pilot.md` records
+  what each is worth. Neither `composer test` nor CI runs it yet.
+
 ### Changed
 
 - **`wire-core.notifications.default` accepts a comma-separated string.** An environment variable
@@ -220,6 +226,67 @@ All notable changes to the Wire ecosystem will be documented in this file.
   before `wire-admin:install` adds the `@source` line and the `primary` palette to `app.css`, so a
   manifest was there, the step said DONE, and the admin rendered unstyled. It is offered again when
   `resources/css/app.css` or the installed packages changed after the manifest was written.
+- **`wire-core:audit-prune` no longer empties the trail on a zero.** `--days=0` computed a cut-off
+  of this very second, deleted every entry and reported success; a negative period did the same.
+  A period under one day — or an empty, fractional or non-numeric one — is refused, nothing is
+  deleted and the command exits non-zero; `AuditLogger::prune()` throws
+  `InvalidRetentionException`. `retention_days` read from `.env` is taken as a number. The docs now
+  say what the trail cannot see: builder-level writes (`query()->update()`, `insert()`, `upsert()`)
+  fire no model event, and wrapping one in `withoutAuditing()` never did anything.
+- **The settings migration honours `wire-module-settings.table`**, and is guarded with `hasTable`
+  for an application restored from a schema dump. `Settings::remove()` and `clear()` dispatch
+  `SettingsSaved` with what now applies to each removed key, so a listener stops serving the old
+  value. A builder-level write behind the model still fires nothing; `Settings::forget()` is
+  documented as the step to take after one.
+- **A password refused on the reset-by-code screen no longer costs the code.** Verifying spent it
+  and the password was judged afterwards, so a confirmation that did not match sent the person back
+  to `/forgot-password`. The session keeps a proof of the code it verified — the address, a keyed
+  fingerprint of the digits and the code's own expiry — and the corrected attempt goes through on
+  it. The address is normalised once, so a capitalised one no longer fails against the code filed
+  under the lower-cased address.
+- **A view or edit page on a key that resolves no record is a 404.** It rendered around nothing —
+  an empty page with a 200, or a 500 from inside an infolist entry — so `/admin/media/1` on a fresh
+  installation was a server error.
+- **Confirming the password comes back to the page.** A refused button stored
+  `url()->current()`, which inside a Livewire round trip is `/livewire/update`, and sent the person
+  to a POST route with a GET. A card showing a "confirm your password" link stored nothing, and the
+  person landed on the application's home. `InteractsWithPasswordConfirmation` stores the page URL
+  Livewire remembers, and `returnHereAfterPasswordConfirmation()` does it on mount.
+- **The sign-in screen no longer reloads itself when the browser holds no passkey.** The autofill
+  ceremony's "nothing signed in" was taken for an arrival: a navigation to `/`, a bounce back to
+  `/login`, a new ceremony, about twice a second, until the limiter answered 429. Only a real
+  response signs in now, and a cancelled ceremony says what to do instead. The profile's passkey
+  card follows Fortify's `confirmPassword` option instead of always sending people to confirm first.
+- **`wire-admin:install` switches on what the field views need.** It adds
+  `@plugin "@tailwindcss/forms"` and `@custom-variant dark (&:where(.dark, .dark *))` to
+  `resources/css/app.css` and `@tailwindcss/forms` to `package.json`. Without them every form of a
+  fresh install drew without borders or padding, and the theme switch's `dark` class did nothing.
+
+### Security
+
+- **The password reset token is no longer readable in the one-time codes table.** The reset code's
+  row carried the broker's token as plain JSON, undoing the hash Laravel files it under: anybody who
+  could read that table could post the address and the token to `/reset-password` without the six
+  digits. The token is dropped; a correct code asks the broker for a fresh one in the request that
+  spends it.
+- **One-time codes can no longer be verified twice.** A code is consumed by its id and its hash,
+  and a request that deleted nothing lost the race. `issue()` is a single `upsert`, so a
+  double-submitted request no longer trips the unique index between a delete and an insert.
+- **The media policy is asked about the file, and the picker cannot change the library.** Every
+  check asked about the `Media` class, so a policy written the way `make:policy` writes it threw on
+  every rename, move, replace and delete, and a per-record rule could not be written. The records
+  are asked about now, one at a time for a selection. The picker extended the manager and is
+  rendered on every page, so `deleteSelected` on it deleted the library: `picking` is `#[Locked]` and
+  a picker refuses update, delete and replace whatever the policy says.
+- **A notification page is scoped the way its list is.** The page found its record with a plain
+  `find()`, so an id was permission: another person's notification rendered in full and was marked
+  read. It resolves through `scopeToViewer()` now, and one outside the scope is a 404.
+  `ResolvesScopedRecord` moves from module-users to wire-panels.
+- **Credentials stay out of the audit trail whatever the config says.** `exclude_columns` was an
+  exact list of `password` and `remember_token`, so two-factor secrets, recovery codes and rotated
+  tokens were written into entries the audit screen shows. The logger drops passwords, anything
+  ending in `_token` or `_secret`, two-factor columns, recovery codes and `api_key` on its own, as a
+  floor under the list, which now accepts `*` patterns.
 
 ### Added
 
