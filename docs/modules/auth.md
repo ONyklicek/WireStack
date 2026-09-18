@@ -511,6 +511,14 @@ token inside one request. `createToken()` replaces any token the account already
 had, so a link and a code cannot both be live for it — which is the property the
 link flow has always had.
 
+A refused password does not cost the code. Verifying spends it, and the new
+password is judged after that — so a confirmation that did not match used to send
+a person back to `/forgot-password`. Now the session keeps a proof of the code
+it just verified: the address, a keyed fingerprint of the digits and the code's
+own expiry. The form comes back with the code filled in, and the corrected
+attempt goes through on that proof. Another browser, another address, other
+digits or a code past its time are all refused as before.
+
 Two bindings are replaced while this flow is on — Laravel's
 `ResetPassword::toMailUsing()` and Fortify's
 `SuccessfulPasswordResetLinkRequestResponse`. If your application binds either

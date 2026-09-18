@@ -37,29 +37,38 @@ final class DatabaseOneTimeCodes implements OneTimeCodes
     public function __construct(private readonly ConnectionInterface $connection) {}
 
     /**
-     * Replace first, then insert.
+     * One statement that inserts the code or replaces the one already there.
      *
-     * In that order rather than as an upsert, because the unique index is on the
-     * pair and an update would keep the attempt counter of the code being
-     * replaced — a person who asked for a second code would inherit their own
-     * wrong guesses at the first.
+     * It used to be two — delete the pair, then insert — with nothing between
+     * them. Two requests for the first code (a double click, a mail client
+     * prefetching the POST) both deleted nothing and both inserted, and the
+     * second insert hit the unique index: an uncaught 500 on the sign-in screen,
+     * the one flow built to answer the same bland sentence whatever happens.
+     *
+     * An upsert has no such window on any driver. What kept it out before was
+     * that an update would keep the attempt counter of the code being replaced,
+     * so a person who asked for a second code would inherit their own wrong
+     * guesses at the first — which naming `attempts` among the columns to
+     * overwrite answers: it is reset along with the code.
      */
     public function issue(CodePurpose $purpose, string $identifier, array $payload = []): OneTimeCode
     {
         $code = $this->generate();
         $expiresAt = Carbon::now()->addMinutes($this->minutes());
 
-        $this->invalidate($purpose, $identifier);
-
-        $this->table()->insert([
-            'purpose' => $purpose->value,
-            'identifier' => $identifier,
-            'code' => Hash::make($code),
-            'payload' => $payload === [] ? null : json_encode($payload, JSON_THROW_ON_ERROR),
-            'attempts' => 0,
-            'expires_at' => $expiresAt,
-            'created_at' => Carbon::now(),
-        ]);
+        $this->table()->upsert(
+            [[
+                'purpose' => $purpose->value,
+                'identifier' => $identifier,
+                'code' => Hash::make($code),
+                'payload' => $payload === [] ? null : json_encode($payload, JSON_THROW_ON_ERROR),
+                'attempts' => 0,
+                'expires_at' => $expiresAt,
+                'created_at' => Carbon::now(),
+            ]],
+            ['purpose', 'identifier'],
+            ['code', 'payload', 'attempts', 'expires_at', 'created_at'],
+        );
 
         return new OneTimeCode($purpose, $identifier, $code, $expiresAt, $payload);
     }
@@ -84,7 +93,7 @@ final class DatabaseOneTimeCodes implements OneTimeCodes
         // walks away mid-flow leaves a hash sitting in the table for as long as
         // the account exists.
         if (Carbon::parse($record->expires_at)->isPast()) {
-            $this->invalidate($purpose, $identifier);
+            $this->consume($record);
 
             return null;
         }
@@ -95,7 +104,15 @@ final class DatabaseOneTimeCodes implements OneTimeCodes
             return null;
         }
 
-        $this->invalidate($purpose, $identifier);
+        // Only the request that actually removes the row has spent the code.
+        // Two requests carrying the same right digits both read the row and both
+        // pass the hash; before, both then ran a delete that did not care whether
+        // it removed anything, and both came back successful — one mailed code,
+        // two sessions. The delete that finds nothing lost the race, and a lost
+        // race is a no like any other.
+        if (! $this->consume($record)) {
+            return null;
+        }
 
         return new OneTimeCode(
             $purpose,
@@ -125,6 +142,22 @@ final class DatabaseOneTimeCodes implements OneTimeCodes
             ->where('purpose', $purpose->value)
             ->where('identifier', $identifier)
             ->delete();
+    }
+
+    /**
+     * Remove exactly the row that was read, and say whether this call did.
+     *
+     * Named by its key *and* its hash, not by the pair: an `issue()` landing
+     * between the read and this delete replaces the code in place — same row,
+     * new hash — and a delete by the pair, or by the key alone, would then throw
+     * away the code in the newest mail on the strength of an older one.
+     */
+    private function consume(stdClass $record): bool
+    {
+        return $this->table()
+            ->where('id', $record->id)
+            ->where('code', $record->code)
+            ->delete() > 0;
     }
 
     /**

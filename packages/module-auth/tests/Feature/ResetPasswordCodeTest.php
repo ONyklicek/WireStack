@@ -9,8 +9,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Testing\TestResponse;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 use Laravel\Fortify\Features;
+use NyonCode\WireModuleAuth\Http\Controllers\PasswordResetCodeController;
 use NyonCode\WireModuleAuth\Tests\Fixtures\CodeUser;
 use NyonCode\WireModuleAuth\Tests\Fixtures\CodeWorld;
 use NyonCode\WireModuleAuth\Tests\Fixtures\ResetUserPassword;
@@ -175,6 +177,95 @@ it('mints the token it resets with, rather than carrying one', function () {
     ])->assertSessionHasNoErrors();
 
     expect(Hash::check('a-brand-new-one', $user->fresh()->password))->toBeTrue();
+});
+
+/** A reset posted from the screen, with the two password fields given apart. */
+function resetFromScreen(string $code, string $password, ?string $confirmation = null): TestResponse
+{
+    return test()->from('/reset-password-code')->post('/reset-password-code', [
+        'email' => 'ann@example.com',
+        'code' => $code,
+        'password' => $password,
+        'password_confirmation' => $confirmation ?? $password,
+    ]);
+}
+
+it('keeps the code good for a second try when the new password is refused', function () {
+    // Verifying spends the code, and the password is judged after that — so a
+    // confirmation that did not match used to leave a spent code and a trip back
+    // to /forgot-password, where the broker's throttle refused the second ask.
+    $user = CodeWorld::user();
+
+    $this->post('/forgot-password', ['email' => 'ann@example.com']);
+    $code = mailedResetCode();
+
+    resetFromScreen($code, 'a-brand-new-one', 'does-not-match')->assertSessionHasErrors('password');
+
+    // The same digits — the screen gives them back filled in.
+    resetFromScreen($code, 'a-brand-new-one')->assertSessionHasNoErrors();
+
+    expect(Hash::check('a-brand-new-one', $user->fresh()->password))->toBeTrue();
+});
+
+it('leaves no live token behind a refused password, and none in the flashed input', function () {
+    // The token minted for the refused attempt did nothing. Left in the broker's
+    // table it would stay good for an hour; left in the request, Laravel would
+    // flash it back to the form and write it into the session.
+    CodeWorld::user();
+
+    $this->post('/forgot-password', ['email' => 'ann@example.com']);
+
+    resetFromScreen(mailedResetCode(), 'a-brand-new-one', 'does-not-match')
+        ->assertSessionHasErrors('password')
+        ->assertSessionHasInput('code')
+        ->assertSessionMissing('_old_input.token');
+
+    expect(DB::table('password_reset_tokens')->count())->toBe(0);
+});
+
+it('holds the second try to the same digits', function () {
+    // The proof is of *this* code, not of a code: a refused password does not
+    // turn the screen into one that takes whatever is typed into the code box.
+    $user = CodeWorld::user();
+
+    $this->post('/forgot-password', ['email' => 'ann@example.com']);
+    $code = mailedResetCode();
+
+    resetFromScreen($code, 'a-brand-new-one', 'does-not-match')->assertSessionHasErrors('password');
+
+    resetFromScreen($code === '000000' ? '111111' : '000000', 'a-brand-new-one')
+        ->assertSessionHasErrors('code');
+
+    expect(Hash::check('correct-horse', $user->fresh()->password))->toBeTrue();
+});
+
+it('holds the second try to the life the code had', function () {
+    // No longer than the code itself would have lived: the proof carries the
+    // code's own expiry, not a new one from the moment it was proved.
+    config()->set('wire-module-auth.codes.expires', 10);
+
+    $user = CodeWorld::user();
+
+    $this->post('/forgot-password', ['email' => 'ann@example.com']);
+    $code = mailedResetCode();
+
+    resetFromScreen($code, 'a-brand-new-one', 'does-not-match')->assertSessionHasErrors('password');
+
+    $this->travel(11)->minutes();
+
+    resetFromScreen($code, 'a-brand-new-one')->assertSessionHasErrors('code');
+
+    expect(Hash::check('correct-horse', $user->fresh()->password))->toBeTrue();
+});
+
+it('forgets the proof once the password is set', function () {
+    CodeWorld::user();
+
+    $this->post('/forgot-password', ['email' => 'ann@example.com']);
+
+    resetFromScreen(mailedResetCode(), 'a-brand-new-one')
+        ->assertSessionHasNoErrors()
+        ->assertSessionMissing(PasswordResetCodeController::PROOF_KEY);
 });
 
 it('refuses rather than fatals when the application swapped the broker out', function () {

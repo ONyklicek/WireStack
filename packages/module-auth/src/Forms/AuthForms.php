@@ -237,8 +237,9 @@ final class AuthForms
     /**
      * A new password, from a code rather than a link.
      *
-     * No token field: the token is what the code's row carries, and a screen
-     * that showed it would be a screen where the code was decoration. The
+     * No token field: the token is what the code stands for — minted when the
+     * code is redeemed — and a screen that showed it would be a screen where the
+     * code was decoration. The
      * address is filled in from the request that asked for the code and stays
      * editable — somebody who asked in one browser and finished in another can
      * still complete it.

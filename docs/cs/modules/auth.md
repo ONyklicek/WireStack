@@ -505,6 +505,13 @@ co čitelný token drží uvnitř jednoho požadavku. `createToken()` nahradí t
 který už účet měl, takže odkaz a kód nemůžou být živé zároveň — což je vlastnost,
 kterou tok s odkazem měl odjakživa.
 
+Odmítnuté heslo kód nestojí. Ověření kód spotřebuje a nové heslo se posuzuje až
+potom — takže nesouhlasící potvrzení dřív poslalo člověka zpátky na
+`/forgot-password`. Teď si session drží důkaz kódu, který právě ověřila: adresu,
+klíčovaný otisk číslic a expiraci kódu. Formulář se vrátí s vyplněným kódem
+a opravený pokus projde na ten důkaz. Jiný prohlížeč, jiná adresa, jiné číslice
+nebo kód po své době se odmítnou jako dřív.
+
 Se zapnutým tokem se nahrazují dva bindingy — Laravelův
 `ResetPassword::toMailUsing()` a `SuccessfulPasswordResetLinkRequestResponse` z
 Fortify. Pokud si některý navazuje vaše aplikace, její provider bootuje poslední
