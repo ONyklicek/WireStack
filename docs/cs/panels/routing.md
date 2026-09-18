@@ -189,6 +189,56 @@ Zóna, která chce pevný cíl místo první stránky, napíše obyčejný redir
 Route::redirect('business', 'business/orders');
 ```
 
+**Nad zónami: kam vede přihlášení.** Při více zónách nepatří `/` žádné z nich
+a právě tam pošle Fortify `home` člověka po přihlášení.
+`Route::wireZoneEntry()` ji routuje jako `wire.zones` a zónu určí bez ptaní
+pokaždé, když existuje jediná odpověď, v tomto pořadí:
+
+1. vlastní volba člověka — uživatelský model s `HasPreferredZone`,
+2. `wire-panels.routes.zone_entry.primary`,
+3. jediná zóna, do které člověk smí.
+
+Krok se počítá jen tehdy, když člověk do jmenované zóny smí — zeptá se
+middlewaru `can:` té zóny, stejně jako vstup výše — takže zastaralá preference
+nebo primární zóna za oprávněním, které nemá, propadne dál místo 403. Výběr zón
+se ukáže jen při skutečné volbě; bez nastaveného view vezme první zónu, do které
+smí.
+
+```php
+Route::middleware(['web', 'auth'])->group(fn () => Route::wireZoneEntry('/'));   // [tl! focus]
+
+// config/wire-panels.php
+'routes' => [
+    'zone_entry' => [
+        'uri' => null,            // nebo '/' — tatáž routa, deklarovaná z configu
+        'primary' => 'business',  // [tl! focus]
+        'view' => 'zones',        // dostane $zones (klíč => URL) a $primary
+    ],
+],
+
+// config/fortify.php
+'home' => '/',
+```
+
+```php
+use NyonCode\WirePanels\Contracts\HasPreferredZone;
+
+class User extends Authenticatable implements HasPreferredZone
+{
+    public function preferredZone(): ?string
+    {
+        return $this->preferred_zone;   // [tl! focus]
+    }
+}
+```
+
+**Znovu vybrat** jde jedním odkazem: `?choose` přeskočí přesměrování a ukáže
+výběr komukoli, s primární zónou i bez ní — kam míří položka „všechny zóny"
+v přepínači zón, `route('wire.zones', ['choose' => 1])`. Zóny se čtou z routeru,
+ne z configu, takže zóny deklarované v route souboru se počítají stejně jako
+`routes.zones`; `ZoneDirectory::reachableBy($user)` je týž seznam, jaký kreslí
+přepínač.
+
 **Odkud se zóna bere.** `Zone::current()` ji přečte z routy, která se právě
 vykresluje, a je to volání **pro plný render stránky**:
 
@@ -299,6 +349,10 @@ ResourceRoutes::urlFor(string $key, string $page = 'index', array $parameters = 
 ResourceRoutes::urls(string $page = 'index', ?string $zone = null): array
 ResourceRoutes::uriFor(string $name, string|RoutePage $page): string       // the segment it sits at
 ResourceRoutes::takesRecord(string $name, string|RoutePage $page): bool    // read off that URI, not off the kind
+ResourceRoutes::zoneEntry(string $uri = '/'): Route   // `wire.zones`; the macro is Route::wireZoneEntry()
+ZoneDirectory::all(): array                           // zone => its shortest route, in registration order
+ZoneDirectory::reachableBy(?Authenticatable $user): array   // zone => URL, only those its `can:` lets in
+ZoneDirectory::landingFor(?Authenticatable $user): ?string  // preference, primary, the only one — or null
 ```
 
 A dvě čtení jména routy stránky, která každý volající dostane z jednoho

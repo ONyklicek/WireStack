@@ -57,6 +57,16 @@ return [
     | all they are one unnamed group, which is what a single-zone application
     | wants and what these values already do.
     |
+    | ZONE ENTRY. With several zones, the address above them — `/` — is where
+    | signing in should end. `zone_entry.uri` routes it (as `wire.zones`; a
+    | route file calls `Route::wireZoneEntry('/')` instead), and point
+    | `fortify.home` at it. It sends each person straight into a zone: their
+    | own `HasPreferredZone::preferredZone()`, else `zone_entry.primary`, else
+    | the only zone they may enter. Only a real choice shows `zone_entry.view`
+    | (handed `$zones`, key => URL, and `$primary`); with no view it takes the
+    | first zone they may enter. `?choose` always shows the picker — the link
+    | a zone switcher's "all zones" entry wants.
+    |
     | MIDDLEWARE. `auth` is in the default, and it is the one default here that
     | is a safety decision rather than a convenience. The pages this registers
     | are a resource's create, edit and delete screens; a group without `auth`
@@ -78,6 +88,11 @@ return [
         'only' => [],
         'except' => [],
         'zones' => [],
+        'zone_entry' => [
+            'uri' => null,
+            'primary' => null,
+            'view' => null,
+        ],
     ],
 
 ];

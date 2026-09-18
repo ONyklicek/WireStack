@@ -148,6 +148,18 @@ final class ResourceRoutes
         return RouteFacade::get('', PanelEntry::class)->name('wire.home');
     }
 
+    /**
+     * The address above the zones, named `wire.zones` — see {@see ZoneEntry}.
+     *
+     * Its own registration rather than part of {@see all()}: it belongs to no
+     * zone, so it sits outside every zone's group, and an application with a
+     * single zone has no use for it.
+     */
+    public static function zoneEntry(string $uri = '/'): Route
+    {
+        return RouteFacade::get($uri, ZoneEntry::class)->name('wire.zones');
+    }
+
     private static function groupDomain(): ?string
     {
         $domains = array_filter(array_column(RouteFacade::getFacadeRoot()->getGroupStack(), 'domain'));

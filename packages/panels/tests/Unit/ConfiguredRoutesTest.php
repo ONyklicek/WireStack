@@ -218,6 +218,33 @@ it('lets a zone inherit the shared values and override only what it names', func
         ->and($ops?->getDomain())->toBe('ops.example.test');
 });
 
+it('routes the address above the zones when config names one', function () {
+    // In no zone, so behind the shared middleware and no zone's `can:`; and on
+    // the shared domain, the one the zones inherit.
+    app(ResourceRegistry::class)->register(RtOrderResource::class);
+
+    crBoot([
+        'middleware' => ['web', 'auth'],
+        'domain' => 'app.example.test',
+        'zone_entry' => ['uri' => '/', 'primary' => null, 'view' => null],
+        'zones' => ['admin' => ['prefix' => 'admin', 'middleware' => ['web', 'auth', 'can:admin']]],
+    ]);
+
+    $entry = Route::getRoutes()->getByName('wire.zones');
+
+    expect($entry?->uri())->toBe('/')
+        ->and($entry?->gatherMiddleware())->toBe(['web', 'auth'])
+        ->and($entry?->getDomain())->toBe('app.example.test');
+});
+
+it('routes no address above the zones unless asked', function () {
+    app(ResourceRegistry::class)->register(RtOrderResource::class);
+
+    crBoot(['zones' => ['admin' => ['prefix' => 'admin']]]);
+
+    expect(Route::getRoutes()->getByName('wire.zones'))->toBeNull();
+});
+
 it('answers a url in the zone that was asked for', function () {
     // The one method ADR 0027 had to change: a link is always "where is this key
     // in THIS zone", and a zone that does not route the key answers null — the
