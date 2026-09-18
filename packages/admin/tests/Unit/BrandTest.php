@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Route;
 
 /*
  * The logo.
@@ -146,6 +147,21 @@ it('links home unless the application says otherwise', function () {
 
     config()->set('wire-admin.brand.url', '/admin');
     expect(btRender())->toContain('href="/admin"');
+});
+
+it('links to the admin s own address once the panel is routed', function () {
+    // In a fresh application `/` is Laravel's welcome page, so a logo that went
+    // there took you out of the admin.
+    config()->set('wire-admin.brand', []);
+    Route::middleware('web')->prefix('backoffice')
+        ->group(fn () => Route::wireResources());
+    Route::getRoutes()->refreshNameLookups();
+
+    expect(btRender())->toContain('href="'.url('/backoffice').'"');
+
+    // What the application configured still wins.
+    config()->set('wire-admin.brand.url', '/elsewhere');
+    expect(btRender())->toContain('href="/elsewhere"');
 });
 
 it('refuses a height that is not a number', function () {

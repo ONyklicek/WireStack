@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireAdmin\View;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Route;
 use Illuminate\View\Component;
+use NyonCode\WireCore\Foundation\Routing\Zone;
 
 /**
  * The mark at the top of the menu: `<x-wire-admin::brand />`.
@@ -87,11 +89,26 @@ class Brand extends Component
         return is_numeric($height) ? max(1, (int) $height) : 28;
     }
 
+    /**
+     * Where the brand links: what the application configured, else the admin's
+     * own address, else the application root.
+     *
+     * The admin's address is `wire.home` — the entry wire-panels routes at the
+     * group's root — in the zone this page belongs to. It used to be `/`, which
+     * in a freshly installed application is Laravel's welcome page: the logo of
+     * the admin took you out of it.
+     */
     public function url(): string
     {
         $url = config('wire-admin.brand.url');
 
-        return is_string($url) && $url !== '' ? $url : '/';
+        if (is_string($url) && $url !== '') {
+            return $url;
+        }
+
+        $home = Zone::prefix(Zone::current()).'wire.home';
+
+        return Route::has($home) ? route($home) : '/';
     }
 
     /**

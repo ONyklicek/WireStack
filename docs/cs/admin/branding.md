@@ -24,6 +24,7 @@ iniciálu aplikace v zaobleném čtverci.
     'logo' => 'images/logo.svg',        // široké menu
     'mark' => 'images/mark.svg',        // lišta — spadne zpět na iniciálu
     'logo_dark' => 'images/logo-dark.svg',
+    'url' => null,                      // kam vede — null: vlastní adresa adminu
 ],
 ```
 

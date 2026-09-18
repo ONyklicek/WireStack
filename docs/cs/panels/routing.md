@@ -148,9 +148,19 @@ A shell s vlastním URL schématem má tady bez odkazu úplně všechno a stejn�
 všechny položky — je to volající, kdo ví, ve kterém případě je. Skupina, které
 vypadnou všechny položky, zmizí celá místo prázdného nadpisu.
 
-**Landing page zóny.** `/business` samo neroutuje nic, dokud si to něco
-nenárokuje — a nárokuje se to jednou metodou: prázdný prefix nepřidá segment,
-takže `index` té stránky sedne na vlastní cestu skupiny:
+**Vlastní adresa zóny.** `/business` samo odpoví vždycky. Pokud si ji nic
+nenárokuje, `wireResources()` tam dá vstup — `wire.home`, v zóně
+`business.wire.home` — který člověka pošle na první stránku skupiny, kterou
+opravdu smí otevřít: první v pořadí sidebaru (skupiny podle svého řazení, pak
+položky podle svého, skryté vynechané) a vynechá stránku, jejíž middleware `can:`
+by Gate odmítl, protože přesměrování do 403 je horší přistání než žádné. Nic
+k otevření je 403; nic zaregistrovaného je 404. Na tuhle adresu také
+`wire:install` nasměruje `home` Fortify, takže přihlášení skončí v adminu. Routu,
+kterou už na té cestě aplikace má, vstup nikdy nenahradí.
+
+**Landing page zóny.** Nárokovat si adresu místo toho je jedna metoda: prázdný
+prefix nepřidá segment, takže `index` té stránky sedne na vlastní cestu skupiny
+a vstup výše se pak neregistruje:
 
 ```php
 final class BusinessOverview extends Dashboard implements ConfiguresRoutes, ProvidesPages
@@ -172,8 +182,8 @@ nárokují kořen **jedné** skupiny, jsou odmítnuty — Laravel klíčuje rout
 URI, takže by druhá tu první nahradila i se jménem routy a zůstala by položka
 menu, která vypadá zaroutovaně a tiše nikam neodkazuje.
 
-Zóna, která chce cíl a ne vlastní stránku, napíše vedle skupiny obyčejný
-redirect:
+Zóna, která chce pevný cíl místo první stránky, napíše obyčejný redirect
+**před** skupinu; vstup ho pak nechá být:
 
 ```php
 Route::redirect('business', 'business/orders');
@@ -283,8 +293,8 @@ si `livewire.component_layout` na svůj vlastní.
 ## Routing API
 
 ```php
-ResourceRoutes::all(array $only = [], array $except = []): array   // každý klíč, který deklaruje
-ResourceRoutes::for(string $class): array                          // jeden, nebo vyhodí výjimku
+ResourceRoutes::all(array $only = [], array $except = []): array   // každý klíč, který deklaruje, navíc `wire.home` v kořeni
+ResourceRoutes::for(string $class, array $pages = []): array   // jeden, nebo vyhodí výjimku; `$pages` routuje jen ty
 ResourceRoutes::urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
 ResourceRoutes::urls(string $page = 'index', ?string $zone = null): array
 ResourceRoutes::uriFor(string $name, string|RoutePage $page): string       // the segment it sits at

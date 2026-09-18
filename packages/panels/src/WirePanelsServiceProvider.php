@@ -90,8 +90,8 @@ class WirePanelsServiceProvider extends PackageServiceProvider
             return ResourceRoutes::all($only, $except);
         });
 
-        Route::macro('wireResource', function (string $resource): array {
-            return ResourceRoutes::for($resource);
+        Route::macro('wireResource', function (string $resource, array $pages = []): array {
+            return ResourceRoutes::for($resource, $pages);
         });
     }
 

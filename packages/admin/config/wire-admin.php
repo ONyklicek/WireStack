@@ -38,7 +38,9 @@ return [
         'height' => env('WIRE_ADMIN_LOGO_HEIGHT', 28),
 
         /*
-         * Where the brand links. Null means the application root.
+         * Where the brand links. Null means the admin's own address (the
+         * `wire.home` route at the panel's prefix), or the application root
+         * where the panel is not routed.
          */
         'url' => null,
     ],

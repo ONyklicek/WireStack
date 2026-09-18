@@ -115,7 +115,44 @@ final class ResourceRoutes
             $routes = [...$routes, ...self::for($class)];
         }
 
+        // The group's own path answers too, unless a landing page has it. See
+        // PanelEntry: it sends a person to the first page they may open, which
+        // is also what makes the prefix a place Fortify can send them after
+        // sign-in.
+        if ($atRoot === null && ($entry = self::entry()) !== null) {
+            $routes[] = $entry;
+        }
+
         return $routes;
+    }
+
+    /**
+     * The route at the group's root that leads into the admin, or null when
+     * something already answers there.
+     *
+     * Checked against the routes registered so far, not only this call's: an
+     * application that calls `wireResources()` twice in one group, or routed a
+     * page of its own at the prefix, must not have that page replaced — Laravel
+     * keys routes by method and URI, and the later registration wins.
+     */
+    private static function entry(): ?Route
+    {
+        $uri = self::groupPrefix() === '' ? '/' : self::groupPrefix();
+
+        foreach (RouteFacade::getRoutes()->get('GET') as $existing) {
+            if ($existing->uri() === $uri && $existing->getDomain() === self::groupDomain()) {
+                return null;
+            }
+        }
+
+        return RouteFacade::get('', PanelEntry::class)->name('wire.home');
+    }
+
+    private static function groupDomain(): ?string
+    {
+        $domains = array_filter(array_column(RouteFacade::getFacadeRoot()->getGroupStack(), 'domain'));
+
+        return $domains === [] ? null : (string) end($domains);
     }
 
     /**
@@ -134,12 +171,13 @@ final class ResourceRoutes
     }
 
     /**
-     * Register one registered class's pages.
+     * Register one registered class's pages — all of them, or the ones named.
      *
      * @param  class-string  $resource
+     * @param  array<int, string>  $pages  Page keys to route; empty means all.
      * @return array<int, Route>
      */
-    public static function for(string $resource): array
+    public static function for(string $resource, array $pages = []): array
     {
         if (! is_subclass_of($resource, ProvidesPages::class)) {
             throw ResourceRoutingException::declaresNoPages($resource);
@@ -153,6 +191,13 @@ final class ResourceRoutes
         $routes = [];
 
         foreach ($resource::pages() as $name => $page) {
+            // Some of a resource's pages, where a group should reach only those —
+            // the users module's own-account page in every zone, without the
+            // user management beside it.
+            if ($pages !== [] && ! in_array($name, $pages, true)) {
+                continue;
+            }
+
             $uri = self::uriFor($name, $page);
             $page = $page instanceof RoutePage ? $page : RoutePage::make($page);
 
