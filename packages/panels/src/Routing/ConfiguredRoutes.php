@@ -79,6 +79,20 @@ final readonly class ConfiguredRoutes implements RegistersPageRoutes
             // and a zone that needs `auth` says only that.
             $this->mount((string) $zone, [...$config, ...(is_array($overrides) ? $overrides : [])]);
         }
+
+        // The address above the zones, behind the top-level middleware — it
+        // is in no zone, so no zone's `can:` applies to it.
+        $entry = $config['zone_entry']['uri'] ?? null;
+
+        if (is_string($entry) && $entry !== '') {
+            $registrar = RouteFacade::middleware($config['middleware'] ?? []);
+
+            if (($config['domain'] ?? null) !== null) {
+                $registrar = $registrar->domain($config['domain']);
+            }
+
+            $registrar->group(fn () => ResourceRoutes::zoneEntry($entry));
+        }
     }
 
     /**

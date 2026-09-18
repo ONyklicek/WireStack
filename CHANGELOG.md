@@ -2,6 +2,60 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.1.0]
+
+Includes everything listed under [2.0.1], which was not released on its own.
+
+### Added
+
+- **A person lands in their zone after signing in — `Route::wireZoneEntry()`.** With several zones,
+  `/` belongs to none of them, and the only answer an application wrote there was a page of links, so
+  a person who works in one zone chose it again after every sign-in. `Route::wireZoneEntry('/')` (or
+  `wire-panels.routes.zone_entry.uri`) routes that address as `wire.zones` and decides without asking
+  whenever there is one answer: the person's own `HasPreferredZone::preferredZone()`, else
+  `routes.zone_entry.primary`, else the only zone they may enter. Each counts only if the zone's
+  `can:` middleware lets them in, so a stale preference or a primary zone behind a permission they
+  lack falls through instead of ending in a 403. A real choice shows `routes.zone_entry.view`
+  (`$zones` key => URL, and `$primary`), and `?choose` shows it on request — the link a zone
+  switcher's "all zones" entry wants. `ZoneDirectory` reads the zones off the router, so zones
+  declared in a route file count the same as `routes.zones`. See `docs/panels/routing.md` § Zones.
+- **The admin answers at its own address — `wire.home`.** Every page lives under the prefix, so
+  `/admin` itself was a 404. `wireResources()` registers `wire.home` (`{zone}.wire.home` in a zone)
+  at the group's root unless a landing page or an application route already has it; it sends the
+  person to the first sidebar entry they may open, in the sidebar's order, skipping routes whose
+  `can:` middleware the Gate refuses (`RouteAccess`). Nothing they may open is a 403, nothing
+  registered a 404. The brand links there when it names no URL.
+- **`Route::wireResource($class, pages: [...])`** routes only the named pages of a resource — a
+  person's own account in every zone, without the user management beside it.
+- **The own account is linked beside every sign-out, in whichever zone.** `ProfileLink` asks the
+  current zone first and then wider; before, the user menu linked to the profile only where the
+  current zone routed the users resource.
+- **`wire:install` prepares the user model.** A module-auth setup step adds
+  `TwoFactorAuthenticatable`, and `PasskeyAuthenticatable` with `PasskeyUser`, for the features
+  `config/fortify.php` switches on. On a clean install the sign-in screen offered passkeys to accounts
+  that could never hold one, and the profile drew neither card. The editing is
+  `Foundation\Setup\ClassSource`, one helper for adding a trait or an interface to an application
+  class.
+- **`wire:install` sends a person who signs in to the admin.** Fortify publishes `home` as `/home`,
+  which a fresh application does not route; a suite step points it at the admin's own address. An
+  application that already changed `home` is left alone.
+- **`composer verify:install` — a clean-install gate.** It creates `laravel/laravel`, requires every
+  package from `packages/*`, runs `wire:install --all`, signs in, opens every sidebar entry and makes
+  a browser pass. The skeleton and the workbench are wired by hand and cannot see an installer gap;
+  this starts where a new user starts. CI runs it from `.github/workflows/clean-install.yml`.
+
+### Fixed
+
+- **A table over a `CollectionDataSource` draws.** The docs promised that a table with
+  `->dataSource(new CollectionDataSource([...]))` and no model searches, filters, sorts and pages;
+  it threw "No model or query defined for table." It now fetches through the source: search,
+  Select/Text/NumberRange filters (the source understands `LIKE`, `BETWEEN` with an open end and
+  `IS NULL`, and compares backed enums by value), sorting, pagination, footer summaries over every
+  matching row, and "select all matching" with bulk actions. Rows reach columns and actions as a
+  read-only `CollectionRow` model. What only a builder can do — `DateFilter`, `Filter::query()`, a
+  search or sort callback, the selection as a builder — throws `CustomDataSourceException` naming
+  it, once it is used.
+
 ## [2.0.1]
 
 ### Added

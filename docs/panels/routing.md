@@ -152,9 +152,20 @@ every entry unlinked here and still wants all of them — it is the caller who
 knows which case it is in. A group whose entries all drop away is absent rather
 than an empty heading.
 
-**The zone's landing page.** `/business` itself routes nothing unless something
-claims it, and claiming it is one method — an empty prefix adds no segment, so
-that page's `index` lands on the group's own path:
+**The zone's own address.** `/business` itself always answers. Unless something
+claims it, `wireResources()` puts an entry there — `wire.home`, or
+`business.wire.home` in a zone — that sends the person to the first page of the
+group they can actually open: first as the sidebar orders it (groups by their
+sort, then entries by theirs, hidden ones skipped), and skipping a page whose
+`can:` middleware the Gate would refuse, because a redirect into a 403 is a worse
+landing than none. Nothing to open is a 403; nothing registered at all is a 404.
+It is also the address `wire:install` points Fortify's `home` at, so signing in
+lands in the admin. A route the application already has at that path is never
+replaced.
+
+**The zone's landing page.** Claiming the address instead is one method — an
+empty prefix adds no segment, so that page's `index` lands on the group's own
+path, and the entry above is then not registered:
 
 ```php
 final class BusinessOverview extends Dashboard implements ConfiguresRoutes, ProvidesPages
@@ -176,12 +187,62 @@ the root of **one** group is refused — Laravel keys routes by URI, so the seco
 would replace the first and take its route name with it, leaving a menu entry
 that looks routed and silently links nowhere.
 
-A zone that wants a destination rather than a page of its own writes an ordinary
-redirect beside the group:
+A zone that wants a fixed destination rather than the first page writes an
+ordinary redirect **before** the group, which the entry then leaves alone:
 
 ```php
 Route::redirect('business', 'business/orders');
 ```
+
+**Above the zones: where signing in lands.** With several zones, `/` belongs to
+none of them, and it is where Fortify's `home` sends a person after signing in.
+`Route::wireZoneEntry()` routes it as `wire.zones`, and it decides the zone
+without asking whenever there is one answer, in this order:
+
+1. the person's own choice — a user model implementing `HasPreferredZone`,
+2. `wire-panels.routes.zone_entry.primary`,
+3. the only zone this person may enter.
+
+A step counts only when the person may enter the zone it names — asked of the
+zone's `can:` middleware, like the entry above — so a stale preference or a
+primary zone behind a permission they lack falls through rather than ending in a
+403. Only a real choice shows the picker view; with none configured it takes the
+first zone they may enter.
+
+```php
+Route::middleware(['web', 'auth'])->group(fn () => Route::wireZoneEntry('/'));   // [tl! focus]
+
+// config/wire-panels.php
+'routes' => [
+    'zone_entry' => [
+        'uri' => null,            // or '/' — the same route, declared from config
+        'primary' => 'business',  // [tl! focus]
+        'view' => 'zones',        // handed $zones (key => URL) and $primary
+    ],
+],
+
+// config/fortify.php
+'home' => '/',
+```
+
+```php
+use NyonCode\WirePanels\Contracts\HasPreferredZone;
+
+class User extends Authenticatable implements HasPreferredZone
+{
+    public function preferredZone(): ?string
+    {
+        return $this->preferred_zone;   // [tl! focus]
+    }
+}
+```
+
+**Choosing again** stays one link away: `?choose` skips the landing and shows the
+picker to anybody, primary zone or not — what a zone switcher's "all zones" entry
+points at, `route('wire.zones', ['choose' => 1])`. The zones are read off the
+router, not off config, so zones declared in a route file count the same as
+`routes.zones`; `ZoneDirectory::reachableBy($user)` is the same list a switcher
+draws.
 
 **Where the zone comes from.** `Zone::current()` reads it off the route being
 rendered, and that is a **full-page-render** call:
@@ -288,12 +349,16 @@ one — set `livewire.component_layout` to your own.
 ## Routing API
 
 ```php
-ResourceRoutes::all(array $only = [], array $except = []): array   // every declaring key
-ResourceRoutes::for(string $class): array                          // one, or throws
+ResourceRoutes::all(array $only = [], array $except = []): array   // every declaring key, plus `wire.home` at the root
+ResourceRoutes::for(string $class, array $pages = []): array   // one, or throws; `$pages` routes only those
 ResourceRoutes::urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
 ResourceRoutes::urls(string $page = 'index', ?string $zone = null): array
 ResourceRoutes::uriFor(string $name, string|RoutePage $page): string       // the segment it sits at
 ResourceRoutes::takesRecord(string $name, string|RoutePage $page): bool    // read off that URI, not off the kind
+ResourceRoutes::zoneEntry(string $uri = '/'): Route   // `wire.zones`; the macro is Route::wireZoneEntry()
+ZoneDirectory::all(): array                           // zone => its shortest route, in registration order
+ZoneDirectory::reachableBy(?Authenticatable $user): array   // zone => URL, only those its `can:` lets in
+ZoneDirectory::landingFor(?Authenticatable $user): ?string  // preference, primary, the only one — or null
 ```
 
 And the two readings of a page route's name, which every caller of either gets

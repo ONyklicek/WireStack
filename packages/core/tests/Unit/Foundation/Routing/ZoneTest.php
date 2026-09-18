@@ -42,6 +42,20 @@ it('answers null for anything that is not a wire page route', function () {
         ->and(Zone::of('wire.invoices'))->toBeNull();
 });
 
+it('reads the zone of the panel s own address, which is about no resource', function () {
+    // `wire.home` is the entry wire-panels routes at a group's root. It answers
+    // by sending a person into that zone's first page, so it has to know which
+    // zone it is — and it has no key or page kind to report.
+    expect(Zone::of('staff.wire.home'))->toBe('staff.')
+        ->and(Zone::of('ops.eu.wire.home'))->toBe('ops.eu.')
+        ->and(Zone::of('wire.home'))->toBeNull()
+        ->and(Zone::keyOf('staff.wire.home'))->toBeNull()
+        ->and(Zone::pageOf('staff.wire.home'))->toBeNull()
+        // A resource called `home` is still a resource.
+        ->and(Zone::keyOf('wire.home.index'))->toBe('home')
+        ->and(Zone::of('livewire.home'))->toBeNull();
+});
+
 it('reads the page kind out of a route name', function () {
     // The last segment, which the pattern matched to anchor the shape and then
     // threw away. A record's sub-navigation marks the tab you are standing on

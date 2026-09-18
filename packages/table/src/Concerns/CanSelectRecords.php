@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Concerns;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use NyonCode\WireTable\Data\CollectionRow;
 use NyonCode\WireTable\Services\AggregateSubqueries;
 use NyonCode\WireTable\Support\InactiveRow;
 use NyonCode\WireTable\Table;
@@ -244,7 +245,12 @@ trait CanSelectRecords
      */
     public function getMatchingRecordsCount(): int
     {
-        return $this->cachedMatchingCount ??= $this->buildTableQuery()->toBase()->getCountForPagination();
+        $table = $this->getTable();
+
+        // A custom source counts what it matches itself.
+        return $this->cachedMatchingCount ??= $table->hasCustomDataSource()
+            ? $table->getDataSource()->count($this->sourcePlan())
+            : $this->buildTableQuery()->toBase()->getCountForPagination();
     }
 
     /**
@@ -442,6 +448,13 @@ trait CanSelectRecords
             return;
         }
 
+        // A custom source's rows are already in memory; there is nothing to chunk.
+        if ($this->getTable()->hasCustomDataSource()) {
+            $this->selectedSourceRows()->each(fn ($record) => $callback($record));
+
+            return;
+        }
+
         $this->selectedRecordsQuery()
             ->chunkById($chunk, function (Collection $records) use ($callback): void {
                 foreach ($records as $record) {
@@ -473,7 +486,9 @@ trait CanSelectRecords
             return collect();
         }
 
-        return $this->cachedSelectedRecords = $this->selectedRecordsQuery()->get();
+        return $this->cachedSelectedRecords = $this->getTable()->hasCustomDataSource()
+            ? $this->selectedSourceRows()
+            : $this->selectedRecordsQuery()->get();
     }
 
     /**
@@ -484,5 +499,29 @@ trait CanSelectRecords
         $cap = $this->getTable()->getBulkMaxRecords();
 
         return $cap !== null && $this->getSelectedRecordsCount() > $cap;
+    }
+
+    /**
+     * The selection, read from a custom data source: every matching row minus
+     * the ones unticked, or exactly the ones ticked — the two modes
+     * {@see selectedRecordsQuery()} expresses as SQL for a model.
+     *
+     * @return Collection<int, Model>
+     */
+    protected function selectedSourceRows(): Collection
+    {
+        $table = $this->getTable();
+        $key = $table->getPrimaryKey();
+        $listed = array_map('strval', $this->tableState->get('selection.records', []));
+
+        if ($this->selectsAllMatching()) {
+            return $this->allSourceRows()
+                ->reject(fn ($record) => in_array((string) $record->getAttribute($key), $listed, true))
+                ->values();
+        }
+
+        return $table->getDataSource()->resolveRecords($listed)
+            ->map(fn ($record) => CollectionRow::from($record, $key))
+            ->values();
     }
 }

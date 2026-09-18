@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WirePanels;
 
+use Illuminate\Routing\Route as RouteDefinition;
 use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
@@ -90,8 +91,12 @@ class WirePanelsServiceProvider extends PackageServiceProvider
             return ResourceRoutes::all($only, $except);
         });
 
-        Route::macro('wireResource', function (string $resource): array {
-            return ResourceRoutes::for($resource);
+        Route::macro('wireResource', function (string $resource, array $pages = []): array {
+            return ResourceRoutes::for($resource, $pages);
+        });
+
+        Route::macro('wireZoneEntry', function (string $uri = '/'): RouteDefinition {
+            return ResourceRoutes::zoneEntry($uri);
         });
     }
 

@@ -209,6 +209,7 @@
         "test:sortable": "vendor/bin/pest --configuration packages/sortable/phpunit.xml",
         "test:boost": "vendor/bin/pest --configuration packages/boost/phpunit.xml",
         "test:browser": "bash scripts/test-browser.sh",
+        "verify:install": "bash scripts/verify-clean-install.sh",
         "lint": "vendor/bin/pint",
         "analyse": "vendor/bin/phpstan analyse --ansi",
         "api:dead": "php scripts/verify-dead-api.php .",

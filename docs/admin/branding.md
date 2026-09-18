@@ -24,6 +24,7 @@ rail falls back to the application's initial in a rounded square.
     'logo' => 'images/logo.svg',        // the wide menu
     'mark' => 'images/mark.svg',        // the rail — falls back to the initial
     'logo_dark' => 'images/logo-dark.svg',
+    'url' => null,                      // where it links — null: the admin's own address
 ],
 ```
 

@@ -11,6 +11,7 @@ use NyonCode\WireCore\Core\Query\AggregateClause;
 use NyonCode\WireCore\Core\Query\FilterClause;
 use NyonCode\WireCore\Core\Query\JoinClause;
 use NyonCode\WireCore\Core\Query\QueryPlan;
+use NyonCode\WireCore\Core\Query\SearchClause;
 use NyonCode\WireCore\Core\Query\SortClause;
 use NyonCode\WireCore\Exceptions\UnsupportedQueryAspectException;
 use NyonCode\WireTable\Data\CollectionDataSource;
@@ -211,3 +212,63 @@ it('streams only what the plan matched', function () {
 
     expect($names)->toBe(['Ada', 'Alan']);
 });
+
+// ─── What the table's own filters and search emit ────────────────────────────
+
+it('reads the operators the way the filters write them, in any case', function () {
+    $of = fn (FilterClause $c): array => cds()->get(new QueryPlan(filters: [$c]))->pluck('name')->all();
+
+    // TextFilter plans `LIKE` in capitals, with `%` wherever the match sits.
+    expect($of(new FilterClause('name', 'LIKE', 'a%')))->toBe(['Ada', 'Alan'])
+        ->and($of(new FilterClause('name', 'LIKE', '%E')))->toBe(['Grace'])
+        ->and($of(new FilterClause('name', 'like', 'A_a')))->toBe(['Ada'])
+        ->and($of(new FilterClause('name', 'NOT LIKE', '%a%')))->toBe([])
+        ->and($of(new FilterClause('id', 'NOT IN', [1, 3])))->toBe(['Grace']);
+});
+
+it('takes a range with either end open', function () {
+    $of = fn (array $range): array => cds()->get(new QueryPlan(filters: [new FilterClause('score', 'BETWEEN', $range)]))->pluck('name')->all();
+
+    expect($of([75, 85]))->toBe(['Alan'])
+        ->and($of([80, null]))->toBe(['Ada', 'Alan'])
+        ->and($of([null, 75]))->toBe(['Grace']);
+});
+
+it('tells a missing value from a present one', function () {
+    $rows = new CollectionDataSource([['id' => 1, 'note' => null], ['id' => 2, 'note' => 'x']]);
+
+    expect($rows->count(new QueryPlan(filters: [new FilterClause('note', 'IS NULL')])))->toBe(1)
+        ->and($rows->count(new QueryPlan(filters: [new FilterClause('note', 'IS NOT NULL')])))->toBe(1);
+});
+
+it('searches the columns a plan names for the term it carries', function () {
+    $plan = fn (?string $term, array $columns): QueryPlan => new QueryPlan(
+        searchClauses: array_map(fn (string $c) => new SearchClause($c), $columns),
+        searchTerm: $term,
+    );
+
+    expect(cds()->get($plan('RAC', ['name']))->pluck('name')->all())->toBe(['Grace'])
+        // Any named column may hold it; a column nobody named is not looked in.
+        ->and(cds()->get($plan('90', ['name', 'score']))->pluck('name')->all())->toBe(['Ada'])
+        ->and(cds()->get($plan('90', ['name']))->pluck('name')->all())->toBe([])
+        // No term, or no columns to look in, is no search at all.
+        ->and(cds()->count($plan(null, ['name'])))->toBe(3)
+        ->and(cds()->count($plan('Ada', [])))->toBe(3);
+});
+
+it('compares a backed enum by the value it is stored as', function () {
+    $rows = new CollectionDataSource([
+        ['id' => 1, 'status' => CdsStatus::Open],
+        ['id' => 2, 'status' => CdsStatus::Closed],
+    ]);
+
+    expect($rows->count(new QueryPlan(filters: [new FilterClause('status', '=', 'open')])))->toBe(1)
+        ->and($rows->count(new QueryPlan(filters: [new FilterClause('status', 'in', [CdsStatus::Closed])])))->toBe(1)
+        ->and($rows->count(new QueryPlan(searchClauses: [new SearchClause('status')], searchTerm: 'clos')))->toBe(1);
+});
+
+enum CdsStatus: string
+{
+    case Open = 'open';
+    case Closed = 'closed';
+}

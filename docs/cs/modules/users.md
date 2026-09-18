@@ -601,6 +601,29 @@ vlastní stránce nastavení, ji tam dá a tady ji vypne:
 </x-wire-admin::layout>
 ```
 
+### V aplikaci se zónami
+
+Stránka je vlastní účet každého, takže odkaz na ni patří vedle každého
+odhlášení — v kterékoli zóně člověk zrovna je. Do každé zóny zarouťujte jen tuto
+stránku, bez správy uživatelů vedle ní:
+
+```php
+foreach (['sales', 'warehouse'] as $zone) {
+    Route::middleware(['web', 'auth', "can:zone.{$zone}"])
+        ->name("{$zone}.")->prefix($zone)
+        ->group(function () use ($zone): void {
+            Route::wireResources(only: $modules[$zone]);
+            Route::wireResource(UserResource::class, pages: ['profile']);   // [tl! focus]
+        });
+}
+```
+
+Položka *Profil* v uživatelském menu pak vede na stránku v zóně, která se právě
+vykresluje; když tam není, na stránku mimo zóny; a když ani ta, na kteroukoli
+zónu, která ji routuje **a** pustí tohoto člověka dovnitř — nejdřív se zeptá
+jejího middlewaru `can:`, takže stránka účtu, která je jen v zóně pro
+administrátory, není pro ostatní odkazem do 403 (`Support\ProfileLink`).
+
 ## Fotka pro vaše uživatele
 
 Přidejte do vlastní tabulky uživatelů nullable string sloupec a nahrávání se

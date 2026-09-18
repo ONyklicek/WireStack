@@ -59,7 +59,14 @@ public function table(Table $table): Table
 ```
 
 Žádné `->model()`, žádné `->query()`. Hledání, filtry, řazení i stránkování
-fungují; zdroj na ně odpoví nad polem.
+fungují; zdroj na ně odpoví nad polem. Totéž platí o částech postavených nad nimi:
+souhrny v patičce sčítají vše, co filtry propustí, ne jen stránku, a „vybrat vše
+odpovídající" předá hromadné akci každý odpovídající řádek.
+
+Každý řádek dorazí do sloupců, akcí i hromadných akcí jako `CollectionRow` —
+model jen pro čtení s klíčem, jaký mu dal zdroj, takže `$record->name`
+a `$record->getKey()` se čtou jako u Eloquentu. `save()` nebo `delete()` na něm
+vyhodí výjimku: nemá tabulku, do které by zapsal.
 
 ## Co tabulka nad kolekcí neumí
 
@@ -73,6 +80,17 @@ odmítnutí vyhodí `UnsupportedQueryAspectException` se jménem aspektu:
 | Agregace přes subquery | rollupy `->sums()`, `->counts()` | vyhodí `[aggregateable]` |
 | Cursor stránkování | `->paginationMode('cursor')` | vyhodí `[cursor paging]` |
 | Detekci změny pro polling | `->poll()` | vrátí `null`; polling místo toho porovná řádky |
+
+Sama tabulka odmítá to, co umí jen Eloquent builder. Deklarovat to nic nestojí;
+ve chvíli, kdy se to **použije**, to `CustomDataSourceException` pojmenuje, místo
+aby spadla na chybějícím modelu:
+
+| Když chcete | Odkud to přijde | Výsledek |
+|-------------|-----------------|----------|
+| Filtr, který se aplikuje jako dotaz | `DateFilter`, `Filter::query(fn ($query) => …)` | vyhodí, jakmile dostane hodnotu |
+| Hledání nebo řazení zapsané jako callback | `->searchable(true, fn ($query, $term) => …)`, `->sortable(true, fn …)` | vyhodí při hledání či řazení |
+| Výběr jako builder | `selectedRecordsQuery()` | vyhodí; `getSelectedRecords()` místo toho čte řádky |
+| Zápis řádku zpět | `$record->save()`, `$record->delete()` | vyhodí |
 
 Nic z toho nejsou omezení, která by se dala tiše obejít. Tabulka nad seznamem
 v paměti je **omezená tabulka** a to omezení je vidět hned při první žádosti
@@ -123,9 +141,10 @@ Action::make('archive')
     ->action(fn (Model $record) => $record->archive());
 ```
 
-Důsledek stojí za to říct rovnou: nad zdrojem, kde není co rozbalit, taková akce
-k dispozici není. Je to táž degradace, jakou uplatňuje dotazová strana, jen
-o úroveň výš.
+Nad `CollectionDataSource` není co rozbalit, takže tabulka předá closure
+`CollectionRow` sestavený z pole. Signatura platí; co closure s řádkem udělá, je
+na ní — `$record->archive()` na něm neexistuje a `$record->save()` vyhodí výjimku
+místo předstíraného zápisu.
 
 ## Co zůstává jen pro Eloquent
 

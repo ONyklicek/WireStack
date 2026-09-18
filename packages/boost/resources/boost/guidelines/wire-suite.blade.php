@@ -22,8 +22,13 @@ running **each package's own installer**, never a copy of it.
   built, so re-publishing writes a *second* copy of one the application already has and `migrate` then
   fails. Never re-run a package installer to "make sure"; check first or pass `--force`.
 - **The second half is setup, not installation.** `wire:install` runs the package installers and then
-  works through `SetupStep`s: Fortify's config and features, teams, roles, migrations, routes, the first
-  administrator, `storage:link`, audit recording, stored notifications, the settings cache, the frontend
+  works through `SetupStep`s: Fortify's config and features, the user model (`TwoFactorAuthenticatable`,
+  `PasskeyAuthenticatable` + `PasskeyUser` for the features switched on — written with
+  `Foundation\Setup\ClassSource`, the one helper for editing an application class), teams, roles,
+  migrations, routes, the
+  sign-in destination (Fortify's default `home` of `/home` pointed at the admin's root, which only the
+  suite can do — it knows both Fortify's file and the panel prefix; an application's own `home` is left
+  alone), the first administrator, `storage:link`, audit recording, stored notifications, the settings cache, the frontend
   build. A package contributes one
   with `SetupRegistry::instance()->register(...)` from its `registeredPackage()` hook — **inside the
   one it already has**, because the toolkit's lifecycle hooks assign rather than append and a second

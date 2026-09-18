@@ -1,0 +1,77 @@
+name: Clean Install
+
+# `laravel new` → `wire:install --all` → sign in → a working admin, end to end.
+#
+# Every other gate runs on the Testbench skeleton or the workbench, and both are
+# wired by hand — routes, Fortify's actions, a home to land on — so a gap in what
+# the installer leaves behind cannot show up in them. It did not: after a clean
+# install the first sign-in went to Fortify's `/home`, a 404, and the admin's own
+# prefix was a 404 as well. scripts/verify-clean-install.sh is the check that
+# starts where a new user starts; this runs it.
+#
+# Triggers on everything that decides what an install produces: the packages'
+# code, their config and views, their composer.json, and the script itself.
+
+on:
+  push:
+    branches: [1.x, 2.x, 2.0.0]
+    paths:
+      - 'packages/**'
+      - 'scripts/verify-clean-install.sh'
+      - 'scripts/clean-install/**'
+      - 'workbench/scripts/lib/cdp.mjs'
+      - '.github/workflows/clean-install.yml'
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'scripts/verify-clean-install.sh'
+      - 'scripts/clean-install/**'
+      - 'workbench/scripts/lib/cdp.mjs'
+      - '.github/workflows/clean-install.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  clean-install:
+    name: Install into a fresh Laravel and sign in
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo, pdo_sqlite, sqlite3, gd
+          coverage: none
+
+      # The fresh application's frontend build runs `npm install && npm run build`.
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      # Nothing is installed in the monorepo itself: the fresh application
+      # requires the packages straight from packages/* as path repositories,
+      # and the browser half uses only Node built-ins and the runner's Chrome.
+      - name: Install, sign in, walk the admin
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+          APP_DIR: ${{ runner.temp }}/wire-clean/app
+        run: bash scripts/verify-clean-install.sh --keep
+
+      - name: Keep the install log and the screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: clean-install
+          path: |
+            ${{ runner.temp }}/wire-clean/verify.log
+            ${{ runner.temp }}/wire-clean/app/storage/logs/
+            /tmp/wire-clean-install-shots/
+          if-no-files-found: ignore

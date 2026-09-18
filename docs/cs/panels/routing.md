@@ -148,9 +148,19 @@ A shell s vlastním URL schématem má tady bez odkazu úplně všechno a stejn�
 všechny položky — je to volající, kdo ví, ve kterém případě je. Skupina, které
 vypadnou všechny položky, zmizí celá místo prázdného nadpisu.
 
-**Landing page zóny.** `/business` samo neroutuje nic, dokud si to něco
-nenárokuje — a nárokuje se to jednou metodou: prázdný prefix nepřidá segment,
-takže `index` té stránky sedne na vlastní cestu skupiny:
+**Vlastní adresa zóny.** `/business` samo odpoví vždycky. Pokud si ji nic
+nenárokuje, `wireResources()` tam dá vstup — `wire.home`, v zóně
+`business.wire.home` — který člověka pošle na první stránku skupiny, kterou
+opravdu smí otevřít: první v pořadí sidebaru (skupiny podle svého řazení, pak
+položky podle svého, skryté vynechané) a vynechá stránku, jejíž middleware `can:`
+by Gate odmítl, protože přesměrování do 403 je horší přistání než žádné. Nic
+k otevření je 403; nic zaregistrovaného je 404. Na tuhle adresu také
+`wire:install` nasměruje `home` Fortify, takže přihlášení skončí v adminu. Routu,
+kterou už na té cestě aplikace má, vstup nikdy nenahradí.
+
+**Landing page zóny.** Nárokovat si adresu místo toho je jedna metoda: prázdný
+prefix nepřidá segment, takže `index` té stránky sedne na vlastní cestu skupiny
+a vstup výše se pak neregistruje:
 
 ```php
 final class BusinessOverview extends Dashboard implements ConfiguresRoutes, ProvidesPages
@@ -172,12 +182,62 @@ nárokují kořen **jedné** skupiny, jsou odmítnuty — Laravel klíčuje rout
 URI, takže by druhá tu první nahradila i se jménem routy a zůstala by položka
 menu, která vypadá zaroutovaně a tiše nikam neodkazuje.
 
-Zóna, která chce cíl a ne vlastní stránku, napíše vedle skupiny obyčejný
-redirect:
+Zóna, která chce pevný cíl místo první stránky, napíše obyčejný redirect
+**před** skupinu; vstup ho pak nechá být:
 
 ```php
 Route::redirect('business', 'business/orders');
 ```
+
+**Nad zónami: kam vede přihlášení.** Při více zónách nepatří `/` žádné z nich
+a právě tam pošle Fortify `home` člověka po přihlášení.
+`Route::wireZoneEntry()` ji routuje jako `wire.zones` a zónu určí bez ptaní
+pokaždé, když existuje jediná odpověď, v tomto pořadí:
+
+1. vlastní volba člověka — uživatelský model s `HasPreferredZone`,
+2. `wire-panels.routes.zone_entry.primary`,
+3. jediná zóna, do které člověk smí.
+
+Krok se počítá jen tehdy, když člověk do jmenované zóny smí — zeptá se
+middlewaru `can:` té zóny, stejně jako vstup výše — takže zastaralá preference
+nebo primární zóna za oprávněním, které nemá, propadne dál místo 403. Výběr zón
+se ukáže jen při skutečné volbě; bez nastaveného view vezme první zónu, do které
+smí.
+
+```php
+Route::middleware(['web', 'auth'])->group(fn () => Route::wireZoneEntry('/'));   // [tl! focus]
+
+// config/wire-panels.php
+'routes' => [
+    'zone_entry' => [
+        'uri' => null,            // nebo '/' — tatáž routa, deklarovaná z configu
+        'primary' => 'business',  // [tl! focus]
+        'view' => 'zones',        // dostane $zones (klíč => URL) a $primary
+    ],
+],
+
+// config/fortify.php
+'home' => '/',
+```
+
+```php
+use NyonCode\WirePanels\Contracts\HasPreferredZone;
+
+class User extends Authenticatable implements HasPreferredZone
+{
+    public function preferredZone(): ?string
+    {
+        return $this->preferred_zone;   // [tl! focus]
+    }
+}
+```
+
+**Znovu vybrat** jde jedním odkazem: `?choose` přeskočí přesměrování a ukáže
+výběr komukoli, s primární zónou i bez ní — kam míří položka „všechny zóny"
+v přepínači zón, `route('wire.zones', ['choose' => 1])`. Zóny se čtou z routeru,
+ne z configu, takže zóny deklarované v route souboru se počítají stejně jako
+`routes.zones`; `ZoneDirectory::reachableBy($user)` je týž seznam, jaký kreslí
+přepínač.
 
 **Odkud se zóna bere.** `Zone::current()` ji přečte z routy, která se právě
 vykresluje, a je to volání **pro plný render stránky**:
@@ -283,12 +343,16 @@ si `livewire.component_layout` na svůj vlastní.
 ## Routing API
 
 ```php
-ResourceRoutes::all(array $only = [], array $except = []): array   // každý klíč, který deklaruje
-ResourceRoutes::for(string $class): array                          // jeden, nebo vyhodí výjimku
+ResourceRoutes::all(array $only = [], array $except = []): array   // každý klíč, který deklaruje, navíc `wire.home` v kořeni
+ResourceRoutes::for(string $class, array $pages = []): array   // jeden, nebo vyhodí výjimku; `$pages` routuje jen ty
 ResourceRoutes::urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string
 ResourceRoutes::urls(string $page = 'index', ?string $zone = null): array
 ResourceRoutes::uriFor(string $name, string|RoutePage $page): string       // the segment it sits at
 ResourceRoutes::takesRecord(string $name, string|RoutePage $page): bool    // read off that URI, not off the kind
+ResourceRoutes::zoneEntry(string $uri = '/'): Route   // `wire.zones`; the macro is Route::wireZoneEntry()
+ZoneDirectory::all(): array                           // zone => its shortest route, in registration order
+ZoneDirectory::reachableBy(?Authenticatable $user): array   // zone => URL, only those its `can:` lets in
+ZoneDirectory::landingFor(?Authenticatable $user): ?string  // preference, primary, the only one — or null
 ```
 
 A dvě čtení jména routy stránky, která každý volající dostane z jednoho

@@ -7,9 +7,9 @@
 
      The URL is asked for rather than built: this package owns the page, not the
      routing convention, so an application that routed nothing gets no link
-     rather than a link to nowhere. Zones give the same question several answers,
-     which is the other reason it is asked at render. --}}
-@php($wmuProfileUrl = app(NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls::class)->urlFor('users', 'profile'))
+     rather than a link to nowhere. Zones give the same question several answers
+     — the current zone first, then wider — which ProfileLink answers. --}}
+@php($wmuProfileUrl = app(NyonCode\WireModuleUsers\Support\ProfileLink::class)->url(auth()->user()))
 
 @if ($wmuProfileUrl)
     <x-wire::menu-item
