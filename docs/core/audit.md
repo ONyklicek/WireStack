@@ -41,6 +41,22 @@ class Order extends Model
 
 The trait records Eloquent `created`, `updated`, and `deleted` events.
 
+**It sees what the model sees, and nothing else.** A write made through the query
+builder fires no model event — that is Laravel's design, not this package's — so
+it leaves no entry:
+
+```php
+$order->update(['status' => 'paid']);                    // recorded
+Order::query()->where('region', 'EU')->update([...]);     // not recorded
+Order::query()->where('status', 'draft')->delete();       // not recorded
+```
+
+The same goes for `insert()`, `upsert()` and `increment()` on a query. When the
+trail has to hold such a write, loop the models, or raise the entry yourself with
+one of the [manual audit events](#manual-audit-events). Soft deletes need neither:
+`restore()` saves, so it is an `updated` entry with `deleted_at` going back to
+`null`, and `forceDelete()` is a `deleted` one.
+
 ## Exclude Or Include Columns
 
 Use `getAuditExclude()` to hide noisy or sensitive columns for a single model.
@@ -168,10 +184,13 @@ Disable audit logging during imports, seeders, or maintenance jobs:
 ```php
 use NyonCode\WireCore\Audit\AuditLogger;
 
-AuditLogger::withoutAuditing(function () {
-    Order::query()->update(['synced_at' => now()]);
+AuditLogger::withoutAuditing(function () use ($orders) {
+    $orders->each->update(['synced_at' => now()]);
 });
 ```
+
+It silences model writes — the ones that would otherwise be recorded. A query
+builder `update()` needs no wrapping, because it was never going to be.
 
 ## Retention
 
@@ -200,6 +219,14 @@ php artisan wire-core:audit-prune --days=90
 Without a configured `retention_days` (and no `--days`), the command warns and
 prunes nothing. Programmatic pruning is still available via
 `app(AuditLogger::class)->prune(?int $days = null)`.
+
+**A period that keeps nothing is refused.** `--days=0` would be "everything
+written before this second" and a negative one reaches into the future, so both
+— and an empty `--days=` from a scheduler variable that was never set — exit
+non-zero with nothing deleted. `prune()` throws `InvalidRetentionException` for
+the same values, and a `retention_days` of `0` is refused the same way. A
+scheduled prune that fails loudly gets noticed; one that wipes the trail and
+reports success does not.
 
 ## Configuration
 

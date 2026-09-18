@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
@@ -14,6 +15,7 @@ use NyonCode\WireCore\Audit\Contracts\AuditableEvent;
 use NyonCode\WireCore\Audit\Events\BulkActionExecuted;
 use NyonCode\WireCore\Audit\Events\InlineCellUpdated;
 use NyonCode\WireCore\Audit\Events\RecordCreated;
+use NyonCode\WireCore\Exceptions\InvalidRetentionException;
 
 /**
  * End-to-end audit pipeline (regression: the package fired AuditableEvents but
@@ -183,6 +185,73 @@ it('does not double-log when a wildcard listener and the subscriber both exist',
     expect(AuditEntry::query()->count())->toBe(1);
 });
 
+/*
+ * Where the trail's edge is. The docs promise both halves of this — that a soft
+ * delete's restore and force delete are recorded without anything extra, and that
+ * a query-builder write is not — so both are held here: a change to either would
+ * make the documentation wrong without anybody noticing.
+ */
+
+class AuditPipelineSoftOrder extends Model
+{
+    use HasAuditable;
+    use SoftDeletes;
+
+    protected $table = 'audit_pipeline_soft_orders';
+
+    protected $guarded = [];
+
+    public $timestamps = false;
+}
+
+function auditSoftOrders(): void
+{
+    Schema::dropIfExists('audit_pipeline_soft_orders');
+    Schema::create('audit_pipeline_soft_orders', function (Blueprint $table) {
+        $table->id();
+        $table->string('status');
+        $table->softDeletes();
+    });
+}
+
+it('records a restore as the update it is', function () {
+    auditSoftOrders();
+
+    $order = AuditPipelineSoftOrder::create(['status' => 'paid']);
+    $order->delete();
+    $order->restore();
+
+    $restore = AuditEntry::query()->where('event', 'updated')->sole();
+
+    expect(AuditEntry::query()->orderBy('id')->pluck('event')->all())->toBe(['created', 'deleted', 'updated'])
+        ->and($restore->new_values)->toBe(['deleted_at' => null]);
+
+    Schema::dropIfExists('audit_pipeline_soft_orders');
+});
+
+it('records a force delete as a delete', function () {
+    auditSoftOrders();
+
+    $order = AuditPipelineSoftOrder::create(['status' => 'paid']);
+    $order->forceDelete();
+
+    expect(AuditEntry::query()->orderBy('id')->pluck('event')->all())->toBe(['created', 'deleted']);
+
+    Schema::dropIfExists('audit_pipeline_soft_orders');
+});
+
+it('records nothing for a write the query builder made', function () {
+    // Laravel's design, not a gap to close here: a builder write fires no model
+    // event, and the docs say so rather than letting the empty log say
+    // "nothing happened" to forty thousand repriced rows.
+    AuditPipelineOrder::create(['status' => 'pending']);
+
+    AuditPipelineOrder::query()->update(['status' => 'repriced']);
+    AuditPipelineOrder::query()->delete();
+
+    expect(AuditEntry::query()->pluck('event')->all())->toBe(['created']);
+});
+
 it('persists nothing when auditing is disabled', function () {
     config()->set('wire-core.audit.enabled', false);
 
@@ -235,6 +304,62 @@ it('warns and prunes nothing without a retention period', function () {
     $this->artisan('wire-core:audit-prune')
         ->expectsOutputToContain('No retention period configured')
         ->assertFailed();
+
+    expect(AuditEntry::query()->count())->toBe(1);
+});
+
+it('refuses a --days that would keep nothing, and deletes nothing', function (string $days) {
+    // `--days=0` pruned every entry and reported success; a negative reached into
+    // the future and did the same; an empty value — a scheduler variable that was
+    // not set — fell through to the configured period without a word. The trail
+    // is the one table where "delete everything" is never what somebody meant.
+    config()->set('wire-core.audit.retention_days', 365);
+    seedAuditEntry(45);
+    seedAuditEntry(1);
+
+    $this->artisan('wire-core:audit-prune', ['--days' => $days])
+        ->expectsOutputToContain('Nothing was pruned')
+        ->assertFailed();
+
+    expect(AuditEntry::query()->count())->toBe(2);
+})->with([
+    'zero' => '0',
+    'negative' => '-30',
+    'empty' => '',
+    'fractional' => '1.5',
+    'not a number' => 'thirty',
+]);
+
+it('refuses a configured retention that would keep nothing', function () {
+    // The same guard, reached from the config rather than the option — and read
+    // as the string `.env` delivers, which used to be compared as whatever it was.
+    config()->set('wire-core.audit.retention_days', '0');
+    seedAuditEntry(45);
+
+    $this->artisan('wire-core:audit-prune')
+        ->expectsOutputToContain('Nothing was pruned')
+        ->assertFailed();
+
+    expect(AuditEntry::query()->count())->toBe(1);
+});
+
+it('reads a configured retention written as a string', function () {
+    config()->set('wire-core.audit.retention_days', '30');
+    seedAuditEntry(45);
+    seedAuditEntry(5);
+
+    $this->artisan('wire-core:audit-prune')
+        ->expectsOutputToContain('Pruned 1 audit entry.')
+        ->assertSuccessful();
+
+    expect(AuditEntry::query()->count())->toBe(1);
+});
+
+it('refuses a period under a day when pruned from code', function () {
+    seedAuditEntry(45);
+
+    expect(fn () => app(AuditLogger::class)->prune(0))
+        ->toThrow(InvalidRetentionException::class, 'would prune every entry');
 
     expect(AuditEntry::query()->count())->toBe(1);
 });

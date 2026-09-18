@@ -19,6 +19,17 @@ use NyonCode\WireCore\Audit\Events\RecordUpdated;
  * Add to any Eloquent model to enable automatic audit logging
  * via Eloquent model events (created, updated, deleted).
  *
+ * **It sees what the model sees, and nothing else.** A write made through the
+ * query builder — `Order::query()->update()`, `->delete()`, `->increment()`,
+ * `insert()`, `upsert()` — fires no model event, by Laravel's design, so it
+ * leaves no entry: forty thousand repriced invoices, and a trail that says
+ * nothing happened to them. Loop the models, or dispatch `RecordUpdated` /
+ * `BulkActionExecuted` yourself for the write the events could not see.
+ *
+ * Soft deletes are covered without anything extra: `restore()` saves, so it is
+ * an `updated` entry with `deleted_at` going back to null, and `forceDelete()`
+ * deletes, so it is a `deleted` one.
+ *
  * Usage:
  *   class Order extends Model
  *   {

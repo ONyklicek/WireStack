@@ -9,6 +9,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Audit\Contracts\AuditableEvent;
+use NyonCode\WireCore\Exceptions\InvalidRetentionException;
 use Throwable;
 
 /**
@@ -87,6 +88,14 @@ class AuditLogger
      * Prune audit entries older than the retention period — the given number of
      * days, or the configured `wire-core.audit.retention_days` when omitted.
      * Returns the number of deleted entries (0 when no period is set).
+     *
+     * **At least one day, or nothing happens.** `now()->subDays(0)` is this
+     * second, so a zero wiped every entry and reported it as a success; a
+     * negative reached into the future and did the same. Both are what a
+     * misconfigured schedule produces, and the trail is the one table where
+     * "delete everything" is never what somebody meant.
+     *
+     * @throws InvalidRetentionException for a period under one day
      */
     public function prune(?int $days = null): int
     {
@@ -94,6 +103,10 @@ class AuditLogger
 
         if ($days === null) {
             return 0;
+        }
+
+        if ($days < 1) {
+            throw InvalidRetentionException::keepsNothing($days);
         }
 
         $modelClass = $this->getAuditEntryModel();
@@ -252,9 +265,11 @@ class AuditLogger
      */
     protected function getRetentionDays(): ?int
     {
-        /** @var int|null $days */
         $days = config('wire-core.audit.retention_days');
 
-        return $days;
+        // Read from `.env` more often than not, so a string: "30" is thirty
+        // days, and anything that is not a number is no period at all rather
+        // than a zero that would prune the lot.
+        return is_numeric($days) ? (int) $days : null;
     }
 }

@@ -327,7 +327,15 @@ Add `HasAuditable` to a model and its created/updated/deleted changes persist as
 rows automatically — the package registers the event subscriber itself, gated by
 `wire-core.audit.enabled`. No manual `Event::subscribe()` needed. Retention: configure
 `wire-core.audit.retention_days` and schedule `wire-core:audit-prune` (or run with `--days=N`).
+A period under one day is refused — `--days=0` exits non-zero and deletes nothing, and `prune(0)`
+throws `InvalidRetentionException` — so never use `0` to mean "prune everything".
 Suppress logging in seeders/imports with `AuditLogger::withoutAuditing(fn () => …)`.
+
+**The trail sees model writes and nothing else.** `Order::query()->update()`, `->delete()`,
+`->increment()`, `insert()` and `upsert()` fire no model event and leave no entry. When a write
+has to be audited, loop the models, or dispatch `RecordUpdated` / `BulkActionExecuted` for it.
+Do not wrap a query-builder write in `withoutAuditing()` — it was never going to be recorded.
+Soft deletes need nothing extra: `restore()` is an `updated` entry, `forceDelete()` a `deleted` one.
 
 **Credentials never reach the trail.** Passwords, anything ending in `_token` or `_secret`,
 two-factor columns, recovery codes and `api_key` are dropped by the logger itself — a floor, not a
