@@ -303,7 +303,19 @@ trait CanBeSummarized
                 thousandsSeparator: $this->summaryThousandsSeparator,
                 prefix: $this->prefix ?? null,
                 suffix: $this->suffix ?? null,
+                number: $this->summaryNumberFormatter(),
             ),
         );
+    }
+
+    /**
+     * How this column formats a number in a cell, for a summary to reuse when
+     * it was given no summaryDecimals(). Null: the column formats no numbers.
+     *
+     * @return (Closure(mixed): mixed)|null
+     */
+    protected function summaryNumberFormatter(): ?Closure
+    {
+        return null;
     }
 }

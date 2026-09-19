@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Support;
 
+use Closure;
 use NyonCode\WireTable\Services\SummaryFormatter;
 
 /**
@@ -13,6 +14,10 @@ use NyonCode\WireTable\Services\SummaryFormatter;
  * about a column, and nothing more — so the formatter never reaches back into
  * one. Immutable, per the coding standard's preference for value objects over
  * shared mutable state.
+ *
+ * `$number` is the column's own number formatting — what `numeric()` or
+ * `money()` does to a cell — for a column that set no `summaryDecimals()`. A
+ * total under a column of `1 089,75` should not read `1089.75`.
  */
 final readonly class SummaryFormat
 {
@@ -22,6 +27,7 @@ final readonly class SummaryFormat
         public string $thousandsSeparator = ' ',
         public ?string $prefix = null,
         public ?string $suffix = null,
+        public ?Closure $number = null,
     ) {}
 
     /** Whether a prefix or suffix would decorate a formatted number. */

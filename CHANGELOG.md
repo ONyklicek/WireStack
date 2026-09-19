@@ -2,6 +2,15 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.1.1]
+
+### Fixed
+
+- **A total is formatted the way the cells above it are.** A summary read only `summaryDecimals()`,
+  so a `numeric(2)` column of `1 089,75` totalled as `1089.75`. Without `summaryDecimals()`, a
+  column's `numeric()` or `money()` now formats its summaries too, through the same `FormatsState`
+  owner the cells use. `summaryDecimals()` still wins where it is set, and counts stay bare.
+
 ## [2.1.0]
 
 Includes everything listed under [2.0.1], which was not released on its own.

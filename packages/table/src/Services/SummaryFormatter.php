@@ -47,7 +47,7 @@ final class SummaryFormatter
         }
 
         // Nothing to apply — preserve the raw int/float untouched.
-        if ($format->decimals === null && ! $format->hasDecorations()) {
+        if ($format->decimals === null && $format->number === null && ! $format->hasDecorations()) {
             return $value;
         }
 
@@ -63,7 +63,9 @@ final class SummaryFormatter
         }
 
         if ($format->decimals === null) {
-            return (string) $value;
+            // The column's own numeric()/money(), so the total reads like the
+            // cells above it. summaryDecimals() still wins when it is set.
+            return (string) ($format->number !== null ? ($format->number)($value) : $value);
         }
 
         return number_format(
