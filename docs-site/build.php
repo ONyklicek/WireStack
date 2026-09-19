@@ -231,6 +231,7 @@ $previewMeta = [
     'auth-passkeys' => ['title' => 'Passkeys', 'caption' => 'The profile card, with a key registered through a real WebAuthn ceremony. Adding one opens the platform\'s own dialog; removing goes through the package\'s own action.'],
     'forms-overview' => ['title' => 'Form Layout', 'caption' => 'Sections, grid layout, toggle, textarea, and action footer.'],
     'forms-repeater' => ['title' => 'Repeater', 'caption' => 'Nested rows with add, remove, and reorder controls.'],
+    'forms-builder' => ['title' => 'Builder', 'caption' => 'Mixed blocks in one list, with the add picker open — each item carries its own block type and is edited with that block\'s schema.'],
     'table-overview' => ['title' => 'Table Surface', 'caption' => 'Search, filters, actions, and full row rendering.'],
     'table-actions-quiet' => ['title' => 'Quiet Row Actions', 'caption' => 'Neutral at rest, colour on hover/focus; a solid Approve stays prominent and Delete stays legibly red.'],
     'table-selection' => ['title' => 'Selection State', 'caption' => 'Bulk-selected rows with the active selection toolbar.'],
@@ -258,6 +259,7 @@ $previewMeta = [
 $pagePreviews = [
     'docs/forms/overview.md' => ['forms-overview', 'forms-repeater'],
     'docs/forms/fields/repeater.md' => ['forms-repeater'],
+    'docs/forms/fields/builder.md' => ['forms-builder'],
     'docs/table/overview.md' => ['table-overview', 'table-selection'],
     'docs/table/actions.md' => ['table-selection'],
     'docs/table/columns/image.md' => ['table-image-gallery'],

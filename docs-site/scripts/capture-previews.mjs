@@ -32,6 +32,12 @@ const fieldSlugs = [
 const captures = [
   { slug: 'forms-overview', path: 'forms-overview' },
   { slug: 'forms-repeater', path: 'forms-repeater' },
+  {
+    slug: 'forms-builder',
+    path: 'forms-builder',
+    // The picker is what makes a builder a builder, so the shot has it open.
+    action: `document.querySelector('[data-testid="form-builder-content-add"]')?.click();`,
+  },
   { slug: 'table-overview', path: 'table-overview' },
   { slug: 'table-actions-quiet', path: 'table-actions-quiet' },
   { slug: 'table-selection', path: 'table-selection' },

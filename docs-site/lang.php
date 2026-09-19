@@ -44,6 +44,8 @@ return [
         'Boost' => 'Boost',
 
         // --- Preview captions (build.php $previewMeta) ----------------------
+        'Builder' => 'Builder',
+        'Mixed blocks in one list, with the add picker open — each item carries its own block type and is edited with that block\'s schema.' => 'Různé bloky v jednom seznamu s otevřeným výběrem bloku — každá položka nese svůj typ bloku a edituje se schématem toho bloku.',
         'Signing In' => 'Přihlášení',
         'The sign-in screen with everything switched on: a password, a passkey, and a one-time code — each drawn from the switch that registers its routes.' => 'Přihlašovací obrazovka se vším zapnutým: heslo, passkey a jednorázový kód — každé se kreslí z přepínače, který mu registruje routy.',
         'Creating An Account' => 'Založení účtu',
