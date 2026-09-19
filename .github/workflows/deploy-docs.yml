@@ -90,9 +90,12 @@ jobs:
             label=$(echo "$version" | jq -r '.label')
             branch=$(echo "$version" | jq -r '.branch')
 
+            # Fail rather than skip: the site is published with force_orphan, so
+            # a skipped version is not "left as it was" — it is wiped, and a
+            # skipped root version leaves the whole domain answering 404.
             if ! git rev-parse --verify --quiet "origin/$branch" >/dev/null; then
-              echo "::warning::Branch origin/$branch for $label not found — skipping."
-              continue
+              echo "::error::Branch origin/$branch for $label not found — fix docs-site/config.json."
+              exit 1
             fi
 
             work="$RUNNER_TEMP/wt-$branch"
