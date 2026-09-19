@@ -122,9 +122,10 @@ class Builder extends Repeater
      * envelope so the resolver mounts them at `<path>.*.data.<field>`.
      *
      * Blocks sharing a field name share its rules — the resolver validates by
-     * wildcard path, which cannot tell one block's `text` from another's. Rules
-     * are therefore only as strict as the loosest block declaring that name;
-     * name fields distinctly where blocks must validate differently.
+     * wildcard path, which cannot tell one block's `text` from another's. The
+     * first block declaring a name wins, so every block sharing it validates by
+     * that block's rules; name fields distinctly where blocks must validate
+     * differently.
      *
      * @return array<string, array<int, mixed>>
      */
