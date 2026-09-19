@@ -10,6 +10,11 @@ All notable changes to the Wire ecosystem will be documented in this file.
   so a `numeric(2)` column of `1 089,75` totalled as `1089.75`. Without `summaryDecimals()`, a
   column's `numeric()` or `money()` now formats its summaries too, through the same `FormatsState`
   owner the cells use. `summaryDecimals()` still wins where it is set, and counts stay bare.
+- **A `CollectionDataSource` sorts text by the application's language.** Rows were ordered byte by
+  byte, which put every accented capital after `Z` — `Černý` after `Veselý`. Text is compared with
+  the `intl` Collator for `app()->getLocale()`, or without accents where the extension is missing;
+  numbers compare as numbers and an empty value sorts first, as a database would. Several sort
+  clauses are one comparison now, the first deciding and the next breaking its ties.
 
 ## [2.1.0]
 

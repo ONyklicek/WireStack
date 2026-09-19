@@ -60,7 +60,9 @@ public function table(Table $table): Table
 ```
 
 No `->model()`, no `->query()`. Search, filters, sorting and pagination all work;
-the source answers them over the array. So do the parts built on top of them:
+the source answers them over the array — text sorted by the application's
+language (through the `intl` Collator where it is installed), so `Černý` comes
+before `Dvořák`, not after `Veselý`. So do the parts built on top of them:
 footer summaries total everything the filters match, not only the page, and
 "select all matching" hands a bulk action every matching row.
 

@@ -59,7 +59,9 @@ public function table(Table $table): Table
 ```
 
 Žádné `->model()`, žádné `->query()`. Hledání, filtry, řazení i stránkování
-fungují; zdroj na ně odpoví nad polem. Totéž platí o částech postavených nad nimi:
+fungují; zdroj na ně odpoví nad polem — text řadí podle jazyka aplikace (přes
+`intl` Collator, kde je nainstalovaný), takže `Černý` je před `Dvořákem`, ne za
+`Veselým`. Totéž platí o částech postavených nad nimi:
 souhrny v patičce sčítají vše, co filtry propustí, ne jen stránku, a „vybrat vše
 odpovídající" předá hromadné akci každý odpovídající řádek.
 
