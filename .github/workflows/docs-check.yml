@@ -56,6 +56,9 @@ jobs:
   check:
     name: Verify docs build
     runs-on: ubuntu-latest
+    # The whole job takes about a minute. A browser left running once held it
+    # open for the runner's six-hour limit; this makes such a hang a failure.
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -68,10 +71,12 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, fileinfo
           coverage: none
 
+      # 22, not 20: the browser check drives Chrome through the global
+      # WebSocket, which Node 20 does not have.
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install npm dependencies
         run: npm install --no-audit --no-fund

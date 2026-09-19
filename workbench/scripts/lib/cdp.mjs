@@ -50,10 +50,27 @@ export async function openPage({ url, shotPrefix, width = 1200, height = 1200, m
   const consoleErrors = [];
   const badResponses = [];
 
-  const wsUrl = await waitForDevtools(devtoolsPort);
-  const cdp = await connect(wsUrl);
-  const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
-  const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
+  // A failure from here until the page is handed back leaves no `close()` for
+  // the caller to reach, and a live Chrome child keeps Node running for ever —
+  // on CI that is a job that hangs until the runner's six-hour limit instead
+  // of failing in seconds. So the browser goes down with the error.
+  let cdp;
+  const abandon = async (error) => {
+    cdp?.close();
+    chrome.kill('SIGTERM');
+    await rm(userDataDir, { recursive: true, force: true }).catch(() => {});
+    throw error;
+  };
+
+  let sessionId;
+  try {
+    const wsUrl = await waitForDevtools(devtoolsPort);
+    cdp = await connect(wsUrl);
+    const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
+    ({ sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true }));
+  } catch (error) {
+    await abandon(error);
+  }
   const page = (method, params) => cdp.send(method, params, sessionId);
 
   const eval_ = async (expression) => {
@@ -82,11 +99,15 @@ export async function openPage({ url, shotPrefix, width = 1200, height = 1200, m
     }
   });
 
-  await page('Page.enable');
-  await page('Runtime.enable');
-  await page('Network.enable');
-  await page('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile });
-  await page('Page.navigate', { url });
+  try {
+    await page('Page.enable');
+    await page('Runtime.enable');
+    await page('Network.enable');
+    await page('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile });
+    await page('Page.navigate', { url });
+  } catch (error) {
+    await abandon(error);
+  }
   await sleep(settle);
 
   const close = async () => {
