@@ -62,6 +62,7 @@ trait HasRecordActions
     {
         return $this->hasRecordActionPointer()
             || $this->hasRowContextMenu()
+            || $this->hasTouchMenu()
             || $this->usesGridSemantics()
             || $this->usesDragSelect()
             || $this->usesRangeSelection();
@@ -99,6 +100,67 @@ trait HasRecordActions
     public function getContextMenuActions(): array
     {
         return $this->recordActionResolver()->contextMenuActions();
+    }
+
+    /**
+     * What a finger reaches through the row's menu that a mouse reaches by a
+     * gesture: every behaviour-only record action the menu does not already
+     * hold, and no action the actions column already shows as a button.
+     *
+     * A tablet is wide enough for the desktop table, so it gets no stacked card
+     * and none of the card's fallback buttons — and a finger has no double
+     * click, no right click and no Delete key. Without this list those actions
+     * were simply unreachable there. The menu opens on a long press, on a tap
+     * where the row has no click action of its own, and from the "⋯" in the
+     * actions column; on a mouse the items are never shown.
+     *
+     * Governed by the same switch as the phone's buttons —
+     * {@see recordActionButtonsOnMobile(false)} keeps behaviour-only actions
+     * behaviour-only everywhere — and, since a long press stands in for the
+     * right click, by the gesture layer's `contextMenu` switch.
+     *
+     * @return array<int, Action>
+     */
+    public function getTouchMenuActions(): array
+    {
+        // A long press is the right click's stand-in, so it answers to the same
+        // gesture switch: gestures(false) or contextMenu(false) leave a finger
+        // exactly what they leave a mouse.
+        if (! $this->showsRecordActionButtonsOnMobile() || ! $this->getGestures()->allowsContextMenu()) {
+            return [];
+        }
+
+        $shown = [];
+
+        foreach ([...$this->actions, ...($this->hasRowContextMenu() ? $this->getContextMenuActions() : [])] as $action) {
+            if ($action instanceof Action) {
+                $shown[$action->getName()] = true;
+            }
+        }
+
+        return array_values(array_filter(
+            $this->recordActionResolver()->mobileFallbackButtons(),
+            fn (Action $action): bool => ! isset($shown[$action->getName()]),
+        ));
+    }
+
+    public function hasTouchMenu(): bool
+    {
+        return $this->getTouchMenuActions() !== [];
+    }
+
+    /**
+     * Whether a finger has a row menu to open at all — the touch items, or the
+     * right-click menu, which is a mouse gesture and nothing else.
+     *
+     * This is what the long press, the "⋯" and the row's touch-action rules
+     * follow. A table whose every gesture action is already in the right-click
+     * menu adds no touch items and still needs all three: without them the menu
+     * exists and no finger can reach it.
+     */
+    public function hasTouchGestures(): bool
+    {
+        return $this->hasRowContextMenu() || $this->hasTouchMenu();
     }
 
     /**

@@ -23,8 +23,12 @@
     (Concerns\InteractsWithTableActions), since an inert attribute is a client
     fact and a forged request is not bound by it.
 
+    $touchTrigger is the rendered row-touch-menu-trigger ("⋯") for a table with a
+    touch menu, and an empty string otherwise — a string rather than an @if, so the
+    compiled cell carries no morph markers for it.
+
     Mind the whitespace: the tags touch on purpose. A run of whitespace between
     two tags is a DOM text node that the morph walks on every commit, and this
     cell is emitted once per row. Whitespace between attributes is free.
 --}}
-<td class="{{ $cellPadding }} {{ $borderClass }} {{ $stickyCellClass }}{{ $inert ? ' opacity-40' : '' }}"@if($inert) inert=""@endif>{!! $stickyLayers !!}<div class="relative flex flex-wrap items-center gap-1 {{ $justifyClass }}">{!! $actions !!}</div></td>
+<td class="{{ $cellPadding }} {{ $borderClass }} {{ $stickyCellClass }}{{ $inert ? ' opacity-40' : '' }}"@if($inert) inert=""@endif>{!! $stickyLayers !!}<div class="relative flex flex-wrap items-center gap-1 {{ $justifyClass }}">{!! $actions !!}{!! $touchTrigger !!}</div></td>

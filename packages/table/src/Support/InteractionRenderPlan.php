@@ -53,6 +53,7 @@ final class InteractionRenderPlan
      */
     private function __construct(
         public readonly bool $rowContextMenuEnabled,
+        public readonly bool $touchMenuEnabled,
         public readonly array $recordActionBindings,
         public readonly bool $keyboardNav,
         public readonly ?string $tableRole,
@@ -83,6 +84,9 @@ final class InteractionRenderPlan
 
         return new self(
             rowContextMenuEnabled: $table->hasRowContextMenu(),
+            // Whether a finger has a row menu to open — the touch items, or a
+            // right-click menu it could otherwise not reach at all.
+            touchMenuEnabled: $table->hasTouchGestures(),
             recordActionBindings: $table->getRecordActionBindings(),
             keyboardNav: $keyboardNav,
             tableRole: $table->getTableRole(),

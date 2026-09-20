@@ -257,6 +257,44 @@ Když má karta zůstat čistá, vypněte to:
 ->recordActionButtonsOnMobile(false)
 ```
 
+## Na tabletu zůstanou gesta, prstem
+
+Tablet je dost široký na desktopovou tabulku, takže nedostane skládanou kartu
+ani její tlačítka — řádek si drží svá gesta. Prst zachová, co které znamená:
+
+| Myš | Prst |
+|-----|------|
+| Klik | Klepnutí |
+| Dvojklik | Dvojité klepnutí — počítá ho tabulka, takže ho Safari nepoužije na zoom |
+| Pravé tlačítko | Dlouhé podržení (půl sekundy, bez pohybu) |
+
+Menu, které prst otevře, je kontextové menu řádku **plus** každá record action,
+která je jen chováním a v menu ještě není — vazby na dvojklik a klávesy, na které
+prst jinak nedosáhne. A protože dlouhé podržení nikdo neuhodne, tabulka se
+sloupcem akcí v něm na dotykové obrazovce ukáže i `⋯`, které otevře totéž menu:
+
+```php
+->actions([EditAction::make()])
+->recordAction(RecordAction::make(Action::make('open'))->onDoubleClick())   // [tl! focus]
+->recordAction(RecordAction::make(Action::make('archive'))->onKey('Delete'))  // [tl! focus]
+```
+
+| Ukazatel | Co uživatel dostane |
+|----------|---------------------|
+| Myš | Dvojklik otevře, `Delete` archivuje. Žádné `⋯`. |
+| Prst | Dvojité klepnutí otevře; dlouhé podržení nebo `⋯` nabídne `Open` a `Archive`. |
+
+`⋯` se ukáže všude, kde řádek vůbec nějaké menu má — tabulka, jejíž gesta už
+v kontextovém menu jsou, nepřidá žádnou položku a tlačítko přesto potřebuje,
+protože pravé tlačítko má jen myš.
+
+Nic se nedeklaruje: je to fallback z telefonu, jen dosažený jinak, takže platí
+stejná pravidla — akce už v `->actions()` nebo povýšená přes
+`->alsoInRowActions()` se neuvede dvakrát, `->recordActionButtonsOnMobile(false)`
+to vypne, a stejně tak `contextMenu(false)`, protože dlouhé podržení zastupuje
+pravé tlačítko. `⋯` se ukáže jen tam, kde platí `(pointer: coarse)`; myš ho ani
+přidané položky nikdy neuvidí.
+
 ## Přehled API
 
 Všechno, co vrstva nabízí, na jednom místě.

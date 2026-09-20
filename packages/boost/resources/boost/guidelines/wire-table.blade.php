@@ -247,6 +247,15 @@ record actions appended after them, a `recordAction('edit')` that only *referenc
 left alone, and the fallback buttons count towards `->collapseActionsOnMobile()`. Turn it off with
 `->recordActionButtonsOnMobile(false)`.
 
+**Tablets keep the gestures, with a finger.** A tablet gets the desktop table, not the card, so the row's
+`wireRecordActions` controller maps them: tap = click, double tap = double click (counted in JS — Safari's
+dblclick is unreliable), long press = right click. The menu a finger opens is the right-click menu plus
+`Table::getTouchMenuActions()` — the same fallback list, minus what the menu or the actions column already
+holds — and a table with an actions column shows a `⋯` (`data-testid="row-touch-menu"`) there on
+`(pointer: coarse)` only — whenever the row has a menu at all (`Table::hasTouchGestures()`), since a
+right-click menu with no touch items is still unreachable with a finger. Nothing to declare; it follows `recordActionButtonsOnMobile()` and the
+`contextMenu` gesture switch. Do not add touch buttons or a second menu of your own for this.
+
 The card renders a **copy** with the keyboard shortcut stripped (`HasKeyboardShortcut::withoutKeyboardShortcut()`,
 new in wire-core). A rendered action button binds its `keyboardShortcut()` as a **window** listener
 (`x-on:keydown.{key}.window` in `wire-core::actions.button`) and the stacked cards are in the document at

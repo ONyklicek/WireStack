@@ -100,6 +100,7 @@
     // Row interaction — the pointer bindings, the two independently switchable
     // halves of the gesture layer, and the active-row marker.
     $rowContextMenuEnabled = $plan->interaction()->rowContextMenuEnabled;
+    $touchMenuEnabled = $plan->interaction()->touchMenuEnabled;
     $recordActionBindings = $plan->interaction()->recordActionBindings;
     $keyboardNav = $plan->interaction()->keyboardNav;
     $tableRole = $plan->interaction()->tableRole;
@@ -377,15 +378,17 @@
                                 </thead>
 
                                 <tbody
-                                        class="divide-y divide-gray-100 dark:divide-gray-700"
+                                        {{-- With a touch menu, a long press is the row's right click: iOS must
+                                             not answer it with its text callout, and a double tap must not zoom. --}}
+                                        class="divide-y divide-gray-100 dark:divide-gray-700{{ $touchMenuEnabled ? ' [&>tr]:touch-manipulation [@media(pointer:coarse)]:[&>tr]:select-none [@media(pointer:coarse)]:[&>tr]:[-webkit-touch-callout:none]' : '' }}"
                                         @if($recordActionsRootEnabled)
-                                            x-data="wireRecordActions({ bindings: @js($recordActionBindings), contextMenu: {{ $rowContextMenuEnabled ? 'true' : 'false' }}, keyboard: @js($recordKeyboardConfig), active: @js($activeRowConfig), gestures: @js($gestureConfig) })"
+                                            x-data="wireRecordActions({ bindings: @js($recordActionBindings), contextMenu: {{ $rowContextMenuEnabled ? 'true' : 'false' }}, touch: {{ $touchMenuEnabled ? 'true' : 'false' }}, keyboard: @js($recordKeyboardConfig), active: @js($activeRowConfig), gestures: @js($gestureConfig) })"
                                             {{-- Bound whenever the controller is mounted, not only for pointer
                                                  bindings: a click also moves the active row, which is what makes a
                                                  clicked row visibly the one the arrow keys continue from. --}}
                                             @click="onPointer('click', $event)"
                                             @dblclick="onPointer('dblclick', $event)"
-                                            @if($rowContextMenuEnabled)
+                                            @if($rowContextMenuEnabled || $touchMenuEnabled)
                                                 @contextmenu="onContextMenu($event)"
                                             @endif
                                             @if($keyboardNav)
@@ -399,7 +402,7 @@
                                         @include('wire-table::tables.partials.record-actions-assets')
                                     @endonce
                                 @endif
-                                @if($rowContextMenuEnabled)
+                                @if($rowContextMenuEnabled || $touchMenuEnabled)
                                     {{-- Core dropdown bundle for any nested action-group dropdown inside a
                                          context-menu item; emitted once per request, not once per row. --}}
                                     @once

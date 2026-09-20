@@ -6,6 +6,14 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Fixed
 
+- **A tablet can reach the row's actions.** A tablet is wide enough for the desktop table, so it got
+  neither the stacked card's buttons nor anything a finger can do with a double click, a right click or a
+  key — a table whose record actions were all gestures offered none of them on an iPad. The row now keeps
+  each gesture for a finger: a tap is a click, a double tap a double click (counted by the table, so Safari
+  does not zoom instead), a long press the right click. The menu a finger opens adds every behaviour-only
+  record action it does not already hold (`Table::getTouchMenuActions()`), and a table with an actions
+  column shows a `⋯` there on a touch screen. Nothing to declare; `recordActionButtonsOnMobile(false)`
+  and `contextMenu(false)` turn it off, and a mouse sees none of it.
 - **A total is formatted the way the cells above it are.** A summary read only `summaryDecimals()`,
   so a `numeric(2)` column of `1 089,75` totalled as `1089.75`. Without `summaryDecimals()`, a
   column's `numeric()` or `money()` now formats its summaries too, through the same `FormatsState`

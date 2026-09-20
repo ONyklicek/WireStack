@@ -260,6 +260,46 @@ Switch it off when a card is meant to stay clean:
 ->recordActionButtonsOnMobile(false)
 ```
 
+## Tablets keep the gestures, with a finger
+
+A tablet is wide enough for the desktop table, so it gets no stacked card and
+none of the card's buttons — the row keeps its gestures. A finger keeps what
+each of them means:
+
+| A mouse | A finger |
+|---------|----------|
+| Click | Tap |
+| Double click | Double tap — counted by the table, so Safari's zoom never gets it |
+| Right click | Long press (half a second, without moving) |
+
+The menu a finger opens is the row's right-click menu **plus** every
+behaviour-only record action it does not already hold — the double-click and
+key bindings a finger has no other way to reach. And because a long press is
+not something anyone guesses, a table with an actions column also shows a
+`⋯` in it on a touch screen, which opens the same menu:
+
+```php
+->actions([EditAction::make()])
+->recordAction(RecordAction::make(Action::make('open'))->onDoubleClick())   // [tl! focus]
+->recordAction(RecordAction::make(Action::make('archive'))->onKey('Delete'))  // [tl! focus]
+```
+
+| Pointer | What the user gets |
+|---------|--------------------|
+| Mouse | Double click opens, `Delete` archives. No `⋯`. |
+| Finger | Double tap opens; a long press or the `⋯` offers `Open` and `Archive`. |
+
+The `⋯` shows wherever the row has a menu at all — a table whose gesture
+actions are *already* in the right-click menu adds no items and still needs it,
+because a right click is a mouse and nothing else.
+
+Nothing to declare: it is the phone's fallback, reached another way, so the
+same rules apply — an action already in `->actions()` or promoted with
+`->alsoInRowActions()` is not listed twice, `->recordActionButtonsOnMobile(false)`
+turns it off, and so does `contextMenu(false)`, since a long press is the right
+click's stand-in. The `⋯` shows only where `(pointer: coarse)` matches; a mouse
+never sees it or the extra items.
+
 ## API reference
 
 Everything the layer exposes, in one place.

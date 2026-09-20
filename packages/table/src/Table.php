@@ -1657,13 +1657,21 @@ class Table implements Htmlable
      */
     public function getRowContextMenuSkeleton(): Skeleton
     {
+        // The touch block is compiled in only where there is something to put in
+        // it, so a table without touch-menu items carries none of it per row.
+        $touch = $this->hasTouchMenu();
+
         return $this->rowContextMenuSkeleton ??= Skeleton::compile(
             view('wire-table::tables.partials.record-context-menu', [
                 'key' => Skeleton::slot('key'),
                 'menu' => Skeleton::slot('menu'),
+                'touch' => $touch
+                    ? trim(view('wire-table::tables.partials.record-touch-menu', ['items' => Skeleton::slot('touch')])->render())
+                    : '',
             ])->render(),
             'key',
             'menu',
+            ...($touch ? ['touch'] : []),
         );
     }
 
@@ -1677,20 +1685,34 @@ class Table implements Htmlable
      */
     public function getRowContextMenuPanel(Model $record): string
     {
-        if (! $this->hasRowContextMenu()) {
-            return '';
-        }
+        $menu = $this->hasRowContextMenu() ? trim($this->getRowContextMenuHtml($record)->toHtml()) : '';
+        $touch = $this->hasTouchMenu() ? trim($this->getRowTouchMenuHtml($record)->toHtml()) : '';
 
-        $menu = trim($this->getRowContextMenuHtml($record)->toHtml());
-
-        if ($menu === '') {
+        if ($menu === '' && $touch === '') {
             return '';
         }
 
         return $this->getRowContextMenuSkeleton()->fill([
             'key' => e((string) $record->{$this->getPrimaryKey()}),
             'menu' => $menu,
+            'touch' => $touch,
         ]);
+    }
+
+    /**
+     * The items the row's menu adds when a finger opened it — see
+     * {@see getTouchMenuActions()}. Same markup as the right-click items.
+     */
+    public function getRowTouchMenuHtml(Model $record): Htmlable
+    {
+        $html = '';
+        $click = new TableActionClickResolver;
+
+        foreach ($this->getTouchMenuActions() as $action) {
+            $html .= $action->renderForDropdown($record, $click);
+        }
+
+        return new HtmlString($html);
     }
 
     // Record actions (row-level interaction: click, double-click, right-click, keys)

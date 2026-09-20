@@ -145,6 +145,7 @@ return [
     'no_sub_rows' => 'No sub-rows found',
     'details' => 'Details',
     'actions' => 'Actions',
+    'row_touch_menu' => 'More actions',
     'sub_rows_count' => '{1}:count item|[2,4]:count items|[5,*]:count items',
     'show_more_count' => 'Show :count more',
 

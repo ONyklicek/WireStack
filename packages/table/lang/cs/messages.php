@@ -145,6 +145,7 @@ return [
     'no_sub_rows' => 'Žádné podzáznamy',
     'details' => 'Detail',
     'actions' => 'Akce',
+    'row_touch_menu' => 'Další akce',
     'sub_rows_count' => '{1}:count položka|[2,4]:count položky|[5,*]:count položek',
     'show_more_count' => 'Zobrazit dalších :count',
 

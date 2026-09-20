@@ -444,6 +444,8 @@ trait HasTableActions
                 // skeleton once and cost the row nothing but the bytes.
                 'stickyCellClass' => $sticky->cellClass,
                 'stickyLayers' => $sticky->layers(),
+                // The "⋯" a finger opens the row's menu with; a mouse never sees it.
+                'touchTrigger' => $this->hasTouchGestures() ? trim(view('wire-table::tables.partials.row-touch-menu-trigger')->render()) : '',
                 'actions' => Skeleton::slot('actions'),
             ])->render(),
             'actions',
