@@ -42,20 +42,60 @@ namespace NyonCode\WireCore\Foundation\View;
 final class ElementHook
 {
     /**
-     * Render one hook name as its attribute, or nothing for an unusable name.
+     * The attribute a hook name is written to, and the one a stylesheet or a
+     * tour matches on.
+     *
+     * A constant because it is now read in two directions — written here,
+     * matched by {@see selector()} — and a second literal is how the writer and
+     * the reader come to disagree about a contract neither of them owns alone.
+     */
+    public const ATTRIBUTE = 'data-wire';
+
+    /**
+     * Whether a string is usable as a hook name.
      *
      * Kebab-case, which is the shape all 387 names the framework already carries
-     * are written in. A name that is not is dropped rather than escaped into the
+     * are written in.
+     *
+     * Public, and the only place the shape is written, because a hook name is
+     * checked in more than one direction: rendered here, and validated up front
+     * by anything that *targets* a name rather than emitting one — a tour step,
+     * for instance, which would otherwise be anchored to a selector that can
+     * never match anything and would say so only by doing nothing.
+     */
+    public static function isValidName(string $name): bool
+    {
+        return preg_match('/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/', $name) === 1;
+    }
+
+    /**
+     * Render one hook name as its attribute, or nothing for an unusable name.
+     *
+     * A name that is not kebab-case is dropped rather than escaped into the
      * markup, because a hook nobody can predict the spelling of is not a
      * contract — and a caller that got here with a variable should find out at
      * the first render, not from a stylesheet that quietly matches nothing.
      */
     public static function render(string $name): string
     {
-        if (preg_match('/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/', $name) !== 1) {
+        if (! self::isValidName($name)) {
             return '';
         }
 
-        return ' data-wire="'.$name.'"';
+        return ' '.self::ATTRIBUTE.'="'.$name.'"';
+    }
+
+    /**
+     * The CSS attribute selector that matches elements carrying a hook name.
+     *
+     * The counterpart to {@see render()}, for the callers that have to *find* a
+     * hooked element rather than mark one. It returns a selector for an invalid
+     * name too — the caller decides whether that is worth refusing, and a
+     * selector that matches nothing is the honest rendering of a name that was
+     * never written into the document either.
+     */
+    public static function selector(string $name): string
+    {
+        return '['.self::ATTRIBUTE.'="'.$name.'"]';
     }
 }
