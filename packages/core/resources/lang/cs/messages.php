@@ -91,6 +91,11 @@ return [
     'widget_save_layout' => 'Uložit rozložení',
     'widget_cancel_layout' => 'Zrušit',
     'widget_reset_layout' => 'Zpět na výchozí',
+    'widget_saved_layouts' => 'Uložená rozložení',
+    'widget_saved_layout_current' => 'Aktuální rozložení',
+    'widget_save_layout_as' => 'Uložit jako…',
+    'widget_save_layout_prompt' => 'Pojmenujte rozložení',
+    'widget_delete_layout' => 'Smazat uložené rozložení',
 
     // The guided walkthrough (Tours/).
     'tour_next' => 'Další',

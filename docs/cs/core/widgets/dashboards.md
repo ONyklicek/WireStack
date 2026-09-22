@@ -15,9 +15,19 @@ URL do routeru, aniž by se kdokoli z nich dozvěděl, co je widget.
 Použijte trait `WithWidgets` na Livewire komponentě pro složení widgetového dashboardu.
 
 ```php
+use NyonCode\WireCore\Widgets\ChartWidget;
 use NyonCode\WireCore\Widgets\Concerns\WithWidgets;
 use NyonCode\WireCore\Widgets\Contracts\HasWidgets;
+use NyonCode\WireCore\Widgets\Stat;
+use NyonCode\WireCore\Widgets\StatsOverviewWidget;
+use NyonCode\WireTable\Table;
+use NyonCode\WireTable\Widgets\TableWidget;   // [tl! focus]
 ```
+
+**`TableWidget` jako jediný není z wire-core.** Kreslí řádky tabulky uvnitř
+karty a engine, který je kreslí, žije ve `wire-table` — takže tam žije i ta
+třída. Aplikace bez toho balíčku skládá ostatní druhy widgetů přesně jako níž.
+Viz [Tabulky a vlastní pohledy](custom.md).
 
 ### Použití
 
@@ -32,10 +42,10 @@ class Dashboard extends Component implements HasWidgets
             StatsOverviewWidget::make()
                 ->columns(4)
                 ->stats([
-                    Stat::make('Users', User::count()),
-                    Stat::make('Orders', Order::count()),
+                    Stat::make('Users', (string) User::count()),
+                    Stat::make('Orders', (string) Order::count()),
                     Stat::make('Revenue', "$" . number_format(Order::sum('total'), 2)),
-                    Stat::make('Products', Product::count()),
+                    Stat::make('Products', (string) Product::count()),
                 ]),
 
             ChartWidget::make()
@@ -47,7 +57,8 @@ class Dashboard extends Component implements HasWidgets
 
             TableWidget::make()
                 ->heading('Recent Orders')
-                ->table(fn ($table) => $this->configureRecentOrdersTable($table)),
+                ->limit(5)
+                ->table(fn (Table $table): Table => $this->configureRecentOrdersTable($table)),
         ];
     }   // [tl! focus:end]
 
@@ -151,15 +162,32 @@ final class SalesDashboard extends Dashboard
 }   // [tl! focus:end]
 ```
 
-`php artisan make:wire-dashboard Sales` přesně tohle vygeneruje — do
-`app/Dashboards/`, ze stubu, který jde publikovat a upravit:
+`php artisan make:wire-dashboard Sales` vygeneruje **dva** soubory:
 
-```bash
-php artisan vendor:publish --tag=wire-core::stubs
+```text
+app/Dashboards/SalesDashboard.php          deklarace
+app/Livewire/Dashboards/ShowSales.php      stránka, která ji mountuje
 ```
 
-Publikovaný `stubs/dashboard.stub` má přednost před balíčkovým, stejně jako to
-dělá Laravelí `stub:publish`.
+Dva proto, že jeden z nich nejde otevřít. Dashboard, který nedeklaruje žádné
+stránky, není nikam routovaný — v menu je z něj položka bez odkazu a na každé
+adrese odpovídá 404 — takže generátor, který psal jen deklaraci, vracel něco, co
+vypadalo hotově a hotové nebylo.
+
+Stránka je třída z wire-panels, takže ji generují panels: příkaz zavolá
+`make:wire-dashboard-page`, pokud je ten balíček nainstalovaný, a jinak řekne, co
+doinstalovat. `--no-page` zapíše jen deklaraci; deklarované `pages()` tam zůstane
+tak jako tak, protože je nikdo nečte, dokud se neroutuje.
+
+Obě šablony jsou stuby, které jde publikovat a upravit:
+
+```bash
+php artisan vendor:publish --tag=wire-core::stubs     # dashboard
+php artisan vendor:publish --tag=wire-panels::stubs   # stránka
+```
+
+Publikovaný `stubs/wire-core/dashboard.stub` má přednost před balíčkovým, stejně
+jako to dělá Laravelí `stub:publish`.
 
 Registruje se stejně jako resources:
 
@@ -229,8 +257,21 @@ Viz [Resources](../../panels/navigation.md).
 | --- | --- | --- |
 | `widgets(): array` | `array<int, Widget>` | Widgety v pořadí rozložení. Povinné |
 | `columns(): int` | `int` | Sloupce mřížky; výchozí 2 |
+| `customisable(): bool` | `bool` | Jestli si ho každý uživatel smí přeskládat; false, a to je celé opt-in |
+| `savedLayouts(): bool` | `bool` | Jestli si každý uživatel smí držet víc uspořádání, každé pod jménem; potřebuje i `customisable()` |
 | `static key(): string` | `string` | Identita, odvozená z názvu třídy bez `Dashboard` |
 | `static label(): string` | `string` | Lidský název; výchozí nadpis stránky |
+
+### Jak nechat každého uživatele přeskládat si ho
+
+`customisable()` je tady jedna věta a za ní celá funkce: widgety, které si
+uživatel položil, v jeho pořadí a v jeho velikostech, uložené per uživatel a per
+dashboard. `DashboardPage` z toho udělá klíč, pod kterým se layout ukládá, a
+přidá ovládání Přizpůsobit / Uložit / Zrušit / Obnovit — deklarovaný dashboard
+tak nepotřebuje vlastní view. Každý widget na něm potřebuje vlastní `key()`.
+
+Úložiště, zásobník, `group()` a `sizes()` popisují
+[Widgety → Přizpůsobitelné dashboardy](index.md#prizpusobitelne-dashboardy).
 
 ---
 

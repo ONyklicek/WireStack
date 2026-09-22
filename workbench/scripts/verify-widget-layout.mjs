@@ -101,8 +101,11 @@ try {
     return JSON.stringify({ class: cell ? cell.className : null });
   })()`);
 
+  // `md:col-span-2`, because the grid is one column until `md` — a span that
+  // applied at `sm`, as this used to assert, makes CSS Grid invent the column
+  // the grid does not have and squeezes every other tile into what is left.
   check('a stepper resizes the tile it belongs to',
-    /sm:col-span-2/.test(sized.class) && /row-span-2/.test(sized.class), JSON.stringify(sized));
+    /md:col-span-2/.test(sized.class) && /row-span-2/.test(sized.class), JSON.stringify(sized));
 
   // ─── 3. Reordering, saved, and still there after a reload ────────────────
   // `Livewire.first()` *is* the `$wire` proxy in Livewire 4 — the component's

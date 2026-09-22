@@ -160,6 +160,14 @@ cannot overwrite related attributes or the row key. Create/attach/detach actions
 `$this->attachRelated($id, [...pivot])` and `$this->detachRelated($id)` (belongs-to-many only, `null`
 detaches all). Using one against an unsupported relationship type throws a clear `RuntimeException`.
 
+### A table inside a dashboard card
+
+`Widgets\TableWidget` is this package's widget: a few read-only rows of a table in a dashboard card — no
+toolbar, no filters, no pagination, no bulk actions. `TableWidget::make()->heading('Recent orders')->limit(5)
+->table(fn (Table $table): Table => $table->query(Order::query()->latest())->columns([...]))`. It lives here
+rather than in wire-core, which owns every other widget kind, because the engine that renders the rows is
+here; before 2.0 it was core's and rendered an empty div, since from there the table could not be reached.
+
 ### Gesture layer
 
 The desktop behaviour — keyboard grid navigation, Shift/mod ranges, the drag sweep, the right-click row

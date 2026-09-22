@@ -336,7 +336,46 @@ multi-field edit with one Save.
 ### Widgets
 
 `StatsOverviewWidget` / `Stat`, `ChartWidget` (+ `LineChartWidget`/`PieChartWidget`/`DoughnutChartWidget`
-presets and `->options([...])` Chart.js overrides), `BarChartWidget` (pure-CSS bars: `->type('vertical'|'horizontal')`, `->variant('finance'|'system')`, `->showGrid()`, `->verticalLabels()` to rotate each bar's label beside it for long names), `TableWidget`, `CustomWidget`.
+presets and `->options([...])` Chart.js overrides), `BarChartWidget` (pure-CSS bars: `->type('vertical'|'horizontal')`, `->variant('finance'|'system')`, `->showGrid()`, `->verticalLabels()` to rotate each bar's label beside it for long names), `CustomWidget` — and
+`TableWidget`, which is **`NyonCode\WireTable\Widgets\TableWidget`, not wire-core's**: it draws rows of a
+table inside a card and the engine that draws them is wire-table's, so the class went with it in 2.0. A
+`use NyonCode\WireCore\Widgets\TableWidget;` is the class that was removed.
+
+**Never write the host's widget state from a view or from JS.** `widgetLayoutDraft`, `editingWidgets`,
+`widgetFilters` and `loadedWidgets` are `#[Locked]`: every change has a method (`moveWidget`, `placeWidget`,
+`resizeWidget`, `removeWidget`, `start/save/cancel/resetWidgetLayout`, `filterWidget`, `loadWidget`), and
+those are where a key is checked against the declaration and a size against the grid. A `wire:model` on any
+of them throws at runtime.
+
+**More than one arrangement** is `savedLayouts(): true` beside it — a separate opt-in, because a switcher
+is not what a dashboard with one layout wants. It rides the same store under a name; the host gains
+`saveWidgetLayoutAs()`, `applyWidgetLayout()`, `deleteWidgetLayout()` and `getWidgetLayoutNames()`, and the
+shipped controls gain a "Save as" and a select. Applying a saved layout **copies** it onto the current one
+rather than pointing at it, so nothing has to remember which name is in use.
+
+**A dashboard a user may rearrange** says `customisable(): true` on the `Dashboard` (off by default; the
+stored layout is per user, under the dashboard's key, in `wire-core.preferences`). Then **every widget on
+it needs its own `key()`** — a derived key is a position, and a stored layout addresses widgets by key, so
+a missing one is refused rather than rendered. `->group('Money')` is the heading it is offered under in the
+tray; `->sizes([[2, 1], [4, 2]])` is the list of sizes it may be given, and it binds: the resize buttons
+walk exactly those pairs and the first one is the size it arrives at from the tray.
+
+**A `columnSpan()` is resolved against the grid the component lands in, and capped by it.** Write the
+number (`columnSpan(3)`, `columnSpanFull()`) and the breakpoints follow the grid — the layout tells each
+child what it is drawn in, and `HasColumnSpan::getColumnSpanClass()` steps the span with the columns. Never
+hand-write `col-span-*` on a schema or infolist child, and never assume a span wider than the grid clips:
+CSS Grid adds the missing column instead, which re-flows the layout and squeezes every sibling into the
+remainder. A grid of your own gets its classes from `ResponsiveGrid::cols()` and hands the same argument to
+`ResponsiveGrid::span()`; the two shipped ladders are `fieldColumns()` (fields, two columns from `sm`) and
+`cardColumns()` (cards and widgets, two from `md`).
+
+**Never let a widget span more columns than the dashboard declares.** `columns(3)` means three is the
+widest a tile can be — a wider one does not clip, CSS Grid adds the missing track and squeezes every other
+tile on the page into what is left. The steppers and the server both cap at `columns()` for you
+(`WidgetSizeOffer`), so the trap is only in hand-written markup: a widget grid resolves its spans through
+`ResponsiveGrid::span($span, $ladder)` against the same ladder `ResponsiveGrid::cols()` built, never
+through a bare `col-span-*` or `HasColumnSpan::getColumnSpanClass()`, which answers for a grid that ramps
+at `sm` and knows no column count.
 
 ### Audit log
 

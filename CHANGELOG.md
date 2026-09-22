@@ -66,6 +66,22 @@ All notable changes to the Wire ecosystem will be documented in this file.
   `TourProgressTest` (9), two more in `TourAcrossPagesTest`, one in panels' `RouteAccessTest`, and seven new
   checks in `verify-demo-tour`.
 
+- **A dashboard can keep more than one arrangement, each under a name.** The preference store has carried a
+  `view` dimension since it was a table's — a saved view is the same bag under a name — and the dashboard
+  side passed it through and never drove it: `widgetLayoutView()` was a seam with nothing on the other end,
+  so the feature existed in the driver and nowhere a user could reach it, while `Table::savedViews()` had
+  had the whole thing for a year. `Dashboard::savedLayouts()` is the opt-in, separate from `customisable()`
+  because the wishes are — one is "you may rearrange this", the other "you may keep several arrangements",
+  and the second is a switcher above the grid that a dashboard with one layout does not want. On the host:
+  `saveWidgetLayoutAs()`, `applyWidgetLayout()`, `deleteWidgetLayout()` and `getWidgetLayoutNames()`, with
+  the shipped controls gaining a "Save as…" and a switcher that appears once there is something to switch
+  to. **Applying is a copy, not a pointer** — the saved arrangement is written onto the current layout, the
+  way `applyTableView()` does, so nothing has to remember which name is in use and the answer survives a
+  reload without a second piece of stored state to disagree with the first. Saving while the editor is open
+  keeps the draft; on a dashboard nobody has arranged it captures what the grid shows, since a name over
+  "the declaration" would restore nothing. Covered by ten tests in core and four in panels, and driven in a
+  browser by `verify-dashboard-customise` — save, rearrange, switch back, delete.
+
 ### Fixed
 
 - **Every select surface renders through one partial.** The native `<select>` was written four times
@@ -121,6 +137,56 @@ All notable changes to the Wire ecosystem will be documented in this file.
   means four columns rather than one. Covered by new PHP tests in core and forms, and by
   `verify-grid-spans`, which measures the rendered track count against the declared column count at three
   widths — the only witness there is, since an over-wide span renders a page that still looks like a page.
+- **`TableWidget` was still documented as wire-core's, two versions after it moved.** The dashboards page
+  composed one in a `WithWidgets` example with no namespace anywhere on the page, and the wire-core
+  guideline listed it beside `ChartWidget` and `CustomWidget` as though it shipped there — so both a reader
+  and an agent would write `use NyonCode\WireCore\Widgets\TableWidget;`, which is the class 2.0 removed.
+  The example now carries the full import block it always needed (`NyonCode\WireTable\Widgets\TableWidget`
+  among them) and a line saying which package each half comes from; the wire-core guideline names it as
+  wire-table's, and the wire-table guideline describes it at all, which it did not.
+
+- **Pressing Customise halved every full-width widget.** The editor starts from the arrangement the
+  declaration describes, and `WidgetLayout::fromWidgets()` read `columnSpanFull()` as one column — so a row
+  of figures across the top of a two-column dashboard dropped to half width the moment the editor opened,
+  before anybody had touched it. Found by putting the feature on a real application's zone dashboards,
+  which all lead with such a row. `'full'` now becomes the grid's own column count.
+
+- **A dashboard's draft was a public property, so the browser could write one and save it.** The host keeps
+  the arrangement being edited, the editor's own mode, each widget's filter and the fetched deferred widgets
+  in public Livewire properties — they have to survive the round trips a drag makes — and a public property
+  is writable from the client unless it says otherwise. Measured: a client set `editingWidgets` true, wrote
+  500 invented placements into `widgetLayoutDraft` and called Save. All 500 were stored verbatim — 15 kB in
+  that user's preference row, and nothing caps it — and the dashboard then rendered **empty**, because
+  `apply()` drops every key the declaration does not have and there was nothing else left. Self-inflicted
+  rather than cross-user, and silent either way: no error, and the way out is a Reset the user has to know
+  about. All four properties are `#[Locked]` now, so the only way in is the methods that check a key against
+  the declaration and a size against the grid; and what is written is narrowed to the declared keys anyway
+  (`WidgetLayout::only()`), which also cleans a stored layout left by an older declaration — a renamed
+  widget stops being carried around the first time that user saves.
+
+- **A widget could be made wider than the dashboard it sits on, and the whole grid paid for it.**
+  The resize steppers were bounded by the widest grid there is (four columns) rather than by the
+  dashboard's own `columns()`, and a tile wider than its grid does not clip — CSS Grid *adds* the
+  missing track. Measured on a three-column dashboard at 1000px: stepping one tile to four columns
+  turned a declared two-track grid into `269px 269px 153px 153px`, so every other widget on the page
+  was squeezed into a sliver, with no error and nothing in the console. The same disagreement ran the
+  other way at every width below `md`: a span was emitted as `sm:col-span-2` while the widget grid is
+  one column until `md`, so between 640 and 768px a one-column dashboard silently became two uneven
+  ones (measured: `216px 377px`). Spans are now resolved against the grid's own ladder —
+  `ResponsiveGrid::span()`, beside the `cols()` that builds it, so the two read from one set of
+  numbers — and step with it (`md:col-span-2 xl:col-span-3` for three columns on a three-column
+  dashboard). Nothing a dashboard declares changes; what changes is that no span can reach the page
+  that its grid cannot honour.
+- **`Widget::sizes()` narrowed nothing.** It has been documented since it shipped as the way to say
+  which sizes a widget looks right at — "letting a user find that out by dragging is worse than not
+  offering it" — and `getSizes()` had no caller anywhere in the repository: only `getDefaultSize()`
+  reached past it for the first pair. A widget declaring one size could still be stepped to any of
+  the grid's twenty-four. The declaration is now the offer: the width buttons walk the offered widths
+  (taking the height that width is offered at, so a `[[2, 1], [4, 2]]` has both pairs reachable), the
+  height buttons walk the heights offered at the current width, a button with nowhere to go is drawn
+  disabled, and the server snaps whatever the browser sends to the same answer. Both bounds — the
+  declaration and the grid — have one owner, `Widgets\Support\WidgetSizeOffer`, because they are the
+  same question asked twice.
 - **A tablet can reach the row's actions.** A tablet is wide enough for the desktop table, so it got
   neither the stacked card's buttons nor anything a finger can do with a double click, a right click or a
   key — a table whose record actions were all gestures offered none of them on an iPad. The row now keeps

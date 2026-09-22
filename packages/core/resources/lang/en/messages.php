@@ -92,6 +92,11 @@ return [
     'widget_save_layout' => 'Save layout',
     'widget_cancel_layout' => 'Cancel',
     'widget_reset_layout' => 'Reset to default',
+    'widget_saved_layouts' => 'Saved layouts',
+    'widget_saved_layout_current' => 'Current layout',
+    'widget_save_layout_as' => 'Save as…',
+    'widget_save_layout_prompt' => 'Name this layout',
+    'widget_delete_layout' => 'Delete this saved layout',
 
     // The guided walkthrough (Tours/).
     'tour_next' => 'Next',

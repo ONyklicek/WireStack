@@ -178,9 +178,15 @@ final readonly class WidgetLayout
      * here on the two are the same kind of thing, which is what lets a drag on
      * an untouched dashboard behave exactly like a drag on a saved one.
      *
+     * `'full'` is the grid's own width, which is why the column count is asked
+     * for. Read as one column — which this did — pressing Customise halved every
+     * full-width row before anybody had touched it, and `columnSpanFull()` is the
+     * usual way to put a row of figures across the top of a dashboard.
+     *
      * @param  array<int, Widget>  $widgets  keys already stamped
+     * @param  int  $columns  The grid the widgets are laid out in
      */
-    public static function fromWidgets(array $widgets): self
+    public static function fromWidgets(array $widgets, int $columns = 1): self
     {
         $placements = [];
 
@@ -195,10 +201,14 @@ final readonly class WidgetLayout
 
             $placements[] = [
                 'key' => $key,
-                // A span of 'full' or nothing is one column here: this is the
-                // number a user will now change with a button, and 'full' is a
-                // word rather than a number on that scale.
-                'w' => is_int($span) ? self::clamp($span, 1, 4) : 1,
+                // 'full' is the grid's width and nothing is one column: this is
+                // the number a user will now change with a button, so 'full'
+                // has to become the number it meant on this grid.
+                'w' => match (true) {
+                    is_int($span) => self::clamp($span, 1, 4),
+                    $span === 'full' => self::clamp($columns, 1, 4),
+                    default => 1,
+                },
                 'h' => self::clamp($widget->getRowSpan() ?? 1, 1, 6),
             ];
         }
@@ -283,6 +293,37 @@ final readonly class WidgetLayout
         array_splice($placements, $index, 1);
 
         return new self($placements);
+    }
+
+    /**
+     * This layout with every placement the declaration does not have dropped.
+     *
+     * {@see apply()} already ignores those when drawing, so this is about what
+     * is *stored*: a bag full of keys nothing can render is a preference row
+     * that grows for no one's benefit, and — since a stored layout is what
+     * `apply()` returns — one made entirely of them is a dashboard that draws
+     * nothing at all. Measured on a component whose public draft was writable:
+     * 500 invented placements saved as 15 kB, and the page came back empty.
+     *
+     * Applied on the way in, so the rule holds for a bag written by an older
+     * version, a second tab, or a client that found a way past the methods.
+     *
+     * Nothing stored is still nothing stored: a layout that was never saved
+     * stays "the declaration decides" rather than becoming an empty placement
+     * list, which is a different thing entirely.
+     *
+     * @param  array<int, string>  $keys  The declared widgets' keys
+     */
+    public function only(array $keys): self
+    {
+        if ($this->placements === null) {
+            return $this;
+        }
+
+        return new self(array_values(array_filter(
+            $this->placements,
+            static fn (array $placement): bool => in_array($placement['key'], $keys, true),
+        )));
     }
 
     /** Whether a widget is currently on the dashboard. */
