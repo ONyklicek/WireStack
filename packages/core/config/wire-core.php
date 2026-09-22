@@ -347,6 +347,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Tours
+    |--------------------------------------------------------------------------
+    |
+    | Where "which walkthroughs this user has already seen" is kept. The same
+    | store as above, with its own default on purpose: a table that forgets a
+    | hidden column is an annoyance, while a tour on a store that forgets is a
+    | walkthrough interrupting the same person on every page load, for ever.
+    |
+    | So this defaults to `session` — the worst untouched-config behaviour is
+    | "once per session" rather than "every time". An application that wants
+    | "once, ever" sets `database` and runs the migration:
+    |
+    |   vendor:publish --tag="wire-core::migrations"
+    |
+    | Nothing is registered by default; the framework ships no tour of its own.
+    |
+    */
+    'tours' => [
+        'preferences' => [
+            'default' => env('WIRE_TOURS_DRIVER', 'session'),
+            'guest' => env('WIRE_TOURS_GUEST_DRIVER', 'session'),
+            'drivers' => [
+                'null' => NullPreferenceDriver::class,
+                'session' => SessionPreferenceDriver::class,
+                'database' => DatabasePreferenceDriver::class,
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Density
     |--------------------------------------------------------------------------
     |

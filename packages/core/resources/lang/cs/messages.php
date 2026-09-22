@@ -86,4 +86,13 @@ return [
     'widget_save_layout' => 'Uložit rozložení',
     'widget_cancel_layout' => 'Zrušit',
     'widget_reset_layout' => 'Zpět na výchozí',
+
+    // The guided walkthrough (Tours/).
+    'tour_next' => 'Další',
+    'tour_back' => 'Zpět',
+    'tour_finish' => 'Hotovo',
+    'tour_skip' => 'Přeskočit',
+    'tour_progress' => 'Krok :current z :total',
+    'tour_region' => 'Průvodce',
+    'tour_replay' => 'Spustit průvodce znovu',
 ];

@@ -104,13 +104,19 @@ it('registers the way out whether or not the shell has booted yet', function () 
 it('sorts the way out after entries other packages contribute', function () {
     // "Sign out" above "Profile" reads as a bug, and neither package can see the
     // other to avoid it.
+    //
+    // Asserted as "last", not as an exact list. This used to name the two
+    // entries it expected, which made it a test of *who else* contributes to the
+    // menu rather than of where this package's entry lands — and it failed the
+    // first time a third package added a row, having caught nothing wrong. The
+    // contract here is the position.
     $chrome = app(PageChrome::class);
     $chrome->add('wire-module-users::profile-menu-item', PageChrome::USER_MENU, 10);
 
-    expect($chrome->views(PageChrome::USER_MENU))->toBe([
-        'wire-module-users::profile-menu-item',
-        'wire-module-auth::user-menu',
-    ]);
+    $views = $chrome->views(PageChrome::USER_MENU);
+
+    expect($views)->toContain('wire-module-users::profile-menu-item')
+        ->and(end($views))->toBe('wire-module-auth::user-menu');
 });
 
 it('leaves the menu alone where the application asked it to', function () {

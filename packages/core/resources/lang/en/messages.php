@@ -87,4 +87,13 @@ return [
     'widget_save_layout' => 'Save layout',
     'widget_cancel_layout' => 'Cancel',
     'widget_reset_layout' => 'Reset to default',
+
+    // The guided walkthrough (Tours/).
+    'tour_next' => 'Next',
+    'tour_back' => 'Back',
+    'tour_finish' => 'Done',
+    'tour_skip' => 'Skip',
+    'tour_progress' => 'Step :current of :total',
+    'tour_region' => 'Product tour',
+    'tour_replay' => 'Replay the tour',
 ];
