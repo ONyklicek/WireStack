@@ -1,4 +1,5 @@
 @php
+    use NyonCode\WireCore\Foundation\Support\ResponsiveGrid;
     use NyonCode\WireCore\Infolists\Components\RepeatableEntry;
 
     assert($field instanceof RepeatableEntry);
@@ -7,12 +8,11 @@
     $columns = $field->getColumns();
     $rows = $field->getRows();
     $rowActions = $field->getActions();
-    $gridCols = match ($columns) {
-        2 => 'sm:grid-cols-2',
-        3 => 'sm:grid-cols-2 md:grid-cols-3',
-        4 => 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
-        default => 'sm:grid-cols-1',
-    };
+    // The field ladder, from its one owner — see the note in
+    // schema/step.blade.php; each entry is told it so its own span is drawn
+    // against the columns a row actually has at that width.
+    $ladder = is_array($columns) ? $columns : ResponsiveGrid::fieldColumns(is_int($columns) ? $columns : 1);
+    $gridCols = ResponsiveGrid::cols($ladder);
 @endphp
 
 <div class="{{ $spanClass }}" @wireExtraAttributes($field)>
@@ -28,7 +28,7 @@
                         <div @class(['grid gap-4', $gridCols])>
                             @foreach($entries as $entry)
                                 @if($entry->isVisible())
-                                    {{ $entry }}
+                                    {{ $entry->inGridOf($ladder) }}
                                 @endif
                             @endforeach
                         </div>

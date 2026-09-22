@@ -54,6 +54,19 @@ TextInput::make('bio')->columnSpan(2);      // rozpětí dvou sloupců
 TextInput::make('notes')->columnSpanFull(); // rozpětí celého řádku
 ```
 
+**Rozpětí se řeší proti mřížce, ve které komponenta skutečně skončí — na každé
+šířce.** Mřížka je responzivní: `columns(3)` je na telefonu jeden sloupec a na
+desktopu tři, takže rozpětí není jedna třída, ale žebřík. `columnSpan(3)`
+v tříslupcovém `Gridu` je `md:col-span-3`, totéž rozpětí ve `Fieldsetu` (který má
+dva sloupce už od `sm`) je `sm:col-span-2 md:col-span-3`. Píšeš číslo, breakpointy
+si doplní mřížka.
+
+**Rozpětí nikdy nemůže být širší než jeho mřížka.** Požádat o víc neznamená
+oříznutou dlaždici — CSS Grid chybějící sloupec *přidá*, čímž přeskládá celý
+layout a ostatní potomky zmáčkne do zbytku. Rozpětí širší než deklarovaný počet
+se proto vykreslí jako celá šířka mřížky: `columnSpan(4)` ve dvousloupcové sekci
+jsou dva sloupce, všude.
+
 ## Společné API layoutů
 
 Každá layoutová komponenta — `Grid`, `Flex`, `Section`, `Fieldset`, `Tab`, `Step`,
@@ -89,8 +102,9 @@ state path: layout nenese hodnotu, takže jméno jen pojmenovává.
 Tři z nich si zaslouží větu, protože právě na ně lidi narazí jako na překvapení:
 
 - **`columnSpan()` je o rodiči, ne o dítěti.** Říká, kolik z gridu, který tuhle
-  komponentu *obsahuje*, zabere. Rozumí `2`, `3`, `4` a `'full'` a ničemu jinému —
-  `columnSpan(5)` tiše znamená „jeden sloupec“.
+  komponentu *obsahuje*, zabere — omezené tím, co ta mřížka má: `columnSpan(5)`
+  ve čtyřsloupcové mřížce jsou čtyři sloupce, ve dvousloupcové dva.
+  `columnSpanFull()` je celý řádek, ať už je řádek jakýkoli.
 - **`visible()` bere closure a vyhodnocuje se při každém renderu**, takže layout
   může přicházet a mizet podle stavu formuláře. `visibleWhen('type', 'company')`
   je totéž napsané pro ten obvyklý případ.

@@ -54,6 +54,19 @@ TextInput::make('bio')->columnSpan(2);      // span two columns
 TextInput::make('notes')->columnSpanFull(); // span the full row
 ```
 
+**A span is resolved against the grid it lands in, at every width.** A grid is
+responsive — `columns(3)` is one column on a phone and three on a desktop — so a
+span is not one class but a ladder: `columnSpan(3)` in a three-column `Grid` is
+`md:col-span-3`, and the same span in a `Fieldset` (which reaches two columns
+already at `sm`) is `sm:col-span-2 md:col-span-3`. You write the number; the
+breakpoints follow the grid.
+
+**A span can never be wider than its grid.** Asking for more is not a clipped
+tile — CSS Grid answers by *adding* the missing column, which re-flows the whole
+layout and squeezes every other child into the remainder. A span wider than the
+declared count is drawn as the full width of the grid instead, so
+`columnSpan(4)` in a two-column section is two columns, everywhere.
+
 ## Common Layout API
 
 Every layout component — `Grid`, `Flex`, `Section`, `Fieldset`, `Tab`, `Step`,
@@ -91,8 +104,9 @@ Three of these are worth a sentence each, because they are the ones people meet
 as surprises:
 
 - **`columnSpan()` is about the parent, not the child.** It says how much of the
-  grid *containing* this component it takes up. It understands `2`, `3`, `4` and
-  `'full'` and nothing else — `columnSpan(5)` silently means "one column".
+  grid *containing* this component it takes up, capped by what that grid has:
+  `columnSpan(5)` in a four-column grid is four columns, and in a two-column one
+  it is two. `columnSpanFull()` is the row, whatever the row turns out to be.
 - **`visible()` takes a closure and is evaluated on every render**, so a layout
   can appear and disappear as the form's state changes. `visibleWhen('type',
   'company')` is the same thing written for the common case.

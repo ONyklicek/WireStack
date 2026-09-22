@@ -14,7 +14,9 @@
 <div class="wire-infolist grid gap-4 sm:gap-6 {{ $columnsClass }}">
     @foreach($components as $component)
         @if($component->isVisible())
-            {{ $component }}
+            {{-- The grid an entry's own span is resolved against; see
+                 HasColumnSpan::inGridOf(). --}}
+            {{ $component->inGridOf($columns) }}
         @endif
     @endforeach
 </div>

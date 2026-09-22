@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Workbench\App\Livewire\Previews;
 
 use Livewire\Component;
+use NyonCode\WireCore\Foundation\Schema\Fieldset;
 use NyonCode\WireCore\Foundation\Schema\Grid;
 use NyonCode\WireCore\Foundation\Schema\Section;
 use NyonCode\WireCore\Foundation\Schema\Step;
@@ -126,8 +127,57 @@ class FormPreview extends Component
             'wizard-live' => $this->buildWizardLiveForm($form),
             'option-wizard' => $this->buildOptionWizardForm($form),
             'field-partials' => $this->buildFieldPartialsForm($form),
+            'grid-spans' => $this->buildGridSpansForm($form),
             default => $this->buildOverviewForm($form),
         };
+    }
+
+    /**
+     * Every column count beside every span, which nothing else here has.
+     *
+     * A span is only ever *drawn* against the grid it lands in, and until this
+     * screen existed no preview put a field wider than one column into a grid at
+     * all — so the one thing that can go wrong with the pair went unseen. It does
+     * not fail loudly: CSS Grid answers a span wider than the grid by **adding**
+     * the missing track, so the page still renders and every other field on the
+     * row is squeezed into what is left.
+     *
+     * The three layouts below are the three ladders the stack has: a `Section`
+     * and a `Grid` resolve their columns through `ResponsiveGrid::cols()`, and a
+     * `Fieldset` had its own local map. A driver measures the rendered
+     * `grid-template-columns` at each breakpoint against what the layout
+     * declared — the number of tracks is the assertion, because it is the thing
+     * the eye sees and the markup does not say.
+     */
+    protected function buildGridSpansForm(Form $form): Form
+    {
+        return $form
+            ->statePath('data')
+            ->schema([
+                Section::make('Two columns')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('two_a')->label('One column'),
+                        TextInput::make('two_b')->label('Spans two')->columnSpan(2),
+                    ]),
+
+                Grid::make()
+                    ->columns(3)
+                    ->schema([
+                        TextInput::make('three_a')->label('One column'),
+                        TextInput::make('three_b')->label('Spans two')->columnSpan(2),
+                        TextInput::make('three_c')->label('Spans three')->columnSpan(3),
+                    ]),
+
+                Fieldset::make('Four columns')
+                    ->columns(4)
+                    ->schema([
+                        TextInput::make('four_a')->label('One column'),
+                        TextInput::make('four_b')->label('Spans two')->columnSpan(2),
+                        TextInput::make('four_c')->label('Spans three')->columnSpan(3),
+                        TextInput::make('four_d')->label('Spans four')->columnSpan(4),
+                    ]),
+            ]);
     }
 
     /**

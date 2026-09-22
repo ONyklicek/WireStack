@@ -102,6 +102,25 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **`SelectFilter::searchable()` pinned the control custom** instead of lifting an earlier `->native()` back
   to the default, so the global mobile-native switch could never reach a searchable filter.
 
+- **A field's `columnSpan()` was drawn against no grid at all, and three surfaces disagreed about what it meant.**
+  Every item emitted one fixed `sm:col-span-N` while the grids around it ramped elsewhere — `Grid`, `Section`
+  and an infolist reach their columns at `md` (`ResponsiveGrid::cols()`), while a step, a tab, a fieldset, a
+  record panel and a repeatable entry reached theirs at `sm` through five copies of one local `match` — and a
+  wire-forms field had a **third** map that stopped at two columns. Measured on a new
+  `/previews/forms-grid-spans` screen before the fix: a `Section` declaring one column until `md` drew two
+  uneven ones at 700px (494px and 510px), because a span-2 field asked for a column that was not there and
+  CSS Grid answered by adding it; and at 1400px a `columnSpan(3)` field in a three-column grid was 369px —
+  exactly as wide as its one-column neighbour — because the forms wrapper emitted **no class at all** for a
+  span of 3 or 4, while `columnSpanFull()` was drawn as two columns rather than the row. A span is now
+  resolved against the grid the component was told it is in (`HasColumnSpan::inGridOf()`, set by the layout
+  that owns the grid) through `ResponsiveGrid::span()`, so it steps with the columns
+  (`sm:col-span-2 md:col-span-3`) and is capped by them: a span wider than the grid is the full width of the
+  grid, never an invented track. The five local `match` copies are gone — the field ladder is
+  `ResponsiveGrid::fieldColumns()`, one owner beside the `cardColumns()` the widget grid uses — and the forms
+  wrapper delegates to the canonical owner like every other surface. `columnSpan(5)` in a four-column grid now
+  means four columns rather than one. Covered by new PHP tests in core and forms, and by
+  `verify-grid-spans`, which measures the rendered track count against the declared column count at three
+  widths — the only witness there is, since an over-wide span renders a page that still looks like a page.
 - **A tablet can reach the row's actions.** A tablet is wide enough for the desktop table, so it got
   neither the stacked card's buttons nor anything a finger can do with a double click, a right click or a
   key — a table whose record actions were all gestures offered none of them on an iPad. The row now keeps

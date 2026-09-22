@@ -111,9 +111,12 @@ it('renders <x-wire::widget-grid> with a column count and canonical span classes
     expect($html)->toContain('wire-widget-grid')
         // Column count drives the responsive grid.
         ->toContain('xl:grid-cols-3')
-        // Span delegates to HasColumnSpan::getColumnSpanClass() — the safelisted
-        // `sm:col-span-2`, never the un-emitted `col-span-2`.
-        ->toContain('sm:col-span-2')
+        // The span is resolved against *that* ladder rather than stated once:
+        // this grid is one column until `md`, so a `sm:col-span-2` — which is
+        // what this used to assert — would make CSS Grid invent the column the
+        // grid does not have and squeeze every other tile into the remainder.
+        ->toContain('md:col-span-2')
+        ->not->toContain('sm:col-span-2')
         ->not->toContain('"col-span-2"')
         // Each Htmlable widget is rendered into the grid.
         ->toContain('Revenue');

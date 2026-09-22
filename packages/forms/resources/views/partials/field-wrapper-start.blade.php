@@ -1,7 +1,12 @@
 @php
     $statePath = $field->getStatePath();
     $hasError = $errors->has($statePath);
-    $columnSpan = $field->getColumnSpan();
+    // Through the canonical owner, resolved against the grid this field was
+    // told it is in. The local map this replaced stopped at two columns — a
+    // `columnSpan(3)` or `(4)` emitted no class at all and the field stayed one
+    // column wide, and `columnSpanFull()` was drawn as two columns rather than
+    // the row. Both are declarations the API accepts and the docs describe.
+    $spanClass = $field->getColumnSpanClass();
 @endphp
 
 <div
@@ -14,11 +19,7 @@
     data-testid="form-field-{{ $statePath }}"
     @wireEl('form-field')
     data-field="{{ $statePath }}"
-    @class([
-        'wire-field relative',
-        'sm:col-span-1' => $columnSpan === 1,
-        'sm:col-span-2 md:col-span-2' => $columnSpan === 2 || $columnSpan === 'full',
-    ])
+    @class(['wire-field relative', $spanClass])
     @wireExtraAttributes($field)
 >
 

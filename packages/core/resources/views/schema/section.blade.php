@@ -6,7 +6,8 @@
 
     // Int and per-breakpoint map alike resolve through the canonical owner —
     // see the note in schema/grid.blade.php for what the local `match` did.
-    $columnsClass = ResponsiveGrid::cols($layout->getColumns());
+    $columns = $layout->getColumns();
+    $columnsClass = ResponsiveGrid::cols($columns);
     $isCollapsible = $layout->isCollapsible();
     $isCollapsed = $layout->isCollapsed();
     $headerActions = $layout->getHeaderActions();
@@ -82,7 +83,8 @@
     >
         @foreach($layout->getSchema() as $component)
             @if($component->isVisible())
-                {{ $component }}
+                {{-- Told which grid it is in; see HasColumnSpan::inGridOf(). --}}
+                {{ $component->inGridOf($columns) }}
             @endif
         @endforeach
     </div>

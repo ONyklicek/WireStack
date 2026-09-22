@@ -1,10 +1,14 @@
 @php
     use NyonCode\WireCore\Foundation\Schema\Fieldset;
+    use NyonCode\WireCore\Foundation\Support\ResponsiveGrid;
 
     assert($layout instanceof Fieldset);
 
     $columns = $layout->getColumns();
-    $columnsClass = is_array($columns) ? \NyonCode\WireCore\Foundation\Support\ResponsiveGrid::cols($columns) : '';
+    // One owner for both shapes, and for the span each child is drawn with —
+    // see the note in schema/step.blade.php.
+    $ladder = is_array($columns) ? $columns : ResponsiveGrid::fieldColumns($columns);
+    $columnsClass = ResponsiveGrid::cols($ladder);
 @endphp
 
 <fieldset class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
@@ -14,17 +18,10 @@
         </legend>
     @endif
 
-    <div @class([
-        'grid gap-4',
-        $columnsClass,
-        'sm:grid-cols-1' => $columns === 1,
-        'sm:grid-cols-2' => $columns === 2,
-        'sm:grid-cols-2 md:grid-cols-3' => $columns === 3,
-        'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' => $columns === 4,
-    ])>
+    <div class="grid gap-4 {{ $columnsClass }}">
         @foreach($layout->getSchema() as $component)
             @if($component->isVisible())
-                {{ $component }}
+                {{ $component->inGridOf($ladder) }}
             @endif
         @endforeach
     </div>
