@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Workbench\App\Providers;
 
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -13,6 +14,9 @@ use Livewire\Livewire;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
+use NyonCode\WireCore\Tours\Tour;
+use NyonCode\WireCore\Tours\Tours;
+use NyonCode\WireCore\Tours\TourStep;
 use NyonCode\WireModuleSettings\Support\SettingsRegistry;
 use Workbench\App\Actions\Fortify\CreateNewUser;
 use Workbench\App\Actions\Fortify\ResetUserPassword;
@@ -211,6 +215,8 @@ class WorkbenchServiceProvider extends ServiceProvider
         // shows the old one.
         config()->set('livewire.component_layout', 'components.layouts.wire');
 
+        $this->bootTours();
+
         // Read at render, so `boot()` is early enough for this one.
         config()->set('wire-module-settings.groups', [BrandingSettings::class]);
 
@@ -292,5 +298,105 @@ class WorkbenchServiceProvider extends ServiceProvider
 
             Livewire::component($name, $component);
         }
+    }
+
+    /**
+     * Two walkthroughs, so the CDP driver has something real to drive.
+     *
+     * The browser is the only place a tour can be checked at all: Pest sees the
+     * markup and not whether the panel landed beside its element, whether a step
+     * with no element was skipped, or whether anything ran on a phone.
+     *
+     * **`invoices-tour` has two steps that are deliberately unreachable** — one
+     * whose element is not rendered, and one whose element is rendered and
+     * hidden. The driver asserts both are skipped and neither is counted.
+     *
+     * The first of them:
+     * `not-on-this-page` is a well-formed hook name that nothing renders, which
+     * is what an application hiding a control looks like from a tour's side. The
+     * driver asserts it is skipped *and* that the progress counter never counted
+     * it.
+     *
+     * **`admin-zone-tour` runs in one zone and nowhere else.** Zone matching is
+     * the part with the trap under it — `Zone::current()` answers
+     * `livewire.update` on a round trip — so it is worth checking where a route
+     * name is real, which is a browser.
+     *
+     * **`gated-tour` is the one nobody may see.** It sorts first, so it would
+     * win every time if the permission were not consulted — which makes a
+     * regression in tour authorization fail loudly here instead of leaking a
+     * walkthrough of a screen somebody cannot reach.
+     */
+    protected function bootTours(): void
+    {
+        // Behind a cookie the tour driver sets, and this is not fussiness. A tour
+        // opens itself and draws a backdrop over the page, so registering one on
+        // a screen unconditionally would break every other driver that visits it
+        // — eleven of them use the invoices pages — and would break them by
+        // covering the thing they came to click, which reads as the feature
+        // under test being broken rather than the workbench.
+        //
+        // A cookie rather than a query parameter because it survives every
+        // navigation the driver makes, `wire:navigate` included.
+        //
+        // `$_COOKIE` rather than `request()->cookie()`, and that was measured
+        // rather than preferred: with the cookie demonstrably sent, the helper
+        // answered null here and the tours never registered. A provider boots
+        // early enough that the framework's cookie handling is not the thing to
+        // ask; the superglobal is populated before PHP dispatches anything.
+        if (! isset($_COOKIE['wire-tour-demo'])) {
+            return;
+        }
+
+        Gate::define('tours.forbidden', static fn (): bool => false);
+
+        $this->app->make(Tours::class)->register(
+            Tour::make('gated-tour')
+                ->permission('tours.forbidden')
+                ->sort(-10)
+                ->steps([
+                    TourStep::make('admin-sidebar')
+                        ->heading('You should never see this')
+                        ->text('If this panel is on screen, tour authorization is broken.'),
+                ]),
+
+            Tour::make('admin-zone-tour')
+                ->zones('admin')
+                ->resource('invoices')
+                ->sort(-5)
+                ->steps([
+                    TourStep::make('admin-sidebar')
+                        ->heading('Admin zone only')
+                        ->text('This tour runs in the admin zone and nowhere else.'),
+                ]),
+
+            Tour::make('invoices-tour')
+                ->since('1')
+                ->resource('invoices')
+                ->page('index')
+                ->steps([
+                    TourStep::make('admin-sidebar')
+                        ->heading('Everything lives here')
+                        ->text('The sidebar holds every area this application has.')
+                        ->placement('right-start'),
+
+                    TourStep::make('not-on-this-page')
+                        ->heading('Unreachable')
+                        ->text('Nothing renders this hook, so this step must be skipped.'),
+
+                    // In the document on every page and hidden on a desktop — the
+                    // mobile sidebar's overlay, behind an `x-show`. Present is not
+                    // showing: a tour that took `querySelector` at its word would
+                    // pin the panel to a box of zero size.
+                    TourStep::make('admin-sidebar-overlay')
+                        ->heading('Hidden')
+                        ->text('This element is rendered but hidden, so this step must be skipped.'),
+
+                    TourStep::make('table-search')
+                        ->heading('Find a row')
+                        ->text('Type here to narrow the table down.')
+                        ->placement('bottom-start'),
+                ]),
+        );
     }
 }
