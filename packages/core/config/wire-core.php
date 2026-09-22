@@ -257,6 +257,16 @@ return [
     |                                          action modals (HasModal)
     |     :breakpoint="'md'"                   <x-wire::dropdown>
     |
+    |   Touch-built control below the breakpoint (wheel / full-height list):
+    |     ->touchOnMobile(true|false)          Select, BelongsToSelect,
+    |                                          DateTimePicker, TimePicker,
+    |                                          SelectFilter, TernaryFilter
+    |
+    |   Browser-native control below the breakpoint instead of the custom one:
+    |     ->nativeOnMobile(true|false)         Select, BelongsToSelect,
+    |                                          DateTimePicker, TimePicker,
+    |                                          SelectFilter, TernaryFilter
+    |
     | Notes: searchable Select/SelectFilter default to floating (search stays
     | usable); an explicit ->sheetOnMobile() still wins. Sheets add safe-area
     | padding, a drag-to-dismiss grabber and a focus trap automatically.
@@ -273,6 +283,20 @@ return [
         //   'lg' (< 1024px, incl. tablet portrait)
         // From the breakpoint up, the classic desktop floating panel is used.
         'breakpoint' => env('WIRE_MOBILE_BREAKPOINT', 'sm'),
+
+        // Default: keep the custom select/date/time controls on a phone too.
+        // true = below the breakpoint every select and picker that has a
+        // browser-native counterpart renders that instead (the phone's own
+        // wheel or list); from the breakpoint up the custom control stays.
+        // Per instance: ->nativeOnMobile(true|false).
+        'native' => env('WIRE_MOBILE_NATIVE', false),
+
+        // Default: no touch-built controls. true = below the breakpoint, date
+        // and time pickers become a wheel and selects a full-height list sheet
+        // (large rows, 16px text, swipe to dismiss) — keeping remote search,
+        // create-option and disabled days, which the browser's control drops.
+        // Outranks 'native'. Per instance: ->touchOnMobile(true|false).
+        'touch' => env('WIRE_MOBILE_TOUCH', false),
     ],
 
     /*

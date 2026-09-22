@@ -15,7 +15,14 @@
     $maxBound = $field->getMaxDate();
     $minTime = DateBoundary::timePart($minBound);
     $maxTime = DateBoundary::timePart($maxBound);
-    $sheetOnMobile = $field->usesSheetOnMobile();
+    // Custom list, native input, or both split at the mobile breakpoint
+    // (->nativeOnMobile()); a sheet nobody can see is not rendered.
+    $nativeMode = $field->getNativeControlMode();
+    $responsive = $nativeMode->isResponsive();
+    // ->touchOnMobile(): below the breakpoint the touch wheel owns the screen,
+    // so the desktop panel is hidden there and never becomes a sheet.
+    $wheel = $field->usesTouchOnMobile();
+    $sheetOnMobile = $field->usesSheetOnMobile() && ! $responsive && ! $wheel;
     $sheetBp = $field->getMobileBreakpoint();
     $sheetBpPx = MobileSheet::px($sheetBp);
     $sheetPanel = MobileSheet::panelPadded($sheetBp);
@@ -25,21 +32,30 @@
     // readOnly() and disabled() outrank typeable(); resolved once rather than
     // re-spelled down the markup.
     $typeable = $field->acceptsTypedInput();
+    $livewire = $field->getLivewire();
 @endphp
 
 @include('wire-forms::partials.field-assets')
 
 @include('wire-forms::partials.field-wrapper-start')
 
-@unless($field->isNative())
+@if($nativeMode->rendersCustom())
     @once
         @include('wire-core::partials.floating-assets')
     @endonce
-@endunless
+@endif
 
-@if($field->isNative())
+@if($wheel)
+    @include('wire-forms::partials.wheel-picker')
+@endif
+
+@if($nativeMode->rendersNative())
+    {{-- A <select> of the slots — see the shared native partial for why a
+         time input will not do. --}}
     @include('wire-forms::partials.date-time-native-input')
-@else
+@endif
+
+@if($nativeMode->rendersCustom())
     <div
     {{-- Body registered as `wireTimePicker`
          (packages/forms/resources/js/fields/time-picker.js); only the
@@ -58,7 +74,7 @@
             sheetOnMobile: @js($sheetOnMobile),
             sheetBreakpoint: @js($sheetBpPx),
         })"
-            class="relative"
+            @class(['relative', MobileSheet::hideBelow($sheetBp) => $responsive || $wheel])
     >
         {{-- Input trigger --}}
         <div class="relative" x-ref="trigger">
@@ -90,7 +106,8 @@
                     @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
                     @if($field->isDisabled()) disabled @endif
                     @if($field->hasAutofocus()) autofocus @endif
-                    @if($field->isRequired()) required @endif
+                    {{-- A hidden twin must not block the form: see the native partial. --}}
+                    @if($field->isRequired()) @if($responsive) aria-required="true" @else required @endif @endif
                     @class([
                         'block w-full rounded-md border-gray-300 shadow-sm',
                         'cursor-pointer' => ! $typeable,

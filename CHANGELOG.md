@@ -6,6 +6,42 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Added
 
+- **Touch-built controls on a phone: `->touchOnMobile()` and `wire-core.mobile.touch`.** One switch
+  (on `Foundation\Concerns\HasNativeControl`) on every select and picker renders a control made for a thumb
+  below the mobile breakpoint, keeping every feature the field has — which the browser's element does not.
+  One precedence for every surface: `native()` > `touchOnMobile()` > `nativeOnMobile()`. A select gets a
+  bottom-sheet list (`wire-core::partials.select-touch-sheet`) driven by the same `wireSearchableSelect`
+  state: 48px rows, 16px text, the search pinned on top and not auto-focused, checkboxes and a count for
+  `multiple()`, "Done" and "Clear all", full height when searchable and content height when not; remote
+  search, create/edit option and disabled options all work. Covered by `verify-touch-select` (20 checks).
+  See `docs/forms/fields/select.md` § Touch list on phones.
+- **A touch wheel for dates and times on a phone.** `->touchOnMobile()` on a `TimePicker` or a
+  `DateTimePicker` (any mode but month) replaces the desktop panel below the mobile breakpoint with a bottom
+  sheet of columns: hours and minutes, day / month / year, or a day column beside the clock for a datetime.
+  The columns are CSS scroll-snap scrollers, so the coasting and the snap are the platform's own; rows tilt
+  like a drum, Android vibrates on a turn. The field's slots, bounds and disabled days decide what is valid —
+  an invalid row is greyed, past a bound the wheels land on the bound, 31 February rolls to the 28th — and
+  nothing is written until "Done". Each column is a `spinbutton`; the sheet reuses the grabber and traps
+  focus. Controller `wireWheelPicker`; covered by `verify-time-wheel` (29 checks). See
+  `docs/forms/fields/date-time-picker.md` § Touch wheel on phones.
+
+- **A select or picker can be the browser's own control on a phone only.** `->nativeOnMobile()` on
+  `Select`, `BelongsToSelect`, `DateTimePicker`, `TimePicker`, `SelectFilter` and `TernaryFilter` keeps the
+  custom control from the mobile breakpoint up and renders the native `<select>` / date / time input below
+  it, where a phone opens its own wheel or list instead of a cramped panel. Both are in the markup, bound to
+  one state, and CSS at the breakpoint (`MobileSheet::showBelow()` / `hideBelow()`) shows one — no flash, no
+  client-side switch, and no sheet drawn for that field. The native twin takes `{id}-native` and an
+  `aria-label`; `required()` becomes `aria-required` on both halves so the hidden one cannot block the form.
+  Global default `wire-core.mobile.native` (`WIRE_MOBILE_NATIVE`, `false`). A control whose phone
+  counterpart cannot do the job at all stays custom: remote search, create/edit option. Everything else goes
+  native, and what a phone's control cannot show is made up for: a clock step (`minutesStep()`/`hoursStep()`,
+  every `TimePicker`) renders a native `<select>` of the slots instead of `<input type="time">`, whose `step`
+  iOS ignores — beside a native date input on a datetime, joined into one state by the new
+  `wireNativeDateTime` controller — and the bounds and disabled dates, which a phone's wheel ignores, are
+  validated on the server (below). Native controls are 16px below `sm`, so iOS Safari does not zoom in on tap. Resolved once by
+  `HasNativeControl::getNativeControlMode()` into the new `Foundation\Enums\NativeControlMode`.
+  See `docs/forms/fields/select.md` § Native on phones only and `docs/start/configuration.md` § Mobile.
+
 - **Tours run on a phone, scroll to what they point at, and can span pages.** Below the sheet breakpoint
   the panel used to refuse to start; it now docks to the bottom of the screen while the highlight ring stays
   on the element, and every step — on any screen — scrolls its element into the room between the top bar and
@@ -31,6 +67,40 @@ All notable changes to the Wire ecosystem will be documented in this file.
   checks in `verify-demo-tour`.
 
 ### Fixed
+
+- **Every select surface renders through one partial.** The native `<select>` was written four times
+  (forms `Select`, `BelongsToSelect`, table `SelectFilter`, `TernaryFilter`) and the copies had drifted;
+  `wire-core::partials.select-control` now owns the combobox and the native element for all seven select
+  surfaces, and `native-select` is its only `<select>`. `searchable-select` stays as an alias for views that
+  include it directly. `BelongsToSelect` renders the base `select` view; its own view is gone.
+- **The combobox honoured `disabledOptions()` nowhere** — only the opt-in native `<select>` did. Disabled
+  options now render disabled, cannot be picked, and are stepped over by the arrow keys.
+- **Combobox options keep the order they were given.** They reached Alpine as a JS object, which lists
+  integer-like keys ascending, so a relationship select ordered by name came out ordered by id. They now
+  travel as `[value, label]` pairs (values still strings, as before). Remote-search results are unchanged.
+- **The column header filters ignored the filter's own settings.** They read the sheet default straight from
+  config, so `->native()` and `->sheetOnMobile()` on a `SelectFilter` / `TernaryFilter` changed its panel
+  control and left the header one alone. Both now render from the filter.
+- **`BelongsToSelect` lost `sheetOnMobile()`, `mobileBreakpoint()`, extra input attributes and disabled
+  options** — its copied view never passed them. It also rendered an empty native list under
+  `->searchable()->native()`, because the relationship query was skipped for "searchable, not preloaded".
+- **`DateTimePicker` held its bounds in the browser only.** `minDate()`, `maxDate()` and `disabledDates()`
+  were drawn by the picker and never validated, so a typed value — or a phone's date wheel, which on iOS
+  ignores `min`/`max` — saved anything. The field now adds `Validation\Rules\DateWithinBounds` whenever it
+  has something to hold (messages in `wire-forms::fields.date.*`, bounds named in `displayFormat()`).
+- **A native time with seconds dropped them.** The input carried no `step`, and the browser's default is a
+  minute. `DateTimePicker::getNativeStep()` now derives it from `secondsStep()` / `withSeconds()`,
+  `minutesStep()` or `hoursStep()`; a `TimePicker`'s native input steps by its slot interval. The native
+  input also carries the field's extra input attributes, which it silently dropped.
+- **A multiple native filter select offered a "none" row**, which a multiple list has no use for.
+- **A native single select with no placeholder showed its first option while the state was null** — the
+  field looked filled and submitted nothing. It now always starts on an empty row: a real choice labelled by
+  the placeholder or `—` on an optional field (how a phone clears it), disabled and hidden on a required one.
+- **A select resolved its options twice per render**, and looked up a label for a selection already in the
+  list — two options queries for a `BelongsToSelect`. `Select::getRenderedOptions()` resolves the list once
+  and asks for a label only for a value the list does not carry, appended rather than moved to the top.
+- **`SelectFilter::searchable()` pinned the control custom** instead of lifting an earlier `->native()` back
+  to the default, so the global mobile-native switch could never reach a searchable filter.
 
 - **A tablet can reach the row's actions.** A tablet is wide enough for the desktop table, so it got
   neither the stacked card's buttons nor anything a finger can do with a double click, a right click or a

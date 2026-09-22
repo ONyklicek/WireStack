@@ -16,26 +16,44 @@ const wireSearchableSelect = (config = {}) => ({
     multiple: config.multiple ?? false,
     remote: config.remote ?? false,
     loading: false,
-    // Seeded from initialOptions in init(); avoids embedding the whole options
-    // map twice in the HTML for every select instance.
-    initialOptions: config.initialOptions ?? {},
+    // The render-time seed arrives as [value, label] pairs — a JS object would
+    // list integer-like keys in ascending order, whatever order the server wrote
+    // them in. init() splits it into a label map for lookups and `order` for
+    // listing, so neither has to rebuild the other on every keystroke.
+    initialOptions: {},
     options: {},
+    order: [],
+    disabledValues: (config.disabledValues ?? []).map(String),
     placeholder: config.placeholder ?? '',
     selected: config.state,
     statePath: config.statePath,
     selectId: config.selectId ?? 'searchable-select',
     sheetOnMobile: config.sheetOnMobile ?? false,
     sheetBreakpoint: config.sheetBreakpoint ?? null,
+    // ->touchOnMobile(): below touchBreakpoint the list opens as a full-height
+    // touch sheet instead of the floating panel. `touchNow` is decided as the
+    // list opens — the one moment the viewport's width is the answer.
+    touch: config.touch ?? false,
+    touchBreakpoint: config.touchBreakpoint ?? 639.98,
+    touchNow: false,
     activeIndex: -1,
     _float: null,
 
     init() {
+        const pairs = Array.isArray(config.initialOptions) ? config.initialOptions : Object.entries(config.initialOptions ?? {})
+        this.order = pairs.map(([value]) => String(value))
+        this.initialOptions = Object.fromEntries(pairs)
         this.options = this.initialOptions
 
         // Teleport + Floating UI: pin the listbox to the trigger while open,
         // tearing the auto-updater down on close.
         this.$watch('open', (open) => {
             if (open) {
+                this.touchNow = this.touch && window.matchMedia(`(max-width: ${this.touchBreakpoint}px)`).matches
+                // The touch sheet is fixed full-height: nothing to anchor, and
+                // no focus into the search — a keyboard sliding up over a list
+                // nobody asked to type into is the thing this sheet avoids.
+                if (this.touchNow) return
                 this.$nextTick(() => {
                     const options = { placement: 'bottom-start', offset: 4, matchWidth: true }
 
@@ -72,18 +90,32 @@ const wireSearchableSelect = (config = {}) => ({
         }
     },
 
+    /**
+     * The options in display order as [value, label] pairs: the seed's order
+     * first, then anything only a remote search or a created option brought in.
+     */
+    get orderedOptions() {
+        const seen = new Set(this.order)
+        const keys = this.order.filter((value) => value in this.options)
+        for (const value of Object.keys(this.options)) {
+            if (! seen.has(value)) keys.push(value)
+        }
+        return keys.map((value) => [value, this.options[value]])
+    },
+
     get filteredOptions() {
         // The server already narrowed remote results; never re-filter locally.
-        if (this.remote) return this.options
-        if (! this.search) return this.options
+        if (this.remote || ! this.search) return this.orderedOptions
         const s = this.search.toLowerCase()
-        return Object.fromEntries(
-            Object.entries(this.options).filter(([k, v]) => String(v).toLowerCase().includes(s)),
-        )
+        return this.orderedOptions.filter(([, label]) => String(label).toLowerCase().includes(s))
     },
 
     get filteredKeys() {
-        return Object.keys(this.filteredOptions)
+        return this.filteredOptions.map(([value]) => value)
+    },
+
+    isOptionDisabled(value) {
+        return this.disabledValues.includes(String(value))
     },
 
     isSelected(value) {
@@ -108,6 +140,7 @@ const wireSearchableSelect = (config = {}) => ({
      */
     upsertOption(detail) {
         if (! detail || detail.statePath !== this.statePath || detail.value === null || detail.value === undefined) return
+        if (! this.order.includes(String(detail.value))) this.order = [...this.order, String(detail.value)]
         this.initialOptions = { ...this.initialOptions, [detail.value]: detail.label }
         this.options = { ...this.options, [detail.value]: detail.label }
     },
@@ -128,6 +161,7 @@ const wireSearchableSelect = (config = {}) => ({
     },
 
     select(value) {
+        if (this.isOptionDisabled(value)) return
         if (this.multiple) {
             let list = Array.isArray(this.selected) ? [...this.selected] : []
             const idx = list.map(String).indexOf(String(value))
@@ -158,11 +192,22 @@ const wireSearchableSelect = (config = {}) => ({
 
     onArrowDown() {
         if (! this.open) { this.open = true; return }
-        if (this.activeIndex < this.filteredKeys.length - 1) this.activeIndex++
+        this.moveActive(1)
     },
 
     onArrowUp() {
-        if (this.activeIndex > 0) this.activeIndex--
+        this.moveActive(-1)
+    },
+
+    // Steps over disabled options, and stays put when nothing enabled lies that way.
+    moveActive(step) {
+        const keys = this.filteredKeys
+        for (let i = this.activeIndex + step; i >= 0 && i < keys.length; i += step) {
+            if (! this.isOptionDisabled(keys[i])) {
+                this.activeIndex = i
+                return
+            }
+        }
     },
 
     onEnter() {

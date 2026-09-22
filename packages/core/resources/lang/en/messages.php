@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 return [
     'breadcrumbs' => 'Breadcrumb',
+
+    // The touch list a select becomes on a phone (->touchOnMobile()).
+    'select_done' => 'Done',
+    'select_clear_all' => 'Clear all',
+    'select_selected' => ':count selected',
     // Shared inline-edit messages (editable panel entries).
     'error' => 'Something went wrong.',
     'save_failed' => 'Could not save. Please try again.',

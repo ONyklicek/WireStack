@@ -379,6 +379,19 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
     }
 
     /**
+     * A phone only gets the browser's <select> when it loses nothing by it. A
+     * remote search needs the combobox's input (and a native list would have to
+     * ship every record instead), and the create/edit option buttons live in the
+     * combobox panel — so those keep the custom control on every screen.
+     */
+    protected function supportsNativeOnMobile(): bool
+    {
+        return ! $this->isRemoteSearch()
+            && ! $this->hasCreateOptionForm()
+            && ! $this->hasEditOptionForm();
+    }
+
+    /**
      * Searchable (or remote) selects default to the classic floating dropdown on
      * mobile — the search input and scrollable list stay usable right at the
      * field instead of being pushed into a bottom sheet. Non-searchable selects
@@ -505,6 +518,42 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
         $label = $this->getOptionLabel($value);
 
         return $label === null ? [] : [$value => $label];
+    }
+
+    /**
+     * The options a render ships: the preloaded list in its own order, plus a
+     * label for any selected value that list does not carry (a remote result
+     * picked earlier, a value set programmatically).
+     *
+     * One list serves both controls. A native <select> is never remote (see
+     * isRemoteSearch() and supportsNativeOnMobile()), so for it the preloaded
+     * list is the full one — and the appended label keeps a value outside the
+     * options showing instead of silently blanking the element.
+     *
+     * Labels are resolved only for what is missing. For a relationship select
+     * every label lookup is another options query, and the selection is usually
+     * already in the preloaded list.
+     *
+     * @return array<string|int, string>
+     */
+    public function getRenderedOptions(mixed $state): array
+    {
+        $options = $this->getPreloadedOptions();
+        $state = EnumResolver::scalarDeep($state);
+
+        $isMissing = static fn (mixed $value): bool => is_scalar($value)
+            && $value !== ''
+            && ! array_key_exists((string) $value, $options);
+
+        $missing = is_array($state)
+            ? array_values(array_filter($state, $isMissing))
+            : ($isMissing($state) ? $state : null);
+
+        if ($missing === null || $missing === []) {
+            return $options;
+        }
+
+        return $options + $this->getSelectedOptionLabels($missing);
     }
 
     // ─── Create option modal ─────────────────────────────────────────

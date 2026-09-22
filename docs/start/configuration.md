@@ -41,6 +41,8 @@ you, so the lines above are for an application setting one up by hand.
 | `WIRE_FORMS_UPLOAD_DISK` | `public` | Forms file upload |
 | `WIRE_MOBILE_SHEET` | `true` | Core mobile bottom-sheets |
 | `WIRE_MOBILE_BREAKPOINT` | `sm` | Core mobile sheet breakpoint |
+| `WIRE_MOBILE_NATIVE` | `false` | Browser-native selects and date/time inputs below the mobile breakpoint |
+| `WIRE_MOBILE_TOUCH` | `false` | Touch-built controls below the mobile breakpoint: wheels for dates and times, a full-height list for selects |
 | `WIRE_TOURS_DRIVER` | `session` | Where a signed-in user's tour progress and finished tours are kept |
 | `WIRE_TOURS_GUEST_DRIVER` | `session` | The same, for a guest |
 | `WIRE_AUTH_CODE_LOGIN` | `false` | Signing in with a mailed code, no password |
@@ -225,6 +227,14 @@ global defaults — every component overrides them per instance.
     //   'md' (< 768px, incl. small tablets)
     //   'lg' (< 1024px, incl. tablet portrait)
     'breakpoint' => env('WIRE_MOBILE_BREAKPOINT', 'sm'),
+
+    // Below the breakpoint, render the browser's own <select> / date / time
+    // input instead of the custom control, wherever one exists.
+    'native' => env('WIRE_MOBILE_NATIVE', false), // [tl! focus]
+
+    // Below the breakpoint, render a control made for a thumb: a wheel for
+    // dates and times, a full-height list sheet for selects. Outranks 'native'.
+    'touch' => env('WIRE_MOBILE_TOUCH', false), // [tl! focus]
 ],
 ```
 
@@ -241,6 +251,11 @@ Select::make('role')->mobileBreakpoint('lg');                 // sheet up to 102
 $table->mobileBreakpoint('md');
 ActionGroup::make([...])->mobileBreakpoint('md');
 Action::make('edit')->form([...])->slideOverOnMobile()->mobileBreakpoint('md');
+
+// Browser-native control below the breakpoint, the custom one above it
+DateTimePicker::make('starts_at')->nativeOnMobile();          // the phone's own date wheel [tl! focus:start]
+SelectFilter::make('status')->nativeOnMobile(false);          // keep the combobox under 'native' => true
+Select::make('customer_id')->touchOnMobile();                 // full-height touch list, search included [tl! focus:end]
 ```
 
 ```blade
@@ -250,6 +265,28 @@ Action::make('edit')->form([...])->slideOverOnMobile()->mobileBreakpoint('md');
 Priority: per-component (`->sheetOnMobile()` / `->mobileBreakpoint()`) > searchable-auto-floating > global
 config. Searchable selects default to floating so the search box stays usable. Sheets add safe-area
 padding, a drag-to-dismiss grabber and a focus trap automatically.
+
+`touch` and `native` both swap the control itself rather than its panel, and
+one precedence holds for every surface: `->native()` (the browser's element
+everywhere) > `->touchOnMobile()` / `touch` > `->nativeOnMobile()` / `native`.
+`touch` renders a control built for a thumb — a wheel for a date or a time, a
+bottom-sheet list with 48px rows, 16px text and a pinned search for a select —
+and, unlike the browser's element, keeps every feature the field has: remote
+search, creating an option, disabled days. See
+[touch list on phones](../forms/fields/select.md#touch-list-on-phones) and
+[touch wheel on phones](../forms/fields/date-time-picker.md#touch-wheel-on-phones).
+
+`native` swaps the control itself rather than its panel. Every select and picker
+that has a browser counterpart — `Select`, `BelongsToSelect`, `DateTimePicker`,
+`TimePicker`, `SelectFilter`, `TernaryFilter` — renders both, and CSS at the same
+breakpoint shows the browser's element below it and the custom control above it,
+so no sheet is drawn for that field. A control that would lose something on the
+way stays custom on every screen — a remote-search or create/edit-option select;
+everything else goes native. A clock step becomes a native `<select>` of the
+slots (beside a native date on a datetime), because iOS ignores a time input's
+`step`, and the pickers' bounds are validated on the server, because a phone's
+wheel ignores them. An explicit `->native(false)` also opts a
+field out of the global switch; `->nativeOnMobile()` brings it back.
 
 ### Tours
 

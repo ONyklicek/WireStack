@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 return [
     'breadcrumbs' => 'Drobečková navigace',
+
+    // Dotykový seznam, kterým se select stane na telefonu (->touchOnMobile()).
+    'select_done' => 'Hotovo',
+    'select_clear_all' => 'Zrušit výběr',
+    'select_selected' => 'Vybráno: :count',
     // Sdílené hlášky inline editace (editovatelné panel entry).
     'error' => 'Něco se pokazilo.',
     'save_failed' => 'Uložení se nezdařilo. Zkuste to prosím znovu.',

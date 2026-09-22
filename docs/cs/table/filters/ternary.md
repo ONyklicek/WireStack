@@ -96,6 +96,18 @@ TernaryFilter::make('is_active')
 Odhlásí filtr ze sdíleného comboboxu, takže přestane odpovídat ostatním selectům.
 Používejte jen tam, kde je cena renderu důležitější než jednotný vzhled.
 
+`->nativeOnMobile()` ponechá combobox od mobilního breakpointu filtru výš a pod
+ním vykreslí `<select>` prohlížeče, kde telefon místo sheetu otevře vlastní výběr:
+
+```php
+TernaryFilter::make('is_active')
+    ->nativeOnMobile()               // telefon: nativní <select>; desktop: combobox
+```
+
+Volba platí v panelu filtrů i v řádku filtrů v hlavičce sloupců — oba vykreslují
+stejný prvek. `->native()` nad ní vyhrává; výchozí hodnota pro celou aplikaci je
+`wire-core.mobile.native` (viz [mobil](../../start/configuration.md#mobil)).
+
 ## API TernaryFilter
 
 ```php
@@ -104,6 +116,8 @@ Používejte jen tam, kde je cena renderu důležitější než jednotný vzhled
 ->allLabel(string $label)           // placeholder pro option „bez filtru"
 ->nullable(bool $nullable = true)   // „false" také odpovídá IS NULL
 ->native(bool $native = true)       // opt-in nativní <select> prohlížeče (výchozí: false)
+->nativeOnMobile(bool $condition = true) // nativní <select> jen pod mobilním breakpointem (výchozí: config wire-core.mobile.native)
+->touchOnMobile(bool $condition = true)  // dotykový seznam přes celou výšku pod mobilním breakpointem (výchozí: config wire-core.mobile.touch)
 ->query(Closure $fn)                // vlastní dotaz: fn(Builder $q, bool $value)
 ```
 

@@ -71,6 +71,14 @@ DateTimePicker::make('slot')
 A day-granular upper bound covers the whole day: `->maxDate('2026-07-20')`
 leaves 20 July selectable up to 23:59.
 
+The bounds and the disabled dates are also **validation rules**. The picker only
+draws them, and a drawing can be stepped around — a value typed into the box, or
+a phone's own date wheel, which on iOS offers every day regardless of `min` and
+`max`. So the field adds its own rule (`Validation\Rules\DateWithinBounds`)
+whenever it has anything to hold, and the error names the bound in
+`displayFormat()` when there is one. A field with no bounds and no disabled
+dates adds no rule.
+
 ## Time Options
 
 ```php
@@ -156,6 +164,86 @@ DateTimePicker::make('date')
 
 The only exception is [`asMonth()`](#modes), which is always native.
 
+A native time or datetime input carries a `step` taken from the finest unit you
+configured — `secondsStep()` (or 1 with `withSeconds()`), else `minutesStep()`,
+else `hoursStep()`. That is what makes a native input show seconds at all (the
+browser's default step is a minute), and the stride its own validation holds the
+value to. `displayFormat()` and `typeable()` belong to the custom picker; a
+native input formats and types the way the browser's locale says.
+
+### Native on phones only
+
+The calendar is comfortable with a mouse and cramped on a phone, where the
+browser already has a date wheel the user knows. `nativeOnMobile()` keeps the
+custom picker from the field's [mobile breakpoint](../../start/configuration.md#mobile)
+up and renders the browser's input below it:
+
+```php
+DateTimePicker::make('starts_at')
+    ->minDate('today')
+    ->minutesStep(15)
+    ->nativeOnMobile()             // phone: native datetime-local; desktop: the calendar
+```
+
+Both are in the markup, bound to the same state, and CSS at the breakpoint shows
+one — nothing is decided in the browser, so nothing flashes. The native twin
+takes its own id (`{id}-native`) and names itself; `required()` becomes
+`aria-required` on both halves, since a required input the stylesheet hides
+would block the form on the other screen size. The calendar's bottom sheet is not
+rendered, because the native input owns that screen.
+
+`native()` wins over it. Every picker goes native on a phone — the custom one
+is the harder control to use there — and what a phone's own control cannot show
+is made up for another way:
+
+- **A clock step** (`minutesStep()`, `hoursStep()` on a `time` or `datetime`)
+  never goes on `<input type="time">`: to the browser `step` is a validation
+  rule, not a wheel, and iOS offers every minute whatever it says. A stepped
+  time is a native `<select>` of the slots; a stepped datetime is a native date
+  input beside that select, joined into the one state in the browser (a date
+  alone writes nothing).
+- **Disabled dates and the bounds** cannot be greyed out in a phone's wheel (iOS
+  ignores `min`/`max` too), so the server refuses them — see
+  [date constraints](#date-constraints).
+- **Seconds** — a native time input carries `step` in seconds, which Android
+  shows; the iOS wheel has no seconds and saves `:00`.
+
+The app-wide default is `wire-core.mobile.native`; an explicit `native(false)`
+opts a field out of it.
+
+### Touch wheel on phones
+
+A phone can get neither the desktop panel nor the browser's control but a touch
+wheel: columns in a bottom sheet that coast and snap like the phone's own
+picker — hours and minutes for a time, day / month / year for a date, and a day
+column beside the clock for a datetime (the iOS shape: "Mon 21/9 · 14 : 30").
+
+```php
+TimePicker::make('opens_at')
+    ->minDate('08:00')->maxDate('18:00')
+    ->touchOnMobile()             // phone: the wheel; desktop: the picker
+```
+
+- Each column is an ordinary scroller with CSS scroll-snap, so the momentum and
+  the snap are the platform's own physics. The rows tilt like a drum, and on
+  Android a turn gives a short vibration (the web has no haptics on iOS).
+- The clock columns come from the field's slots (interval and bounds applied);
+  a date's years and a datetime's days run between `minDate()` and `maxDate()`.
+  A combination the field would refuse is greyed and never kept: past a bound
+  the wheels land on the bound itself, 31 February rolls the day back to the
+  28th, a disabled day steps to its neighbour, and a clock value that is not a
+  slot rolls the other column.
+- Nothing is written while the wheel turns: **Done** commits, **Cancel**, the
+  backdrop and a swipe down on the grabber leave the value; **Clear** empties
+  it. An empty field opens on the next slot from now.
+- Each column is a `spinbutton` for screen readers and the keyboard (arrows,
+  Home/End); the sheet traps focus and locks the page scroll while it is open.
+- Months and weekdays are named in the page's locale (`<html lang>`).
+- Every mode but `asMonth()`. It wins over `nativeOnMobile()`; `native()` wins
+  over it. It follows the field's `mobileBreakpoint()`, and the app-wide default
+  is `wire-core.mobile.touch` — the same switch that gives selects their
+  [touch list](select.md#touch-list-on-phones).
+
 ## Methods
 
 | Method | Type | Description |
@@ -176,8 +264,10 @@ The only exception is [`asMonth()`](#modes), which is always native.
 | `hoursStep(int)` | int | Hour increment step |
 | `minutesStep(int)` | int | Minute increment step |
 | `secondsStep(int)` | int | Second increment step |
+| `touchOnMobile(bool $condition = true)` | bool | Touch wheel in a bottom sheet below the mobile breakpoint; not for `asMonth()` (default: `false`) — see [touch wheel on phones](#touch-wheel-on-phones) |
 | `timezone(string)` | string | Show the value in this timezone and convert back to the app timezone on save; `datetime` only |
 | `native(bool $native = true)` | bool | Use the browser-native control instead of the custom picker (default: `false`) |
+| `nativeOnMobile(bool $condition = true)` | bool | Browser-native control below the mobile breakpoint only, the custom picker above it (default: `wire-core.mobile.native`, `false`); a clock step renders a native date + slot `<select>` |
 | `typeable(bool\|Closure)` | bool | Let the value be typed into the input as well as picked (default: `true`); custom picker only |
 | `disabled(bool\|Closure)` | bool | Disable the picker |
 | `readOnly(bool\|Closure)` | bool | Read-only mode — no typing and no panel |

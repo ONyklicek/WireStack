@@ -74,6 +74,21 @@ SelectFilter::make('type')
 Odhlásí filtr ze sdíleného comboboxu, takže přestane odpovídat formulářovému
 selectu. Používejte jen tam, kde je cena renderu důležitější než jednotný vzhled.
 
+`->nativeOnMobile()` ponechá combobox od mobilního breakpointu filtru výš a pod
+ním vykreslí `<select>` prohlížeče, kde telefon místo sheetu otevře vlastní výběr:
+
+```php
+SelectFilter::make('type')
+    ->options([...])
+    ->nativeOnMobile()               // telefon: nativní <select>; desktop: combobox
+```
+
+Volba platí v panelu filtrů i v řádku filtrů v hlavičce sloupců — oba vykreslují
+stejný prvek, včetně filtru s `multiple()`. `->touchOnMobile()` místo toho
+otevře [dotykový seznam](../../forms/fields/select.md#dotykovy-seznam-na-telefonu),
+na obou místech. `->native()` nad ní vyhrává; výchozí hodnota pro celou aplikaci je
+`wire-core.mobile.native` (viz [mobil](../../start/configuration.md#mobil)).
+
 ## Z databáze
 
 ```php
@@ -118,4 +133,6 @@ SelectFilter::make('has_avatar')
 ->multiple(bool $multiple = true)    // režim multi-select
 ->searchable(bool $searchable = true) // přidá vyhledávací input do rozbalovacího seznamu
 ->native(bool $native = true)        // opt-in nativní <select> prohlížeče (výchozí: false)
+->nativeOnMobile(bool $condition = true) // nativní <select> jen pod mobilním breakpointem (výchozí: config wire-core.mobile.native)
+->touchOnMobile(bool $condition = true)  // dotykový seznam přes celou výšku pod mobilním breakpointem (výchozí: config wire-core.mobile.touch)
 ```

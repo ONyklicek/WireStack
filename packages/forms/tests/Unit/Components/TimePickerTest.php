@@ -75,10 +75,18 @@ test('asTime() keeps the steppers — the two pickers are separate on purpose', 
         ->and($html)->not->toContain('-list');
 });
 
-test('renders a native time input when asked for one', function () {
-    expect(renderTimePickerView(TimePicker::make('opens_at')->native()->maxDate('17:00')))
-        ->toContain('type="time"')
-        ->toContain('max="17:00"')
+// Not <input type="time">: its step never reaches a phone's wheel (iOS offers
+// every minute), so a 30-minute field took 09:17 and then refused it.
+test('renders a native select of the slots when asked for one', function () {
+    $html = renderTimePickerView(TimePicker::make('opens_at')->native()->minDate('08:00')->maxDate('17:00'));
+
+    expect($html)
+        ->toContain('<select')
+        ->toContain('<option value="08:00"')
+        ->toContain('<option value="17:00"')
+        ->not->toContain('<option value="07:30"')
+        ->not->toContain('<option value="17:30"')
+        ->not->toContain('type="time"')
         ->not->toContain('form-time-opens_at-list');
 });
 
@@ -151,4 +159,94 @@ test('the list opens from the keyboard and from a real toggle button', function 
         ->toContain('@keydown.down.prevent="open = true"')
         ->toContain('aria-haspopup="dialog"')
         ->toContain('data-testid="form-time-opens_at-toggle"');
+});
+
+test('the slot options walk the day at the interval, inside the bounds', function () {
+    $field = TimePicker::make('opens_at')->minDate('08:00')->maxDate('09:30');
+
+    expect($field->getSlotOptions())->toBe(['08:00' => '08:00', '08:30' => '08:30', '09:00' => '09:00', '09:30' => '09:30'])
+        ->and(TimePicker::make('t')->minutesStep(15)->minDate('10:00')->maxDate('10:30')->getSlotOptions())
+        ->toBe(['10:00' => '10:00', '10:15' => '10:15', '10:30' => '10:30'])
+        ->and(count(TimePicker::make('t')->getSlotOptions()))->toBe(48);
+});
+
+test('the slot options keep a current value that sits between slots, in order', function () {
+    expect(TimePicker::make('t')->minDate('08:00')->maxDate('09:00')->getSlotOptions('08:17'))
+        ->toBe(['08:00' => '08:00', '08:17' => '08:17', '08:30' => '08:30', '09:00' => '09:00']);
+});
+
+test('the slot options carry seconds and the display format', function () {
+    expect(TimePicker::make('t')->withSeconds()->minDate('08:00')->maxDate('08:30')->getSlotOptions())
+        ->toBe(['08:00:00' => '08:00:00', '08:30:00' => '08:30:00'])
+        ->and(TimePicker::make('t')->displayFormat('g:i A')->minDate('13:00')->maxDate('13:00')->getSlotOptions())
+        ->toBe(['13:00' => '1:00 PM']);
+});
+
+test('nativeOnMobile() renders the slot list and a native twin', function () {
+    $html = renderTimePickerView(TimePicker::make('opens_at')->nativeOnMobile());
+
+    expect($html)
+        ->toContain('wireTimePicker(')
+        ->toContain('<select')
+        ->not->toContain('type="time"')
+        ->toContain('<div class="hidden max-sm:block">')
+        ->toContain('id="opens_at-native"');
+});
+
+test('a slot list stays native on a phone whatever its interval or seconds', function () {
+    // Its native control is a <select> of the slots, which carries both.
+    expect(TimePicker::make('t')->minutesStep(15)->withSeconds()->nativeOnMobile()->isNativeOnMobile())->toBeTrue();
+});
+
+// ─── The mobile time wheel ───────────────────────────────────────────────────
+
+test('touchOnMobile() renders the desktop list and a phone wheel split at the breakpoint', function () {
+    $html = renderTimePickerView(TimePicker::make('opens_at')->label('Opens at')->minDate('08:00')->maxDate('09:00')->touchOnMobile());
+
+    expect($html)
+        ->toContain('wireWheelPicker(')
+        ->toContain('wireTimePicker(')
+        ->toContain('class="hidden max-sm:block"')
+        ->toContain('relative max-sm:hidden')
+        // The slots the wheel builds its columns from, bounds already applied.
+        ->toContain("slots: JSON.parse('[\\u002208:00\\u0022,\\u002208:30\\u0022,\\u002209:00\\u0022]')")
+        ->toContain("kind: 'time'")
+        ->toContain('role="spinbutton"')
+        ->toContain('x-trap.noscroll.noautofocus="open"')
+        // Neither a native twin nor a sheet for the desktop panel: the wheel owns the phone.
+        ->not->toContain('-native"')
+        ->toContain('sheetOnMobile: false');
+});
+
+test('the wheel wins over nativeOnMobile, and native() wins over the wheel', function () {
+    $wheel = TimePicker::make('t')->nativeOnMobile()->touchOnMobile();
+
+    expect($wheel->usesTouchOnMobile())->toBeTrue()
+        ->and($wheel->isNativeOnMobile())->toBeFalse()
+        ->and(TimePicker::make('t')->touchOnMobile()->native()->usesTouchOnMobile())->toBeFalse()
+        ->and(TimePicker::make('t')->touchOnMobile(false)->usesTouchOnMobile())->toBeFalse();
+});
+
+test('a time, a date and a datetime get the wheel; a month does not', function () {
+    expect(DateTimePicker::make('d')->asTime()->touchOnMobile()->usesTouchOnMobile())->toBeTrue()
+        ->and(DateTimePicker::make('d')->touchOnMobile()->usesTouchOnMobile())->toBeTrue()
+        ->and(DateTimePicker::make('d')->asDate()->touchOnMobile()->usesTouchOnMobile())->toBeTrue()
+        ->and(DateTimePicker::make('d')->asMonth()->touchOnMobile()->usesTouchOnMobile())->toBeFalse();
+});
+
+test('a date wheel carries its bounds and disabled days to the browser', function () {
+    $field = DateTimePicker::make('due')->asDate()->minDate('2026-01-10')->maxDate('2027-12-31')->disabledDates(['2026-03-01'])->touchOnMobile();
+    $html = view($field->render()->name(), ['field' => $field])->withErrors(new MessageBag)->render();
+
+    expect($html)
+        ->toContain("kind: 'date'")
+        ->toContain("min: '2026-01-10'")
+        ->toContain("max: '2027-12-31'")
+        ->toContain("disabledDates: JSON.parse('[\\u00222026-03-01\\u0022]')")
+        ->toContain('relative max-sm:hidden')
+        ->not->toContain('-native"');
+});
+
+test('the wheel controller ships in the fields bundle', function () {
+    expect(file_get_contents(__DIR__.'/../../../dist/wire-forms-fields.js'))->toContain('wireWheelPicker');
 });

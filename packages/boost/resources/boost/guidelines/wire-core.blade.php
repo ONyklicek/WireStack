@@ -90,6 +90,23 @@ default `sm`). Override per component with `->sheetOnMobile(true|false)` and `->
 `:sheet-on-mobile` / `:breakpoint`. Searchable selects default to floating. Sheets add safe-area padding,
 a drag-to-dismiss grabber and a focus trap automatically — do not re-implement these.
 
+**Native control on a phone.** Every surface with a browser counterpart (`Select`, `BelongsToSelect`,
+`DateTimePicker`, `TimePicker`, `SelectFilter`, `TernaryFilter`) uses `Foundation\Concerns\HasNativeControl`:
+`->native()` is the browser's element everywhere, `->nativeOnMobile()` only below the same mobile breakpoint
+(global default `wire-core.mobile.native`, default `false`). Views branch on the one resolved value,
+`getNativeControlMode()` (`NativeControlMode::Never|Always|Mobile`); Mobile renders both controls and
+`MobileSheet::showBelow()` / `hideBelow()` pick one in CSS, with no sheet for that field. A surface whose
+custom control carries something the native one cannot overrides `supportsNativeOnMobile()` (only remote
+search and create/edit option stay custom). A clock step goes native as a `<select>` of the slots — beside a
+native date on a datetime, joined by `wireNativeDateTime` — never as `<input type="time" step>`, which iOS ignores.
+`DateTimePicker` also validates its bounds server-side (`DateWithinBounds`) — a native wheel ignores them.
+**Touch-built control on a phone:** `Foundation\Concerns\HasNativeControl` — `->touchOnMobile()`, global
+`wire-core.mobile.touch` — gives a picker a scroll-snap wheel and a select a bottom-sheet list, keeping remote
+search, create-option and disabled days. Precedence is one rule: `native()` > `touchOnMobile()` >
+`nativeOnMobile()`. The select list is `wire-core::partials.select-touch-sheet`, rendered by `select-control`
+beside the floating panel on the same `wireSearchableSelect` state — never a second select component. Every select goes through
+`wire-core::partials.select-control` — never hand-write a `<select>` or include the combobox beside it.
+
 ### Layouts
 
 Canonical layout vocabulary shared by forms and infolists (`NyonCode\WireCore\Foundation\Schema\*`):

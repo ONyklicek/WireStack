@@ -284,6 +284,74 @@ Select::make('country')
     ->native()          // vynutit nativní <select> prohlížeče
 ```
 
+### Nativní jen na telefonu
+
+Některé selecty jsou jako combobox na desktopu v pořádku a na telefonu dřina —
+dlouhý seznam v 360px širokém sheetu, multi-select, kterým se musíte proscrollovat.
+`nativeOnMobile()` ponechá combobox od [mobilního breakpointu](../../start/configuration.md#mobil)
+pole výš a obrazovku pod ním předá `<select>` prohlížeče, který telefon otevře
+jako vlastní kolečko nebo seznam přes celou obrazovku.
+
+```php
+Select::make('country')
+    ->options(Country::pluck('name', 'code')->toArray())
+    ->searchable()
+    ->nativeOnMobile()          // telefon: nativní <select>; tablet/desktop: combobox
+    ->mobileBreakpoint('md')    // dělení se řídí breakpointem sheetu
+```
+
+Jak se to vyhodnotí:
+
+- V markupu jsou oba prvky, navázané na stejný stav, a CSS na breakpointu ukáže
+  jeden z nich. V prohlížeči se nic nerozhoduje, takže nic neprobliká a první
+  vykreslení se neliší od aktualizace z Livewire.
+- `<label>` míří na combobox; nativní dvojče dostane vlastní id (`{id}-native`) a
+  pojmenuje se přes `aria-label`. `required()` se na obou polovinách změní na
+  `aria-required`, protože povinný prvek, který styly skryjí, by na druhé
+  velikosti obrazovky zablokoval odeslání formuláře.
+- Bottom sheet, kterým by se combobox na telefonu stal, se nevykreslí — tu
+  obrazovku vlastní nativní prvek.
+- `native()` vyhrává nad `nativeOnMobile()`. Select, který na comboboxu závisí,
+  si ho ponechá na každé obrazovce: vzdálené hledání (`getSearchResultsUsing()`
+  nebo relace bez preloadu) a `createOptionForm()` / `editOptionForm()`, jejichž
+  tlačítka žijí v panelu comboboxu. Select s `multiple()` je nativní také —
+  vlastní zaškrtávací seznam telefonu.
+- Prázdný jednoduchý select začíná prázdným řádkem, takže prvek nikdy neukazuje
+  první možnost, když je hodnota null. U nepovinného pole je řádek skutečnou
+  volbou — tak telefon hodnotu vymaže — popsaný placeholderem nebo `—`; u
+  povinného je neaktivní a skrytý. Pod `sm` má prvek 16 px, protože iOS Safari
+  přiblíží stránku ke každému menšímu prvku, jakmile na něj uživatel klepne.
+- Výchozí hodnota pro celou aplikaci je `wire-core.mobile.native`
+  (`WIRE_MOBILE_NATIVE`). Explicitní `native(false)` z ní pole vyřadí;
+  `nativeOnMobile(false)` udělá totéž, aniž by sahalo na `native()`.
+
+Zakázané možnosti (`disabledOptions()`) i pořadí možností jsou v obou prvcích stejné.
+
+### Dotykový seznam na telefonu
+
+`touchOnMobile()` ponechá combobox od mobilního breakpointu pole výš a pod ním
+otevře seznam dělaný pro palec: bottom sheet s 48px řádky, 16px písmem (iOS
+nezoomuje), hledáním připnutým nahoře a úchytem, kterým se zavře tažením dolů.
+
+```php
+Select::make('customer_id')
+    ->relationship('customer', 'name')
+    ->searchable()
+    ->touchOnMobile()           // telefon: dotykový seznam; desktop: combobox
+```
+
+- Je to tentýž combobox, jen nakreslený pro telefon: vzdálené hledání,
+  `createOptionForm()` / `editOptionForm()`, zakázané možnosti i pořadí možností
+  fungují — všechno, co nativní `<select>` zahodí.
+- Seznam s hledáním zabere celou výšku, aby neskákal, když ho hledání zúží;
+  krátký seznam je vysoký jen jako jeho řádky.
+- Jednoduchý výběr sheet zavře. Select s `multiple()` zaškrtává, počet ukazuje
+  v hlavičce a zavře se tlačítkem **Hotovo**; **Zrušit výběr** ho vyprázdní.
+- Hledání se po otevření nezaostří, takže nevyjede klávesnice přes seznam, který
+  jste chtěli jen proscrollovat.
+- `native()` nad ním vyhrává; on vyhrává nad `nativeOnMobile()`. Výchozí hodnota
+  pro celou aplikaci je `wire-core.mobile.touch`.
+
 ## Boolean select
 
 ```php
@@ -322,6 +390,8 @@ Select::make('tier')
 | `searchable()` | bool | Zapnout hledání v možnostech |
 | `multiple()` | bool | Povolit více výběrů |
 | `native(bool $native = true)` | bool | Použít nativní `<select>` prohlížeče místo comboboxu (výchozí: `false`) |
+| `touchOnMobile(bool $condition = true)` | bool | Dotykový seznam přes celou výšku pod mobilním breakpointem, nad ním combobox (výchozí: `wire-core.mobile.touch`, `false`) |
+| `nativeOnMobile(bool $condition = true)` | bool | Nativní `<select>` prohlížeče jen pod mobilním breakpointem, nad ním combobox (výchozí: `wire-core.mobile.native`, `false`) |
 | `maxItems(int\|null)` | int | Maximum vybraných položek (multi-select) |
 | `minItems(int\|null)` | int | Minimum vybraných položek (multi-select) |
 | `disabledOptions(array\|Closure)` | array | Klíče možností vykreslené jako zakázané |

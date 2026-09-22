@@ -98,6 +98,12 @@ class FieldPreview extends Component
             // Same rule as slot_at: the key has to exist for entangle() to bind.
             // Left empty so the clock starts where an unset time picker opens.
             'opens_at' => null,
+            'urgency' => null,
+            'starts_at' => null,
+            'closes_at' => null,
+            'touch_city' => null,
+            'touch_tags' => [],
+            'due_on' => null,
         ];
     }
 
@@ -130,6 +136,54 @@ class FieldPreview extends Component
                     ->from('valid_from')
                     ->until('valid_to')
                     ->presets(),
+            ];
+        }
+
+        // ->nativeOnMobile(): the custom control from sm up, the browser's own
+        // below it. Driven by verify-native-on-mobile, which also checks the
+        // combobox keeps integer keys in the given order and skips a disabled one.
+        if ($field === 'native-on-mobile') {
+            return [
+                Select::make('urgency')
+                    ->label('Urgency')
+                    ->options([10 => 'Urgent', 2 => 'Normal', 7 => 'Someday'])
+                    ->disabledOptions([7])
+                    ->nativeOnMobile(),
+                DateTimePicker::make('due_on')->label('Due on')->asDate()->nativeOnMobile(),
+                TimePicker::make('opens_at')->label('Opens at')->nativeOnMobile(),
+                DateTimePicker::make('starts_at')->label('Starts at')->minutesStep(15)->nativeOnMobile(),
+            ];
+        }
+
+        // ->touchOnMobile() on selects: the full-height touch list on a phone.
+        // Driven by verify-touch-select.
+        if ($field === 'touch-select') {
+            $cities = ['Praha', 'Brno', 'Ostrava', 'Plzeň', 'Liberec', 'Olomouc', 'České Budějovice', 'Hradec Králové',
+                'Ústí nad Labem', 'Pardubice', 'Zlín', 'Havířov', 'Kladno', 'Most', 'Opava', 'Frýdek-Místek', 'Karviná',
+                'Jihlava', 'Teplice', 'Děčín', 'Karlovy Vary', 'Chomutov', 'Jablonec nad Nisou', 'Mladá Boleslav'];
+
+            return [
+                Select::make('touch_city')->label('City')->searchable()->placeholder('None')
+                    // Keys descending on purpose: the list must keep this order, not sort by id.
+                    ->options(array_combine(range(count($cities) + 100, 101, -1), $cities))
+                    ->touchOnMobile(),
+                Select::make('touch_tags')->label('Tags')->multiple()
+                    ->options(['vip' => 'VIP', 'express' => 'Express', 'gift' => 'Gift', 'b2b' => 'B2B', 'fragile' => 'Fragile'])
+                    ->disabledOptions(['fragile'])
+                    ->touchOnMobile(),
+            ];
+        }
+
+        // ->touchOnMobile(): the prototype touch wheel for times on a phone.
+        // Driven by verify-time-wheel.
+        if ($field === 'time-wheel') {
+            return [
+                TimePicker::make('opens_at')->label('Opens at')->minDate('08:00')->maxDate('18:00')->touchOnMobile(),
+                DateTimePicker::make('closes_at')->label('Closes at')->asTime()->minutesStep(5)->touchOnMobile(),
+                DateTimePicker::make('due_on')->label('Due on')->asDate()
+                    ->minDate('2026-01-10')->maxDate('2027-12-31')->disabledDates(['2026-03-01'])->touchOnMobile(),
+                DateTimePicker::make('starts_at')->label('Starts at')->minutesStep(15)
+                    ->minDate('2026-09-01 08:30')->maxDate('2026-12-31')->touchOnMobile(),
             ];
         }
 

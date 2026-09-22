@@ -516,8 +516,9 @@ class BelongsToSelect extends Select
             return [];
         }
 
-        // If searchable and not preload, return empty (will be loaded via AJAX)
-        if ($this->isSearchable() && ! $this->isPreload()) {
+        // A remote combobox loads its matches over AJAX. A native <select> has no
+        // AJAX, so native() needs the whole list even on a searchable field.
+        if ($this->isSearchable() && ! $this->isPreload() && ! $this->isNative()) {
             return [];
         }
 
@@ -565,8 +566,13 @@ class BelongsToSelect extends Select
         }
     }
 
+    /**
+     * The base select view: the relationship only changes where options come
+     * from, and a second copy of the markup was the half that drifted (it lost
+     * the mobile sheet, the extra input attributes and the disabled options).
+     */
     protected function viewName(): string
     {
-        return 'wire-forms::components.belongs-to-select';
+        return 'wire-forms::components.select';
     }
 }
