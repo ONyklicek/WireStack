@@ -147,6 +147,22 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **`SelectFilter::searchable()` pinned the control custom** instead of lifting an earlier `->native()` back
   to the default, so the global mobile-native switch could never reach a searchable filter.
 
+- **The tick in a table's selection checkbox was a hairline.** The table is the only surface in the
+  stack that draws a checkbox by hand — the row box is a `role="checkbox"` button, because Alpine
+  owns the selection and a range sweep has to survive a shift-click a native input would eat — and
+  it borrowed Heroicons' solid `check` for the mark. That glyph is a filled silhouette about 1.2px
+  thick at 16px spanning its whole viewBox, so inside a bordered 16px box it came out as a hairline
+  pressed into the corners, a pixel down and right of centre because `absolute inset-0` anchors to
+  the padding box while `h-4 w-4` insisted on the full 16. Beside the native checkboxes the rest of
+  the stack draws (wire-forms' `Checkbox`, `CheckboxList`, wire-core's checkbox entry, all styled by
+  `@tailwindcss/forms`) it read as a different control, and `compact()` — more rows, less
+  surrounding white — is where it stopped reading at all. The mark is now `table:checkbox-check`
+  from wire-table's own icon set: 16x16, stroked at 2 units with round caps, inset clear of the
+  border, and stretched to the button's content box so it centres itself — 1.75px of ink against
+  1.2. It also **draws itself in** over 200ms when a row is selected, and the partial-selection bar
+  (`table:checkbox-indeterminate`) is drawn at the same weight so the two states of one checkbox no
+  longer look like two different checkboxes. Row, header and card select-all share one resolved
+  string. See `packages/table/resources/icons/table.php`.
 - **A field's `columnSpan()` was drawn against no grid at all, and three surfaces disagreed about what it meant.**
   Every item emitted one fixed `sm:col-span-N` while the grids around it ramped elsewhere — `Grid`, `Section`
   and an infolist reach their columns at `md` (`ResponsiveGrid::cols()`), while a step, a tab, a fieldset, a
