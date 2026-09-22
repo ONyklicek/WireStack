@@ -15,6 +15,7 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
 use NyonCode\WirePanels\Install\RegisterResourceRoutes;
+use NyonCode\WirePanels\Resources\Console\MakeDashboardPageCommand;
 use NyonCode\WirePanels\Routing\ConfiguredRoutes;
 use NyonCode\WirePanels\Routing\RegisteredPageUrls;
 use NyonCode\WirePanels\Routing\ResourceRoutes;
@@ -71,6 +72,12 @@ class WirePanelsServiceProvider extends PackageServiceProvider
             ->hasConfig()
             ->hasViews()
             ->hasTranslations()
+            // The page half of a dashboard. It lives here because the class it
+            // extends does: core owns the declaration and may not name a class
+            // from a package above it, so `make:wire-dashboard` asks for this
+            // one by name — see MakeDashboardPageCommand.
+            ->hasCommand(MakeDashboardPageCommand::class)
+            ->hasStubs(['../stubs/dashboard-page.stub'])
             ->hasAbout();
     }
 

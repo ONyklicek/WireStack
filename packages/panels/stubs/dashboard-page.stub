@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ dashboardFqn }};
+use NyonCode\WirePanels\Resources\Pages\DashboardPage;
+
+/**
+ * The page that renders {@see {{ dashboard }}}.
+ *
+ * Everything it does comes from `DashboardPage`: the widget grid, each widget's
+ * own polling and filters, and the Customise controls if the dashboard says
+ * `customisable()`. Give it a heading of its own with
+ * `protected ?string $title = 'Today';` — otherwise it takes the dashboard's
+ * label.
+ */
+class {{ class }} extends DashboardPage
+{
+    protected static ?string $dashboard = {{ dashboard }}::class;
+}

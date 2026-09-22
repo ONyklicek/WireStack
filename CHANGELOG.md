@@ -82,6 +82,20 @@ All notable changes to the Wire ecosystem will be documented in this file.
   "the declaration" would restore nothing. Covered by ten tests in core and four in panels, and driven in a
   browser by `verify-dashboard-customise` — save, rearrange, switch back, delete.
 
+- **`make:wire-dashboard` generates the page that makes the dashboard reachable.** It wrote a declaration
+  and stopped: a dashboard that declares no `pages()` is routed nowhere, so the generated class appeared in
+  the menu as an entry with no link and answered 404 at every address — after being registered, which is
+  what made it read as a framework bug rather than as half a generator. The command now writes
+  `app/Livewire/Dashboards/Show{Name}.php` beside `app/Dashboards/{Name}Dashboard.php`, and the stub
+  declares the `pages()` that ties them together. The page extends wire-panels' `DashboardPage`, so
+  **wire-panels generates it**: the new `make:wire-dashboard-page` command, with its own publishable stub
+  (`wire-panels::stubs`), which core calls *by name* — the one thing a package may know about a package
+  above it. Without wire-panels the dashboard is still written, with a line saying what to install; the
+  declared `pages()` is inert until something routes and correct the moment it does. `--no-page` writes the
+  declaration alone. Covered by a panels test that generates both halves, loads them, registers the
+  dashboard and asserts `Route::wireResources()` registers a URL for it — the assertion that fails against
+  the old stub.
+
 ### Fixed
 
 - **Every select surface renders through one partial.** The native `<select>` was written four times
