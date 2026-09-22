@@ -71,7 +71,7 @@ see [Panels](../panels/overview.md) for why the direction is the design.
 | `packages/core/src/Foundation/Support` | Shared helpers — `ResponsiveGrid` (per-breakpoint columns), `MobileSheet`, `EnumResolver` |
 | `packages/core/src/Foundation/Concerns` | Canonical shared traits — `HasColor`, `HasIcon`, `HasSize`, `HasVisibility`, `HasActions`, `HasSheetOnMobile`, … |
 | `packages/core/src/Foundation/Registration` | `Catalog` — everything an application registered, whatever kind — plus the `RegistrySource` / `HasRegistryKey` contracts a registry joins it with |
-| `packages/core/src/Foundation/Routing` | What a page declaration carries (`ProvidesPages`, `RoutePage`, `ConfiguresRoutes`), `Zone`, and the `ResolvesPageUrls` / `RegistersPageRoutes` seams the URL convention answers |
+| `packages/core/src/Foundation/Routing` | What a page declaration carries (`ProvidesPages`, `RoutePage`, `ConfiguresRoutes`), `Zone`, and the `ResolvesPageUrls` / `AuthorizesUrls` / `RegistersPageRoutes` seams the URL convention answers |
 | `packages/core/src/GlobalSearch` | The ⌘K palette, its search service and result value object |
 | `packages/core/src/Core/Resources` | Resource identity, the registry, `Workspace` and the navigation vocabulary |
 | `packages/core/src/Modals` | Modal, confirmation, slide-over, wizard classes |

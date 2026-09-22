@@ -39,6 +39,8 @@ Potřebujete jen tagy balíčků, které jste nainstalovali.
 | `WIRE_FORMS_UPLOAD_DISK` | `public` | Forms upload souborů |
 | `WIRE_MOBILE_SHEET` | `true` | Core mobilní bottom-sheety |
 | `WIRE_MOBILE_BREAKPOINT` | `sm` | Breakpoint mobilního sheetu |
+| `WIRE_TOURS_DRIVER` | `session` | Kde se přihlášenému uživateli ukládá postup a dokončení průvodců |
+| `WIRE_TOURS_GUEST_DRIVER` | `session` | Totéž pro hosta |
 | `WIRE_AUTH_CODE_LOGIN` | `false` | Přihlášení kódem z e-mailu, bez hesla |
 | `WIRE_AUTH_CODE_SECOND_FACTOR` | `false` | Kód e-mailem po správném heslu |
 | `WIRE_AUTH_CODE_VERIFY_EMAIL` | `false` | Potvrzení adresy kódem |
@@ -244,6 +246,31 @@ Action::make('edit')->form([...])->slideOverOnMobile()->mobileBreakpoint('md');
 ```
 
 Priorita: jednotlivá komponenta (`->sheetOnMobile()` / `->mobileBreakpoint()`) > searchable-auto-floating > globální konfigurace. Searchable selecty jsou defaultně plovoucí, aby vyhledávací pole zůstalo použitelné. Sheety automaticky přidávají safe-area padding, úchyt pro zavření tažením a focus trap.
+
+### Průvodci
+
+Kde si [průvodce](../core/tours.md) pamatuje, co o kom ví: které průvodce
+dokončil nebo přeskočil a ke kterému kroku došel v tom, který opustil v půlce.
+Je to úložiště preferencí s vlastním výchozím driverem, `session` místo `null`,
+protože průvodce nad úložištěm, které zapomíná, by stejného člověka přerušoval
+při každém načtení stránky.
+
+```php
+'tours' => [
+    'preferences' => [
+        'default' => env('WIRE_TOURS_DRIVER', 'session'),        // přihlášení uživatelé
+        'guest' => env('WIRE_TOURS_GUEST_DRIVER', 'session'),    // hosté
+        'drivers' => [
+            'null' => NullPreferenceDriver::class,
+            'session' => SessionPreferenceDriver::class,
+            'database' => DatabasePreferenceDriver::class,       // „jednou provždy" — potřebuje migraci
+        ],
+    ],
+],
+```
+
+Panel průvodce se pod `mobile.breakpoint` výše přichytí ke spodnímu okraji
+obrazovky. Viz [Tour → Zapamatování](../core/tours.md#zapamatovani).
 
 ## Forms
 

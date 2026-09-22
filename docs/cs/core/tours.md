@@ -55,11 +55,19 @@ porovnání tak pokrývá oba případy:
 Nic neporovnává čísla verzí jako čísla a nic nečte verzi balíčku. Chcete-li
 průvodce ukázat znovu všem, změňte `since()`.
 
-**Kde běží.** Rozhodování a zaznamenání probíhá na serveru. Všechno mezi tím
-běží v prohlížeči, v Alpine, bez requestu na každý krok. Panel umisťuje pomocník
-nad Floating UI, který `@wireStackScripts` už dává na každou stránku, takže tato
-funkce nepřidává žádný vlastní JavaScriptový bundle. Dokončení nebo přeskočení
-udělá právě jeden Livewire request, aby se zaznamenalo.
+**Kde běží.** Rozhodování a zaznamenání probíhá na serveru. Přechody mezi kroky
+běží v prohlížeči, v Alpine. Panel umisťuje pomocník nad Floating UI, který
+`@wireStackScripts` už dává na každou stránku, takže tato funkce nepřidává žádný
+vlastní JavaScriptový bundle. Livewire request dělají dvě věci: každý nově
+zobrazený krok, aby se zaznamenalo, kam až člověk došel, a dokončení nebo
+přeskočení, aby se zaznamenalo, že skončil.
+
+**Opuštěný v půlce.** Kdo průvodce opustí kliknutím jinam, aniž by ho dokončil
+nebo přeskočil, potká ho při příští návštěvě stránky, na které průvodce začíná,
+u kroku, u kterého skončil. Pokud je ten krok na jiné stránce, průvodce se
+otevře u posledního kroku před ním na této stránce, takže „Další" vede zpět k
+němu. Krok se ukládá k hodnotě `since()` průvodce, takže po nové verzi začne
+průvodce od začátku. Dokončení, přeskočení i opětovné spuštění ho smažou.
 
 **Kde se ukládá.** Pod klíčem `tours` v uživatelském úložišti preferencí, s
 vlastním nastavením driveru `wire-core.tours.preferences.default`. **To má
@@ -83,12 +91,20 @@ který je také `session`.
   vidět, takže počítadlo vždy ukazuje, kolik kroků člověk opravdu uvidí. Prvek,
   který je vykreslený, ale skrytý, třeba neotevřený dropdown, se počítá jako
   chybějící. Průvodce, který takhle přijde o všechny kroky, se nespustí.
-- **Na telefonu neběží nic.** Pod breakpointem sheetu (`wire-core.mobile.breakpoint`,
-  ve výchozím stavu `sm`, tedy užší než 640 px) se žádný průvodce nespustí, a ten,
-  který běží, skončí, když se okno zúží pod tuto hranici. Tam je sidebar
-  vysouvací panel a toolbar je sbalený, takže prvky, na které kroky ukazují, na
-  obrazovce nejsou. Kdo přijde poprvé z telefonu, průvodce neviděl, takže na něj
-  počká na širší obrazovce.
+- **Na telefonu se panel přichytí dolů.** Pod 640 px přestane plavat vedle
+  prvku a sedí přes spodní okraj obrazovky, zatímco zvýrazňující rámeček dál
+  označuje prvek. Každý krok odscrolluje svůj prvek do místa mezi horní lištou a
+  panelem. Co telefon skrývá — sidebar je tam vysouvací panel — se přeskočí jako
+  každý skrytý prvek, takže telefon může napočítat méně kroků než desktop. Když
+  okno překročí 640 px jedním či druhým směrem, panel se umístí znovu.
+- **Krok na jiné stránce tam přejde.** Krok vytvořený s
+  [`on()`](tour-step.md#na-jine-strance) patří na jinou stránku téže zóny a
+  přeskočí se pro toho, koho routa té stránky nepustí.
+  „Další" tam přejde a průvodce pokračuje; „Zpět" z něj vrátí. Stránka a krok
+  cestují v query stringu (`wire-tour`, `wire-tour-step`), který prohlížeč
+  odstraní, jakmile si je průvodce převezme. Server ho přijme jen pro průvodce,
+  kterého tento člověk nedokončil, v zóně, pro kterou byl deklarován, a u kroku,
+  který na té stránce opravdu je.
 - **Potřebuje layout shellu.** Průvodce vykresluje layout `wire-admin`. Pokud
   vykreslujete vlastní layout, přečtěte si [Vlastní layout](#vlastni-layout).
 
@@ -188,6 +204,10 @@ closurou. Spouští se, zatímco layout vykresluje stránku, jen u průvodce, je
 zóna, resource a stránka už sedí, a nikdy během Livewire requestu. Za jedno
 vykreslení se může spustit víckrát, protože stejnou otázku klade i položka pro
 opětovné spuštění, takže ať je levná.
+
+Tato omezení říkají, kde průvodce **začíná**. Krok může i tak vést jinam v téže
+zóně, pomocí [`on()`](tour-step.md#na-jine-strance). Stránka, na kterou dovede,
+omezením průvodce odpovídat nemusí, protože průvodce je tam přenesen, ne vybrán.
 
 ## Co je nového po aktualizaci
 

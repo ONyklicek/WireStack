@@ -76,14 +76,22 @@ it('hands the browser one step per declared step, in order', function () {
                 'heading' => 'One',
                 'text' => 'First',
                 'placement' => 'right-start',
+                // A tour constrained by nothing claims every page, so both of
+                // its steps are on this one and neither needs an address.
+                'here' => true,
+                'url' => null,
             ],
             [
                 'selector' => '[data-wire="table-search"]',
                 'heading' => 'Two',
                 'text' => 'Second',
                 'placement' => 'bottom',
+                'here' => true,
+                'url' => null,
             ],
-        ]);
+        ])
+        // Nothing in the request asked it to carry on, so it starts at the top.
+        ->and($payload['resume'])->toBeNull();
 });
 
 /**
@@ -152,7 +160,10 @@ it('defers its first ref read past x-init', function () {
 
     $html = renderHost();
 
-    expect($html)->toContain('x-init="$nextTick(() => start())"')
+    // Deferred past `$nextTick`, and then past the page settling: a tour that
+    // planned the moment Alpine started saw a phone's sidebar mid-slide and
+    // pointed into a drawer that then left.
+    expect($html)->toContain('x-init="$nextTick(() => settle().then(() => start()))"')
         ->and($html)->not->toMatch('/x-init="[^"]*\$refs/');
 });
 

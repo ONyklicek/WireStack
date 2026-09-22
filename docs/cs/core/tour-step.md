@@ -103,6 +103,40 @@ je napsali.
 U `admin-nav-item` to funguje, protože jeho view píše `data-resource` hned vedle
 hooku. Zužujte jen podle atributů, které sedí na stejném prvku jako hook.
 
+## Na jiné stránce
+
+`on()` dá krok na jinou stránku téže zóny, pojmenovanou klíčem resource a
+stránkou, pod kterou ji panel routuje:
+
+```php
+TourStep::make('table-search')
+    ->on('orders')                 // seznam objednávek — stránka je ve výchozím stavu 'index'
+    ->heading('Každý seznam funguje takhle');
+
+TourStep::make('form-actions')->on('orders', 'create');
+```
+
+Po dokončení předchozího kroku prohlížeč přejde na tu stránku s průvodcem v
+query stringu a průvodce pokračuje tímto krokem. „Zpět" z něj přejde na
+předchozí krok, ať je na kterékoli stránce. Adresa pochází od stejného vlastníka jako
+každý jiný odkaz na stránku, v zóně, ve které průvodce běží, takže krok nikdy
+nevede ven ze své zóny.
+
+Krok, jehož stránka v té zóně není routovaná, se přeskočí jako chybějící prvek,
+a stejně tak krok, jehož stránku tento člověk nesmí otevřít. Ptá se routy té
+stránky: `can:` middlewaru, kterou `wire-panels` píše z `permission()` stránky
+a její zóny, položeného Gate. Kdo nemá přístup k seznamu objednávek, dostane
+průvodce o krok kratšího, ne 403. Krok, jehož prvek druhá stránka nevykreslí, se pozná až po
+příchodu: průvodce tam pokračuje dalším krokem, a když žádný není, skončí, aniž
+by se zaznamenal. Počítadlo
+kroků se spočítá jednou, na stránce, kde průvodce začal, a nese se dál, takže
+se v půlce nezmění.
+
+Průvodce přes víc stránek držte krátký, protože každá změna stránky je plná
+navigace. Kdo ho opustí na jiné stránce kliknutím jinam, potká ho znovu na
+stránce, kde začíná, u posledního kroku před tím, u kterého skončil, takže ho
+„Další" vrátí zpět (viz [Tour](tours.md#jak-to-funguje), opuštěný v půlce).
+
 ## Rozšířený příklad
 
 Průvodce při prvním spuštění, jehož kroky jdou po stránce zleva doprava, včetně
@@ -162,11 +196,15 @@ TourStep::make(string $anchor)             // jméno element hooku; vyhodí výj
 ->text(?string $text)                      // text kroku, prostý text — výchozí žádný
 ->placement(string $placement)             // 'top'|'right'|'bottom'|'left', volitelně '-start'|'-end' — výchozí 'bottom'
 ->where(string $attribute, string $value)  // zúžení podle data-<attribute>="<value>"; jméno musí mít tvar hooku
+->on(string $resource, string $page = 'index') // krok na jiné stránce téže zóny — výchozí vlastní stránka průvodce // [tl! focus]
 ->getAnchor(): string
 ->getHeading(): ?string
 ->getText(): ?string
 ->getPlacement(): string
 ->getSelector(): string                    // CSS selektor, který prohlížeč vyhledá, i se zúžením
+->getResource(): ?string                   // klíč resource z on(), nebo null
+->getPage(): ?string                       // stránka z on(), nebo null
+->isElsewhere(): bool                      // zda bylo zavoláno on()
 ```
 
 ## Související

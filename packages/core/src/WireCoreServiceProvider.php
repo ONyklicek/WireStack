@@ -51,8 +51,10 @@ use NyonCode\WireCore\Foundation\Icons\IconSet;
 use NyonCode\WireCore\Foundation\Mentions\MentionRegistry;
 use NyonCode\WireCore\Foundation\Mentions\MentionRenderer;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
+use NyonCode\WireCore\Foundation\Routing\UnguardedUrls;
 use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
 use NyonCode\WireCore\Foundation\Setup\EnvFile;
 use NyonCode\WireCore\Foundation\Support\IslandViewScope;
@@ -657,6 +659,10 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // `wire-panels` — so core declares the question and answers it with
         // "nothing is routed" until a package that routes says otherwise.
         $this->app->bindIf(ResolvesPageUrls::class, UnroutedPageUrls::class);
+
+        // Its other half: whether somebody may open a URL. Yes until the same
+        // package says which routes carry `can:` middleware.
+        $this->app->bindIf(AuthorizesUrls::class, UnguardedUrls::class);
 
         $this->app->bind(Workspace::class, fn ($app): Workspace => new Workspace(
             $app->make(Catalog::class),

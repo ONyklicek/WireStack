@@ -23,12 +23,22 @@
 
      ## What it will not do
 
-     **Nothing runs below the sheet breakpoint.** Not a bottom sheet, not a
-     cut-out — the tour does not start, and one already running ends if the
-     viewport crosses down. A sheet cannot point at anything, and on a phone the
-     sidebar is a drawer and the toolbar has collapsed, so the elements a step
-     names are not on the page to point at. A tour that silently became a stack
-     of captions is worse than no tour.
+     **Below the sheet breakpoint the panel docks to the bottom of the screen**
+     instead of floating beside its element. It used not to run there at all —
+     the objection was that a sheet cannot point at anything — and that is
+     answered rather than ignored: the highlight ring stays on the element and
+     the page scrolls it into the room above the panel, so a phone gets a tour
+     that points, not a stack of captions. An element a phone does not show (the
+     sidebar is a drawer there) is skipped by the rule below, and the counter
+     says the tour got shorter.
+
+     **Every step scrolls its element into view**, on any screen: an element
+     under the fold used to be pointed at from off-screen.
+
+     **A step may be on another page** (`TourStep::on()`). Reaching it navigates
+     there with the tour's id and the step in the query, the server renders the
+     host for that page, and the tour carries on. The browser never knows a
+     route — each step arrives with its page's URL, from the one owner of those.
 
      **A step whose element is missing or hidden is skipped, never fatal.** An
      application may have hidden a control, this screen may legitimately not
@@ -64,6 +74,9 @@
         tourId: @js($tour->getId()),
         steps: @js($payload['steps']),
         breakpoint: @js($payload['breakpoint']),
+        resume: @js($payload['resume']),
+        from: @js($payload['from']),
+        reported: null,
         progressTemplate: @js(__('wire-core::messages.tour_progress', ['current' => '{c}', 'total' => '{t}'])),
 
         {{-- `plan` is the indices of the steps whose element was actually on the
@@ -76,6 +89,7 @@
         plan: [],
         cursor: 0,
         active: false,
+        dock: false,
         detach: null,
         rect: { top: 0, left: 0, width: 0, height: 0 },
         raised: null,
@@ -88,9 +102,11 @@
                 .replace('{t}', this.plan.length);
         },
 
-        {{-- The one rule that keeps a tour off a phone. Re-read rather than
-             cached: a tablet rotates, and a desktop window gets dragged narrow. --}}
-        tooNarrow() {
+        {{-- Whether the panel docks to the bottom rather than floating beside
+             its element. Re-read rather than cached: a tablet rotates, and a
+             desktop window gets dragged narrow — which re-places the step
+             instead of ending the tour. --}}
+        docked() {
             return window.matchMedia('(max-width: ' + this.breakpoint + 'px)').matches;
         },
 
@@ -104,12 +120,25 @@
              same question. --}}
         shown(selector) {
             const el = document.querySelector(selector);
-            return el && el.getClientRects().length > 0 ? el : null;
+            if (! el || el.getClientRects().length === 0) { return null; }
+            {{-- Rendered, displayed and pushed off the side is not showing
+                 either: a phone's sidebar is a drawer translated out of view,
+                 and a ring drawn around it would sit off the edge of the screen. --}}
+            const box = el.getBoundingClientRect();
+            return box.width > 0 && box.right > 0 && box.left < window.innerWidth ? el : null;
+        },
+
+        {{-- A step on this page is available when its element is showing; one
+             on another page, when there is an address to go to. --}}
+        available(i) {
+            const step = this.steps[i];
+            if (! step) { return false; }
+            return step.here ? !! this.shown(step.selector) : !! step.url;
         },
 
         at(cursor) {
             const step = this.steps[this.plan[cursor]];
-            return step ? this.shown(step.selector) : null;
+            return step && step.here ? this.shown(step.selector) : null;
         },
 
         {{-- The first planned step still on the page, walking in `direction`.
@@ -119,31 +148,148 @@
              rather than trusting the plan it walks. --}}
         seek(from, direction) {
             for (let i = from; i >= 0 && i < this.plan.length; i += direction) {
-                if (this.at(i)) { return i; }
+                if (this.available(this.plan[i])) { return i; }
             }
             return null;
         },
 
+        {{-- Wait for the page to stop moving before deciding what is on it.
+             A tour that plans the moment Alpine starts sees the page as it is
+             *mid-transition*: a phone's sidebar is on screen until its own
+             binding slides it away over 200 ms, so a step pointing into it was
+             counted, shown, and pinned to a drawer that then left. What is
+             awaited is the thing itself — the document loaded, two frames, and
+             every finite animation running at that moment — rather than a
+             guessed delay; the cap is only there so an animation that never
+             settles cannot hold a tour back for ever. --}}
+        settle() {
+            const frames = () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+            const loaded = document.readyState === 'complete'
+                ? Promise.resolve()
+                : new Promise((done) => window.addEventListener('load', done, { once: true }));
+            const moving = () => (document.getAnimations ? document.getAnimations() : [])
+                .filter((a) => a.playState === 'running' && a.effect && a.effect.getTiming().iterations !== Infinity)
+                .map((a) => a.finished.catch(() => null));
+            const cap = new Promise((done) => setTimeout(done, 1200));
+            return loaded.then(frames).then(() => Promise.race([Promise.all(moving()), cap])).then(frames);
+        },
+
         start() {
-            if (this.tooNarrow()) { return; }
+            {{-- The address a tour arrived by is spent the moment it is read:
+                 left in place, a reload or a bookmark would restart the
+                 walkthrough mid-way. --}}
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('wire-tour')) {
+                url.searchParams.delete('wire-tour');
+                url.searchParams.delete('wire-tour-step');
+                window.history.replaceState(window.history.state, '', url.toString());
+            }
 
             this.plan = this.steps
-                .map((step, i) => (this.shown(step.selector) ? i : null))
+                .map((step, i) => (this.available(i) ? i : null))
                 .filter((i) => i !== null);
+
+            {{-- Carrying on, the page before already decided which steps this
+                 tour has: a step it skipped (a phone did not show that element)
+                 must stay skipped here, or the counter reads "2 of 4" on one
+                 page and "5 of 5" on the next. Its plan rides in the tab's own
+                 storage, narrowed again to what is available on this page. --}}
+            if (this.resume !== null) {
+                const carried = this.carriedPlan();
+                if (carried) { this.plan = carried.filter((i) => this.available(i)); }
+            }
 
             if (this.plan.length === 0) { return; }
 
-            this.cursor = 0;
+            {{-- Carrying on from another page: at the step that was asked for,
+                 or the first one after it still standing. With none left the
+                 tour stops here rather than sending somebody back the way they
+                 came; nothing is recorded, so it runs again on the next visit. --}}
+            let cursor = 0;
+            if (this.resume !== null) {
+                cursor = this.plan.findIndex((i) => i >= this.resume);
+                if (cursor === -1) { return; }
+            }
+
+            {{-- Coming back to a tour left halfway on an earlier visit: at the
+                 step it was left on when that step is on this page, or else at
+                 the last one before it here — so "Next" leads on to where they
+                 were — or else the first one after it. --}}
+            if (this.resume === null && this.from !== null) {
+                const here = (i) => this.steps[i] && this.steps[i].here;
+                const exact = this.plan.indexOf(this.from);
+                const before = this.plan.map((i, at) => (i < this.from && here(i) ? at : -1)).filter((at) => at !== -1).pop();
+                const after = this.plan.findIndex((i) => i > this.from && here(i));
+                cursor = exact !== -1 && here(this.from) ? exact : (before !== undefined ? before : Math.max(after, 0));
+            }
+
+            this.cursor = cursor;
+            {{-- Docked before shown: otherwise a phone gets one frame of the
+                 floating panel in the top-left corner before `place()` moves it. --}}
+            this.dock = this.docked();
             this.active = true;
             this.$nextTick(() => this.place());
         },
 
+        planKey() { return 'wire-tour-plan:' + this.tourId; },
+
+        {{-- Storage can be switched off or full; a tour that could not carry
+             its plan still carries on, it just recounts on the next page. --}}
+        carriedPlan() {
+            try {
+                const plan = JSON.parse(window.sessionStorage.getItem(this.planKey()) || 'null');
+                return Array.isArray(plan) && plan.every((i) => Number.isInteger(i)) ? plan : null;
+            } catch (e) { return null; }
+        },
+
+        carryPlan() {
+            try { window.sessionStorage.setItem(this.planKey(), JSON.stringify(this.plan)); } catch (e) {}
+        },
+
+        {{-- To the page the next step is on. Livewire's own navigation where it
+             is on the page, so an application using `wire:navigate` keeps its
+             single-page feel; a plain visit otherwise. --}}
+        go(index) {
+            const step = this.steps[index];
+            this.carryPlan();
+            this.release();
+            const target = new URL(step.url, window.location.origin);
+            target.searchParams.set('wire-tour', this.tourId);
+            target.searchParams.set('wire-tour-step', index);
+            this.active = false;
+            if (window.Livewire && typeof window.Livewire.navigate === 'function') {
+                window.Livewire.navigate(target.toString());
+            } else {
+                window.location.assign(target.toString());
+            }
+        },
+
+        {{-- Bring the element into the room the panel leaves — below the sticky
+             top bar, and above the panel itself when it is docked — and only if
+             it is not already there, so a step on a visible element never
+             jolts the page. --}}
+        reveal(target) {
+            const bar = document.querySelector('[data-wire=\'admin-topbar\']');
+            const top = (bar ? bar.getBoundingClientRect().bottom : 0) + 12;
+            const panel = this.$refs.panel;
+            const bottom = window.innerHeight - (this.dock && panel ? panel.offsetHeight + 24 : 12);
+            const box = target.getBoundingClientRect();
+            if (box.top >= top && box.bottom <= bottom) { return; }
+            const room = bottom - top;
+            const offset = box.height >= room ? top : top + (room - box.height) / 2;
+            window.scrollBy({ top: box.top - offset, behavior: 'smooth' });
+        },
+
         place() {
             this.release();
+            const index = this.plan[this.cursor];
+            if (this.steps[index] && ! this.steps[index].here) { this.go(index); return; }
             const target = this.at(this.cursor);
             {{-- Gone since the plan was built: walk on rather than showing a
                  panel pinned to nothing. --}}
             if (! target) { this.move(1); return; }
+            this.dock = this.docked();
+            this.report(index);
 
             {{-- Raised above the backdrop rather than the backdrop being cut
                  out: one z-index instead of an SVG mask that would have to
@@ -152,8 +298,16 @@
             if (getComputedStyle(target).position === 'static') { target.style.position = 'relative'; }
             target.style.zIndex = '61';
 
-            this.track();
-            this.detach = this.$float(target, this.$refs.panel, { placement: this.step.placement || 'bottom', offset: 12 });
+            {{-- Docked, the panel is placed by its classes and floats beside
+                 nothing; the ring is what points. Measured after the panel has
+                 laid out, because how much room is left above it is the
+                 question `reveal()` answers. --}}
+            if (this.dock) {
+                this.unpin();
+            } else {
+                this.detach = this.$float(target, this.$refs.panel, { placement: this.step.placement || 'bottom', offset: 12 });
+            }
+            this.$nextTick(() => { this.reveal(target); this.track(); });
         },
 
         {{-- The ring is our own element over the target's box, so it carries a
@@ -165,6 +319,30 @@
             if (! target) { return; }
             const box = target.getBoundingClientRect();
             this.rect = { top: box.top, left: box.left, width: box.width, height: box.height };
+        },
+
+        {{-- Floating UI writes its position onto the panel's own style and
+             leaves it there when detached, and an inline `position: absolute`
+             outranks the class that docks the panel: a tour dragged narrow kept
+             floating at a left offset from the wide layout, squeezed into a
+             sliver. Docking clears what floating wrote. --}}
+        unpin() {
+            const panel = this.$refs.panel;
+            if (! panel) { return; }
+            ['position', 'top', 'left', 'right', 'bottom', 'transform', 'zIndex', 'maxHeight', 'minWidth', 'overflowY']
+                .forEach((property) => { panel.style[property] = ''; });
+        },
+
+        {{-- How far this person got, told to the server once per step shown, so
+             a tour they leave halfway reopens there on the next visit. An event
+             rather than a call for the reason `done()` gives: the component
+             that makes the round trip sits outside this `wire:ignore`. --}}
+        report(index) {
+            if (this.reported === index) { return; }
+            this.reported = index;
+            window.dispatchEvent(new CustomEvent('wire-tour:reached', {
+                detail: { id: this.tourId, step: index },
+            }));
         },
 
         release() {
@@ -193,15 +371,16 @@
         done(skipped) {
             this.release();
             this.active = false;
+            try { window.sessionStorage.removeItem(this.planKey()); } catch (e) {}
             window.dispatchEvent(new CustomEvent('wire-tour:done', {
                 detail: { id: this.tourId, skipped: skipped },
             }));
         },
     }"
-    x-init="$nextTick(() => start())"
+    x-init="$nextTick(() => settle().then(() => start()))"
     x-on:keydown.escape.window="active && done(true)"
     x-on:scroll.window.passive="active && track()"
-    x-on:resize.window="active && (tooNarrow() ? done(true) : track())"
+    x-on:resize.window="active && (docked() !== dock ? settle().then(() => place()) : track())"
     wire:ignore
 >
     <div
@@ -228,7 +407,8 @@
         x-show="active"
         x-cloak
         @include('wire-core::modals.partials.focus-trap', ['openExpression' => 'active'])
-        class="absolute left-0 top-0 z-[63] w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white p-4 shadow-xl dark:border-gray-700 dark:bg-gray-800"
+        x-bind:class="dock ? 'fixed inset-x-3 bottom-3 max-h-[45vh] overflow-y-auto' : 'absolute left-0 top-0 w-72 max-w-[calc(100vw-2rem)]'"
+        class="z-[63] rounded-xl border border-gray-200 bg-white p-4 shadow-xl dark:border-gray-700 dark:bg-gray-800"
         role="dialog"
         aria-label="{{ __('wire-core::messages.tour_region') }}"
     >

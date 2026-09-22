@@ -12,9 +12,11 @@ import { openPage, checker, until } from './lib/cdp.mjs';
  * Two of the checks below are holding a *decision* rather than a mechanism, and
  * they are the ones worth keeping if the rest are ever trimmed:
  *
- *   - Nothing runs below the sheet breakpoint. A decision no test asserts is a
- *     decision that survives until the first person who thinks a bottom sheet
- *     would be nice here.
+ *   - On a phone the tour runs *docked*: the panel sits along the bottom edge,
+ *     the ring still points, and a step whose element a phone does not show —
+ *     the sidebar is a drawer there — is skipped. It used to be refused below
+ *     the sheet breakpoint altogether; the owner reversed that, and a decision
+ *     this driver does not hold is one that drifts back.
  *   - A permission-gated tour is never shown. This is the one place in the
  *     feature where being wrong is worse than being broken: a walkthrough of a
  *     screen somebody cannot reach is a hint about it. The workbench registers
@@ -203,7 +205,7 @@ try {
     await eval_(panelText),
   );
 
-  // ── Nothing on a phone ───────────────────────────────────────────────────
+  // ── On a phone, docked ───────────────────────────────────────────────────
   // A fresh identity, so the tour is unseen again, and a narrow viewport before
   // the page loads. 375px is an iPhone; the breakpoint is 639.98.
   // Through CDP, not `document.cookie`. Laravel's session cookie is HttpOnly, so
@@ -216,13 +218,23 @@ try {
   await setViewport(375, 780);
   await eval_(`window.location.href = ${JSON.stringify(`${origin}/previews/routed/invoices`)}`);
   await waitFor('!! window.Alpine', 15000);
-  await until(async () => await eval_(`!! document.querySelector('[data-wire="tour-panel"]')`), { timeout: 8000 }).catch(() => {});
+  // Waiting for the panel to *show*, not merely to exist: it is in the document
+  // on every page a tour claims, so waiting for its presence returned at once —
+  // which is how "no tour on a phone" passed for as long as it did.
+  await until(() => eval_(panelVisible), { timeout: 10000 });
 
-  check('no tour starts below the sheet breakpoint', ! (await eval_(panelVisible)), await eval_(panelText));
+  check('a tour runs below the sheet breakpoint', await eval_(panelVisible), await eval_(panelText));
+  check('…docked along the bottom of the screen', await eval_(`(() => {
+    const p = document.querySelector('[data-wire="tour-panel"]').getBoundingClientRect();
+    return Math.abs(window.innerHeight - p.bottom) <= 16 && p.width >= window.innerWidth - 32;
+  })()`));
+  // The drawer's entry and the hidden overlay are not showing on a phone, and
+  // the step nothing renders never is: one step is left, and it says so.
+  check('…with only the step a phone can show', /1$/.test(await eval_(progress)), await eval_(progress));
 
-  await shot('03-phone-quiet');
+  await shot('03-phone-docked');
 
-  // ── And one already running ends if the window is dragged narrow ─────────
+  // ── And one already running docks if the window is dragged narrow ────────
   await setViewport(1400, 950);
   await eval_(`window.location.href = ${JSON.stringify(`${origin}/previews/routed/invoices`)}`);
   await waitFor('!! window.Alpine', 15000);
@@ -232,9 +244,10 @@ try {
 
   await setViewport(375, 780);
   await eval_(`window.dispatchEvent(new Event('resize'))`);
-  await until(async () => ! (await eval_(panelVisible)), { timeout: 8000 }).catch(() => {});
+  await until(() => eval_(`getComputedStyle(document.querySelector('[data-wire="tour-panel"]')).position === 'fixed'`), { timeout: 8000 });
 
-  check('and ends if the viewport crosses the breakpoint while it is running', ! (await eval_(panelVisible)));
+  check('and docks rather than ends when the viewport crosses the breakpoint',
+    (await eval_(panelVisible)) && (await eval_(`getComputedStyle(document.querySelector('[data-wire="tour-panel"]')).position === 'fixed'`)));
 
   console.log(`Screenshots: ${shotDir}`);
 } finally {

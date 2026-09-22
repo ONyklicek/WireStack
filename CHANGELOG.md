@@ -4,6 +4,32 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ## [2.1.1]
 
+### Added
+
+- **Tours run on a phone, scroll to what they point at, and can span pages.** Below the sheet breakpoint
+  the panel used to refuse to start; it now docks to the bottom of the screen while the highlight ring stays
+  on the element, and every step — on any screen — scrolls its element into the room between the top bar and
+  the panel instead of pointing at something below the fold. A control a phone does not show (the sidebar is
+  a drawer there) is skipped like any hidden one, and the counter says the tour got shorter. The tour waits
+  for the page to stop moving before it plans, so a drawer mid-slide is not counted as showing.
+  `TourStep::on($resource, $page = 'index')` puts a step on another page of the same zone: "Next" navigates
+  there with the tour in the query string, the host renders on that page only for an unfinished tour at a
+  step really on it, and the counter is carried across so it reads the same on both pages. "Back" returns
+  across the page boundary. Covered by seven tests in `TourAcrossPagesTest` and the `verify-demo-tour` and
+  `verify-tour` drivers. See `docs/core/tour-step.md` § On Another Page.
+
+- **A tour step never leads into a 403, and a tour left halfway picks up where it was left.** A step on
+  another page is offered only when that page's route lets this person in: core gains
+  `Foundation\Routing\Contracts\AuthorizesUrls` (answered "yes" by `UnguardedUrls` until something routes),
+  and `wire-panels` binds its existing `RouteAccess` to it, so the question is the route's `can:` middleware
+  put to the Gate — the same one the admin's entry and the account link already ask. And each step shown is
+  recorded (`TourAcknowledgement::reach()`, bounded to the tour's steps server-side, under `reached` in the
+  tours bag and stamped with `since()`), so somebody who clicks away mid-tour meets it again at that step —
+  or, when that step was on another page, at the last one before it, so "Next" leads back on. Finishing,
+  skipping and replaying clear it; a late request after "Finish" cannot reopen it. Covered by
+  `TourProgressTest` (9), two more in `TourAcrossPagesTest`, one in panels' `RouteAccessTest`, and seven new
+  checks in `verify-demo-tour`.
+
 ### Fixed
 
 - **A tablet can reach the row's actions.** A tablet is wide enough for the desktop table, so it got

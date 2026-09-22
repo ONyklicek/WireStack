@@ -9,7 +9,8 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 
 /**
- * The one round trip a tour makes: recording that somebody is done with it.
+ * The round trips a tour makes: recording how far somebody got, and that they
+ * are done with it.
  *
  * Everything else about a tour happens in the browser over data the page
  * already carried — which step is showing, where the panel sits, whether the
@@ -60,6 +61,16 @@ final class TourAcknowledgement extends Component
     public function acknowledge(TourState $state, Auth $auth): void
     {
         $state->acknowledge($this->tourId, $auth->guard()->user());
+    }
+
+    /**
+     * Record how far this person got, so a tour they leave halfway reopens
+     * there. The step is the browser's to name and {@see TourState::reach()}'s
+     * to bound; the tour is still this component's own.
+     */
+    public function reach(int $step, TourState $state, Auth $auth): void
+    {
+        $state->reach($this->tourId, $step, $auth->guard()->user());
     }
 
     public function render(): View

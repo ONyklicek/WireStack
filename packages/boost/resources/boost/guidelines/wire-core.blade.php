@@ -368,7 +368,12 @@ rest wait for a later visit — one tour per audience, never one tour with branc
 different string re-runs it for everybody who finished the old one. Never rename the id for that —
 the id is what acknowledgements are stored against. Storage is `wire-core.tours.preferences`
 (default `session`; `database` plus the `wire-core::migrations` publish for "once, ever").
-Nothing runs below the mobile sheet breakpoint, by design. The framework registers no tour itself.
+Below the mobile sheet breakpoint the panel docks to the bottom and the page scrolls each element
+above it; what a phone hides (the sidebar drawer) is skipped and not counted. `TourStep::on('orders')`
+puts a step on another page of the same zone — "Next" navigates there and the tour carries on; a step
+whose page's route (`can:` middleware, via core's `AuthorizesUrls`) refuses this person is skipped. A tour
+left halfway reopens at the step reached (stored per `since()`; cleared by finish, skip and replay). The
+framework registers no tour itself.
 
 ### JavaScript assets
 

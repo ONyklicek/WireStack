@@ -106,6 +106,40 @@ with AND, in the order you wrote them.
 This works for `admin-nav-item` because its view writes `data-resource` next to
 the hook. Narrow only by attributes that sit on the same element as the hook.
 
+## On Another Page
+
+`on()` puts a step on another page of the same zone, named by the resource key
+and the page the panel routes it under:
+
+```php
+TourStep::make('table-search')
+    ->on('orders')                 // the orders list — the page defaults to 'index'
+    ->heading('Every list works like this');
+
+TourStep::make('form-actions')->on('orders', 'create');
+```
+
+When the step before it is finished, the browser navigates to that page with the
+tour in the query string, and the tour carries on at this step. "Back" from it
+goes to the step before, on whatever page that one is. The address comes from the same
+owner every other page link does, in the zone the tour is running in, so a step
+never leads out of its zone.
+
+A step whose page is not routed in that zone is skipped like a missing element,
+and so is one whose page this person may not open. That is asked of the page's
+route: the `can:` middleware `wire-panels` writes from a page's `permission()`
+and its zone's, put to the Gate. Somebody without access to the orders list
+gets a tour one step shorter, not a 403. A step whose element the other page does not render is found out only on
+arrival: the tour moves on to the next step there, and if there is none, it
+stops without being recorded. The progress
+counter is worked out once, on the page the tour started on, and carried along,
+so it does not change halfway through.
+
+Keep a tour that spans pages short, because every page change is a full
+navigation. Somebody who leaves it on another page by clicking elsewhere meets
+it again on the page it starts on, at the last step before the one they left,
+so "Next" takes them back (see [Tour](tours.md#how-it-works), left halfway).
+
 ## Extended Example
 
 A first-run tour whose steps follow the page from left to right, including one
@@ -165,11 +199,15 @@ TourStep::make(string $anchor)             // an element-hook name; throws if it
 ->text(?string $text)                      // the body, plain text — default none
 ->placement(string $placement)             // 'top'|'right'|'bottom'|'left', optionally '-start'|'-end' — default 'bottom'
 ->where(string $attribute, string $value)  // narrow by data-<attribute>="<value>"; the name must be hook-shaped
+->on(string $resource, string $page = 'index') // put the step on another page of the same zone — default the tour's own page // [tl! focus]
 ->getAnchor(): string
 ->getHeading(): ?string
 ->getText(): ?string
 ->getPlacement(): string
 ->getSelector(): string                    // the CSS selector the browser resolves, narrowing included
+->getResource(): ?string                   // the resource key from on(), or null
+->getPage(): ?string                       // the page from on(), or null
+->isElsewhere(): bool                      // whether on() was called
 ```
 
 ## Related

@@ -1,4 +1,5 @@
-{{-- The invisible half of a tour: the one round trip it makes.
+{{-- The invisible half of a tour: the round trips it makes — how far somebody
+     got, each time a step is shown, and that they are done with it.
 
      Separate from the chrome beside it, and not merely for tidiness. The chrome
      is wrapped in `wire:ignore` so a morph cannot strip the inline positioning
@@ -16,5 +17,6 @@
      only the tour that was already rendered here. --}}
 <div
     x-data
+    x-on:wire-tour:reached.window="$event.detail.id === @js($tourId) && $wire.reach($event.detail.step)"
     x-on:wire-tour:done.window="$event.detail.id === @js($tourId) && $wire.acknowledge()"
 ></div>

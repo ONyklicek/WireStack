@@ -52,6 +52,11 @@ final class TourStep
     /** @var array<string, string> */
     private array $attributes = [];
 
+    /** The page this step is on when it is not the tour's own; see {@see on()}. */
+    private ?string $resource = null;
+
+    private ?string $page = null;
+
     private function __construct(private readonly string $anchor) {}
 
     /**
@@ -118,6 +123,45 @@ final class TourStep
         $this->attributes[$attribute] = $value;
 
         return $this;
+    }
+
+    /**
+     * Put this step on another page of the same zone.
+     *
+     * A walkthrough of a screen usually runs out of screen: the dashboard says
+     * "orders are over here", and the next useful thing to point at is on the
+     * orders page. A step declared `on('orders')` is shown there — "Next" on the
+     * step before it navigates, and the tour carries on where it left off.
+     *
+     * Named by the registered key and page, the same pair the menu and the
+     * router use, so the URL comes from the one owner that knows it
+     * (`ResolvesPageUrls`) and moves when the routes move. A step with no
+     * `on()` is on the page the tour started from.
+     */
+    public function on(string $resource, string $page = 'index'): self
+    {
+        $this->resource = $resource;
+        $this->page = $page;
+
+        return $this;
+    }
+
+    /** The registered key of the page this step is on, or null for the tour's own. */
+    public function getResource(): ?string
+    {
+        return $this->resource;
+    }
+
+    /** The page this step is on, or null for the tour's own. */
+    public function getPage(): ?string
+    {
+        return $this->page;
+    }
+
+    /** Whether this step lives on a page other than the one the tour started from. */
+    public function isElsewhere(): bool
+    {
+        return $this->resource !== null;
     }
 
     public function getAnchor(): string

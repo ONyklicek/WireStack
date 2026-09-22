@@ -41,6 +41,8 @@ you, so the lines above are for an application setting one up by hand.
 | `WIRE_FORMS_UPLOAD_DISK` | `public` | Forms file upload |
 | `WIRE_MOBILE_SHEET` | `true` | Core mobile bottom-sheets |
 | `WIRE_MOBILE_BREAKPOINT` | `sm` | Core mobile sheet breakpoint |
+| `WIRE_TOURS_DRIVER` | `session` | Where a signed-in user's tour progress and finished tours are kept |
+| `WIRE_TOURS_GUEST_DRIVER` | `session` | The same, for a guest |
 | `WIRE_AUTH_CODE_LOGIN` | `false` | Signing in with a mailed code, no password |
 | `WIRE_AUTH_CODE_SECOND_FACTOR` | `false` | A mailed code after a correct password |
 | `WIRE_AUTH_CODE_VERIFY_EMAIL` | `false` | Confirming an address by code |
@@ -248,6 +250,31 @@ Action::make('edit')->form([...])->slideOverOnMobile()->mobileBreakpoint('md');
 Priority: per-component (`->sheetOnMobile()` / `->mobileBreakpoint()`) > searchable-auto-floating > global
 config. Searchable selects default to floating so the search box stays usable. Sheets add safe-area
 padding, a drag-to-dismiss grabber and a focus trap automatically.
+
+### Tours
+
+Where a [tour](../core/tours.md) keeps what it remembers per person: the tours
+they finished or skipped, and the step they reached in one they left halfway.
+It is the preference store with its own default, `session` rather than `null`,
+because a tour on a store that forgets would interrupt the same person on every
+page load.
+
+```php
+'tours' => [
+    'preferences' => [
+        'default' => env('WIRE_TOURS_DRIVER', 'session'),        // signed-in users
+        'guest' => env('WIRE_TOURS_GUEST_DRIVER', 'session'),    // guests
+        'drivers' => [
+            'null' => NullPreferenceDriver::class,
+            'session' => SessionPreferenceDriver::class,
+            'database' => DatabasePreferenceDriver::class,       // "once, ever" — needs the migration
+        ],
+    ],
+],
+```
+
+A tour's panel docks to the bottom of the screen below the `mobile.breakpoint`
+above. See [Tour → Remembering](../core/tours.md#remembering).
 
 ## Forms
 

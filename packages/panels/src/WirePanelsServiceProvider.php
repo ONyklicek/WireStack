@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
@@ -17,6 +18,7 @@ use NyonCode\WirePanels\Install\RegisterResourceRoutes;
 use NyonCode\WirePanels\Routing\ConfiguredRoutes;
 use NyonCode\WirePanels\Routing\RegisteredPageUrls;
 use NyonCode\WirePanels\Routing\ResourceRoutes;
+use NyonCode\WirePanels\Routing\RouteAccess;
 
 /**
  * The application owner layer.
@@ -49,6 +51,10 @@ class WirePanelsServiceProvider extends PackageServiceProvider
                 // Core asks "where does this key live?" and answers null until
                 // something owns routing. This package does, so it answers.
                 $this->app->bind(ResolvesPageUrls::class, RegisteredPageUrls::class);
+
+                // And who may open them: the `can:` middleware this package
+                // writes onto those routes, asked of the Gate.
+                $this->app->bind(AuthorizesUrls::class, RouteAccess::class);
 
                 // And core calls this once the registries are full, which is the
                 // only moment auto-registration can read a complete catalogue.

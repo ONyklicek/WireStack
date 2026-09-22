@@ -55,11 +55,20 @@ comparison covers both cases:
 Nothing compares version numbers as numbers, and nothing reads a package
 version. To show a tour again to everybody, change `since()`.
 
-**Where it runs.** Deciding and recording happen on the server. Everything in
-between happens in the browser, in Alpine, with no request per step. The panel
-is positioned by the Floating UI helper that `@wireStackScripts` already puts on
-every page, so this feature adds no JavaScript bundle of its own. Finishing or
-skipping makes exactly one Livewire request, to record it.
+**Where it runs.** Deciding and recording happen on the server. Moving between
+steps happens in the browser, in Alpine. The panel is positioned by the
+Floating UI helper that `@wireStackScripts` already puts on every page, so this
+feature adds no JavaScript bundle of its own. Two things make a Livewire
+request: each newly shown step, to record how far this person got, and
+finishing or skipping, to record that they are done.
+
+**Left halfway.** Somebody who leaves a tour by clicking elsewhere, without
+finishing or skipping it, meets it again on their next visit to a page it
+starts on, at the step they left it on. If that step is on another page, the
+tour opens at the last step before it on this page, so "Next" leads back to
+it. The step is stored against the tour's `since()` value, so after a new
+version the tour starts from the beginning. Finishing, skipping and replaying
+all clear it.
 
 **Where it is stored.** Under the `tours` key of the per-user preference store,
 using its own driver setting, `wire-core.tours.preferences.default`. **That
@@ -84,12 +93,20 @@ session. For "once, ever", switch it to `database` and run the migration (see
   the person will actually see. An element that is rendered but hidden, such as
   a dropdown that has not been opened, counts as missing. A tour that loses all
   of its steps this way does not start.
-- **Nothing runs on a phone.** Below the sheet breakpoint (`wire-core.mobile.breakpoint`,
-  `sm` by default, which means narrower than 640px) no tour starts, and one that
-  is running ends if the window is made narrower than that. There, the sidebar
-  is a drawer and the toolbar has collapsed, so the elements the steps point at
-  are not on screen. Somebody whose first visit is on a phone has not seen the
-  tour, so it waits for them on a wider screen.
+- **On a phone the panel docks to the bottom.** Below 640px it stops floating
+  beside the element and sits across the bottom of the screen, while the
+  highlight ring still marks the element. Each step scrolls its element into the
+  room between the top bar and the panel. What a phone hides — the sidebar is a
+  drawer there — is skipped like any hidden element, so a phone can count fewer
+  steps than a desktop. The panel is re-placed when the window crosses 640px
+  either way.
+- **A step on another page navigates there.** A step made with
+  [`on()`](tour-step.md#on-another-page) belongs to another page of the same
+  zone, and is skipped for somebody that page's route does not let in. "Next" navigates there and the tour carries on; "Back" from it comes
+  back. The page and step travel in the query string (`wire-tour`,
+  `wire-tour-step`), which the browser removes once the tour has picked them up.
+  The server accepts it only for a tour this person has not finished, in the
+  zone it was declared for, at a step that really is on that page.
 - **It needs the shell's layout.** The tour is drawn by `wire-admin`'s layout.
   If you render your own layout instead, see [Your own layout](#your-own-layout).
 
@@ -189,6 +206,11 @@ runs while the layout renders the page, only for a tour whose zone, resource
 and page already matched, and never during a Livewire request. It can run more
 than once per page, because the replay entry asks the same question, so keep it
 cheap.
+
+These say where a tour **starts**. A step can still lead elsewhere in the same
+zone with [`on()`](tour-step.md#on-another-page). The page it lands on does not
+have to match the tour's constraints, because the tour is carried there rather
+than chosen there.
 
 ## What's New After an Upgrade
 

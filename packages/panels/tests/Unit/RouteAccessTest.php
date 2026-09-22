@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
 use NyonCode\WirePanels\Routing\ResourceRoutes;
@@ -91,6 +92,16 @@ it('answers for a URL by the route behind it, and lets one it does not route thr
 
     expect(app(RouteAccess::class)->allowsUrl(url('/closed'), raUser()))->toBeFalse()
         ->and(app(RouteAccess::class)->allowsUrl('https://status.example.test/', raUser()))->toBeTrue();
+});
+
+it('is the answer core gets when it asks whether a URL may be opened', function () {
+    // A core surface — a tour carrying on to another page — asks through the
+    // contract and never names this package; this is what it is handed.
+    Gate::define('nobody', fn (): bool => false);
+    Route::middleware('can:nobody')->get('shut', fn () => 'no');
+
+    expect(app(AuthorizesUrls::class))->toBeInstanceOf(RouteAccess::class)
+        ->and(app(AuthorizesUrls::class)->allowsUrl(url('/shut'), raUser()))->toBeFalse();
 });
 
 it('routes only the pages asked for when a resource is registered with a list of them', function () {

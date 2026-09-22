@@ -666,7 +666,22 @@ surface's obligation, verified by `composer boost:check-docs`.
   across three independent axes has no obvious ordering — is a zone constraint
   narrower than a permission one? — so it would be a rule nobody could predict
   from the outside. An integer is a rule an author can read off the page.
-- **Nothing runs on a phone.** Below the sheet breakpoint (639.98 px, the number
+- **~~Nothing runs on a phone.~~ Revised: a phone docks the panel.** What
+  follows was the first decision, kept because its reasoning is what the
+  revision answers. The panel now docks to the bottom of the screen below the
+  breakpoint, the highlight ring stays on the element, and every step scrolls
+  its element into the room between the top bar and the panel, so a phone gets
+  a tour that points rather than a stack of captions. What a phone does not show
+  — the sidebar drawer — is skipped by the ordinary missing-element rule, and
+  the counter says so. The same change let a step live on another page
+  (`TourStep::on()`), carried there in the query string and resumed only for an
+  unfinished tour, in its own zone, at a step that is really on that page; a
+  step whose page's route refuses the person (`AuthorizesUrls`, answered by
+  panels' `RouteAccess`) gets no address and is skipped. Each step shown is
+  recorded too, so a tour left halfway reopens where it was left — which
+  revises "seen is only ever written on finish or skip" below: *seen* still
+  is, and *reached* is a separate, version-stamped entry those two clear. The
+  first decision read: below the sheet breakpoint (639.98 px, the number
   the rest of the stack already uses) no tour starts, and one already running
   ends if the viewport crosses down. `floatingAnchor`'s `sheetOnMobile` would
   have made the panel a bottom sheet, but a sheet cannot point at anything — and

@@ -383,6 +383,16 @@ is the other half of that seam: `wire-core` calls it once the registries are ful
 which is the only moment [config-declared routes](#registering-them-from-config-instead)
 can read a complete catalogue.
 
+`AuthorizesUrls` is the question after "where": may this person open that URL.
+`wire-panels` answers it with `RouteAccess`, which puts the route's `can:`
+middleware (a page's `permission()`, a zone's group) to the Gate. Without a
+package that routes, the answer is yes. A [tour](../core/tour-step.md#on-another-page)
+asks it before leading somebody to another page, so a step never ends in a 403.
+
+```php
+app(AuthorizesUrls::class)->allowsUrl(string $url, ?Authenticatable $user): bool
+```
+
 ## Related
 
 - [Pages](pages.md) — the components these routes reach

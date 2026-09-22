@@ -17,6 +17,15 @@ use NyonCode\WireCore\Foundation\Preferences\PreferenceManager;
  *
  *     ['getting-started' => '2.2', 'sales-orders' => '1']
  *
+ * Beside it, under `reached`, the step somebody got to in a tour they have not
+ * finished, stamped with the version it was reached in:
+ *
+ *     ['reached' => ['getting-started' => ['since' => '2.2', 'step' => 3]]]
+ *
+ * so that leaving a walkthrough halfway — clicking into the page it is showing
+ * off, which is what a good tour invites — does not start it over next time.
+ * Finishing, skipping and forgetting all clear it.
+ *
  * ## Why this is a preference and not a table of its own
  *
  * Because `Foundation\Preferences` is already "a per-user JSON bag keyed by a
@@ -50,6 +59,9 @@ final class TourLedger
     public const SURFACE = 'tours';
 
     public const CONFIG_PREFIX = 'wire-core.tours.preferences';
+
+    /** The key the unfinished tours' progress lives under, inside the same bag. */
+    public const REACHED = 'reached';
 
     public function __construct(private readonly ?PreferenceDriver $driver = null) {}
 
@@ -87,6 +99,37 @@ final class TourLedger
         $this->write($user, fn (array $seen): array => [
             ...$seen,
             $tour->getId() => $tour->getVersion(),
+        ], forgetProgressOf: $tour);
+    }
+
+    /**
+     * The step this user reached in this version of a tour they have not
+     * finished, or null.
+     *
+     * Null for a step reached in an older version: the author changed the tour,
+     * and a step number means nothing across that — the step that was fourth may
+     * be gone, or be about something else now.
+     */
+    public function reached(Tour $tour, ?Authenticatable $user): ?int
+    {
+        $reached = $this->reachedIn($this->driver($user)->load(self::SURFACE, $user))[$tour->getId()] ?? null;
+
+        return $reached !== null && $reached['since'] === $tour->getVersion() ? $reached['step'] : null;
+    }
+
+    /** Record the step this user has got to in a tour they are still walking. */
+    public function reach(Tour $tour, ?Authenticatable $user, int $step): void
+    {
+        $driver = $this->driver($user);
+
+        $bag = $driver->load(self::SURFACE, $user);
+
+        $driver->save(self::SURFACE, $user, [
+            ...$bag,
+            self::REACHED => [
+                ...$this->reachedIn($bag),
+                $tour->getId() => ['since' => $tour->getVersion(), 'step' => $step],
+            ],
         ]);
     }
 
@@ -103,7 +146,7 @@ final class TourLedger
             unset($seen[$tour->getId()]);
 
             return $seen;
-        });
+        }, forgetProgressOf: $tour);
     }
 
     /**
@@ -113,18 +156,52 @@ final class TourLedger
      * than this surface writes, and a save built from a stale read would put
      * back whatever another surface stored in between.
      *
+     * Both callers are done with the tour's progress too — somebody who
+     * finished has nowhere left to resume, and a replay starts from the top — so
+     * it is dropped in the same save rather than a second one.
+     *
      * @param  callable(array<string, string>): array<string, string>  $change
      */
-    private function write(?Authenticatable $user, callable $change): void
+    private function write(?Authenticatable $user, callable $change, Tour $forgetProgressOf): void
     {
         $driver = $this->driver($user);
 
         $bag = $driver->load(self::SURFACE, $user);
 
+        $reached = $this->reachedIn($bag);
+        unset($reached[$forgetProgressOf->getId()]);
+
         $driver->save(self::SURFACE, $user, [
             ...$bag,
             self::SURFACE => $change($this->versionsIn($bag)),
+            self::REACHED => $reached,
         ]);
+    }
+
+    /**
+     * The progress map inside a loaded bag, with anything unusable dropped —
+     * for the reason {@see versionsIn()} gives.
+     *
+     * @param  array<string, mixed>  $bag
+     * @return array<string, array{since: string, step: int}>
+     */
+    private function reachedIn(array $bag): array
+    {
+        $reached = $bag[self::REACHED] ?? [];
+
+        if (! is_array($reached)) {
+            return [];
+        }
+
+        $valid = [];
+
+        foreach ($reached as $id => $entry) {
+            if (is_string($id) && is_array($entry) && is_scalar($entry['since'] ?? null) && is_int($entry['step'] ?? null) && $entry['step'] >= 0) {
+                $valid[$id] = ['since' => (string) $entry['since'], 'step' => $entry['step']];
+            }
+        }
+
+        return $valid;
     }
 
     /**

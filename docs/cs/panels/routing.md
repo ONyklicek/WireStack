@@ -377,6 +377,16 @@ je druhá půlka toho seamu: `wire-core` ho zavolá ve chvíli, kdy jsou registr
 což je jediný okamžik, kdy [routy z configu](#registrace-z-configu-misto-route-souboru)
 můžou přečíst kompletní katalog.
 
+`AuthorizesUrls` je otázka po „kde": smí tento člověk tu URL otevřít.
+`wire-panels` na ni odpovídá `RouteAccess`, který položí `can:` middlewaru routy
+(`permission()` stránky, skupinu zóny) Gate. Bez balíčku, který routuje, je
+odpověď ano. [Průvodce](../core/tour-step.md#na-jine-strance) se na ni ptá, než
+někoho dovede na jinou stránku, takže krok nikdy neskončí na 403.
+
+```php
+app(AuthorizesUrls::class)->allowsUrl(string $url, ?Authenticatable $user): bool
+```
+
 ## Související
 
 - [Stránky](pages.md) — komponenty, na které tyhle routy vedou

@@ -208,6 +208,61 @@ final class Tour
      * middle of being built. Registration is the first moment the definition is
      * finished and therefore the first moment it can be judged.
      */
+    /**
+     * Whether a step belongs on the page being rendered.
+     *
+     * A step with `on()` belongs on the page it names. One without belongs on
+     * the tour's own pages — wherever the tour itself matches — which is every
+     * step there was before a tour could span pages, so a tour declared the old
+     * way answers exactly as it did.
+     */
+    public function stepIsHere(TourStep $step, ?string $zone, ?string $resource, ?string $page): bool
+    {
+        if (! $step->isElsewhere()) {
+            return $this->matchesLocation($zone, $resource, $page);
+        }
+
+        return $this->constraintAllows($this->zones, $zone)
+            && $step->getResource() === $resource
+            && $step->getPage() === $page;
+    }
+
+    /**
+     * Whether this tour may carry on, on the page being rendered, at a step.
+     *
+     * What a page the tour navigated to asks: the zone still has to be one the
+     * tour runs in — a tour does not leave its zone — and the step asked for has
+     * to be one that lives here. Anything else is a link somebody edited, and
+     * answers no.
+     */
+    public function continuesAt(int $index, ?string $zone, ?string $resource, ?string $page): bool
+    {
+        $step = $this->steps[$index] ?? null;
+
+        return $step instanceof TourStep
+            && $this->constraintAllows($this->zones, $zone)
+            && $this->stepIsHere($step, $zone, $resource, $page)
+            && $this->isVisible();
+    }
+
+    /**
+     * The page the tour starts on, as `[key, page]`, or null when it does not
+     * name one.
+     *
+     * What a step on another page needs to lead back: going *back* from the
+     * first step there returns to the last step here. A tour constrained by
+     * nothing narrower than a zone has no single page to return to, and simply
+     * does not offer the way back.
+     *
+     * @return array{0: string, 1: string}|null
+     */
+    public function home(): ?array
+    {
+        $resource = $this->resources[0] ?? null;
+
+        return $resource === null ? null : [$resource, $this->pages[0] ?? 'index'];
+    }
+
     public function assertUsable(): void
     {
         if ($this->steps === []) {

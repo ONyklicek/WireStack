@@ -69,6 +69,33 @@ final class TourState
     }
 
     /**
+     * The tour a page was navigated to in order to carry on, or null.
+     *
+     * A tour spanning pages hands the next page its id and the step it reached,
+     * and this is where that is taken at its word only as far as it is true:
+     * the tour has to exist, still be unfinished for this person, and have that
+     * step on *this* page in a zone it runs in. A link somebody edited, a tour
+     * finished in another tab, a step that moved — each answers null, and the
+     * page renders as though nothing had been asked.
+     */
+    public function resuming(
+        string $id,
+        int $index,
+        ?string $zone,
+        ?string $resource,
+        ?string $page,
+        ?Authenticatable $user,
+    ): ?Tour {
+        $tour = $this->tours->get($id);
+
+        if ($tour === null || $this->ledger->hasSeen($tour, $user)) {
+            return null;
+        }
+
+        return $tour->continuesAt($index, $zone, $resource, $page) ? $tour : null;
+    }
+
+    /**
      * The tour that claims this screen whether or not it has been acknowledged.
      *
      * What a "replay" affordance needs, and the reason it is a second method
@@ -120,6 +147,38 @@ final class TourState
         }
 
         $this->ledger->acknowledge($tour, $user);
+    }
+
+    /**
+     * The step this person had reached in an unfinished tour, or null.
+     *
+     * Zero is null too: a tour left on its first step starts where it would
+     * have started anyway, and the browser has one fewer case to settle.
+     */
+    public function reached(Tour $tour, ?Authenticatable $user): ?int
+    {
+        $step = $this->ledger->reached($tour, $user);
+
+        return $step !== null && $step > 0 && $step < count($tour->getSteps()) ? $step : null;
+    }
+
+    /**
+     * Record the step this person has got to in the tour with this id.
+     *
+     * The step comes from the browser, so it is bounded to the tour's steps and
+     * otherwise ignored. The worst a forged one can do is choose where this
+     * person's own tour reopens. A tour already finished is left alone: a late
+     * request from the last step must not reopen what "Finish" just closed.
+     */
+    public function reach(string $tourId, int $step, ?Authenticatable $user): void
+    {
+        $tour = $this->tours->get($tourId);
+
+        if ($tour === null || $step < 0 || $step >= count($tour->getSteps()) || $this->ledger->hasSeen($tour, $user)) {
+            return;
+        }
+
+        $this->ledger->reach($tour, $user, $step);
     }
 
     /**
