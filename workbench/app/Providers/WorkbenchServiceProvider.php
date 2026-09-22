@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Workbench\App\Providers;
 
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -18,6 +19,7 @@ use NyonCode\WireCore\Tours\Tour;
 use NyonCode\WireCore\Tours\Tours;
 use NyonCode\WireCore\Tours\TourStep;
 use NyonCode\WireModuleSettings\Support\SettingsRegistry;
+use Throwable;
 use Workbench\App\Actions\Fortify\CreateNewUser;
 use Workbench\App\Actions\Fortify\ResetUserPassword;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
@@ -215,6 +217,7 @@ class WorkbenchServiceProvider extends ServiceProvider
         // shows the old one.
         config()->set('livewire.component_layout', 'components.layouts.wire');
 
+        $this->bootDatabaseSessions();
         $this->bootTours();
 
         // Read at render, so `boot()` is early enough for this one.
@@ -398,5 +401,26 @@ class WorkbenchServiceProvider extends ServiceProvider
                         ->placement('bottom-start'),
                 ]),
         );
+    }
+
+    /**
+     * Keep sessions in the database, the way Laravel has since 11 — and the way
+     * an application has to for the profile's browser-sessions card to list
+     * anything, since no other driver records whose a session is.
+     *
+     * Guarded by the table rather than set outright: a workbench database built
+     * before this migration would otherwise fail on every request, and a preview
+     * server that 500s wholesale is the hardest kind of stale skeleton to read.
+     * Falling back means the card shows its own explanation instead.
+     */
+    protected function bootDatabaseSessions(): void
+    {
+        try {
+            if (Schema::hasTable('sessions')) {
+                config()->set('session.driver', 'database');
+            }
+        } catch (Throwable) {
+            // No database yet (a build step, a fresh clone): leave the default.
+        }
     }
 }

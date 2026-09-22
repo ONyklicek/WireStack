@@ -90,4 +90,16 @@ return [
     'passkey_failed' => 'Nepovedlo se. Zkuste to znovu, nebo použijte heslo.',
     'password_confirmation_required' => 'Z bezpečnostních důvodů před změnou nebo zobrazením těchto nastavení potvrďte své heslo.',
     'password_confirmation_link' => 'Potvrdit heslo',
+
+    // Relace prohlížeče — kde je účet přihlášený.
+    'browser_sessions' => 'Relace prohlížeče',
+    'browser_sessions_hint' => 'Správa a odhlášení aktivních relací v jiných prohlížečích a zařízeních.',
+    'browser_sessions_explain' => 'V případě potřeby se můžete odhlásit ze všech ostatních relací prohlížeče na všech svých zařízeních. Pokud máte podezření, že byl váš účet zneužit, změňte také heslo.',
+    'browser_sessions_unlisted' => 'Seznam relací vyžaduje databázový ovladač relací.',
+    'browser_sessions_unknown' => 'Neznámé',
+    'browser_sessions_this_device' => 'Toto zařízení',
+    'browser_sessions_last_active' => 'Naposledy aktivní :time',
+    'browser_sessions_logout' => 'Odhlásit ostatní relace prohlížeče',
+    'browser_sessions_confirm' => 'Zadejte heslo pro potvrzení, že se chcete odhlásit z ostatních relací prohlížeče na všech svých zařízeních.',
+    'browser_sessions_logged_out' => 'Ostatní relace prohlížeče byly odhlášeny.',
 ];

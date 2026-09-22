@@ -117,6 +117,7 @@ současné heslo nemá. V tom je celý rozdíl.
     'password' => true,
     'two_factor' => true,
     'passkeys' => true,
+    'browser_sessions' => true,  // seznam potřebuje databázový ovladač session
     'delete_account' => false,   // ve výchozím stavu vypnuté — viz níž
     'menu_item' => true,         // odkaz na profil v uživatelském menu shellu
 ],
@@ -548,6 +549,7 @@ ne“* není zpráva, kterou by stránka profilu měla kdy vyprodukovat.
 | Změna hesla | `UpdatePassword` | `profile.password` |
 | Dvoufázové ověření | `TwoFactorAuthentication` | `profile.two_factor` **a** je nainstalovaný Fortify |
 | Passkeys | `PasskeyManagement` | `profile.passkeys` **a** Fortify routuje `Features::passkeys()` |
+| Relace prohlížeče | `BrowserSessionManagement` | `profile.browser_sessions` |
 | Smazání účtu | `DeleteAccount` | `profile.delete_account` — **ve výchozím stavu vypnuté** |
 
 **Záznamem je přihlášený uživatel, nikdy parametr routy.** Stránka profilu, která
@@ -563,6 +565,15 @@ porovnává kopii hashe hesla v session s tou uživatelovou při každém reques
 takže změna, která tu kopii neposune, vás odhlásí hned při dalším kliknutí — a to
 právě v aplikacích, které ten middleware zapínají, tedy v těch, kterým na tom
 záleží nejvíc. Karta ji posune.
+
+**Odhlášení všude jinde jsou dva mechanismy.** Karta relací prohlížeče ukáže, kde
+je účet přihlášený — platformu, prohlížeč, IP adresu, poslední aktivitu — a po
+zadání hesla ukončí každou relaci kromě té aktuální. Smazání ostatních řádků
+z tabulky `sessions` je ukončí na ovladači `database`, jediném, který si pamatuje,
+komu relace patří; Laravelí `logoutOtherDevices()` přehashuje heslo, což je ukončí
+na libovolném ovladači, kde běží `AuthenticateSession`. Karta dělá obojí a kopii
+hashe v aktuální relaci posune, aby zůstala přihlášená. Na jiném ovladači řekne,
+že seznam není k dispozici, a tlačítko funguje dál.
 
 **Smazání vlastního účtu je ve výchozím stavu vypnuté**, a je to rozhodnutí, ne
 opatrnost: v administraci je člověk na téhle stránce většinou zaměstnanec

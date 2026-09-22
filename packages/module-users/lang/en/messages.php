@@ -90,4 +90,16 @@ return [
     'passkey_failed' => 'That did not work. Try again, or use your password.',
     'password_confirmation_required' => 'For your security, confirm your password before changing or revealing these settings.',
     'password_confirmation_link' => 'Confirm your password',
+
+    // Browser sessions — where the account is signed in.
+    'browser_sessions' => 'Browser sessions',
+    'browser_sessions_hint' => 'Manage and log out your active sessions on other browsers and devices.',
+    'browser_sessions_explain' => 'If necessary, you may log out of all of your other browser sessions across all of your devices. If you think your account has been compromised, you should also update your password.',
+    'browser_sessions_unlisted' => 'The list of sessions needs the database session driver.',
+    'browser_sessions_unknown' => 'Unknown',
+    'browser_sessions_this_device' => 'This device',
+    'browser_sessions_last_active' => 'Last active :time',
+    'browser_sessions_logout' => 'Log out other browser sessions',
+    'browser_sessions_confirm' => 'Enter your password to confirm you would like to log out of your other browser sessions across all of your devices.',
+    'browser_sessions_logged_out' => 'Your other browser sessions have been logged out.',
 ];

@@ -12,6 +12,7 @@ use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireForms\Components\Field;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Forms\Form;
+use NyonCode\WireModuleUsers\Livewire\BrowserSessionManagement;
 use NyonCode\WireModuleUsers\Livewire\DeleteAccount;
 use NyonCode\WireModuleUsers\Livewire\PasskeyManagement;
 use NyonCode\WireModuleUsers\Livewire\TwoFactorAuthentication;
@@ -180,6 +181,10 @@ class EditProfile extends EditPage
 
         if (config('wire-module-users.profile.passkeys', true) && Passkeys::enabled()) {
             $cards[] = PasskeyManagement::class;
+        }
+
+        if (config('wire-module-users.profile.browser_sessions', true)) {
+            $cards[] = BrowserSessionManagement::class;
         }
 
         if (config('wire-module-users.profile.delete_account', false)) {

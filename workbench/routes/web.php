@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use NyonCode\WireCore\Core\Resources\Workspace;
 use Workbench\App\Http\Middleware\SignInDemoUser;
@@ -438,6 +439,41 @@ Route::get('previews/auth/two-factor', function (Request $request): RedirectResp
 
     return redirect()->route('two-factor.login');
 })->name('workbench.two-factor-preview');
+
+// A second device for the profile's browser-sessions card, reachable.
+//
+// The card lists rows of the `sessions` table, and a preview server browsed by
+// one headless Chrome has exactly one of them — so the interesting half, a
+// session that is *not* this one and a button that ends it, never appears. This
+// puts one there and hands over to the real page, the way the auth previews
+// above put a half-signed-in session in place before handing over to Fortify's.
+//
+// Re-runnable: the row is replaced rather than added to, so a driver that runs
+// twice sees two sessions both times.
+Route::get('previews/profile/browser-sessions', function (): RedirectResponse {
+    $user = Auth::user();
+
+    abort_if($user === null, 404, 'Nobody signed in to own a second session.');
+
+    $table = (string) config('session.table', 'sessions');
+
+    // Everything but the session asking, so a preview server that has been
+    // browsed before shows two rows rather than a pile of abandoned ones.
+    DB::table($table)
+        ->where('user_id', $user->getAuthIdentifier())
+        ->where('id', '!=', session()->getId())
+        ->delete();
+    DB::table($table)->insert([
+        'id' => 'preview-other-device',
+        'user_id' => $user->getAuthIdentifier(),
+        'ip_address' => '203.0.113.7',
+        'user_agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+        'payload' => '',
+        'last_activity' => now()->subMinutes(42)->getTimestamp(),
+    ]);
+
+    return redirect('/previews/routed/users/profile');
+})->middleware(SignInDemoUser::class)->name('workbench.browser-sessions-preview');
 
 // The route helper, on the real thing. Four Route::get() lines per resource used
 // to be written by hand here; a resource now declares its pages and this

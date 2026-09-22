@@ -66,6 +66,13 @@ All notable changes to the Wire ecosystem will be documented in this file.
   `TourProgressTest` (9), two more in `TourAcrossPagesTest`, one in panels' `RouteAccessTest`, and seven new
   checks in `verify-demo-tour`.
 
+- **A browser-sessions card on the profile page.** `BrowserSessionManagement` lists where the
+  account is signed in — platform, browser, IP address, last activity — and, after the password,
+  ends every other session: it deletes their rows on the `database` session driver and calls
+  `logoutOtherDevices()` so `AuthenticateSession` ends them on any driver, keeping the current one
+  signed in. On by default (`wire-module-users.profile.browser_sessions`); the list needs the
+  `database` driver, the button does not. See `docs/modules/users.md` § Your Own Account.
+
 - **A dashboard can keep more than one arrangement, each under a name.** The preference store has carried a
   `view` dimension since it was a table's — a saved view is the same bag under a name — and the dashboard
   side passed it through and never drove it: `widgetLayoutView()` was a seam with nothing on the other end,

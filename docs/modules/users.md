@@ -119,6 +119,7 @@ difference.
     'password' => true,
     'two_factor' => true,
     'passkeys' => true,
+    'browser_sessions' => true,  // the list needs the database session driver
     'delete_account' => false,   // off by default — see below
     'menu_item' => true,         // the profile link in the shell's user menu
 ],
@@ -560,6 +561,7 @@ password did not"* is not a message a profile page should ever produce.
 | Update password | `UpdatePassword` | `profile.password` |
 | Two-factor authentication | `TwoFactorAuthentication` | `profile.two_factor` **and** Fortify is installed |
 | Passkeys | `PasskeyManagement` | `profile.passkeys` **and** Fortify routes `Features::passkeys()` |
+| Browser sessions | `BrowserSessionManagement` | `profile.browser_sessions` |
 | Delete account | `DeleteAccount` | `profile.delete_account` — **off by default** |
 
 **The record is the signed-in user, never a route parameter.** A profile page
@@ -576,6 +578,16 @@ middleware compares the session's copy of the password hash against the user's o
 every request, so a change that does not move that copy along signs you out on
 the very next click — on exactly the applications that enable the middleware,
 which are the ones that care most. The card moves it.
+
+**Signing out everywhere else is two mechanisms.** The browser-sessions card lists
+where the account is signed in — platform, browser, IP address, last activity — and
+ends every session but the current one after asking for the password. Deleting the
+other rows from the `sessions` table ends them on the `database` driver, the only
+one that records whose a session is; Laravel's `logoutOtherDevices()` rehashes the
+password, which ends them on any driver where `AuthenticateSession` runs. The card
+does both, and moves the current session's copy of the hash along so it stays
+signed in. On another driver it says the list is unavailable and the button still
+works.
 
 **Deleting your own account is off by default**, and that is a decision rather
 than caution: in an admin panel the person on this page is usually staff, and an
