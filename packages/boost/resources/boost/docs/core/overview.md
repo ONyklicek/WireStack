@@ -27,7 +27,7 @@ by review:
 | --- | --- | --- |
 | **L0** | `Foundation/`, `Exceptions/` — traits, contracts, enums, value objects | nothing above it |
 | **L1** | `Core/` — the headless engine: plugins, resources identity, registries | L0 |
-| **L2** | `Actions/`, `Modals/`, `Notifications/`, `Widgets/`, `Infolists/`, `Panels/`, `Audit/` | L0 and L1 — never each other |
+| **L2** | `Actions/`, `Modals/`, `Notifications/`, `Widgets/`, `Infolists/`, `Panels/`, `Audit/`, `Tours/` | L0 and L1 — never each other |
 
 Two surfaces in L2 that need to talk do it through a contract in
 `Foundation/Contracts/`, not by importing each other. That is what keeps an
@@ -53,6 +53,7 @@ theirs through the same code, so the vocabulary is worth learning once.
 | [Editable Panels](record-panels.md) | The same shape, with entries that write straight back to the record |
 | [Schema](schema/overview.md) | The layout vocabulary forms, infolists and modals all consume |
 | [Global Search](global-search.md) | The ⌘K palette over everything registered |
+| [Tours](tours.md) | First-run and what's-new walkthroughs, scoped by zone and permission |
 | [Audit Log](audit.md) | The trail of model changes, recorded for you |
 | [Plugins](plugins/index.md) | The extension point for applications and companion packages |
 

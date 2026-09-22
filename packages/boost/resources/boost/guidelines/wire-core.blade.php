@@ -344,6 +344,32 @@ application-specific columns on top and accepts `*` (`'billing_*'`). Do not add 
 to it "to be safe"; do add your own (`salary`, `national_id`). The entries are rendered old-value
 beside new-value on the audit module's screen, so anything you leave in is on a page.
 
+### Tours
+
+A `Tour` is a guided walkthrough registered from a service provider's `boot()`:
+`$this->app->make(Tours::class)->register(Tour::make('id')->steps([TourStep::make('table-search')->text('…')]))`.
+It runs by itself on the first full page render of a screen it claims, and the browser does the rest;
+finishing and skipping both record it, in one Livewire request.
+
+**A step names an element hook, never a selector.** `TourStep::make()` takes a `data-wire` name
+(`admin-sidebar`, `table-search`, `admin-nav-item`) and throws on anything that is not kebab-case.
+Find real names with `grep -rho 'data-wire="[a-z-]*"' vendor/nyoncode | sort -u` — do not invent one,
+because a well-formed name nothing renders is silently **skipped**, exactly like an element that is
+hidden (an unopened dropdown, the bulk bar before a selection). Narrow one element among many with
+`->where('resource', 'orders')` (matches `data-resource="orders"`).
+
+**Scope with what already exists.** Who: `->permission('sales.*')`, `->authorize()`,
+`->authorizeUsing()`, `->visible()` — the shared authorization, through `Gate`, wildcards included.
+Do not add a role check of your own. Where: `->zones('sales')` (`->zones(null)` is the unzoned app),
+`->resource('orders')`, `->page('index')`. Several matching tours: the lowest `->sort()` runs, the
+rest wait for a later visit — one tour per audience, never one tour with branches.
+
+**Show it again by changing `->since()`.** The stored value is compared for inequality, so any
+different string re-runs it for everybody who finished the old one. Never rename the id for that —
+the id is what acknowledgements are stored against. Storage is `wire-core.tours.preferences`
+(default `session`; `database` plus the `wire-core::migrations` publish for "once, ever").
+Nothing runs below the mobile sheet breakpoint, by design. The framework registers no tour itself.
+
 ### JavaScript assets
 
 Put `@@wireStackScripts` once in the layout `<head>`. It emits every registered wireStack Alpine
