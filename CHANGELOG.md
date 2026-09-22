@@ -2,6 +2,21 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.1.1]
+
+### Fixed
+
+- **A table inside another table's page keeps its own rows.** Livewire 4 applies an island fragment by
+  searching the component's DOM for the marker with the fragment's token, and the search does not stop
+  at a nested component (`renderIsland()` passes no `hasReachedBoundary`; `walkElements()` honours
+  `stop()` only for the element that matched). The token names the compiled island view, so every table
+  on a page shares `data-region` and `action-modals` — and a sort or page size on the outer table landed
+  in the nested one: the outer grid did not change, the inner one showed its rows and threw
+  `isSelected is not defined`. wire-core now hides the same-token markers of nested components for the
+  length of one message (`support/island-scope.js`). Present in every Livewire 4.x up to 4.4.6; remove the
+  workaround once Livewire scopes `renderIsland()` to the component
+  ([livewire/livewire#10737](https://github.com/livewire/livewire/pull/10737)).
+
 ## [2.1.0]
 
 Includes everything listed under [2.0.1], which was not released on its own.
