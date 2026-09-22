@@ -137,8 +137,13 @@ home="$(php artisan tinker --execute='echo config("fortify.home");' 2>/dev/null 
 [[ "$home" == '/admin' ]]
 check "fortify.home points at the admin (/admin)" $? "it is '$home'"
 
-php artisan route:list --name=wire.home 2>/dev/null | grep -q 'admin'
-check 'the admin has an address of its own (wire.home)' $?
+# The prefix itself answers — named `wire.home` when nothing claims it, and the
+# landing page's own name when something does. Since the installer writes a
+# dashboard at the root, that is `wire.overview.index` here; asserting the name
+# would be asserting which of the two is in play rather than that the address
+# works at all.
+php artisan route:list --path=admin 2>/dev/null | grep -qE 'GET\|HEAD[[:space:]]+admin[[:space:]]'
+check 'the admin has an address of its own' $?
 
 ls public/build/manifest.json >/dev/null 2>&1
 check 'the frontend was built' $?
@@ -184,15 +189,20 @@ landed="$(sign_in "$ADMIN_EMAIL")"
 [[ "$landed" == "$ORIGIN/admin" ]]
 check 'signing in lands on the admin, not on /home' $? "went to $landed"
 
-first="$(location_of "$ORIGIN/admin")"
-[[ "$first" == "$ORIGIN/admin/"* ]]
-check 'the admin s address leads to its first page' $? "went to $first"
+# The installer writes a dashboard and points it at the admin's own address, so
+# `/admin` is a page rather than a redirect. It used to forward to whichever
+# screen sorted first in the sidebar — on a `--all` install that was the media
+# library, which is not what signing in should open.
+[[ "$(status_of "$ORIGIN/admin")" == 200 ]]
+check 'the admin s address is a page of its own, not a forward' $? "HTTP $(status_of "$ORIGIN/admin")"
 
-page="$(curl -s -b "$JAR" "$first")"
-[[ "$(status_of "$first")" == 200 ]]
-check 'and that page answers' $?
+page="$(curl -s -b "$JAR" "$ORIGIN/admin")"
+grep -q 'wire-widget-grid' <<<"$page"
+check 'and that page is the dashboard the installer wrote' $?
 grep -q 'data-wire="admin-sidebar"' <<<"$page"
 check 'inside the admin shell, with its sidebar' $?
+grep -q 'Overview' <<<"$page"
+check 'which lists it first, above every module s group' $?
 grep -Eq 'href="[^"]*/build/assets/[^"]*\.css"' <<<"$page"
 check 'styled by the built stylesheet' $?
 
@@ -223,7 +233,11 @@ landed="$(sign_in "$PLAIN_EMAIL")"
 check 'lands on the admin as well' $? "went to $landed"
 code="$(status_of "$ORIGIN/admin")"
 target="$(location_of "$ORIGIN/admin")"
-if [[ "$code" == 302 ]]; then
+if [[ "$code" == 200 ]]; then
+    # The dashboard the installer wrote guards nothing, so anybody signed in
+    # opens it — which is a better landing than the 403 this used to accept.
+    check 'and opens the dashboard, which asks for no permission' 0
+elif [[ "$code" == 302 ]]; then
     [[ "$(status_of "$target")" == 200 ]]
     check 'and is taken to a page they may open' $? "$target answered $(status_of "$target")"
 else

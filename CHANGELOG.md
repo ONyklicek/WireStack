@@ -96,6 +96,21 @@ All notable changes to the Wire ecosystem will be documented in this file.
   dashboard and asserts `Route::wireResources()` registers a URL for it — the assertion that fails against
   the old stub.
 
+- **`wire-admin:install` writes the dashboard the admin opens on.** An admin needs a page of its own to
+  land on and there was none: the shell's own address forwarded to whichever screen sorted first in the
+  sidebar. Measured on a clean `laravel new` → `wire:install --all` → sign in: zero dashboards registered
+  and `/admin` redirected to `/admin/media`, the media library, because its navigation group happens to
+  sort above the others; an application with no modules at all had nothing to forward to and answered 404
+  at its own address. The installer now scaffolds `app/Dashboards/OverviewDashboard.php` and
+  `app/Livewire/Dashboards/ShowOverview.php` and registers the first in `config/wire-core.php`. Both files
+  are the application's — a dashboard counts *your* rows, so the shipped one counts what every Laravel
+  application has (users, verified, new this week) and says to replace it. It claims the panel's own path
+  (`routePrefix()` of `ConfiguresRoutes::ROOT`), so `/admin` **is** the dashboard rather than a redirect,
+  and its menu entry names no group, which puts it above every group a module declares. Nothing is
+  overwritten, both halves are idempotent, and a config that is not published yet leaves the pair on disk
+  with the line to add. The clean-install gate asserts the landing is a widget grid rather than a forward,
+  in the shell and in a browser.
+
 ### Fixed
 
 - **Every select surface renders through one partial.** The native `<select>` was written four times

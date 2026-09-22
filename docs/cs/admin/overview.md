@@ -30,8 +30,51 @@ Instalátor udělá tři věci, které `composer require` udělat nemůže, a u 
 | Přidá jeden řádek `@source` do `resources/css/app.css` | Aby Tailwind zkompiloval třídy, které views shellu používají |
 | Přidá tamtéž `@plugin "@tailwindcss/forms"` a `@custom-variant dark (&:where(.dark, .dark *))` a do `package.json` balíček `@tailwindcss/forms` | Pole formulářů berou rámeček a odsazení z forms pluginu a přepínač motivu funguje přes třídu `dark` — bez nich má čerstvá aplikace přihlašovací pole jako holé čáry a noční režim nedělá nic. Řádek, který už tam je, zůstane, jak je |
 | Publikuje překlady | Těch pár řetězců, které sidebar ukazuje |
+| Zapíše `app/Dashboards/OverviewDashboard.php` a `app/Livewire/Dashboards/ShowOverview.php` a ten první zaregistruje v `config/wire-core.php` | Někam přistát — viz níž |
 
 Nic se nepřepisuje, takže druhý běh je bezpečný: layout, který jste upravili, zůstane a nahlásí se jako už existující. Aplikace, která si providery drží jinde - Laravel 10 nebo vlastní konvence - dostane řádek k doplnění místo tichého úspěchu a zbytek instalace doběhne.
+
+### Někam přistát
+
+Admin potřebuje vlastní stránku, na které se otevře, a dokud ji instalátor
+nezačal psát, žádná nebyla: adresa shellu přesměrovávala na tu obrazovku, která
+se v sidebaru řadila první — což u `wire:install --all` znamenalo, že vás
+přihlášení otevřelo v **knihovně médií**. Aplikace bez modulů neměla kam
+přesměrovat vůbec a na vlastní adrese odpovídala 404.
+
+Instalátor proto zapíše dashboard — dva malé soubory, oba vaše:
+
+```php
+// app/Dashboards/OverviewDashboard.php
+class OverviewDashboard extends Dashboard implements ConfiguresRoutes, ProvidesNavigation, ProvidesPages
+{
+    public function widgets(): array   // [tl! focus:start]
+    {
+        return [
+            StatsOverviewWidget::make()->key('accounts')->heading('Accounts')->stats([
+                Stat::make('Users', (string) User::query()->count())->icon('users')->color('primary'),
+            ]),
+        ];
+    }   // [tl! focus:end]
+
+    public static function pages(): array { return ['index' => ShowOverview::class]; }
+
+    public static function routePrefix(): ?string { return self::ROOT; }   // [tl! focus]
+}
+```
+
+Počítá uživatele, protože to je jediná tabulka, kterou má každá aplikace.
+Nahraďte to — přesně proto je to kód aplikace a ne něco, co dodává balíček. Co
+tam můžete dát, vypisují [Widgety](../core/widgets/index.md).
+
+`routePrefix()` s hodnotou `ConfiguresRoutes::ROOT` nepřidává žádný segment URI,
+takže stránka přistane na vlastní cestě panelu: `/admin` **je** ten dashboard, ne
+přesměrování jinam. Tu cestu si smí nárokovat jen jedna věc, takže vlastní
+landing page tohle nahradí, ne doplní. Smažte ty tři routovací metody a je z toho
+běžná stránka na `/admin/overview` — a adresa shellu se vrátí k přesměrovávání.
+
+Jeho položka v menu nemá skupinu, což ji staví nad každou skupinu, kterou
+deklarují moduly: položka bez skupiny se vykreslí první a bez nadpisu.
 
 ### Jeden řádek, který Tailwind potřebuje
 

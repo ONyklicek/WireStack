@@ -179,3 +179,51 @@ it('finishes with a warning when there is no provider list to edit', function ()
         expect(is_file(base_path('resources/views/components/layouts/admin.blade.php')))->toBeTrue();
     });
 });
+
+it('writes the dashboard the admin opens on, and registers it in the published config', function () {
+    // The step that makes signing in land somewhere. Both halves are asked on
+    // every run and report separately, so this runs the command twice: once to
+    // write and register the pair, once to be told it is already there.
+    icRestoring([
+        base_path('config/wire-core.php'),
+        base_path('resources/views/components/layouts/admin.blade.php'),
+        base_path('bootstrap/providers.php'),
+        app_path('Providers/WireAdminServiceProvider.php'),
+        app_path('Dashboards/OverviewDashboard.php'),
+        app_path('Livewire/Dashboards/ShowOverview.php'),
+    ], function () {
+        // The workbench has a dashboard of its own, and Testbench copies it into
+        // the skeleton — so this starts from the shape a clean application has.
+        foreach ([app_path('Dashboards/OverviewDashboard.php'), app_path('Livewire/Dashboards/ShowOverview.php')] as $path) {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+
+        // The published config, with the `//` an empty list carries.
+        file_put_contents(base_path('config/wire-core.php'), <<<'PHP'
+        <?php
+
+        return [
+            'dashboards' => [
+                //
+            ],
+        ];
+        PHP);
+
+        $this->artisan('wire-admin:install')
+            ->expectsOutputToContain('Wrote app/Dashboards/OverviewDashboard.php')
+            ->expectsOutputToContain('Registered App\Dashboards\OverviewDashboard')
+            ->assertSuccessful();
+
+        expect(file_get_contents(base_path('config/wire-core.php')))
+            ->toContain('\App\Dashboards\OverviewDashboard::class,')
+            ->and(file_get_contents(app_path('Livewire/Dashboards/ShowOverview.php')))
+            ->toContain('OverviewDashboard::class');
+
+        $this->artisan('wire-admin:install')
+            ->expectsOutputToContain('app/Dashboards/OverviewDashboard.php already exists')
+            ->expectsOutputToContain('App\Dashboards\OverviewDashboard is already registered')
+            ->assertSuccessful();
+    });
+});

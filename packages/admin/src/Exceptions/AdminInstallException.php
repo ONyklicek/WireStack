@@ -34,6 +34,22 @@ final class AdminInstallException extends RuntimeException implements WireExcept
         );
     }
 
+    /**
+     * The same failure for the files that are not the layout.
+     *
+     * Named separately because the advice differs: the layout has one stub and
+     * one address, while these are written in pairs and land wherever the caller
+     * asked for them — so the message points at the file it was writing rather
+     * than at a stub path that would be the wrong one.
+     */
+    public static function stubDirectoryNotWritable(string $directory, string $target): self
+    {
+        return new self(
+            "[{$target}] could not be written: [{$directory}] does not exist and cannot be created. ".
+            'Create it and run the installer again.'
+        );
+    }
+
     public static function stylesheetMissing(string $file, string $line): self
     {
         return new self(
@@ -68,6 +84,26 @@ final class AdminInstallException extends RuntimeException implements WireExcept
             "[{$file}] is not the list Laravel generates — it does not end in a returned array — ".
             "so [{$provider}] was not added to it rather than being written into something ".
             'this installer does not understand. Add it by hand.'
+        );
+    }
+
+    public static function dashboardConfigMissing(string $file, string $dashboard): self
+    {
+        return new self(
+            "[{$file}] does not exist, so [{$dashboard}] was not registered. ".
+            'Publish it with `php artisan vendor:publish --tag=wire-core::config` and add '.
+            "[\\{$dashboard}::class] to its `dashboards` list. Until it is there the dashboard ".
+            'is a class nothing reads: no menu entry, no route, and the admin goes back to '.
+            'forwarding its own address to whichever page sorts first.'
+        );
+    }
+
+    public static function dashboardConfigNotEditable(string $file, string $dashboard): self
+    {
+        return new self(
+            "[{$file}] has no `dashboards` list this installer could read, so [{$dashboard}] ".
+            'was not written into something it does not understand. Add '.
+            "[\\{$dashboard}::class] to that list by hand."
         );
     }
 

@@ -284,6 +284,113 @@ final readonly class InstallScaffold
     }
 
     /**
+     * The dashboard an admin opens on, written into the application.
+     *
+     * The gap it closes is one only a clean install shows: the shell's own
+     * address has nothing of its own to show, so it forwards to whichever screen
+     * sorts first in the sidebar. Measured on a fresh `wire:install --all` —
+     * zero dashboards registered, and the admin's address led to `/admin/media`,
+     * the media library, because its navigation group happens to sort above the
+     * others. An application with no modules at all has nothing to forward to
+     * and answers 404 at its own address.
+     *
+     * **Two files, both the application's.** A dashboard counts the
+     * application's own rows, so no package can ship one that means anything;
+     * what a package can do is write the shape and get out of the way. The pair
+     * is the same split a resource makes — the declaration, and the page that
+     * mounts it.
+     *
+     * Never overwrites, and the *dashboard* is what it looks for: an application
+     * that deleted the generated page and mounted the dashboard its own way must
+     * not have the page written back underneath it.
+     *
+     * @throws AdminInstallException When a directory cannot be created.
+     */
+    public function dashboard(
+        string $dashboardPath = 'app/Dashboards/OverviewDashboard.php',
+        string $pagePath = 'app/Livewire/Dashboards/ShowOverview.php',
+    ): InstallOutcome {
+        $dashboard = $this->basePath.'/'.ltrim($dashboardPath, '/');
+
+        if (is_file($dashboard)) {
+            return InstallOutcome::AlreadyPresent;
+        }
+
+        $this->writeStub($dashboard, 'OverviewDashboard.stub');
+        $this->writeStub($this->basePath.'/'.ltrim($pagePath, '/'), 'ShowOverview.stub');
+
+        return InstallOutcome::Created;
+    }
+
+    /**
+     * Put that dashboard in the list the framework reads.
+     *
+     * `config/wire-core.php` rather than a line in a provider, because that file
+     * is where the documentation says a dashboard is registered and where an
+     * application will look for it later. `wire-core:install` publishes it, and
+     * `wire:install` runs that before this.
+     *
+     * Anchored on the `dashboards` key and the bracket that closes it, matching
+     * on the class name — so an application that reformatted the file, or
+     * registered this dashboard by hand, is left alone.
+     *
+     * @throws AdminInstallException When the config is not published, or is not a shape this understands.
+     */
+    public function registerDashboard(
+        string $dashboard = 'App\\Dashboards\\OverviewDashboard',
+        string $relativePath = 'config/wire-core.php',
+    ): InstallOutcome {
+        $file = $this->basePath.'/'.ltrim($relativePath, '/');
+
+        if (! is_file($file)) {
+            throw AdminInstallException::dashboardConfigMissing($file, $dashboard);
+        }
+
+        $contents = (string) file_get_contents($file);
+
+        if (str_contains($contents, $dashboard.'::class')) {
+            return InstallOutcome::AlreadyPresent;
+        }
+
+        // Anchored to the start of a line, which is what tells the real key from
+        // the one in the documentation block above it: the published config
+        // explains itself with `|   'dashboards' => [ … ]` inside a comment, and
+        // a pattern that only looked for the key wrote the entry in there — a
+        // file that still parses, a list that stays empty, and an installer that
+        // reported success. Found on a clean install, not by a test.
+        if (preg_match('/^(?<indent>[ \t]*)([\'"])dashboards\2\s*=>\s*\[(?<body>[^\]]*)\]/m', $contents, $match) !== 1) {
+            throw AdminInstallException::dashboardConfigNotEditable($file, $dashboard);
+        }
+
+        // The `//` placeholder is what an empty published list holds. Kept, it
+        // would sit above the entry and read as commented-out code.
+        $body = trim($match['body']) === '//' ? '' : rtrim($match['body'], " \t\n\r");
+        $indent = $match['indent'];
+
+        $replacement = $indent."'dashboards' => [".$body."\n".$indent.'    \\'.$dashboard."::class,\n".$indent.']';
+
+        file_put_contents($file, str_replace($match[0], $replacement, $contents));
+
+        return InstallOutcome::Created;
+    }
+
+    /**
+     * Write one stub into the application, creating its directory.
+     *
+     * @throws AdminInstallException When the directory cannot be created.
+     */
+    private function writeStub(string $target, string $stub): void
+    {
+        $directory = dirname($target);
+
+        if (! is_dir($directory) && ! @mkdir($directory, 0755, true) && ! is_dir($directory)) {
+            throw AdminInstallException::stubDirectoryNotWritable($directory, $target);
+        }
+
+        file_put_contents($target, (string) file_get_contents(__DIR__.'/../../stubs/'.$stub));
+    }
+
+    /**
      * Add the published provider to `bootstrap/providers.php`.
      *
      * That file is Laravel 11's provider list and the reason this is not left to

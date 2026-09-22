@@ -31,8 +31,52 @@ The installer does the three things `composer require` cannot, and says what it 
 | Adds one `@source` line to `resources/css/app.css` | So Tailwind compiles the classes the shell's views use |
 | Adds `@plugin "@tailwindcss/forms"` and `@custom-variant dark (&:where(.dark, .dark *))` there, and `@tailwindcss/forms` to `package.json` | The field views take their border and padding from the forms plugin, and the theme switch works through the `dark` class — without these a fresh application's sign-in fields are bare lines and night mode does nothing. Either line already there is left as it is |
 | Publishes translations | The handful of strings the sidebar shows |
+| Writes `app/Dashboards/OverviewDashboard.php` and `app/Livewire/Dashboards/ShowOverview.php`, and registers the first in `config/wire-core.php` | Somewhere to land — see below |
 
 Nothing is overwritten, so a second run is safe: a layout you have edited is left alone and reported as already there. An application that keeps its providers somewhere else - Laravel 10, or its own convention - gets the line to add rather than a silent success, and the rest of the install still completes.
+
+### Somewhere To Land
+
+An admin needs a page of its own to open on, and until the installer wrote one
+there was none: the shell's address forwarded to whichever screen sorted first
+in the sidebar, which on a `wire:install --all` meant signing in opened the
+**media library**. An application with no modules at all had nothing to forward
+to and answered 404 at its own address.
+
+So the installer writes a dashboard — two small files, both yours:
+
+```php
+// app/Dashboards/OverviewDashboard.php
+class OverviewDashboard extends Dashboard implements ConfiguresRoutes, ProvidesNavigation, ProvidesPages
+{
+    public function widgets(): array   // [tl! focus:start]
+    {
+        return [
+            StatsOverviewWidget::make()->key('accounts')->heading('Accounts')->stats([
+                Stat::make('Users', (string) User::query()->count())->icon('users')->color('primary'),
+            ]),
+        ];
+    }   // [tl! focus:end]
+
+    public static function pages(): array { return ['index' => ShowOverview::class]; }
+
+    public static function routePrefix(): ?string { return self::ROOT; }   // [tl! focus]
+}
+```
+
+It counts users because that is the one table every application has. Replace it
+— that is the point of it being application code rather than something the
+package ships. [Widgets](../core/widgets/index.md) lists what you can put there.
+
+`routePrefix()` of `ConfiguresRoutes::ROOT` adds no URI segment, so the page
+lands on the panel's own path: `/admin` **is** the dashboard, rather than a
+redirect to somewhere else. Only one thing may claim that path, so a landing
+page of your own replaces this rather than sitting beside it. Delete those three
+route methods and it becomes an ordinary page at `/admin/overview`, with the
+shell's address going back to forwarding.
+
+Its menu entry names no group, which is what puts it above every group a module
+declares — an ungrouped entry renders first and without a heading.
 
 ### The One Line Tailwind Needs
 

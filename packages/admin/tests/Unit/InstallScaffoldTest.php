@@ -435,3 +435,218 @@ it('reports a package.json it cannot read instead of writing into it', function 
         isRemove($base);
     }
 });
+
+// ─── The dashboard the admin lands on ────────────────────────────────────────
+
+/*
+ * Why the installer writes one at all: without a dashboard the shell's own
+ * address has nothing of its own to show, so it forwards to whichever screen
+ * sorts first in the sidebar. Measured on a fresh `wire:install --all` — zero
+ * dashboards registered, and the admin's address led to the media library.
+ */
+
+/**
+ * The published config, shaped the way wire-core actually publishes it.
+ *
+ * The comment block matters and is not decoration: the real file explains the
+ * key by writing it out — `|   'dashboards' => [ … ]` — and the first version of
+ * this installer matched *that* one. It wrote the entry inside the comment,
+ * where it parses fine, changes nothing and still reports success. A fixture
+ * without the block passed every assertion here while a clean install came out
+ * with an empty list.
+ */
+function isConfigWith(string $base, string $dashboards): void
+{
+    mkdir($base.'/config', 0755, true);
+    file_put_contents($base.'/config/wire-core.php', <<<PHP
+        <?php
+
+        return [
+            'resources' => [
+                //
+            ],
+
+            /*
+            |----------------------------------------------------------------
+            | Dashboards
+            |----------------------------------------------------------------
+            |
+            |   'dashboards' => [
+            |       App\Dashboards\SalesDashboard::class,
+            |   ],
+            |
+            */
+            'dashboards' => [
+        {$dashboards}
+            ],
+        ];
+        PHP);
+}
+
+it('writes a dashboard and the page that mounts it', function () {
+    $base = isBase();
+
+    try {
+        $outcome = (new InstallScaffold($base))->dashboard();
+
+        $dashboard = (string) file_get_contents($base.'/app/Dashboards/OverviewDashboard.php');
+        $page = (string) file_get_contents($base.'/app/Livewire/Dashboards/ShowOverview.php');
+
+        expect($outcome)->toBe(InstallOutcome::Created)
+            ->and($dashboard)->toContain('class OverviewDashboard extends Dashboard')
+            // The three that put it at the admin's own address rather than
+            // under it, which is what makes signing in open a dashboard.
+            ->and($dashboard)->toContain('return self::ROOT;')
+            ->and($dashboard)->toContain("'index' => ShowOverview::class")
+            ->and($dashboard)->toContain('ConfiguresRoutes')
+            // Ungrouped, so it renders above every group a module declares.
+            ->and($dashboard)->not->toContain('->group(')
+            ->and($page)->toContain('extends DashboardPage')
+            ->and($page)->toContain('OverviewDashboard::class');
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('leaves a dashboard somebody already has, page included', function () {
+    $base = isBase();
+
+    try {
+        mkdir($base.'/app/Dashboards', 0755, true);
+        file_put_contents($base.'/app/Dashboards/OverviewDashboard.php', '<?php // mine');
+
+        $outcome = (new InstallScaffold($base))->dashboard();
+
+        expect($outcome)->toBe(InstallOutcome::AlreadyPresent)
+            ->and(file_get_contents($base.'/app/Dashboards/OverviewDashboard.php'))->toBe('<?php // mine')
+            // And the page is not written back underneath an application that
+            // deleted it and mounts the dashboard its own way.
+            ->and(is_file($base.'/app/Livewire/Dashboards/ShowOverview.php'))->toBeFalse();
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('refuses when the dashboard directory cannot be made, and says which file', function () {
+    // `app/` present as a *file* is the shape that makes mkdir fail, the same
+    // one the layout step is checked with. The message names the file it was
+    // writing rather than the layout stub, which is the whole reason this does
+    // not share the layout's exception.
+    $base = isBase();
+
+    try {
+        file_put_contents($base.'/app', 'not a directory');
+
+        expect(fn () => (new InstallScaffold($base))->dashboard())
+            ->toThrow(AdminInstallException::class, 'OverviewDashboard.php] could not be written');
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('registers the dashboard in the published config, replacing the placeholder', function () {
+    $base = isBase();
+
+    try {
+        isConfigWith($base, '        //');
+
+        $outcome = (new InstallScaffold($base))->registerDashboard();
+        $config = (string) file_get_contents($base.'/config/wire-core.php');
+
+        expect($outcome)->toBe(InstallOutcome::Created)
+            ->and($config)->toContain('\App\Dashboards\OverviewDashboard::class,')
+            // The list it was not asked about is untouched, placeholder and all.
+            ->and($config)->toContain("'resources' => [");
+
+        // The `//` a published list carries would read as commented-out code
+        // once something sits under it, so the dashboards list loses it — and
+        // only that one.
+        preg_match("/'dashboards' => \[(.*?)\]/s", $config, $block);
+
+        expect($block[1])->not->toContain('//');
+
+        // And the file is still PHP that returns the list with the class in it.
+        $parsed = require $base.'/config/wire-core.php';
+
+        expect($parsed['dashboards'])->toBe(['App\Dashboards\OverviewDashboard']);
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('keeps a dashboard list somebody has already written in', function () {
+    $base = isBase();
+
+    try {
+        isConfigWith($base, '        \App\Dashboards\SalesDashboard::class,');
+
+        $outcome = (new InstallScaffold($base))->registerDashboard();
+        $parsed = require $base.'/config/wire-core.php';
+
+        expect($outcome)->toBe(InstallOutcome::Created)
+            ->and($parsed['dashboards'])->toBe([
+                'App\Dashboards\SalesDashboard',
+                'App\Dashboards\OverviewDashboard',
+            ]);
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('says so rather than registering twice', function () {
+    $base = isBase();
+
+    try {
+        isConfigWith($base, '        \App\Dashboards\OverviewDashboard::class,');
+
+        expect((new InstallScaffold($base))->registerDashboard())->toBe(InstallOutcome::AlreadyPresent);
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('reports an unpublished config instead of silently registering nothing', function () {
+    $base = isBase();
+
+    try {
+        expect(fn () => (new InstallScaffold($base))->registerDashboard())
+            ->toThrow(AdminInstallException::class, 'vendor:publish');
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('refuses a config with no dashboards list rather than mangling it', function () {
+    $base = isBase();
+
+    try {
+        mkdir($base.'/config', 0755, true);
+        file_put_contents($base.'/config/wire-core.php', "<?php\n\nreturn ['resources' => []];\n");
+
+        expect(fn () => (new InstallScaffold($base))->registerDashboard())
+            ->toThrow(AdminInstallException::class, 'by hand');
+    } finally {
+        isRemove($base);
+    }
+});
+
+it('writes into the list rather than into the comment that describes it', function () {
+    $base = isBase();
+
+    try {
+        isConfigWith($base, '        //');
+
+        (new InstallScaffold($base))->registerDashboard();
+
+        $config = (string) file_get_contents($base.'/config/wire-core.php');
+        $parsed = require $base.'/config/wire-core.php';
+
+        // What the first version did: the class landed between the `|` lines,
+        // the file still parsed, and the list stayed empty.
+        expect($parsed['dashboards'])->toBe(['App\Dashboards\OverviewDashboard'])
+            ->and($config)->toContain('|       App\Dashboards\SalesDashboard::class,')
+            ->and($config)->not->toContain('|       App\Dashboards\OverviewDashboard::class,');
+    } finally {
+        isRemove($base);
+    }
+});
