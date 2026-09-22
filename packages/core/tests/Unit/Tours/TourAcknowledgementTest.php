@@ -64,7 +64,7 @@ function aTour(string $id = 't', string $version = '1'): Tour
     return $tour;
 }
 
-function signedIn(int $id = 1): User
+function aSignedInUser(int $id = 1): User
 {
     $user = new class extends User {};
     $user->id = $id;
@@ -75,7 +75,7 @@ function signedIn(int $id = 1): User
 
 it('records the tour it was mounted with', function () {
     $tour = aTour('getting-started', '2.2');
-    $user = signedIn();
+    $user = aSignedInUser();
 
     Livewire::test(TourAcknowledgement::class, ['tourId' => 'getting-started'])
         ->call('acknowledge');
@@ -92,7 +92,7 @@ it('records the tour it was mounted with', function () {
 it('takes no id from the browser', function () {
     $mine = aTour('mine');
     $other = aTour('other');
-    $user = signedIn();
+    $user = aSignedInUser();
 
     Livewire::test(TourAcknowledgement::class, ['tourId' => 'mine'])
         ->call('acknowledge', 'other');
@@ -103,7 +103,7 @@ it('takes no id from the browser', function () {
 
 it('records the version that was current, so a bump shows the tour again', function () {
     aTour('t', '2.1');
-    $user = signedIn();
+    $user = aSignedInUser();
 
     Livewire::test(TourAcknowledgement::class, ['tourId' => 't'])->call('acknowledge');
 
@@ -127,7 +127,7 @@ it('does not throw for a guest, and remembers them for their session', function 
 });
 
 it('ignores an id the registry does not know', function () {
-    signedIn();
+    aSignedInUser();
 
     Livewire::test(TourAcknowledgement::class, ['tourId' => 'removed-last-release'])
         ->call('acknowledge')
@@ -149,7 +149,7 @@ it('offers a replay in the user menu', function () {
 });
 
 it('is not mounted at all on a screen no tour claims', function () {
-    signedIn();
+    aSignedInUser();
 
     // The view registered with PageChrome decides this, so an application with
     // no tours never pays for a Livewire component here — no snapshot, no
@@ -166,7 +166,7 @@ it('is not mounted at all on a screen no tour claims', function () {
  */
 it('offers the tour claiming this screen even once it has been acknowledged', function () {
     $tour = aTour();
-    $user = signedIn();
+    $user = aSignedInUser();
 
     app(TourLedger::class)->acknowledge($tour, $user);
 
@@ -178,7 +178,7 @@ it('offers the tour claiming this screen even once it has been acknowledged', fu
 
 it('forgets the tour, so the page runs it again', function () {
     $tour = aTour();
-    $user = signedIn();
+    $user = aSignedInUser();
 
     app(TourLedger::class)->acknowledge($tour, $user);
 
@@ -207,7 +207,7 @@ it('holds no address the browser could point somewhere else', function () {
     expect(array_values($public))->toBe(['tourId']);
 
     aTour();
-    signedIn();
+    aSignedInUser();
 
     Livewire::test(TourReplay::class, ['tourId' => 't'])->call('replay')->assertNoRedirect();
 });
