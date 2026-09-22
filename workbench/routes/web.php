@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use NyonCode\WireCore\Core\Resources\Workspace;
+use NyonCode\WireCore\Tours\TourLedger;
 use Workbench\App\Http\Middleware\SignInDemoUser;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
 use Workbench\App\Livewire\Previews\CorePreview;
@@ -30,6 +31,7 @@ use Workbench\App\Livewire\Resources\ListInvoices;
 use Workbench\App\Livewire\Resources\ListTasks;
 use Workbench\App\Livewire\Resources\ViewInvoice;
 use Workbench\App\Models\User as WorkbenchUser;
+use Workbench\App\Providers\WorkbenchServiceProvider;
 
 // One source of truth for the preview surface: every entry below registers its
 // own route *and* is listed on the /previews index. A new variant needs a line
@@ -519,6 +521,22 @@ foreach ($zoneMembership as $zone => $only) {
         Route::wireResources(only: $only);
     });
 }
+
+// The demo, from the top: the dashboard in the admin shell, with its tour.
+//
+// One address to hand to somebody. It turns the demo tour on (a cookie, so it
+// survives every navigation after this one — see WorkbenchServiceProvider::
+// bootTours()) and forgets that the tour was ever finished, because the demo user
+// is shared: without that, the second person to open the link would get a
+// dashboard and no walkthrough, and the link would look broken.
+//
+// Lands on `admin`, not `business`: the admin zone is the one with the full
+// sidebar, and the tour's first step points at the dashboard's entry in it.
+Route::get('/previews/demo', function (): RedirectResponse {
+    app(TourLedger::class)->forget(WorkbenchServiceProvider::demoTour(), Auth::user());
+
+    return redirect('/previews/zoned/admin')->withCookie(cookie()->forever('wire-demo-tour', '1'));
+})->name('workbench.demo');
 
 // The menu of both zones, side by side (ADR 0027 open question 2). One catalogue,
 // one set of entries, and the only difference is where each one points — which is
