@@ -11,8 +11,8 @@ use RuntimeException;
 /**
  * A route registration that cannot mean what it says.
  *
- * Two shapes: a resource asked to route pages it does not declare, and pages
- * asked to be registered twice.
+ * Three shapes: a resource asked to route pages it does not declare, pages
+ * asked to be registered twice, and a page and another route on one path.
  *
  * Loud rather than silent, and only on the explicit path: `Route::wireResource()`
  * names one resource, so being handed one with no pages is a mistake worth
@@ -56,6 +56,42 @@ final class ResourceRoutingException extends RuntimeException implements WireExc
     }
 
     /**
+     * A page would have taken a path another route already answers.
+     *
+     * The same failure {@see twoAtTheRoot()} refuses, at any path and against
+     * anybody's route: the page would replace that route and take its name, so
+     * whatever linked to it — a hand-written route the application still
+     * names, or another resource's page — would stop without a word.
+     */
+    public static function pathTaken(string $key, string $page, string $uri, ?string $holder): self
+    {
+        return new self(
+            "[{$key}] routes its [{$page}] page at `{$uri}`, where ".self::describe($holder).' already answers. '.
+            'Laravel keys routes by method and URI, so registering it would replace that route and take '.
+            'its name with it. Give the resource a routePrefix() of its own, leave it out of this group '.
+            'with only()/except(), or move the other route.'
+        );
+    }
+
+    /**
+     * A route registered after a page replaced it.
+     *
+     * Found once every route is loaded, because the route that did it came
+     * later in the application's route file than the page. Refused like the
+     * other order is: the page's route name is gone, so its menu entry renders
+     * and links nowhere.
+     */
+    public static function pathTakenLater(string $key, string $page, string $uri, ?string $holder): self
+    {
+        return new self(
+            "[{$key}] routed its [{$page}] page at `{$uri}`, and ".self::describe($holder).' registered '.
+            'there afterwards replaced it. Laravel keys routes by method and URI, so the page lost its '.
+            'route name and its menu entry links nowhere. Move the other route, or give the resource a '.
+            'routePrefix() of its own.'
+        );
+    }
+
+    /**
      * Both registration paths were used at once (ADR 0026 §5).
      *
      * Refused rather than resolved, for the reason a duplicate registry key is:
@@ -71,5 +107,10 @@ final class ResourceRoutingException extends RuntimeException implements WireExc
             'route name. Use one or the other: set `wire-panels.routes.enabled` to false to '.
             'keep the call in your route file, or delete the call to keep the config.'
         );
+    }
+
+    private static function describe(?string $route): string
+    {
+        return $route === null ? 'an unnamed route' : "the route [{$route}]";
     }
 }

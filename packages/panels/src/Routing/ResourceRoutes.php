@@ -133,19 +133,20 @@ final class ResourceRoutes
      * Checked against the routes registered so far, not only this call's: an
      * application that calls `wireResources()` twice in one group, or routed a
      * page of its own at the prefix, must not have that page replaced — Laravel
-     * keys routes by method and URI, and the later registration wins.
+     * keys routes by method and URI, and the later registration wins. A route
+     * the application registers at the prefix *after* this one wins the same
+     * way, and is left to: see {@see RouteClaims} for why the entry yields
+     * where a page refuses.
      */
     private static function entry(): ?Route
     {
         $uri = self::groupPrefix() === '' ? '/' : self::groupPrefix();
 
-        foreach (RouteFacade::getRoutes()->get('GET') as $existing) {
-            if ($existing->uri() === $uri && $existing->getDomain() === self::groupDomain()) {
-                return null;
-            }
-        }
-
-        return RouteFacade::get('', PanelEntry::class)->name('wire.home');
+        return app(RouteClaims::class)->entry(
+            $uri,
+            self::groupDomain(),
+            fn (): Route => RouteFacade::get('', PanelEntry::class)->name('wire.home'),
+        );
     }
 
     /**
@@ -209,6 +210,7 @@ final class ResourceRoutes
         $prefix = self::prefixFor($resource, $key);
         $domain = self::domainFor($resource);
         $shared = self::middlewareFor($resource);
+        $claims = app(RouteClaims::class);
 
         $routes = [];
 
@@ -233,9 +235,11 @@ final class ResourceRoutes
                 $registrar = $registrar->domain($domain);
             }
 
-            $routes[] = $registrar
+            // Through the claims, so the page never takes a path a route of the
+            // application's holds, and never loses its own to one without a word.
+            $routes[] = $claims->page($key, $name, fn (): Route => $registrar
                 ->get(trim($prefix.'/'.$uri, '/'), $page->component)
-                ->name("wire.{$key}.{$name}");
+                ->name("wire.{$key}.{$name}"));
         }
 
         return $routes;

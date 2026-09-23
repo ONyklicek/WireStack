@@ -77,6 +77,15 @@ is called.
 'archive' => RoutePage::make(ArchivedOrders::class),                          // a list page
 ```
 
+**A page never takes a path, and never loses one.** Laravel keys routes by method
+and URI, so a second route at a path does not shadow the first — it replaces it,
+name and all, without a word. A page is where its menu entry points, so neither
+side may do that: `wireResources()` refuses a page whose path a route already
+answers, and a route registered over a page further down the route file is
+refused once every route is loaded — at boot, and so at `route:cache` too, not on
+the first click. The same page routed twice over itself changes nothing and
+passes.
+
 ## Authorization, middleware and domains
 
 `RoutePage::permission()` lands on the route as Laravel's own `can:` middleware.
@@ -160,8 +169,8 @@ sort, then entries by theirs, hidden ones skipped), and skipping a page whose
 `can:` middleware the Gate would refuse, because a redirect into a 403 is a worse
 landing than none. Nothing to open is a 403; nothing registered at all is a 404.
 It is also the address `wire:install` points Fortify's `home` at, so signing in
-lands in the admin. A route the application already has at that path is never
-replaced.
+lands in the admin. A route the application has at that path wins, whether it
+comes before the group or after it: the entry is a convenience and steps aside.
 
 **The zone's landing page.** Claiming the address instead is one method — an
 empty prefix adds no segment, so that page's `index` lands on the group's own
@@ -188,7 +197,8 @@ would replace the first and take its route name with it, leaving a menu entry
 that looks routed and silently links nowhere.
 
 A zone that wants a fixed destination rather than the first page writes an
-ordinary redirect **before** the group, which the entry then leaves alone:
+ordinary redirect beside the group — before it or after it — which the entry
+then leaves alone:
 
 ```php
 Route::redirect('business', 'business/orders');

@@ -20,6 +20,7 @@ use NyonCode\WirePanels\Routing\ConfiguredRoutes;
 use NyonCode\WirePanels\Routing\RegisteredPageUrls;
 use NyonCode\WirePanels\Routing\ResourceRoutes;
 use NyonCode\WirePanels\Routing\RouteAccess;
+use NyonCode\WirePanels\Routing\RouteClaims;
 
 /**
  * The application owner layer.
@@ -49,6 +50,10 @@ class WirePanelsServiceProvider extends PackageServiceProvider
             ->registeredPackage(function (): void {
                 $this->registerRouteMacros();
 
+                // What the macros registered, so no page of theirs takes a
+                // route's path or loses its own to one — see RouteClaims.
+                $this->app->singleton(RouteClaims::class);
+
                 // Core asks "where does this key live?" and answers null until
                 // something owns routing. This package does, so it answers.
                 $this->app->bind(ResolvesPageUrls::class, RegisteredPageUrls::class);
@@ -68,6 +73,12 @@ class WirePanelsServiceProvider extends PackageServiceProvider
                 // screen. The prefix and the middleware are the application's to
                 // choose, so the step asks rather than guessing.
                 SetupRegistry::instance()->register(RegisterResourceRoutes::class);
+            })
+            ->bootedPackage(function (): void {
+                // Once every route is loaded: a route file registers its
+                // routes from a provider's booted callback, and the one that
+                // replaces a page may come after the page.
+                $this->app->booted(fn () => $this->app->make(RouteClaims::class)->verify());
             })
             ->hasConfig()
             ->hasViews()
