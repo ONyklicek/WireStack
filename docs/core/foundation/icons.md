@@ -235,6 +235,43 @@ app(IconManager::class)->registerIconSet(new LucideIconSet);           // throws
 > (`arrow-down-tray`), so there is no ambiguity. Use `default:name` to address the
 > base set explicitly.
 
+### The prefixes the packages already take
+
+Three sets are registered for you, by the packages that draw them. Each ships
+the glyphs Heroicons cannot answer for, in the format that one surface needs:
+
+| Prefix | Registered by | Glyphs | Format |
+|--------|---------------|--------|--------|
+| `wire` | wire-core | `wire:star`, `wire:star-outline` — the rating marks | 24×24 fill |
+| `forms` | wire-forms | the rich editor's toolbar, 20 of them: `forms:bold`, `forms:italic`, `forms:link`, … | 24×24 fill |
+| `table` | wire-table | `table:checkbox-check`, `table:checkbox-indeterminate` — the marks inside the table's own selection checkbox | 16×16 stroke |
+
+The format is why a glyph belongs to a set rather than to a pile: a set declares
+one viewBox and one set of stroke/fill attributes for everything in it, so the
+table's checkbox marks — authored at 16×16 and stroked, because they are drawn
+inside a 16 px bordered box and nothing else — cannot share a set with 24×24
+filled icons without one of the two rendering at the wrong weight. Bodies load
+on first use, so a page that draws none of a set's glyphs never reads its file.
+
+**Those three names are taken, and taking one back has an order to it.**
+Registering a set under a prefix that already has one replaces it silently,
+and the packages register theirs while booting — *after* the manager has read
+`icons.sets` from config, because that config is read when the manager is first
+built. So declaring `'table' => MyIconSet::class` in config does nothing: the
+package's own registration runs later and wins. Register from your own service
+provider's `boot()` instead, which runs after the packages':
+
+```php
+public function boot(): void
+{
+    app(IconManager::class)->registerIconSet(new MyTableIconSet, 'table'); // [tl! focus]
+}
+```
+
+To change one glyph rather than all of them, let your set answer for that name
+and delegate the rest to the package's — a set is an object, so wrapping one is
+ordinary composition.
+
 ### Swapping the default (unprefixed) set
 
 To make a different set the unprefixed base — e.g. ship Lucide as your primary

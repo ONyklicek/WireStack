@@ -59,6 +59,12 @@ final class RowRenderPlan
      * @param  string  $selectCheckIcon  Record-invariant chrome, resolved once —
      *                                   the card view echoes the string rather
      *                                   than re-entering the icon directive.
+     * @param  string  $selectIndeterminateIcon  The tick's partial-selection
+     *                                           sibling, resolved on the same
+     *                                           terms so the two states of one
+     *                                           checkbox are drawn at one weight.
+     *                                           Only the select-all boxes echo it;
+     *                                           a row is selected or it is not.
      * @param  string|null  $rowClassBinding  Null when no row state is dynamic.
      * @param  list<string>  $pageRecordKeys  the page's keys a selection may take
      * @param  array<string, string>  $selectionAnnouncements
@@ -66,6 +72,7 @@ final class RowRenderPlan
     private function __construct(
         public readonly bool $isSelectable,
         public readonly string $selectCheckIcon,
+        public readonly string $selectIndeterminateIcon,
         public readonly bool $hasSummaries,
         public readonly ?string $rowClassBinding,
         public readonly array $pageRecordKeys,
@@ -123,6 +130,7 @@ final class RowRenderPlan
         return new self(
             isSelectable: $isSelectable,
             selectCheckIcon: $isSelectable ? $table->getSelectionCheckIcon() : '',
+            selectIndeterminateIcon: $isSelectable ? $table->getSelectionIndeterminateIcon() : '',
             hasSummaries: $hasSummaries,
             rowClassBinding: $rowClassBinding,
             pageRecordKeys: $pageRecordKeys,

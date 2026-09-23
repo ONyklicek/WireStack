@@ -43,6 +43,7 @@ abstract class DashboardPage extends Component implements IdentifiesHookTarget
     // through Livewire's __call, at render time only.
     use WithWidgets {
         getWidgetColumns as private declaredWidgetColumns;
+        hasSavedWidgetLayouts as private declaredSavedLayouts;
     }
 
     /**
@@ -122,6 +123,34 @@ abstract class DashboardPage extends Component implements IdentifiesHookTarget
         }
 
         return $this->requireDashboard()->customisable() ? $dashboard::key() : null;
+    }
+
+    /**
+     * Whether the declared dashboard offers named layouts.
+     *
+     * Both halves asked, because a name without an arrangement to put under it
+     * is nothing: a dashboard that says `savedLayouts()` and not `customisable()`
+     * gets no switcher, the same answer {@see widgetLayoutKey()} gives.
+     *
+     * A page on the standalone path — its own `getWidgets()`, no declared
+     * dashboard — keeps the trait's default and says so itself by overriding
+     * this, exactly as it names {@see $layoutKey}.
+     */
+    public function hasSavedWidgetLayouts(): bool
+    {
+        $dashboard = static::$dashboard;
+
+        // Aliased, never `parent::`: the method comes from the trait, and the
+        // parent of this class is Livewire\Component, which has none — that
+        // compiles and then throws BadMethodCallException at render time. The
+        // same reason `getWidgetColumns()` is aliased above.
+        if ($dashboard === null || ! is_subclass_of($dashboard, Dashboard::class)) {
+            return $this->declaredSavedLayouts();
+        }
+
+        $instance = $this->requireDashboard();
+
+        return $instance->customisable() && $instance->savedLayouts();
     }
 
     /**

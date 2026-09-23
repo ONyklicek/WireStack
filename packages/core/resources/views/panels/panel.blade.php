@@ -1,18 +1,19 @@
 @php
+    use NyonCode\WireCore\Foundation\Support\ResponsiveGrid;
+
     /** @var array<int, mixed> $components */
     /** @var int $columns */
+
+    // The field ladder, from its one owner — see the note in
+    // schema/step.blade.php. Each entry is told it, so its own span is drawn
+    // against the columns this panel actually has at each width.
+    $ladder = ResponsiveGrid::fieldColumns($columns);
 @endphp
 
-<div @class([
-    'wire-panel grid gap-4',
-    'sm:grid-cols-1' => $columns === 1,
-    'sm:grid-cols-2' => $columns === 2,
-    'sm:grid-cols-2 md:grid-cols-3' => $columns === 3,
-    'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' => $columns === 4,
-])>
+<div class="wire-panel grid gap-4 {{ ResponsiveGrid::cols($ladder) }}">
     @foreach($components as $component)
         @if($component->isVisible())
-            {{ $component }}
+            {{ $component->inGridOf($ladder) }}
         @endif
     @endforeach
 </div>

@@ -670,3 +670,93 @@ test('per-component mobile breakpoint overrides the global default', function ()
 
     config(['wire-core.mobile.breakpoint' => 'sm']);
 });
+
+// ─── Native on mobile ────────────────────────────────────────────────────────
+
+test('nativeOnMobile() renders the combobox and a native twin split at the breakpoint', function () {
+    $html = renderSelect(Select::make('role')->label('Role')->options(['a' => 'A', 'b' => 'B'])->nativeOnMobile()->required());
+
+    expect($html)
+        ->toContain('class="relative max-sm:hidden"')
+        ->toContain('<div class="hidden max-sm:block">')
+        ->toContain('wireSearchableSelect(')
+        ->toContain('<select')
+        ->toContain('aria-label="Role"')
+        ->toContain('aria-required="true"');
+});
+
+test('nativeOnMobile() follows the field mobile breakpoint', function () {
+    expect(renderSelect(Select::make('role')->options(['a' => 'A'])->nativeOnMobile()->mobileBreakpoint('lg')))
+        ->toContain('class="relative max-lg:hidden"')
+        ->toContain('<div class="hidden max-lg:block">');
+});
+
+test('a phone keeps the combobox when the native select would lose a feature', function () {
+    $remote = Select::make('user')->getSearchResultsUsing(fn () => [])->nativeOnMobile();
+    $create = Select::make('user')->options(['a' => 'A'])->createOptionForm([TextInput::make('name')])->nativeOnMobile();
+    $edit = Select::make('user')->options(['a' => 'A'])->editOptionForm([TextInput::make('name')])->nativeOnMobile();
+    $plain = Select::make('user')->options(['a' => 'A'])->searchable()->nativeOnMobile();
+
+    expect($remote->isNativeOnMobile())->toBeFalse()
+        ->and($create->isNativeOnMobile())->toBeFalse()
+        ->and($edit->isNativeOnMobile())->toBeFalse()
+        // A client-side search is only a convenience; the native list has every option.
+        ->and($plain->isNativeOnMobile())->toBeTrue()
+        ->and(Select::make('tags')->options(['a' => 'A'])->multiple()->nativeOnMobile()->isNativeOnMobile())->toBeTrue();
+});
+
+test('the global mobile native config reaches a select that never chose', function () {
+    config(['wire-core.mobile.native' => true]);
+
+    expect(Select::make('role')->options(['a' => 'A'])->isNativeOnMobile())->toBeTrue()
+        ->and(Select::make('role')->options(['a' => 'A'])->native(false)->isNativeOnMobile())->toBeFalse();
+});
+
+test('disabled options reach the combobox, not only the native select', function () {
+    // Regression: disabledOptions() reached the native <select> only, and the
+    // combobox — the default — let a disabled option be picked.
+    $html = renderSelect(Select::make('role')->options(['a' => 'A', 'b' => 'B'])->disabledOptions(['b']));
+
+    expect($html)
+        ->toContain('disabledValues: ')
+        ->toContain(':disabled="isOptionDisabled(value)"');
+});
+
+test('rendered options resolve a label only for a selection the list does not carry', function () {
+    $calls = 0;
+    $field = Select::make('role')
+        ->options(['a' => 'A', 'b' => 'B'])
+        ->getOptionLabelUsing(function ($value) use (&$calls) {
+            $calls++;
+
+            return 'Label '.$value;
+        });
+
+    expect($field->getRenderedOptions('a'))->toBe(['a' => 'A', 'b' => 'B'])
+        ->and($field->getRenderedOptions(null))->toBe(['a' => 'A', 'b' => 'B'])
+        ->and($field->getRenderedOptions(''))->toBe(['a' => 'A', 'b' => 'B'])
+        ->and($calls)->toBe(0)
+        // The list order is kept; the missing selection is appended, not prepended.
+        ->and($field->getRenderedOptions('z'))->toBe(['a' => 'A', 'b' => 'B', 'z' => 'Label z'])
+        ->and($calls)->toBe(1);
+});
+
+test('rendered options of a multiple select append only the missing values', function () {
+    $field = Select::make('roles')
+        ->multiple()
+        ->options(['a' => 'A'])
+        ->getOptionLabelsUsing(fn (array $values) => array_combine($values, array_map(fn ($v) => 'L'.$v, $values)));
+
+    expect($field->getRenderedOptions(['a', 'x']))->toBe(['a' => 'A', 'x' => 'Lx'])
+        ->and($field->getRenderedOptions(['a']))->toBe(['a' => 'A']);
+});
+
+test('touchOnMobile() renders the touch sheet and keeps remote search and create-option', function () {
+    $remote = Select::make('user')->label('User')->getSearchResultsUsing(fn () => [])->touchOnMobile();
+
+    // Unlike the browser's control, the touch sheet keeps what the combobox does.
+    expect($remote->usesTouchOnMobile())->toBeTrue()
+        ->and(renderSelect($remote))
+        ->toContain('select-touch-sheet')
+        ->toContain('remote: true');
+});

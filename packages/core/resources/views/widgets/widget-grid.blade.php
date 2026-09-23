@@ -1,5 +1,14 @@
 @php
+    use NyonCode\WireCore\Foundation\Support\ResponsiveGrid;
+
     $columns = $columns ?? 2;
+
+    // How many columns this grid has *at each width*, asked once and used
+    // twice — for the grid and for every tile in it. They have to be the same
+    // numbers: a tile spanning more columns than the grid has does not clip, it
+    // makes CSS Grid invent the missing track and squeezes every other tile into
+    // what is left. See ResponsiveGrid::span().
+    $ladder = ResponsiveGrid::cardColumns($columns);
     // A polling, deferred or filtered widget answers with a `wire:partial`
     // region, which is inert without the applier — and a widget-only dashboard
     // has no other surface that would pull the bundle in.
@@ -31,9 +40,12 @@
     @include('wire-core::partials.partial-assets')
 @endif
 
-<div class="wire-widget-grid">
+{{-- `widget-grid` is the dashboard as a whole — what a theme scopes to and what
+     a guided tour points at when it introduces the cards rather than one of
+     them. A hook name, so it is kept once it has shipped. --}}
+<div class="wire-widget-grid" @wireEl('widget-grid')>
     @if($editing)
-        @include('wire-core::widgets.partials.widget-tray', ['available' => $available, 'trayGroup' => $trayGroup])
+        @include('wire-core::widgets.partials.widget-tray', ['available' => $available, 'trayGroup' => $trayGroup, 'columns' => $columns])
     @endif
 
     {{-- Responsive: 1 col on mobile, growing toward the configured count.
@@ -50,10 +62,8 @@
          layout's business. --}}
     <div @if($editing) x-sort="$wire.placeWidget($item, $position)" x-sort:group="{{ $trayGroup }}" @endif
          @class([
-        'grid gap-6 grid-cols-1',
-        'md:grid-cols-2' => $columns === 2,
-        'md:grid-cols-2 xl:grid-cols-3' => $columns === 3,
-        'md:grid-cols-2 xl:grid-cols-4' => $columns >= 4,
+        'grid gap-6',
+        ResponsiveGrid::cols($ladder),
         // Tall tiles need a row to be a fixed size; a card taller than two of
         // them scrolls inside itself rather than stretching the row, or the
         // span would mean nothing. Only ever emitted on a grid that has one.
@@ -66,7 +76,12 @@
                      re-render arrives over it; paired by key, the two cannot
                      disagree, so nothing has to be dragged back first. --}}
                 <div wire:key="widget-cell-{{ $widget->getKey() }}"
-                     class="{{ $widget->getColumnSpanClass() }} {{ $widget->getRowSpanClass() }} {{ $editing ? 'relative' : '' }}"
+                     {{-- Told which grid it is in, then asked — the same two
+                          steps every other grid in the stack takes. A card grid
+                          ramps later than a field grid, and a span it cannot
+                          honour is the one thing that must never reach the page:
+                          CSS Grid answers it by adding the column. --}}
+                     class="{{ $widget->inGridOf($ladder)->getColumnSpanClass() }} {{ $widget->getRowSpanClass() }} {{ $editing ? 'relative' : '' }}"
                      {{-- `@js`, not the bare key: the plugin *evaluates* what
                           `x-sort:item` holds (`el._x_sort_key = evaluate(expression)`),
                           so a bare `revenue` is an identifier and throws
@@ -78,7 +93,7 @@
                      @if($widget->isPolling()) {!! $widget->getPollingDirective() !!} @endif
                      @if($widget->isLazy()) wire:init="loadWidget('{{ $widget->getKey() }}')" @endif>
                     @if($editing)
-                        @include('wire-core::widgets.partials.widget-edit-controls', ['widget' => $widget])
+                        @include('wire-core::widgets.partials.widget-edit-controls', ['widget' => $widget, 'columns' => $columns])
                     @endif
                     {{-- Only a widget something replaces on its own needs an
                          anchor, so a dashboard that neither polls, defers nor

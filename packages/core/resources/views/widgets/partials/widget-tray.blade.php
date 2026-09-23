@@ -31,7 +31,13 @@
 
             <div class="flex flex-wrap gap-2">
                 @foreach($trayWidgets as $trayWidget)
-                    @php [$trayWidth, $trayHeight] = $trayWidget->getDefaultSize(); @endphp
+                    @php
+                        // The size it will actually arrive at — the first size
+                        // it offers, clamped to this dashboard's columns. Asked
+                        // of the same owner the drop asks, so the label and the
+                        // tile cannot disagree.
+                        [$trayWidth, $trayHeight] = \NyonCode\WireCore\Widgets\Support\WidgetSizeOffer::for($trayWidget, $columns ?? 2)->arrivalSize();
+                    @endphp
                     <div wire:key="tray-{{ $trayWidget->getKey() }}"
                          x-sort:item="@js($trayWidget->getKey())"
                          data-testid="widget-tray-{{ $trayWidget->getKey() }}"

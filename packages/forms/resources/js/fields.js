@@ -1,5 +1,7 @@
 import wireDateTimePicker from './fields/date-time-picker'
 import wireTimePicker from './fields/time-picker'
+import wireNativeDateTime from './fields/native-date-time'
+import wireWheelPicker from './fields/wheel-picker'
 import wireTagsInput from './fields/tags'
 import wireRating from './fields/rating'
 import wireRichEditor from './fields/rich-editor'
@@ -46,6 +48,8 @@ const registerWireFormsFields = () => {
 
     window.Alpine.data('wireDateTimePicker', wireDateTimePicker)
     window.Alpine.data('wireTimePicker', wireTimePicker)
+    window.Alpine.data('wireNativeDateTime', wireNativeDateTime)
+    window.Alpine.data('wireWheelPicker', wireWheelPicker)
     window.Alpine.data('wireTagsInput', wireTagsInput)
     window.Alpine.data('wireRating', wireRating)
     window.Alpine.data('wireRichEditor', wireRichEditor)

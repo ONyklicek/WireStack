@@ -257,6 +257,16 @@ return [
     |                                          action modals (HasModal)
     |     :breakpoint="'md'"                   <x-wire::dropdown>
     |
+    |   Touch-built control below the breakpoint (wheel / full-height list):
+    |     ->touchOnMobile(true|false)          Select, BelongsToSelect,
+    |                                          DateTimePicker, TimePicker,
+    |                                          SelectFilter, TernaryFilter
+    |
+    |   Browser-native control below the breakpoint instead of the custom one:
+    |     ->nativeOnMobile(true|false)         Select, BelongsToSelect,
+    |                                          DateTimePicker, TimePicker,
+    |                                          SelectFilter, TernaryFilter
+    |
     | Notes: searchable Select/SelectFilter default to floating (search stays
     | usable); an explicit ->sheetOnMobile() still wins. Sheets add safe-area
     | padding, a drag-to-dismiss grabber and a focus trap automatically.
@@ -273,6 +283,20 @@ return [
         //   'lg' (< 1024px, incl. tablet portrait)
         // From the breakpoint up, the classic desktop floating panel is used.
         'breakpoint' => env('WIRE_MOBILE_BREAKPOINT', 'sm'),
+
+        // Default: keep the custom select/date/time controls on a phone too.
+        // true = below the breakpoint every select and picker that has a
+        // browser-native counterpart renders that instead (the phone's own
+        // wheel or list); from the breakpoint up the custom control stays.
+        // Per instance: ->nativeOnMobile(true|false).
+        'native' => env('WIRE_MOBILE_NATIVE', false),
+
+        // Default: no touch-built controls. true = below the breakpoint, date
+        // and time pickers become a wheel and selects a full-height list sheet
+        // (large rows, 16px text, swipe to dismiss) — keeping remote search,
+        // create-option and disabled days, which the browser's control drops.
+        // Outranks 'native'. Per instance: ->touchOnMobile(true|false).
+        'touch' => env('WIRE_MOBILE_TOUCH', false),
     ],
 
     /*
@@ -342,6 +366,52 @@ return [
             'null' => NullPreferenceDriver::class,
             'session' => SessionPreferenceDriver::class,
             'database' => DatabasePreferenceDriver::class,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tours
+    |--------------------------------------------------------------------------
+    |
+    | Where "which walkthroughs this user has already seen" is kept. The same
+    | store as above, with its own default on purpose: a table that forgets a
+    | hidden column is an annoyance, while a tour on a store that forgets is a
+    | walkthrough interrupting the same person on every page load, for ever.
+    |
+    | So this defaults to `session` — the worst untouched-config behaviour is
+    | "once per session" rather than "every time". An application that wants
+    | "once, ever" sets `database` and runs the migration:
+    |
+    |   vendor:publish --tag="wire-core::migrations"
+    |
+    | Nothing is registered by default; the framework ships no tour of its own.
+    |
+    */
+    'tours' => [
+        /*
+        |----------------------------------------------------------------------
+        | Postponements
+        |----------------------------------------------------------------------
+        |
+        | How many times a tour's welcome block may be answered with "Later"
+        | before it stops asking and counts as seen. Each "Later" puts the tour
+        | down for the session; reaching this number records it the way skipping
+        | does. Zero removes the button, leaving a welcome that can only be
+        | started. A tour may override this with `->postpone(int $times)`.
+        |
+        */
+
+        'postpone' => env('WIRE_TOURS_POSTPONE', 3),
+
+        'preferences' => [
+            'default' => env('WIRE_TOURS_DRIVER', 'session'),
+            'guest' => env('WIRE_TOURS_GUEST_DRIVER', 'session'),
+            'drivers' => [
+                'null' => NullPreferenceDriver::class,
+                'session' => SessionPreferenceDriver::class,
+                'database' => DatabasePreferenceDriver::class,
+            ],
         ],
     ],
 

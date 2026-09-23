@@ -14,6 +14,7 @@ use Laravel\Fortify\Features;
 use Livewire\Livewire;
 use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireModuleUsers\Http\Middleware\SetCurrentTeam;
+use NyonCode\WireModuleUsers\Livewire\BrowserSessionManagement;
 use NyonCode\WireModuleUsers\Livewire\DeleteAccount;
 use NyonCode\WireModuleUsers\Livewire\TeamSwitcher;
 use NyonCode\WireModuleUsers\Livewire\TwoFactorAuthentication;
@@ -120,12 +121,13 @@ it('draws every card when the installation has every half', function () {
     ]));
 
     expect(Livewire::test(EditProfile::class)->instance()->cards())
-        ->toBe([UpdatePassword::class, TwoFactorAuthentication::class, DeleteAccount::class]);
+        ->toBe([UpdatePassword::class, TwoFactorAuthentication::class, BrowserSessionManagement::class, DeleteAccount::class]);
 });
 
 it('draws none of them when the installation asked for none', function () {
     config()->set('wire-module-users.profile.password', false);
     config()->set('wire-module-users.profile.two_factor', false);
+    config()->set('wire-module-users.profile.browser_sessions', false);
     config()->set('wire-module-users.profile.delete_account', false);
 
     $this->be(AvatarUser::query()->create([
@@ -161,6 +163,7 @@ it('names the hook target each card can be intercepted through', function () {
     expect((new UpdatePassword)->hookKey())->toBe('users.password')
         ->and((new DeleteAccount)->hookKey())->toBe('users.delete-account')
         ->and((new TwoFactorAuthentication)->hookKey())->toBe('users.two-factor')
+        ->and((new BrowserSessionManagement)->hookKey())->toBe('users.browser-sessions')
         ->and((new TeamSwitcher)->hookKey())->toBe('users.team-switcher');
 });
 

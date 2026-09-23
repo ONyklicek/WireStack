@@ -59,9 +59,15 @@ try {
   `);
   await submit('[data-testid="auth-login-form"]');
 
-  // `/admin` answers with a redirect to its first page, so the browser is
-  // already past it by now.
-  check('signing in lands inside the admin', await eval_(`location.pathname.startsWith('/admin/')`),
+  // `/admin` itself, because the installer writes a dashboard and points it at
+  // the panel's own path. It used to redirect on to whichever screen sorted
+  // first in the sidebar — the media library, on an install with every module —
+  // so this asserted a path *under* the prefix.
+  check('signing in lands on the admin s own dashboard',
+    await eval_(`location.pathname === '/admin' || location.pathname.startsWith('/admin/')`),
+    await eval_('location.pathname'));
+  check('…which is a widget grid, not a forward to somewhere else',
+    await eval_(`!! document.querySelector('.wire-widget-grid')`),
     await eval_('location.pathname'));
 
   await waitFor(`!! window.Livewire && !! window.Alpine`, 10000).catch(() => {});

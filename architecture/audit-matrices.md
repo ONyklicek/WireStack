@@ -99,7 +99,7 @@ Members: forms `Select`, `BelongsToSelect`, `MorphToSelect`; table `SelectFilter
 | edit option | OK | **GAP** — inherited, no UI affordance | — | — | — | — |
 | enum options (`options(Enum::class)`) | OK | OK* | — | OK | — (boolean) | OK |
 
-Canonical owner of the native/custom choice: `Foundation\Concerns\HasNativeControl` (core) — also used by `DateTimePicker`, hence "Control" not "Select". Two extension points: `defaultNative()` (different default) and an aliasable `isNative()` (force native in a mode, as `DateTimePicker` does for `month`).
+Canonical owner of the native/custom choice: `Foundation\Concerns\HasNativeControl` (core) — also used by `DateTimePicker`, hence "Control" not "Select". Three extension points: `defaultNative()` (different default), an aliasable `isNative()` (force native in a mode, as `DateTimePicker` does for `month`), and `supportsNativeOnMobile()` (keep the custom control on a phone when the native one cannot do the job at all — only remote search and create/edit option; a clock step goes native as a slot `<select>`, and the pickers' bounds are validated server-side by `DateWithinBounds`). `->nativeOnMobile()` (2026-09-22) splits a surface at the mobile breakpoint; views branch on `getNativeControlMode()` only. Every select renders through `wire-core::partials.select-control` (combobox inline, `native-select` its only `<select>`); `searchable-select` is an alias.
 
 Standing issue: **two parallel create-option mechanisms** (`Select` → dedicated trait/modal vs `BelongsToSelect` → action system). Canonical-owner rule says consolidate; record a decision before adding a third.
 

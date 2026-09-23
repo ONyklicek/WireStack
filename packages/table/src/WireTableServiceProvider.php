@@ -10,7 +10,9 @@ use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
+use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireTable\Livewire\TableStateSynthesizer;
+use NyonCode\WireTable\Support\Icons\TableIconSet;
 use NyonCode\WireTable\Support\RecordAction;
 
 class WireTableServiceProvider extends PackageServiceProvider
@@ -41,6 +43,14 @@ class WireTableServiceProvider extends PackageServiceProvider
 
                 $this->registerRecordActionMacros();
                 Bundle::serve('wire-table', self::ASSETS_PATH);
+
+                // The marks inside the hand-drawn selection checkbox, as
+                // `table:checkbox-check` and `table:checkbox-indeterminate`.
+                // Registering the set costs nothing until one is asked for —
+                // the bodies load on first use — and it is what keeps the
+                // selection cell free of inline <svg> (AI_CODING_STANDARD.md,
+                // Rendering § Icons).
+                app(IconManager::class)->registerIconSet(new TableIconSet, 'table');
             })
             ->hasConfig()
             ->hasViews()

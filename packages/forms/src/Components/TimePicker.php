@@ -10,11 +10,12 @@ use NyonCode\WireForms\Exceptions\FormConfigurationException;
  * Time-only picker, picked from a list of slots.
  *
  * Everything about the *value* is DateTimePicker's `time` mode — the `H:i` /
- * `H:i:s` state format, the bounds, the native `<input type="time">` fallback,
- * `displayFormat()`, the mobile sheet — so anything documented for `->asTime()`
- * holds here verbatim. What differs is how the time is chosen: a scrollable list
- * of times at a fixed interval (the Flux UI pattern) rather than the hour/minute
- * steppers `->asTime()` renders.
+ * `H:i:s` state format, the bounds, `displayFormat()`, the mobile sheet — so
+ * anything documented for `->asTime()` holds here verbatim, the native control
+ * included: a `<select>` of the slots (see DateTimePicker::getSlotOptions()).
+ * What differs is how the time is chosen in the custom picker: a scrollable
+ * list of times at a fixed interval (the Flux UI pattern) rather than the
+ * hour/minute steppers `->asTime()` renders.
  *
  * That makes it deliberately more than a facade, and it is the one place this
  * package carries two ways to pick a time. `DateTimePicker::asTime()` keeps its
@@ -68,6 +69,16 @@ class TimePicker extends DateTimePicker
     public function getMinutesStep(): int
     {
         return max(1, parent::getMinutesStep() ?? self::DEFAULT_INTERVAL_MINUTES);
+    }
+
+    /**
+     * A slot list is a clock step by definition: the interval is the one
+     * {@see getMinutesStep()} resolves, never null, so the native control is
+     * always the `<select>` of these slots.
+     */
+    public function getSlotInterval(): int
+    {
+        return $this->getMinutesStep();
     }
 
     protected function viewName(): string

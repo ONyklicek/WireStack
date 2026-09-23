@@ -9,9 +9,64 @@
      Renders nothing at all unless the host opted in, so including it
      unconditionally is safe on a dashboard nobody may rearrange.
 
-     Variables: $customisable, $editing --}}
+     Variables: $customisable, $editing, $savedLayouts, $layoutNames --}}
 @if($customisable)
+    @php
+        // Handed in by `widgetGridData()`, defaulted here for the caller that
+        // assembles its own payload — a dashboard that never asked for named
+        // layouts must not have a switcher appear because a key was missing.
+        $savedLayouts = $savedLayouts ?? false;
+        $layoutNames = $layoutNames ?? [];
+    @endphp
+
     <div class="wire-widget-layout-controls flex items-center justify-end gap-2">
+        @if($savedLayouts)
+            {{-- The switcher, and only where there is something to switch to.
+                 An empty select beside a "Save as" button reads as a list that
+                 failed to load rather than as one nobody has filled yet. --}}
+            @if($layoutNames !== [])
+                {{-- The chosen name is Alpine's, not the component's: it is what
+                     the delete button acts on and nothing else reads it, so
+                     keeping it on the server would be a round trip and a
+                     property to rehydrate for a value that dies with the page.
+                     Applying a layout copies it onto the current one, so the
+                     select is a verb rather than a state the page returns to. --}}
+                <div x-data="{ layout: '' }" class="flex items-center gap-2">
+                    <select
+                        x-model="layout"
+                        x-on:change="$wire.applyWidgetLayout(layout)"
+                        data-testid="widget-layout-view" @wireEl('widget-layout-view')
+                        aria-label="{{ __('wire-core::messages.widget_saved_layouts') }}"
+                        class="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    >
+                        <option value="">{{ __('wire-core::messages.widget_saved_layout_current') }}</option>
+                        @foreach($layoutNames as $layoutName)
+                            <option value="{{ $layoutName }}">{{ $layoutName }}</option>
+                        @endforeach
+                    </select>
+
+                    <button type="button"
+                            x-show="layout !== ''"
+                            x-on:click="$wire.deleteWidgetLayout(layout); layout = ''"
+                            data-testid="widget-layout-delete" @wireEl('widget-layout-delete')
+                            aria-label="{{ __('wire-core::messages.widget_delete_layout') }}"
+                            class="rounded-sm p-1 text-gray-400 transition hover:text-red-600 dark:hover:text-red-400">
+                        {!! icon('outline:trash', 'w-4 h-4', 'h-4 w-4') !!}
+                    </button>
+                </div>
+            @endif
+
+            {{-- `window.prompt` for the name, as the table's own saved views do:
+                 a modal for one string is a modal to maintain, and the host is
+                 free to call `saveWidgetLayoutAs()` from its own chrome. --}}
+            <button type="button"
+                    x-on:click="$wire.saveWidgetLayoutAs(window.prompt(@js(__('wire-core::messages.widget_save_layout_prompt'))) ?? '')"
+                    data-testid="widget-layout-save-as" @wireEl('widget-layout-save-as')
+                    class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                {{ __('wire-core::messages.widget_save_layout_as') }}
+            </button>
+        @endif
+
         @if($editing)
             <button type="button" wire:click="saveWidgetLayout"
                     data-testid="widget-layout-save" @wireEl('widget-layout-save')

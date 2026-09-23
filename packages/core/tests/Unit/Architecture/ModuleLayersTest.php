@@ -63,6 +63,13 @@ function coreModuleLayers(): array
         'GlobalSearch' => 2,
         'Panels' => 2,
         'Audit' => 2,
+        // Tours are an L2 surface and satisfy the boundary without an exception:
+        // the definition reads Foundation only — `Concerns\HasVisibility` for
+        // who a tour is for, `Routing\Zone` for where it runs, `Preferences\*`
+        // for what has been acknowledged — and its chrome is its own view rather
+        // than a `Modals\Html\Modal`, which is what would have made it reach
+        // sideways into another surface.
+        'Tours' => 2,
     ];
 }
 

@@ -94,6 +94,24 @@ abstract class Dashboard implements HasWidgets
     }
 
     /**
+     * Whether a user may keep several arrangements of this dashboard, each under
+     * a name.
+     *
+     * False, and separate from {@see customisable()} on purpose: rearranging a
+     * dashboard and keeping *more than one* arrangement are different wishes,
+     * and the second adds a switcher above the grid that a dashboard with one
+     * layout does not want. The same split a table makes between
+     * `rememberColumns()` and `savedViews()`, riding the same store.
+     *
+     * Means nothing on a dashboard that is not customisable — there is no
+     * arrangement to name — so the page asks for both.
+     */
+    public function savedLayouts(): bool
+    {
+        return false;
+    }
+
+    /**
      * A stable identity, unique among everything a menu lists.
      *
      * Derived from the class name with a trailing "Dashboard" dropped, for the

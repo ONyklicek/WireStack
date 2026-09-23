@@ -75,6 +75,15 @@ Druh stránky, který router nezná, sedí na vlastním jméně a může říct 
 'archive' => RoutePage::make(ArchivedOrders::class),                          // stránka seznamu
 ```
 
+**Stránka nikdy cestu nezabere a nikdy o ni nepřijde.** Laravel klíčuje routy
+podle metody a URI, takže druhá routa na stejné cestě tu první nezastíní —
+nahradí ji i se jménem, a beze slova. Na stránku míří její položka menu, takže to
+nesmí udělat ani jedna strana: `wireResources()` odmítne stránku, jejíž cestu už
+nějaká routa obsluhuje, a routu zaregistrovanou přes stránku níž v route souboru
+odmítne, jakmile jsou načtené všechny routy — při bootu, a tedy i při
+`route:cache`, ne až při prvním kliknutí. Stejná stránka zaroutovaná dvakrát přes
+sebe nic nemění a projde.
+
 ## Oprávnění, middleware a domény
 
 `RoutePage::permission()` dosedne na routu jako Laravelí `can:` middleware. Nic
@@ -155,8 +164,9 @@ opravdu smí otevřít: první v pořadí sidebaru (skupiny podle svého řazen�
 položky podle svého, skryté vynechané) a vynechá stránku, jejíž middleware `can:`
 by Gate odmítl, protože přesměrování do 403 je horší přistání než žádné. Nic
 k otevření je 403; nic zaregistrovaného je 404. Na tuhle adresu také
-`wire:install` nasměruje `home` Fortify, takže přihlášení skončí v adminu. Routu,
-kterou už na té cestě aplikace má, vstup nikdy nenahradí.
+`wire:install` nasměruje `home` Fortify, takže přihlášení skončí v adminu. Routa,
+kterou má aplikace na té cestě, vyhraje, ať je před skupinou, nebo za ní: vstup
+je pohodlí a ustoupí.
 
 **Landing page zóny.** Nárokovat si adresu místo toho je jedna metoda: prázdný
 prefix nepřidá segment, takže `index` té stránky sedne na vlastní cestu skupiny
@@ -182,8 +192,8 @@ nárokují kořen **jedné** skupiny, jsou odmítnuty — Laravel klíčuje rout
 URI, takže by druhá tu první nahradila i se jménem routy a zůstala by položka
 menu, která vypadá zaroutovaně a tiše nikam neodkazuje.
 
-Zóna, která chce pevný cíl místo první stránky, napíše obyčejný redirect
-**před** skupinu; vstup ho pak nechá být:
+Zóna, která chce pevný cíl místo první stránky, napíše obyčejný redirect vedle
+skupiny — před ni, nebo za ni; vstup ho pak nechá být:
 
 ```php
 Route::redirect('business', 'business/orders');
@@ -376,6 +386,16 @@ a které odpoví `null`, když routing nevlastní žádný balíček. `Registers
 je druhá půlka toho seamu: `wire-core` ho zavolá ve chvíli, kdy jsou registry plné,
 což je jediný okamžik, kdy [routy z configu](#registrace-z-configu-misto-route-souboru)
 můžou přečíst kompletní katalog.
+
+`AuthorizesUrls` je otázka po „kde": smí tento člověk tu URL otevřít.
+`wire-panels` na ni odpovídá `RouteAccess`, který položí `can:` middlewaru routy
+(`permission()` stránky, skupinu zóny) Gate. Bez balíčku, který routuje, je
+odpověď ano. [Průvodce](../core/tour-step.md#na-jine-strance) se na ni ptá, než
+někoho dovede na jinou stránku, takže krok nikdy neskončí na 403.
+
+```php
+app(AuthorizesUrls::class)->allowsUrl(string $url, ?Authenticatable $user): bool
+```
 
 ## Související
 

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\ViewErrorBag;
+use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Filters\SelectFilter;
 
 it('can be created', function () {
@@ -145,4 +147,81 @@ it('defaults a searchable filter to a floating dropdown on mobile, plain to a sh
     expect(SelectFilter::make('role')->usesSheetOnMobile())->toBeTrue()
         ->and(SelectFilter::make('role')->searchable()->usesSheetOnMobile())->toBeFalse()
         ->and(SelectFilter::make('role')->searchable()->sheetOnMobile()->usesSheetOnMobile())->toBeTrue();
+});
+
+// ─── Native on mobile ────────────────────────────────────────────────────────
+
+it('renders the combobox and a native twin when native on mobile', function () {
+    $html = SelectFilter::make('status')
+        ->options(['paid' => 'Paid', 'due' => 'Due'])
+        ->nativeOnMobile()
+        ->render();
+
+    expect($html)
+        ->toContain('class="relative max-sm:hidden"')
+        ->toContain('<div class="hidden max-sm:block">')
+        ->toContain('id="filter-status-native"')
+        ->toContain('wire:model.live="tableState.filters.status.value"')
+        ->toContain("\$wire.entangle('tableState.filters.status.value').live");
+});
+
+it('searchable() lifts native() back to the default, not to a pinned custom control', function () {
+    config(['wire-core.mobile.native' => true]);
+
+    $filter = SelectFilter::make('status')->native()->searchable();
+
+    expect($filter->isNative())->toBeFalse()
+        ->and($filter->isNativeOnMobile())->toBeTrue();
+});
+
+it('leaves no placeholder row in a multiple native select', function () {
+    $html = SelectFilter::make('status')
+        ->options(['paid' => 'Paid'])
+        ->multiple()
+        ->native()
+        ->render();
+
+    expect($html)->toContain('multiple')->not->toContain('<option value="">');
+});
+
+// Regression: the header-row partials read the sheet default straight from
+// config and never asked the filter, so ->native() and ->sheetOnMobile() on a
+// filter changed its panel control and left the header one untouched.
+it('honours the filter native choice in the column header row too', function () {
+    view()->share('errors', new ViewErrorBag);
+
+    $render = fn (SelectFilter $filter): string => view('wire-table::tables.columns.partials.filter-select', [
+        'column' => TextColumn::make('status'),
+        'filter' => $filter,
+        'value' => null,
+        'statePath' => 'tableState.columnFilters.status',
+        'controlClasses' => '',
+    ])->render();
+
+    $filter = fn () => SelectFilter::make('status')->options(['paid' => 'Paid']);
+
+    expect($render($filter()))->not->toContain('<select')
+        ->and($render($filter()->native()))->toContain('<select')->not->toContain('wireSearchableSelect(')
+        ->and($render($filter()->nativeOnMobile()))->toContain('<div class="hidden max-sm:block">')
+        ->and($render($filter()->sheetOnMobile(false)))->toContain('sheetOnMobile: false');
+});
+
+it('puts a multiple filter on the native select on a phone too', function () {
+    expect(SelectFilter::make('status')->multiple()->nativeOnMobile()->isNativeOnMobile())->toBeTrue();
+});
+
+it('renders the touch sheet in the panel and in the header row alike', function () {
+    view()->share('errors', new ViewErrorBag);
+    $filter = SelectFilter::make('status')->options(['paid' => 'Paid'])->touchOnMobile();
+
+    $header = view('wire-table::tables.columns.partials.filter-select', [
+        'column' => TextColumn::make('status'),
+        'filter' => $filter,
+        'value' => null,
+        'statePath' => 'tableState.columnFilters.status',
+        'controlClasses' => '',
+    ])->render();
+
+    expect($filter->render())->toContain('select-touch-sheet')
+        ->and($header)->toContain('select-touch-sheet');
 });

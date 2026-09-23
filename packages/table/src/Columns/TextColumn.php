@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Columns;
 
+use Closure;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Concerns\FormatsState;
 use NyonCode\WireCore\Foundation\Mentions\MentionRenderer;
@@ -32,6 +33,19 @@ class TextColumn extends Column
     public function getFontFamily(): ?string
     {
         return $this->fontFamily;
+    }
+
+    /**
+     * A total under `numeric()` or `money()` cells is formatted the way they
+     * are — the same FormatsState owner, so the two cannot disagree.
+     */
+    protected function summaryNumberFormatter(): ?Closure
+    {
+        if (! $this->numeric && ! $this->money) {
+            return null;
+        }
+
+        return fn (mixed $value): mixed => $this->applyNumericAndDateFormatting($value);
     }
 
     /**

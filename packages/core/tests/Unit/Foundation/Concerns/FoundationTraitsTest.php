@@ -5,6 +5,7 @@ declare(strict_types=1);
 use NyonCode\WireCore\Foundation\Concerns;
 use NyonCode\WireCore\Foundation\Enums;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
+use NyonCode\WireCore\Foundation\Support\ResponsiveGrid;
 
 // Test helper: create a class that uses Foundation traits
 function makeFoundationField(string $name = 'test_field'): object
@@ -380,10 +381,31 @@ it('resolves the responsive column span class', function () {
     $field = makeFoundationField('name');
     expect($field->getColumnSpanClass())->toBe('');
 
-    expect($field->columnSpan(2)->getColumnSpanClass())->toBe('sm:col-span-2')
-        ->and($field->columnSpan(3)->getColumnSpanClass())->toBe('sm:col-span-3')
-        ->and($field->columnSpan(4)->getColumnSpanClass())->toBe('sm:col-span-4')
+    // Nobody told this field which grid it is in, so it assumes one exactly as
+    // wide as it asked for — the narrowest assumption that still honours the
+    // declaration, and one that can never invent a track. A grid that ramps at
+    // `md` is what `ResponsiveGrid::cols(int)` builds, so `md:` is where the
+    // span starts.
+    expect($field->columnSpan(2)->getColumnSpanClass())->toBe('md:col-span-2')
+        ->and($field->columnSpan(3)->getColumnSpanClass())->toBe('md:col-span-3')
+        ->and($field->columnSpan(4)->getColumnSpanClass())->toBe('md:col-span-4')
         ->and($field->columnSpanFull()->getColumnSpanClass())->toBe('col-span-full');
+});
+
+it('resolves the span against the grid it was told it is in', function () {
+    // The whole point of the context: three columns is three only where the
+    // grid has three. On the field ladder it is two from `sm` and three from
+    // `md`, and on a two-column grid it is two and never more — a span wider
+    // than the grid does not clip, CSS Grid adds the missing track.
+    $ladder = ResponsiveGrid::fieldColumns(3);
+
+    expect(makeFoundationField('a')->columnSpan(3)->inGridOf($ladder)->getColumnSpanClass())
+        ->toBe('sm:col-span-2 md:col-span-3')
+        ->and(makeFoundationField('b')->columnSpan(4)->inGridOf(2)->getColumnSpanClass())
+        ->toBe('md:col-span-2')
+        // A span of one is no class at all, whatever the grid.
+        ->and(makeFoundationField('c')->columnSpan(1)->inGridOf($ladder)->getColumnSpanClass())
+        ->toBe('');
 });
 
 it('falls back to the provided default column span class', function () {
@@ -391,7 +413,12 @@ it('falls back to the provided default column span class', function () {
     expect($field->getColumnSpanClass('col-span-full'))->toBe('col-span-full');
 
     // An explicit span still wins over the default.
-    expect($field->columnSpan(2)->getColumnSpanClass('col-span-full'))->toBe('sm:col-span-2');
+    expect($field->columnSpan(2)->getColumnSpanClass('col-span-full'))->toBe('md:col-span-2');
+
+    // …except where the grid is one column, where a span has nothing to say and
+    // the default is what a block-level surface asked for.
+    expect(makeFoundationField('x')->columnSpan(2)->inGridOf(1)->getColumnSpanClass('col-span-full'))
+        ->toBe('col-span-full');
 });
 
 // ─── CanBeReadOnly ──────────────────────────────────────────

@@ -2,6 +2,324 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.2.0]
+
+### Added
+
+- **Touch-built controls on a phone: `->touchOnMobile()` and `wire-core.mobile.touch`.** One switch
+  (on `Foundation\Concerns\HasNativeControl`) on every select and picker renders a control made for a thumb
+  below the mobile breakpoint, keeping every feature the field has — which the browser's element does not.
+  One precedence for every surface: `native()` > `touchOnMobile()` > `nativeOnMobile()`. A select gets a
+  bottom-sheet list (`wire-core::partials.select-touch-sheet`) driven by the same `wireSearchableSelect`
+  state: 48px rows, 16px text, the search pinned on top and not auto-focused, checkboxes and a count for
+  `multiple()`, "Done" and "Clear all", full height when searchable and content height when not; remote
+  search, create/edit option and disabled options all work. Covered by `verify-touch-select` (20 checks).
+  See `docs/forms/fields/select.md` § Touch list on phones.
+- **A touch wheel for dates and times on a phone.** `->touchOnMobile()` on a `TimePicker` or a
+  `DateTimePicker` (any mode but month) replaces the desktop panel below the mobile breakpoint with a bottom
+  sheet of columns: hours and minutes, day / month / year, or a day column beside the clock for a datetime.
+  The columns are CSS scroll-snap scrollers, so the coasting and the snap are the platform's own; rows tilt
+  like a drum, Android vibrates on a turn. The field's slots, bounds and disabled days decide what is valid —
+  an invalid row is greyed, past a bound the wheels land on the bound, 31 February rolls to the 28th — and
+  nothing is written until "Done". Each column is a `spinbutton`; the sheet reuses the grabber and traps
+  focus. Controller `wireWheelPicker`; covered by `verify-time-wheel` (29 checks). See
+  `docs/forms/fields/date-time-picker.md` § Touch wheel on phones.
+
+- **A select or picker can be the browser's own control on a phone only.** `->nativeOnMobile()` on
+  `Select`, `BelongsToSelect`, `DateTimePicker`, `TimePicker`, `SelectFilter` and `TernaryFilter` keeps the
+  custom control from the mobile breakpoint up and renders the native `<select>` / date / time input below
+  it, where a phone opens its own wheel or list instead of a cramped panel. Both are in the markup, bound to
+  one state, and CSS at the breakpoint (`MobileSheet::showBelow()` / `hideBelow()`) shows one — no flash, no
+  client-side switch, and no sheet drawn for that field. The native twin takes `{id}-native` and an
+  `aria-label`; `required()` becomes `aria-required` on both halves so the hidden one cannot block the form.
+  Global default `wire-core.mobile.native` (`WIRE_MOBILE_NATIVE`, `false`). A control whose phone
+  counterpart cannot do the job at all stays custom: remote search, create/edit option. Everything else goes
+  native, and what a phone's control cannot show is made up for: a clock step (`minutesStep()`/`hoursStep()`,
+  every `TimePicker`) renders a native `<select>` of the slots instead of `<input type="time">`, whose `step`
+  iOS ignores — beside a native date input on a datetime, joined into one state by the new
+  `wireNativeDateTime` controller — and the bounds and disabled dates, which a phone's wheel ignores, are
+  validated on the server (below). Native controls are 16px below `sm`, so iOS Safari does not zoom in on tap. Resolved once by
+  `HasNativeControl::getNativeControlMode()` into the new `Foundation\Enums\NativeControlMode`.
+  See `docs/forms/fields/select.md` § Native on phones only and `docs/start/configuration.md` § Mobile.
+
+- **Tours run on a phone, scroll to what they point at, and can span pages.** Below the sheet breakpoint
+  the panel used to refuse to start; it now docks to the bottom of the screen while the highlight ring stays
+  on the element, and every step — on any screen — scrolls its element into the room between the top bar and
+  the panel instead of pointing at something below the fold. A control a phone does not show (the sidebar is
+  a drawer there) is skipped like any hidden one, and the counter says the tour got shorter. The tour waits
+  for the page to stop moving before it plans, so a drawer mid-slide is not counted as showing.
+  `TourStep::on($resource, $page = 'index')` puts a step on another page of the same zone: "Next" navigates
+  there with the tour in the query string, the host renders on that page only for an unfinished tour at a
+  step really on it, and the counter is carried across so it reads the same on both pages. "Back" returns
+  across the page boundary. Covered by seven tests in `TourAcrossPagesTest` and the `verify-demo-tour` and
+  `verify-tour` drivers. See `docs/core/tour-step.md` § On Another Page.
+
+- **A tour step never leads into a 403, and a tour left halfway picks up where it was left.** A step on
+  another page is offered only when that page's route lets this person in: core gains
+  `Foundation\Routing\Contracts\AuthorizesUrls` (answered "yes" by `UnguardedUrls` until something routes),
+  and `wire-panels` binds its existing `RouteAccess` to it, so the question is the route's `can:` middleware
+  put to the Gate — the same one the admin's entry and the account link already ask. And each step shown is
+  recorded (`TourAcknowledgement::reach()`, bounded to the tour's steps server-side, under `reached` in the
+  tours bag and stamped with `since()`), so somebody who clicks away mid-tour meets it again at that step —
+  or, when that step was on another page, at the last one before it, so "Next" leads back on. Finishing,
+  skipping and replaying clear it; a late request after "Finish" cannot reopen it. Covered by
+  `TourProgressTest` (9), two more in `TourAcrossPagesTest`, one in panels' `RouteAccessTest`, and seven new
+  checks in `verify-demo-tour`.
+
+- **A tour can ask before it starts, and be put off.** `Tours\TourWelcome` opens a tour with a card in
+  the middle of the screen — a heading, a line or two, and two buttons — instead of dimming the page and
+  pointing at something uninvited. Opt-in per tour through `Tour::welcome()`, and shown only when the tour
+  starts from the top: somebody carried onto a page by `TourStep::on()`, or returning to a walkthrough they
+  left halfway, is put back where they were rather than asked whether to start something already running.
+  The plan is built before the card is shown, so a tour with nothing it can point at still does not greet.
+  "Later" is the third outcome, and the first that is not final — finishing and skipping are one call
+  because both are decisions. It is stamped with the **session id** rather than a clock, so "not in this
+  sitting" means the same on the `session` driver and on `database`, where a bare flag would have been a
+  skip under another name; no duration to configure and no time zone to get wrong. Each one is counted
+  under `postponed` in the tours bag, and the one that spends `Tour::postpone(int $times)`
+  (`wire-core.tours.postpone`, `WIRE_TOURS_POSTPONE`, default 3) acknowledges the tour rather than
+  recording a fourth state — so a greeting cannot return for ever. `postpone(0)` removes the button, and a
+  tour that never offered the choice records nothing when the event is forged. Escape dismisses the card
+  and means the same as Later. Five element hooks (`tour-welcome`, `-heading`, `-text`, `-start`,
+  `-later`), `tour_start` / `tour_later` in both locales, and `TourWelcome::view()` for an application's
+  own markup, included inside the tour's Alpine scope with `greeting`, `begin()`, `later()` and the
+  `welcome` payload in reach. Covered by `TourWelcomeTest` (23), one more in `TourAcknowledgementTest`,
+  and the new `verify-tour-welcome` driver (14 checks). See `docs/core/tour-welcome.md`.
+
+- **A "replay the tour" button anywhere, not only in the user menu.** The menu entry is drawn only where a
+  tour already claims the screen, so forgetting it there is enough — the browser reloads the page it is on.
+  A trigger anywhere else is for a tour that runs where the person is not, and forgetting alone appears to
+  do nothing. `TourState::replayNow()` forgets it *and* answers with the way to the screen it runs on: the
+  address is built from the tour's own `zones()`, `resource()` and `page()` through `ResolvesPageUrls`,
+  checked against the page's own rules with `AuthorizesUrls`, and carried in the same query a cross-page
+  step already travels by, so the tour is running when the page opens. It is never taken from the request —
+  what the first replay refused was a redirect target held in a public Livewire property, which is writable
+  from the browser. Null is a real answer, for a tour scoped to nothing narrower than a zone or one whose
+  page this person may not open, and the tour is forgotten either way. `Tours\TourDestination` is an
+  extraction rather than an addition: `TourHost` already answered "where is this tour's page, and may this
+  person open it", and this is the second asker. `TourState::postpone()` and `acknowledge()` are public
+  beside it, which is what a test uses. See `docs/core/tours.md` § Replaying, which now shows the four ways
+  to put the button on a screen — its own view, a table's header action, a render hook, and an entry of
+  your own in the user menu.
+
+- **A browser-sessions card on the profile page.** `BrowserSessionManagement` lists where the
+  account is signed in — platform, browser, IP address, last activity — and, after the password,
+  ends every other session: it deletes their rows on the `database` session driver and calls
+  `logoutOtherDevices()` so `AuthenticateSession` ends them on any driver, keeping the current one
+  signed in. On by default (`wire-module-users.profile.browser_sessions`); the list needs the
+  `database` driver, the button does not. See `docs/modules/users.md` § Your Own Account.
+
+- **A dashboard can keep more than one arrangement, each under a name.** The preference store has carried a
+  `view` dimension since it was a table's — a saved view is the same bag under a name — and the dashboard
+  side passed it through and never drove it: `widgetLayoutView()` was a seam with nothing on the other end,
+  so the feature existed in the driver and nowhere a user could reach it, while `Table::savedViews()` had
+  had the whole thing for a year. `Dashboard::savedLayouts()` is the opt-in, separate from `customisable()`
+  because the wishes are — one is "you may rearrange this", the other "you may keep several arrangements",
+  and the second is a switcher above the grid that a dashboard with one layout does not want. On the host:
+  `saveWidgetLayoutAs()`, `applyWidgetLayout()`, `deleteWidgetLayout()` and `getWidgetLayoutNames()`, with
+  the shipped controls gaining a "Save as…" and a switcher that appears once there is something to switch
+  to. **Applying is a copy, not a pointer** — the saved arrangement is written onto the current layout, the
+  way `applyTableView()` does, so nothing has to remember which name is in use and the answer survives a
+  reload without a second piece of stored state to disagree with the first. Saving while the editor is open
+  keeps the draft; on a dashboard nobody has arranged it captures what the grid shows, since a name over
+  "the declaration" would restore nothing. Covered by ten tests in core and four in panels, and driven in a
+  browser by `verify-dashboard-customise` — save, rearrange, switch back, delete.
+
+- **`make:wire-dashboard` generates the page that makes the dashboard reachable.** It wrote a declaration
+  and stopped: a dashboard that declares no `pages()` is routed nowhere, so the generated class appeared in
+  the menu as an entry with no link and answered 404 at every address — after being registered, which is
+  what made it read as a framework bug rather than as half a generator. The command now writes
+  `app/Livewire/Dashboards/Show{Name}.php` beside `app/Dashboards/{Name}Dashboard.php`, and the stub
+  declares the `pages()` that ties them together. The page extends wire-panels' `DashboardPage`, so
+  **wire-panels generates it**: the new `make:wire-dashboard-page` command, with its own publishable stub
+  (`wire-panels::stubs`), which core calls *by name* — the one thing a package may know about a package
+  above it. Without wire-panels the dashboard is still written, with a line saying what to install; the
+  declared `pages()` is inert until something routes and correct the moment it does. `--no-page` writes the
+  declaration alone. Covered by a panels test that generates both halves, loads them, registers the
+  dashboard and asserts `Route::wireResources()` registers a URL for it — the assertion that fails against
+  the old stub.
+
+- **`wire-admin:install` writes the dashboard the admin opens on.** An admin needs a page of its own to
+  land on and there was none: the shell's own address forwarded to whichever screen sorted first in the
+  sidebar. Measured on a clean `laravel new` → `wire:install --all` → sign in: zero dashboards registered
+  and `/admin` redirected to `/admin/media`, the media library, because its navigation group happens to
+  sort above the others; an application with no modules at all had nothing to forward to and answered 404
+  at its own address. The installer now scaffolds `app/Dashboards/OverviewDashboard.php` and
+  `app/Livewire/Dashboards/ShowOverview.php` and registers the first in `config/wire-core.php`. Both files
+  are the application's — a dashboard counts *your* rows, so the shipped one counts what every Laravel
+  application has (users, verified, new this week) and says to replace it. It claims the panel's own path
+  (`routePrefix()` of `ConfiguresRoutes::ROOT`), so `/admin` **is** the dashboard rather than a redirect,
+  and its menu entry names no group, which puts it above every group a module declares. Nothing is
+  overwritten, both halves are idempotent, and a config that is not published yet leaves the pair on disk
+  with the line to add. The clean-install gate asserts the landing is a widget grid rather than a forward,
+  in the shell and in a browser.
+
+### Changed
+
+- **A resource page and another route can no longer share a path — in either order.** Laravel keys routes
+  by method and URI, so a second route at a path does not shadow the first: it replaces it, name and all,
+  without a word. `Route::wireResources()` guarded only the entry at a group's root (`wire.home`), and only
+  against routes registered before it; a page could replace a route of the application's, and a route
+  further down the route file could replace a page and leave its menu entry rendered and linking nowhere.
+  The new `Routing\RouteClaims` records what the macros register. A page whose path a route already answers
+  is refused with `ResourceRoutingException::pathTaken()`, and a route registered over a page later is
+  refused with `pathTakenLater()` once every route is loaded — at boot, so `route:cache` refuses it too
+  rather than caching the broken set. **This fails where it used to pass**: an application that has such a
+  collision today stops at boot, with a message naming the resource, the page, the path and the route in
+  its way. The entry at the root yields in both orders — a route the application puts there, before the
+  group or after it, is its own claim on the root — and a page routed twice over itself, a landing page
+  taking the root from the entry, one path on two hosts, and a collection swapped wholesale (installing
+  cached routes) all still pass. Covered by eight tests in `RouteClaimsTest` and checked against the
+  workbench in both orders. See `docs/panels/routing.md` § The URL shape.
+
+### Fixed
+
+- **Every select surface renders through one partial.** The native `<select>` was written four times
+  (forms `Select`, `BelongsToSelect`, table `SelectFilter`, `TernaryFilter`) and the copies had drifted;
+  `wire-core::partials.select-control` now owns the combobox and the native element for all seven select
+  surfaces, and `native-select` is its only `<select>`. `searchable-select` stays as an alias for views that
+  include it directly. `BelongsToSelect` renders the base `select` view; its own view is gone.
+- **The combobox honoured `disabledOptions()` nowhere** — only the opt-in native `<select>` did. Disabled
+  options now render disabled, cannot be picked, and are stepped over by the arrow keys.
+- **Combobox options keep the order they were given.** They reached Alpine as a JS object, which lists
+  integer-like keys ascending, so a relationship select ordered by name came out ordered by id. They now
+  travel as `[value, label]` pairs (values still strings, as before). Remote-search results are unchanged.
+- **The column header filters ignored the filter's own settings.** They read the sheet default straight from
+  config, so `->native()` and `->sheetOnMobile()` on a `SelectFilter` / `TernaryFilter` changed its panel
+  control and left the header one alone. Both now render from the filter.
+- **`BelongsToSelect` lost `sheetOnMobile()`, `mobileBreakpoint()`, extra input attributes and disabled
+  options** — its copied view never passed them. It also rendered an empty native list under
+  `->searchable()->native()`, because the relationship query was skipped for "searchable, not preloaded".
+- **`DateTimePicker` held its bounds in the browser only.** `minDate()`, `maxDate()` and `disabledDates()`
+  were drawn by the picker and never validated, so a typed value — or a phone's date wheel, which on iOS
+  ignores `min`/`max` — saved anything. The field now adds `Validation\Rules\DateWithinBounds` whenever it
+  has something to hold (messages in `wire-forms::fields.date.*`, bounds named in `displayFormat()`).
+- **A native time with seconds dropped them.** The input carried no `step`, and the browser's default is a
+  minute. `DateTimePicker::getNativeStep()` now derives it from `secondsStep()` / `withSeconds()`,
+  `minutesStep()` or `hoursStep()`; a `TimePicker`'s native input steps by its slot interval. The native
+  input also carries the field's extra input attributes, which it silently dropped.
+- **A multiple native filter select offered a "none" row**, which a multiple list has no use for.
+- **A native single select with no placeholder showed its first option while the state was null** — the
+  field looked filled and submitted nothing. It now always starts on an empty row: a real choice labelled by
+  the placeholder or `—` on an optional field (how a phone clears it), disabled and hidden on a required one.
+- **A select resolved its options twice per render**, and looked up a label for a selection already in the
+  list — two options queries for a `BelongsToSelect`. `Select::getRenderedOptions()` resolves the list once
+  and asks for a label only for a value the list does not carry, appended rather than moved to the top.
+- **`SelectFilter::searchable()` pinned the control custom** instead of lifting an earlier `->native()` back
+  to the default, so the global mobile-native switch could never reach a searchable filter.
+
+- **The tick in a table's selection checkbox was a hairline.** The table is the only surface in the
+  stack that draws a checkbox by hand — the row box is a `role="checkbox"` button, because Alpine
+  owns the selection and a range sweep has to survive a shift-click a native input would eat — and
+  it borrowed Heroicons' solid `check` for the mark. That glyph is a filled silhouette about 1.2px
+  thick at 16px spanning its whole viewBox, so inside a bordered 16px box it came out as a hairline
+  pressed into the corners, a pixel down and right of centre because `absolute inset-0` anchors to
+  the padding box while `h-4 w-4` insisted on the full 16. Beside the native checkboxes the rest of
+  the stack draws (wire-forms' `Checkbox`, `CheckboxList`, wire-core's checkbox entry, all styled by
+  `@tailwindcss/forms`) it read as a different control, and `compact()` — more rows, less
+  surrounding white — is where it stopped reading at all. The mark is now `table:checkbox-check`
+  from wire-table's own icon set: 16x16, stroked at 2 units with round caps, inset clear of the
+  border, and stretched to the button's content box so it centres itself — 1.75px of ink against
+  1.2. It also **draws itself in** over 200ms when a row is selected, and the partial-selection bar
+  (`table:checkbox-indeterminate`) is drawn at the same weight so the two states of one checkbox no
+  longer look like two different checkboxes. Row, header and card select-all share one resolved
+  string. See `packages/table/resources/icons/table.php`.
+- **A field's `columnSpan()` was drawn against no grid at all, and three surfaces disagreed about what it meant.**
+  Every item emitted one fixed `sm:col-span-N` while the grids around it ramped elsewhere — `Grid`, `Section`
+  and an infolist reach their columns at `md` (`ResponsiveGrid::cols()`), while a step, a tab, a fieldset, a
+  record panel and a repeatable entry reached theirs at `sm` through five copies of one local `match` — and a
+  wire-forms field had a **third** map that stopped at two columns. Measured on a new
+  `/previews/forms-grid-spans` screen before the fix: a `Section` declaring one column until `md` drew two
+  uneven ones at 700px (494px and 510px), because a span-2 field asked for a column that was not there and
+  CSS Grid answered by adding it; and at 1400px a `columnSpan(3)` field in a three-column grid was 369px —
+  exactly as wide as its one-column neighbour — because the forms wrapper emitted **no class at all** for a
+  span of 3 or 4, while `columnSpanFull()` was drawn as two columns rather than the row. A span is now
+  resolved against the grid the component was told it is in (`HasColumnSpan::inGridOf()`, set by the layout
+  that owns the grid) through `ResponsiveGrid::span()`, so it steps with the columns
+  (`sm:col-span-2 md:col-span-3`) and is capped by them: a span wider than the grid is the full width of the
+  grid, never an invented track. The five local `match` copies are gone — the field ladder is
+  `ResponsiveGrid::fieldColumns()`, one owner beside the `cardColumns()` the widget grid uses — and the forms
+  wrapper delegates to the canonical owner like every other surface. `columnSpan(5)` in a four-column grid now
+  means four columns rather than one. Covered by new PHP tests in core and forms, and by
+  `verify-grid-spans`, which measures the rendered track count against the declared column count at three
+  widths — the only witness there is, since an over-wide span renders a page that still looks like a page.
+- **`TableWidget` was still documented as wire-core's, two versions after it moved.** The dashboards page
+  composed one in a `WithWidgets` example with no namespace anywhere on the page, and the wire-core
+  guideline listed it beside `ChartWidget` and `CustomWidget` as though it shipped there — so both a reader
+  and an agent would write `use NyonCode\WireCore\Widgets\TableWidget;`, which is the class 2.0 removed.
+  The example now carries the full import block it always needed (`NyonCode\WireTable\Widgets\TableWidget`
+  among them) and a line saying which package each half comes from; the wire-core guideline names it as
+  wire-table's, and the wire-table guideline describes it at all, which it did not.
+
+- **Pressing Customise halved every full-width widget.** The editor starts from the arrangement the
+  declaration describes, and `WidgetLayout::fromWidgets()` read `columnSpanFull()` as one column — so a row
+  of figures across the top of a two-column dashboard dropped to half width the moment the editor opened,
+  before anybody had touched it. Found by putting the feature on a real application's zone dashboards,
+  which all lead with such a row. `'full'` now becomes the grid's own column count.
+
+- **A dashboard's draft was a public property, so the browser could write one and save it.** The host keeps
+  the arrangement being edited, the editor's own mode, each widget's filter and the fetched deferred widgets
+  in public Livewire properties — they have to survive the round trips a drag makes — and a public property
+  is writable from the client unless it says otherwise. Measured: a client set `editingWidgets` true, wrote
+  500 invented placements into `widgetLayoutDraft` and called Save. All 500 were stored verbatim — 15 kB in
+  that user's preference row, and nothing caps it — and the dashboard then rendered **empty**, because
+  `apply()` drops every key the declaration does not have and there was nothing else left. Self-inflicted
+  rather than cross-user, and silent either way: no error, and the way out is a Reset the user has to know
+  about. All four properties are `#[Locked]` now, so the only way in is the methods that check a key against
+  the declaration and a size against the grid; and what is written is narrowed to the declared keys anyway
+  (`WidgetLayout::only()`), which also cleans a stored layout left by an older declaration — a renamed
+  widget stops being carried around the first time that user saves.
+
+- **A widget could be made wider than the dashboard it sits on, and the whole grid paid for it.**
+  The resize steppers were bounded by the widest grid there is (four columns) rather than by the
+  dashboard's own `columns()`, and a tile wider than its grid does not clip — CSS Grid *adds* the
+  missing track. Measured on a three-column dashboard at 1000px: stepping one tile to four columns
+  turned a declared two-track grid into `269px 269px 153px 153px`, so every other widget on the page
+  was squeezed into a sliver, with no error and nothing in the console. The same disagreement ran the
+  other way at every width below `md`: a span was emitted as `sm:col-span-2` while the widget grid is
+  one column until `md`, so between 640 and 768px a one-column dashboard silently became two uneven
+  ones (measured: `216px 377px`). Spans are now resolved against the grid's own ladder —
+  `ResponsiveGrid::span()`, beside the `cols()` that builds it, so the two read from one set of
+  numbers — and step with it (`md:col-span-2 xl:col-span-3` for three columns on a three-column
+  dashboard). Nothing a dashboard declares changes; what changes is that no span can reach the page
+  that its grid cannot honour.
+- **`Widget::sizes()` narrowed nothing.** It has been documented since it shipped as the way to say
+  which sizes a widget looks right at — "letting a user find that out by dragging is worse than not
+  offering it" — and `getSizes()` had no caller anywhere in the repository: only `getDefaultSize()`
+  reached past it for the first pair. A widget declaring one size could still be stepped to any of
+  the grid's twenty-four. The declaration is now the offer: the width buttons walk the offered widths
+  (taking the height that width is offered at, so a `[[2, 1], [4, 2]]` has both pairs reachable), the
+  height buttons walk the heights offered at the current width, a button with nowhere to go is drawn
+  disabled, and the server snaps whatever the browser sends to the same answer. Both bounds — the
+  declaration and the grid — have one owner, `Widgets\Support\WidgetSizeOffer`, because they are the
+  same question asked twice.
+- **`wireResources()` inside a nested group replaced the application's route at the group root.**
+  Laravel merges the prefix into every layer of the group stack, so the last layer already carries the
+  whole path; `ResourceRoutes::groupPrefix()` joined all of them, and a middleware or name group nested
+  under `prefix('sales')` answered `sales/sales`. The root check never matched, `wire.home` was registered
+  over the application's route at `sales` and took its name with it — silently, and against the documented
+  promise that the entry never replaces a route already at that path. It is the shape a gradual migration
+  needs (`->name('sales.')` on an inner group, beside hand-written routes that keep their old names). The
+  prefix is now read off the last layer alone; a single group behaves as before. Covered by a regression
+  test in `PanelEntryTest`.
+- **A tablet can reach the row's actions.** A tablet is wide enough for the desktop table, so it got
+  neither the stacked card's buttons nor anything a finger can do with a double click, a right click or a
+  key — a table whose record actions were all gestures offered none of them on an iPad. The row now keeps
+  each gesture for a finger: a tap is a click, a double tap a double click (counted by the table, so Safari
+  does not zoom instead), a long press the right click. The menu a finger opens adds every behaviour-only
+  record action it does not already hold (`Table::getTouchMenuActions()`), and a table with an actions
+  column shows a `⋯` there on a touch screen. Nothing to declare; `recordActionButtonsOnMobile(false)`
+  and `contextMenu(false)` turn it off, and a mouse sees none of it.
+- **A total is formatted the way the cells above it are.** A summary read only `summaryDecimals()`,
+  so a `numeric(2)` column of `1 089,75` totalled as `1089.75`. Without `summaryDecimals()`, a
+  column's `numeric()` or `money()` now formats its summaries too, through the same `FormatsState`
+  owner the cells use. `summaryDecimals()` still wins where it is set, and counts stay bare.
+- **A `CollectionDataSource` sorts text by the application's language.** Rows were ordered byte by
+  byte, which put every accented capital after `Z` — `Černý` after `Veselý`. Text is compared with
+  the `intl` Collator for `app()->getLocale()`, or without accents where the extension is missing;
+  numbers compare as numbers and an empty value sorts first, as a database would. Several sort
+  clauses are one comparison now, the first deciding and the next breaking its ties.
+
 ## [2.1.1]
 
 ### Fixed

@@ -96,6 +96,19 @@ TernaryFilter::make('is_active')
 Opts out of the shared combobox, so the filter no longer matches the other
 selects. Prefer it only where render cost matters more than a consistent look.
 
+`->nativeOnMobile()` keeps the combobox from the filter's mobile breakpoint up
+and renders the browser's `<select>` below it, where a phone opens its own
+picker instead of a sheet:
+
+```php
+TernaryFilter::make('is_active')
+    ->nativeOnMobile()               // phone: native <select>; desktop: the combobox
+```
+
+The choice holds in the filter panel and in the column header row alike — both
+render the same control. `->native()` wins over it; the app-wide default is
+`wire-core.mobile.native` (see [mobile](../../start/configuration.md#mobile)).
+
 ## TernaryFilter API
 
 ```php
@@ -104,6 +117,8 @@ selects. Prefer it only where render cost matters more than a consistent look.
 ->allLabel(string $label)           // placeholder for the "no filter" option
 ->nullable(bool $nullable = true)   // "false" also matches IS NULL
 ->native(bool $native = true)       // opt into a browser-native <select> (default: false)
+->nativeOnMobile(bool $condition = true) // native <select> below the mobile breakpoint only (default: config wire-core.mobile.native)
+->touchOnMobile(bool $condition = true)  // full-height touch list below the mobile breakpoint (default: config wire-core.mobile.touch)
 ->query(Closure $fn)                // custom query: fn(Builder $q, bool $value)
 ```
 

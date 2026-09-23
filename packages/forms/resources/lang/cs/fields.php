@@ -54,6 +54,15 @@ return [
     // Vlastní validační hlášky MoneyInputu: částka se skrývá za oddělovači
     // skupin, takže se meze hlásí ve stejném formátu, v jakém je uživatel
     // napsal, ne jako holé číslo.
+    // Hranice DateTimePickeru, hlídané i na serveru, nejen nakreslené v
+    // pickeru — napsaná hodnota nebo kolečko telefonu je může překročit.
+    'date' => [
+        'invalid' => 'Pole :attribute není platné datum.',
+        'min' => 'Pole :attribute nesmí být dříve než :min.',
+        'max' => 'Pole :attribute nesmí být později než :max.',
+        'disabled' => 'Zvolené datum v poli :attribute není k dispozici.',
+    ],
+
     'money' => [
         'invalid' => 'Pole :attribute musí být částka.',
         'min' => 'Pole :attribute musí být alespoň :min.',
@@ -84,5 +93,18 @@ return [
         'this_month' => 'Tento měsíc',
         'last_30_days' => 'Posledních 30 dní',
         'this_year' => 'Tento rok',
+    ],
+
+    // Mobilní kolečko (->touchOnMobile()): jeho sloupce a tlačítka.
+    'wheel' => [
+        'hours' => 'Hodiny',
+        'minutes' => 'Minuty',
+        'day' => 'Den',
+        'month' => 'Měsíc',
+        'year' => 'Rok',
+        'today' => 'Dnes',
+        'done' => 'Hotovo',
+        'cancel' => 'Zrušit',
+        'clear' => 'Vymazat',
     ],
 ];

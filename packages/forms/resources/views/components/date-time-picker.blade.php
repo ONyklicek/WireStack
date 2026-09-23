@@ -1,7 +1,8 @@
 @php
+    use NyonCode\WireCore\Foundation\Support\MobileSheet;
     use NyonCode\WireForms\Components\DateTimePicker;
 
-     assert($field instanceof DateTimePicker);
+    assert($field instanceof DateTimePicker);
 
     $wireModifier = $field->getWireModelModifier();
     $wireAttr = 'wire:model' . ($wireModifier ? ".{$wireModifier}" : '');
@@ -24,11 +25,19 @@
     $hasSeconds = $field->hasSeconds();
     $secondsStep = $field->getSecondsStep() ?? 1;
     $fieldId = $field->getId();
-    // Below the configured breakpoint the calendar becomes a bottom sheet instead
-    // of a floating panel — unless disabled via ->sheetOnMobile(false) or config.
-    $sheetOnMobile = $field->usesSheetOnMobile();
+    // Custom picker, native input, or both split at the mobile breakpoint
+    // (->nativeOnMobile()), where CSS shows one and hides the other.
+    $nativeMode = $field->getNativeControlMode();
+    $responsive = $nativeMode->isResponsive();
     $sheetBp = $field->getMobileBreakpoint();
-    $sheetBpPx = \NyonCode\WireCore\Foundation\Support\MobileSheet::px($sheetBp);
+    // Below the configured breakpoint the calendar becomes a bottom sheet instead
+    // of a floating panel — unless disabled via ->sheetOnMobile(false) or config,
+    // or unless a native input takes that screen over, when it is never seen.
+    // ->touchOnMobile(): below the breakpoint the touch wheel owns the screen,
+    // so the desktop panel is hidden there and never becomes a sheet.
+    $wheel = $field->usesTouchOnMobile();
+    $sheetOnMobile = $field->usesSheetOnMobile() && ! $responsive && ! $wheel;
+    $sheetBpPx = MobileSheet::px($sheetBp);
     $sheetPanel = \NyonCode\WireCore\Foundation\Support\MobileSheet::panelPadded($sheetBp);
     $sheetMotion = \NyonCode\WireCore\Foundation\Support\MobileSheet::motion($sheetBp);
     $sheetBackdrop = \NyonCode\WireCore\Foundation\Support\MobileSheet::backdropHide($sheetBp);
@@ -36,23 +45,30 @@
     // and disabled() outrank typeable(), which is why this is one resolved answer
     // rather than three conditions repeated down the markup.
     $typeable = $field->acceptsTypedInput();
+    $livewire = $field->getLivewire();
 @endphp
 
 @include('wire-forms::partials.field-assets')
 
 @include('wire-forms::partials.field-wrapper-start')
 
-@unless($field->isNative())
+@if($nativeMode->rendersCustom())
     {{-- Scaffolding is identical for every date picker; emit it once per request
          (matters when several date fields, or a repeater of them, render). --}}
     @once
         @include('wire-core::partials.floating-assets')
     @endonce
-@endunless
+@endif
 
-@if($field->isNative())
+@if($wheel)
+    @include('wire-forms::partials.wheel-picker')
+@endif
+
+@if($nativeMode->rendersNative())
     @include('wire-forms::partials.date-time-native-input')
-@else
+@endif
+
+@if($nativeMode->rendersCustom())
     {{-- The calendar/clock controller is registered once as `wireDateTimePicker`
          (packages/forms/resources/js/fields/date-time-picker.js); only the
          per-instance config is markup. `state` is built here rather than passed
@@ -82,7 +98,7 @@
             sheetOnMobile: @js($sheetOnMobile),
             sheetBreakpoint: @js($sheetBpPx),
         })"
-            class="relative"
+            @class(['relative', MobileSheet::hideBelow($sheetBp) => $responsive || $wheel])
     >
         {{-- Input trigger --}}
         <div class="relative" x-ref="trigger">
@@ -116,7 +132,8 @@
                     @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
                     @if($field->isDisabled()) disabled @endif
                     @if($field->hasAutofocus()) autofocus @endif
-                    @if($field->isRequired()) required @endif
+                    {{-- A hidden twin must not block the form: see the native partial. --}}
+                    @if($field->isRequired()) @if($responsive) aria-required="true" @else required @endif @endif
                     @class([
                         'block w-full rounded-md border-gray-300 shadow-sm',
                         // Only a box that cannot be typed into is a button.

@@ -63,8 +63,8 @@ moved packages.
 `wireFlyout`, `wireContextMenu`, `wireTabs`, `wireWizard`, `wireEditableCell`,
 `wireSearchableSelect` — which is exactly the set that must never arrive late. The
 combobox is core's rather than forms' because
-`wire-core::partials.searchable-select` is included by seven surfaces across forms
-*and* table.
+`wire-core::partials.select-control` (formerly `searchable-select`, still an alias)
+is rendered by seven surfaces across forms *and* table.
 
 `wireFlyout` is `wireDropdown` opened by *pointing* rather than clicking, and it
 lives here for the same reason the combobox does: the collapsed admin sidebar is

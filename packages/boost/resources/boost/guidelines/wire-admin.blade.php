@@ -14,6 +14,13 @@ resource pages and its own chrome simply does not install this (ADR 0028).
   and adds `@tailwindcss/forms` to `package.json`. Idempotent and never overwriting; an app with
   no `bootstrap/providers.php` is told the line to add (`AdminInstallException`, caught and warned) and the rest
   still completes. Failures are exceptions, never a status nobody checks.
+- **It also writes the dashboard the admin lands on** — `app/Dashboards/OverviewDashboard.php` and
+  `app/Livewire/Dashboards/ShowOverview.php`, registered in `config('wire-core.dashboards')`. Both are the
+  application's files and counting *its* rows is the point: the shipped one counts users because that is the
+  one table every Laravel application has. It claims the panel's own path (`routePrefix()` returning
+  `ConfiguresRoutes::ROOT`), so `/admin` is the dashboard rather than a redirect to whichever screen sorts
+  first, and its menu entry names no group, which renders it above every group a module declares. Only one
+  thing may sit at that path — a landing page of your own replaces it rather than joining it.
 @verbatim
 - **Two tags, both class-based**: `<x-wire-admin::layout>` (slots: `head`, `brand`, `topbar`, `user`, default)
   and `<x-wire-admin::sidebar :linked-only="false" :zone="…" :active-key="…" />`.

@@ -25,7 +25,7 @@ Moduly jsou **navrstvené** a to vrstvení hlídá test, ne code review:
 | --- | --- | --- |
 | **L0** | `Foundation/`, `Exceptions/` — traity, kontrakty, enumy, hodnotové objekty | nic nad sebou |
 | **L1** | `Core/` — bezhlavý engine: pluginy, identita resourců, registry | L0 |
-| **L2** | `Actions/`, `Modals/`, `Notifications/`, `Widgets/`, `Infolists/`, `Panels/`, `Audit/` | L0 a L1 — nikdy sebe navzájem |
+| **L2** | `Actions/`, `Modals/`, `Notifications/`, `Widgets/`, `Infolists/`, `Panels/`, `Audit/`, `Tours/` | L0 a L1 — nikdy sebe navzájem |
 
 Dva povrchy z L2, které si potřebují říct, to udělají přes kontrakt ve
 `Foundation/Contracts/`, ne vzájemným importem. Právě díky tomu aplikace, která
@@ -50,6 +50,7 @@ ten slovník vyplatí naučit jednou.
 | [Editovatelné panely](record-panels.md) | Stejný tvar, ale s entries, které zapisují rovnou do záznamu |
 | [Schéma](schema/overview.md) | Layoutový slovník, který konzumují formuláře, infolisty i modaly |
 | [Globální vyhledávání](global-search.md) | ⌘K palette nad vším zaregistrovaným |
+| [Průvodci](tours.md) | Průvodci při prvním spuštění a po novinkách, omezení na zónu a oprávnění |
 | [Auditní log](audit.md) | Stopa změn modelů, zapisovaná za vás |
 | [Pluginy](plugins/index.md) | Rozšiřovací bod pro aplikace i doprovodné balíčky |
 

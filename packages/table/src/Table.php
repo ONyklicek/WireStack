@@ -721,11 +721,39 @@ class Table implements Htmlable
      * Record-invariant chrome, so it goes through the canonical IconManager (which
      * memoises the rendered SVG by name+size+class) rather than being inlined — the
      * row echoes a string instead of re-entering the icon layer per row. Shared by
-     * the row's cell and the stacked card view's select-all.
+     * the row's cell, the header's select-all and the stacked card view's, so all
+     * three marks stay one glyph.
+     *
+     * `table:checkbox-check`, not Heroicons' solid `check`: the latter is a filled
+     * silhouette spanning its whole 20x20 viewBox, which inside a 16 px bordered box
+     * came out as a ~1.2 px hairline pressed into the corners — unreadable next to
+     * the native checkboxes the rest of the stack draws. See
+     * `resources/icons/table.php`.
+     *
+     * No size class. `absolute inset-0` with no width or height stretches the SVG to
+     * the button's CONTENT box, which is 14 px inside a 16 px border-box button — so
+     * the mark centres itself exactly. The old `h-4 w-4` fought that: an explicit
+     * 16 px box anchored at the padding edge sat a pixel down and right of centre and
+     * overhung the border.
      */
     public function getSelectionCheckIcon(): string
     {
-        return app(IconManager::class)->render('check', 'h-4 w-4', 'absolute inset-0 text-white');
+        return app(IconManager::class)->render('table:checkbox-check', '', 'absolute inset-0 text-white');
+    }
+
+    /**
+     * The selection checkbox's partial-selection bar, resolved once per request.
+     *
+     * The tick's sibling, and resolved the same way for the same reasons. It exists
+     * so the two states of one control are drawn at one weight: a 2 px tick beside
+     * Heroicons' 1.2 px `minus` looked like two different checkboxes depending on
+     * how much of the page was selected. Only the two select-all boxes draw it — a
+     * row is selected or it is not — so unlike the tick it never reaches the row
+     * loop.
+     */
+    public function getSelectionIndeterminateIcon(): string
+    {
+        return app(IconManager::class)->render('table:checkbox-indeterminate', '', 'absolute inset-0 text-white');
     }
 
     /**
@@ -1657,13 +1685,21 @@ class Table implements Htmlable
      */
     public function getRowContextMenuSkeleton(): Skeleton
     {
+        // The touch block is compiled in only where there is something to put in
+        // it, so a table without touch-menu items carries none of it per row.
+        $touch = $this->hasTouchMenu();
+
         return $this->rowContextMenuSkeleton ??= Skeleton::compile(
             view('wire-table::tables.partials.record-context-menu', [
                 'key' => Skeleton::slot('key'),
                 'menu' => Skeleton::slot('menu'),
+                'touch' => $touch
+                    ? trim(view('wire-table::tables.partials.record-touch-menu', ['items' => Skeleton::slot('touch')])->render())
+                    : '',
             ])->render(),
             'key',
             'menu',
+            ...($touch ? ['touch'] : []),
         );
     }
 
@@ -1677,20 +1713,34 @@ class Table implements Htmlable
      */
     public function getRowContextMenuPanel(Model $record): string
     {
-        if (! $this->hasRowContextMenu()) {
-            return '';
-        }
+        $menu = $this->hasRowContextMenu() ? trim($this->getRowContextMenuHtml($record)->toHtml()) : '';
+        $touch = $this->hasTouchMenu() ? trim($this->getRowTouchMenuHtml($record)->toHtml()) : '';
 
-        $menu = trim($this->getRowContextMenuHtml($record)->toHtml());
-
-        if ($menu === '') {
+        if ($menu === '' && $touch === '') {
             return '';
         }
 
         return $this->getRowContextMenuSkeleton()->fill([
             'key' => e((string) $record->{$this->getPrimaryKey()}),
             'menu' => $menu,
+            'touch' => $touch,
         ]);
+    }
+
+    /**
+     * The items the row's menu adds when a finger opened it — see
+     * {@see getTouchMenuActions()}. Same markup as the right-click items.
+     */
+    public function getRowTouchMenuHtml(Model $record): Htmlable
+    {
+        $html = '';
+        $click = new TableActionClickResolver;
+
+        foreach ($this->getTouchMenuActions() as $action) {
+            $html .= $action->renderForDropdown($record, $click);
+        }
+
+        return new HtmlString($html);
     }
 
     // Record actions (row-level interaction: click, double-click, right-click, keys)

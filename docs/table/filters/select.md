@@ -74,6 +74,22 @@ SelectFilter::make('type')
 Opts out of the shared combobox, so the filter no longer matches the form select.
 Prefer it only where render cost matters more than a consistent look.
 
+`->nativeOnMobile()` keeps the combobox from the filter's mobile breakpoint up
+and renders the browser's `<select>` below it, where a phone opens its own
+picker instead of a sheet:
+
+```php
+SelectFilter::make('type')
+    ->options([...])
+    ->nativeOnMobile()               // phone: native <select>; desktop: the combobox
+```
+
+The choice holds in the filter panel and in the column header row alike — both
+render the same control, a `multiple()` filter included. `->touchOnMobile()`
+opens the [touch list](../../forms/fields/select.md#touch-list-on-phones) instead,
+in both places. `->native()` wins over it; the app-wide default is
+`wire-core.mobile.native` (see [mobile](../../start/configuration.md#mobile)).
+
 ## From Database
 
 ```php
@@ -118,4 +134,6 @@ SelectFilter::make('has_avatar')
 ->multiple(bool $multiple = true)    // multi-select mode
 ->searchable(bool $searchable = true) // add a search input to the dropdown
 ->native(bool $native = true)        // opt into a browser-native <select> (default: false)
+->nativeOnMobile(bool $condition = true) // native <select> below the mobile breakpoint only (default: config wire-core.mobile.native)
+->touchOnMobile(bool $condition = true)  // full-height touch list below the mobile breakpoint (default: config wire-core.mobile.touch)
 ```

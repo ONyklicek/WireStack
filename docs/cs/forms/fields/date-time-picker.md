@@ -71,6 +71,13 @@ DateTimePicker::make('slot')
 Horní mez zadaná na celý den pokrývá celý den: `->maxDate('2026-07-20')`
 nechá 20. července volitelné až do 23:59.
 
+Meze a zakázané dny jsou zároveň **validační pravidla**. Picker je jen kreslí a
+kresbu jde obejít — hodnotou napsanou do pole nebo kolečkem data telefonu, které
+na iOS nabízí každý den bez ohledu na `min` a `max`. Pole si proto přidá vlastní
+pravidlo (`Validation\Rules\DateWithinBounds`), kdykoli má co hlídat, a chybová
+hláška pojmenuje mez v `displayFormat()`, pokud je nastavený. Pole bez mezí a bez
+zakázaných dnů žádné pravidlo nepřidá.
+
 ## Volby času
 
 ```php
@@ -155,6 +162,82 @@ DateTimePicker::make('date')
 
 Jedinou výjimkou je [`asMonth()`](#rezimy), který je vždy nativní.
 
+Nativní vstup času nebo data a času nese `step` odvozený z nejjemnější jednotky,
+kterou jste nastavili — `secondsStep()` (nebo 1 s `withSeconds()`), jinak
+`minutesStep()`, jinak `hoursStep()`. Teprve díky tomu nativní vstup vůbec ukáže
+sekundy (výchozí krok prohlížeče je minuta), a na tento krok pak hodnotu drží i
+validace prohlížeče. `displayFormat()` a `typeable()` patří vlastnímu pickeru;
+nativní vstup formátuje a píše se tak, jak určí locale prohlížeče.
+
+### Nativní jen na telefonu
+
+Kalendář se s myší ovládá pohodlně a na telefonu je stísněný, přičemž prohlížeč
+už má kolečko data, které uživatel zná. `nativeOnMobile()` ponechá vlastní picker
+od [mobilního breakpointu](../../start/configuration.md#mobil) pole výš a pod ním
+vykreslí vstup prohlížeče:
+
+```php
+DateTimePicker::make('starts_at')
+    ->minDate('today')
+    ->minutesStep(15)
+    ->nativeOnMobile()             // telefon: nativní datetime-local; desktop: kalendář
+```
+
+V markupu jsou oba, navázané na stejný stav, a CSS na breakpointu ukáže jeden — v
+prohlížeči se nic nerozhoduje, takže nic neprobliká. Nativní dvojče dostane
+vlastní id (`{id}-native`) a samo se pojmenuje; `required()` se na obou polovinách
+změní na `aria-required`, protože povinný vstup, který styly skryjí, by na druhé
+velikosti obrazovky zablokoval formulář. Bottom sheet kalendáře se nevykreslí,
+tu obrazovku vlastní nativní vstup.
+
+`native()` nad ním vyhrává. Na telefonu je nativní každý picker — vlastní se
+tam ovládá hůř — a co prvek telefonu sám neumí, se dohání jinak:
+
+- **Krok hodin** (`minutesStep()`, `hoursStep()` u `time` nebo `datetime`) nikdy
+  nejde na `<input type="time">`: pro prohlížeč je `step` validační pravidlo, ne
+  kolečko, a iOS nabízí každou minutu. Čas s krokem je nativní `<select>` slotů;
+  datum a čas s krokem je nativní vstup data vedle tohoto selectu, složené v
+  prohlížeči do jednoho stavu (samotné datum nic nezapíše).
+- **Zakázané dny a meze** kolečko telefonu nezašedí (iOS ignoruje i
+  `min`/`max`), takže je odmítne server — viz [omezení data](#omezeni-data).
+- **Sekundy** — nativní vstup času nese `step` v sekundách, který Android
+  ukáže; kolečko iOS sekundy nemá a uloží `:00`.
+
+Výchozí hodnota pro celou aplikaci je `wire-core.mobile.native`; explicitní
+`native(false)` z ní pole vyřadí.
+
+### Dotykové kolečko na telefonu
+
+Telefon může místo desktopového panelu i prvku prohlížeče dostat dotykové
+kolečko: sloupce v bottom sheetu, které dojíždějí a zacvakávají jako vlastní
+picker telefonu — hodiny a minuty u času, den / měsíc / rok u data a sloupec dnů
+vedle hodin u data s časem (tvar z iOS: „Po 21. 9. · 14 : 30“).
+
+```php
+TimePicker::make('opens_at')
+    ->minDate('08:00')->maxDate('18:00')
+    ->touchOnMobile()             // telefon: kolečko; desktop: picker
+```
+
+- Každý sloupec je obyčejný scroller s CSS scroll-snap, takže setrvačnost a
+  zacvaknutí jsou fyzika samotné platformy. Řádky se natáčejí jako válec a na
+  Androidu otočení krátce zavibruje (na iOS web haptiku nemá).
+- Sloupce hodin vznikají ze slotů pole (interval i meze uplatněné); roky u data
+  a dny u data s časem sahají od `minDate()` do `maxDate()`. Kombinace, kterou
+  by pole odmítlo, je zašedlá a nikdy nezůstane: za mezí kolečka skočí přesně na
+  mez, 31. únor vrátí den na 28., zakázaný den se posune na sousední a čas mimo
+  slot otočí druhý sloupec.
+- Během otáčení se nic nezapisuje: **Hotovo** uloží, **Zrušit**, pozadí i tažení
+  úchytu dolů hodnotu ponechají; **Vymazat** pole vyprázdní. Prázdné pole se
+  otevře na nejbližším slotu od teď.
+- Každý sloupec je pro čtečky a klávesnici `spinbutton` (šipky, Home/End); sheet
+  drží fokus a po dobu otevření zamyká scroll stránky.
+- Měsíce a dny v týdnu jsou pojmenované podle jazyka stránky (`<html lang>`).
+- Pro všechny režimy kromě `asMonth()`. Vyhrává nad `nativeOnMobile()`;
+  `native()` vyhrává nad ním. Řídí se `mobileBreakpoint()` pole a výchozí
+  hodnota pro celou aplikaci je `wire-core.mobile.touch` — stejný přepínač,
+  který selectům dává [dotykový seznam](select.md#dotykovy-seznam-na-telefonu).
+
 ## Metody
 
 | Metoda | Typ | Popis |
@@ -175,8 +258,10 @@ Jedinou výjimkou je [`asMonth()`](#rezimy), který je vždy nativní.
 | `hoursStep(int)` | int | Krok inkrementu hodin |
 | `minutesStep(int)` | int | Krok inkrementu minut |
 | `secondsStep(int)` | int | Krok inkrementu sekund |
+| `touchOnMobile(bool $condition = true)` | bool | Dotykové kolečko v bottom sheetu pod mobilním breakpointem; ne pro `asMonth()` (výchozí: `false`) — viz [dotykové kolečko na telefonu](#dotykove-kolecko-na-telefonu) |
 | `timezone(string)` | string | Zobrazí hodnotu v této timezone a při uložení ji převede zpět do timezone aplikace; jen pro `datetime` |
 | `native(bool $native = true)` | bool | Použít nativní ovládání prohlížeče místo vlastního pickeru (výchozí: `false`) |
+| `nativeOnMobile(bool $condition = true)` | bool | Nativní ovládání prohlížeče jen pod mobilním breakpointem, nad ním vlastní picker (výchozí: `wire-core.mobile.native`, `false`); krok hodin vykreslí nativní datum + `<select>` slotů |
 | `typeable(bool\|Closure)` | bool | Umožnit hodnotu napsat, nejen vybrat (výchozí: `true`); jen vlastní picker |
 | `disabled(bool\|Closure)` | bool | Znepřístupnit picker |
 | `readOnly(bool\|Closure)` | bool | Read-only režim — bez psaní i bez panelu |

@@ -3,9 +3,12 @@
 declare(strict_types=1);
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\MessageBag;
 use NyonCode\WireCore\Core\State\StateHydrator;
+use NyonCode\WireCore\Foundation\Enums\NativeControlMode;
 use NyonCode\WireForms\Components\DateTimePicker;
+use NyonCode\WireForms\Validation\Rules\DateWithinBounds;
 
 test('default mode is datetime', function () {
     $field = DateTimePicker::make('created_at');
@@ -413,4 +416,148 @@ test('a native input keeps the browser keyboard whatever typeable says', functio
     expect(renderPickerView(DateTimePicker::make('at')->native()->typeable(false)))
         ->not->toContain('readonly')
         ->not->toContain('onTyped(');
+});
+
+// ─── Native step and native on mobile ────────────────────────────────────────
+
+test('the native step follows the finest configured time unit', function () {
+    expect(DateTimePicker::make('d')->asDate()->getNativeStep())->toBeNull()
+        ->and(DateTimePicker::make('d')->asMonth()->getNativeStep())->toBeNull()
+        ->and(DateTimePicker::make('d')->getNativeStep())->toBeNull()
+        ->and(DateTimePicker::make('d')->asTime()->withSeconds()->getNativeStep())->toBe(1)
+        ->and(DateTimePicker::make('d')->asTime()->withSeconds()->secondsStep(15)->getNativeStep())->toBe(15)
+        ->and(DateTimePicker::make('d')->minutesStep(15)->getNativeStep())->toBe(900)
+        ->and(DateTimePicker::make('d')->hoursStep(2)->getNativeStep())->toBe(7200);
+});
+
+// Regression: a native time with seconds dropped them — the browser's default
+// step is a minute, and the input carried no step at all.
+test('a native time with seconds asks the browser for seconds', function () {
+    expect(renderPickerView(DateTimePicker::make('d')->asTime()->withSeconds()->native()))
+        ->toContain('type="time"')
+        ->toContain('step="1"');
+});
+
+test('nativeOnMobile() renders the picker and a native twin split at the breakpoint', function () {
+    $html = renderPickerView(DateTimePicker::make('d')->label('When')->asDate()->required()->nativeOnMobile());
+
+    expect($html)
+        ->toContain('<div class="hidden max-sm:block">')
+        ->toContain('max-sm:hidden')
+        ->toContain('wireDateTimePicker(')
+        ->toContain('type="date"')
+        ->toContain('id="d-native"')
+        ->toContain('aria-label="When"')
+        ->toContain('aria-required="true"')
+        // Neither half may block the form while the other is the visible one.
+        ->not->toMatch('/<input[^>]*\srequired[\s>\/]/')
+        // The calendar never becomes a sheet on a screen the native input owns.
+        ->toContain('sheetOnMobile: false');
+});
+
+// A phone gets its own date wheel even with disabled dates: the wheel cannot
+// grey them out, but the server rule refuses them, and the custom calendar is
+// the harder control to use on a phone.
+test('a picker with disabled dates still goes native on a phone', function () {
+    $field = DateTimePicker::make('d')->asDate()->disabledDates(['2026-07-10'])->nativeOnMobile();
+
+    expect($field->isNativeOnMobile())->toBeTrue()
+        ->and(renderPickerView($field))->toContain('type="date"');
+});
+
+test('month mode is native everywhere, never split', function () {
+    expect(DateTimePicker::make('d')->asMonth()->nativeOnMobile()->getNativeControlMode())
+        ->toBe(NativeControlMode::Always);
+});
+
+// ─── Server-side bounds ──────────────────────────────────────────────────────
+
+// Regression: minDate(), maxDate() and disabledDates() were drawn by the picker
+// only. A typed value, or a phone's own wheel (iOS ignores min/max), saved
+// whatever it was given.
+test('the picker bounds are held on the server too', function () {
+    $rules = DateTimePicker::make('d')->asDate()
+        ->minDate('2026-07-10')->maxDate('2026-07-20')->disabledDates(['2026-07-15'])
+        ->getValidationRules();
+
+    $messages = fn (mixed $value): array => Validator::make(['d' => $value], ['d' => $rules])->errors()->get('d');
+
+    expect($rules[0])->toBe('nullable')
+        ->and($rules[1])->toBeInstanceOf(DateWithinBounds::class)
+        ->and($messages('2026-07-12'))->toBe([])
+        ->and($messages(null))->toBe([])
+        ->and($messages('2026-07-09'))->toBe(['The d must not be earlier than 2026-07-10.'])
+        ->and($messages('2026-07-21'))->toBe(['The d must not be later than 2026-07-20.'])
+        ->and($messages('2026-07-15'))->toBe(['The selected d is not available.'])
+        ->and($messages('not a date'))->toBe(['The d is not a valid date.']);
+});
+
+test('a datetime bound compares instants, and names itself as the user reads it', function () {
+    $rules = DateTimePicker::make('d')->minDate('2026-07-10 08:30')->displayFormat('j. n. Y H:i')->required()->getValidationRules();
+    $messages = fn (mixed $value): array => Validator::make(['d' => $value], ['d' => $rules])->errors()->get('d');
+
+    expect($messages('2026-07-10T08:30'))->toBe([])
+        ->and($messages('2026-07-10T08:30:00'))->toBe([])
+        ->and($messages('2026-07-10T08:29'))->toBe(['The d must not be earlier than 10. 7. 2026 08:30.']);
+});
+
+test('a time field holds its clock bounds', function () {
+    $rules = DateTimePicker::make('t')->asTime()->minDate('08:00')->maxDate('17:00')->getValidationRules();
+    $passes = fn (mixed $value): bool => Validator::make(['t' => $value], ['t' => $rules])->passes();
+
+    expect($passes('08:00'))->toBeTrue()
+        ->and($passes('17:00'))->toBeTrue()
+        ->and($passes('07:59'))->toBeFalse()
+        ->and($passes('17:01'))->toBeFalse();
+});
+
+test('a picker with nothing to hold adds no rule', function () {
+    expect(DateTimePicker::make('d')->getValidationRules())->toBe([]);
+});
+
+test('every picker goes native on a phone, whatever its step or seconds', function () {
+    expect(DateTimePicker::make('d')->minutesStep(15)->nativeOnMobile()->isNativeOnMobile())->toBeTrue()
+        ->and(DateTimePicker::make('d')->asTime()->hoursStep(2)->nativeOnMobile()->isNativeOnMobile())->toBeTrue()
+        ->and(DateTimePicker::make('d')->asTime()->withSeconds()->nativeOnMobile()->isNativeOnMobile())->toBeTrue();
+});
+
+test('a clock step decides the native control: slots, not a time input', function () {
+    expect(DateTimePicker::make('d')->getSlotInterval())->toBeNull()
+        ->and(DateTimePicker::make('d')->asDate()->minutesStep(15)->getSlotInterval())->toBeNull()
+        ->and(DateTimePicker::make('d')->minutesStep(15)->getSlotInterval())->toBe(15)
+        ->and(DateTimePicker::make('d')->asTime()->hoursStep(2)->getSlotInterval())->toBe(120)
+        ->and(DateTimePicker::make('d')->minutesStep(1)->usesNativeSlots())->toBeFalse();
+});
+
+// iOS ignores a time input's step, so a stepped datetime is a native date input
+// beside a native <select> of the slots, joined by wireNativeDateTime.
+test('a stepped datetime renders a native date and a native slot select', function () {
+    $html = renderPickerView(DateTimePicker::make('d')->minutesStep(15)->minDate('2026-07-10 08:30')->native());
+
+    expect($html)
+        ->toContain('wireNativeDateTime(')
+        ->toContain('type="date"')
+        ->toContain('min="2026-07-10"')
+        ->toContain('x-model="date"')
+        ->toContain('x-model="time"')
+        ->toMatch('/<option value="08:15"\s*>08:15/')
+        ->not->toContain('type="datetime-local"');
+});
+
+test('a stepped time renders a native slot select', function () {
+    $html = renderPickerView(DateTimePicker::make('t')->asTime()->minutesStep(20)->minDate('08:00')->maxDate('09:00')->native());
+
+    expect($html)
+        ->toContain('<select')
+        ->toMatch('/<option value="08:20"\s*>08:20/')
+        ->not->toContain('<option value="09:20"')
+        ->not->toContain('type="time"');
+});
+
+test('the controller joins both halves into the one state, or nothing', function () {
+    $controller = file_get_contents(__DIR__.'/../../../resources/js/fields/native-date-time.js');
+
+    expect($controller)
+        ->toContain('return this.date && this.time ? `${this.date}T${this.time}` : null')
+        ->and(file_get_contents(__DIR__.'/../../../dist/wire-forms-fields.js'))->toContain('wireNativeDateTime');
 });

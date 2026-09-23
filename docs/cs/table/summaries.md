@@ -143,7 +143,9 @@ jsou řádky zaškrtnuté. Aktivní volba je uložena ve stavu Livewire tabulky.
 ## Formátování čísel
 
 Numerické souhrny se formátují s prefixem/suffixem sloupce a, když je nastaveno,
-`->summaryDecimals()`:
+`->summaryDecimals()`. Bez něj sloupec, který své buňky formátuje přes
+`numeric()` nebo `money()`, stejně naformátuje i součty — buňky i patička jdou
+přes jeden formátovač, takže se nemohou rozcházet:
 
 ```php
 TextColumn::make('total')
@@ -165,6 +167,8 @@ TextColumn::make('total')
 | `->summaryDecimals(2, '.', ',')`           | `1234.5` | `1,234.50`    |
 | `->prefix("$")->summaryDecimals(2,'.',',')`| `1500`   | `$1,500.00`   |
 | `->suffix(' Kč')->summaryDecimals(2)`      | `1234.5` | `1 234,50 Kč` |
+| `->numeric(2)`                             | `1234.5` | `1 234,50`    |
+| `->numeric(2)->summaryDecimals(0)`         | `1234.5` | `1 235`       |
 
 `count` a `distinctCount` se nikdy nepřeformátují jako desetinná čísla — zůstanou
 celočíselné. `range` je už formátovaný řetězec `"min – max"`.

@@ -9,14 +9,18 @@ use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
 use NyonCode\WirePanels\Install\RegisterResourceRoutes;
+use NyonCode\WirePanels\Resources\Console\MakeDashboardPageCommand;
 use NyonCode\WirePanels\Routing\ConfiguredRoutes;
 use NyonCode\WirePanels\Routing\RegisteredPageUrls;
 use NyonCode\WirePanels\Routing\ResourceRoutes;
+use NyonCode\WirePanels\Routing\RouteAccess;
+use NyonCode\WirePanels\Routing\RouteClaims;
 
 /**
  * The application owner layer.
@@ -46,9 +50,17 @@ class WirePanelsServiceProvider extends PackageServiceProvider
             ->registeredPackage(function (): void {
                 $this->registerRouteMacros();
 
+                // What the macros registered, so no page of theirs takes a
+                // route's path or loses its own to one — see RouteClaims.
+                $this->app->singleton(RouteClaims::class);
+
                 // Core asks "where does this key live?" and answers null until
                 // something owns routing. This package does, so it answers.
                 $this->app->bind(ResolvesPageUrls::class, RegisteredPageUrls::class);
+
+                // And who may open them: the `can:` middleware this package
+                // writes onto those routes, asked of the Gate.
+                $this->app->bind(AuthorizesUrls::class, RouteAccess::class);
 
                 // And core calls this once the registries are full, which is the
                 // only moment auto-registration can read a complete catalogue.
@@ -62,9 +74,21 @@ class WirePanelsServiceProvider extends PackageServiceProvider
                 // choose, so the step asks rather than guessing.
                 SetupRegistry::instance()->register(RegisterResourceRoutes::class);
             })
+            ->bootedPackage(function (): void {
+                // Once every route is loaded: a route file registers its
+                // routes from a provider's booted callback, and the one that
+                // replaces a page may come after the page.
+                $this->app->booted(fn () => $this->app->make(RouteClaims::class)->verify());
+            })
             ->hasConfig()
             ->hasViews()
             ->hasTranslations()
+            // The page half of a dashboard. It lives here because the class it
+            // extends does: core owns the declaration and may not name a class
+            // from a package above it, so `make:wire-dashboard` asks for this
+            // one by name — see MakeDashboardPageCommand.
+            ->hasCommand(MakeDashboardPageCommand::class)
+            ->hasStubs(['../stubs/dashboard-page.stub'])
             ->hasAbout();
     }
 

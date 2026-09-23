@@ -9,6 +9,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
+use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
 use Throwable;
 
 /**
@@ -18,13 +19,15 @@ use Throwable;
  * open them with Laravel's own `can:` middleware (`RoutePage::permission()`,
  * a zone's group). So a place that picks a destination — the admin's entry
  * ({@see PanelEntry}), a menu item that could point into more than one zone —
- * asks the route's `can:` middleware of the Gate first.
+ * asks the route's `can:` middleware of the Gate first. It is also core's
+ * {@see AuthorizesUrls}, so a core surface — a tour carrying on to another page
+ * — asks the same thing without naming this package.
  *
  * Only `can:` is asked. It is the one middleware the panel uses for
  * authorization; `auth` and `verified` already passed on the way to whatever is
  * asking, and anything else is the application's to answer.
  */
-final readonly class RouteAccess
+final readonly class RouteAccess implements AuthorizesUrls
 {
     public function __construct(private Router $router, private Gate $gate) {}
 

@@ -15,9 +15,19 @@ menu and a URL in the router without either of them learning what a widget is.
 Use the `WithWidgets` trait on a Livewire component to compose a widget dashboard.
 
 ```php
+use NyonCode\WireCore\Widgets\ChartWidget;
 use NyonCode\WireCore\Widgets\Concerns\WithWidgets;
 use NyonCode\WireCore\Widgets\Contracts\HasWidgets;
+use NyonCode\WireCore\Widgets\Stat;
+use NyonCode\WireCore\Widgets\StatsOverviewWidget;
+use NyonCode\WireTable\Table;
+use NyonCode\WireTable\Widgets\TableWidget;   // [tl! focus]
 ```
+
+**`TableWidget` is the one that is not wire-core's.** It draws rows of a table
+inside a card, and the engine that draws them lives in `wire-table` — so the
+class does too, and an application without that package composes the other
+widget kinds exactly as below. See [Tables And Custom Views](custom.md).
 
 ### Usage
 
@@ -32,10 +42,10 @@ class Dashboard extends Component implements HasWidgets
             StatsOverviewWidget::make()
                 ->columns(4)
                 ->stats([
-                    Stat::make('Users', User::count()),
-                    Stat::make('Orders', Order::count()),
+                    Stat::make('Users', (string) User::count()),
+                    Stat::make('Orders', (string) Order::count()),
                     Stat::make('Revenue', "$" . number_format(Order::sum('total'), 2)),
-                    Stat::make('Products', Product::count()),
+                    Stat::make('Products', (string) Product::count()),
                 ]),
 
             ChartWidget::make()
@@ -47,7 +57,8 @@ class Dashboard extends Component implements HasWidgets
 
             TableWidget::make()
                 ->heading('Recent Orders')
-                ->table(fn ($table) => $this->configureRecentOrdersTable($table)),
+                ->limit(5)
+                ->table(fn (Table $table): Table => $this->configureRecentOrdersTable($table)),
         ];
     }   // [tl! focus:end]
 
@@ -152,15 +163,32 @@ final class SalesDashboard extends Dashboard
 }   // [tl! focus:end]
 ```
 
-`php artisan make:wire-dashboard Sales` generates exactly that — into
-`app/Dashboards/`, from a stub you can publish and change:
+`php artisan make:wire-dashboard Sales` generates **two** files:
 
-```bash
-php artisan vendor:publish --tag=wire-core::stubs
+```text
+app/Dashboards/SalesDashboard.php          the declaration
+app/Livewire/Dashboards/ShowSales.php      the page that mounts it
 ```
 
-A published `stubs/dashboard.stub` wins over the package's, the way Laravel's
-own `stub:publish` works.
+Two, because one of them cannot be opened. A dashboard that declares no pages is
+routed nowhere — it appears in the menu as an entry with no link and answers 404
+at every address — so a generator that wrote only the declaration handed back
+something that looked finished and was not.
+
+The page is wire-panels' class, so wire-panels generates it: the command calls
+`make:wire-dashboard-page` when that package is installed, and says what to
+install when it is not. `--no-page` writes the declaration alone; the declared
+`pages()` stays either way, since nothing reads it until something routes.
+
+Both templates are stubs you can publish and change:
+
+```bash
+php artisan vendor:publish --tag=wire-core::stubs     # the dashboard
+php artisan vendor:publish --tag=wire-panels::stubs   # the page
+```
+
+A published `stubs/wire-core/dashboard.stub` wins over the package's, the way
+Laravel's own `stub:publish` works.
 
 Register it the way resources are registered:
 
@@ -229,8 +257,21 @@ declares `pages()` is routed by `Route::wireResources()` like any resource. See 
 | --- | --- | --- |
 | `widgets(): array` | `array<int, Widget>` | The widgets, in layout order. Required |
 | `columns(): int` | `int` | Grid columns; defaults to 2 |
+| `customisable(): bool` | `bool` | Whether each user may rearrange it; false, and that is the whole opt-in |
+| `savedLayouts(): bool` | `bool` | Whether each user may keep several arrangements, each under a name; needs `customisable()` too |
 | `static key(): string` | `string` | Identity, derived from the class name minus `Dashboard` |
 | `static label(): string` | `string` | Human name; the page's default heading |
+
+### Letting each user rearrange it
+
+`customisable()` is one sentence here and a whole feature behind it: the widgets
+a user placed, in their order and at their sizes, stored per user and per
+dashboard. `DashboardPage` turns it into the key the layout is stored under and
+includes the Customise / Save / Cancel / Reset controls, so a declared dashboard
+needs no view of its own. Every widget on one needs its own `key()`.
+
+See [Widgets → Customisable dashboards](index.md#customisable-dashboards) for
+the store, the tray, `group()` and `sizes()`.
 
 ---
 

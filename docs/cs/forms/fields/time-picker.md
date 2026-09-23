@@ -73,7 +73,7 @@ TimePicker::make('opens_at')
     ->withSeconds()               // ukládá H:i:s; sloty pořád padají na :00
     ->displayFormat('H:i')
     ->typeable(false)             // jen seznam — do triggeru se psát nedá
-    ->native()                    // nativní <input type="time"> prohlížeče
+    ->native()                    // nativní <select> se sloty
     ->placeholder('Vyber čas')
 ```
 
@@ -86,9 +86,20 @@ Ukládaná hodnota je `H:i`, s `withSeconds()` pak `H:i:s`.
 > `DateTimePicker::asTime()`: holý čas je hodnota nástěnných hodin a převod mezi
 > zónami by ji rozbil. Platí jen pro `datetime`.
 
-> `->native()` předá celé pole vlastnímu časovému prvku prohlížeče, takže s ním
-> odejde i seznam slotů, interval a zakázané sloty — nativní input si `min`/`max`
-> vynucuje po svém.
+> `->native()` vykreslí sloty jako nativní `<select>` prohlížeče, ne jako
+> `<input type="time">`: `step` časového vstupu se do kolečka telefonu nedostane
+> (iOS nabízí každou minutu), takže hodnotu na slotu udrží jen select. Nabízí
+> sloty uvnitř `minDate()`/`maxDate()` po intervalu, popsané podle
+> `displayFormat()`, a navíc aktuální hodnotu, pokud leží mezi dvěma sloty.
+> `->nativeOnMobile()` udělá totéž jen pod mobilním breakpointem a nad ním seznam
+> slotů ponechá, ať je interval nebo sekundy jakékoli — viz
+> [nativní jen na telefonu](date-time-picker.md#nativni-jen-na-telefonu). Meze
+> server hlídá v každém případě; hodnota mezi sloty chybou není, protože napsat ji
+> na desktopu je dovolené.
+
+> Na telefonu `->touchOnMobile()` promění seznam slotů v dotykové kolečko —
+> sloupce hodin a minut v bottom sheetu — viz
+> [dotykové kolečko na telefonu](date-time-picker.md#dotykove-kolecko-na-telefonu).
 
 ## Režim je zamčený
 

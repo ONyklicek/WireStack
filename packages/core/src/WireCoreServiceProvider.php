@@ -7,6 +7,7 @@ namespace NyonCode\WireCore;
 use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\View;
 use Livewire\ComponentHookRegistry;
 use Livewire\Livewire;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
@@ -50,8 +51,10 @@ use NyonCode\WireCore\Foundation\Icons\IconSet;
 use NyonCode\WireCore\Foundation\Mentions\MentionRegistry;
 use NyonCode\WireCore\Foundation\Mentions\MentionRenderer;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
+use NyonCode\WireCore\Foundation\Routing\UnguardedUrls;
 use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
 use NyonCode\WireCore\Foundation\Setup\EnvFile;
 use NyonCode\WireCore\Foundation\Support\IslandViewScope;
@@ -83,6 +86,10 @@ use NyonCode\WireCore\Notifications\Drivers\StackDriver;
 use NyonCode\WireCore\Notifications\NotificationBell;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireCore\Notifications\Support\NotificationChannel;
+use NyonCode\WireCore\Tours\TourAcknowledgement;
+use NyonCode\WireCore\Tours\TourHost;
+use NyonCode\WireCore\Tours\TourReplay;
+use NyonCode\WireCore\Tours\Tours;
 use NyonCode\WireCore\Widgets\Console\MakeDashboardCommand;
 use NyonCode\WireCore\Widgets\Console\MakeWidgetCommand;
 use NyonCode\WireCore\Widgets\DashboardRegistry;
@@ -115,6 +122,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 $this->bootModals();
                 $this->bootPlugins();
                 $this->bootResources();
+                $this->bootTours();
                 Bundle::serve('wire-core', self::ASSETS_PATH);
             })
             ->hasConfig()
@@ -323,6 +331,12 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // Singleton because that is the whole contract: two instances would mean
         // two copies of a modal in one document, both listening for one event.
         $this->app->singleton(PageChrome::class);
+
+        // The registered walkthroughs. Singleton for the reason PageChrome is
+        // one: providers write to it at boot, and a second instance would be a
+        // registry holding half the tours — with which half depending on who
+        // resolved it first.
+        $this->app->singleton(Tours::class);
     }
 
     protected function bootFoundation(): void
@@ -646,6 +660,10 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // "nothing is routed" until a package that routes says otherwise.
         $this->app->bindIf(ResolvesPageUrls::class, UnroutedPageUrls::class);
 
+        // Its other half: whether somebody may open a URL. Yes until the same
+        // package says which routes carry `can:` middleware.
+        $this->app->bindIf(AuthorizesUrls::class, UnguardedUrls::class);
+
         $this->app->bind(Workspace::class, fn ($app): Workspace => new Workspace(
             $app->make(Catalog::class),
             $app->make(NavigationGroups::class),
@@ -679,6 +697,54 @@ class WireCoreServiceProvider extends PackageServiceProvider
      * may reference models and policies, so it is read once the application's
      * own providers have run.
      */
+    /**
+     * Put the walkthrough's chrome on every page, and give it its data.
+     *
+     * **Unconditional, deliberately.** Provider order in a Laravel application
+     * is composer's discovery order, so an application that registers its tours
+     * in its own provider may boot after this one — and a `if ($tours->all())`
+     * here would answer "none" for exactly that application and leave the chrome
+     * off every page for ever. The same reasoning `wire-module-users` records
+     * for its user-menu entry. Whether there is a tour to run is asked at
+     * render, where the answer is knowable.
+     *
+     * A composer rather than a view that resolves its own dependencies: a view
+     * reaching into the container is a view doing PHP's job (Rendering Rule 1),
+     * and `PageChrome` renders by name with no data of its own to pass.
+     *
+     * The cost to an application with no tours is one `@include`, one empty
+     * `foreach` over the registry, and the `@if` that ends the view. Nothing
+     * touches the preference store until a tour actually claims a screen.
+     */
+    protected function bootTours(): void
+    {
+        View::composer('wire-core::tours.host', function ($view): void {
+            $host = $this->app->make(TourHost::class);
+
+            $view->with(['tourHost' => $host, 'tour' => $host->current()]);
+        });
+
+        View::composer('wire-core::tours.replay-entry', function ($view): void {
+            $view->with('replayableTour', $this->app->make(TourHost::class)->replayable());
+        });
+
+        // The one round trip a tour makes, and the way back into one that is
+        // finished. Addressable by name so a Blade file mounts them without
+        // importing a class, the same as the bell and the palette above.
+        Livewire::component('wire-tour-acknowledgement', TourAcknowledgement::class);
+        Livewire::component('wire-tour-replay', TourReplay::class);
+
+        $chrome = $this->app->make(PageChrome::class);
+
+        $chrome->add('wire-core::tours.host');
+
+        // In the person's own menu rather than the page's chrome, because a
+        // walkthrough is theirs: they are the one who finished it, and they are
+        // the one who wants it again. The sort leaves room above for the profile
+        // link and below for the way out, neither of which this package can see.
+        $chrome->add('wire-core::tours.replay-entry', PageChrome::USER_MENU, sort: 20);
+    }
+
     protected function bootResources(): void
     {
         $this->app->make(ResourceRegistry::class)->registerMany(config('wire-core.resources', []));

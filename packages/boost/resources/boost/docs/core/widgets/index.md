@@ -491,6 +491,20 @@ The pairs are the *offer*, not a promise about storage: a layout that arrives
 carrying a size outside them is still clamped to the grid rather than rejected,
 because a stored layout can outlive the declaration that shaped it.
 
+**The steppers are that offer, drawn.** The width buttons walk the offered
+widths — taking the height that width is offered at, so a declaration of
+`[[2, 1], [4, 2]]` has both pairs reachable — and the height buttons walk the
+heights offered at the current width, so a height button never moves a tile
+sideways under the reader's hand. A button with nowhere left to go is drawn
+disabled, which is the one place a user sees the offer.
+
+**A width is bounded by the dashboard's own `columns()` too.** A tile wider than
+its grid does not clip: CSS Grid *adds* the missing column, and every other tile
+on the dashboard is squeezed into what is left. So a three-column dashboard
+never offers a fourth, and whatever the browser sends is snapped to the same
+answer on the way in — one owner, `Widgets\Support\WidgetSizeOffer`, for both
+bounds and for the buttons.
+
 **"Removed" and "available" are the same state.** Nothing records that a widget
 was taken off — it is simply not in the layout any more, which is what puts it in
 the tray. One rule doing two jobs, so the two cannot disagree.
@@ -528,6 +542,60 @@ public function render()
     return view('wire-core::widgets.widget-grid', $this->widgetGridData(2));
 }
 ```
+
+### What the browser may change
+
+The host holds four public properties, because a drag makes round trips and a
+widget cannot remember anything across one: the draft being arranged, whether
+the editor is open, each widget's filter selection and which deferred widgets
+have been fetched. **All four are `#[Locked]`** — every change has a method, and
+a method is where a key is checked against the declaration and a size against
+the grid:
+
+```php
+moveWidget() placeWidget() resizeWidget() removeWidget()   // the arrangement
+startEditingWidgets() saveWidgetLayout() cancelEditingWidgets() resetWidgetLayout()
+filterWidget() loadWidget() callWidgetAction() refreshWidget()
+```
+
+Saving narrows what it writes to the keys the dashboard declares, which also
+cleans a stored layout left by an older declaration — a widget you renamed stops
+being carried around the first time that user saves.
+
+### More than one arrangement
+
+`savedLayouts()` is the second half of the opt-in, and it is separate because the
+wishes are: `customisable()` is "you may rearrange this", this is "you may keep
+several arrangements".
+
+```php
+class SalesDashboard extends Dashboard
+{
+    public function customisable(): bool { return true; }
+    public function savedLayouts(): bool { return true; }   // [tl! focus]
+}
+```
+
+It rides the same store — a saved layout **is** this dashboard's layout under a
+name, which is the `view` dimension the preference store has carried since it
+was a table's. The controls gain a "Save as…" beside Customise, and a switcher
+once there is something to switch to.
+
+| Method | What it does |
+| --- | --- |
+| `saveWidgetLayoutAs(string $name)` | Keeps the arrangement on screen under a name, replacing one of that name |
+| `applyWidgetLayout(string $name)` | Puts a saved arrangement back on the dashboard |
+| `deleteWidgetLayout(string $name)` | Forgets one; the dashboard on screen is untouched |
+| `getWidgetLayoutNames(): array` | The names this user has saved, for a switcher of your own |
+
+**Applying is a copy, not a pointer.** The saved arrangement is written onto the
+current layout, so nothing has to remember which name is in use and the answer
+survives a reload without a second piece of stored state that could disagree
+with the first. Choosing a name is a verb, not a mode you are then in.
+
+Saving while the editor is open keeps the **draft** — what the user is looking
+at. On a dashboard nobody has arranged, what is captured is what the grid shows,
+since a name over "the declaration" would restore nothing.
 
 ### Ready-made controls
 

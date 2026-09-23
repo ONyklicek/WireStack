@@ -73,7 +73,7 @@ TimePicker::make('opens_at')
     ->withSeconds()               // stored H:i:s; slots still land on :00
     ->displayFormat('H:i')
     ->typeable(false)             // the list only — no typing into the trigger
-    ->native()                    // browser's <input type="time">
+    ->native()                    // a native <select> of the slots
     ->placeholder('Pick a time')
 ```
 
@@ -86,9 +86,20 @@ The stored value is `H:i`, or `H:i:s` with `withSeconds()`.
 > `DateTimePicker::asTime()`: a bare time is a wall-clock value, and converting it
 > between zones would corrupt it. It applies to `datetime` only.
 
-> `->native()` hands the whole field to the browser's own time control, so the
-> slot list, the interval and the disabled slots all go with it — a native input
-> enforces `min`/`max` its own way.
+> `->native()` renders the slots as a browser-native `<select>`, not as
+> `<input type="time">`: a time input's `step` never reaches a phone's wheel
+> (iOS offers every minute), so only a select keeps the value on a slot. It
+> lists the slots inside `minDate()`/`maxDate()` at the interval, labelled by
+> `displayFormat()`, plus the current value if it sits between two slots.
+> `->nativeOnMobile()` does the same below the mobile breakpoint only and keeps
+> the slot list above it, whatever the interval or seconds — see
+> [native on phones only](date-time-picker.md#native-on-phones-only). The bounds
+> are validated on the server either way; a value between slots is not an
+> error, because typing one on a desktop is allowed.
+
+> On a phone, `->touchOnMobile()` turns the slot list into a touch wheel — hour
+> and minute columns in a bottom sheet — see
+> [touch wheel on phones](date-time-picker.md#touch-wheel-on-phones).
 
 ## The Mode Is Locked
 

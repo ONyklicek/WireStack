@@ -130,6 +130,50 @@ final class MobileSheet
     }
 
     /**
+     * Shown below the breakpoint only — the wrapper of a browser-native control
+     * that stands in for a custom one on a phone (`->nativeOnMobile()`).
+     *
+     * Goes on a wrapper, never on the control: `hidden` next to the control's
+     * own `block` is two display utilities, and which wins is the stylesheet's
+     * order rather than the markup's.
+     */
+    public static function showBelow(?string $breakpoint = null): string
+    {
+        return match (self::breakpoint($breakpoint)) {
+            'md' => 'hidden max-md:block',
+            'lg' => 'hidden max-lg:block',
+            default => 'hidden max-sm:block',
+        };
+    }
+
+    /**
+     * Hidden below the breakpoint — the wrapper of the custom control a native
+     * one replaces there. The counterpart of {@see showBelow()}.
+     */
+    public static function hideBelow(?string $breakpoint = null): string
+    {
+        return match (self::breakpoint($breakpoint)) {
+            'md' => 'max-md:hidden',
+            'lg' => 'max-lg:hidden',
+            default => 'max-sm:hidden',
+        };
+    }
+
+    /**
+     * A trigger sized for a thumb below the breakpoint: a 44px target and 16px
+     * text (iOS Safari zooms into anything smaller). For the trigger of a
+     * control that opens a touch sheet (`->touchOnMobile()`).
+     */
+    public static function touchTrigger(?string $breakpoint = null): string
+    {
+        return match (self::breakpoint($breakpoint)) {
+            'md' => 'max-md:min-h-11 max-md:text-base',
+            'lg' => 'max-lg:min-h-11 max-lg:text-base',
+            default => 'max-sm:min-h-11 max-sm:text-base',
+        };
+    }
+
+    /**
      * Hide-from-breakpoint utility for the dimming backdrop (mobile-only).
      */
     public static function backdropHide(?string $breakpoint = null): string

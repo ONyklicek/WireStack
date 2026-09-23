@@ -90,3 +90,12 @@ it('selects the "all" placeholder option when no value is set on the native path
 
     expect($html)->toMatch('/value=""\s+selected/');
 });
+
+it('renders the combobox and a native twin when native on mobile', function () {
+    $html = TernaryFilter::make('active')->nativeOnMobile()->render();
+
+    expect($html)
+        ->toContain('<div class="hidden max-sm:block">')
+        ->toContain('id="filter-active-native"')
+        ->toContain('wireSearchableSelect(');
+});

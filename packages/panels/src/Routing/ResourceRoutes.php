@@ -133,19 +133,20 @@ final class ResourceRoutes
      * Checked against the routes registered so far, not only this call's: an
      * application that calls `wireResources()` twice in one group, or routed a
      * page of its own at the prefix, must not have that page replaced — Laravel
-     * keys routes by method and URI, and the later registration wins.
+     * keys routes by method and URI, and the later registration wins. A route
+     * the application registers at the prefix *after* this one wins the same
+     * way, and is left to: see {@see RouteClaims} for why the entry yields
+     * where a page refuses.
      */
     private static function entry(): ?Route
     {
         $uri = self::groupPrefix() === '' ? '/' : self::groupPrefix();
 
-        foreach (RouteFacade::getRoutes()->get('GET') as $existing) {
-            if ($existing->uri() === $uri && $existing->getDomain() === self::groupDomain()) {
-                return null;
-            }
-        }
-
-        return RouteFacade::get('', PanelEntry::class)->name('wire.home');
+        return app(RouteClaims::class)->entry(
+            $uri,
+            self::groupDomain(),
+            fn (): Route => RouteFacade::get('', PanelEntry::class)->name('wire.home'),
+        );
     }
 
     /**
@@ -168,18 +169,28 @@ final class ResourceRoutes
     }
 
     /**
-     * The prefix of the group this is being registered inside, for a message.
+     * The whole prefix of the group this is being registered inside.
      *
      * Read off the router's group stack rather than passed in, because the group
      * is the application's and this deliberately never knew about it — which is
-     * the whole point of the macro. Best effort, and used only to name the zone
-     * in an error.
+     * the whole point of the macro. Not only for a message: entry() looks for a
+     * route already at this path before it puts `wire.home` there, so a wrong
+     * answer replaces the application's route rather than misnaming a zone.
      */
     private static function groupPrefix(): string
     {
         $stack = RouteFacade::getFacadeRoot()->getGroupStack();
 
-        return trim(implode('/', array_filter(array_column($stack, 'prefix'))), '/');
+        if ($stack === []) {
+            return '';
+        }
+
+        // Laravel merges the prefix into every layer of the stack, so the last one
+        // already carries the whole path. Joining them multiplies it: a nested
+        // group under `sales` answers `sales/sales`, the root check in entry()
+        // never matches, and `wire.home` is registered over the application's own
+        // route — silently, because Laravel keys routes by method and URI.
+        return trim((string) (end($stack)['prefix'] ?? ''), '/');
     }
 
     /**
@@ -199,6 +210,7 @@ final class ResourceRoutes
         $prefix = self::prefixFor($resource, $key);
         $domain = self::domainFor($resource);
         $shared = self::middlewareFor($resource);
+        $claims = app(RouteClaims::class);
 
         $routes = [];
 
@@ -223,9 +235,11 @@ final class ResourceRoutes
                 $registrar = $registrar->domain($domain);
             }
 
-            $routes[] = $registrar
+            // Through the claims, so the page never takes a path a route of the
+            // application's holds, and never loses its own to one without a word.
+            $routes[] = $claims->page($key, $name, fn (): Route => $registrar
                 ->get(trim($prefix.'/'.$uri, '/'), $page->component)
-                ->name("wire.{$key}.{$name}");
+                ->name("wire.{$key}.{$name}"));
         }
 
         return $routes;

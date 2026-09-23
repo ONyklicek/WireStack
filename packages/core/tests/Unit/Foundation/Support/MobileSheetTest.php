@@ -63,3 +63,12 @@ it('accepts a Breakpoint enum override, resolving non-sheet breakpoints to sm', 
         ->and(MobileSheet::breakpoint(Breakpoint::Xl))->toBe('sm')
         ->and(MobileSheet::breakpoint(Breakpoint::Xl))->toBe(MobileSheet::breakpoint('xl'));
 });
+
+it('splits a control pair at the breakpoint, one side each', function () {
+    expect(MobileSheet::showBelow('sm'))->toBe('hidden max-sm:block')
+        ->and(MobileSheet::hideBelow('sm'))->toBe('max-sm:hidden')
+        ->and(MobileSheet::showBelow('md'))->toBe('hidden max-md:block')
+        ->and(MobileSheet::hideBelow('md'))->toBe('max-md:hidden')
+        ->and(MobileSheet::showBelow('lg'))->toBe('hidden max-lg:block')
+        ->and(MobileSheet::hideBelow('lg'))->toBe('max-lg:hidden');
+});

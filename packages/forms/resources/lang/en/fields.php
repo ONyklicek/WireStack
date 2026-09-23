@@ -54,6 +54,15 @@ return [
     // MoneyInput's own validation messages: the amount lives behind the
     // grouping separators, so the bounds are reported back in the format the
     // user typed rather than as a bare float.
+    // DateTimePicker's bounds, held on the server as well as drawn by the
+    // picker — a typed value or a phone's own wheel can step outside them.
+    'date' => [
+        'invalid' => 'The :attribute is not a valid date.',
+        'min' => 'The :attribute must not be earlier than :min.',
+        'max' => 'The :attribute must not be later than :max.',
+        'disabled' => 'The selected :attribute is not available.',
+    ],
+
     'money' => [
         'invalid' => 'The :attribute must be an amount.',
         'min' => 'The :attribute must be at least :min.',
@@ -85,5 +94,18 @@ return [
         'this_month' => 'This month',
         'last_30_days' => 'Last 30 days',
         'this_year' => 'This year',
+    ],
+
+    // The mobile wheel picker (->touchOnMobile()): its columns and its buttons.
+    'wheel' => [
+        'hours' => 'Hours',
+        'minutes' => 'Minutes',
+        'day' => 'Day',
+        'month' => 'Month',
+        'year' => 'Year',
+        'today' => 'Today',
+        'done' => 'Done',
+        'cancel' => 'Cancel',
+        'clear' => 'Clear',
     ],
 ];

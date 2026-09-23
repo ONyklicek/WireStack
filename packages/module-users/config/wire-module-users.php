@@ -172,6 +172,10 @@ return [
     | in its own right — an application that wants the password card on a page
     | of its own mounts it there and turns it off here.
     |
+    | `browser_sessions` lists where the account is signed in only on the
+    | `database` session driver — nothing else knows whose a session is. Its
+    | button signs the other devices out on any driver.
+    |
     | `delete_account` is off by default, and deliberately: an admin panel where
     | the only administrator can remove themselves in two clicks is a support
     | ticket waiting to happen. Turn it on where accounts are self-service.
@@ -181,6 +185,7 @@ return [
         'password' => true,
         'two_factor' => true,
         'passkeys' => true,
+        'browser_sessions' => true,
         'delete_account' => env('WIRE_USERS_DELETE_ACCOUNT', false),
 
         // Whether the shell's user menu gets a link to this page. On, because

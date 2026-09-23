@@ -301,6 +301,7 @@ Framework jich nese pár set; tyhle jsou ty, od kterých většina témat začí
 | `admin-nav-item`, `admin-nav-label`, `admin-nav-badge-dot` | Jedna položka menu |
 | `table-search`, `table-toolbar`, `table-bulk-bar` | Chrome nad tabulkou |
 | `form-field` | Wrapper, který má každé pole formuláře |
+| `tour-panel`, `tour-highlight`, `tour-backdrop` | Průvodce, když právě běží |
 | `badge`, `button`, `callout`, `dropdown`, `menu-item`, `section` | Sdílené komponenty, kdekoli se objeví |
 
 ### Co jméno slibuje

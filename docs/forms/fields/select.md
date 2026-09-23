@@ -281,6 +281,78 @@ Select::make('country')
     ->native()          // force the browser-native <select> instead
 ```
 
+### Native on phones only
+
+Some selects are fine as a combobox on a desktop and hard work on a phone — a
+long list in a 360px-wide sheet, a multi-select you have to scroll through.
+`nativeOnMobile()` keeps the combobox from the field's
+[mobile breakpoint](../../start/configuration.md#mobile) up and hands the screen
+below it to the browser's `<select>`, which a phone opens as its own wheel or
+full-screen list.
+
+```php
+Select::make('country')
+    ->options(Country::pluck('name', 'code')->toArray())
+    ->searchable()
+    ->nativeOnMobile()          // phone: native <select>; tablet/desktop: combobox
+    ->mobileBreakpoint('md')    // the split follows the sheet breakpoint
+```
+
+How it resolves:
+
+- Both controls are in the markup, bound to the same state, and CSS at the
+  breakpoint shows one of them. Nothing is decided in the browser, so there is
+  no flash and no difference between the first paint and a Livewire update.
+- The `<label>` points at the combobox; the native twin gets its own id
+  (`{id}-native`) and names itself with `aria-label`. `required()` becomes
+  `aria-required` on both halves, because a required element the stylesheet
+  hides would stop the form submitting on the other screen size.
+- The bottom sheet this combobox would become on a phone is not rendered — the
+  native element owns that screen.
+- `native()` wins over `nativeOnMobile()`. A select that relies on the combobox
+  keeps it on every screen: remote search (`getSearchResultsUsing()` or a
+  non-preloaded relationship), and `createOptionForm()` / `editOptionForm()`,
+  whose buttons live in the combobox panel. A `multiple()` select goes native
+  too — the phone's own checklist.
+- An empty single select starts on a blank row, so the element never shows the
+  first option while the value is null. On an optional field the row is a real
+  choice — how a phone clears the value — labelled by the placeholder or `—`; on
+  a required one it is disabled and hidden. Below `sm` the element is 16px,
+  because iOS Safari zooms the page into any smaller control the moment it is
+  tapped.
+- The app-wide default is `wire-core.mobile.native` (`WIRE_MOBILE_NATIVE`).
+  An explicit `native(false)` opts a field out of it; `nativeOnMobile(false)`
+  does the same without touching `native()`.
+
+Disabled options (`disabledOptions()`) and the option order are the same in
+both controls.
+
+### Touch list on phones
+
+`touchOnMobile()` keeps the combobox from the field's mobile breakpoint up and
+opens a list made for a thumb below it: a bottom sheet with 48px rows, 16px text
+(iOS does not zoom), the search pinned at the top and a grabber to swipe it
+away.
+
+```php
+Select::make('customer_id')
+    ->relationship('customer', 'name')
+    ->searchable()
+    ->touchOnMobile()           // phone: touch list; desktop: combobox
+```
+
+- It is the same combobox, drawn for a phone: remote search,
+  `createOptionForm()` / `editOptionForm()`, disabled options and the option
+  order all work — everything the browser's `<select>` drops.
+- A searchable list takes the full height, so it does not jump as the search
+  narrows it; a short list sits at the height of its rows.
+- A single pick closes the sheet. A `multiple()` select ticks checkboxes, counts
+  them in the header, and closes on **Done**; **Clear all** empties it.
+- The search is not focused on open, so no keyboard slides up over a list you
+  only meant to scroll.
+- `native()` wins over it; it wins over `nativeOnMobile()`. The app-wide default
+  is `wire-core.mobile.touch`.
+
 ## Boolean Select
 
 ```php
@@ -319,6 +391,8 @@ Select::make('tier')
 | `searchable()` | bool | Enable option search |
 | `multiple()` | bool | Allow multiple selections |
 | `native(bool $native = true)` | bool | Use the browser-native `<select>` instead of the combobox (default: `false`) |
+| `touchOnMobile(bool $condition = true)` | bool | Full-height touch list below the mobile breakpoint, the combobox above it (default: `wire-core.mobile.touch`, `false`) |
+| `nativeOnMobile(bool $condition = true)` | bool | Browser-native `<select>` below the mobile breakpoint only, the combobox above it (default: `wire-core.mobile.native`, `false`) |
 | `maxItems(int\|null)` | int | Maximum selected items (multi-select) |
 | `minItems(int\|null)` | int | Minimum selected items (multi-select) |
 | `disabledOptions(array\|Closure)` | array | Option keys that are rendered as disabled |

@@ -235,3 +235,73 @@ it('draws none of it on a dashboard nobody may rearrange', function () {
     expect($html)->not->toContain('widget-layout-edit')
         ->and($html)->not->toContain('widget-tray');
 });
+
+// ─── Named layouts ───────────────────────────────────────────────────────────
+
+/** A dashboard whose users may keep several arrangements. */
+final class DpNamedDashboard extends Dashboard
+{
+    public function widgets(): array
+    {
+        return [StatsOverviewWidget::make()->key('revenue')->stats([Stat::make('Total', '1')])];
+    }
+
+    public function customisable(): bool
+    {
+        return true;
+    }
+
+    public function savedLayouts(): bool
+    {
+        return true;
+    }
+}
+
+class DpNamedPage extends DashboardPage
+{
+    protected static ?string $dashboard = DpNamedDashboard::class;
+}
+
+/** Names asked for without an arrangement to put under them. */
+final class DpNamesOnlyDashboard extends Dashboard
+{
+    public function widgets(): array
+    {
+        return [StatsOverviewWidget::make()->key('revenue')->stats([Stat::make('Total', '1')])];
+    }
+
+    public function savedLayouts(): bool
+    {
+        return true;
+    }
+}
+
+class DpNamesOnlyPage extends DashboardPage
+{
+    protected static ?string $dashboard = DpNamesOnlyDashboard::class;
+}
+
+it('offers named layouts when the dashboard asks for both', function () {
+    $page = Livewire::test(DpNamedPage::class);
+
+    expect($page->instance()->hasSavedWidgetLayouts())->toBeTrue()
+        ->and($page->html())->toContain('data-testid="widget-layout-save-as"');
+});
+
+it('offers none where only one of the two is asked for', function () {
+    // A name is a name for an arrangement, and a dashboard nobody may rearrange
+    // has none — so `savedLayouts()` alone is the same answer `widgetLayoutKey()`
+    // gives it: nothing.
+    expect(Livewire::test(DpNamesOnlyPage::class)->instance()->hasSavedWidgetLayouts())->toBeFalse()
+        // …and rearranging without names is the shipped default.
+        ->and(Livewire::test(DpCustomisablePage::class)->instance()->hasSavedWidgetLayouts())->toBeFalse();
+
+    expect(Livewire::test(DpCustomisablePage::class)->html())
+        ->not->toContain('data-testid="widget-layout-save-as"');
+});
+
+it('keeps the standalone page s own answer', function () {
+    // No dashboard to ask, so the page says so itself — the same division
+    // `$layoutKey` makes.
+    expect(Livewire::test(DpStandalonePage::class)->instance()->hasSavedWidgetLayouts())->toBeFalse();
+});

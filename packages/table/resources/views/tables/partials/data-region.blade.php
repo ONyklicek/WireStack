@@ -100,6 +100,7 @@
     // Row interaction — the pointer bindings, the two independently switchable
     // halves of the gesture layer, and the active-row marker.
     $rowContextMenuEnabled = $plan->interaction()->rowContextMenuEnabled;
+    $touchMenuEnabled = $plan->interaction()->touchMenuEnabled;
     $recordActionBindings = $plan->interaction()->recordActionBindings;
     $keyboardNav = $plan->interaction()->keyboardNav;
     $tableRole = $plan->interaction()->tableRole;
@@ -115,6 +116,7 @@
     $rowClassBinding = $plan->row()->rowClassBinding;
     $isSelectable = $plan->row()->isSelectable;
     $selectCheckIcon = $plan->row()->selectCheckIcon;
+    $selectIndeterminateIcon = $plan->row()->selectIndeterminateIcon;
     $hasSummaries = $plan->row()->hasSummaries;
     $pageRecordKeys = $plan->row()->pageRecordKeys;
 
@@ -244,11 +246,19 @@
                                                         class="relative h-4 w-4 rounded-sm border focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
                                                         :class="(allSelected || someSelected) ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'"
                                                 >
-                                                    <span x-show="allSelected" x-cloak>
-                                                        {!! icon('check', 'h-4 w-4', 'absolute inset-0 text-white') !!}
+                                                    {{-- The same tick as the rows below, from the same
+                                                         resolved string, drawing itself in the same way —
+                                                         see tables.partials.selection-cell for why the
+                                                         transition sits on the span and why its visible
+                                                         end is the value an absent utility computes to. --}}
+                                                    <span x-show="allSelected" x-cloak
+                                                          x-transition:enter="transition-[stroke-dashoffset] duration-200 ease-out"
+                                                          x-transition:enter-start="[stroke-dashoffset:12]"
+                                                          x-transition:enter-end="[stroke-dashoffset:0]">
+                                                        {!! $selectCheckIcon !!}
                                                     </span>
                                                     <span x-show="someSelected" x-cloak>
-                                                        {!! icon('minus', 'h-4 w-4', 'absolute inset-0 text-white') !!}
+                                                        {!! $selectIndeterminateIcon !!}
                                                     </span>
                                                 </button>
                                             </div>
@@ -377,15 +387,17 @@
                                 </thead>
 
                                 <tbody
-                                        class="divide-y divide-gray-100 dark:divide-gray-700"
+                                        {{-- With a touch menu, a long press is the row's right click: iOS must
+                                             not answer it with its text callout, and a double tap must not zoom. --}}
+                                        class="divide-y divide-gray-100 dark:divide-gray-700{{ $touchMenuEnabled ? ' [&>tr]:touch-manipulation [@media(pointer:coarse)]:[&>tr]:select-none [@media(pointer:coarse)]:[&>tr]:[-webkit-touch-callout:none]' : '' }}"
                                         @if($recordActionsRootEnabled)
-                                            x-data="wireRecordActions({ bindings: @js($recordActionBindings), contextMenu: {{ $rowContextMenuEnabled ? 'true' : 'false' }}, keyboard: @js($recordKeyboardConfig), active: @js($activeRowConfig), gestures: @js($gestureConfig) })"
+                                            x-data="wireRecordActions({ bindings: @js($recordActionBindings), contextMenu: {{ $rowContextMenuEnabled ? 'true' : 'false' }}, touch: {{ $touchMenuEnabled ? 'true' : 'false' }}, keyboard: @js($recordKeyboardConfig), active: @js($activeRowConfig), gestures: @js($gestureConfig) })"
                                             {{-- Bound whenever the controller is mounted, not only for pointer
                                                  bindings: a click also moves the active row, which is what makes a
                                                  clicked row visibly the one the arrow keys continue from. --}}
                                             @click="onPointer('click', $event)"
                                             @dblclick="onPointer('dblclick', $event)"
-                                            @if($rowContextMenuEnabled)
+                                            @if($rowContextMenuEnabled || $touchMenuEnabled)
                                                 @contextmenu="onContextMenu($event)"
                                             @endif
                                             @if($keyboardNav)
@@ -399,7 +411,7 @@
                                         @include('wire-table::tables.partials.record-actions-assets')
                                     @endonce
                                 @endif
-                                @if($rowContextMenuEnabled)
+                                @if($rowContextMenuEnabled || $touchMenuEnabled)
                                     {{-- Core dropdown bundle for any nested action-group dropdown inside a
                                          context-menu item; emitted once per request, not once per row. --}}
                                     @once
@@ -541,9 +553,12 @@
                                             class="relative h-5 w-5 shrink-0 rounded-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                                             :class="(allSelected || someSelected) ? 'bg-primary-600 border-primary-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'"
                                     >
-                                        <span x-show="allSelected" x-cloak>{!! $selectCheckIcon !!}</span>
+                                        <span x-show="allSelected" x-cloak
+                                              x-transition:enter="transition-[stroke-dashoffset] duration-200 ease-out"
+                                              x-transition:enter-start="[stroke-dashoffset:12]"
+                                              x-transition:enter-end="[stroke-dashoffset:0]">{!! $selectCheckIcon !!}</span>
                                         <span x-show="someSelected" x-cloak>
-                                            {!! icon('minus', 'h-4 w-4', 'absolute inset-0 text-white') !!}
+                                            {!! $selectIndeterminateIcon !!}
                                         </span>
                                     </button>
                                     <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">

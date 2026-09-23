@@ -14,7 +14,7 @@ function renderBelongsToSelect(BelongsToSelect $field): string
 {
     view()->share('errors', new ViewErrorBag);
 
-    return view('wire-forms::components.belongs-to-select', ['field' => $field])->render();
+    return view('wire-forms::components.select', ['field' => $field])->render();
 }
 
 test('make creates belongs-to-select with name', function () {
@@ -195,13 +195,13 @@ test('search options returns empty without relationship', function () {
     expect($field->searchOptions('test'))->toBe([]);
 });
 
-test('view name is belongs-to-select', function () {
+test('renders through the base select view', function () {
     $field = BelongsToSelect::make('company_id');
 
     // Access via reflection since viewName() is protected
     $reflection = new ReflectionMethod($field, 'viewName');
 
-    expect($reflection->invoke($field))->toBe('wire-forms::components.belongs-to-select');
+    expect($reflection->invoke($field))->toBe('wire-forms::components.select');
 });
 
 test('create option returns null without record or relationship', function () {

@@ -142,7 +142,9 @@ rows are checked. The active choice is stored in Livewire table state.
 ## Number Formatting
 
 Numeric summaries are formatted with the column's prefix/suffix and, when set,
-`->summaryDecimals()`:
+`->summaryDecimals()`. Without it, a column that formats its cells with
+`numeric()` or `money()` formats its totals the same way — the cells and the
+footer go through one formatter, so they cannot disagree:
 
 ```php
 TextColumn::make('total')
@@ -164,6 +166,8 @@ TextColumn::make('total')
 | `->summaryDecimals(2, '.', ',')`           | `1234.5` | `1,234.50`    |
 | `->prefix("$")->summaryDecimals(2,'.',',')`| `1500`   | `$1,500.00`   |
 | `->suffix(' Kč')->summaryDecimals(2)`      | `1234.5` | `1 234,50 Kč` |
+| `->numeric(2)`                             | `1234.5` | `1 234,50`    |
+| `->numeric(2)->summaryDecimals(0)`         | `1234.5` | `1 235`       |
 
 `count` and `distinctCount` are never reformatted as decimals — they stay whole
 numbers. `range` is already a formatted `"min – max"` string.

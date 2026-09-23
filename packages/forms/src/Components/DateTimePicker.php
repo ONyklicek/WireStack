@@ -15,6 +15,8 @@ use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Contracts\DehydratesState;
 use NyonCode\WireCore\Foundation\Contracts\HydratesState;
 use NyonCode\WireCore\Foundation\Support\DateBoundary;
+use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
+use NyonCode\WireForms\Validation\Rules\DateWithinBounds;
 
 /**
  * Unified date/time picker field.
@@ -24,7 +26,7 @@ use NyonCode\WireCore\Foundation\Support\DateBoundary;
  *
  * @see ADR 0008
  */
-class DateTimePicker extends Field implements DehydratesState, HydratesState
+class DateTimePicker extends Field implements DehydratesState, HydratesState, ProvidesImplicitValidationRules
 {
     use CanBeTyped;
     use HasExtraInputAttributes;
@@ -315,6 +317,128 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
         return $this->nativeChoice() || $this->mode === 'month';
     }
 
+    /**
+     * The picker's bounds, repeated on the server — see {@see DateWithinBounds}.
+     * Nothing to hold, no rule: a plain date field keeps exactly the rules its
+     * owner wrote.
+     *
+     * @return array<int, mixed>
+     */
+    public function implicitValidationRules(): array
+    {
+        $min = $this->getMinDate();
+        $max = $this->getMaxDate();
+        $disabled = $this->mode === 'time' ? [] : $this->getDisabledDates();
+
+        if ($min === null && $max === null && $disabled === []) {
+            return [];
+        }
+
+        $rule = new DateWithinBounds($min, $max, $disabled, $this->getDisplayFormat());
+
+        return $this->isRequired() ? [$rule] : ['nullable', $rule];
+    }
+
+    /** A time or a datetime — a value with a clock half the browser has to pick. */
+    private function hasClock(): bool
+    {
+        return $this->mode === 'time' || $this->mode === 'datetime';
+    }
+
+    /**
+     * The clock step, in minutes, when the field has one — or null.
+     *
+     * A step decides the native control. To the browser `step` is a validation
+     * rule, not a wheel: iOS offers every minute whatever it says, then the
+     * field refuses the pick. So a stepped clock goes native as a `<select>` of
+     * these slots instead of `<input type="time">` (with a native date input
+     * beside it on a datetime), and a phone can only give back a slot.
+     */
+    public function getSlotInterval(): ?int
+    {
+        if (! $this->hasClock()) {
+            return null;
+        }
+
+        return match (true) {
+            ($this->getMinutesStep() ?? 1) > 1 => $this->getMinutesStep(),
+            ($this->getHoursStep() ?? 1) > 1 => $this->getHoursStep() * 60,
+            default => null,
+        };
+    }
+
+    /**
+     * The touch control here is the wheel (`partials.wheel-picker`): a time, a
+     * date or a datetime. A month is the browser's control everywhere.
+     */
+    protected function supportsTouchOnMobile(): bool
+    {
+        return in_array($this->mode, ['time', 'date', 'datetime'], true);
+    }
+
+    /** Whether the native control is a list of clock slots rather than a time input. */
+    public function usesNativeSlots(): bool
+    {
+        return $this->getSlotInterval() !== null;
+    }
+
+    /**
+     * The clock slots as a native `<select>`'s options: `value => label`, in the
+     * state's clock shape, walking the day at {@see getSlotInterval()}.
+     *
+     * A time field leaves out what its bounds forbid, so the list offers only
+     * what will save. A datetime's bounds belong to a day, not to the clock, so
+     * its slots are the whole day and the server rule holds the boundary days.
+     *
+     * A current value between two slots (the interval changed, or it was typed
+     * on a desktop) is kept in the list, in order, so the element shows it
+     * instead of silently blanking.
+     *
+     * @return array<string, string>
+     */
+    public function getSlotOptions(mixed $state = null): array
+    {
+        $interval = max(1, $this->getSlotInterval() ?? 1);
+        $bounded = $this->mode === 'time';
+        $min = $bounded ? DateBoundary::timePart($this->getMinDate()) : null;
+        $max = $bounded ? DateBoundary::timePart($this->getMaxDate()) : null;
+        // The state is H:i, or H:i:s with seconds; slots key by that shape.
+        $length = $this->hasSeconds() ? 8 : 5;
+        $slots = [];
+
+        for ($minute = 0; $minute < 24 * 60; $minute += $interval) {
+            $time = sprintf('%02d:%02d:00', intdiv($minute, 60), $minute % 60);
+
+            if (($min !== null && $time < $min) || ($max !== null && $time > $max)) {
+                continue;
+            }
+
+            $slots[substr($time, 0, $length)] = $time;
+        }
+
+        $current = is_string($state) && $state !== '' ? DateBoundary::timePart($state) : null;
+
+        if ($current !== null) {
+            $slots[substr($current, 0, $length)] = $current;
+            asort($slots);
+        }
+
+        return array_map(fn (string $time): string => $this->formatSlotLabel($time), $slots);
+    }
+
+    /** A slot as the custom list labels it: displayFormat() when set, else the bare time. */
+    private function formatSlotLabel(string $time): string
+    {
+        // A datetime's display format carries a date a bare slot does not have.
+        $display = $this->mode === 'time' ? $this->getDisplayFormat() : null;
+
+        if ($display === null) {
+            return substr($time, 0, $this->hasSeconds() ? 8 : 5);
+        }
+
+        return Carbon::createFromFormat('H:i:s', $time)->format($display);
+    }
+
     public function getFirstDayOfWeek(): int
     {
         if ($this->firstDayOfWeek !== null) {
@@ -380,6 +504,28 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState
             'month' => 'month',
             'time' => 'time',
             default => 'datetime-local',
+        };
+    }
+
+    /**
+     * The native input's `step`, in seconds, or null for the browser's default.
+     *
+     * It is what makes a native time show seconds at all — the default step is
+     * a minute — and the stride the browser's own validation holds a value to.
+     * The finest configured unit wins: seconds, then minutes, then hours. A date
+     * or a month has no clock, so no step.
+     */
+    public function getNativeStep(): ?int
+    {
+        if ($this->mode !== 'time' && $this->mode !== 'datetime') {
+            return null;
+        }
+
+        return match (true) {
+            $this->hasSeconds() => max(1, $this->getSecondsStep() ?? 1),
+            $this->getMinutesStep() !== null => max(1, $this->getMinutesStep()) * 60,
+            $this->getHoursStep() !== null => max(1, $this->getHoursStep()) * 3600,
+            default => null,
         };
     }
 

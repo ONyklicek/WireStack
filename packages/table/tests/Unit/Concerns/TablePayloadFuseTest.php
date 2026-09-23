@@ -386,6 +386,19 @@ it('keeps a selection cell to a splice', function () {
     // The zero is the load-bearing half of this budget. It only holds while the tags in
     // the partial keep touching; re-indenting it "for readability" puts every one of
     // those nodes straight back, which is exactly the change this catches.
+    //
+    // Re-measured 2026-09-20: 1221.25 B on the old markup (the +49 on the note above is
+    // drift), then 1322.25 once the tick started drawing itself in — +101 B/row, and the
+    // budget moved 1250 -> 1400 to take it. What was bought: the mark is now
+    // `table:checkbox-check`, a 16x16 stroked glyph that is 79 B SMALLER than the
+    // Heroicons silhouette it replaced, and the three x-transition attributes that
+    // animate its `stroke-dashoffset` cost 180. The headroom either side of the move is
+    // the same ~78 B the original note set aside for a class-list edit.
+    //
+    // This is the one place in the row where a feature was allowed to cost bytes. If it
+    // ever has to come back, the three x-transition attributes in
+    // `tables.partials.selection-cell` are the whole 180 and removing them leaves a tick
+    // that simply appears — the glyph's own fallback, deliberately that way round.
     $plain = pfPerRow();
     $selectable = pfPerRow(selectable: true);
 
@@ -394,7 +407,7 @@ it('keeps a selection cell to a splice', function () {
         'whitespaceRuns' => $selectable['whitespaceRuns'] - $plain['whitespaceRuns'],
     ];
 
-    expect($cell['bytes'])->toBeLessThan(1250)
+    expect($cell['bytes'])->toBeLessThan(1400)
         ->and($cell['whitespaceRuns'])->toEqual(0);
 });
 

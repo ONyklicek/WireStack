@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Collection;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Columns\SummaryType;
+use NyonCode\WireTable\Columns\TextColumn;
 
 /**
  * Helper: build a page-scope summary of $type on column $name over $rows,
@@ -104,6 +105,24 @@ it('applies prefix and suffix to numeric summaries', function () {
     $value = $column->computeSummaries(collect([['price' => 1000], ['price' => 500]]))[0]['value'];
 
     expect($value)->toBe('$1,500.00');
+});
+
+it('formats a total the way the column formats its cells', function () {
+    // A column of `1 089,75` totalled as `1089.75`: the summary read only
+    // summaryDecimals() and never the numeric() the cells above it use.
+    $rows = collect([['h' => 1000.5], ['h' => 89.25]]);
+
+    $numeric = TextColumn::make('h')->numeric(2)->summarize('sum', scope: 'page');
+    $money = TextColumn::make('h')->money('CZK', 2)->suffix(' / měsíc')->summarize('sum', scope: 'page');
+    $cell = fn (TextColumn $column, mixed $value) => (fn () => $this->applyNumericAndDateFormatting($value))->call($column);
+
+    expect($numeric->computeSummaries($rows)[0]['value'])->toBe('1 089,75')
+        ->and($money->computeSummaries($rows)[0]['value'])->toBe($cell($money, 1089.75).' / měsíc')
+        // summaryDecimals() still wins, and a count stays a bare number.
+        ->and(TextColumn::make('h')->numeric(2)->summaryDecimals(0)->summarize('sum', scope: 'page')->computeSummaries($rows)[0]['value'])->toBe('1 090')
+        ->and(TextColumn::make('h')->numeric(2)->summarize('count', scope: 'page')->computeSummaries($rows)[0]['value'])->toBe(2)
+        // A column that formats no numbers keeps the raw total.
+        ->and(TextColumn::make('h')->summarize('sum', scope: 'page')->computeSummaries($rows)[0]['value'])->toBe(1089.75);
 });
 
 it('does not reformat counts as decimals', function () {

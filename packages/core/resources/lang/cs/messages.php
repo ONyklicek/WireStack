@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 return [
     'breadcrumbs' => 'Drobečková navigace',
+
+    // Dotykový seznam, kterým se select stane na telefonu (->touchOnMobile()).
+    'select_done' => 'Hotovo',
+    'select_clear_all' => 'Zrušit výběr',
+    'select_selected' => 'Vybráno: :count',
     // Sdílené hlášky inline editace (editovatelné panel entry).
     'error' => 'Něco se pokazilo.',
     'save_failed' => 'Uložení se nezdařilo. Zkuste to prosím znovu.',
@@ -86,4 +91,20 @@ return [
     'widget_save_layout' => 'Uložit rozložení',
     'widget_cancel_layout' => 'Zrušit',
     'widget_reset_layout' => 'Zpět na výchozí',
+    'widget_saved_layouts' => 'Uložená rozložení',
+    'widget_saved_layout_current' => 'Aktuální rozložení',
+    'widget_save_layout_as' => 'Uložit jako…',
+    'widget_save_layout_prompt' => 'Pojmenujte rozložení',
+    'widget_delete_layout' => 'Smazat uložené rozložení',
+
+    // The guided walkthrough (Tours/).
+    'tour_next' => 'Další',
+    'tour_back' => 'Zpět',
+    'tour_finish' => 'Hotovo',
+    'tour_skip' => 'Přeskočit',
+    'tour_progress' => 'Krok :current z :total',
+    'tour_region' => 'Průvodce',
+    'tour_start' => 'Spustit průvodce',
+    'tour_later' => 'Třeba později',
+    'tour_replay' => 'Spustit průvodce znovu',
 ];

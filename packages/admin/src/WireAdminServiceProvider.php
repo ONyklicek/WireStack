@@ -152,6 +152,29 @@ class WireAdminServiceProvider extends PackageServiceProvider
             $command->warn('  ⚠️  '.$e->getMessage());
         }
 
+        // Somewhere to land. An admin whose own address forwards to whichever
+        // screen sorts first is what a clean install used to sign you in to —
+        // see InstallScaffold::dashboard(). Written before it is registered, so
+        // a failure to register still leaves the pair on disk with a message
+        // saying what to do with them.
+        $command->comment(match ($scaffold->dashboard()) {
+            InstallOutcome::Created => '  ✅ Wrote app/Dashboards/OverviewDashboard.php and its page — the admin now opens on it',
+            InstallOutcome::AlreadyPresent => '  ↩︎  app/Dashboards/OverviewDashboard.php already exists — left as it is',
+        });
+
+        // Always asked, not only when the file was just written: the two halves
+        // fail separately — a config that was not published yet leaves the pair
+        // on disk and unregistered — and running the installer again is how that
+        // is repaired. Idempotent, like every step here.
+        try {
+            $command->comment(match ($scaffold->registerDashboard()) {
+                InstallOutcome::Created => '  ✅ Registered App\\Dashboards\\OverviewDashboard in config/wire-core.php',
+                InstallOutcome::AlreadyPresent => '  ↩︎  App\\Dashboards\\OverviewDashboard is already registered',
+            });
+        } catch (AdminInstallException $e) {
+            $command->warn('  ⚠️  '.$e->getMessage());
+        }
+
         $command->comment('');
         $command->comment('  Your pages render in the shell as soon as they are routed:');
         $command->comment('  Route::wireResources() in routes/web.php, or wire-panels.routes.enabled in config.');

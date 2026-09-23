@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace {{ namespace }};
 
+use {{ pageFqn }};
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Widgets\Dashboard;
 use NyonCode\WireCore\Widgets\Stat;
 use NyonCode\WireCore\Widgets\StatsOverviewWidget;
 
-class {{ class }} extends Dashboard implements ProvidesNavigation
+class {{ class }} extends Dashboard implements ProvidesNavigation, ProvidesPages
 {
     /**
      * The widgets on this dashboard, in the order they are laid out.
@@ -32,6 +34,23 @@ class {{ class }} extends Dashboard implements ProvidesNavigation
     public function columns(): int
     {
         return 2;
+    }
+
+    /**
+     * The page that renders it, and what makes this dashboard reachable.
+     *
+     * A dashboard declaring no pages is routed nowhere: it appears in the menu
+     * as an entry with no link, and typing its address is a 404. `Route::wireResources()`
+     * reads this, and `{{ page }}` is the Livewire component generated beside
+     * this class.
+     *
+     * Add `implements ConfiguresRoutes` with `routePrefix()` returning
+     * `ConfiguresRoutes::ROOT` to put it on the panel's own path instead of
+     * under a segment of its own.
+     */
+    public static function pages(): array
+    {
+        return ['index' => {{ page }}::class];
     }
 
     /**

@@ -59,3 +59,54 @@ it('prefers a published stub over the package one', function () {
         ->toContain('class CustomDashboard {}')
         ->not->toContain('extends Dashboard');
 });
+
+// ─── The page half ───────────────────────────────────────────────────────────
+
+/*
+ * A dashboard declaring no pages is routed nowhere: it appears in the menu as an
+ * entry with no link and answers 404 at every address, which is what a generated
+ * one used to be. The page that mounts it is wire-panels' class, so wire-panels
+ * generates it — this package's half is naming it and asking, by command name.
+ */
+
+it('declares the page that makes it reachable', function () {
+    $this->artisan('make:wire-dashboard', ['name' => 'Sales'])->assertSuccessful();
+
+    $contents = File::get(app_path('Dashboards/SalesDashboard.php'));
+
+    expect($contents)->toContain('implements ProvidesNavigation, ProvidesPages')
+        ->toContain('public static function pages(): array')
+        ->toContain("return ['index' => ShowSales::class];")
+        // The import, so the reference resolves wherever the app's root
+        // namespace is.
+        ->toContain('use App\Livewire\Dashboards\ShowSales;');
+});
+
+it('names the page after the dashboard, suffix or not', function () {
+    $this->artisan('make:wire-dashboard', ['name' => 'SalesDashboard'])->assertSuccessful();
+
+    expect(File::get(app_path('Dashboards/SalesDashboard.php')))
+        ->toContain('ShowSales::class');
+});
+
+it('says what to install when nothing can generate the page', function () {
+    // wire-panels is not installed in this package's own test application, so
+    // this is the path an application without it takes: the dashboard is still
+    // written, and `pages()` with it — nothing reads that until something
+    // routes, so it is inert now and correct the moment the package arrives.
+    $this->artisan('make:wire-dashboard', ['name' => 'Sales'])
+        ->expectsOutputToContain('nyoncode/wire-panels')
+        ->assertSuccessful();
+
+    expect(File::exists(app_path('Dashboards/SalesDashboard.php')))->toBeTrue();
+});
+
+it('writes the dashboard alone when asked to', function () {
+    $this->artisan('make:wire-dashboard', ['name' => 'Sales', '--no-page' => true])
+        ->doesntExpectOutputToContain('nyoncode/wire-panels')
+        ->assertSuccessful();
+
+    // The declaration still names its page: what `--no-page` skips is generating
+    // one, not pretending the dashboard needs none.
+    expect(File::get(app_path('Dashboards/SalesDashboard.php')))->toContain('ShowSales::class');
+});

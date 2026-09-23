@@ -495,6 +495,19 @@ Dvojice jsou *nabídka*, ne slib o úložišti: layout, který dorazí s velikos
 mimo ně, se pořád jen ořízne na mřížku, protože uložený layout může přežít
 deklaraci, která ho utvářela.
 
+**Steppery jsou ta nabídka, vykreslená.** Tlačítka šířky procházejí nabídnuté
+šířky — s výškou, ve které se ta šířka nabízí, takže z deklarace `[[2, 1], [4, 2]]`
+jsou dosažitelné obě dvojice — a tlačítka výšky procházejí výšky nabídnuté
+v aktuální šířce, takže tlačítko výšky nikdy neposune dlaždici do stran. Tlačítko,
+které už nemá kam, se vykreslí zakázané; je to jediné místo, kde uživatel nabídku
+vidí.
+
+**Šířku navíc omezují `columns()` samotného dashboardu.** Dlaždice širší než její
+mřížka se neořízne: CSS Grid chybějící sloupec *přidá* a všechny ostatní dlaždice
+na dashboardu se zmáčknou do zbytku. Tříslupcový dashboard proto čtvrtý sloupec
+nenabídne a cokoli pošle prohlížeč se na cestě dovnitř přichytí na tutéž odpověď —
+jeden vlastník, `Widgets\Support\WidgetSizeOffer`, pro obě meze i pro tlačítka.
+
 **„Odebraný“ a „dostupný“ je týž stav.** Nikde se nezaznamenává, že byl widget
 sundán — prostě už není v layoutu, a to ho vrací do zásobníku. Jedno pravidlo
 dělá dvě práce, takže si nemohou odporovat.
@@ -532,6 +545,59 @@ public function render()
     return view('wire-core::widgets.widget-grid', $this->widgetGridData(2));
 }
 ```
+
+### Co smí měnit prohlížeč
+
+Hostitel drží čtyři veřejné vlastnosti, protože drag dělá round tripy a widget
+si přes ně nic nepamatuje: rozpracovaný draft, jestli je editor otevřený, výběr
+filtru u každého widgetu a které odložené widgety už se načetly. **Všechny čtyři
+jsou `#[Locked]`** — každá změna má metodu a metoda je místo, kde se klíč
+kontroluje proti deklaraci a velikost proti mřížce:
+
+```php
+moveWidget() placeWidget() resizeWidget() removeWidget()   // uspořádání
+startEditingWidgets() saveWidgetLayout() cancelEditingWidgets() resetWidgetLayout()
+filterWidget() loadWidget() callWidgetAction() refreshWidget()
+```
+
+Ukládání navíc zúží zapisované na klíče, které dashboard deklaruje — což zároveň
+uklidí uložené rozložení po starší deklaraci: přejmenovaný widget se přestane
+vozit s sebou při prvním uložení.
+
+### Víc než jedno rozložení
+
+`savedLayouts()` je druhá půlka opt-inu a je oddělená proto, že ta přání jsou
+dvě: `customisable()` říká „tohle si smíš přeskládat", tohle říká „smíš si držet
+víc uspořádání".
+
+```php
+class SalesDashboard extends Dashboard
+{
+    public function customisable(): bool { return true; }
+    public function savedLayouts(): bool { return true; }   // [tl! focus]
+}
+```
+
+Jede po tomtéž úložišti — uložené rozložení **je** rozložení tohohle dashboardu
+pod jménem, což je dimenze `view`, kterou store nese od doby, kdy patřil
+tabulce. Ovládání dostane „Uložit jako…" vedle Upravit a přepínač ve chvíli, kdy
+je mezi čím přepínat.
+
+| Metoda | Co dělá |
+| --- | --- |
+| `saveWidgetLayoutAs(string $name)` | Uloží uspořádání na obrazovce pod jménem, stejnojmenné přepíše |
+| `applyWidgetLayout(string $name)` | Vrátí uložené uspořádání na dashboard |
+| `deleteWidgetLayout(string $name)` | Zapomene ho; rozložení na obrazovce zůstane |
+| `getWidgetLayoutNames(): array` | Jména, která si uživatel uložil, pro vlastní přepínač |
+
+**Použití je kopie, ne ukazatel.** Uložené uspořádání se zapíše na aktuální
+rozložení, takže si nikdo nemusí pamatovat, které jméno je zrovna v používání, a
+odpověď přežije reload bez druhého kusu uloženého stavu, který by mohl tomu
+prvnímu odporovat. Výběr jména je sloveso, ne režim, ve kterém pak jste.
+
+Uložení při otevřeném editoru bere **draft** — to, na co se uživatel dívá. Na
+dashboardu, který nikdo nepřeskládal, se uloží to, co ukazuje mřížka: jméno nad
+„deklarací" by nevracelo nic.
 
 ### Hotové ovládání
 

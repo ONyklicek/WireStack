@@ -5,8 +5,10 @@ declare(strict_types=1);
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use NyonCode\WireCore\Core\Resources\Workspace;
+use NyonCode\WireCore\Tours\TourLedger;
 use Workbench\App\Http\Middleware\SignInDemoUser;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
 use Workbench\App\Livewire\Previews\CorePreview;
@@ -29,6 +31,7 @@ use Workbench\App\Livewire\Resources\ListInvoices;
 use Workbench\App\Livewire\Resources\ListTasks;
 use Workbench\App\Livewire\Resources\ViewInvoice;
 use Workbench\App\Models\User as WorkbenchUser;
+use Workbench\App\Providers\WorkbenchServiceProvider;
 
 // One source of truth for the preview surface: every entry below registers its
 // own route *and* is listed on the /previews index. A new variant needs a line
@@ -102,6 +105,7 @@ $screens = [
     'sortable-columns' => ['title' => 'Wire Sortable Columns', 'subtitle' => 'Drag a header to reorder columns, on a table that also has a selection column and row handles.', 'component' => SortablePreview::class, 'variant' => 'columns'],
     'sortable-morph' => ['title' => 'Wire Sortable Morph', 'subtitle' => 'A column-reorderable table with a search box and an editable cell — what the drag controller is allowed to keep a Livewire morph from doing.', 'component' => SortablePreview::class, 'variant' => 'morph'],
     'forms-field-partials' => ['title' => 'Wire Forms', 'subtitle' => 'A live field under Form::fieldPartials(): a plain commit answers with nothing, a dependent sibling comes back as a region, and a field appearing falls back to a full render.', 'component' => FormPreview::class, 'variant' => 'field-partials'],
+    'forms-grid-spans' => ['title' => 'Wire Forms · Column spans', 'subtitle' => 'A two-, three- and four-column layout, each holding fields that span more than one column: what the grid actually draws at every breakpoint, which is the one thing a span can get wrong without failing.', 'component' => FormPreview::class, 'variant' => 'grid-spans'],
     'sortable-partials' => ['title' => 'Wire Sortable Partials', 'subtitle' => 'Row reordering and rowPartials() on one table: an inline save answers with the row alone, morphed by a path that never reaches the hook the drag handles are rebuilt from.', 'component' => SortablePreview::class, 'variant' => 'partials'],
     'sortable-everything' => ['title' => 'Wire Sortable · every control', 'subtitle' => 'Row handles, draggable headers, search, pagination and a 3s poll on one table: search and paging stay live inside reorder mode, and a drag on page two only permutes page two.', 'component' => SortablePreview::class, 'variant' => 'everything'],
     'gesture-lab' => ['title' => 'Gesture Lab', 'subtitle' => 'Every selection gesture, record action, the shortcut help and column reordering on one table, with a live state read-out.', 'component' => GestureLabPreview::class, 'variant' => 'lab'],
@@ -142,6 +146,9 @@ $fieldPreviews = [
     'select' => 'Select',
     'select-floating' => 'Select · floating on mobile (opt-out)',
     'select-bp-lg' => 'Select · per-component breakpoint lg',
+    'native-on-mobile' => 'Native control on a phone only',
+    'time-wheel' => 'Wheel picker on a phone',
+    'touch-select' => 'Touch select on a phone',
     'checkbox-list-responsive' => 'CheckboxList · per-breakpoint columns',
     'checkbox' => 'Checkbox',
     'checkbox-list' => 'Checkbox List',
@@ -435,6 +442,41 @@ Route::get('previews/auth/two-factor', function (Request $request): RedirectResp
     return redirect()->route('two-factor.login');
 })->name('workbench.two-factor-preview');
 
+// A second device for the profile's browser-sessions card, reachable.
+//
+// The card lists rows of the `sessions` table, and a preview server browsed by
+// one headless Chrome has exactly one of them — so the interesting half, a
+// session that is *not* this one and a button that ends it, never appears. This
+// puts one there and hands over to the real page, the way the auth previews
+// above put a half-signed-in session in place before handing over to Fortify's.
+//
+// Re-runnable: the row is replaced rather than added to, so a driver that runs
+// twice sees two sessions both times.
+Route::get('previews/profile/browser-sessions', function (): RedirectResponse {
+    $user = Auth::user();
+
+    abort_if($user === null, 404, 'Nobody signed in to own a second session.');
+
+    $table = (string) config('session.table', 'sessions');
+
+    // Everything but the session asking, so a preview server that has been
+    // browsed before shows two rows rather than a pile of abandoned ones.
+    DB::table($table)
+        ->where('user_id', $user->getAuthIdentifier())
+        ->where('id', '!=', session()->getId())
+        ->delete();
+    DB::table($table)->insert([
+        'id' => 'preview-other-device',
+        'user_id' => $user->getAuthIdentifier(),
+        'ip_address' => '203.0.113.7',
+        'user_agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+        'payload' => '',
+        'last_activity' => now()->subMinutes(42)->getTimestamp(),
+    ]);
+
+    return redirect('/previews/routed/users/profile');
+})->middleware(SignInDemoUser::class)->name('workbench.browser-sessions-preview');
+
 // The route helper, on the real thing. Four Route::get() lines per resource used
 // to be written by hand here; a resource now declares its pages and this
 // registers them inside whatever group it is called in — the prefix, and any
@@ -479,6 +521,22 @@ foreach ($zoneMembership as $zone => $only) {
         Route::wireResources(only: $only);
     });
 }
+
+// The demo, from the top: the dashboard in the admin shell, with its tour.
+//
+// One address to hand to somebody. It turns the demo tour on (a cookie, so it
+// survives every navigation after this one — see WorkbenchServiceProvider::
+// bootTours()) and forgets that the tour was ever finished, because the demo user
+// is shared: without that, the second person to open the link would get a
+// dashboard and no walkthrough, and the link would look broken.
+//
+// Lands on `admin`, not `business`: the admin zone is the one with the full
+// sidebar, and the tour's first step points at the dashboard's entry in it.
+Route::get('/previews/demo', function (): RedirectResponse {
+    app(TourLedger::class)->forget(WorkbenchServiceProvider::demoTour(), Auth::user());
+
+    return redirect('/previews/zoned/admin')->withCookie(cookie()->forever('wire-demo-tour', '1'));
+})->name('workbench.demo');
 
 // The menu of both zones, side by side (ADR 0027 open question 2). One catalogue,
 // one set of entries, and the only difference is where each one points — which is

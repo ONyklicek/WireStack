@@ -39,6 +39,11 @@ Potřebujete jen tagy balíčků, které jste nainstalovali.
 | `WIRE_FORMS_UPLOAD_DISK` | `public` | Forms upload souborů |
 | `WIRE_MOBILE_SHEET` | `true` | Core mobilní bottom-sheety |
 | `WIRE_MOBILE_BREAKPOINT` | `sm` | Breakpoint mobilního sheetu |
+| `WIRE_MOBILE_NATIVE` | `false` | Nativní selecty a vstupy data/času prohlížeče pod mobilním breakpointem |
+| `WIRE_MOBILE_TOUCH` | `false` | Dotykové prvky pod mobilním breakpointem: kolečka pro datum a čas, seznam přes celou výšku pro selecty |
+| `WIRE_TOURS_DRIVER` | `session` | Kde se přihlášenému uživateli ukládá postup a dokončení průvodců |
+| `WIRE_TOURS_GUEST_DRIVER` | `session` | Totéž pro hosta |
+| `WIRE_TOURS_POSTPONE` | `3` | Kolikrát smí být welcome blok průvodce odbyt „Odložit“, než se ptát přestane |
 | `WIRE_AUTH_CODE_LOGIN` | `false` | Přihlášení kódem z e-mailu, bez hesla |
 | `WIRE_AUTH_CODE_SECOND_FACTOR` | `false` | Kód e-mailem po správném heslu |
 | `WIRE_AUTH_CODE_VERIFY_EMAIL` | `false` | Potvrzení adresy kódem |
@@ -221,6 +226,14 @@ Plovoucí panely (rozbalovací nabídky, menu skupin akcí, select/date/tag pick
     //   'md' (< 768px, včetně malých tabletů)
     //   'lg' (< 1024px, včetně tabletu na výšku)
     'breakpoint' => env('WIRE_MOBILE_BREAKPOINT', 'sm'),
+
+    // Pod breakpointem vykreslit vlastní <select> / vstup data / času
+    // prohlížeče místo vlastního prvku, všude, kde nějaký existuje.
+    'native' => env('WIRE_MOBILE_NATIVE', false), // [tl! focus]
+
+    // Pod breakpointem vykreslit prvek dělaný pro palec: kolečko pro datum a
+    // čas, seznam přes celou výšku pro selecty. Vyhrává nad 'native'.
+    'touch' => env('WIRE_MOBILE_TOUCH', false), // [tl! focus]
 ],
 ```
 
@@ -237,6 +250,11 @@ Select::make('role')->mobileBreakpoint('lg');                 // sheet až do 10
 $table->mobileBreakpoint('md');
 ActionGroup::make([...])->mobileBreakpoint('md');
 Action::make('edit')->form([...])->slideOverOnMobile()->mobileBreakpoint('md');
+
+// Nativní prvek prohlížeče pod breakpointem, vlastní nad ním
+DateTimePicker::make('starts_at')->nativeOnMobile();          // vlastní kolečko data telefonu [tl! focus:start]
+SelectFilter::make('status')->nativeOnMobile(false);          // ponechat combobox i při 'native' => true
+Select::make('customer_id')->touchOnMobile();                 // dotykový seznam přes celou výšku, i s hledáním [tl! focus:end]
 ```
 
 ```blade
@@ -244,6 +262,59 @@ Action::make('edit')->form([...])->slideOverOnMobile()->mobileBreakpoint('md');
 ```
 
 Priorita: jednotlivá komponenta (`->sheetOnMobile()` / `->mobileBreakpoint()`) > searchable-auto-floating > globální konfigurace. Searchable selecty jsou defaultně plovoucí, aby vyhledávací pole zůstalo použitelné. Sheety automaticky přidávají safe-area padding, úchyt pro zavření tažením a focus trap.
+
+`touch` i `native` mění prvek samotný, ne jeho panel, a pro všechny prvky platí
+jedno pořadí přednosti: `->native()` (prvek prohlížeče všude) >
+`->touchOnMobile()` / `touch` > `->nativeOnMobile()` / `native`. `touch` vykreslí
+prvek dělaný pro palec — kolečko pro datum nebo čas, seznam v bottom sheetu
+s 48px řádky, 16px písmem a hledáním nahoře pro select — a na rozdíl od prvku
+prohlížeče si ponechá všechno, co pole umí: vzdálené hledání, vytvoření možnosti,
+zakázané dny. Viz [dotykový seznam na telefonu](../forms/fields/select.md#dotykovy-seznam-na-telefonu)
+a [dotykové kolečko na telefonu](../forms/fields/date-time-picker.md#dotykove-kolecko-na-telefonu).
+
+`native` nemění panel prvku, ale prvek samotný. Každý select a picker, který má
+protějšek v prohlížeči — `Select`, `BelongsToSelect`, `DateTimePicker`,
+`TimePicker`, `SelectFilter`, `TernaryFilter` — vykreslí oba a CSS na stejném
+breakpointu ukáže pod ním prvek prohlížeče a nad ním vlastní prvek, takže se pro
+takové pole žádný sheet nekreslí. Prvek, který by přechodem o něco přišel, zůstává
+vlastní na každé obrazovce — select se vzdáleným hledáním nebo s vytvářením či
+úpravou možnosti; vše ostatní je nativní. Krok hodin se stane nativním
+`<select>` slotů (u data a času vedle nativního data), protože iOS `step`
+časového vstupu ignoruje, a meze pickerů hlídá server, protože kolečko telefonu
+je ignoruje. Explicitní `->native(false)` pole
+z globálního přepínače také vyřadí; `->nativeOnMobile()` ho vrátí zpět.
+
+### Průvodci
+
+Kde si [průvodce](../core/tours.md) pamatuje, co o kom ví: které průvodce
+dokončil nebo přeskočil, ke kterému kroku došel v tom, který opustil v půlce, a
+které si odložil. Je to úložiště preferencí s vlastním výchozím driverem, `session` místo `null`,
+protože průvodce nad úložištěm, které zapomíná, by stejného člověka přerušoval
+při každém načtení stránky.
+
+```php
+'tours' => [
+    'postpone' => env('WIRE_TOURS_POSTPONE', 3),                 // „Odložit“, než se průvodce přestane ptát // [tl! focus]
+
+    'preferences' => [
+        'default' => env('WIRE_TOURS_DRIVER', 'session'),        // přihlášení uživatelé
+        'guest' => env('WIRE_TOURS_GUEST_DRIVER', 'session'),    // hosté
+        'drivers' => [
+            'null' => NullPreferenceDriver::class,
+            'session' => SessionPreferenceDriver::class,
+            'database' => DatabasePreferenceDriver::class,       // „jednou provždy" — potřebuje migraci
+        ],
+    ],
+],
+```
+
+`postpone` je počet, kolikrát smí být [welcome blok](../core/tour-welcome.md)
+průvodce odbyt tlačítkem „Odložit“, než se průvodce zaznamená jako viděný a
+přestane se ptát. Každé „Odložit“ ho položí na dobu dané session; nula tlačítko
+odstraní a průvodce může číslo přepsat přes `->postpone(int $times)`.
+
+Panel průvodce se pod `mobile.breakpoint` výše přichytí ke spodnímu okraji
+obrazovky. Viz [Tour → Zapamatování](../core/tours.md#zapamatovani).
 
 ## Forms
 

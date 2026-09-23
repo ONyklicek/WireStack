@@ -962,3 +962,4 @@ it was likely moved or renamed — search `CHANGELOG.md` for the old name.
 - [Configuration](configuration.md) — publishable config
 - [Theming](theming.md) — keeping view overrides minimal
 - [Troubleshooting](troubleshooting.md) — issues that appear after an update
+- [Tour → What's New After an Upgrade](../core/tours.md#whats-new-after-an-upgrade) — telling the people who use your application what changed in the release you just shipped

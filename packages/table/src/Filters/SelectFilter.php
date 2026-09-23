@@ -50,10 +50,12 @@ class SelectFilter extends Filter
         $this->searchable = $searchable;
 
         // A searchable dropdown is the custom combobox, not the browser-native
-        // <select>. Opt out of native rendering so ->searchable() works on its
-        // own; an explicit later ->native() can still force the native element.
-        if ($searchable) {
-            $this->native = false;
+        // <select>, so ->searchable() lifts an earlier ->native(); an explicit
+        // later ->native() can still force the native element. Reset to the
+        // default rather than pinned off, so ->nativeOnMobile() and its global
+        // config still reach a searchable filter the way they reach a Select.
+        if ($searchable && $this->native === true) {
+            $this->native = null;
         }
 
         return $this;

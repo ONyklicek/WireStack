@@ -45,3 +45,35 @@ it('leaves the tag alone when the name is unusable', function () {
     expect(Blade::render('<div @wireEl($name)></div>', ['name' => 'Not A Name']))
         ->toBe('<div ></div>');
 });
+
+/**
+ * The name shape became public when something other than the renderer needed to
+ * ask about it: a tour step targets a hook rather than emitting one, and a
+ * targeted name that is not a hook produces a selector matching nothing — which
+ * a tour would then skip, indistinguishably from an element the page genuinely
+ * does not have.
+ *
+ * Extracted rather than copied. Two regexes for one contract disagree at the
+ * first edit, and the one that drifts is the copy nobody is looking at.
+ */
+it('answers whether a name is usable without rendering it', function () {
+    expect(ElementHook::isValidName('table-search'))->toBeTrue()
+        ->and(ElementHook::isValidName('a1'))->toBeTrue()
+        ->and(ElementHook::isValidName('Table-Search'))->toBeFalse()
+        ->and(ElementHook::isValidName('table_search'))->toBeFalse()
+        ->and(ElementHook::isValidName('table--search'))->toBeFalse()
+        ->and(ElementHook::isValidName(''))->toBeFalse();
+});
+
+it('agrees with what it renders', function () {
+    foreach (['table-search', 'Table-Search', '', 'a><script', 'x-2-y'] as $name) {
+        expect(ElementHook::isValidName($name))->toBe(ElementHook::render($name) !== '');
+    }
+});
+
+it('builds the selector that matches what it wrote', function () {
+    $rendered = ElementHook::render('table-search');
+
+    expect(ElementHook::selector('table-search'))->toBe('[data-wire="table-search"]')
+        ->and($rendered)->toContain(ElementHook::ATTRIBUTE.'="table-search"');
+});

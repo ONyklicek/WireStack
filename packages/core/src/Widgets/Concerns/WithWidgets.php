@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Widgets\Concerns;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Plugin\HookDispatch;
 use NyonCode\WireCore\Core\Plugin\Hooks\WidgetConfiguringPayload;
@@ -17,6 +18,7 @@ use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver;
 use NyonCode\WireCore\Foundation\Preferences\PreferenceManager;
 use NyonCode\WireCore\Widgets\Support\WidgetLayout;
+use NyonCode\WireCore\Widgets\Support\WidgetSizeOffer;
 use NyonCode\WireCore\Widgets\Widget;
 
 /** @phpstan-require-extends Component */
@@ -44,8 +46,17 @@ trait WithWidgets
      * next render asks it a question. The host is the only thing on this page
      * that persists, so the host keeps the selection and pushes it back in.
      *
+     * Locked, like the three below it: the browser has a method for every change
+     * it may make (`filterWidget()` here), and a property it can write directly
+     * is a second way in that answers to none of the rules those methods apply.
+     * Measured before this: 500 placements a client wrote into
+     * `widgetLayoutDraft` and saved were stored verbatim — 15 kB in that user's
+     * preference row — and the dashboard then rendered **empty**, because not
+     * one of the keys was declared.
+     *
      * @var array<string, string>
      */
+    #[Locked]
     public array $widgetFilters = [];
 
     /**
@@ -69,7 +80,13 @@ trait WithWidgets
      * write: a live drag persists on every drop, so a stray grab overwrites a
      * layout somebody was happy with and there is nothing to undo it. A mode has
      * a Cancel.
+     *
+     * Opened and closed by {@see startEditingWidgets()} and its two endings,
+     * never by the browser: this mode is what the write guard in
+     * {@see updateDraft()} reads, so a property a client could set true would be
+     * that guard's off switch.
      */
+    #[Locked]
     public bool $editingWidgets = false;
 
     /**
@@ -79,8 +96,14 @@ trait WithWidgets
      * deliberately separate from what is stored: nothing here reaches the
      * preference driver until {@see saveWidgetLayout()} says so.
      *
+     * Every change to it goes through `moveWidget()`, `placeWidget()`,
+     * `resizeWidget()` or `removeWidget()`, each of which checks the key against
+     * the declaration and the size against the grid. Writing the array itself
+     * would skip all of that, which is why the browser may not.
+     *
      * @var array<int, array{key: string, w: int, h: int}>
      */
+    #[Locked]
     public array $widgetLayoutDraft = [];
 
     /**
@@ -93,6 +116,7 @@ trait WithWidgets
      *
      * @var array<int, string>
      */
+    #[Locked]
     public array $loadedWidgets = [];
 
     /**
@@ -171,6 +195,31 @@ trait WithWidgets
         }
 
         return $stamped;
+    }
+
+    /**
+     * Every key this dashboard declares.
+     *
+     * What a stored layout is allowed to mention. Read from the stamped list
+     * rather than from the visible one: a widget a policy hides is still
+     * declared, and dropping its placement on save would lose the user's
+     * arrangement of it the first time they saved while it was hidden.
+     *
+     * @return array<int, string>
+     */
+    private function declaredKeys(): array
+    {
+        $keys = [];
+
+        foreach ($this->stampedWidgets() as $widget) {
+            $key = $widget->getKey();
+
+            if ($key !== null) {
+                $keys[] = $key;
+            }
+        }
+
+        return $keys;
     }
 
     /** The declared widget answering to a key, whatever the layout has done with it. */
@@ -300,7 +349,7 @@ trait WithWidgets
         $layout = $this->widgetLayout();
 
         $this->widgetLayoutDraft = ($layout->isDeclared()
-            ? WidgetLayout::fromWidgets($this->getVisibleWidgets())
+            ? WidgetLayout::fromWidgets($this->getVisibleWidgets(), $this->getWidgetColumns())
             : $layout)->toBag()['widgets'];
 
         $this->editingWidgets = true;
@@ -332,13 +381,142 @@ trait WithWidgets
         $this->widgetPreferenceDriver()->save(
             $key,
             $this->widgetPreferenceUser(),
-            WidgetLayout::of($this->widgetLayoutDraft)->toBag(),
+            // Narrowed to what this dashboard declares. The draft cannot hold
+            // anything else — every method that writes it checks the key — and
+            // that is exactly why the guard is here too: the property was
+            // reachable from the browser until it was locked, and a bag of keys
+            // nothing renders is a preference row that grows for nobody and a
+            // dashboard that draws nothing.
+            WidgetLayout::of($this->widgetLayoutDraft)->only($this->declaredKeys())->toBag(),
             $this->widgetLayoutView(),
         );
 
         $this->editingWidgets = false;
         $this->widgetLayoutDraft = [];
         $this->widgetLayout = null;
+    }
+
+    /**
+     * Whether this user may keep several arrangements of this dashboard under
+     * names.
+     *
+     * Off by default and separate from {@see widgetLayoutKey()}, the way a
+     * table's `savedViews()` is separate from `rememberColumns()`: one
+     * arrangement a user keeps is the common case, and a switcher over a list of
+     * one is chrome nobody asked for.
+     *
+     * `WirePanels\Resources\Pages\DashboardPage` overrides this with what the
+     * declared dashboard says.
+     */
+    public function hasSavedWidgetLayouts(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Keep the arrangement on screen under a name, replacing one of that name.
+     *
+     * What is saved is what the user is looking at — the draft while the editor
+     * is open, the stored layout otherwise — and never the declaration: a saved
+     * layout is a *placement*, so a dashboard nobody has arranged has nothing to
+     * save until it does.
+     *
+     * An empty name is the unnamed current layout, which is not a saved one.
+     * Accepting it here would let "Save as" overwrite the live layout with
+     * itself and put an entry with no label in the switcher.
+     */
+    public function saveWidgetLayoutAs(string $name): void
+    {
+        $key = $this->widgetLayoutKey();
+        $name = trim($name);
+
+        if ($key === null || $name === '' || ! $this->hasSavedWidgetLayouts()) {
+            return;
+        }
+
+        $layout = $this->editingWidgets
+            ? WidgetLayout::of($this->widgetLayoutDraft)
+            : $this->widgetLayout();
+
+        // The declaration is not a layout: nothing has been placed, so there is
+        // nothing a name could restore. Captured as what the grid shows instead,
+        // which is the same thing the editor starts from.
+        if ($layout->isDeclared()) {
+            $layout = WidgetLayout::fromWidgets($this->getVisibleWidgets(), $this->getWidgetColumns());
+        }
+
+        $this->widgetPreferenceDriver()->save(
+            $key,
+            $this->widgetPreferenceUser(),
+            $layout->only($this->declaredKeys())->toBag(),
+            $name,
+        );
+    }
+
+    /**
+     * Put a saved arrangement back on the dashboard.
+     *
+     * A copy onto the current layout, not a pointer at the saved one — the same
+     * thing `applyTableView()` does, and for the same reason: nothing then has
+     * to remember which named layout was in use, so the answer survives a reload
+     * without a second piece of stored state that could disagree with the first.
+     *
+     * A name with nothing under it leaves the dashboard alone. That is a saved
+     * layout somebody deleted in another tab, and reverting to the declaration
+     * because of it would be the opposite of what the click asked for.
+     */
+    public function applyWidgetLayout(string $name): void
+    {
+        $key = $this->widgetLayoutKey();
+        $name = trim($name);
+
+        if ($key === null || $name === '' || ! $this->hasSavedWidgetLayouts()) {
+            return;
+        }
+
+        $driver = $this->widgetPreferenceDriver();
+        $user = $this->widgetPreferenceUser();
+        $bag = $driver->load($key, $user, $name);
+
+        if (WidgetLayout::fromBag($bag)->isDeclared()) {
+            return;
+        }
+
+        $driver->save($key, $user, $bag, $this->widgetLayoutView());
+
+        // Whatever was being edited was an arrangement of the *previous* layout,
+        // so the mode closes with it rather than leaving a draft nobody can tell
+        // apart from what was just applied.
+        $this->cancelEditingWidgets();
+    }
+
+    /** Forget one saved arrangement. The dashboard on screen is untouched. */
+    public function deleteWidgetLayout(string $name): void
+    {
+        $key = $this->widgetLayoutKey();
+        $name = trim($name);
+
+        if ($key === null || $name === '' || ! $this->hasSavedWidgetLayouts()) {
+            return;
+        }
+
+        $this->widgetPreferenceDriver()->forget($key, $this->widgetPreferenceUser(), $name);
+    }
+
+    /**
+     * The names this user has saved, for the switcher.
+     *
+     * @return array<int, string>
+     */
+    public function getWidgetLayoutNames(): array
+    {
+        $key = $this->widgetLayoutKey();
+
+        if ($key === null || ! $this->hasSavedWidgetLayouts()) {
+            return [];
+        }
+
+        return $this->widgetPreferenceDriver()->views($key, $this->widgetPreferenceUser());
     }
 
     /**
@@ -397,7 +575,7 @@ trait WithWidgets
             return;
         }
 
-        [$width, $height] = $widget->getDefaultSize();
+        [$width, $height] = WidgetSizeOffer::for($widget, $this->getWidgetColumns())->arrivalSize();
 
         $this->updateDraft(
             fn (WidgetLayout $layout): WidgetLayout => $layout->has($key)
@@ -451,6 +629,11 @@ trait WithWidgets
             'editing' => $this->editingWidgets,
             'customisable' => $this->isCustomisableDashboard(),
             'available' => $this->getAvailableWidgets(),
+            // The switcher's two halves: whether to draw one at all, and what
+            // it lists. Both here rather than reached for in the view, for the
+            // reason the four above are.
+            'savedLayouts' => $this->hasSavedWidgetLayouts() && $this->isCustomisableDashboard(),
+            'layoutNames' => $this->getWidgetLayoutNames(),
             // Named per component so two dashboards on one page cannot pull
             // tiles out of each other.
             'trayGroup' => 'wire-widgets-'.$this->getId(),
@@ -502,9 +685,28 @@ trait WithWidgets
         return $groups;
     }
 
-    /** Resize a widget: `$width` columns of the grid, `$height` rows. */
+    /**
+     * Resize a widget: `$width` columns of the grid, `$height` rows.
+     *
+     * Snapped to a size the widget actually offers on this grid, because this is
+     * a public Livewire method and the size arrives from the browser. Two things
+     * it refuses to let through: a width greater than the dashboard's own
+     * columns — which does not clip but makes CSS Grid *add* a column, squeezing
+     * every other tile on the dashboard — and a size outside a widget's declared
+     * `sizes()`, which is the narrowing that declaration has always promised.
+     * {@see WidgetSizeOffer} owns both, and the steppers draw themselves from
+     * the same answer.
+     */
     public function resizeWidget(string $key, int $width, int $height): void
     {
+        $widget = $this->declaredWidget($key);
+
+        if ($widget === null) {
+            return;
+        }
+
+        [$width, $height] = WidgetSizeOffer::for($widget, $this->getWidgetColumns())->nearest($width, $height);
+
         $this->updateDraft(fn (WidgetLayout $layout): WidgetLayout => $layout->resize($key, $width, $height));
     }
 

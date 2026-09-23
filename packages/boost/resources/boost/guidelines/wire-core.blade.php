@@ -90,6 +90,23 @@ default `sm`). Override per component with `->sheetOnMobile(true|false)` and `->
 `:sheet-on-mobile` / `:breakpoint`. Searchable selects default to floating. Sheets add safe-area padding,
 a drag-to-dismiss grabber and a focus trap automatically — do not re-implement these.
 
+**Native control on a phone.** Every surface with a browser counterpart (`Select`, `BelongsToSelect`,
+`DateTimePicker`, `TimePicker`, `SelectFilter`, `TernaryFilter`) uses `Foundation\Concerns\HasNativeControl`:
+`->native()` is the browser's element everywhere, `->nativeOnMobile()` only below the same mobile breakpoint
+(global default `wire-core.mobile.native`, default `false`). Views branch on the one resolved value,
+`getNativeControlMode()` (`NativeControlMode::Never|Always|Mobile`); Mobile renders both controls and
+`MobileSheet::showBelow()` / `hideBelow()` pick one in CSS, with no sheet for that field. A surface whose
+custom control carries something the native one cannot overrides `supportsNativeOnMobile()` (only remote
+search and create/edit option stay custom). A clock step goes native as a `<select>` of the slots — beside a
+native date on a datetime, joined by `wireNativeDateTime` — never as `<input type="time" step>`, which iOS ignores.
+`DateTimePicker` also validates its bounds server-side (`DateWithinBounds`) — a native wheel ignores them.
+**Touch-built control on a phone:** `Foundation\Concerns\HasNativeControl` — `->touchOnMobile()`, global
+`wire-core.mobile.touch` — gives a picker a scroll-snap wheel and a select a bottom-sheet list, keeping remote
+search, create-option and disabled days. Precedence is one rule: `native()` > `touchOnMobile()` >
+`nativeOnMobile()`. The select list is `wire-core::partials.select-touch-sheet`, rendered by `select-control`
+beside the floating panel on the same `wireSearchableSelect` state — never a second select component. Every select goes through
+`wire-core::partials.select-control` — never hand-write a `<select>` or include the combobox beside it.
+
 ### Layouts
 
 Canonical layout vocabulary shared by forms and infolists (`NyonCode\WireCore\Foundation\Schema\*`):
@@ -319,7 +336,46 @@ multi-field edit with one Save.
 ### Widgets
 
 `StatsOverviewWidget` / `Stat`, `ChartWidget` (+ `LineChartWidget`/`PieChartWidget`/`DoughnutChartWidget`
-presets and `->options([...])` Chart.js overrides), `BarChartWidget` (pure-CSS bars: `->type('vertical'|'horizontal')`, `->variant('finance'|'system')`, `->showGrid()`, `->verticalLabels()` to rotate each bar's label beside it for long names), `TableWidget`, `CustomWidget`.
+presets and `->options([...])` Chart.js overrides), `BarChartWidget` (pure-CSS bars: `->type('vertical'|'horizontal')`, `->variant('finance'|'system')`, `->showGrid()`, `->verticalLabels()` to rotate each bar's label beside it for long names), `CustomWidget` — and
+`TableWidget`, which is **`NyonCode\WireTable\Widgets\TableWidget`, not wire-core's**: it draws rows of a
+table inside a card and the engine that draws them is wire-table's, so the class went with it in 2.0. A
+`use NyonCode\WireCore\Widgets\TableWidget;` is the class that was removed.
+
+**Never write the host's widget state from a view or from JS.** `widgetLayoutDraft`, `editingWidgets`,
+`widgetFilters` and `loadedWidgets` are `#[Locked]`: every change has a method (`moveWidget`, `placeWidget`,
+`resizeWidget`, `removeWidget`, `start/save/cancel/resetWidgetLayout`, `filterWidget`, `loadWidget`), and
+those are where a key is checked against the declaration and a size against the grid. A `wire:model` on any
+of them throws at runtime.
+
+**More than one arrangement** is `savedLayouts(): true` beside it — a separate opt-in, because a switcher
+is not what a dashboard with one layout wants. It rides the same store under a name; the host gains
+`saveWidgetLayoutAs()`, `applyWidgetLayout()`, `deleteWidgetLayout()` and `getWidgetLayoutNames()`, and the
+shipped controls gain a "Save as" and a select. Applying a saved layout **copies** it onto the current one
+rather than pointing at it, so nothing has to remember which name is in use.
+
+**A dashboard a user may rearrange** says `customisable(): true` on the `Dashboard` (off by default; the
+stored layout is per user, under the dashboard's key, in `wire-core.preferences`). Then **every widget on
+it needs its own `key()`** — a derived key is a position, and a stored layout addresses widgets by key, so
+a missing one is refused rather than rendered. `->group('Money')` is the heading it is offered under in the
+tray; `->sizes([[2, 1], [4, 2]])` is the list of sizes it may be given, and it binds: the resize buttons
+walk exactly those pairs and the first one is the size it arrives at from the tray.
+
+**A `columnSpan()` is resolved against the grid the component lands in, and capped by it.** Write the
+number (`columnSpan(3)`, `columnSpanFull()`) and the breakpoints follow the grid — the layout tells each
+child what it is drawn in, and `HasColumnSpan::getColumnSpanClass()` steps the span with the columns. Never
+hand-write `col-span-*` on a schema or infolist child, and never assume a span wider than the grid clips:
+CSS Grid adds the missing column instead, which re-flows the layout and squeezes every sibling into the
+remainder. A grid of your own gets its classes from `ResponsiveGrid::cols()` and hands the same argument to
+`ResponsiveGrid::span()`; the two shipped ladders are `fieldColumns()` (fields, two columns from `sm`) and
+`cardColumns()` (cards and widgets, two from `md`).
+
+**Never let a widget span more columns than the dashboard declares.** `columns(3)` means three is the
+widest a tile can be — a wider one does not clip, CSS Grid adds the missing track and squeezes every other
+tile on the page into what is left. The steppers and the server both cap at `columns()` for you
+(`WidgetSizeOffer`), so the trap is only in hand-written markup: a widget grid resolves its spans through
+`ResponsiveGrid::span($span, $ladder)` against the same ladder `ResponsiveGrid::cols()` built, never
+through a bare `col-span-*` or `HasColumnSpan::getColumnSpanClass()`, which answers for a grid that ramps
+at `sm` and knows no column count.
 
 ### Audit log
 
@@ -343,6 +399,59 @@ default, so emptying `wire-core.audit.exclude_columns` does not bring them back.
 application-specific columns on top and accepts `*` (`'billing_*'`). Do not add the credential names
 to it "to be safe"; do add your own (`salary`, `national_id`). The entries are rendered old-value
 beside new-value on the audit module's screen, so anything you leave in is on a page.
+
+### Tours
+
+A `Tour` is a guided walkthrough registered from a service provider's `boot()`:
+`$this->app->make(Tours::class)->register(Tour::make('id')->steps([TourStep::make('table-search')->text('…')]))`.
+It runs by itself on the first full page render of a screen it claims, and the browser does the rest;
+finishing and skipping both record it, in one Livewire request.
+
+**A step names an element hook, never a selector.** `TourStep::make()` takes a `data-wire` name
+(`admin-sidebar`, `table-search`, `admin-nav-item`) and throws on anything that is not kebab-case.
+Find real names with `grep -rho 'data-wire="[a-z-]*"' vendor/nyoncode | sort -u` — do not invent one,
+because a well-formed name nothing renders is silently **skipped**, exactly like an element that is
+hidden (an unopened dropdown, the bulk bar before a selection). Narrow one element among many with
+`->where('resource', 'orders')` (matches `data-resource="orders"`).
+
+**Scope with what already exists.** Who: `->permission('sales.*')`, `->authorize()`,
+`->authorizeUsing()`, `->visible()` — the shared authorization, through `Gate`, wildcards included.
+Do not add a role check of your own. Where: `->zones('sales')` (`->zones(null)` is the unzoned app),
+`->resource('orders')`, `->page('index')`. Several matching tours: the lowest `->sort()` runs, the
+rest wait for a later visit — one tour per audience, never one tour with branches.
+
+**Show it again by changing `->since()`.** The stored value is compared for inequality, so any
+different string re-runs it for everybody who finished the old one. Never rename the id for that —
+the id is what acknowledgements are stored against. Storage is `wire-core.tours.preferences`
+(default `session`; `database` plus the `wire-core::migrations` publish for "once, ever").
+Below the mobile sheet breakpoint the panel docks to the bottom and the page scrolls each element
+above it; what a phone hides (the sidebar drawer) is skipped and not counted. `TourStep::on('orders')`
+puts a step on another page of the same zone — "Next" navigates there and the tour carries on; a step
+whose page's route (`can:` middleware, via core's `AuthorizesUrls`) refuses this person is skipped. A tour
+left halfway reopens at the step reached (stored per `since()`; cleared by finish, skip and replay). The
+framework registers no tour itself.
+
+**A tour may ask before it points.** `->welcome(TourWelcome::make()->heading('…')->text('…'))` opens it
+with a centred card offering Start and Later. **Later is not Skip**: skip is recorded exactly as finishing
+is, while later puts the tour down for that session and is counted — the one reaching `->postpone(int)`
+(default `wire-core.tours.postpone`, 3) acknowledges it, so a greeting cannot return for ever.
+`->postpone(0)` drops the Later button. The card is shown only when the tour starts from the top, never
+when resuming. `TourWelcome::view('tours.welcome')` swaps the markup for your own, included inside the
+tour's Alpine scope, where it has `greeting`, `begin()`, `later()` and the `welcome` payload and owns its
+own `x-show`. Hooks: `tour-welcome`, `-heading`, `-text`, `-start`, `-later`.
+
+**A tour is drawn by the layout, through `PageChrome`** — `wire-admin`'s renders it, and a layout of
+your own must render the same two loops (body, and `PageChrome::USER_MENU`) plus `@@wireStackScripts`
+in the head, or nothing appears however well the tour is scoped. That registry is also where the
+"Replay the tour" entry in the user menu comes from; it shows only on a screen a tour claims. For a
+replay trigger anywhere else, return `app(TourState::class)->replayNow('id', auth()->user())` from the
+action: it forgets the tour *and* answers with a redirect to the screen the tour runs on, built from the
+tour's own scoping through the router — never from an address held in a public Livewire property, which
+is writable from the browser. It answers null when the tour names no page of its own or the person may
+not open it, and the tour is forgotten either way, so reload when null. `replay()` is the same without
+the redirect, for a trigger on a screen the tour already claims.
+`TourState::acknowledge('id', $user)` is the lever the other way, which is what a test uses to assert
+somebody already-seen is left alone.
 
 ### JavaScript assets
 

@@ -56,6 +56,39 @@ let openRecordMenu = null
 // throws the node away entirely. The key and the coordinates survive both.
 let openRecordMenuState = null
 
+// The event that opened the menu, so the document's own close-on-click listener
+// can tell "the tap that opened it" from "a tap somewhere else". Both reach the
+// document: the ⋯ trigger opens the menu from a click that is still bubbling.
+let menuOpeningEvent = null
+
+// How long a finger has to rest on a row before it counts as the right click
+// it stands in for, and how far it may drift meanwhile before it is a scroll.
+const LONG_PRESS_MS = 500
+const LONG_PRESS_SLOP = 10
+
+// Two taps closer together than this, on one row, are a double click. A little
+// longer than a mouse's: a thumb is slower than a finger on a button.
+const DOUBLE_TAP_MS = 350
+
+// The lift that ends a long press still produces a click, and it lands wherever
+// the finger is — on the row, or on the menu that just opened under it, where it
+// would close the menu or run the item it happens to rest on. Swallowed once, in
+// the capture phase, before either can see it.
+function swallowNextClick() {
+    const swallow = (event) => {
+        event.stopPropagation()
+        event.preventDefault()
+        done()
+    }
+    const done = () => {
+        clearTimeout(timer)
+        document.removeEventListener('click', swallow, true)
+    }
+    const timer = setTimeout(done, 800)
+
+    document.addEventListener('click', swallow, true)
+}
+
 // One morph guard for the page rather than one per table: Livewire's hook() has
 // no off switch, so registering inside init() would stack a fresh hook every
 // time a table re-initialises. Same pattern as the fill handle's guard — a poll
@@ -89,7 +122,7 @@ const installMorphGuards = () => {
 function restoreRecordMenu() {
     if (! openRecordMenuState) return
 
-    const { key, left, top } = openRecordMenuState
+    const { key, left, top, touch } = openRecordMenuState
     const panel = document.querySelector(`[data-record-menu="${CSS.escape(key)}"]`)
 
     if (! panel) {
@@ -103,6 +136,10 @@ function restoreRecordMenu() {
     if (panel.style.left !== left) panel.style.left = left
     if (panel.style.top !== top) panel.style.top = top
 
+    // The touch-only items are hidden by the server on every render, the same
+    // way the panel is; a menu a finger opened has to get them back.
+    showTouchItems(panel, touch)
+
     // A re-created panel takes the focus down with it, and the keyboard path
     // opens this menu with a menu item focused. Without this the arrow keys go
     // dead against a menu that is still on screen.
@@ -111,6 +148,13 @@ function restoreRecordMenu() {
     }
 
     openRecordMenu = panel
+}
+
+function showTouchItems(panel, touch) {
+    const items = panel.querySelector('[data-touch-menu]')
+    const display = touch ? '' : 'none'
+
+    if (items && items.style.display !== display) items.style.display = display
 }
 
 function hideRecordMenu(panel) {
@@ -125,6 +169,9 @@ function hideRecordMenu(panel) {
 const wireRecordActions = (config = {}) => ({
     bindings: config.bindings || {},
     contextMenu: !! config.contextMenu,
+    // Behaviour-only actions a finger reaches through the row's menu — a long
+    // press, or the ⋯ in the actions column (Table::getTouchMenuActions()).
+    touch: !! config.touch,
     kb: config.keyboard || null,
     // The mouse half of the gesture layer, switchable on its own: a table may
     // keep the checkbox sweep with the keyboard off, or drop the Shift-ranges
@@ -180,8 +227,9 @@ const wireRecordActions = (config = {}) => ({
         }
 
         this.initSweep()
+        this.initTouch()
 
-        if (! this.contextMenu) return
+        if (! this.contextMenu && ! this.touch) return
 
         // Installed on the way in, not when a menu opens: the restore runs off a
         // morph, and the first morph can land before the user's first right
@@ -189,7 +237,9 @@ const wireRecordActions = (config = {}) => ({
         installMorphGuards()
 
         // Global close triggers, bound once for the whole table (not per row).
-        this._onDocPointer = () => hideRecordMenu(openRecordMenu)
+        this._onDocPointer = (event) => {
+            if (event !== menuOpeningEvent) hideRecordMenu(openRecordMenu)
+        }
         this._onKey = (event) => {
             if (event.key === 'Escape') hideRecordMenu(openRecordMenu)
         }
@@ -203,6 +253,11 @@ const wireRecordActions = (config = {}) => ({
     destroy() {
         clearTimeout(this._clickTimer)
         clearTimeout(this._focusTimer)
+        clearTimeout(this._pressTimer)
+        this.$el.removeEventListener('pointerdown', this._onPressDown)
+        this.$el.removeEventListener('pointermove', this._onPressMove)
+        this.$el.removeEventListener('pointerup', this._onPressEnd)
+        this.$el.removeEventListener('pointercancel', this._onPressEnd)
         this._rowObserver?.disconnect()
         document.removeEventListener('focusout', this._onFocusOut)
         document.removeEventListener('click', this._onDocPointer)
@@ -215,6 +270,80 @@ const wireRecordActions = (config = {}) => ({
         document.removeEventListener('pointerup', this._onSweepUp)
         document.removeEventListener('pointercancel', this._onSweepUp)
         hideRecordMenu(openRecordMenu)
+    },
+
+    // ── Touch: the mouse's gestures, for a finger ────────────────────
+    //
+    // A tablet is wide enough for the desktop table, so it gets the desktop's
+    // gestures and none of the phone's buttons — and a finger has no right
+    // click and, on iPadOS, no reliable double click. Each keeps its meaning:
+    //
+    //   tap        → click         (the browser's own click, untouched)
+    //   double tap → double click  (counted here: Safari may not send one)
+    //   long press → right click   (Safari sends no contextmenu for it)
+    //
+    // The pointer type of the last press is remembered for the click and the
+    // contextmenu that follow it, since neither carries one everywhere.
+
+    initTouch() {
+        this._pointerType = null
+        this._lastTap = null
+
+        this._onPressDown = (event) => {
+            this._pointerType = event.pointerType
+
+            if (event.pointerType !== 'touch' || ! event.isPrimary) return
+
+            const row = this.row(event)
+            if (! row || this.blocked(event, row) || ! this.menuFor(row)) return
+
+            const x = event.clientX
+            const y = event.clientY
+
+            clearTimeout(this._pressTimer)
+            this._press = { x, y }
+            this._pressTimer = setTimeout(() => {
+                this._press = null
+                swallowNextClick()
+                this.openTouchMenu(row, x, y)
+            }, LONG_PRESS_MS)
+        }
+
+        // A finger that moves is scrolling; the browser says so with a
+        // pointercancel as well, but only once it has decided to pan.
+        this._onPressMove = (event) => {
+            if (! this._press || event.pointerType !== 'touch') return
+
+            if (Math.hypot(event.clientX - this._press.x, event.clientY - this._press.y) > LONG_PRESS_SLOP) {
+                this.cancelPress()
+            }
+        }
+
+        this._onPressEnd = () => this.cancelPress()
+
+        this.$el.addEventListener('pointerdown', this._onPressDown)
+        this.$el.addEventListener('pointermove', this._onPressMove, { passive: true })
+        this.$el.addEventListener('pointerup', this._onPressEnd)
+        this.$el.addEventListener('pointercancel', this._onPressEnd)
+    },
+
+    cancelPress() {
+        clearTimeout(this._pressTimer)
+        this._pressTimer = null
+        this._press = null
+    },
+
+    menuFor(row) {
+        return document.querySelector(`[data-record-menu="${CSS.escape(row.dataset.rowKey)}"]`)
+    },
+
+    // The row's menu with the touch items showing.
+    openTouchMenu(row, x, y) {
+        const panel = this.menuFor(row)
+        if (! panel) return
+
+        this.markActive(row)
+        this.openMenu(panel, x, y, { touch: true })
     },
 
     // ── Selection sweep: drag down the checkbox column to select ─────
@@ -756,6 +885,39 @@ const wireRecordActions = (config = {}) => ({
         const row = this.row(event)
         if (! row) return
 
+        const touch = this._pointerType === 'touch'
+
+        // The ⋯ in the actions column: a button, so blocked() below would
+        // rightly keep it from the row — it is the row's menu, opened under it.
+        const trigger = event.target.closest('[data-touch-menu-trigger]')
+        if (trigger && row.contains(trigger)) {
+            if (type !== 'click') return
+
+            const rect = trigger.getBoundingClientRect()
+            menuOpeningEvent = event
+            this.openTouchMenu(row, rect.left, rect.bottom)
+
+            return
+        }
+
+        if (touch) {
+            // A double tap is counted here, from its two clicks — whatever
+            // dblclick the browser adds on top is dropped, or it would run twice.
+            if (type === 'dblclick') return
+
+            if (type === 'click') {
+                const now = Date.now()
+                const last = this._lastTap
+
+                if (last && last.key === row.dataset.rowKey && now - last.at < DOUBLE_TAP_MS) {
+                    this._lastTap = null
+                    type = 'dblclick'
+                } else {
+                    this._lastTap = { key: row.dataset.rowKey, at: now }
+                }
+            }
+        }
+
         // A click in the row's own selection cell runs nothing, but it is a
         // selection gesture: it decides where a following Shift+arrow range grows
         // from, the same way a click does in a file explorer. Anywhere in the
@@ -810,7 +972,7 @@ const wireRecordActions = (config = {}) => ({
             this._clickTimer = setTimeout(() => {
                 this._clickTimer = null
                 this.$wire.openActionModal(key, name)
-            }, 250)
+            }, touch ? DOUBLE_TAP_MS : 250)
             return
         }
 
@@ -825,6 +987,25 @@ const wireRecordActions = (config = {}) => ({
     },
 
     onContextMenu(event) {
+        // Android answers a long press with a contextmenu of its own, at about
+        // the moment the press timer would. One menu, opened as a touch one.
+        if (this._pointerType === 'touch') {
+            const row = this.row(event)
+            if (! row || this.blocked(event, row) || ! this.menuFor(row)) return
+
+            event.preventDefault()
+
+            // Only if the press timer has not opened it already — and then the
+            // lift still owes a click, which must not reach the new menu.
+            if (openRecordMenu !== this.menuFor(row)) {
+                this.cancelPress()
+                swallowNextClick()
+                this.openTouchMenu(row, event.clientX, event.clientY)
+            }
+
+            return
+        }
+
         if (! this.contextMenu) return
 
         // The native contextmenu a real browser fires right after Shift+F10 /
@@ -851,10 +1032,12 @@ const wireRecordActions = (config = {}) => ({
         this.openMenu(panel, event.clientX, event.clientY)
     },
 
-    openMenu(panel, x, y) {
+    openMenu(panel, x, y, { touch = false } = {}) {
         if (openRecordMenu && openRecordMenu !== panel) hideRecordMenu(openRecordMenu)
         openRecordMenu = panel
 
+        // Before measuring: the touch items change the panel's height.
+        showTouchItems(panel, touch)
         panel.style.display = ''
 
         // Position at the cursor, nudged back inside the viewport so it is never
@@ -875,6 +1058,7 @@ const wireRecordActions = (config = {}) => ({
             key: panel.dataset.recordMenu,
             left: panel.style.left,
             top: panel.style.top,
+            touch,
         }
     },
 })

@@ -116,7 +116,10 @@ it('draws the stored spans as grid classes', function () {
     $html = Livewire::test(LayoutDashboard::class)->html();
 
     expect($html)->toContain('row-span-2')
-        ->and($html)->toContain('sm:col-span-2')
+        // `md:`, not `sm:`: the grid is one column until `md`, and a span that
+        // applied before the column exists makes CSS Grid invent it.
+        ->and($html)->toContain('md:col-span-2')
+        ->and($html)->not->toContain('sm:col-span-2')
         // The row baseline only appears on a grid that has a tall tile.
         ->and($html)->toContain('auto-rows-');
 });
@@ -281,4 +284,27 @@ it('says nothing about keys on a dashboard nobody rearranges', function () {
     };
 
     expect($component->getVisibleWidgets()[0]->getKey())->toBe('w0');
+});
+
+// ─── Narrowed to what exists ─────────────────────────────────────────────────
+
+it('drops placements the declaration does not have', function () {
+    // `apply()` ignores them when drawing; this is about what is *stored*. A bag
+    // of keys nothing can render is a preference row that grows for nobody — and
+    // one made entirely of them is a dashboard that draws nothing at all.
+    $layout = WidgetLayout::of([
+        ['key' => 'revenue', 'w' => 2, 'h' => 1],
+        ['key' => 'retired', 'w' => 1, 'h' => 1],
+        ['key' => 'orders', 'w' => 1, 'h' => 1],
+    ])->only(['revenue', 'orders']);
+
+    expect(array_column($layout->toBag()['widgets'], 'key'))->toBe(['revenue', 'orders'])
+        // Order and size are the user's; narrowing touches neither.
+        ->and($layout->sizeOf('revenue'))->toBe(['key' => 'revenue', 'w' => 2, 'h' => 1]);
+});
+
+it('leaves "never laid out" as it is rather than making it an empty layout', function () {
+    // The two are different answers: nothing stored means the declaration
+    // decides, and an empty list means a user took everything off.
+    expect(WidgetLayout::none()->only(['revenue'])->isDeclared())->toBeTrue();
 });

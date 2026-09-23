@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 return [
     'breadcrumbs' => 'Breadcrumb',
+
+    // The touch list a select becomes on a phone (->touchOnMobile()).
+    'select_done' => 'Done',
+    'select_clear_all' => 'Clear all',
+    'select_selected' => ':count selected',
     // Shared inline-edit messages (editable panel entries).
     'error' => 'Something went wrong.',
     'save_failed' => 'Could not save. Please try again.',
@@ -87,4 +92,20 @@ return [
     'widget_save_layout' => 'Save layout',
     'widget_cancel_layout' => 'Cancel',
     'widget_reset_layout' => 'Reset to default',
+    'widget_saved_layouts' => 'Saved layouts',
+    'widget_saved_layout_current' => 'Current layout',
+    'widget_save_layout_as' => 'Save as…',
+    'widget_save_layout_prompt' => 'Name this layout',
+    'widget_delete_layout' => 'Delete this saved layout',
+
+    // The guided walkthrough (Tours/).
+    'tour_next' => 'Next',
+    'tour_back' => 'Back',
+    'tour_finish' => 'Done',
+    'tour_skip' => 'Skip',
+    'tour_progress' => 'Step :current of :total',
+    'tour_region' => 'Product tour',
+    'tour_start' => 'Start the tour',
+    'tour_later' => 'Maybe later',
+    'tour_replay' => 'Replay the tour',
 ];

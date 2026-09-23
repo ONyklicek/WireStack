@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Workbench\App\Providers;
 
+use Illuminate\Http\Middleware\TrustProxies;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -13,7 +16,12 @@ use Livewire\Livewire;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
+use NyonCode\WireCore\Tours\Tour;
+use NyonCode\WireCore\Tours\Tours;
+use NyonCode\WireCore\Tours\TourStep;
+use NyonCode\WireCore\Tours\TourWelcome;
 use NyonCode\WireModuleSettings\Support\SettingsRegistry;
+use Throwable;
 use Workbench\App\Actions\Fortify\CreateNewUser;
 use Workbench\App\Actions\Fortify\ResetUserPassword;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
@@ -56,6 +64,20 @@ class WorkbenchServiceProvider extends ServiceProvider
         // table the workbench has no reason to migrate — so a halt form would
         // come back without its fields on the preview and nowhere else.
         config()->set('cache.default', 'file');
+
+        // The demo is reachable through a Cloudflare tunnel, which ends HTTPS at
+        // the edge and hands the request on to this server as plain HTTP. Laravel
+        // builds every absolute URL — the stylesheet, Livewire's script, the
+        // redirect `/previews/demo` answers with — from what it thinks the
+        // request was, so without this the page arrives over https and asks for
+        // its assets over http, which the browser blocks as mixed content: an
+        // unstyled page with Livewire dead and nothing on the server side wrong.
+        //
+        // Loopback only, because that is where `cloudflared` connects from. A
+        // phone on the LAN talks to this server directly and is not trusted, so
+        // it cannot claim to be https or to be somebody else by sending the same
+        // headers; a request with none of them — every CDP driver — is unchanged.
+        TrustProxies::at(['127.0.0.1', '::1']);
 
         // The customisable-dashboard preview has to survive a reload, and the
         // shipped default is `null` — nothing persisted, which is the right
@@ -211,6 +233,9 @@ class WorkbenchServiceProvider extends ServiceProvider
         // shows the old one.
         config()->set('livewire.component_layout', 'components.layouts.wire');
 
+        $this->bootDatabaseSessions();
+        $this->bootTours();
+
         // Read at render, so `boot()` is early enough for this one.
         config()->set('wire-module-settings.groups', [BrandingSettings::class]);
 
@@ -291,6 +316,223 @@ class WorkbenchServiceProvider extends ServiceProvider
                 ->implode('.');
 
             Livewire::component($name, $component);
+        }
+    }
+
+    /**
+     * Two walkthroughs, so the CDP driver has something real to drive.
+     *
+     * The browser is the only place a tour can be checked at all: Pest sees the
+     * markup and not whether the panel landed beside its element, whether a step
+     * with no element was skipped, or whether anything ran on a phone.
+     *
+     * **`invoices-tour` has two steps that are deliberately unreachable** — one
+     * whose element is not rendered, and one whose element is rendered and
+     * hidden. The driver asserts both are skipped and neither is counted.
+     *
+     * The first of them:
+     * `not-on-this-page` is a well-formed hook name that nothing renders, which
+     * is what an application hiding a control looks like from a tour's side. The
+     * driver asserts it is skipped *and* that the progress counter never counted
+     * it.
+     *
+     * **`admin-zone-tour` runs in one zone and nowhere else.** Zone matching is
+     * the part with the trap under it — `Zone::current()` answers
+     * `livewire.update` on a round trip — so it is worth checking where a route
+     * name is real, which is a browser.
+     *
+     * **`gated-tour` is the one nobody may see.** It sorts first, so it would
+     * win every time if the permission were not consulted — which makes a
+     * regression in tour authorization fail loudly here instead of leaking a
+     * walkthrough of a screen somebody cannot reach.
+     */
+    /**
+     * The tour a person meets on the demo dashboard.
+     *
+     * Everything the fixtures below are not: four steps that all exist, in the
+     * order somebody new would want them, pointing only at controls that are on
+     * screen before anything is clicked — a step whose element appears only in
+     * edit mode would simply be skipped, and a tour that shrank as you watched
+     * it would read as broken.
+     *
+     * One definition, used twice: registered while the demo cookie is set, and
+     * handed to the ledger by `/previews/demo` so that opening the link always
+     * starts it from the first step. The demo user is shared, so without that
+     * the second person to open the link would see a dashboard and no tour.
+     */
+    public static function demoTour(): Tour
+    {
+        return Tour::make('dashboard-demo')
+            ->zones('admin')
+            ->resource('overview')
+            ->page('index')
+            ->steps([
+                TourStep::make('admin-nav-item')
+                    ->where('resource', 'overview')
+                    ->heading('Your overview')
+                    ->text('A dashboard is a page in the menu like any other. This one is the admin\'s landing page, so it sits first.')
+                    ->placement('right-start'),
+
+                TourStep::make('widget-grid')
+                    ->heading('Real numbers')
+                    ->text('Every card counts rows from the invoices and tasks in this demo. Change one there and the figure here follows.')
+                    ->placement('top'),
+
+                TourStep::make('widget-layout-edit')
+                    ->heading('Make it yours')
+                    ->text('Customise lets you drag cards into another order, make them wider or taller, and take some off — they wait in a tray until you want them back.')
+                    ->placement('bottom-end'),
+
+                TourStep::make('widget-layout-save-as')
+                    ->heading('Keep more than one')
+                    ->text('Save the arrangement under a name, and switch between your saved layouts from the menu that appears beside it.')
+                    ->placement('bottom-end'),
+
+                // On another page: "Next" goes to the invoices list and the tour
+                // carries on there. The step a person reaches by leaving the
+                // dashboard is the one that shows a tour is not a single screen.
+                TourStep::make('table-search')
+                    ->on('invoices')
+                    ->heading('Every list works like this')
+                    ->text('Search, filter and sort are the same on every table in the admin — this is the invoices list.')
+                    ->placement('bottom-start'),
+            ]);
+    }
+
+    protected function bootTours(): void
+    {
+        // The demo tour, behind a cookie of its own. Separate from the fixture
+        // cookie below because the two audiences are: the fixtures exist for
+        // `verify-tour` and are deliberately strange, and this one exists for a
+        // person. Either would put a backdrop over every other driver that
+        // visits the admin zone, so neither is registered unconditionally.
+        if (isset($_COOKIE['wire-demo-tour'])) {
+            $this->app->make(Tours::class)->register(self::demoTour());
+        }
+
+        // The welcome block, behind a cookie of its own for the reason the two
+        // below have one, only more so: it puts a card and a backdrop over the
+        // whole page *before* anything can be clicked, so a driver that did not
+        // come for it would find the screen covered rather than merely dimmed.
+        //
+        // Two postponements rather than the configured three, so the driver can
+        // spend the allowance and watch the tour give up without three round
+        // trips of setup.
+        if (isset($_COOKIE['wire-tour-welcome'])) {
+            $this->app->make(Tours::class)->register(
+                Tour::make('welcome-tour')
+                    ->sort(-20)
+                    ->resource('invoices')
+                    ->page('index')
+                    ->postpone(2)
+                    ->welcome(
+                        TourWelcome::make()
+                            ->heading('Two minutes, and you will know your way around')
+                            ->text('We will point at a couple of things and then leave you to it.')
+                            ->later('Not just now'),
+                    )
+                    ->steps([
+                        TourStep::make('admin-sidebar')
+                            ->heading('Everything lives here')
+                            ->text('The sidebar holds every area this application has.')
+                            ->placement('right-start'),
+
+                        TourStep::make('table-search')
+                            ->heading('Find a row')
+                            ->text('Search narrows the table as you type.'),
+                    ]),
+            );
+        }
+
+        // Behind a cookie the tour driver sets, and this is not fussiness. A tour
+        // opens itself and draws a backdrop over the page, so registering one on
+        // a screen unconditionally would break every other driver that visits it
+        // — eleven of them use the invoices pages — and would break them by
+        // covering the thing they came to click, which reads as the feature
+        // under test being broken rather than the workbench.
+        //
+        // A cookie rather than a query parameter because it survives every
+        // navigation the driver makes, `wire:navigate` included.
+        //
+        // `$_COOKIE` rather than `request()->cookie()`, and that was measured
+        // rather than preferred: with the cookie demonstrably sent, the helper
+        // answered null here and the tours never registered. A provider boots
+        // early enough that the framework's cookie handling is not the thing to
+        // ask; the superglobal is populated before PHP dispatches anything.
+        if (! isset($_COOKIE['wire-tour-demo'])) {
+            return;
+        }
+
+        Gate::define('tours.forbidden', static fn (): bool => false);
+
+        $this->app->make(Tours::class)->register(
+            Tour::make('gated-tour')
+                ->permission('tours.forbidden')
+                ->sort(-10)
+                ->steps([
+                    TourStep::make('admin-sidebar')
+                        ->heading('You should never see this')
+                        ->text('If this panel is on screen, tour authorization is broken.'),
+                ]),
+
+            Tour::make('admin-zone-tour')
+                ->zones('admin')
+                ->resource('invoices')
+                ->sort(-5)
+                ->steps([
+                    TourStep::make('admin-sidebar')
+                        ->heading('Admin zone only')
+                        ->text('This tour runs in the admin zone and nowhere else.'),
+                ]),
+
+            Tour::make('invoices-tour')
+                ->since('1')
+                ->resource('invoices')
+                ->page('index')
+                ->steps([
+                    TourStep::make('admin-sidebar')
+                        ->heading('Everything lives here')
+                        ->text('The sidebar holds every area this application has.')
+                        ->placement('right-start'),
+
+                    TourStep::make('not-on-this-page')
+                        ->heading('Unreachable')
+                        ->text('Nothing renders this hook, so this step must be skipped.'),
+
+                    // In the document on every page and hidden on a desktop — the
+                    // mobile sidebar's overlay, behind an `x-show`. Present is not
+                    // showing: a tour that took `querySelector` at its word would
+                    // pin the panel to a box of zero size.
+                    TourStep::make('admin-sidebar-overlay')
+                        ->heading('Hidden')
+                        ->text('This element is rendered but hidden, so this step must be skipped.'),
+
+                    TourStep::make('table-search')
+                        ->heading('Find a row')
+                        ->text('Type here to narrow the table down.')
+                        ->placement('bottom-start'),
+                ]),
+        );
+    }
+
+    /**
+     * Keep sessions in the database, the way Laravel has since 11 — and the way
+     * an application has to for the profile's browser-sessions card to list
+     * anything, since no other driver records whose a session is.
+     *
+     * Guarded by the table rather than set outright: a workbench database built
+     * before this migration would otherwise fail on every request, and a preview
+     * server that 500s wholesale is the hardest kind of stale skeleton to read.
+     * Falling back means the card shows its own explanation instead.
+     */
+    protected function bootDatabaseSessions(): void
+    {
+        try {
+            if (Schema::hasTable('sessions')) {
+                config()->set('session.driver', 'database');
+            }
+        } catch (Throwable) {
+            // No database yet (a build step, a fresh clone): leave the default.
         }
     }
 }

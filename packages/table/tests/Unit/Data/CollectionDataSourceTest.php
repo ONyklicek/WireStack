@@ -267,6 +267,49 @@ it('compares a backed enum by the value it is stored as', function () {
         ->and($rows->count(new QueryPlan(searchClauses: [new SearchClause('status')], searchTerm: 'clos')))->toBe(1);
 });
 
+it('sorts text by the application s language, not by bytes', function () {
+    // Byte order put every accented capital after Z: Černý after Veselý, on a
+    // page a database-backed table would have ordered the way Czech is read.
+    app()->setLocale('cs');
+
+    $rows = new CollectionDataSource(array_map(
+        fn (string $name, int $id) => ['id' => $id, 'name' => $name],
+        ['Veselý', 'Černý', 'Cibulka', 'Dvořák', 'adam'],
+        [1, 2, 3, 4, 5],
+    ));
+
+    expect($rows->get(new QueryPlan(sortClauses: [new SortClause('name')]))->pluck('name')->all())
+        ->toBe(['adam', 'Cibulka', 'Černý', 'Dvořák', 'Veselý'])
+        ->and($rows->get(new QueryPlan(sortClauses: [new SortClause('name', 'desc')]))->pluck('name')->first())
+        ->toBe('Veselý');
+});
+
+it('sorts numbers as numbers, nothing first, and enums by their value', function () {
+    $rows = new CollectionDataSource([
+        ['id' => 1, 'n' => '10', 'status' => CdsStatus::Open],
+        ['id' => 2, 'n' => 9, 'status' => CdsStatus::Closed],
+        ['id' => 3, 'n' => null, 'status' => null],
+        ['id' => 4, 'n' => 9.5, 'status' => CdsStatus::Open],
+    ]);
+
+    expect($rows->get(new QueryPlan(sortClauses: [new SortClause('n')]))->pluck('id')->all())->toBe([3, 2, 4, 1])
+        ->and($rows->get(new QueryPlan(sortClauses: [new SortClause('status'), new SortClause('n', 'desc')]))->pluck('id')->all())
+        ->toBe([3, 2, 1, 4]);
+});
+
+it('still orders text the Collator refuses, and values of no common kind', function () {
+    // Invalid UTF-8 makes Collator::compare() answer false: the order falls back
+    // to comparing without accents, then byte for byte.
+    $rows = new CollectionDataSource([
+        ['id' => 1, 'name' => "b\xff"],
+        ['id' => 2, 'name' => "a\xff"],
+        ['id' => 3, 'name' => "A\xff"],
+        ['id' => 4, 'name' => true],
+    ]);
+
+    expect($rows->get(new QueryPlan(sortClauses: [new SortClause('name')]))->pluck('id')->all())->toBe([3, 2, 1, 4]);
+});
+
 enum CdsStatus: string
 {
     case Open = 'open';
