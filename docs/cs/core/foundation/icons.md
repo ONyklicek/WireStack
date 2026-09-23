@@ -237,6 +237,43 @@ app(IconManager::class)->registerIconSet(new LucideIconSet);           // vyhod�
 > (`arrow-down-tray`), takže není žádná nejednoznačnost. Použijte `default:name` k adresování
 > základní sady explicitně.
 
+### Prefixy, které si balíčky už zabraly
+
+Tři sady jsou zaregistrované za vás — těmi balíčky, které je kreslí. Každá dodává
+glyfy, na které Heroicons nemá odpověď, ve formátu, jaký ten jeden povrch potřebuje:
+
+| Prefix | Registruje | Glyfy | Formát |
+|--------|------------|-------|--------|
+| `wire` | wire-core | `wire:star`, `wire:star-outline` — značky hodnocení | 24×24 fill |
+| `forms` | wire-forms | lišta rich editoru, dvacet položek: `forms:bold`, `forms:italic`, `forms:link`, … | 24×24 fill |
+| `table` | wire-table | `table:checkbox-check`, `table:checkbox-indeterminate` — značky uvnitř vlastního zaškrtávátka tabulky | 16×16 stroke |
+
+Formát je důvod, proč glyf patří do sady a ne na hromadu: sada deklaruje jeden
+viewBox a jednu sadu atributů stroke/fill pro všechno v sobě. Značky zaškrtávátka
+tabulky jsou kreslené v 16×16 tahem, protože se vykreslují do 16px orámovaného
+okénka a nikam jinam — ve společné sadě s 24×24 vyplněnými ikonami by se jedno
+z obou vykreslovalo ve špatné váze. Těla se načítají až při prvním použití, takže
+stránka, která z dané sady nekreslí nic, její soubor vůbec neotevře.
+
+**Ta tři jména jsou zabraná a vzít si je zpět má své pořadí.** Registrace sady
+pod prefix, který už jednu má, tu původní tiše nahradí — a balíčky registrují své
+sady při bootu, tedy *až po* tom, co manažer přečetl `icons.sets` z konfigurace
+(čte ji, když se poprvé vytváří). Deklarace `'table' => MyIconSet::class`
+v konfiguraci proto neudělá nic: registrace balíčku proběhne později a vyhraje.
+Registrujte místo toho z `boot()` vlastního service provideru, který se spouští
+po těch balíčkových:
+
+```php
+public function boot(): void
+{
+    app(IconManager::class)->registerIconSet(new MyTableIconSet, 'table'); // [tl! focus]
+}
+```
+
+Pro výměnu jediného glyfu místo celé sady nechte svou sadu odpovídat na to jedno
+jméno a zbytek delegujte na sadu balíčku — sada je objekt, takže je to obyčejná
+kompozice.
+
 ### Výměna výchozí (neprefixované) sady
 
 Aby se jiná sada stala neprefixovaným základem — např. dodat Lucide jako váš primární
