@@ -25,6 +25,11 @@
     // and is drawn disabled, which is the only place a user sees the offer.
     $offer = WidgetSizeOffer::for($widget, $columns ?? 2);
 
+    // A widget that named its sizes (`sizes(['S' => …, 'M' => …])`) is offered
+    // them by name: three sizes are three choices, and a stepper would make
+    // the user walk to them without saying where the walk ends.
+    $namedSizes = $offer->named();
+
     $narrower = $offer->narrower($editWidth, $editHeight);
     $wider = $offer->wider($editWidth, $editHeight);
     $shorter = $offer->shorter($editWidth, $editHeight);
@@ -40,42 +45,59 @@
         {!! icon('outline:bars-3', 'w-4 h-4', 'h-4 w-4') !!}
     </span>
 
-    {{-- Steppers rather than a drag-to-resize corner: a span is a handful of
-         sizes, so a button can say which one you are getting. A corner would
-         need pointer maths, a preview and a grid that can be measured mid-drag,
-         to land on the same few. --}}
-    <button type="button"
-            @if($narrower) wire:click="{{ $widget->getResizeExpression($narrower[0], $narrower[1]) }}" @endif
-            @disabled($narrower === null)
-            data-testid="widget-narrower-{{ $editKey }}"
-            aria-label="{{ __('wire-core::messages.widget_narrower') }}"
-            class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
-        {!! icon('outline:chevron-left', 'w-4 h-4', 'h-4 w-4') !!}
-    </button>
-    <button type="button"
-            @if($wider) wire:click="{{ $widget->getResizeExpression($wider[0], $wider[1]) }}" @endif
-            @disabled($wider === null)
-            data-testid="widget-wider-{{ $editKey }}"
-            aria-label="{{ __('wire-core::messages.widget_wider') }}"
-            class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
-        {!! icon('outline:chevron-right', 'w-4 h-4', 'h-4 w-4') !!}
-    </button>
-    <button type="button"
-            @if($shorter) wire:click="{{ $widget->getResizeExpression($shorter[0], $shorter[1]) }}" @endif
-            @disabled($shorter === null)
-            data-testid="widget-shorter-{{ $editKey }}"
-            aria-label="{{ __('wire-core::messages.widget_shorter') }}"
-            class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
-        {!! icon('outline:chevron-up', 'w-4 h-4', 'h-4 w-4') !!}
-    </button>
-    <button type="button"
-            @if($taller) wire:click="{{ $widget->getResizeExpression($taller[0], $taller[1]) }}" @endif
-            @disabled($taller === null)
-            data-testid="widget-taller-{{ $editKey }}"
-            aria-label="{{ __('wire-core::messages.widget_taller') }}"
-            class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
-        {!! icon('outline:chevron-down', 'w-4 h-4', 'h-4 w-4') !!}
-    </button>
+    @if($namedSizes !== [])
+        <div class="flex items-center gap-0.5" role="group" aria-label="{{ __('wire-core::messages.widget_size') }}">
+            @foreach($namedSizes as $namedSize)
+                @php($isCurrent = $namedSize['width'] === $editWidth && $namedSize['height'] === $editHeight)
+                <button type="button"
+                        wire:click="{{ $widget->getResizeExpression($namedSize['width'], $namedSize['height']) }}"
+                        aria-pressed="{{ $isCurrent ? 'true' : 'false' }}"
+                        data-testid="widget-size-{{ $editKey }}-{{ $namedSize['label'] }}"
+                        @class([
+                            'rounded-sm px-1.5 py-0.5 text-[11px] font-bold',
+                            'bg-primary-600 text-white' => $isCurrent,
+                            'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200' => ! $isCurrent,
+                        ])>{{ $namedSize['label'] }}</button>
+            @endforeach
+        </div>
+    @else
+        {{-- Steppers rather than a drag-to-resize corner: a span is a handful of
+             sizes, so a button can say which one you are getting. A corner would
+             need pointer maths, a preview and a grid that can be measured mid-drag,
+             to land on the same few. --}}
+        <button type="button"
+                @if($narrower) wire:click="{{ $widget->getResizeExpression($narrower[0], $narrower[1]) }}" @endif
+                @disabled($narrower === null)
+                data-testid="widget-narrower-{{ $editKey }}"
+                aria-label="{{ __('wire-core::messages.widget_narrower') }}"
+                class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
+            {!! icon('outline:chevron-left', 'w-4 h-4', 'h-4 w-4') !!}
+        </button>
+        <button type="button"
+                @if($wider) wire:click="{{ $widget->getResizeExpression($wider[0], $wider[1]) }}" @endif
+                @disabled($wider === null)
+                data-testid="widget-wider-{{ $editKey }}"
+                aria-label="{{ __('wire-core::messages.widget_wider') }}"
+                class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
+            {!! icon('outline:chevron-right', 'w-4 h-4', 'h-4 w-4') !!}
+        </button>
+        <button type="button"
+                @if($shorter) wire:click="{{ $widget->getResizeExpression($shorter[0], $shorter[1]) }}" @endif
+                @disabled($shorter === null)
+                data-testid="widget-shorter-{{ $editKey }}"
+                aria-label="{{ __('wire-core::messages.widget_shorter') }}"
+                class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
+            {!! icon('outline:chevron-up', 'w-4 h-4', 'h-4 w-4') !!}
+        </button>
+        <button type="button"
+                @if($taller) wire:click="{{ $widget->getResizeExpression($taller[0], $taller[1]) }}" @endif
+                @disabled($taller === null)
+                data-testid="widget-taller-{{ $editKey }}"
+                aria-label="{{ __('wire-core::messages.widget_taller') }}"
+                class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
+            {!! icon('outline:chevron-down', 'w-4 h-4', 'h-4 w-4') !!}
+        </button>
+    @endif
 
     <button type="button"
             wire:click="{{ $widget->getRemoveExpression() }}"

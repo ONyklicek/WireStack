@@ -49,7 +49,7 @@ to `wire_preferences` because it will now hold more than tables.
 | --- | --- |
 | Widget sizes | **Width and height.** A tile can be 2 columns wide and 2 rows tall |
 | Layout model | **Ordered list + (w, h)**, packed by CSS Grid — no x/y coordinates, no collision resolution |
-| Editing | **Explicit edit mode.** A "Customise" button reveals the tray, handles and removes; Save / Cancel |
+| Editing | **Explicit edit mode.** A "Customise" button reveals the tray, handles and removes; Save / Cancel. `autosave()` (step 7) keeps the mode and stores each change at once |
 | Per-user | **Opt-in.** A dashboard without `customisable()` behaves exactly as it does today |
 | Store | `Foundation\Preferences\*` in core, extracted from `wire-table` |
 | Multiple dashboards | Keyed by `Dashboard::key()`; the store's `view` dimension gives named layouts for free |
@@ -252,6 +252,38 @@ workbench preview writes its own, which is what proves that path still works.
 **The gate.** 3 new tests in panels, `composer test:panels` and `test:core`
 otherwise unchanged.
 
+
+### Step 7 — Controls from a real application — **DONE**
+
+**Found by moving an application's own dashboard onto this one.** The intranet
+that drove wire-panels had a dashboard of its own — a widget catalogue, per-role
+presets, one period/customer filter over the page — and its controls were, in
+six places, better than these. The choice was to rebuild them in the application
+over this feature's seams or to put them here; the six are general, so here.
+
+| The application had | Landed as |
+| --- | --- |
+| A preset per role; the rest only offered | `Dashboard::defaultLayout()` / host `defaultWidgetLayout()`, resolved by `Support\DefaultWidgetLayout`. Stored layout > default > declaration; Reset forgets the stored one |
+| Changes stored at once, "Reset" as the undo | `autosave()` — the mode stays, and ends with Done |
+| At most twelve widgets | `maxWidgets()` — refused in `placeWidget()`, said in the tray |
+| S / M / L width buttons | Named sizes: `sizes(['S' => …])`; `WidgetSizeOffer::named()` keeps each name with its size *on this grid* |
+| An "add widget" list with descriptions | The tray draws `description()` |
+| One period and customer filter in the URL | `filters()` of `DashboardFilter`, `InteractsWithDashboardFilters` on the host, `DashboardFilterState`; `ignoresDashboardFilters()` for a widget that cannot be narrowed |
+| A "drop here" target while dragging | `sortable-ghost` styled as a dashed target — a class, no script |
+
+**Autosave does not reverse the edit-mode decision.** The mode exists because a
+live drag with no undo overwrites a layout somebody was happy with. That is still
+the default. What the application showed is the other case: a dashboard used as
+a tool all day, where a forgotten Save loses more than a stray drag and Reset is
+undo enough. It is an opt-in for that case, and it keeps the mode — handles and
+tray still appear only while customising.
+
+**What stayed in the application:** per-user alert thresholds on a widget and the
+record card beside the grid. Both are that application's domain, not a
+dashboard's.
+
+**The gate.** 38 new tests in core, 4 in panels; the existing suites unchanged
+apart from Reset, which the controls now offer only over a stored layout.
 
 ## What this does not do
 

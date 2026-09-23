@@ -56,3 +56,8 @@ app(Tours::class)->register(
 - A tour step names an element hook (`data-wire`), never a CSS selector; a step whose element is hidden,
   or whose `on()` page this person may not open, is skipped. Change `->since()` to show a tour again,
   never the id. Phones get a docked panel; a tour left halfway reopens at the step reached.
+- A customisable dashboard is shaped on the `Dashboard`: `defaultLayout()` (what a newcomer sees, may depend
+  on the user; the rest waits in the tray), `autosave()`, `maxWidgets()`, named sizes
+  (`->sizes(['S' => [1, 1], 'L' => [4, 1]])`) and `filters()` — one `DashboardFilter` selection in the address
+  that `widgets()` reads through `$this->filter()`. Never repeat a per-widget `filter()` to fake a
+  dashboard-wide one; mark a widget that cannot be narrowed with `->ignoresDashboardFilters()`.

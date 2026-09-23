@@ -97,6 +97,11 @@ public function callWidgetAction(string $key, string $name): void // akce v hlav
 public function loadWidget(string $key): void        // první render odloženého widgetu
 public array $widgetFilters                          // jaký filtr který widget ukazuje
 public array $loadedWidgets                          // klíče, které už byly staženy
+protected function getDashboardFilters(): array      // filtry nad celým dashboardem (výchozí: žádné) [tl! focus:start]
+public function dashboardFilter(string $name): ?string          // hodnota jednoho filtru, pro getWidgets()
+public function setDashboardFilter(string $name, string $value): void // co volá lišta filtrů
+public function resetDashboardFilters(): void        // všechny filtry zpět na výchozí
+public array $dashboardFilters                       // výběr, v adrese jako ?dashboard[…] [tl! focus:end]
 ```
 
 ### Stav drží hostitel, widgety žádný
@@ -259,6 +264,12 @@ Viz [Resources](../../panels/navigation.md).
 | `columns(): int` | `int` | Sloupce mřížky; výchozí 2 |
 | `customisable(): bool` | `bool` | Jestli si ho každý uživatel smí přeskládat; false, a to je celé opt-in |
 | `savedLayouts(): bool` | `bool` | Jestli si každý uživatel smí držet víc uspořádání, každé pod jménem; potřebuje i `customisable()` |
+| `defaultLayout(): ?array` | `array\|null` | Co uživatel vidí, než si cokoli uspořádá; zbytek začíná v zásobníku. Null umístí vše deklarované |
+| `autosave(): bool` | `bool` | Jestli se změna v režimu úprav uloží hned; false ponechá Uložit a Zrušit |
+| `maxWidgets(): ?int` | `int\|null` | Nejvíc widgetů, které si uživatel smí umístit; null bez limitu |
+| `filters(): array` | `array<int, DashboardFilter>` | Filtry nad celým dashboardem, čtené ve `widgets()` přes `filter()` |
+| `withFilterState(DashboardFilterState $state): static` | `static` | Nastaví stránka před `widgets()`; deklarace ho jen čte |
+| `filter(string $name): ?string` | `string\|null` | Chráněná. Hodnota jednoho filtru — jeho výchozí, dokud stránka neřekne jinak |
 | `static key(): string` | `string` | Identita, odvozená z názvu třídy bez `Dashboard` |
 | `static label(): string` | `string` | Lidský název; výchozí nadpis stránky |
 
@@ -270,8 +281,99 @@ dashboard. `DashboardPage` z toho udělá klíč, pod kterým se layout ukládá
 přidá ovládání Přizpůsobit / Uložit / Zrušit / Obnovit — deklarovaný dashboard
 tak nepotřebuje vlastní view. Každý widget na něm potřebuje vlastní `key()`.
 
-Úložiště, zásobník, `group()` a `sizes()` popisují
+Tu funkci tvarují `defaultLayout()`, `autosave()` a `maxWidgets()` — co uvidí
+nováček, jestli se změna uloží hned, kolik widgetů se vejde. Úložiště, zásobník,
+`group()`, `sizes()` i ty tři popisují
 [Widgety → Přizpůsobitelné dashboardy](index.md#prizpusobitelne-dashboardy).
+
+### Filtry nad celým dashboardem
+
+Vlastní `filter()` widgetu zužuje ten jeden widget. Dashboard čtený jako jeden
+obraz chce opak: jeden výběr — „tento měsíc“, „tento zákazník“ — na který
+odpovídá každý widget, takže dvě čísla vedle sebe odpovídají na tutéž otázku.
+
+```php
+use NyonCode\WireCore\Widgets\Dashboard;
+use NyonCode\WireCore\Widgets\DashboardFilter;
+
+final class ProductionDashboard extends Dashboard
+{
+    public function filters(): array                                          // [tl! focus:start]
+    {
+        return [
+            DashboardFilter::make('period')->label('Období')->buttons()
+                ->options(['week' => 'Tento týden', 'month' => 'Tento měsíc', 'all' => 'Vše'])
+                ->default('month'),
+            DashboardFilter::make('customer')->label('Zákazník')->placeholder('Všichni zákazníci')
+                ->options(fn (): array => Customer::withWorkInProgress()->pluck('name', 'id')->all()),
+        ];
+    }                                                                         // [tl! focus:end]
+
+    public function widgets(): array
+    {
+        $metrics = ProductionMetrics::for($this->filter('period'), $this->filter('customer')); // [tl! focus]
+
+        return [
+            StatsOverviewWidget::make()->key('made')->heading('Vyrobeno')
+                ->stats([Stat::make('Kusů', (string) $metrics->made())]),
+            StatsOverviewWidget::make()->key('server')->heading('Účetní server')
+                ->ignoresDashboardFilters()                                   // [tl! focus]
+                ->stats([Stat::make('Stav', $this->serverStatus())]),
+        ];
+    }
+}
+```
+
+**Výběr žije na stránce a v adrese.** `DashboardPage` ho drží v
+`$dashboardFilters`, který je v query stringu jako `?dashboard[period]=week` —
+dashboard se tak dá poslat odkazem přesně tak, jak ho odesílatel viděl, a
+obnovení stránky ho zachová. Drží se jen hodnoty, které se liší od výchozích,
+takže nefiltrovaný dashboard má čistou adresu. Vlastnost je zamčená: lišta
+filtrů ji mění přes `setDashboardFilter()` a cokoli přišlo v adrese se ověří
+dřív, než to kdokoli přečte.
+
+**Hodnota zůstane, jen když ji filtr nabídl.** Všechno ostatní — starý odkaz,
+překlep, id z doby před změnou voleb — spadne na výchozí hodnotu filtru, místo
+aby se dostalo k dotazu, který ji čte. Výchozí `null` znamená „nezužuje nic“ a
+kreslí se jako placeholder.
+
+**Stránka předá vyhodnocené hodnoty dashboardu dřív, než běží `widgets()`**
+(`withFilterState()`), a `filter()` je čte; dashboard postavený bez stránky čte
+své výchozí hodnoty. Ručně psaný hostitel `WithWidgets` deklaruje
+`getDashboardFilters()` a v `getWidgets()` čte `$this->dashboardFilter('period')`
+stejně.
+
+**Widget, který zúžit nejde, to řekne.** `ignoresDashboardFilters()` na něj dá
+značku „Bez filtru“, dokud se kterýkoli filtr liší od výchozího — stav externího
+serveru nemá zákazníka a čtenář, který ho porovnává s filtrovanými sousedy,
+to potřebuje vědět.
+
+**Kde se kreslí.** `DashboardPage` dá lištu filtrů vedle ovládání rozložení.
+Vlastní hostitel ji vloží tam, kam ji chce jeho layout:
+
+```blade
+@include('wire-core::widgets.partials.widget-filters')   {{-- bez filtrů nevykreslí nic --}}
+@include('wire-core::widgets.widget-grid')
+```
+
+Filtr deklarovaný `buttons()` — pár období čitelných na první pohled — je řada
+tlačítek, ostatní jsou select, kde volby jsou záznamy. Odkaz „Zrušit filtr“ se
+objeví, jen dokud je něco zúžené.
+
+### DashboardFilter API
+
+```php
+DashboardFilter::make(string $name)
+->label(string|Closure|null $label)            // výchozí je jméno jako nadpis
+->options(array|Closure $options)              // hodnota => popisek; closure se vyhodnotí, až je potřeba
+->default(int|string|null $default)            // hodnota, když není nic vybráno; null nezužuje nic
+->placeholder(string|Closure|null $placeholder) // prázdná volba selectu — výchozí: popisek
+->buttons(bool $buttons = true)                // řada tlačítek místo selectu
+->getOptions(): array                          // klíčované hodnotou tak, jak ji nese adresa
+->getDefault(): ?string
+->isButtons(): bool
+->resolve(mixed $value): ?string               // nabídnutá hodnota, jinak výchozí
+```
 
 ---
 

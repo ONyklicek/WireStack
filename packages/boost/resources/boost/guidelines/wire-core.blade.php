@@ -342,8 +342,9 @@ table inside a card and the engine that draws them is wire-table's, so the class
 `use NyonCode\WireCore\Widgets\TableWidget;` is the class that was removed.
 
 **Never write the host's widget state from a view or from JS.** `widgetLayoutDraft`, `editingWidgets`,
-`widgetFilters` and `loadedWidgets` are `#[Locked]`: every change has a method (`moveWidget`, `placeWidget`,
-`resizeWidget`, `removeWidget`, `start/save/cancel/resetWidgetLayout`, `filterWidget`, `loadWidget`), and
+`widgetFilters`, `loadedWidgets` and `dashboardFilters` are `#[Locked]`: every change has a method (`moveWidget`, `placeWidget`,
+`resizeWidget`, `removeWidget`, `start/save/cancel/resetWidgetLayout`, `filterWidget`, `loadWidget`,
+`setDashboardFilter`, `resetDashboardFilters`), and
 those are where a key is checked against the declaration and a size against the grid. A `wire:model` on any
 of them throws at runtime.
 
@@ -359,6 +360,19 @@ it needs its own `key()`** — a derived key is a position, and a stored layout 
 a missing one is refused rather than rendered. `->group('Money')` is the heading it is offered under in the
 tray; `->sizes([[2, 1], [4, 2]])` is the list of sizes it may be given, and it binds: the resize buttons
 walk exactly those pairs and the first one is the size it arrives at from the tray.
+Key the pairs to name them (`->sizes(['S' => [1, 1], 'M' => [2, 1], 'L' => [4, 1]])`) and the editor offers
+`S M L` buttons instead of steppers; `->description()` is shown under the heading in the tray.
+
+**Shape a customisable dashboard on the `Dashboard`, not in its page:** `defaultLayout()` is what somebody
+sees before arranging anything (`['kpi' => 'L', 'queue' => [2, 1], 'money']` — may depend on the user; the
+rest starts in the tray, Reset comes back here), `autosave()` stores every change at once (the mode then ends
+with Done, no Save/Cancel), `maxWidgets()` refuses a widget past the limit. A **filter over the whole
+dashboard** is `filters(): [DashboardFilter::make('period')->options([...])->default('month')->buttons()]`,
+read in `widgets()` through `$this->filter('period')` — one selection in the address (`?dashboard[period]=…`)
+that every widget answers, never a per-widget `filter()` repeated on each. A widget that cannot be narrowed
+says `->ignoresDashboardFilters()` and is marked while a filter narrows. A hand-written `WithWidgets` host
+answers the same through `defaultWidgetLayout()`, `autosavesWidgetLayout()`, `maxWidgets()`,
+`getDashboardFilters()` and `$this->dashboardFilter()`, and includes `wire-core::widgets.partials.widget-filters`.
 
 **A `columnSpan()` is resolved against the grid the component lands in, and capped by it.** Write the
 number (`columnSpan(3)`, `columnSpanFull()`) and the breakpoints follow the grid — the layout tells each

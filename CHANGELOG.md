@@ -2,6 +2,42 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **A customisable dashboard can be shaped the way a real application's was.** Found by moving an application's
+  own dashboard onto `Dashboard` / `DashboardPage`: its controls did six things the framework's could not, and
+  each is now a declaration on the `Dashboard` (and a protected hook on a hand-written `WithWidgets` host):
+  - `defaultLayout()` — what somebody sees before arranging anything, as keys in order with an optional size
+    (`['kpi' => 'L', 'queue' => [2, 1], 'money']`); may depend on the user. Everything else declared starts in
+    the tray, and Reset comes back here rather than to the whole declaration (`Support\DefaultWidgetLayout`,
+    host hook `defaultWidgetLayout()`, `hasStoredWidgetLayout()`).
+  - `autosave()` — every change in edit mode is stored at once; the mode then ends with Done instead of
+    Save and Cancel (`autosavesWidgetLayout()`).
+  - `maxWidgets()` — a widget past the limit is refused on the server and the tray says why instead of
+    offering add buttons (`widgetLimitReached()`).
+  - `filters()` — `DashboardFilter` selections over the whole dashboard, held in the address
+    (`?dashboard[period]=week`), checked against their options, and read in `widgets()` through
+    `$this->filter()`; a filter bar (`wire-core::widgets.partials.widget-filters`, buttons or a select, a reset
+    while narrowed) that `DashboardPage` draws beside the controls. A widget that cannot be narrowed says
+    `->ignoresDashboardFilters()` and is marked "Not filtered" while a filter narrows
+    (`Concerns\InteractsWithDashboardFilters`, `Support\DashboardFilterState`).
+  - Named sizes — `->sizes(['S' => [1, 1], 'M' => [2, 1], 'L' => [4, 1]])` offers those names as buttons
+    instead of width and height steppers (`getSizeLabel()`, `hasNamedSizes()`, `WidgetSizeOffer::named()`).
+  - The tray shows a widget's `description()`, and a dragged tile's drop position is drawn as a dashed
+    target (`sortable-ghost`, no JavaScript).
+  Hook names `widget-filters`, `widget-filters-reset`, `widget-layout-done`, `widget-tray-limit` and
+  `widget-unfiltered`. Covered by `WidgetDashboardControlsTest` (21), `DashboardFiltersTest` (17) and four
+  more in panels' `DashboardPageTest`. See `docs/core/widgets/index.md` § Customisable Dashboards and
+  `docs/core/widgets/dashboards.md` § Filters over the whole dashboard.
+
+### Changed
+
+- **The ready-made layout controls offer Reset only while the user has a layout of their own.** On a
+  dashboard nobody has arranged there is nothing to reset to. `Widget::group()` / `sizes()` moved into
+  `Widgets\Concerns\HasLayoutOffer` (same API), which brings `Widget` back under the 300-line bound.
+
 ## [2.2.0]
 
 ### Added

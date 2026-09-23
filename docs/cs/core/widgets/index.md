@@ -392,7 +392,8 @@ rozpon řádků (1–6).
   na dashboardu není — je k dispozici k vrácení. Jedno pravidlo dělá dvě práce
   místo příznaku `hidden` vedle pořadí, který by s ním mohl nesouhlasit.
 - **Prázdný seznam není totéž co žádný layout.** Nic uloženého znamená, že
-  rozhoduje deklarace — to musí vidět uživatel, který se dashboardu nikdy
+  rozhoduje [výchozí rozložení](#kde-zacina-vychozi-rozlozeni) dashboardu —
+  a bez něj deklarace — to musí vidět uživatel, který se dashboardu nikdy
   nedotkl. Uložený prázdný seznam znamená, že někdo všechno sundal, a má na
   prázdný dashboard nárok.
 - **Layout je preference, nikdy oprávnění.** Widget, který layout umístí a
@@ -408,6 +409,58 @@ Dlaždice s `row-span-2` potřebuje řádky známé výšky, takže mřížka, k
 dlaždici má, dostane výchozí výšku řádku a dlaždice si scrollují vlastní obsah
 místo aby řádek natahovaly. Mřížka, kde nic řádky nepřesahuje, tu výchozí výšku
 nikdy nedostane — karta je tam pořád vysoká podle obsahu, přesně jako dřív.
+
+### Kde začíná: výchozí rozložení
+
+Dashboard, který nabízí katalog widgetů, by neměl nováčkovi postavit před oči
+celý katalog. `defaultLayout()` říká, které widgety člověk uvidí, než si cokoli
+uspořádá; každý další deklarovaný widget začíná v zásobníku.
+
+```php
+use NyonCode\WireCore\Widgets\Dashboard;
+
+final class ProductionDashboard extends Dashboard
+{
+    public function customisable(): bool
+    {
+        return true;
+    }
+
+    public function defaultLayout(): ?array                                // [tl! focus:start]
+    {
+        return auth()->user()?->hasRole('technician')
+            ? ['queue' => 'L', 'kpi']                                      // zkušebna pracuje ze své fronty
+            : ['kpi' => 'L', 'attention' => [2, 1], 'queue' => 'M'];
+    }                                                                      // [tl! focus:end]
+
+    public function widgets(): array
+    {
+        return [/* kpi, attention, queue, money, … — každý s vlastním key() */];
+    }
+}
+```
+
+Pořadí je pevné: **vyhrává rozložení, které si uživatel uložil**; bez něj se
+umístí výchozí rozložení; bez výchozího všechno, co je deklarované. „Obnovit“
+zapomene uložené rozložení, takže se vrátí k výchozímu, ne k celé deklaraci —
+a protože výchozí rozložení je skutečné umístění, widgety, které vynechává, jsou
+v zásobníku hned při prvním otevření úprav.
+
+Zápis jsou klíče v pořadí, každý volitelně s velikostí:
+
+- holý klíč dostane svou první nabízenou velikost, jako by přišel ze zásobníku;
+- `klíč => [šířka, výška]` se přichytí k nejbližší velikosti, kterou widget na
+  téhle mřížce nabízí, takže výchozí rozložení nedá widgetu velikost, kterou
+  jeho deklarace odmítá;
+- `klíč => 'L'` jmenuje jednu z [pojmenovaných velikostí](#zasobnik) widgetu;
+  jméno, které nedeklaruje, spadne na velikost při přidání.
+
+Klíč, který dashboard nedeklaruje, se zahodí — stejné pravidlo jako u uloženého
+rozložení. `defaultLayout()` se ptá při každém vykreslení, takže smí záviset na
+tom, kdo se dívá — kvůli tomu je to metoda, ne konstanta. Ručně psaný hostitel
+odpovídá na tutéž otázku chráněnou `defaultWidgetLayout()` a
+`hasStoredWidgetLayout()` řekne, na které z obou se uživatel dívá: hotové
+ovládání nabízí „Obnovit“ jen tehdy, když má uživatel co zapomenout.
 
 ### Jak se přeskládá
 
@@ -447,6 +500,33 @@ podle pozice, a puštěné DOM se s odpovědí nemůže rozejít.
 
 **Změna velikosti jsou steppery, ne tažení za roh.** Rozpon je 1–4 sloupce a 1–6
 řádků, takže dosažitelných velikostí je jedenáct a tlačítko říká, kterou dostanete.
+Widget, který [své velikosti pojmenuje](#zasobnik), dostane místo nich ta jména —
+`S`, `M`, `L` — protože tři velikosti jsou tři volby a stepper by k nim uživatele
+vedl po jednom sloupci, aniž by řekl, kde cesta končí.
+
+**Widget dopadne tam, kde je obrys.** Během tažení nechává SortableJS kopii
+dlaždice tam, kam by dopadla; mřížka ji kreslí jako cíl — čárkovaný obrys přes
+zesvětlenou dlaždici — takže čtenář vidí, kam widget půjde, ještě než ho pustí.
+Je to třída na buňce (`sortable-ghost`), takže ani tohle nestojí žádný
+JavaScript.
+
+### Ukládání průběžně
+
+Uložit a Zrušit existují proto, aby náhodné tažení nepřepsalo rozložení.
+Dashboard, který je pracovním nástrojem — otevřený celé dopoledne, přeskládaný
+mimochodem — má opačný problém: zapomenuté Uložit ztratí víc než náhodné
+tažení a „Obnovit“ stačí jako zpět. `autosave()` ukládá každou změnu hned:
+
+```php
+public function autosave(): bool
+{
+    return true;   // každý přesun, změna velikosti, přidání i odebrání se uloží hned
+}
+```
+
+Režim zůstává — úchyty a zásobník se objeví jen při úpravách — ale končí
+tlačítkem **Hotovo** místo Uložit a Zrušit, protože už není co zahodit. Ručně
+psaný hostitel odpovídá metodou `autosavesWidgetLayout()`.
 
 ### API režimu úprav
 
@@ -463,6 +543,18 @@ public array $widgetLayoutDraft
 
 Na dashboardu, který se nepřihlásil, všechny nedělají nic — jsou to veřejné
 Livewire metody, takže je prohlížeč může zavolat, kdy se mu zachce.
+
+Co ručně psaný hostitel `WithWidgets` přepisuje, aby odpověděl na otázky, na
+které `Dashboard` odpovídá metodami `defaultLayout()`, `autosave()` a
+`maxWidgets()`:
+
+```php
+protected function defaultWidgetLayout(): ?array   // zápis výchozího rozložení, nebo null pro deklaraci
+protected function autosavesWidgetLayout(): bool   // výchozí false — Uložit a Zrušit
+protected function maxWidgets(): ?int              // výchozí null — bez limitu
+public function hasStoredWidgetLayout(): bool      // uživatel má vlastní rozložení
+public function widgetLimitReached(): bool         // umístěno tolik, kolik maxWidgets() dovolí
+```
 
 ### Zásobník
 
@@ -515,13 +607,39 @@ dělá dvě práce, takže si nemohou odporovat.
 Widget, který skrývá politika, se nikdy nenabídne: zásobník s něčím, co po
 přidání zmizí, je horší než zásobník, který to nenabízí.
 
+**Zásobník říká, co widget ukazuje.** Jeho `description()` se kreslí pod
+nadpisem — v zásobníku se člověk rozhoduje, co si na dashboard dá, a samotný
+nadpis mu to málokdy řekne. **Velikosti lze pojmenovat** klíči u dvojic:
+
+```php
+StatsOverviewWidget::make()
+    ->key('queue')
+    ->heading('Fronta zkušebny')
+    ->description('Kusy čekající na zkušebnu, nejstarší první.')          // [tl! focus]
+    ->sizes(['S' => [1, 1], 'M' => [2, 1], 'L' => [4, 1]])            // [tl! focus]
+    ->stats([Stat::make('Čeká', $this->waiting())])
+```
+
+Editor pak místo stepperů kreslí `S M L`. Jména platí buď pro všechny, nebo pro
+žádnou — jedna nepojmenovaná dvojice ponechá steppery — a každé tlačítko říká
+velikost tak, jak je *na téhle mřížce*: na dvousloupcovém dashboardu jsou `M`
+a `L` stejné a vyhraje první jméno, stejně jako první dvojice.
+
+**Limit se řekne v zásobníku.** `maxWidgets()` na dashboardu (nebo hostiteli)
+odmítne widget nad limit na serveru; zásobník pak ukáže proč a schová tlačítka
+pro přidání, místo aby nabízel kliknutí, které nic neudělá. Omezuje to, co
+uživatel přidává — výchozí nebo uložené rozložení z doby před limitem zůstane,
+jak je.
+
 ### API zásobníku
 
 ```php
 ->group(?string $group)                    // nadpis v zásobníku, pod kterým se widget nabízí
-->sizes(array $sizes)                      // [[w, h], …] — velikosti, které smí mít
+->sizes(array $sizes)                      // [[w, h], …] nebo ['S' => [w, h], …] — pojmenované velikosti jsou tlačítka
 ->getGroup(): ?string
 ->getSizes(): array
+->getSizeLabel(int $width, int $height): ?string   // jméno deklarované velikosti
+->hasNamedSizes(): bool                    // každá nabízená velikost má jméno
 ->getDefaultSize(): array                  // první nabídnutá dvojice, nebo [1, 1]
 ```
 
@@ -531,6 +649,7 @@ na hostiteli:
 ->placeWidget(string $key, int $position): void   // přidat, nebo přesunout, když už tam je
 ->removeWidget(string $key): void
 ->getAvailableWidgets(): array                    // skupina => widgety, pro zásobník
+->widgetLimitReached(): bool                      // zásobník pak nenabízí tlačítka pro přidání
 ->widgetGridData(?int $columns = null): array     // všechno, co view mřížky potřebuje
 ```
 
@@ -707,10 +826,15 @@ Zděděné z traitů:
 ->spansRows(): bool
 
 ->group(?string $group): static             // nadpis v zásobníku, pod kterým se nabízí
-->sizes(array $sizes): static               // [[w, h], …] — velikosti, které smí mít
+->sizes(array $sizes): static               // [[w, h], …] nebo ['S' => [w, h], …] — velikosti, které smí mít
 ->getGroup(): ?string
 ->getSizes(): array
+->getSizeLabel(int $width, int $height): ?string
+->hasNamedSizes(): bool
 ->getDefaultSize(): array
+
+->ignoresDashboardFilters(bool $ignores = true): static   // CanIgnoreDashboardFilters
+->isIgnoringDashboardFilters(): bool
 
 ->extraAttributes(array $attrs): static      // HasExtraAttributes
 ->getExtraAttributes(): array

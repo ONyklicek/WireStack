@@ -9,6 +9,7 @@ use Livewire\Component;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Widgets\Concerns\WithWidgets;
 use NyonCode\WireCore\Widgets\Dashboard;
+use NyonCode\WireCore\Widgets\DashboardFilter;
 use NyonCode\WireCore\Widgets\Widget;
 use NyonCode\WirePanels\Exceptions\ResourcePageException;
 
@@ -167,7 +168,57 @@ abstract class DashboardPage extends Component implements IdentifiesHookTarget
      */
     protected function getWidgets(): array
     {
-        return $this->requireDashboard()->widgets();
+        $dashboard = $this->requireDashboard();
+
+        // Before `widgets()`, because that is where the dashboard narrows by
+        // them. The page holds the selection (in the address); the declaration
+        // only reads it.
+        if (static::$dashboard !== null) {
+            $dashboard->withFilterState($this->getDashboardFilterState());
+        }
+
+        return $dashboard->widgets();
+    }
+
+    /**
+     * The declared dashboard's default layout, for a user who has not arranged it.
+     *
+     * @return array<int|string, mixed>|null
+     */
+    protected function defaultWidgetLayout(): ?array
+    {
+        return $this->declared()?->defaultLayout();
+    }
+
+    protected function autosavesWidgetLayout(): bool
+    {
+        return $this->declared()?->autosave() ?? false;
+    }
+
+    protected function maxWidgets(): ?int
+    {
+        return $this->declared()?->maxWidgets();
+    }
+
+    /**
+     * @return array<int, DashboardFilter>
+     */
+    protected function getDashboardFilters(): array
+    {
+        return $this->declared()?->filters() ?? [];
+    }
+
+    /**
+     * The declared dashboard, or null on the standalone path where the page
+     * writes its own widgets and answers these questions itself.
+     */
+    private function declared(): ?Dashboard
+    {
+        $dashboard = static::$dashboard;
+
+        return $dashboard !== null && is_subclass_of($dashboard, Dashboard::class)
+            ? $this->requireDashboard()
+            : null;
     }
 
     protected function getWidgetColumns(): int

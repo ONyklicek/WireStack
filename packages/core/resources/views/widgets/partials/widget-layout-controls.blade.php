@@ -9,7 +9,12 @@
      Renders nothing at all unless the host opted in, so including it
      unconditionally is safe on a dashboard nobody may rearrange.
 
-     Variables: $customisable, $editing, $savedLayouts, $layoutNames --}}
+     On an `autosave()` dashboard every change is already stored, so the mode
+     ends with Done rather than Save and Cancel — a Cancel there would promise
+     an undo nothing can give. Reset is offered only while the user has a
+     layout of their own; on the default there is nothing to reset to.
+
+     Variables: $customisable, $editing, $savedLayouts, $layoutNames, $autosave, $hasStoredLayout --}}
 @if($customisable)
     @php
         // Handed in by `widgetGridData()`, defaulted here for the caller that
@@ -17,6 +22,10 @@
         // layouts must not have a switcher appear because a key was missing.
         $savedLayouts = $savedLayouts ?? false;
         $layoutNames = $layoutNames ?? [];
+        $autosave = $autosave ?? false;
+        // Unknown means "assume there is something": a caller assembling its
+        // own payload keeps the Reset it always had.
+        $hasStoredLayout = $hasStoredLayout ?? true;
     @endphp
 
     <div class="wire-widget-layout-controls flex items-center justify-end gap-2">
@@ -68,6 +77,16 @@
         @endif
 
         @if($editing)
+            @if($autosave)
+            {{-- Everything is stored already; Done only closes the mode. It
+                 calls the same save as Save does, which writes nothing new. --}}
+            <button type="button" wire:click="saveWidgetLayout"
+                    data-testid="widget-layout-done" @wireEl('widget-layout-done')
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-primary-700">
+                {!! icon('outline:check', 'w-4 h-4', 'h-4 w-4') !!}
+                {{ __('wire-core::messages.widget_done_layout') }}
+            </button>
+            @else
             <button type="button" wire:click="saveWidgetLayout"
                     data-testid="widget-layout-save" @wireEl('widget-layout-save')
                     class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-primary-700">
@@ -80,7 +99,9 @@
                     class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
                 {{ __('wire-core::messages.widget_cancel_layout') }}
             </button>
+            @endif
 
+            @if($hasStoredLayout)
             {{-- Last, and visually quietest: it throws away a layout somebody
                  may have spent a while on, and the two buttons it sits beside
                  are the ones being reached for. --}}
@@ -89,6 +110,7 @@
                     class="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                 {{ __('wire-core::messages.widget_reset_layout') }}
             </button>
+            @endif
         @else
             <button type="button" wire:click="startEditingWidgets"
                     data-testid="widget-layout-edit" @wireEl('widget-layout-edit')

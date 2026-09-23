@@ -96,6 +96,11 @@ return [
     'widget_save_layout_as' => 'Uložit jako…',
     'widget_save_layout_prompt' => 'Pojmenujte rozložení',
     'widget_delete_layout' => 'Smazat uložené rozložení',
+    'widget_size' => 'Velikost',
+    'widget_done_layout' => 'Hotovo',
+    'widget_limit_reached' => 'Na nástěnku se vejde nejvýš :max widgetů. Nejdřív nějaký odeberte.',
+    'widget_filters_reset' => 'Zrušit filtr',
+    'widget_ignores_filters' => 'Bez filtru',
 
     // The guided walkthrough (Tours/).
     'tour_next' => 'Další',

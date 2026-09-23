@@ -18,7 +18,9 @@ use NyonCode\WireCore\Foundation\Contracts\HasFieldActions;
 use NyonCode\WireCore\Foundation\Schema\Section;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 use NyonCode\WireCore\Widgets\Concerns\CanBeLazy;
+use NyonCode\WireCore\Widgets\Concerns\CanIgnoreDashboardFilters;
 use NyonCode\WireCore\Widgets\Concerns\HasEmptyState;
+use NyonCode\WireCore\Widgets\Concerns\HasLayoutOffer;
 use NyonCode\WireCore\Widgets\Concerns\HasPolling;
 use NyonCode\WireCore\Widgets\Concerns\HasWidgetFilter;
 
@@ -31,11 +33,13 @@ abstract class Widget implements HasFieldActions, Htmlable
 {
     use CanBeDisabled;
     use CanBeLazy;
+    use CanIgnoreDashboardFilters;
     use EvaluatesClosures;
     use HasActions;
     use HasColumnSpan;
     use HasEmptyState;
     use HasExtraAttributes;
+    use HasLayoutOffer;
     use HasPolling;
     use HasRowSpan;
     use HasVisibility;
@@ -47,11 +51,6 @@ abstract class Widget implements HasFieldActions, Htmlable
     protected ?string $description = null;
 
     protected ?string $key = null;
-
-    protected ?string $group = null;
-
-    /** @var array<int, array{0: int, 1: int}> */
-    protected array $sizes = [];
 
     public static function make(): static
     {
@@ -162,81 +161,6 @@ abstract class Widget implements HasFieldActions, Htmlable
     public function hasRenderableActions(): bool
     {
         return $this->getRenderableActions() !== [];
-    }
-
-    /**
-     * Which tray group this widget is offered under.
-     *
-     * A heading in the list of things a user can put on their dashboard, and
-     * nothing else — it does not group anything on the dashboard itself, where
-     * the user's own order decides. Null puts the widget in the ungrouped run,
-     * which is where a dashboard with a handful of widgets should leave them:
-     * one group is a heading over everything, which is a heading that says
-     * nothing.
-     */
-    public function group(?string $group): static
-    {
-        $this->group = $group;
-
-        return $this;
-    }
-
-    public function getGroup(): ?string
-    {
-        return $this->group;
-    }
-
-    /**
-     * The sizes this widget may be given, as `[width, height]` pairs.
-     *
-     * Empty means the whole grid — 1–4 columns by 1–6 rows, stepped freely.
-     * Declaring a list narrows it to sizes the widget actually looks right at:
-     * a sparkline row is not a 1×1 tile and a single figure is not a 4×6 one,
-     * and letting a user find that out by dragging is worse than not offering
-     * it.
-     *
-     * The pairs are the *offer*, not a guarantee about what is stored: a layout
-     * that arrives with a size outside them is still clamped to the grid rather
-     * than rejected, because a stored layout can outlive the declaration that
-     * shaped it.
-     *
-     * Typed as a loose array and narrowed here, the way `BarChartWidget::items()`
-     * is: the pairs are a declaration somebody writes by hand, and half a pair
-     * would otherwise reach the grid as a size with no height.
-     *
-     * @param  array<int, mixed>  $sizes
-     */
-    public function sizes(array $sizes): static
-    {
-        $pairs = [];
-
-        foreach ($sizes as $size) {
-            if (is_array($size) && isset($size[0], $size[1]) && is_int($size[0]) && is_int($size[1])) {
-                $pairs[] = [$size[0], $size[1]];
-            }
-        }
-
-        $this->sizes = $pairs;
-
-        return $this;
-    }
-
-    /**
-     * @return array<int, array{0: int, 1: int}>
-     */
-    public function getSizes(): array
-    {
-        return $this->sizes;
-    }
-
-    /**
-     * The size a widget is added at: the first it offers, or one column by one row.
-     *
-     * @return array{0: int, 1: int}
-     */
-    public function getDefaultSize(): array
-    {
-        return $this->sizes[0] ?? [1, 1];
     }
 
     /** The expression the tile's remove control calls on the host. */

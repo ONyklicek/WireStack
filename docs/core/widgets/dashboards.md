@@ -97,6 +97,11 @@ public function callWidgetAction(string $key, string $name): void // a header ac
 public function loadWidget(string $key): void        // a deferred widget's first render
 public array $widgetFilters                          // the selection each widget is showing
 public array $loadedWidgets                          // the keys already fetched
+protected function getDashboardFilters(): array      // filters over the whole dashboard (default: none) [tl! focus:start]
+public function dashboardFilter(string $name): ?string          // one filter's value, for getWidgets()
+public function setDashboardFilter(string $name, string $value): void // what the filter bar calls
+public function resetDashboardFilters(): void        // every filter back to its default
+public array $dashboardFilters                       // the selection, in the address as ?dashboard[…] [tl! focus:end]
 ```
 
 ### The host holds the state, the widgets hold none
@@ -259,6 +264,12 @@ declares `pages()` is routed by `Route::wireResources()` like any resource. See 
 | `columns(): int` | `int` | Grid columns; defaults to 2 |
 | `customisable(): bool` | `bool` | Whether each user may rearrange it; false, and that is the whole opt-in |
 | `savedLayouts(): bool` | `bool` | Whether each user may keep several arrangements, each under a name; needs `customisable()` too |
+| `defaultLayout(): ?array` | `array\|null` | What a user sees before arranging anything; the rest starts in the tray. Null places everything declared |
+| `autosave(): bool` | `bool` | Whether a change in edit mode is stored at once; false keeps Save and Cancel |
+| `maxWidgets(): ?int` | `int\|null` | The most widgets a user may place; null for no limit |
+| `filters(): array` | `array<int, DashboardFilter>` | Filters over the whole dashboard, read in `widgets()` through `filter()` |
+| `withFilterState(DashboardFilterState $state): static` | `static` | Set by the page before `widgets()`; the declaration only reads it |
+| `filter(string $name): ?string` | `string\|null` | Protected. One filter's value — its default until the page says otherwise |
 | `static key(): string` | `string` | Identity, derived from the class name minus `Dashboard` |
 | `static label(): string` | `string` | Human name; the page's default heading |
 
@@ -270,8 +281,99 @@ dashboard. `DashboardPage` turns it into the key the layout is stored under and
 includes the Customise / Save / Cancel / Reset controls, so a declared dashboard
 needs no view of its own. Every widget on one needs its own `key()`.
 
-See [Widgets → Customisable dashboards](index.md#customisable-dashboards) for
-the store, the tray, `group()` and `sizes()`.
+`defaultLayout()`, `autosave()` and `maxWidgets()` shape that feature — what a
+newcomer sees, whether a change is stored at once, how many widgets fit. See
+[Widgets → Customisable dashboards](index.md#customisable-dashboards) for the
+store, the tray, `group()`, `sizes()` and those three.
+
+### Filters over the whole dashboard
+
+A widget's own `filter()` narrows that widget. A dashboard read as one picture
+wants the opposite: one selection — "this month", "this customer" — that every
+widget answers, so two figures side by side answer the same question.
+
+```php
+use NyonCode\WireCore\Widgets\Dashboard;
+use NyonCode\WireCore\Widgets\DashboardFilter;
+
+final class ProductionDashboard extends Dashboard
+{
+    public function filters(): array                                          // [tl! focus:start]
+    {
+        return [
+            DashboardFilter::make('period')->label('Period')->buttons()
+                ->options(['week' => 'This week', 'month' => 'This month', 'all' => 'All'])
+                ->default('month'),
+            DashboardFilter::make('customer')->label('Customer')->placeholder('All customers')
+                ->options(fn (): array => Customer::withWorkInProgress()->pluck('name', 'id')->all()),
+        ];
+    }                                                                         // [tl! focus:end]
+
+    public function widgets(): array
+    {
+        $metrics = ProductionMetrics::for($this->filter('period'), $this->filter('customer')); // [tl! focus]
+
+        return [
+            StatsOverviewWidget::make()->key('made')->heading('Made')
+                ->stats([Stat::make('Pieces', (string) $metrics->made())]),
+            StatsOverviewWidget::make()->key('server')->heading('Accounting server')
+                ->ignoresDashboardFilters()                                   // [tl! focus]
+                ->stats([Stat::make('Status', $this->serverStatus())]),
+        ];
+    }
+}
+```
+
+**The selection lives on the page and in the address.** `DashboardPage` holds
+it in `$dashboardFilters`, which is in the query string as `?dashboard[period]=week`
+— so a dashboard can be sent as a link exactly as its sender saw it, and a reload
+keeps it. Only values that differ from a default are kept, so an unfiltered
+dashboard has a clean address. The property is locked: the filter bar changes it
+through `setDashboardFilter()`, and whatever the address carried is checked
+before anything reads it.
+
+**A value is kept only when the filter offered it.** Everything else — a stale
+link, a typo, an id from before the options changed — resolves to the filter's
+default rather than reaching the query that reads it. A default of `null` means
+"narrows nothing" and is drawn as the placeholder.
+
+**The page hands the resolved values to the dashboard before `widgets()` runs**
+(`withFilterState()`), and `filter()` reads them; a dashboard built without a page
+reads its defaults. A hand-written `WithWidgets` host declares
+`getDashboardFilters()` and reads `$this->dashboardFilter('period')` in
+`getWidgets()` the same way.
+
+**A widget that cannot be narrowed says so.** `ignoresDashboardFilters()` puts a
+"Not filtered" mark on it while any filter differs from its default — the state
+of an external server has no customer, and a reader comparing it with its
+filtered neighbours needs to know.
+
+**Where it is drawn.** `DashboardPage` puts the filter bar beside the layout
+controls. A host of your own includes it where its layout wants it:
+
+```blade
+@include('wire-core::widgets.partials.widget-filters')   {{-- renders nothing without filters --}}
+@include('wire-core::widgets.widget-grid')
+```
+
+Buttons for a filter declared `buttons()` — a handful of periods read at a
+glance — and a select for the rest, where the options are records. A "Clear
+filters" link appears only while something is narrowed.
+
+### DashboardFilter API
+
+```php
+DashboardFilter::make(string $name)
+->label(string|Closure|null $label)            // defaults to the name, headlined
+->options(array|Closure $options)              // value => label; a closure is resolved when needed
+->default(int|string|null $default)            // the value when nothing is chosen; null narrows nothing
+->placeholder(string|Closure|null $placeholder) // the select's empty option — default: the label
+->buttons(bool $buttons = true)                // a row of buttons instead of a select
+->getOptions(): array                          // keyed by the value as the address carries it
+->getDefault(): ?string
+->isButtons(): bool
+->resolve(mixed $value): ?string               // an offered value, else the default
+```
 
 ---
 

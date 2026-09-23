@@ -9,13 +9,22 @@
      wherever its own layout puts buttons.
 
      Both partials render nothing on a dashboard nobody may rearrange, so there
-     is no condition here to keep in step with one over there.
+     is no condition here to keep in step with one over there — and the filter
+     bar renders nothing on a dashboard that declares no filters.
 
      Variables: everything `WithWidgets::widgetGridData()` returns, plus $title --}}
 <div class="wire-dashboard-page space-y-4 sm:space-y-6">
     @include('wire-panels::pages.partials.header', ['breadcrumbs' => []])
 
-    @include('wire-core::widgets.partials.widget-layout-controls')
+    {{-- Filters and controls share a row: the filters narrow what the grid
+         shows, the controls change how it is arranged, and both sit over it. --}}
+    <div class="flex flex-wrap items-center gap-3">
+        @include('wire-core::widgets.partials.widget-filters')
+
+        <div class="ml-auto">
+            @include('wire-core::widgets.partials.widget-layout-controls')
+        </div>
+    </div>
 
     @include('wire-core::widgets.widget-grid')
 </div>
