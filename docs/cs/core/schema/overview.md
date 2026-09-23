@@ -57,7 +57,7 @@ TextInput::make('notes')->columnSpanFull(); // rozpětí celého řádku
 **Rozpětí se řeší proti mřížce, ve které komponenta skutečně skončí — na každé
 šířce.** Mřížka je responzivní: `columns(3)` je na telefonu jeden sloupec a na
 desktopu tři, takže rozpětí není jedna třída, ale žebřík. `columnSpan(3)`
-v tříslupcovém `Gridu` je `md:col-span-3`, totéž rozpětí ve `Fieldsetu` (který má
+v třísloupcovém `Gridu` je `md:col-span-3`, totéž rozpětí ve `Fieldsetu` (který má
 dva sloupce už od `sm`) je `sm:col-span-2 md:col-span-3`. Píšeš číslo, breakpointy
 si doplní mřížka.
 
@@ -66,6 +66,35 @@ oříznutou dlaždici — CSS Grid chybějící sloupec *přidá*, čímž přes
 layout a ostatní potomky zmáčkne do zbytku. Rozpětí širší než deklarovaný počet
 se proto vykreslí jako celá šířka mřížky: `columnSpan(4)` ve dvousloupcové sekci
 jsou dva sloupce, všude.
+
+**Mřížka svým potomkům řekne, ve které mřížce jsou.** Komponenta se nikdy neptá,
+kde sedí — dozví se to na vstupu a svůj žebřík si spočítá z toho, co jí bylo
+řečeno. Všechny dodávané layouty to za tebe dělají, takže tohle je potřeba jen
+když si píšeš vlastní layoutovou komponentu: předej stejný počet sloupců metodě
+`ResponsiveGrid::cols()` pro mřížku a metodě `inGridOf()` každého potomka, a
+rozpětí uvnitř se pak posouvají s mřížkou, ne mimo ni.
+
+```php
+@php
+    use NyonCode\WireCore\Foundation\Support\ResponsiveGrid;
+
+    $columns = $layout->getColumns();
+@endphp
+
+<div class="grid gap-4 {{ ResponsiveGrid::cols($columns) }}">
+    @foreach ($layout->getSchema() as $component)
+        @if ($component->isVisible())
+            {{ $component->inGridOf($columns) }} {{-- [tl! focus] --}}
+        @endif
+    @endforeach
+</div>
+```
+
+Potomek, kterému to nikdo neřekl, předpokládá mřížku přesně tak širokou, jaké
+rozpětí si vyžádal. To je nejužší předpoklad, který nikdy nemůže vymyslet sloupec
+— a zároveň to není mřížka, kterou jsi nakreslil, takže `columnSpan(2)` ve tvém
+vlastním třísloupcovém layoutu by se přeskládalo na špatné šířce a nikdo by to
+nenahlásil.
 
 ## Společné API layoutů
 
@@ -83,6 +112,7 @@ state path: layout nenese hodnotu, takže jméno jen pojmenovává.
 ->statePath(?string $path)               // přepne kořen state path pro všechno pod ní
 ->columnSpan(int|string $span)           // 2|3|4|'full' — kolik z RODIČOVSKÉHO gridu zabere
 ->columnSpanFull()                       // zkratka pro 'full'
+->inGridOf(int|array $columns)           // mřížka, ve které se komponenta kreslí; layout to řekne každému potomkovi
 ->visible(bool|Closure $condition = true)
 ->hidden(bool|Closure $condition = true)
 ->visibleWhen(string $field, mixed $value = true)   // vidět, dokud se jiné pole rovná $value

@@ -67,6 +67,34 @@ layout and squeezes every other child into the remainder. A span wider than the
 declared count is drawn as the full width of the grid instead, so
 `columnSpan(4)` in a two-column section is two columns, everywhere.
 
+**A grid tells its children which grid they are in.** A component never asks
+where it sits — it is told on the way in, and resolves its own ladder from what
+it was told. Every shipped layout does this for you, so it matters only when you
+write a layout component of your own: hand the same column count to
+`ResponsiveGrid::cols()` for the grid and to each child's `inGridOf()`, and the
+spans inside it step with the grid instead of beside it.
+
+```php
+@php
+    use NyonCode\WireCore\Foundation\Support\ResponsiveGrid;
+
+    $columns = $layout->getColumns();
+@endphp
+
+<div class="grid gap-4 {{ ResponsiveGrid::cols($columns) }}">
+    @foreach ($layout->getSchema() as $component)
+        @if ($component->isVisible())
+            {{ $component->inGridOf($columns) }} {{-- [tl! focus] --}}
+        @endif
+    @endforeach
+</div>
+```
+
+A child nobody told assumes a grid exactly as wide as the span it asked for.
+That is the narrowest assumption that can never invent a column — and it is also
+not the grid you drew, so a `columnSpan(2)` in your own three-column layout
+would reflow at the wrong width and nothing would report it.
+
 ## Common Layout API
 
 Every layout component — `Grid`, `Flex`, `Section`, `Fieldset`, `Tab`, `Step`,
@@ -84,6 +112,7 @@ adds.
 ->statePath(?string $path)               // re-root the state path for everything beneath
 ->columnSpan(int|string $span)           // 2|3|4|'full' — how much of the PARENT grid this takes
 ->columnSpanFull()                       // shorthand for 'full'
+->inGridOf(int|array $columns)           // the grid this is drawn in; a layout tells each of its children
 ->visible(bool|Closure $condition = true)
 ->hidden(bool|Closure $condition = true)
 ->visibleWhen(string $field, mixed $value = true)   // shown while another field equals $value
