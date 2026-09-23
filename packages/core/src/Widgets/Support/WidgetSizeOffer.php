@@ -45,8 +45,12 @@ final class WidgetSizeOffer
 
     /**
      * @param  array<int, array{0: int, 1: int}>  $offered  In declaration order; the first is the arrival size
+     * @param  array<int, string>  $labels  The name each offered size goes by, keyed like `$offered`; empty when unnamed
      */
-    private function __construct(private readonly array $offered) {}
+    private function __construct(
+        private readonly array $offered,
+        private readonly array $labels = [],
+    ) {}
 
     /**
      * The sizes this widget may take on a grid of `$columns` columns.
@@ -60,20 +64,28 @@ final class WidgetSizeOffer
     {
         $maxWidth = max(1, min(4, $columns));
         $declared = [];
+        $labels = [];
 
         foreach ($widget->getSizes() as [$width, $height]) {
             $pair = [self::clamp($width, $maxWidth), self::clamp($height, self::MAX_HEIGHT)];
 
             // Two declared pairs can clamp onto each other — [[3, 1], [4, 1]] on
             // a two-column grid is one size twice — and a duplicate would make a
-            // button appear to do nothing.
+            // button appear to do nothing. The name kept is the first one's, the
+            // same rule that decides which pair survives.
             if (! in_array($pair, $declared, true)) {
                 $declared[] = $pair;
+
+                $label = $widget->getSizeLabel($width, $height);
+
+                if ($label !== null) {
+                    $labels[count($declared) - 1] = $label;
+                }
             }
         }
 
         if ($declared !== []) {
-            return new self($declared);
+            return new self($declared, $widget->hasNamedSizes() ? $labels : []);
         }
 
         // Nothing declared: the whole grid, which is what the docs promise and
@@ -122,6 +134,29 @@ final class WidgetSizeOffer
         }
 
         return $best;
+    }
+
+    /**
+     * The offered sizes by name, for a widget that declared them named.
+     *
+     * Empty when the sizes are unnamed, which is what tells the edit controls
+     * to draw steppers instead. Each entry keeps the size *as it is on this
+     * grid* — a declared `L` of four columns is three on a three-column
+     * dashboard, and a button must say what it will actually do.
+     *
+     * @return array<int, array{label: string, width: int, height: int}>
+     */
+    public function named(): array
+    {
+        $named = [];
+
+        foreach ($this->labels as $index => $label) {
+            [$width, $height] = $this->offered[$index];
+
+            $named[] = ['label' => $label, 'width' => $width, 'height' => $height];
+        }
+
+        return $named;
     }
 
     /**
