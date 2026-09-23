@@ -104,5 +104,7 @@ return [
     'tour_skip' => 'Přeskočit',
     'tour_progress' => 'Krok :current z :total',
     'tour_region' => 'Průvodce',
+    'tour_start' => 'Spustit průvodce',
+    'tour_later' => 'Třeba později',
     'tour_replay' => 'Spustit průvodce znovu',
 ];

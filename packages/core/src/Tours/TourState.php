@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Tours;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Http\RedirectResponse;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 
 /**
@@ -43,6 +44,7 @@ final class TourState
     public function __construct(
         private readonly Tours $tours,
         private readonly TourLedger $ledger,
+        private readonly ?TourDestination $destination = null,
     ) {}
 
     /**
@@ -64,8 +66,54 @@ final class TourState
             $zone,
             $resource,
             $page,
-            fn (Tour $tour): bool => ! $this->ledger->hasSeen($tour, $user),
+            fn (Tour $tour): bool => ! $this->ledger->hasSeen($tour, $user)
+                && ! $this->ledger->isPostponed($tour, $user),
         );
+    }
+
+    /**
+     * Record that this person would rather see this tour another time.
+     *
+     * The third answer, and the only one that is not final: finishing and
+     * skipping both {@see acknowledge()}, while this one puts the tour down for
+     * the session and counts that it happened. When the count reaches the tour's
+     * {@see Tour::postpone()} limit the tour is acknowledged instead — somebody
+     * who has said "later" that many times has answered, and the alternative is
+     * a greeting that returns for ever.
+     *
+     * A limit of zero means the tour never offered the choice, so nothing is
+     * recorded: a forged event cannot put off a tour whose author did not allow
+     * it. An unregistered id is ignored, as everywhere else here.
+     */
+    public function postpone(string $tourId, ?Authenticatable $user): void
+    {
+        $tour = $this->tours->get($tourId);
+
+        if ($tour === null) {
+            return;
+        }
+
+        $limit = $tour->getPostponeLimit() ?? self::configuredPostponeLimit();
+
+        if ($limit <= 0) {
+            return;
+        }
+
+        if ($this->ledger->postponements($tour, $user) + 1 >= $limit) {
+            $this->ledger->acknowledge($tour, $user);
+
+            return;
+        }
+
+        $this->ledger->postpone($tour, $user);
+    }
+
+    /** How many postponements a tour that does not say allows. */
+    public static function configuredPostponeLimit(): int
+    {
+        $configured = config('wire-core.tours.postpone', 3);
+
+        return is_numeric($configured) ? max(0, (int) $configured) : 0;
     }
 
     /**
@@ -195,5 +243,44 @@ final class TourState
         }
 
         $this->ledger->forget($tour, $user);
+    }
+
+    /**
+     * Forget a tour *and* hand back the way to the screen it runs on.
+     *
+     * What {@see replay()} could not do: the entry in the user menu is rendered
+     * only where a tour already claims the screen, so forgetting is enough there
+     * — the browser reloads the page it is on and the tour is waiting. A trigger
+     * anywhere else (a help button, a row in the settings) forgets a tour that
+     * runs somewhere the person is not, and nothing visible happens until they
+     * wander onto it.
+     *
+     * The address is built by {@see TourDestination::start()} from the tour's
+     * own constraints and the router, and is never taken from the request. The
+     * plan this feature was built from records why in one line: the first draft
+     * of the replay held the page's URL in a public Livewire property, and every
+     * public property is writable from the browser, so "the user can only
+     * redirect themselves" stopped being true the moment somebody was handed a
+     * link that set it.
+     *
+     * Null is a real answer, and the caller is expected to handle it by
+     * reloading: a tour scoped to nothing narrower than a zone has no single
+     * screen to be sent to, and one whose page this person may not open has
+     * none they may be sent to. The tour is forgotten eitherway — which is the
+     * half that was asked for, and the half that still works.
+     */
+    public function replayNow(string $tourId, ?Authenticatable $user): ?RedirectResponse
+    {
+        $tour = $this->tours->get($tourId);
+
+        if ($tour === null) {
+            return null;
+        }
+
+        $this->ledger->forget($tour, $user);
+
+        $url = $this->destination?->start($tour, $user);
+
+        return $url === null ? null : new RedirectResponse($url);
     }
 }

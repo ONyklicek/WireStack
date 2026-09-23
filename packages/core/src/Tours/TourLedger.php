@@ -26,6 +26,16 @@ use NyonCode\WireCore\Foundation\Preferences\PreferenceManager;
  * off, which is what a good tour invites — does not start it over next time.
  * Finishing, skipping and forgetting all clear it.
  *
+ * And under `postponed`, a tour somebody answered "later" to, stamped with the
+ * session it was put off in and how many times it has been:
+ *
+ *     ['postponed' => ['getting-started' => ['since' => '2.2', 'session' => 'w1Xz…', 'count' => 2]]]
+ *
+ * The session is what makes "later" mean "not in this sitting" on a driver that
+ * remembers for ever, and the count is what stops it meaning "not ever, one
+ * sitting at a time" — {@see Tour::postpone()} owns the number it is compared
+ * against.
+ *
  * ## Why this is a preference and not a table of its own
  *
  * Because `Foundation\Preferences` is already "a per-user JSON bag keyed by a
@@ -62,6 +72,9 @@ final class TourLedger
 
     /** The key the unfinished tours' progress lives under, inside the same bag. */
     public const REACHED = 'reached';
+
+    /** The key a put-off tour's session and count live under, inside the same bag. */
+    public const POSTPONED = 'postponed';
 
     public function __construct(private readonly ?PreferenceDriver $driver = null) {}
 
@@ -134,6 +147,68 @@ final class TourLedger
     }
 
     /**
+     * Whether this user has put this tour off for the session they are in.
+     *
+     * Stamped with the session rather than with a clock, which is what makes
+     * "not now" mean the same thing on every driver. On `session` the entry
+     * would have gone with the session anyway; on `database` it outlives it,
+     * and without this comparison a postponement there would be indistinguishable
+     * from a skip — the one outcome "Later" exists in order not to be.
+     *
+     * A session that cannot be identified — no session bound at all, which is a
+     * console render rather than a page — answers false. The recoverable
+     * direction: a tour that greets somebody once more, rather than one that
+     * silently never greets anybody again.
+     */
+    public function isPostponed(Tour $tour, ?Authenticatable $user): bool
+    {
+        $session = $this->session();
+
+        if ($session === null) {
+            return false;
+        }
+
+        $entry = $this->postponedIn($this->driver($user)->load(self::SURFACE, $user))[$tour->getId()] ?? null;
+
+        return $entry !== null && $entry['since'] === $tour->getVersion() && $entry['session'] === $session;
+    }
+
+    /**
+     * How many times this user has put off this version of this tour.
+     *
+     * Counted across sessions, unlike {@see isPostponed()}: the whole point of
+     * the count is that saying "later" in three different sessions is an answer.
+     * A count recorded against an older `since()` is not this tour's, for the
+     * reason {@see reached()} gives about step numbers.
+     */
+    public function postponements(Tour $tour, ?Authenticatable $user): int
+    {
+        $entry = $this->postponedIn($this->driver($user)->load(self::SURFACE, $user))[$tour->getId()] ?? null;
+
+        return $entry !== null && $entry['since'] === $tour->getVersion() ? $entry['count'] : 0;
+    }
+
+    /** Record that this user has put this tour off once more, for this session. */
+    public function postpone(Tour $tour, ?Authenticatable $user): void
+    {
+        $driver = $this->driver($user);
+
+        $bag = $driver->load(self::SURFACE, $user);
+
+        $driver->save(self::SURFACE, $user, [
+            ...$bag,
+            self::POSTPONED => [
+                ...$this->postponedIn($bag),
+                $tour->getId() => [
+                    'since' => $tour->getVersion(),
+                    'session' => $this->session() ?? '',
+                    'count' => $this->postponements($tour, $user) + 1,
+                ],
+            ],
+        ]);
+    }
+
+    /**
      * Forget one tour for this user, so it runs again on the next matching page.
      *
      * What a "replay" entry calls. Scoped to one id rather than clearing the
@@ -158,7 +233,11 @@ final class TourLedger
      *
      * Both callers are done with the tour's progress too — somebody who
      * finished has nowhere left to resume, and a replay starts from the top — so
-     * it is dropped in the same save rather than a second one.
+     * it is dropped in the same save rather than a second one. The postponement
+     * goes with it, and for a sharper reason: a replayed tour that kept its
+     * count would be one "later" away from acknowledging itself, and a
+     * *finished* tour that kept it would carry the count into the next version,
+     * where the author's third greeting would be somebody else's first.
      *
      * @param  callable(array<string, string>): array<string, string>  $change
      */
@@ -171,11 +250,65 @@ final class TourLedger
         $reached = $this->reachedIn($bag);
         unset($reached[$forgetProgressOf->getId()]);
 
+        $postponed = $this->postponedIn($bag);
+        unset($postponed[$forgetProgressOf->getId()]);
+
         $driver->save(self::SURFACE, $user, [
             ...$bag,
             self::SURFACE => $change($this->versionsIn($bag)),
             self::REACHED => $reached,
+            self::POSTPONED => $postponed,
         ]);
+    }
+
+    /**
+     * The postponement map inside a loaded bag, with anything unusable dropped —
+     * for the reason {@see versionsIn()} gives.
+     *
+     * @param  array<string, mixed>  $bag
+     * @return array<string, array{since: string, session: string, count: int}>
+     */
+    private function postponedIn(array $bag): array
+    {
+        $postponed = $bag[self::POSTPONED] ?? [];
+
+        if (! is_array($postponed)) {
+            return [];
+        }
+
+        $valid = [];
+
+        foreach ($postponed as $id => $entry) {
+            if (is_string($id) && is_array($entry) && is_scalar($entry['since'] ?? null) && is_scalar($entry['session'] ?? null) && is_int($entry['count'] ?? null) && $entry['count'] >= 0) {
+                $valid[$id] = [
+                    'since' => (string) $entry['since'],
+                    'session' => (string) $entry['session'],
+                    'count' => $entry['count'],
+                ];
+            }
+        }
+
+        return $valid;
+    }
+
+    /**
+     * The id of the session this request belongs to, or null when there is none.
+     *
+     * Asked of the container rather than of the `session()` helper so that a
+     * context without a session — an artisan command rendering a view — answers
+     * null instead of throwing. Unlike the route, a session id is the same on a
+     * page render and on the Livewire updates after it, which is why this is
+     * read where it is needed rather than passed along.
+     */
+    private function session(): ?string
+    {
+        if (! app()->bound('session.store')) {
+            return null;
+        }
+
+        $id = app('session.store')->getId();
+
+        return $id === '' ? null : $id;
     }
 
     /**

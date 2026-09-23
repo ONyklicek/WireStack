@@ -7,7 +7,9 @@ summary: Jedna zastávka průvodce — element hook, na který ukazuje, jak se z
 
 Jedna zastávka [průvodce](tours.md): prvek, na který ukazuje, a co říká panel
 vedle něj. Krok jmenuje **element hook**, tedy jméno `data-wire`, které framework
-píše do svého markupu, nikdy CSS selektor.
+píše do svého markupu, nikdy CSS selektor. Jméno věci, na kterou chcete ukázat,
+zjistíte v devtools přímo z prvku, nebo si jména vypíšete hromadně —
+[Vzhled → Jak jméno najít](../start/theming.md#jak-jmeno-najit) ukazuje obojí.
 
 ```php
 use NyonCode\WireCore\Tours\TourStep;
@@ -210,4 +212,6 @@ TourStep::make(string $anchor)             // jméno element hooku; vyhodí výj
 ## Související
 
 - [Tour](tours.md) — kdo průvodce uvidí, kde běží a jak se pamatuje
-- [Theming](../start/theming.md#stylovaci-hooky) — odkud se berou jména hooků a co slibují
+- [Vzhled → Jak jméno najít](../start/theming.md#jak-jmeno-najit) — jak přečíst jméno hooku ze stránky
+- [Vzhled → Stylovací hooky](../start/theming.md#stylovaci-hooky) — odkud se berou jména hooků a co slibují
+- [Řešení potíží → Průvodce se nikdy neobjeví](../start/troubleshooting.md#pruvodce-se-nikdy-neobjevi) — když se krok tiše přeskakuje

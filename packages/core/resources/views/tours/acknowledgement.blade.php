@@ -19,4 +19,5 @@
     x-data
     x-on:wire-tour:reached.window="$event.detail.id === @js($tourId) && $wire.reach($event.detail.step)"
     x-on:wire-tour:done.window="$event.detail.id === @js($tourId) && $wire.acknowledge()"
+    x-on:wire-tour:postponed.window="$event.detail.id === @js($tourId) && $wire.postpone()"
 ></div>

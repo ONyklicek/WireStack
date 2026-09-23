@@ -29,7 +29,8 @@ kind of page (`index`, `create`, `view`, `edit`, or a resource's own page). It
 then walks the registered tours, **lowest `sort()` first**, and takes the first
 one that passes all of these:
 
-1. This person has not already finished or skipped **this version** of it.
+1. This person has not already finished or skipped **this version** of it, and
+   has not [put it off](tour-welcome.md) for the session they are in.
 2. Its location constraints match. Each of `zones()`, `resource()` and `page()`
    that you set must match, and one you did not set matches anything.
 3. Its visibility allows it. That is `visible()` / `hidden()` and the shared
@@ -128,7 +129,35 @@ $this->app->make(Tours::class)->register(
 ```
 
 Each step names an **element hook**, the `data-wire` name the framework puts on
-its markup. [TourStep](tour-step.md) covers steps in full.
+its markup. You find one the way you would find anything on a page — open
+devtools and read the attribute off the element, or list them in bulk with the
+one-liner in [Theming → Finding a name](../start/theming.md#finding-a-name).
+[TourStep](tour-step.md) covers steps in full.
+
+## Asking First
+
+A tour that starts by itself is an interruption somebody never agreed to. Give
+it a [welcome block](tour-welcome.md) and the first beat becomes a question
+instead — a card in the middle of the screen, with a button to start now and one
+to be asked again later:
+
+```php
+use NyonCode\WireCore\Tours\TourWelcome;
+
+Tour::make('getting-started')
+    ->welcome(
+        TourWelcome::make()
+            ->heading('Two minutes, and you will know your way around')
+            ->text('We will point at four things and then leave you to it.'),
+    )
+    ->steps([...]);
+```
+
+**Later is not Skip.** Skip is final — it is recorded exactly as finishing is.
+Later puts the tour down for the session and asks again on the next visit, and
+is counted: the one that reaches `postpone()`'s limit (default `3`) records the
+tour as seen, so a greeting cannot come back for ever.
+[TourWelcome](tour-welcome.md) covers the block, its labels and its own markup.
 
 ## Registering
 
@@ -231,6 +260,13 @@ finished the old version will see the new one once, and nobody else sees it
 twice. The value only needs to be different: it can be a release number, a date
 or a word.
 
+**Editing the steps is not enough on its own.** Nothing hashes a tour's content,
+so a tour whose `since()` did not move stays acknowledged and the new wording
+reaches only people who had never finished it. Deploying a new release does not
+do it either — a tour is not new because a patch went out. Changing `since()` is
+the one thing that says "show this again", and it is the whole upgrade path:
+there is no second store to clear and no command to run.
+
 A what's-new tour is often one step long. It uses the same scoping, so a
 feature only one role can use gets a tour only that role sees.
 
@@ -285,6 +321,60 @@ The reload is intentional. The panel is part of the page layout, which a
 Livewire request does not re-render. The server does not store the address to
 return to either: the browser reloads the page it is already on.
 
+### Your Own Trigger
+
+The user-menu entry is the one the framework draws, and it is rendered only
+where a tour already claims the screen — so forgetting the tour is enough there,
+and the browser reloads the page it is on. A trigger **somewhere else** — a help
+button in a page header, a row on a settings screen — is for a tour that runs
+where the person is not, so forgetting it alone would appear to do nothing.
+`replayNow()` forgets it *and* hands back the way to the screen it runs on:
+
+```php
+use Livewire\Component;
+use NyonCode\WireCore\Tours\TourState;
+
+class HelpButton extends Component
+{
+    public function replayOnboarding(TourState $tours)
+    {
+        return $tours->replayNow('getting-started', auth()->user());   // [tl! focus]
+    }
+}
+```
+
+The address is built from the tour's own `zones()`, `resource()` and `page()`
+through the same owner every menu link comes from, so it follows the routes when
+they move. It carries the tour in the query, the way a step on another page
+travels, so the tour is already running when the page opens.
+
+Three things to know before you wire one up:
+
+- **It can answer with nothing, and the tour is still forgotten.** A tour scoped
+  to nothing narrower than a zone has no single screen to be sent to, and one
+  whose page this person may not open has none they may be sent to. Returning
+  null from a Livewire action does nothing, so reload when there is nowhere to
+  go:
+
+  ```php
+  if (($redirect = $tours->replayNow('getting-started', auth()->user())) === null) {
+      $this->js('window.location.reload()');
+  }
+
+  return $redirect;
+  ```
+
+- **The address is never taken from the request.** It is computed from the tour
+  and the router. The obvious implementation keeps the page's URL in a public
+  Livewire property — and every public property is writable from the browser, so
+  "the user can only redirect themselves" stops being true the moment somebody
+  is handed a link that sets it.
+- **An unknown id is ignored**, not an error — a tour may have been removed
+  between the page rendering and the click.
+
+`replay()` is the same call without the redirect, for a trigger on a screen the
+tour already claims. Call either once per tour id you want to offer.
+
 ## Your Own Layout
 
 The tour and the replay entry are both drawn through `PageChrome`, the registry
@@ -321,6 +411,7 @@ from your own stylesheet without publishing a view:
 | `tour-heading`, `tour-text` | The step's title and body |
 | `tour-progress` | "Step 2 of 4" |
 | `tour-next`, `tour-back`, `tour-skip` | The three buttons |
+| `tour-welcome`, `tour-welcome-*` | The [welcome block](tour-welcome.md#styling), when the tour has one |
 
 ```css
 [data-wire="tour-panel"] { @apply rounded-2xl shadow-2xl; }
@@ -409,6 +500,8 @@ steps are documented on [TourStep](tour-step.md).
 ```php
 Tour::make(string $id)                // stable id — acknowledgements are stored against it; throws on an empty one
 ->steps(array $steps)                 // array<TourStep>, in the order they are shown; a tour with none throws at register()
+->welcome(TourWelcome $welcome)       // open with a block that asks before it points — default: none, the tour just starts   // [tl! focus:start]
+->postpone(int $times)                // how many "Later"s before it records itself as seen; 0 removes the button — default: wire-core.tours.postpone (3) // [tl! focus:end]
 ->since(string $version)              // content version, compared for inequality — default '1'
 ->sort(int $sort)                     // lowest runs first when several claim a screen — default 0
 ->zones(?string ...$zones)            // zone names; null is the unzoned application — default: any zone
@@ -418,6 +511,8 @@ Tour::make(string $id)                // stable id — acknowledgements are stor
 ->getVersion(): string
 ->getSort(): int
 ->getSteps(): array                   // array<int, TourStep>
+->getPostponeLimit(): ?int            // the author's number, or null to use the configured one
+->getWelcome(): ?TourWelcome
 ```
 
 Registration, on the `Tours` singleton:
@@ -429,9 +524,22 @@ app(Tours::class)->get(string $id): ?Tour
 app(Tours::class)->has(string $id): bool
 ```
 
+What one person has seen, on the `TourState` singleton. This is what the replay
+entry calls, and what [your own trigger](#your-own-trigger) and a test call:
+
+```php
+app(TourState::class)->replay(string $tourId, ?Authenticatable $user): void                 // forget it, so it runs again; an unknown id is ignored
+app(TourState::class)->replayNow(string $tourId, ?Authenticatable $user): ?RedirectResponse // and the way to the screen it runs on, or null
+app(TourState::class)->acknowledge(string $tourId, ?Authenticatable $user): void            // record it as finished, the way Finish and Skip do
+app(TourState::class)->postpone(string $tourId, ?Authenticatable $user): void               // "Later" — down for this session, counted; the last one acknowledges
+```
+
 ## Related
 
 - [TourStep](tour-step.md) — what a step points at, and how it is narrowed
+- [TourWelcome](tour-welcome.md) — asking before it starts, and what "Later" costs
+- [Testing → Testing a Tour](../start/testing.md#testing-a-tour) — asserting that one is registered, and that it runs
+- [Troubleshooting → A tour never appears](../start/troubleshooting.md#a-tour-never-appears) — the checklist when nothing happens
 - [Authorization](../start/authorization.md) — the shared rules a tour's visibility uses
 - [Routing zones](../panels/routing.md) — where zone names come from
-- [Theming](../start/theming.md#styling-hooks) — styling hooks in general
+- [Theming → Finding a name](../start/theming.md#finding-a-name) — how to read a step's hook name off the page

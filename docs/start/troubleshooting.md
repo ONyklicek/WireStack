@@ -266,6 +266,76 @@ in tests.
 
 ---
 
+## A tour never appears
+
+**Symptom:** A [tour](../core/tours.md) is registered and no walkthrough runs.
+
+**Causes**, in the order worth checking — a tour that does not run is always
+silent, because every one of these is a legitimate thing for it to decide:
+
+1. **This person has already seen it.** Finishing *and* skipping both count, and
+   the record is kept for the tour's current `since()` value. In development you
+   meet this after the very first page load. Use **Replay the tour** in the user
+   menu, or set `WIRE_TOURS_DRIVER=null` in `.env` while you work on it, which
+   makes it run on every page load.
+2. **They put it off.** A tour with a [welcome block](../core/tour-welcome.md)
+   can be answered with "Later", which silences it for the rest of that session
+   — and the "Later" that spends the tour's `postpone()` allowance records it as
+   seen for good, exactly as skipping would. Signing in again, or the `null`
+   driver, clears it.
+3. **Nothing draws it.** The panel is rendered through `PageChrome`, which
+   `wire-admin`'s layout renders. A layout of your own has to render the same
+   two loops — see [Tour → Your own layout](../core/tours.md#your-own-layout).
+   `@wireStackScripts` must be in the `<head>` too, because the panel is
+   positioned by the controllers it delivers.
+4. **Every step's element is missing or hidden.** A step whose element is not on
+   the page, or is rendered but has no size (a dropdown that is closed, a bulk
+   bar before rows are selected), is skipped on purpose — and a tour that loses
+   *all* of its steps this way does not start. Check the names against the page
+   with devtools; see [Theming → Finding a name](theming.md#finding-a-name).
+5. **The screen does not match.** `zones()`, `resource()` and `page()` combine
+   with AND. `zones('sales')` never matches an application with no zones —
+   `zones(null)` is the unzoned one.
+6. **Authorization denies it.** `permission()`, `authorize()` and
+   `authorizeUsing()` fail closed, and a tour with a permission is never shown
+   to a guest.
+7. **Another tour claimed the screen first.** Only one runs per visit; the
+   lowest `sort()` wins and the rest wait for a later visit.
+
+**Fix:** work down that list against
+[Tour → How It Works](../core/tours.md#how-it-works). To prove the wiring
+without touching any of the scoping, register a tour with no constraints at all
+and one step pointing at `admin-sidebar`: if that does not run, the cause is (1),
+(2) or (3).
+
+---
+
+## A tour I edited does not run again
+
+**Symptom:** The steps or wording changed, the deploy went out, and people who
+had already finished the tour still see nothing.
+
+**Cause:** Nothing hashes a tour's content and nothing reads a package version.
+What is stored against a person is the tour's `since()` value, and it is
+compared for inequality — so an edited tour whose `since()` did not move is
+still acknowledged.
+
+**Fix:** change `since()` to anything different — a release number, a date, a
+word:
+
+```php
+Tour::make('getting-started')->since('2.2')->steps([...]);
+```
+
+Everybody who finished the old version sees the new one once. Nobody sees it
+twice, and there is no store to clear and no command to run. Renaming the tour's
+**id** has the same visible effect, but it is a different thing: the id is what
+acknowledgements are stored against, so a rename throws away the record for
+everybody and for good. Change `since()`, not the id. See
+[Tour → What's New After an Upgrade](../core/tours.md#whats-new-after-an-upgrade).
+
+---
+
 ## Still stuck?
 
 - Re-read the package-specific doc for the feature (Forms, Table, Sortable, Core).

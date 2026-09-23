@@ -19,6 +19,7 @@ use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Tours\Tour;
 use NyonCode\WireCore\Tours\Tours;
 use NyonCode\WireCore\Tours\TourStep;
+use NyonCode\WireCore\Tours\TourWelcome;
 use NyonCode\WireModuleSettings\Support\SettingsRegistry;
 use Throwable;
 use Workbench\App\Actions\Fortify\CreateNewUser;
@@ -407,6 +408,40 @@ class WorkbenchServiceProvider extends ServiceProvider
         // visits the admin zone, so neither is registered unconditionally.
         if (isset($_COOKIE['wire-demo-tour'])) {
             $this->app->make(Tours::class)->register(self::demoTour());
+        }
+
+        // The welcome block, behind a cookie of its own for the reason the two
+        // below have one, only more so: it puts a card and a backdrop over the
+        // whole page *before* anything can be clicked, so a driver that did not
+        // come for it would find the screen covered rather than merely dimmed.
+        //
+        // Two postponements rather than the configured three, so the driver can
+        // spend the allowance and watch the tour give up without three round
+        // trips of setup.
+        if (isset($_COOKIE['wire-tour-welcome'])) {
+            $this->app->make(Tours::class)->register(
+                Tour::make('welcome-tour')
+                    ->sort(-20)
+                    ->resource('invoices')
+                    ->page('index')
+                    ->postpone(2)
+                    ->welcome(
+                        TourWelcome::make()
+                            ->heading('Two minutes, and you will know your way around')
+                            ->text('We will point at a couple of things and then leave you to it.')
+                            ->later('Not just now'),
+                    )
+                    ->steps([
+                        TourStep::make('admin-sidebar')
+                            ->heading('Everything lives here')
+                            ->text('The sidebar holds every area this application has.')
+                            ->placement('right-start'),
+
+                        TourStep::make('table-search')
+                            ->heading('Find a row')
+                            ->text('Search narrows the table as you type.'),
+                    ]),
+            );
         }
 
         // Behind a cookie the tour driver sets, and this is not fussiness. A tour

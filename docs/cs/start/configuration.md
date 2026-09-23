@@ -43,6 +43,7 @@ Potřebujete jen tagy balíčků, které jste nainstalovali.
 | `WIRE_MOBILE_TOUCH` | `false` | Dotykové prvky pod mobilním breakpointem: kolečka pro datum a čas, seznam přes celou výšku pro selecty |
 | `WIRE_TOURS_DRIVER` | `session` | Kde se přihlášenému uživateli ukládá postup a dokončení průvodců |
 | `WIRE_TOURS_GUEST_DRIVER` | `session` | Totéž pro hosta |
+| `WIRE_TOURS_POSTPONE` | `3` | Kolikrát smí být welcome blok průvodce odbyt „Odložit“, než se ptát přestane |
 | `WIRE_AUTH_CODE_LOGIN` | `false` | Přihlášení kódem z e-mailu, bez hesla |
 | `WIRE_AUTH_CODE_SECOND_FACTOR` | `false` | Kód e-mailem po správném heslu |
 | `WIRE_AUTH_CODE_VERIFY_EMAIL` | `false` | Potvrzení adresy kódem |
@@ -286,13 +287,15 @@ z globálního přepínače také vyřadí; `->nativeOnMobile()` ho vrátí zpě
 ### Průvodci
 
 Kde si [průvodce](../core/tours.md) pamatuje, co o kom ví: které průvodce
-dokončil nebo přeskočil a ke kterému kroku došel v tom, který opustil v půlce.
-Je to úložiště preferencí s vlastním výchozím driverem, `session` místo `null`,
+dokončil nebo přeskočil, ke kterému kroku došel v tom, který opustil v půlce, a
+které si odložil. Je to úložiště preferencí s vlastním výchozím driverem, `session` místo `null`,
 protože průvodce nad úložištěm, které zapomíná, by stejného člověka přerušoval
 při každém načtení stránky.
 
 ```php
 'tours' => [
+    'postpone' => env('WIRE_TOURS_POSTPONE', 3),                 // „Odložit“, než se průvodce přestane ptát // [tl! focus]
+
     'preferences' => [
         'default' => env('WIRE_TOURS_DRIVER', 'session'),        // přihlášení uživatelé
         'guest' => env('WIRE_TOURS_GUEST_DRIVER', 'session'),    // hosté
@@ -304,6 +307,11 @@ při každém načtení stránky.
     ],
 ],
 ```
+
+`postpone` je počet, kolikrát smí být [welcome blok](../core/tour-welcome.md)
+průvodce odbyt tlačítkem „Odložit“, než se průvodce zaznamená jako viděný a
+přestane se ptát. Každé „Odložit“ ho položí na dobu dané session; nula tlačítko
+odstraní a průvodce může číslo přepsat přes `->postpone(int $times)`.
 
 Panel průvodce se pod `mobile.breakpoint` výše přichytí ke spodnímu okraji
 obrazovky. Viz [Tour → Zapamatování](../core/tours.md#zapamatovani).

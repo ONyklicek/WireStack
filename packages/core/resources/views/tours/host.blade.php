@@ -76,6 +76,7 @@
         breakpoint: @js($payload['breakpoint']),
         resume: @js($payload['resume']),
         from: @js($payload['from']),
+        welcome: @js($payload['welcome']),
         reported: null,
         progressTemplate: @js(__('wire-core::messages.tour_progress', ['current' => '{c}', 'total' => '{t}'])),
 
@@ -89,6 +90,7 @@
         plan: [],
         cursor: 0,
         active: false,
+        greeting: false,
         dock: false,
         detach: null,
         rect: { top: 0, left: 0, width: 0, height: 0 },
@@ -224,11 +226,44 @@
             }
 
             this.cursor = cursor;
-            {{-- Docked before shown: otherwise a phone gets one frame of the
-                 floating panel in the top-left corner before `place()` moves it. --}}
+
+            {{-- The welcome block is the tour's first beat rather than a step of
+                 it, so it is shown only when the tour is starting from the top.
+                 Somebody carried here by "Next" from another page, or coming
+                 back to a walkthrough they left halfway, has answered it
+                 already and would be asked whether to start something they are
+                 in the middle of. --}}
+            if (this.welcome && this.resume === null && this.from === null) {
+                this.greeting = true;
+                return;
+            }
+
+            this.begin();
+        },
+
+        {{-- Past the greeting and into the walkthrough. Docked before shown:
+             otherwise a phone gets one frame of the floating panel in the
+             top-left corner before `place()` moves it. --}}
+        begin() {
+            this.greeting = false;
             this.dock = this.docked();
             this.active = true;
             this.$nextTick(() => this.place());
+        },
+
+        {{-- "Later", and the Escape that means the same thing.
+             The count is the server's to keep: `TourState::postpone()` decides
+             whether this one was the last, and acknowledges the tour when it
+             was. A tour whose author allowed no postponement carries no `later`
+             label, so dismissing its welcome records nothing at all and the
+             tour greets again on the next visit — the same as walking away
+             from a walkthrough, which has always been the free answer. --}}
+        later() {
+            this.greeting = false;
+            if (! this.welcome || ! this.welcome.later) { return; }
+            window.dispatchEvent(new CustomEvent('wire-tour:postponed', {
+                detail: { id: this.tourId },
+            }));
         },
 
         planKey() { return 'wire-tour-plan:' + this.tourId; },
@@ -378,19 +413,81 @@
         },
     }"
     x-init="$nextTick(() => settle().then(() => start()))"
-    x-on:keydown.escape.window="active && done(true)"
+    x-on:keydown.escape.window="active ? done(true) : (greeting && later())"
     x-on:scroll.window.passive="active && track()"
     x-on:resize.window="active && (docked() !== dock ? settle().then(() => place()) : track())"
     wire:ignore
 >
     <div
         @wireEl('tour-backdrop')
-        x-show="active"
+        x-show="active || greeting"
         x-cloak
         x-transition.opacity
         class="fixed inset-0 z-[60] bg-gray-900/50 dark:bg-gray-950/70"
         aria-hidden="true"
     ></div>
+
+    {{-- The block a tour opens with, when it has one. Centred rather than
+         floating beside anything: it is about the tour rather than about an
+         element, and there is nothing to point at until somebody has said yes.
+         It sits above the backdrop and, unlike the panel, never docks — at any
+         width a centred card is the right shape for a question. --}}
+@if ($payload['welcome'] !== null)
+@if ($payload['welcome']['view'] !== null)
+    {{-- An application's own markup instead of the framework's, included inside
+         this `x-data` so it has `greeting`, `begin()`, `later()` and the
+         `welcome` object in scope. It owns its own visibility: nothing here
+         shows it, so it carries its own `x-show="greeting"`. --}}
+    @include($payload['welcome']['view'], ['welcome' => $tour->getWelcome(), 'tour' => $tour])
+@else
+    <div
+        @wireEl('tour-welcome')
+        x-show="greeting"
+        x-cloak
+        x-transition.opacity
+        @include('wire-core::modals.partials.focus-trap', ['openExpression' => 'greeting'])
+        class="fixed inset-0 z-[63] flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="{{ __('wire-core::messages.tour_region') }}"
+    >
+        <div class="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-6 text-center shadow-xl dark:border-gray-700 dark:bg-gray-800">
+            <p
+                @wireEl('tour-welcome-heading')
+                x-show="welcome.heading"
+                x-text="welcome.heading"
+                class="text-base font-semibold text-gray-900 dark:text-gray-100"
+            ></p>
+
+            <p
+                @wireEl('tour-welcome-text')
+                x-show="welcome.text"
+                x-text="welcome.text"
+                class="mt-2 text-sm text-gray-600 dark:text-gray-300"
+            ></p>
+
+            <div class="mt-6 flex items-center justify-center gap-2">
+                <button
+                    @wireEl('tour-welcome-later')
+                    type="button"
+                    x-show="welcome.later"
+                    x-text="welcome.later"
+                    x-on:click="later()"
+                    class="rounded-md px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                ></button>
+
+                <button
+                    @wireEl('tour-welcome-start')
+                    type="button"
+                    x-text="welcome.start"
+                    x-on:click="begin()"
+                    class="rounded-md bg-primary-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
+                ></button>
+            </div>
+        </div>
+    </div>
+@endif
+@endif
 
     <div
         @wireEl('tour-highlight')

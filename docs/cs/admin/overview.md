@@ -89,8 +89,8 @@ Instalátor ho zapíše za vás a míří na celý vendor adresář místo na je
 
 ### Když si píšete vlastní layout
 
-Layout shellu nese vedle markupu ještě dvě věci a vlastní layout je musí nést
-také:
+Layout shellu nese vedle markupu ještě tři věci a vlastní layout je musí nést
+také. Dvě z nich jsou pravidla:
 
 ```blade
 @include('wire-core::partials.density')   {{-- [tl! focus:1] --}}
@@ -108,6 +108,24 @@ Samotné atributy pocházejí taky z layoutu:
 ```blade
 <html data-density="{{ \NyonCode\WireCore\Foundation\Enums\Density::configured()->value }}"
       data-shape="{{ \NyonCode\WireCore\Foundation\Enums\Shape::configured()->value }}">
+```
+
+Třetí je **page chrome** — registr, přes který balíčky vloží view do layoutu,
+aniž by věděly, který layout to je. Z něj pochází panel
+[průvodce](../core/tours.md#vlastni-layout), jeho položka „Spustit průvodce
+znovu“ v uživatelském menu i modal výběru médií. Layout, který registr
+nevykresluje, tiše nemá nic z toho:
+
+```blade
+{{-- na konci <body> --}}
+@foreach (app(\NyonCode\WireCore\Foundation\View\PageChrome::class)->views() as $view)
+    @include($view)
+@endforeach
+
+{{-- uvnitř uživatelského menu --}}
+@foreach (app(\NyonCode\WireCore\Foundation\View\PageChrome::class)->views(\NyonCode\WireCore\Foundation\View\PageChrome::USER_MENU) as $view)
+    @include($view)
+@endforeach
 ```
 
 Pokud váš stylesheet není `resources/css/app.css` nebo Tailwind neimportuje, instalátor to řekne a řádek vám dá místo toho, aby ho zapsal do souboru, který Tailwind nikdy nečte. Doplňte ho pod import a cestu upravte podle toho, kde stylesheet leží.

@@ -45,6 +45,7 @@ you, so the lines above are for an application setting one up by hand.
 | `WIRE_MOBILE_TOUCH` | `false` | Touch-built controls below the mobile breakpoint: wheels for dates and times, a full-height list for selects |
 | `WIRE_TOURS_DRIVER` | `session` | Where a signed-in user's tour progress and finished tours are kept |
 | `WIRE_TOURS_GUEST_DRIVER` | `session` | The same, for a guest |
+| `WIRE_TOURS_POSTPONE` | `3` | How many times a tour's welcome block may be answered with "Later" before it stops asking |
 | `WIRE_AUTH_CODE_LOGIN` | `false` | Signing in with a mailed code, no password |
 | `WIRE_AUTH_CODE_SECOND_FACTOR` | `false` | A mailed code after a correct password |
 | `WIRE_AUTH_CODE_VERIFY_EMAIL` | `false` | Confirming an address by code |
@@ -291,13 +292,15 @@ field out of the global switch; `->nativeOnMobile()` brings it back.
 ### Tours
 
 Where a [tour](../core/tours.md) keeps what it remembers per person: the tours
-they finished or skipped, and the step they reached in one they left halfway.
-It is the preference store with its own default, `session` rather than `null`,
-because a tour on a store that forgets would interrupt the same person on every
-page load.
+they finished or skipped, the step they reached in one they left halfway, and
+the ones they put off. It is the preference store with its own default,
+`session` rather than `null`, because a tour on a store that forgets would
+interrupt the same person on every page load.
 
 ```php
 'tours' => [
+    'postpone' => env('WIRE_TOURS_POSTPONE', 3),                 // "Later"s before a tour stops asking // [tl! focus]
+
     'preferences' => [
         'default' => env('WIRE_TOURS_DRIVER', 'session'),        // signed-in users
         'guest' => env('WIRE_TOURS_GUEST_DRIVER', 'session'),    // guests
@@ -309,6 +312,11 @@ page load.
     ],
 ],
 ```
+
+`postpone` is how many times a tour's [welcome block](../core/tour-welcome.md)
+may be answered with "Later" before it records itself as seen and stops asking.
+Each "Later" puts the tour down for that session; zero removes the button, and a
+tour may override the number with `->postpone(int $times)`.
 
 A tour's panel docks to the bottom of the screen below the `mobile.breakpoint`
 above. See [Tour → Remembering](../core/tours.md#remembering).

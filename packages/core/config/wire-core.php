@@ -389,6 +389,21 @@ return [
     |
     */
     'tours' => [
+        /*
+        |----------------------------------------------------------------------
+        | Postponements
+        |----------------------------------------------------------------------
+        |
+        | How many times a tour's welcome block may be answered with "Later"
+        | before it stops asking and counts as seen. Each "Later" puts the tour
+        | down for the session; reaching this number records it the way skipping
+        | does. Zero removes the button, leaving a welcome that can only be
+        | started. A tour may override this with `->postpone(int $times)`.
+        |
+        */
+
+        'postpone' => env('WIRE_TOURS_POSTPONE', 3),
+
         'preferences' => [
             'default' => env('WIRE_TOURS_DRIVER', 'session'),
             'guest' => env('WIRE_TOURS_GUEST_DRIVER', 'session'),

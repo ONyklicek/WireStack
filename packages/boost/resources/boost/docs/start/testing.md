@@ -241,6 +241,71 @@ it('adds updated_by before save', function () {
 
 ---
 
+## Testing a Tour
+
+Which [tour](../core/tours.md) runs is decided on the server, so the parts worth
+testing need no browser: that it is registered, that it claims the screen you
+meant it to, and that somebody who has already seen it is left alone. What a
+test at this level cannot see is the walkthrough itself — whether the panel
+lands beside the right element, whether a hidden step is skipped, whether
+Escape closes it. That is the browser's behaviour.
+
+Registration is a container lookup, and the cheapest guard against a provider
+that stopped booting:
+
+```php
+use NyonCode\WireCore\Tours\Tours;
+
+it('registers the onboarding tour', function () {
+    expect(app(Tours::class)->has('getting-started'))->toBeTrue();
+});
+```
+
+Whether it runs on a given screen is a page render. The panel carries the
+`tour-panel` element hook, which is public API — it is not renamed or removed in
+a minor release — so it is a safe thing to assert on:
+
+```php
+it('walks a new user through the orders list', function () {
+    $this->actingAs(User::factory()->create())
+        ->get('/admin/orders')
+        ->assertSee('data-wire="tour-panel"', false);
+});
+```
+
+The second argument turns escaping off; without it the quotes in the attribute
+will not match. A tour that does not claim the screen renders nothing at all, so
+the negative is the same assertion inverted — which is how you pin scoping:
+
+```php
+use NyonCode\WireCore\Tours\TourState;
+
+it('leaves somebody who has already finished it alone', function () {
+    $user = User::factory()->create();
+
+    app(TourState::class)->acknowledge('getting-started', $user);   // what Finish and Skip record
+
+    $this->actingAs($user)
+        ->get('/admin/orders')
+        ->assertDontSee('data-wire="tour-panel"', false);
+});
+```
+
+`TourState::replay()` is the same call the other way round, and the one your own
+[replay trigger](../core/tours.md#your-own-trigger) makes.
+
+Two things that trip tests up rather than applications:
+
+- **The store is per driver.** Tours default to the `session` driver, and each
+  test gets a fresh session, so acknowledgements do not leak between tests. On
+  `database` the `wire_preferences` migration has to have run, or the
+  acknowledgement is written nowhere and the tour keeps appearing.
+- **A tour needs the layout that draws it.** The page render above asserts
+  through `wire-admin`'s layout. A test that renders a component in isolation
+  has no `PageChrome`, and therefore no panel, however well the tour is scoped.
+
+---
+
 ## Running the Suite
 
 ```bash
@@ -265,3 +330,4 @@ macros, or plugin wiring changed.
 - [Extending Forms](../forms/custom-fields.md) — building the fields you are testing
 - [Save Lifecycle](../forms/save-lifecycle.md) — the hooks `save()` runs through
 - [Core Plugins](../core/plugins/index.md) — hook and plugin testing
+- [Tour](../core/tours.md) — how a tour decides to run, and what it stores

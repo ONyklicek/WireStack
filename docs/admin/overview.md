@@ -91,8 +91,8 @@ The installer writes it for you, pointing at the vendor directory rather than at
 
 ### If You Write Your Own Layout
 
-The shell's layout carries two things besides the markup, and a layout of your
-own has to carry them too:
+The shell's layout carries three things besides the markup, and a layout of your
+own has to carry them too. Two are rules:
 
 ```blade
 @include('wire-core::partials.density')   {{-- [tl! focus:1] --}}
@@ -109,6 +109,24 @@ The attributes themselves come from the layout too:
 ```blade
 <html data-density="{{ \NyonCode\WireCore\Foundation\Enums\Density::configured()->value }}"
       data-shape="{{ \NyonCode\WireCore\Foundation\Enums\Shape::configured()->value }}">
+```
+
+The third is **page chrome** — the registry through which packages put a view
+into a layout without knowing which layout it is. A guided
+[tour](../core/tours.md#your-own-layout)'s panel comes from it, so does its
+"Replay the tour" entry in the user menu, and so does the media picker's modal.
+A layout that does not render the registry silently has none of them:
+
+```blade
+{{-- at the end of <body> --}}
+@foreach (app(\NyonCode\WireCore\Foundation\View\PageChrome::class)->views() as $view)
+    @include($view)
+@endforeach
+
+{{-- inside the user menu --}}
+@foreach (app(\NyonCode\WireCore\Foundation\View\PageChrome::class)->views(\NyonCode\WireCore\Foundation\View\PageChrome::USER_MENU) as $view)
+    @include($view)
+@endforeach
 ```
 
 If your stylesheet is not `resources/css/app.css`, or does not import Tailwind, the installer says so and gives you the line rather than writing it into a file Tailwind never reads. Add it below the import, with the path adjusted to where the stylesheet lives.

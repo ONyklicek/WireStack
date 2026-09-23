@@ -58,6 +58,11 @@ final class Tour
 
     private int $sort = 0;
 
+    private ?TourWelcome $welcome = null;
+
+    /** Null means "whatever the configuration says"; see {@see postpone()}. */
+    private ?int $postpone = null;
+
     /** @var array<int, TourStep> */
     private array $steps = [];
 
@@ -117,6 +122,52 @@ final class Tour
         $this->steps = array_values($steps);
 
         return $this;
+    }
+
+    /**
+     * Open with a block that says what this is and asks whether to start now.
+     *
+     * Opt-in: without one the tour begins by pointing at something, which is
+     * what it has always done. {@see TourWelcome} says why a tour might ask
+     * first, and what "Later" means.
+     */
+    public function welcome(TourWelcome $welcome): self
+    {
+        $this->welcome = $welcome;
+
+        return $this;
+    }
+
+    /**
+     * How many times this tour may be put off before it stops asking.
+     *
+     * Reaching the count acknowledges the tour, exactly as skipping it would:
+     * somebody who has said "later" three times has answered, and a greeting
+     * that returns for ever is the failure mode this counter exists to prevent.
+     * `postpone(0)` removes the "Later" button altogether, leaving a welcome
+     * block that can only be started.
+     *
+     * Left unset, the configured default applies
+     * (`wire-core.tours.postpone`). The default is resolved where the count is
+     * used rather than here, so a tour registered at boot does not freeze the
+     * configuration as it was at boot.
+     */
+    public function postpone(int $times): self
+    {
+        $this->postpone = max(0, $times);
+
+        return $this;
+    }
+
+    public function getWelcome(): ?TourWelcome
+    {
+        return $this->welcome;
+    }
+
+    /** The author's postponement count, or null to use the configured one. */
+    public function getPostponeLimit(): ?int
+    {
+        return $this->postpone;
     }
 
     /**
@@ -261,6 +312,19 @@ final class Tour
         $resource = $this->resources[0] ?? null;
 
         return $resource === null ? null : [$resource, $this->pages[0] ?? 'index'];
+    }
+
+    /**
+     * The zone a tour sent to itself should be opened in.
+     *
+     * The first one it was declared for, or null — which is both "the unzoned
+     * mount point" and the honest answer for a tour that named no zone, since
+     * an unconstrained tour runs in every zone and no one of them is its home.
+     * Only {@see TourDestination::start()} asks, and only to build one URL.
+     */
+    public function startZone(): ?string
+    {
+        return $this->zones[0] ?? null;
     }
 
     public function assertUsable(): void

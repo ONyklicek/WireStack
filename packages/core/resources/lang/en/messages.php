@@ -105,5 +105,7 @@ return [
     'tour_skip' => 'Skip',
     'tour_progress' => 'Step :current of :total',
     'tour_region' => 'Product tour',
+    'tour_start' => 'Start the tour',
+    'tour_later' => 'Maybe later',
     'tour_replay' => 'Replay the tour',
 ];

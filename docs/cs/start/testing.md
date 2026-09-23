@@ -239,6 +239,72 @@ it('adds updated_by before save', function () {
 
 ---
 
+## Testování průvodce
+
+O tom, který [průvodce](../core/tours.md) se spustí, se rozhoduje na serveru,
+takže části, které stojí za testování, prohlížeč nepotřebují: že je
+zaregistrovaný, že si nárokuje obrazovku, kterou jste mysleli, a že člověka,
+který ho už viděl, nechá být. Co test na této úrovni nevidí, je prohlídka sama —
+jestli panel přistane vedle správného prvku, jestli se skrytý krok přeskočí,
+jestli ho Escape zavře. To je chování prohlížeče.
+
+Registrace je dotaz do kontejneru a nejlevnější pojistka proti provideru, který
+se přestal bootovat:
+
+```php
+use NyonCode\WireCore\Tours\Tours;
+
+it('registers the onboarding tour', function () {
+    expect(app(Tours::class)->has('getting-started'))->toBeTrue();
+});
+```
+
+Jestli běží na dané obrazovce, je otázka na vykreslení stránky. Panel nese
+element hook `tour-panel`, což je veřejné API — v minor verzi se nepřejmenuje ani
+neodstraní — takže je bezpečné na něj asertovat:
+
+```php
+it('walks a new user through the orders list', function () {
+    $this->actingAs(User::factory()->create())
+        ->get('/admin/orders')
+        ->assertSee('data-wire="tour-panel"', false);
+});
+```
+
+Druhý argument vypíná escapování; bez něj uvozovky v atributu neodpovídají.
+Průvodce, který si obrazovku nenárokuje, nevykreslí vůbec nic, takže negativní
+případ je tatáž asertace obráceně — a právě tím se přišpendlí omezení:
+
+```php
+use NyonCode\WireCore\Tours\TourState;
+
+it('leaves somebody who has already finished it alone', function () {
+    $user = User::factory()->create();
+
+    app(TourState::class)->acknowledge('getting-started', $user);   // co zaznamenává Dokončit a Přeskočit
+
+    $this->actingAs($user)
+        ->get('/admin/orders')
+        ->assertDontSee('data-wire="tour-panel"', false);
+});
+```
+
+`TourState::replay()` je totéž opačně a je to volání, které dělá váš
+[vlastní spouštěč](../core/tours.md#vlastni-spoustec).
+
+Dvě věci, na kterých zakopávají spíš testy než aplikace:
+
+- **Úložiště je podle driveru.** Průvodci mají ve výchozím stavu driver
+  `session` a každý test dostane čistou session, takže potvrzení mezi testy
+  neprotékají. Na `database` musí proběhnout migrace `wire_preferences`, jinak se
+  potvrzení nezapíše nikam a průvodce se objevuje dál.
+- **Průvodce potřebuje layout, který ho kreslí.** Vykreslení stránky výše
+  asertuje přes layout `wire-admin`. Test, který vykresluje komponentu
+  samostatně, nemá `PageChrome`, a tedy ani panel — ať je průvodce omezený
+  sebelíp.
+
+---
+
 ## Spuštění sady
 
 ```bash
@@ -263,3 +329,4 @@ nebo zapojení pluginů.
 - [Rozšíření formulářů](../forms/custom-fields.md) — stavba polí, která testujete
 - [Životní cyklus ukládání](../forms/save-lifecycle.md) — hooky, kterými `save()` prochází
 - [Core Pluginy](../core/plugins/index.md) — testování hooků a pluginů
+- [Tour](../core/tours.md) — jak se průvodce rozhoduje, že poběží, a co si ukládá

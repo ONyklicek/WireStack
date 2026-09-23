@@ -6,8 +6,6 @@ namespace NyonCode\WireCore\Tours;
 
 use Illuminate\Contracts\Auth\Factory as Auth;
 use Illuminate\Http\Request;
-use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
-use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WireCore\Foundation\Support\MobileSheet;
 
@@ -54,9 +52,8 @@ final class TourHost
     public function __construct(
         private readonly TourState $state,
         private readonly Auth $auth,
-        private readonly ResolvesPageUrls $urls,
         private readonly Request $request,
-        private readonly AuthorizesUrls $access,
+        private readonly TourDestination $destination,
     ) {}
 
     /**
@@ -124,7 +121,13 @@ final class TourHost
      * the browser settles against what this page has, where `resume` is a
      * promise the server already checked.
      *
-     * @return array{id: string, breakpoint: float, resume: int|null, from: int|null, steps: array<int, array{selector: string, heading: string|null, text: string|null, placement: string, here: bool, url: string|null}>}
+     * `welcome` is the block the tour opens with, or null for a tour that starts
+     * by pointing at something. Its labels are resolved here rather than on
+     * {@see TourWelcome}, which is registered at boot: a translation resolved
+     * then would be in whatever locale the console had. `later` is null when the
+     * tour allows no postponement, and the browser renders no button for it.
+     *
+     * @return array{id: string, breakpoint: float, resume: int|null, from: int|null, welcome: array{heading: string|null, text: string|null, start: string, later: string|null, view: string|null}|null, steps: array<int, array{selector: string, heading: string|null, text: string|null, placement: string, here: bool, url: string|null}>}
      */
     public function payload(Tour $tour): array
     {
@@ -135,6 +138,7 @@ final class TourHost
         return [
             'id' => $tour->getId(),
             'breakpoint' => MobileSheet::px(),
+            'welcome' => $this->welcome($tour),
             'resume' => $resume = $this->resumingTour()?->getId() === $tour->getId() ? $this->requestedStep() : null,
             'from' => $resume === null ? $this->state->reached($tour, $this->auth->guard()->user()) : null,
             'steps' => array_map(
@@ -179,28 +183,40 @@ final class TourHost
     }
 
     /**
-     * Where a step that is not on this page is.
+     * The welcome block as the browser needs it, or null when there is none.
      *
-     * Its own `on()` page, or — for a step on the tour's starting page, seen from
-     * another one — the page the tour starts on. Through {@see ResolvesPageUrls},
-     * the owner every menu link comes from, so a tour never spells a route and
-     * follows the routes when they move.
+     * The "Later" label is dropped rather than merely unused when the tour
+     * allows no postponement: what the payload does not carry, the markup
+     * cannot render, so the choice is absent from the page rather than present
+     * and ignored.
+     *
+     * @return array{heading: string|null, text: string|null, start: string, later: string|null, view: string|null}|null
      */
-    private function urlOf(Tour $tour, TourStep $step, ?string $zone): ?string
+    private function welcome(Tour $tour): ?array
     {
-        [$resource, $page] = $step->isElsewhere()
-            ? [$step->getResource(), $step->getPage()]
-            : ($tour->home() ?? [null, null]);
+        $welcome = $tour->getWelcome();
 
-        if ($resource === null || $page === null) {
+        if ($welcome === null) {
             return null;
         }
 
-        $url = $this->urls->urlFor($resource, $page, [], $zone);
+        $postponable = ($tour->getPostponeLimit() ?? TourState::configuredPostponeLimit()) > 0;
 
-        // A step that would walk somebody into a 403 is a step they cannot
-        // see, and is skipped like one — asked of the route, which is where the
-        // page's rules are, rather than restated on the step.
-        return $url !== null && $this->access->allowsUrl($url, $this->auth->guard()->user()) ? $url : null;
+        return [
+            'heading' => $welcome->getHeading(),
+            'text' => $welcome->getText(),
+            'start' => $welcome->getStart() ?? __('wire-core::messages.tour_start'),
+            'later' => $postponable ? ($welcome->getLater() ?? __('wire-core::messages.tour_later')) : null,
+            'view' => $welcome->getView(),
+        ];
+    }
+
+    /**
+     * Where a step that is not on this page is — {@see TourDestination}, which
+     * owns the question because a replay trigger elsewhere now asks it too.
+     */
+    private function urlOf(Tour $tour, TourStep $step, ?string $zone): ?string
+    {
+        return $this->destination->of($tour, $step, $zone, $this->auth->guard()->user());
     }
 }

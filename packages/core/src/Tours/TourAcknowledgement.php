@@ -64,6 +64,20 @@ final class TourAcknowledgement extends Component
     }
 
     /**
+     * Record that this person chose "Later" in the welcome block.
+     *
+     * Takes nothing, for the reason `acknowledge()` does: the tour is the one
+     * this component was mounted with. {@see TourState::postpone()} owns what
+     * "later" costs — a tour whose author allowed no postponement records
+     * nothing here, so the browser cannot invent the choice by dispatching the
+     * event.
+     */
+    public function postpone(TourState $state, Auth $auth): void
+    {
+        $state->postpone($this->tourId, $auth->guard()->user());
+    }
+
+    /**
      * Record how far this person got, so a tour they leave halfway reopens
      * there. The step is the browser's to name and {@see TourState::reach()}'s
      * to bound; the tour is still this component's own.

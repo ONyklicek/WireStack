@@ -954,3 +954,4 @@ v `CHANGELOG.md`.
 - [Konfigurace](configuration.md) — publikovatelná konfigurace
 - [Vzhled](theming.md) — udržování přepisů pohledů na minimu
 - [Řešení potíží](troubleshooting.md) — problémy, které se objeví po aktualizaci
+- [Tour → Co je nového po aktualizaci](../core/tours.md#co-je-noveho-po-aktualizaci) — jak lidem, kteří vaši aplikaci používají, ukázat, co se ve vydání změnilo

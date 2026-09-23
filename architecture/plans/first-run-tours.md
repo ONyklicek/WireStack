@@ -645,6 +645,51 @@ surface's obligation, verified by `composer boost:check-docs`.
 **The gate.** `npm run docs:check`, `docs:standard`, `docs:api`,
 `docs:examples`, `composer boost:check-docs`.
 
+### Step 6 — Asking first, putting off, and starting one from elsewhere — **DONE**
+
+**Landed.** `Tours\TourWelcome` (a value object beside `TourStep`),
+`Tour::welcome()` and `Tour::postpone()`, a `postponed` key in the ledger,
+`TourState::{postpone, replayNow}`, `TourAcknowledgement::postpone()`, and
+`Tours\TourDestination` — which is an extraction rather than an addition, since
+`TourHost::urlOf()` already answered "where is this tour's page, and may this
+person open it" and `replayNow()` is the second asker. Five new element hooks,
+`tour_start` / `tour_later` in both locales, `wire-core.tours.postpone` (3),
+`docs/core/tour-welcome.md` in both locales, and
+`workbench/scripts/verify-tour-welcome.mjs` — 14 checks over its own fixture
+tour, behind a cookie of its own, so the two existing tour drivers meet no card
+over the page they came to click.
+
+**A third outcome, and why it is not a third state.** Finish and skip are one
+call because both are decisions. "Later" is not, so it needed somewhere to live —
+and the cheap version, a flag, is a skip under another name on the `database`
+driver, where it would outlive the sitting it was meant to cover. It is stamped
+with the **session id** instead: no clock to configure, no time zone to get
+wrong, and "not in this sitting" means the same thing on every driver. The
+count beside it is what keeps a greeting from returning for ever, and the one
+that spends the allowance **acknowledges** the tour rather than recording a
+fourth thing — so nothing downstream learned a new state.
+
+**The greeting is a beat, not a step.** It is shown only when the tour starts
+from the top: `resume` (carried here by `TourStep::on()`) and `from` (left
+halfway on an earlier visit) both mean somebody is already inside the
+walkthrough, and asking them whether to start it would be asking about something
+already running. The plan is built before the card is shown, so a tour with
+nothing it can point at still does not start — and therefore does not greet.
+
+**`replayNow()` redirects, and step 3's objection still holds.** The address is
+computed from the tour's own scoping through `ResolvesPageUrls`, checked with
+`AuthorizesUrls`, and carried in the query the way a cross-page step already
+travels. What step 3 refused was a redirect target **held in a public Livewire
+property**, which is writable from the browser; a server-computed one is not that
+thing. Null is a real answer — a tour scoped to nothing narrower than a zone has
+no single screen — and the forget happens either way, so the caller reloads.
+
+**The gate.** `test:core` 3154, `test:boost` 255, `test:admin` 122, Integration
+70; `lint`, `analyse`, `coverage:verify` (9142 tests, every package at or above
+its floor); `docs:check`, `docs:standard`, `docs:api`, `docs:examples`,
+`boost:check-docs`, `hooks:verify`; and the three tour drivers — the new one
+14/14, `verify-tour` 21/21, `verify-demo-tour` 48/48.
+
 ## Limitations, named now
 
 - **No chrome, no tour.** `PageChrome` is rendered by `wire-admin`'s layout. An

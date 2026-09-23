@@ -29,7 +29,8 @@ aktuální routy přečte tři věci: zónu, registrovaný resource a druh strá
 registrované průvodce **od nejnižšího `sort()`** a vezme prvního, který splní
 všechno z tohoto:
 
-1. Tento člověk **tuto verzi** zatím nedokončil ani nepřeskočil.
+1. Tento člověk **tuto verzi** zatím nedokončil ani nepřeskočil a ani si ji
+   [neodložil](tour-welcome.md) v session, ve které je.
 2. Sedí jeho omezení umístění. Každé z `zones()`, `resource()` a `page()`, které
    nastavíte, musí sedět, a to, které nenastavíte, sedí na cokoli.
 3. Pustí ho jeho viditelnost. To je `visible()` / `hidden()` a sdílená
@@ -126,7 +127,35 @@ $this->app->make(Tours::class)->register(
 ```
 
 Každý krok jmenuje **element hook**, tedy jméno `data-wire`, které framework
-píše do svého markupu. Kroky podrobně popisuje [TourStep](tour-step.md).
+píše do svého markupu. Najdete ho stejně jako cokoli jiného na stránce —
+otevřete devtools a přečtěte atribut přímo z prvku, nebo si je vypište hromadně
+jednořádkovým příkazem z [Vzhled → Jak jméno najít](../start/theming.md#jak-jmeno-najit).
+Kroky podrobně popisuje [TourStep](tour-step.md).
+
+## Zeptat se nejdřív
+
+Průvodce, který se spustí sám, je vyrušení, se kterým nikdo nesouhlasil. Dejte
+mu [welcome blok](tour-welcome.md) a z první doby se stane otázka — karta
+uprostřed obrazovky s tlačítkem spustit teď a tlačítkem nechat se zeptat znovu
+později:
+
+```php
+use NyonCode\WireCore\Tours\TourWelcome;
+
+Tour::make('getting-started')
+    ->welcome(
+        TourWelcome::make()
+            ->heading('Dvě minuty a budete se tu vyznat')
+            ->text('Ukážeme na čtyři věci a pak vás necháme být.'),
+    )
+    ->steps([...]);
+```
+
+**Odložit není Přeskočit.** Přeskočit je konečné — ukládá se přesně jako
+dokončení. Odložit průvodce položí na dobu session a při příští návštěvě se
+zeptá znovu, a počítá se: to, které dosáhne limitu `postpone()` (výchozí `3`),
+průvodce zaznamená jako viděný, takže se pozdrav nemůže vracet navždy.
+Blok, jeho popisky i vlastní markup popisuje [TourWelcome](tour-welcome.md).
 
 ## Registrace
 
@@ -227,6 +256,13 @@ Když změníte, co průvodce ukazuje, změňte i jeho `since()`. Každý, kdo p
 starou verzi, uvidí novou jednou, a nikdo jiný ji neuvidí dvakrát. Hodnota se
 musí jen lišit: může to být číslo vydání, datum nebo slovo.
 
+**Samotná úprava kroků nestačí.** Obsah průvodce se nijak nehashuje, takže
+průvodce, kterému se `since()` nepohnulo, zůstává potvrzený a nové znění se
+dostane jen k lidem, kteří ho nikdy nedokončili. Nasazení nového vydání to
+neudělá také — průvodce není nový proto, že vyšla patch verze. Změna `since()`
+je jediná věc, která říká „ukaž to znovu“, a je to celá cesta po aktualizaci:
+není tu druhé úložiště, které by se mazalo, ani příkaz, který by se pouštěl.
+
 Průvodce po novince má často jen jeden krok. Používá stejná omezení, takže
 funkci, kterou může používat jen jedna role, ukáže průvodce jen té roli.
 
@@ -282,6 +318,60 @@ Opětovné načtení je záměr. Panel je součástí layoutu stránky, který L
 request znovu nevykresluje. Server si ani neukládá adresu, kam se vrátit:
 prohlížeč znovu načte stránku, na které už je.
 
+### Vlastní spouštěč
+
+Položku v uživatelském menu kreslí framework a vykresluje se jen tam, kde si
+obrazovku už nějaký průvodce nárokuje — takže tam stačí průvodce zapomenout a
+prohlížeč znovu načte stránku, na které je. Spouštěč **někde jinde** — tlačítko
+nápovědy v hlavičce stránky, řádek v nastavení — je pro průvodce, který běží
+tam, kde dotyčný není, takže samotné zapomenutí by vypadalo, že nedělá nic.
+`replayNow()` ho zapomene *a* vrátí cestu na obrazovku, kde běží:
+
+```php
+use Livewire\Component;
+use NyonCode\WireCore\Tours\TourState;
+
+class HelpButton extends Component
+{
+    public function replayOnboarding(TourState $tours)
+    {
+        return $tours->replayNow('getting-started', auth()->user());   // [tl! focus]
+    }
+}
+```
+
+Adresa se staví z vlastních `zones()`, `resource()` a `page()` průvodce přes
+téhož vlastníka, ze kterého pochází každý odkaz v menu, takže se hýbe spolu s
+routami. Nese průvodce v query stejně, jako po stránkách cestuje krok, takže
+průvodce už při otevření stránky běží.
+
+Tři věci, které je dobré vědět, než si takový spouštěč zapojíte:
+
+- **Může odpovědět ničím, a průvodce je stejně zapomenutý.** Průvodce omezený
+  ničím užším než zónou nemá jedinou obrazovku, kam poslat, a ten, jehož stránku
+  dotyčný nesmí otevřít, nemá žádnou, kam ho poslat smí. Vrácení null z Livewire
+  akce neudělá nic, takže když není kam jít, načtěte stránku znovu:
+
+  ```php
+  if (($redirect = $tours->replayNow('getting-started', auth()->user())) === null) {
+      $this->js('window.location.reload()');
+  }
+
+  return $redirect;
+  ```
+
+- **Adresa se nikdy nebere z requestu.** Počítá se z průvodce a z rout. Zřejmá
+  implementace drží adresu stránky ve veřejné Livewire vlastnosti — a každá
+  veřejná vlastnost je zapisovatelná z prohlížeče, takže „uživatel může
+  přesměrovat jen sám sebe“ přestane platit ve chvíli, kdy někdo dostane odkaz,
+  který ji nastaví.
+- **Neznámé id se ignoruje**, není to chyba — průvodce mohl být odstraněn mezi
+  vykreslením stránky a kliknutím.
+
+`replay()` je totéž bez přesměrování, pro spouštěč na obrazovce, kterou si
+průvodce už nárokuje. Zavolejte jedno z nich jednou pro každé id průvodce, které
+chcete nabídnout.
+
 ## Vlastní layout
 
 Průvodce i položka pro opětovné spuštění se vykreslují přes `PageChrome`,
@@ -318,6 +408,7 @@ stylesheetu, bez publikování view:
 | `tour-heading`, `tour-text` | Titulek a text kroku |
 | `tour-progress` | „Krok 2 z 4" |
 | `tour-next`, `tour-back`, `tour-skip` | Tři tlačítka |
+| `tour-welcome`, `tour-welcome-*` | [Welcome blok](tour-welcome.md#stylovani), když ho průvodce má |
 
 ```css
 [data-wire="tour-panel"] { @apply rounded-2xl shadow-2xl; }
@@ -405,6 +496,8 @@ a kroky popisuje [TourStep](tour-step.md).
 ```php
 Tour::make(string $id)                // stabilní id — ukládají se k němu potvrzení; prázdné vyhodí výjimku
 ->steps(array $steps)                 // array<TourStep>, v pořadí zobrazení; průvodce bez kroků vyhodí při register()
+->welcome(TourWelcome $welcome)       // začít blokem, který se zeptá dřív, než ukáže — výchozí: žádný, průvodce prostě začne   // [tl! focus:start]
+->postpone(int $times)                // kolik „Odložit“, než se zaznamená jako viděný; 0 tlačítko odstraní — výchozí: wire-core.tours.postpone (3) // [tl! focus:end]
 ->since(string $version)              // verze obsahu, porovnává se na nerovnost — výchozí '1'
 ->sort(int $sort)                     // nejnižší se spustí první, když si obrazovku nárokuje víc průvodců — výchozí 0
 ->zones(?string ...$zones)            // jména zón; null je aplikace bez zóny — výchozí: jakákoli zóna
@@ -414,6 +507,8 @@ Tour::make(string $id)                // stabilní id — ukládají se k němu 
 ->getVersion(): string
 ->getSort(): int
 ->getSteps(): array                   // array<int, TourStep>
+->getPostponeLimit(): ?int            // autorovo číslo, nebo null pro konfigurované
+->getWelcome(): ?TourWelcome
 ```
 
 Registrace, na singletonu `Tours`:
@@ -425,9 +520,22 @@ app(Tours::class)->get(string $id): ?Tour
 app(Tours::class)->has(string $id): bool
 ```
 
+Co jeden člověk viděl, na singletonu `TourState`. Tohle volá položka pro
+opětovné spuštění, [vlastní spouštěč](#vlastni-spoustec) i test:
+
+```php
+app(TourState::class)->replay(string $tourId, ?Authenticatable $user): void                 // zapomenout, aby se spustil znovu; neznámé id se ignoruje
+app(TourState::class)->replayNow(string $tourId, ?Authenticatable $user): ?RedirectResponse // a k tomu cesta na obrazovku, kde běží, nebo null
+app(TourState::class)->acknowledge(string $tourId, ?Authenticatable $user): void            // zaznamenat jako dokončený, stejně jako to dělá Dokončit a Přeskočit
+app(TourState::class)->postpone(string $tourId, ?Authenticatable $user): void               // „Odložit“ — na tuhle session, počítá se; to poslední potvrdí
+```
+
 ## Související
 
 - [TourStep](tour-step.md) — na co krok ukazuje a jak se zúží
+- [TourWelcome](tour-welcome.md) — zeptat se před spuštěním a co stojí „Odložit“
+- [Testování → Testování průvodce](../start/testing.md#testovani-pruvodce) — jak ověřit, že je registrovaný a že se spustí
+- [Řešení potíží → Průvodce se nikdy neobjeví](../start/troubleshooting.md#pruvodce-se-nikdy-neobjevi) — co projít, když se nic neděje
 - [Autorizace](../start/authorization.md) — sdílená pravidla, která používá viditelnost průvodce
 - [Směrovací zóny](../panels/routing.md) — odkud se berou jména zón
-- [Theming](../start/theming.md#stylovaci-hooky) — stylovací hooky obecně
+- [Vzhled → Jak jméno najít](../start/theming.md#jak-jmeno-najit) — jak přečíst jméno hooku pro krok přímo ze stránky

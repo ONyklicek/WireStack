@@ -431,6 +431,28 @@ whose page's route (`can:` middleware, via core's `AuthorizesUrls`) refuses this
 left halfway reopens at the step reached (stored per `since()`; cleared by finish, skip and replay). The
 framework registers no tour itself.
 
+**A tour may ask before it points.** `->welcome(TourWelcome::make()->heading('…')->text('…'))` opens it
+with a centred card offering Start and Later. **Later is not Skip**: skip is recorded exactly as finishing
+is, while later puts the tour down for that session and is counted — the one reaching `->postpone(int)`
+(default `wire-core.tours.postpone`, 3) acknowledges it, so a greeting cannot return for ever.
+`->postpone(0)` drops the Later button. The card is shown only when the tour starts from the top, never
+when resuming. `TourWelcome::view('tours.welcome')` swaps the markup for your own, included inside the
+tour's Alpine scope, where it has `greeting`, `begin()`, `later()` and the `welcome` payload and owns its
+own `x-show`. Hooks: `tour-welcome`, `-heading`, `-text`, `-start`, `-later`.
+
+**A tour is drawn by the layout, through `PageChrome`** — `wire-admin`'s renders it, and a layout of
+your own must render the same two loops (body, and `PageChrome::USER_MENU`) plus `@@wireStackScripts`
+in the head, or nothing appears however well the tour is scoped. That registry is also where the
+"Replay the tour" entry in the user menu comes from; it shows only on a screen a tour claims. For a
+replay trigger anywhere else, return `app(TourState::class)->replayNow('id', auth()->user())` from the
+action: it forgets the tour *and* answers with a redirect to the screen the tour runs on, built from the
+tour's own scoping through the router — never from an address held in a public Livewire property, which
+is writable from the browser. It answers null when the tour names no page of its own or the person may
+not open it, and the tour is forgotten either way, so reload when null. `replay()` is the same without
+the redirect, for a trigger on a screen the tour already claims.
+`TourState::acknowledge('id', $user)` is the lever the other way, which is what a test uses to assert
+somebody already-seen is left alone.
+
 ### JavaScript assets
 
 Put `@@wireStackScripts` once in the layout `<head>`. It emits every registered wireStack Alpine

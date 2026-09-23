@@ -7,7 +7,10 @@ summary: One stop on a tour — the element hook it points at, how it is narrowe
 
 One stop on a [Tour](tours.md): the element it points at, and what the panel
 beside that element says. A step names an **element hook**, the `data-wire`
-name the framework writes on its markup, and never a CSS selector.
+name the framework writes on its markup, and never a CSS selector. To find the
+name of the thing you want to point at, open devtools and read it off the
+element, or list them in bulk — [Theming → Finding a name](../start/theming.md#finding-a-name)
+shows both.
 
 ```php
 use NyonCode\WireCore\Tours\TourStep;
@@ -213,4 +216,6 @@ TourStep::make(string $anchor)             // an element-hook name; throws if it
 ## Related
 
 - [Tour](tours.md) — who sees a tour, where it runs, and how it is remembered
-- [Theming](../start/theming.md#styling-hooks) — where hook names come from, and what they promise
+- [Theming → Finding a name](../start/theming.md#finding-a-name) — reading a hook name off the page
+- [Theming → Styling hooks](../start/theming.md#styling-hooks) — where hook names come from, and what they promise
+- [Troubleshooting → A tour never appears](../start/troubleshooting.md#a-tour-never-appears) — when a step is silently skipped

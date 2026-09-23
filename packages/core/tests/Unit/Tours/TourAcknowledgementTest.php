@@ -189,6 +189,20 @@ it('forgets the tour, so the page runs it again', function () {
     expect(app(TourLedger::class)->hasSeen($tour, $user))->toBeFalse();
 });
 
+it('records a "later" from the welcome block, and takes no id to do it', function () {
+    $tour = aTour('greeted');
+    $user = signedInTourUser();
+
+    Livewire::test(TourAcknowledgement::class, ['tourId' => $tour->getId()])
+        ->call('postpone');
+
+    // Put down rather than decided about: the tour is not acknowledged, it is
+    // simply not offered again in this sitting.
+    expect(app(TourLedger::class)->postponements($tour, $user))->toBe(1)
+        ->and(app(TourLedger::class)->hasSeen($tour, $user))->toBeFalse()
+        ->and(app(TourLedger::class)->isPostponed($tour, $user))->toBeTrue();
+});
+
 /**
  * The obvious implementation keeps the page's URL in a property and redirects to
  * it. Every public Livewire property is writable from the browser, so that

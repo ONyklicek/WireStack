@@ -268,6 +268,73 @@ cestu asertujte v testech.
 
 ---
 
+## Průvodce se nikdy neobjeví
+
+**Příznak:** [Průvodce](../core/tours.md) je zaregistrovaný a žádná prohlídka se
+nespustí.
+
+**Příčiny** v pořadí, v jakém je stojí za to projít — průvodce, který neběží, je
+vždycky tichý, protože každá z těchto věcí je něco, co legitimně rozhodnout může:
+
+1. **Dotyčný ho už viděl.** Počítá se dokončení *i* přeskočení a záznam se drží
+   pro aktuální hodnotu `since()`. Při vývoji na to narazíte hned po prvním
+   načtení stránky. Použijte **Spustit průvodce znovu** v uživatelském menu,
+   nebo si po dobu práce na něm nastavte `WIRE_TOURS_DRIVER=null` v `.env`, což
+   ho spustí při každém načtení stránky.
+2. **Odložil si ho.** Průvodce s [welcome blokem](../core/tour-welcome.md) jde
+   odbýt tlačítkem „Odložit“, což ho umlčí do konce dané session — a to
+   „Odložit“, které vyčerpá povolený počet z `postpone()`, ho zaznamená jako
+   viděný natrvalo, přesně jako přeskočení. Nové přihlášení nebo driver `null`
+   to smaže.
+3. **Nikdo ho nekreslí.** Panel se vykresluje přes `PageChrome`, který vykresluje
+   layout `wire-admin`. Vlastní layout musí vykreslit stejné dvě smyčky — viz
+   [Tour → Vlastní layout](../core/tours.md#vlastni-layout). `@wireStackScripts`
+   musí být také v `<head>`, protože panel umisťují controllery, které doručuje.
+4. **Prvky všech kroků chybí nebo jsou skryté.** Krok, jehož prvek na stránce
+   není, nebo je vykreslený, ale nemá rozměr (zavřený dropdown, bulk lišta před
+   výběrem řádků), se záměrně přeskakuje — a průvodce, který takhle přijde o
+   *všechny* kroky, se nespustí. Porovnejte jména se stránkou v devtools; viz
+   [Vzhled → Jak jméno najít](theming.md#jak-jmeno-najit).
+5. **Obrazovka neodpovídá.** `zones()`, `resource()` a `page()` se skládají přes
+   AND. `zones('sales')` nikdy neodpovídá aplikaci bez zón — aplikaci bez zóny
+   jmenuje `zones(null)`.
+6. **Autorizace ho zamítá.** `permission()`, `authorize()` a `authorizeUsing()`
+   selhávají zavřeně a průvodce s oprávněním se nikdy neukáže hostovi.
+7. **Obrazovku si první nárokoval jiný průvodce.** Na jednu návštěvu běží jen
+   jeden; vyhrává nejnižší `sort()` a ostatní čekají na další návštěvu.
+
+**Náprava:** projděte ten seznam proti
+[Tour → Jak to funguje](../core/tours.md#jak-to-funguje). Když chcete ověřit
+zapojení, aniž byste se dotkli omezení, zaregistrujte průvodce úplně bez omezení
+a s jedním krokem na `admin-sidebar`: pokud se nespustí ani ten, je příčina v
+bodě (1), (2) nebo (3).
+
+---
+
+## Upravený průvodce se nespustí znovu
+
+**Příznak:** Kroky nebo znění se změnily, nasazení proběhlo, a lidé, kteří
+průvodce už dokončili, pořád nevidí nic.
+
+**Příčina:** Obsah průvodce se nijak nehashuje a nic nečte verzi balíčku. K
+člověku se ukládá hodnota `since()` daného průvodce a porovnává se na nerovnost
+— takže upravený průvodce, kterému se `since()` nepohnulo, je pořád potvrzený.
+
+**Náprava:** změňte `since()` na cokoli jiného — číslo vydání, datum, slovo:
+
+```php
+Tour::make('getting-started')->since('2.2')->steps([...]);
+```
+
+Každý, kdo dokončil starou verzi, uvidí novou jednou. Nikdo ji neuvidí dvakrát a
+není tu úložiště, které by se mazalo, ani příkaz, který by se pouštěl.
+Přejmenování **id** průvodce má navenek stejný efekt, ale je to něco jiného: k id
+se ukládají potvrzení, takže přejmenování zahodí záznam všem a natrvalo. Měňte
+`since()`, ne id. Viz
+[Tour → Co je nového po aktualizaci](../core/tours.md#co-je-noveho-po-aktualizaci).
+
+---
+
 ## Pořád zaseknutí?
 
 - Znovu si přečtěte dokumentaci konkrétního balíčku pro danou funkci (Forms, Table, Sortable, Core).
