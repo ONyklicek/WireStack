@@ -337,6 +337,11 @@ class HelpButton extends Component
     {
         return $tours->replayNow('getting-started', auth()->user());   // [tl! focus]
     }
+
+    public function render()
+    {
+        return view('tours.replay-button');
+    }
 }
 ```
 
@@ -371,6 +376,88 @@ Tři věci, které je dobré vědět, než si takový spouštěč zapojíte:
 `replay()` je totéž bez přesměrování, pro spouštěč na obrazovce, kterou si
 průvodce už nárokuje. Zavolejte jedno z nich jednou pro každé id průvodce, které
 chcete nabídnout.
+
+#### Jak ho dostat na obrazovku
+
+Komponenta výše je to, co dělá request. Všechno níž je způsob, jak ji někomu
+dostat před oči, a všechny mountují tutéž komponentu.
+
+**Vlastní view.** Tlačítko je obyčejné, takže bere propsy sdílené komponenty:
+
+```blade
+{{-- resources/views/tours/replay-button.blade.php --}}
+<x-wire::button wire:click="replayOnboarding" color="gray" size="sm" icon="academic-cap">
+    {{ __('Spustit průvodce znovu') }}
+</x-wire::button>
+```
+
+**Vedle vlastních tlačítek tabulky**, jako header akce. Tahle cesta `replayNow()`
+použít nemůže: `successRedirect()` bere URL, ne redirect, který vrací Livewire
+akce — průvodce se proto zapomene v callbacku a adresa se spočítá vedle:
+
+```php
+use NyonCode\WireCore\Tours\TourDestination;
+use NyonCode\WireCore\Tours\Tours;
+use NyonCode\WireCore\Tours\TourState;
+
+HeaderAction::make('replay-tour')
+    ->label('Spustit průvodce znovu')
+    ->icon('academic-cap')
+    ->action(fn () => app(TourState::class)->replay('getting-started', auth()->user()))
+    ->successRedirect(function (): ?string {                                    // [tl! focus:start]
+        $tour = app(Tours::class)->get('getting-started');
+
+        return $tour === null
+            ? null
+            : app(TourDestination::class)->start($tour, auth()->user());
+    });                                                                         // [tl! focus:end]
+```
+
+V tom bloku jsou dva ostré rohy a ani jeden není kosmetický:
+
+- **Callback akce se plní podle *jména* parametru, ne z kontejneru.**
+  `fn (TourState $tours) => …` tady není dependency injection — invoker předá
+  pojmenované argumenty z payloadu (`record`, `records`, `data`) a nic jiného,
+  takže parametr, který naplnit neumí, nepředá vůbec a closure spadne na počtu
+  argumentů. Uvnitř closure sáhněte po `app()`, jako výše.
+- **`Tours::get()` odpoví null na id, které nezná, a `TourDestination::start()`
+  bere `Tour`.** Tohle je jediné místo v celé funkci, kde je překlep v id
+  `TypeError`, a ne tiché nic — takže se null ošetří, místo aby se předpokládalo,
+  že nenastane.
+
+**Na každé stránce, bez editace stránky.** [Render hook](../start/theming.md#render-hooky)
+vloží komponentu do pozice, kterou layout už nabízí — `panels.page.header.end`,
+`admin.topbar.end`, `admin.sidebar.end` nebo `table.toolbar.end`:
+
+```php
+use NyonCode\WireCore\Core\Plugin\RenderHook;
+
+RenderHook::add('panels.page.header.end', fn () => view('tours.replay-hook'));
+```
+
+```blade
+{{-- resources/views/tours/replay-hook.blade.php --}}
+@livewire('help-button')
+```
+
+**Do uživatelského menu, vedle položky frameworku.** `PageChrome` je registr, do
+kterého je přispěná i samotná položka pro opětovné spuštění, a aplikace do něj
+může přidávat z `boot()` service provideru:
+
+```php
+use NyonCode\WireCore\Foundation\View\PageChrome;
+
+app(PageChrome::class)->add('tours.replay-hook', PageChrome::USER_MENU, sort: 30);
+```
+
+Je idempotentní podle jména view, takže provider, který nabootuje dvakrát, přidá
+jednu položku. Na rozdíl od položky frameworku se ta vaše kreslí na každé
+obrazovce — nikdo se jí neptá, jestli si tuhle nějaký průvodce nárokuje.
+
+**Ne odkaz.** Adresa, kterou `replayNow()` vrací, je skutečná URL, ale poslat
+někomu holý odkaz nespustí nic: server přijme průvodce v query jen pro člověka,
+který ho **nedokončil**. Zapomenutí je ta půlka, kterou odkaz udělat neumí, a
+proto všechny způsoby výše vedou přes request.
 
 ## Vlastní layout
 

@@ -340,6 +340,11 @@ class HelpButton extends Component
     {
         return $tours->replayNow('getting-started', auth()->user());   // [tl! focus]
     }
+
+    public function render()
+    {
+        return view('tours.replay-button');
+    }
 }
 ```
 
@@ -374,6 +379,91 @@ Three things to know before you wire one up:
 
 `replay()` is the same call without the redirect, for a trigger on a screen the
 tour already claims. Call either once per tour id you want to offer.
+
+#### Putting It On A Screen
+
+The component above is what makes the request. Everything below is a way of
+getting it in front of somebody, and they all mount that same component.
+
+**Its own view.** The button is an ordinary one, so it takes the shared
+component's props:
+
+```blade
+{{-- resources/views/tours/replay-button.blade.php --}}
+<x-wire::button wire:click="replayOnboarding" color="gray" size="sm" icon="academic-cap">
+    {{ __('Replay the tour') }}
+</x-wire::button>
+```
+
+**Beside a table's own buttons**, as a header action. This path cannot use
+`replayNow()`: `successRedirect()` takes a URL, not the redirect a Livewire
+action returns, so the tour is forgotten in the callback and the address worked
+out beside it:
+
+```php
+use NyonCode\WireCore\Tours\TourDestination;
+use NyonCode\WireCore\Tours\Tours;
+use NyonCode\WireCore\Tours\TourState;
+
+HeaderAction::make('replay-tour')
+    ->label('Replay the tour')
+    ->icon('academic-cap')
+    ->action(fn () => app(TourState::class)->replay('getting-started', auth()->user()))
+    ->successRedirect(function (): ?string {                                    // [tl! focus:start]
+        $tour = app(Tours::class)->get('getting-started');
+
+        return $tour === null
+            ? null
+            : app(TourDestination::class)->start($tour, auth()->user());
+    });                                                                         // [tl! focus:end]
+```
+
+Two sharp edges live in that block, and neither is cosmetic:
+
+- **An action's callback is filled by parameter *name*, not from the container.**
+  `fn (TourState $tours) => …` is not dependency injection here — the invoker
+  passes the payload's named arguments (`record`, `records`, `data`) and nothing
+  else, so a parameter it cannot fill is not passed at all and the closure throws
+  on arity. Reach for `app()` inside the closure, as above.
+- **`Tours::get()` answers null for an id it does not know, and
+  `TourDestination::start()` takes a `Tour`.** This is the one place in the
+  feature where a mistyped id is a `TypeError` rather than a quiet no-op, so the
+  null is handled rather than assumed away.
+
+**On every page, without editing a page.** A [render hook](../start/theming.md#render-hooks)
+puts the component into a position the layout already offers —
+`panels.page.header.end`, `admin.topbar.end`, `admin.sidebar.end` or
+`table.toolbar.end`:
+
+```php
+use NyonCode\WireCore\Core\Plugin\RenderHook;
+
+RenderHook::add('panels.page.header.end', fn () => view('tours.replay-hook'));
+```
+
+```blade
+{{-- resources/views/tours/replay-hook.blade.php --}}
+@livewire('help-button')
+```
+
+**In the user menu, beside the framework's own entry.** `PageChrome` is the
+registry the replay entry itself is contributed to, and an application may add
+to it from a service provider's `boot()`:
+
+```php
+use NyonCode\WireCore\Foundation\View\PageChrome;
+
+app(PageChrome::class)->add('tours.replay-hook', PageChrome::USER_MENU, sort: 30);
+```
+
+It is idempotent by view name, so a provider that boots twice adds one entry.
+Unlike the framework's own entry, yours is drawn on every screen — it is not
+asked whether a tour claims this one.
+
+**Not a link.** The address `replayNow()` answers with is a real URL, but
+sending somebody a bare one does not replay anything: the server accepts the
+tour in the query only for a person who has **not** finished it. Forgetting is
+the half a link cannot do, which is why every way above goes through a request.
 
 ## Your Own Layout
 
