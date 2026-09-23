@@ -2,6 +2,17 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.2.2]
+
+### Fixed
+
+- **A dashboard no longer lists its tray on every render.** `WithWidgets::widgetGridData()` computed the
+  tray outside edit mode too, and listing it asks every unplaced widget whether it is visible — on a
+  dashboard with a default layout, whose widgets build their data to answer that, every render and every
+  poll tick built the whole catalogue to draw nothing. The tray is drawn in edit mode alone, so it is listed
+  there alone. Found by the first application to put a default layout on a catalogue of widgets; covered by
+  `WidgetDashboardControlsTest`.
+
 ## [2.2.1]
 
 ### Added

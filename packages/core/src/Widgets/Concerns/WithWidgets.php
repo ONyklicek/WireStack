@@ -732,7 +732,11 @@ trait WithWidgets
             'columns' => $columns ?? $this->getWidgetColumns(),
             'editing' => $this->editingWidgets,
             'customisable' => $this->isCustomisableDashboard(),
-            'available' => $this->getAvailableWidgets(),
+            // Only while editing: the tray is drawn in edit mode alone, and
+            // listing it asks every unplaced widget whether it is visible — on a
+            // dashboard whose widgets build their data to answer that, every
+            // render would build the whole catalogue to draw nothing.
+            'available' => $this->editingWidgets ? $this->getAvailableWidgets() : [],
             // The switcher's two halves: whether to draw one at all, and what
             // it lists. Both here rather than reached for in the view, for the
             // reason the four above are.

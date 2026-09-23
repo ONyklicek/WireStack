@@ -78,6 +78,26 @@ class ControlsDashboard extends Component
     }
 }
 
+class TrayProbeDashboard extends ControlsDashboard
+{
+    public static int $asked = 0;
+
+    public ?array $default = ['kpi'];
+
+    protected function getWidgets(): array
+    {
+        return [
+            ...parent::getWidgets(),
+            StatsOverviewWidget::make()->key('probe')->heading('Probe')
+                ->visible(function (): bool {
+                    self::$asked++;
+
+                    return true;
+                }),
+        ];
+    }
+}
+
 function controlsKeys($component): array
 {
     return array_map(fn ($widget) => $widget->getKey(), $component->instance()->getVisibleWidgets());
@@ -146,6 +166,21 @@ it('reads the default through the static resolver the same way', function () {
         ['key' => 'b', 'w' => 1, 'h' => 1],
         ['key' => 'a', 'w' => 2, 'h' => 6],
     ]);
+});
+
+it('asks an unplaced widget nothing until the tray is open', function () {
+    // Listing the tray asks each unplaced widget whether it is visible. A
+    // dashboard whose widgets compute their data to answer must not pay for
+    // that on every render — the tray is drawn in edit mode only.
+    TrayProbeDashboard::$asked = 0;
+
+    $component = Livewire::test(TrayProbeDashboard::class);
+
+    expect(TrayProbeDashboard::$asked)->toBe(0);
+
+    $component->call('startEditingWidgets');
+
+    expect(TrayProbeDashboard::$asked)->toBeGreaterThan(0);
 });
 
 // ─── Autosave ────────────────────────────────────────────────────────────────
