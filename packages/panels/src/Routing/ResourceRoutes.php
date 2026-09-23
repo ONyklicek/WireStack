@@ -168,18 +168,28 @@ final class ResourceRoutes
     }
 
     /**
-     * The prefix of the group this is being registered inside, for a message.
+     * The whole prefix of the group this is being registered inside.
      *
      * Read off the router's group stack rather than passed in, because the group
      * is the application's and this deliberately never knew about it — which is
-     * the whole point of the macro. Best effort, and used only to name the zone
-     * in an error.
+     * the whole point of the macro. Not only for a message: entry() looks for a
+     * route already at this path before it puts `wire.home` there, so a wrong
+     * answer replaces the application's route rather than misnaming a zone.
      */
     private static function groupPrefix(): string
     {
         $stack = RouteFacade::getFacadeRoot()->getGroupStack();
 
-        return trim(implode('/', array_filter(array_column($stack, 'prefix'))), '/');
+        if ($stack === []) {
+            return '';
+        }
+
+        // Laravel merges the prefix into every layer of the stack, so the last one
+        // already carries the whole path. Joining them multiplies it: a nested
+        // group under `sales` answers `sales/sales`, the root check in entry()
+        // never matches, and `wire.home` is registered over the application's own
+        // route — silently, because Laravel keys routes by method and URI.
+        return trim((string) (end($stack)['prefix'] ?? ''), '/');
     }
 
     /**

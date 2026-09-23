@@ -270,6 +270,24 @@ it('never replaces something the application already routed at the prefix', func
     $this->get('/admin')->assertOk()->assertSee('the application s own');
 });
 
+it('leaves the application its own route at the group root, even from a nested group', function () {
+    // Laravel merges the prefix into every layer of the group stack, so a
+    // nested group used to read `sales/sales` and miss the route at `sales`.
+    Route::prefix('sales')->group(function () {
+        Route::get('/', fn (): string => 'the application s own')->name('app.entry');
+
+        Route::middleware('web')->group(
+            fn () => Route::name('sales.')->group(fn () => Route::wireResources(only: ['pe-users'])),
+        );
+    });
+    Route::getRoutes()->refreshNameLookups();
+
+    expect(Route::getRoutes()->getByName('app.entry'))->not->toBeNull()
+        ->and(Route::has('sales.wire.home'))->toBeFalse();
+
+    $this->get('/sales')->assertOk()->assertSee('the application s own');
+});
+
 it('registers one entry for a group routed in more than one call', function () {
     Route::middleware('web')->prefix('admin')->group(function () {
         Route::wireResources(only: ['pe-users']);
