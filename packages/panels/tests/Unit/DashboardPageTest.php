@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
+use NyonCode\WireCore\Foundation\Preferences\Drivers\SessionPreferenceDriver;
+use NyonCode\WireCore\Foundation\Preferences\PreferenceManager;
 use NyonCode\WireCore\Widgets\Dashboard;
+use NyonCode\WireCore\Widgets\DashboardFilter;
 use NyonCode\WireCore\Widgets\Stat;
 use NyonCode\WireCore\Widgets\StatsOverviewWidget;
 use NyonCode\WireCore\Widgets\Widget;
@@ -216,15 +219,26 @@ it('draws the rearrange controls on a customisable dashboard', function () {
         ->and($html)->not->toContain('data-testid="widget-layout-save"');
 });
 
-it('swaps them for save, cancel and reset in the mode', function () {
+it('swaps them for save and cancel in the mode', function () {
     $html = Livewire::test(DpCustomisablePage::class)->call('startEditingWidgets')->html();
 
     expect($html)->toContain('data-testid="widget-layout-save"')
         ->and($html)->toContain('data-testid="widget-layout-cancel"')
-        ->and($html)->toContain('data-testid="widget-layout-reset"')
         ->and($html)->not->toContain('data-testid="widget-layout-edit"')
         // And the tray came with the mode, from the grid this page includes.
         ->and($html)->toContain('data-testid="widget-tray"');
+});
+
+it('offers reset only once the user has a layout of their own', function () {
+    // On a dashboard nobody has arranged there is nothing to reset to — the
+    // button would forget a layout that does not exist.
+    $page = Livewire::test(DpCustomisablePage::class)->call('startEditingWidgets');
+
+    expect($page->html())->not->toContain('data-testid="widget-layout-reset"');
+
+    $page->call('saveWidgetLayout')->call('startEditingWidgets');
+
+    expect($page->html())->toContain('data-testid="widget-layout-reset"');
 });
 
 it('draws none of it on a dashboard nobody may rearrange', function () {
@@ -304,4 +318,87 @@ it('keeps the standalone page s own answer', function () {
     // No dashboard to ask, so the page says so itself — the same division
     // `$layoutKey` makes.
     expect(Livewire::test(DpStandalonePage::class)->instance()->hasSavedWidgetLayouts())->toBeFalse();
+});
+
+// ─── Controls declared on the dashboard ──────────────────────────────────────
+
+final class DpControlledDashboard extends Dashboard
+{
+    public function filters(): array
+    {
+        return [
+            DashboardFilter::make('period')->buttons()
+                ->options(['week' => 'Week', 'month' => 'Month'])
+                ->default('month'),
+        ];
+    }
+
+    public function widgets(): array
+    {
+        return [
+            StatsOverviewWidget::make()->key('made')->heading('Made '.$this->filter('period'))
+                ->stats([Stat::make('Made', '1')]),
+            StatsOverviewWidget::make()->key('money')->heading('Money')->stats([Stat::make('Paid', '2')]),
+            StatsOverviewWidget::make()->key('queue')->heading('Queue')->stats([Stat::make('Waiting', '3')]),
+        ];
+    }
+
+    public function customisable(): bool
+    {
+        return true;
+    }
+
+    public function defaultLayout(): ?array
+    {
+        return ['made'];
+    }
+
+    public function autosave(): bool
+    {
+        return true;
+    }
+
+    public function maxWidgets(): ?int
+    {
+        return 2;
+    }
+}
+
+class DpControlledPage extends DashboardPage
+{
+    protected static ?string $dashboard = DpControlledDashboard::class;
+}
+
+it('takes the default layout, autosave and the limit from the dashboard', function () {
+    PreferenceManager::swap(new SessionPreferenceDriver);
+
+    $page = Livewire::test(DpControlledPage::class);
+
+    expect(array_map(fn (Widget $widget) => $widget->getKey(), $page->instance()->getVisibleWidgets()))->toBe(['made']);
+
+    $page->call('startEditingWidgets')
+        ->call('placeWidget', 'money', 1)
+        ->call('placeWidget', 'queue', 2);
+
+    // Stored without Save, and the third refused at the limit of two.
+    expect(array_column(PreferenceManager::resolve()->load('dp-controlled', null)['widgets'], 'key'))
+        ->toBe(['made', 'money']);
+
+    PreferenceManager::swap(null);
+});
+
+it('hands the dashboard its filter and draws the bar over the grid', function () {
+    $page = Livewire::test(DpControlledPage::class);
+
+    expect($page->html())->toContain('Made month')
+        ->and($page->html())->toContain('data-testid="widget-filters"');
+
+    expect($page->call('setDashboardFilter', 'period', 'week')->html())->toContain('Made week');
+});
+
+it('answers the new questions itself on the standalone path', function () {
+    $page = Livewire::test(DpStandalonePage::class);
+
+    expect($page->instance()->getDashboardFilterState()->filters())->toBe([])
+        ->and($page->instance()->widgetLimitReached())->toBeFalse();
 });

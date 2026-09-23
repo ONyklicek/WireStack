@@ -29,6 +29,16 @@ palette find the area without being told.
 - **Fortify owns the security, `wire-module-auth` owns the screens.** Anything Fortify has an answer for
   stays Fortify's. One-time codes are the only authentication this stack owns: four switches under
   `wire-module-auth.codes`, all off by default.
+- **An auth screen changes through its seams, never by forking the module or working around it.**
+  Fields: `AuthForms::extend(AuthForm::Login, fn (array $fields) => …)` in the application's provider
+  (it boots last and wins). The identity field is named after `fortify.username`, so an application
+  that signs in by username or staff number extends the screens that post to Fortify's `email` —
+  `ForgotPassword`, `ResetPassword`, `Register` — and tells `Fortify::createUsersUsing()` about every
+  field it adds. The frame is `wire-module-auth.layout`. A Fortify response is rebound through its
+  contract (e.g. `EmailVerificationNotificationSentResponse`; the frame prints `session('status')` as
+  text). One screen's markup: `Fortify::loginView(…)` inside @verbatim`<x-wire-module-auth::screen>`@endverbatim; all of
+  them back with `'views' => false`. `search-wire-docs` "Customizing The Screens" has the details —
+  read it before calling any of this a package bug.
 - **Two-factor and teams in the users module are `auto` switches that look for the thing itself** — Fortify
   for 2FA, the permission package for teams — and stay off when it is absent. Do not force them on with a
   config flag the feature cannot honour.

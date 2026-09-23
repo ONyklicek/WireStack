@@ -387,8 +387,9 @@ re-pack — and no way to pin a widget to an absolute cell. `w` is the column sp
   not on the dashboard — it is available to put back. One rule doing two jobs,
   rather than a `hidden` flag beside the order that could disagree with it.
 - **An empty list is not the same as no layout.** Nothing stored means the
-  declaration decides, which is what a user who has never touched this dashboard
-  must see. A stored empty list means somebody took everything off, and they are
+  dashboard's [default layout](#where-it-starts-a-default-layout) decides — or,
+  without one, the declaration — which is what a user who has never touched this
+  dashboard must see. A stored empty list means somebody took everything off, and they are
   entitled to an empty dashboard.
 - **A layout is a preference, never a grant.** A widget the layout places and
   `visible()` or `permission()` hides stays hidden.
@@ -403,6 +404,58 @@ A `row-span-2` tile needs rows of a known height, so a grid that has one gets a
 row baseline and its tiles scroll inside themselves rather than stretching the
 row. A grid where nothing spans rows never gets that baseline — a card there is
 still as tall as its contents, exactly as before.
+
+### Where it starts: a default layout
+
+A dashboard that offers a catalogue of widgets should not put the whole
+catalogue in front of a newcomer. `defaultLayout()` says which widgets somebody
+sees before arranging anything; every other declared widget starts in the tray.
+
+```php
+use NyonCode\WireCore\Widgets\Dashboard;
+
+final class ProductionDashboard extends Dashboard
+{
+    public function customisable(): bool
+    {
+        return true;
+    }
+
+    public function defaultLayout(): ?array                                // [tl! focus:start]
+    {
+        return auth()->user()?->hasRole('technician')
+            ? ['queue' => 'L', 'kpi']                                      // the bench works from its queue
+            : ['kpi' => 'L', 'attention' => [2, 1], 'queue' => 'M'];
+    }                                                                      // [tl! focus:end]
+
+    public function widgets(): array
+    {
+        return [/* kpi, attention, queue, money, … — each with its own key() */];
+    }
+}
+```
+
+The order of resolution is fixed: **a layout the user stored wins**; with none,
+the default layout is placed; with no default either, everything declared is.
+"Reset" forgets the stored layout, so it comes back to the default rather than
+to the whole declaration — and because the default is a real placement, the
+widgets it leaves out are in the tray from the first time the editor opens.
+
+The spec is keys in order, each optionally with a size:
+
+- a bare key arrives at its first offered size, as if added from the tray;
+- `key => [width, height]` is snapped to the nearest size the widget offers on
+  this grid, so a default cannot give a widget a size its declaration refuses;
+- `key => 'L'` names one of the widget's [named sizes](#the-tray); a name it
+  does not declare falls back to the arrival size.
+
+A key the dashboard does not declare is dropped, the same rule a stored layout
+follows. `defaultLayout()` is asked on every render, so it may depend on who is
+looking — which is the reason it exists rather than a constant. A hand-written
+host answers the same question with the protected `defaultWidgetLayout()`, and
+`hasStoredWidgetLayout()` says which of the two the user is looking at: the
+ready-made controls offer Reset only when there is a layout of their own to
+forget.
 
 ### Rearranging it
 
@@ -443,6 +496,33 @@ position and the dropped DOM cannot disagree with the answer.
 
 **Resizing is steppers, not a drag corner.** A span is 1–4 columns and 1–6 rows,
 so there are eleven reachable sizes and a button says which one you are getting.
+A widget that [names its sizes](#the-tray) is offered those names instead —
+`S`, `M`, `L` — because three sizes are three choices, and a stepper would walk
+the user to them one column at a time without saying where the walk ends.
+
+**The drop lands where the outline is.** While a tile is dragged, SortableJS
+keeps a copy of it where it would land; the grid styles that copy as a drop
+target — a dashed outline over a faded tile — so the reader sees where the
+widget goes before letting go. It is a class on the cell (`sortable-ghost`), so
+it costs no JavaScript either.
+
+### Saving as you go
+
+Save and Cancel exist so a stray drag cannot overwrite a layout. A dashboard that
+is a working tool — opened all morning, rearranged in passing — has the opposite
+problem: a forgotten Save loses more than a stray drag does, and Reset is undo
+enough. `autosave()` stores every change as it is made:
+
+```php
+public function autosave(): bool
+{
+    return true;   // every move, resize, add and remove is stored at once
+}
+```
+
+The mode stays — handles and tray appear only while customising — but it ends
+with **Done** instead of Save and Cancel, since there is no draft left to throw
+away. A hand-written host answers with `autosavesWidgetLayout()`.
 
 ### Edit-mode API
 
@@ -459,6 +539,17 @@ public array $widgetLayoutDraft
 
 All of them are no-ops on a dashboard that never opted in — they are public
 Livewire methods, so the browser can call them whenever it likes.
+
+What a hand-written `WithWidgets` host overrides to answer the questions a
+`Dashboard` answers with `defaultLayout()`, `autosave()` and `maxWidgets()`:
+
+```php
+protected function defaultWidgetLayout(): ?array   // a default-layout spec, or null for the declaration
+protected function autosavesWidgetLayout(): bool   // default false — Save and Cancel
+protected function maxWidgets(): ?int              // default null — no limit
+public function hasStoredWidgetLayout(): bool      // the user has a layout of their own
+public function widgetLimitReached(): bool         // as many placed as maxWidgets() allows
+```
 
 ### The tray
 
@@ -512,13 +603,38 @@ the tray. One rule doing two jobs, so the two cannot disagree.
 A widget a policy hides is never offered: a tray listing something that vanishes
 when you add it is worse than one that does not list it.
 
+**The tray says what a widget shows.** Its `description()` is drawn under the
+heading — the tray is where somebody decides what to put on their dashboard, and
+a heading alone rarely tells them. **Sizes can be named**, by keying the pairs:
+
+```php
+StatsOverviewWidget::make()
+    ->key('queue')
+    ->heading('Testing queue')
+    ->description('Pieces waiting for the test bench, oldest first.')   // [tl! focus]
+    ->sizes(['S' => [1, 1], 'M' => [2, 1], 'L' => [4, 1]])            // [tl! focus]
+    ->stats([Stat::make('Waiting', $this->waiting())])
+```
+
+The editor then draws `S M L` in place of the steppers. Names are all or
+nothing — one unnamed pair keeps the steppers — and each button says the size as
+it is *on this grid*: on a two-column dashboard `M` and `L` are the same size, and
+the first name wins, as the first pair does.
+
+**A limit is said in the tray.** `maxWidgets()` on the dashboard (or the host)
+refuses a widget past the limit on the server; the tray then shows why and drops
+its add buttons, rather than offering a click that does nothing. It bounds what a
+user adds — a default or stored layout from before the limit is left as it is.
+
 ### Tray API
 
 ```php
 ->group(?string $group)                    // the tray heading this widget is offered under
-->sizes(array $sizes)                      // [[w, h], …] — the sizes it may take
+->sizes(array $sizes)                      // [[w, h], …] or ['S' => [w, h], …] — named sizes become buttons
 ->getGroup(): ?string
 ->getSizes(): array
+->getSizeLabel(int $width, int $height): ?string   // the name a declared size goes by
+->hasNamedSizes(): bool                    // every offered size has a name
 ->getDefaultSize(): array                  // the first offered pair, or [1, 1]
 ```
 
@@ -528,6 +644,7 @@ on the host:
 ->placeWidget(string $key, int $position): void   // add, or move if already there
 ->removeWidget(string $key): void
 ->getAvailableWidgets(): array                    // group => widgets, for the tray
+->widgetLimitReached(): bool                      // the tray then offers no add buttons
 ->widgetGridData(?int $columns = null): array     // everything the grid view needs
 ```
 
@@ -704,10 +821,15 @@ Inherited from traits:
 ->spansRows(): bool
 
 ->group(?string $group): static             // tray heading it is offered under
-->sizes(array $sizes): static               // [[w, h], …] — the sizes it may take
+->sizes(array $sizes): static               // [[w, h], …] or ['S' => [w, h], …] — the sizes it may take
 ->getGroup(): ?string
 ->getSizes(): array
+->getSizeLabel(int $width, int $height): ?string
+->hasNamedSizes(): bool
 ->getDefaultSize(): array
+
+->ignoresDashboardFilters(bool $ignores = true): static   // CanIgnoreDashboardFilters
+->isIgnoringDashboardFilters(): bool
 
 ->extraAttributes(array $attrs): static      // HasExtraAttributes
 ->getExtraAttributes(): array

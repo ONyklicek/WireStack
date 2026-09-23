@@ -97,6 +97,11 @@ return [
     'widget_save_layout_as' => 'Save as…',
     'widget_save_layout_prompt' => 'Name this layout',
     'widget_delete_layout' => 'Delete this saved layout',
+    'widget_size' => 'Size',
+    'widget_done_layout' => 'Done',
+    'widget_limit_reached' => 'The dashboard holds at most :max widgets. Remove one to add another.',
+    'widget_filters_reset' => 'Clear filters',
+    'widget_ignores_filters' => 'Not filtered',
 
     // The guided walkthrough (Tours/).
     'tour_next' => 'Next',

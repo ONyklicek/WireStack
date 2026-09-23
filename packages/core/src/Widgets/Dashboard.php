@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
 use NyonCode\WireCore\Widgets\Contracts\HasWidgets;
+use NyonCode\WireCore\Widgets\Support\DashboardFilterState;
 
 /**
  * A page's worth of widgets, declared once and away from any component.
@@ -49,6 +50,8 @@ use NyonCode\WireCore\Widgets\Contracts\HasWidgets;
  */
 abstract class Dashboard implements HasWidgets
 {
+    private ?DashboardFilterState $filterState = null;
+
     /**
      * The widgets on this dashboard, in the order they are laid out.
      *
@@ -109,6 +112,85 @@ abstract class Dashboard implements HasWidgets
     public function savedLayouts(): bool
     {
         return false;
+    }
+
+    /**
+     * What a user sees before arranging anything; null places everything declared.
+     *
+     * A spec of widget keys in order, each optionally with a size — a pair or
+     * one of the widget's named sizes:
+     *
+     *   ['revenue', 'orders' => [2, 1], 'queue' => 'L']
+     *
+     * Everything declared and not listed starts in the tray, and "Reset" comes
+     * back here rather than to the whole declaration. An instance method, asked
+     * on every render, so it may depend on who is looking — the test bench wants
+     * its queue, the office wants the money. Means nothing on a dashboard that
+     * is not {@see customisable()}. See `Support\DefaultWidgetLayout`.
+     *
+     * @return array<int|string, mixed>|null
+     */
+    public function defaultLayout(): ?array
+    {
+        return null;
+    }
+
+    /**
+     * Whether a change in edit mode is stored at once rather than on Save.
+     *
+     * False, which keeps the edit mode's point: a stray drag cannot overwrite a
+     * layout until somebody says so. A dashboard used as a working tool all day,
+     * where a forgotten Save is the worse loss and "Reset" is the undo, says
+     * true — its controls then offer Done instead of Save and Cancel.
+     */
+    public function autosave(): bool
+    {
+        return false;
+    }
+
+    /**
+     * The most widgets a user may place on this dashboard; null for no limit.
+     *
+     * Bounds what a user adds from the tray. A dashboard with forty tiles is
+     * unreadable and costs forty widgets of queries per render; the tray says
+     * when the limit is reached rather than letting the page get there.
+     */
+    public function maxWidgets(): ?int
+    {
+        return null;
+    }
+
+    /**
+     * Filters over the whole dashboard, read by every widget.
+     *
+     * Each is one selection in the page's address that `widgets()` narrows by,
+     * through {@see filter()} — so the whole dashboard answers the same
+     * question at once rather than each widget on a slice of its own.
+     *
+     * @return array<int, DashboardFilter>
+     */
+    public function filters(): array
+    {
+        return [];
+    }
+
+    /**
+     * The resolved filter values this dashboard builds its widgets for.
+     *
+     * Set by whatever renders the dashboard, which is the one place the
+     * selection lives; the declaration only reads it.
+     */
+    public function withFilterState(DashboardFilterState $state): static
+    {
+        $this->filterState = $state;
+
+        return $this;
+    }
+
+    /** The value of one of this dashboard's filters, for `widgets()` to narrow by. */
+    protected function filter(string $name): ?string
+    {
+        return ($this->filterState ?? DashboardFilterState::resolve($this->filters(), []))->value($name);
     }
 
     /**

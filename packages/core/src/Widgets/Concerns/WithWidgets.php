@@ -17,6 +17,7 @@ use NyonCode\WireCore\Foundation\Contracts\RunsComponentActions;
 use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver;
 use NyonCode\WireCore\Foundation\Preferences\PreferenceManager;
+use NyonCode\WireCore\Widgets\Support\DefaultWidgetLayout;
 use NyonCode\WireCore\Widgets\Support\WidgetLayout;
 use NyonCode\WireCore\Widgets\Support\WidgetSizeOffer;
 use NyonCode\WireCore\Widgets\Widget;
@@ -24,6 +25,7 @@ use NyonCode\WireCore\Widgets\Widget;
 /** @phpstan-require-extends Component */
 trait WithWidgets
 {
+    use InteractsWithDashboardFilters;
     use InteractsWithPartials;
 
     /**
@@ -119,6 +121,9 @@ trait WithWidgets
     #[Locked]
     public array $loadedWidgets = [];
 
+    /** @var bool|null Whether this user has a layout of their own; memoized with {@see}. */
+    private ?bool $storedWidgetLayout = null;
+
     /**
      * @return array<int, Widget>
      */
@@ -130,6 +135,53 @@ trait WithWidgets
     protected function getWidgetColumns(): int
     {
         return 2;
+    }
+
+    /**
+     * What a user sees before arranging anything, or null for "everything
+     * declared".
+     *
+     * A spec {@see DefaultWidgetLayout} reads — keys in order, optionally with
+     * a size. Everything declared but not in it starts in the tray, and "Reset"
+     * comes back to it rather than to the whole declaration. Asked on every
+     * render, so it may depend on who is looking.
+     *
+     * `WirePanels\Resources\Pages\DashboardPage` overrides this with the
+     * declared dashboard's `defaultLayout()`.
+     *
+     * @return array<int|string, mixed>|null
+     */
+    protected function defaultWidgetLayout(): ?array
+    {
+        return null;
+    }
+
+    /**
+     * Whether a change in edit mode is stored at once rather than on Save.
+     *
+     * Off by default, and that is the decision the edit mode was built on: a
+     * live drag persists on every drop, so a stray grab overwrites a layout
+     * somebody was happy with. An application whose dashboard is a tool worked
+     * in all day, where "Reset" is the undo and a forgotten Save is the worse
+     * loss, turns it on — the controls then offer Done instead of Save and
+     * Cancel.
+     */
+    protected function autosavesWidgetLayout(): bool
+    {
+        return false;
+    }
+
+    /**
+     * The most widgets one user may place, or null for no limit.
+     *
+     * A dashboard with forty tiles is unreadable and runs forty widgets' worth of
+     * queries on every render; a limit refuses the forty-first rather than
+     * letting the page get there. It bounds what a user *adds* — a default or a
+     * stored layout written before the limit is left as it is.
+     */
+    protected function maxWidgets(): ?int
+    {
+        return null;
     }
 
     /**
@@ -290,13 +342,49 @@ trait WithWidgets
             return $this->widgetLayout = WidgetLayout::of($this->widgetLayoutDraft);
         }
 
-        $bag = $this->widgetPreferenceDriver()->load(
+        $layout = WidgetLayout::fromBag($this->widgetPreferenceDriver()->load(
             $key,
             $this->widgetPreferenceUser(),
             $this->widgetLayoutView(),
-        );
+        ));
 
-        return $this->widgetLayout = WidgetLayout::fromBag($bag);
+        $this->storedWidgetLayout = ! $layout->isDeclared();
+
+        // Nothing of their own: the dashboard's default, when it has one. It is
+        // a real placement from here on — which is what puts everything else in
+        // the tray and gives "Reset" somewhere to come back to.
+        $default = $layout->isDeclared() ? $this->defaultWidgetLayout() : null;
+
+        if ($default !== null) {
+            $layout = DefaultWidgetLayout::resolve($default, $this->stampedWidgets(), $this->getWidgetColumns());
+        }
+
+        return $this->widgetLayout = $layout;
+    }
+
+    /**
+     * Whether this user has arranged the dashboard themselves, rather than
+     * seeing its default or its declaration.
+     *
+     * What decides whether "Reset" has anything to reset, and what a dashboard
+     * says about itself ("your layout" against "the default for your role").
+     */
+    public function hasStoredWidgetLayout(): bool
+    {
+        if ($this->widgetLayoutKey() === null) {
+            return false;
+        }
+
+        if ($this->storedWidgetLayout === null) {
+            // While editing the memo holds the draft, so ask the store itself.
+            $this->storedWidgetLayout = ! WidgetLayout::fromBag($this->widgetPreferenceDriver()->load(
+                (string) $this->widgetLayoutKey(),
+                $this->widgetPreferenceUser(),
+                $this->widgetLayoutView(),
+            ))->isDeclared();
+        }
+
+        return $this->storedWidgetLayout;
     }
 
     /**
@@ -378,6 +466,16 @@ trait WithWidgets
             return;
         }
 
+        $this->persistWidgetDraft($key);
+
+        $this->editingWidgets = false;
+        $this->widgetLayoutDraft = [];
+        $this->widgetLayout = null;
+    }
+
+    /** Write the draft to the store — Save, or every change on an autosaving dashboard. */
+    private function persistWidgetDraft(string $key): void
+    {
         $this->widgetPreferenceDriver()->save(
             $key,
             $this->widgetPreferenceUser(),
@@ -391,9 +489,7 @@ trait WithWidgets
             $this->widgetLayoutView(),
         );
 
-        $this->editingWidgets = false;
-        $this->widgetLayoutDraft = [];
-        $this->widgetLayout = null;
+        $this->storedWidgetLayout = true;
     }
 
     /**
@@ -537,6 +633,8 @@ trait WithWidgets
 
         $this->widgetPreferenceDriver()->forget($key, $this->widgetPreferenceUser(), $this->widgetLayoutView());
 
+        $this->storedWidgetLayout = false;
+
         $this->cancelEditingWidgets();
     }
 
@@ -572,6 +670,12 @@ trait WithWidgets
         $widget = $this->declaredWidget($key);
 
         if ($widget === null) {
+            return;
+        }
+
+        // A widget already placed may still move; only a new one counts against
+        // the limit.
+        if ($this->widgetLimitReached() && ! WidgetLayout::of($this->widgetLayoutDraft)->has($key)) {
             return;
         }
 
@@ -637,6 +741,14 @@ trait WithWidgets
             // Named per component so two dashboards on one page cannot pull
             // tiles out of each other.
             'trayGroup' => 'wire-widgets-'.$this->getId(),
+            // The controls a real application asked for: Done instead of
+            // Save / Cancel, Reset only where there is something of the user's
+            // to reset, the tray saying when it is full, and the filter bar.
+            'autosave' => $this->autosavesWidgetLayout(),
+            'hasStoredLayout' => $this->hasStoredWidgetLayout(),
+            'atWidgetLimit' => $this->widgetLimitReached(),
+            'maxWidgets' => $this->maxWidgets(),
+            'filterState' => $this->getDashboardFilterState(),
         ];
     }
 
@@ -728,6 +840,31 @@ trait WithWidgets
 
         $this->widgetLayoutDraft = $change(WidgetLayout::of($this->widgetLayoutDraft))->toBag()['widgets'];
         $this->widgetLayout = null;
+
+        if ($this->autosavesWidgetLayout()) {
+            $this->persistWidgetDraft((string) $this->widgetLayoutKey());
+        }
+    }
+
+    /**
+     * Whether a user has placed as many widgets as {@see maxWidgets()} allows.
+     *
+     * Counted from the draft while editing — what the user is arranging — and
+     * from the dashboard as drawn otherwise.
+     */
+    public function widgetLimitReached(): bool
+    {
+        $max = $this->maxWidgets();
+
+        if ($max === null) {
+            return false;
+        }
+
+        $placed = $this->editingWidgets
+            ? count($this->widgetLayoutDraft)
+            : count($this->getVisibleWidgets());
+
+        return $placed >= $max;
     }
 
     private function widgetPreferenceDriver(): PreferenceDriver

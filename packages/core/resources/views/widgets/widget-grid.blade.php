@@ -34,6 +34,11 @@
     // into.
     $trayGroup = $trayGroup ?? 'wire-widgets';
     $available = $available ?? [];
+
+    // Whether the dashboard's filters are narrowing it right now — what puts
+    // the "not filtered" mark on a widget that declared it ignores them. Absent
+    // on the component path, where there are no dashboard filters at all.
+    $filtersNarrowed = isset($filterState) && $filterState->isNarrowed();
 @endphp
 
 @if($anyAnchored)
@@ -45,7 +50,13 @@
      them. A hook name, so it is kept once it has shipped. --}}
 <div class="wire-widget-grid" @wireEl('widget-grid')>
     @if($editing)
-        @include('wire-core::widgets.partials.widget-tray', ['available' => $available, 'trayGroup' => $trayGroup, 'columns' => $columns])
+        @include('wire-core::widgets.partials.widget-tray', [
+            'available' => $available,
+            'trayGroup' => $trayGroup,
+            'columns' => $columns,
+            'atWidgetLimit' => $atWidgetLimit ?? false,
+            'maxWidgets' => $maxWidgets ?? null,
+        ])
     @endif
 
     {{-- Responsive: 1 col on mobile, growing toward the configured count.
@@ -81,7 +92,12 @@
                           ramps later than a field grid, and a span it cannot
                           honour is the one thing that must never reach the page:
                           CSS Grid answers it by adding the column. --}}
-                     class="{{ $widget->inGridOf($ladder)->getColumnSpanClass() }} {{ $widget->getRowSpanClass() }} {{ $editing ? 'relative' : '' }}"
+                     {{-- While a tile is dragged SortableJS keeps a `sortable-ghost`
+                          copy where it would land. Styled as a drop target — a
+                          dashed outline over a faded tile — so the reader sees
+                          where the widget goes before letting go, with no
+                          JavaScript of ours. --}}
+                     class="{{ $widget->inGridOf($ladder)->getColumnSpanClass() }} {{ $widget->getRowSpanClass() }} {{ $editing ? 'relative rounded-lg [&.sortable-ghost]:opacity-60 [&.sortable-ghost]:outline-dashed [&.sortable-ghost]:outline-2 [&.sortable-ghost]:outline-offset-2 [&.sortable-ghost]:outline-primary-500' : '' }}"
                      {{-- `@js`, not the bare key: the plugin *evaluates* what
                           `x-sort:item` holds (`el._x_sort_key = evaluate(expression)`),
                           so a bare `revenue` is an identifier and throws
@@ -94,6 +110,15 @@
                      @if($widget->isLazy()) wire:init="loadWidget('{{ $widget->getKey() }}')" @endif>
                     @if($editing)
                         @include('wire-core::widgets.partials.widget-edit-controls', ['widget' => $widget, 'columns' => $columns])
+                    @endif
+                    {{-- Said, not hidden: the widget still shows everything,
+                         and a reader comparing it with its filtered neighbours
+                         needs to know it is not one of them. --}}
+                    @if($filtersNarrowed && $widget->isIgnoringDashboardFilters())
+                        <p class="mb-1 text-[11px] font-medium text-gray-400 dark:text-gray-500"
+                           data-testid="widget-unfiltered-{{ $widget->getKey() }}" @wireEl('widget-unfiltered')>
+                            {{ __('wire-core::messages.widget_ignores_filters') }}
+                        </p>
                     @endif
                     {{-- Only a widget something replaces on its own needs an
                          anchor, so a dashboard that neither polls, defers nor
