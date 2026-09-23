@@ -109,6 +109,27 @@ Alpine dodává a startuje.
 ---
 
 <a id="wirex-is-not-defined-after-a-wire-navigate-visit"></a>
+## Vnořená tabulka ukazuje řádky vnější tabulky
+
+**Příznak:** Na stránce, jejíž komponenta má tabulku a zároveň obsahuje další
+Livewire komponentu s vlastní tabulkou (zakázka s dodacími listy v záložce),
+řazení ani změna počtu na stránku vnější tabulkou nepohne, zato vnořená tabulka
+najednou vypisuje řádky té vnější. V konzoli je `isSelected is not defined`
+a podobné.
+
+**Příčina:** Livewire 4 aplikuje fragment islandu tak, že v DOM komponenty
+hledá značku s tokenem fragmentu — a u vnořené komponenty se nezastaví. Token
+pojmenovává zkompilovaný view islandu, takže ho sdílí každá tabulka na stránce
+(`data-region`, `action-modals`), a fragment vnější tabulky dopadne do vnitřní.
+Platí pro všechny verze Livewire 4.x do 4.4.6 (oprava navržena
+v [livewire/livewire#10737](https://github.com/livewire/livewire/pull/10737)).
+
+**Řešení:** Nechte v layoutu `@wireStackScripts` — wire-core 2.1.1 po dobu
+každé zprávy skryje značky vnořených komponent, takže fragment může dopadnout
+jen do své komponenty. Layout bez bundlu wire-core obcházku nedostane.
+
+---
+
 ## `wireX is not defined` po návštěvě přes `wire:navigate`
 
 **Příznak:** Stránka funguje, když se načte přímo, ale při příchodu přes

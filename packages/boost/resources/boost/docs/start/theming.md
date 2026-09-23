@@ -299,6 +299,7 @@ The framework carries a few hundred; these are the ones most themes start from:
 | `admin-nav-item`, `admin-nav-label`, `admin-nav-badge-dot` | One entry in the menu |
 | `table-search`, `table-toolbar`, `table-bulk-bar` | The chrome above a table |
 | `form-field` | The wrapper every form field has |
+| `tour-panel`, `tour-highlight`, `tour-backdrop` | The guided walkthrough, when one is running |
 | `badge`, `button`, `callout`, `dropdown`, `menu-item`, `section` | The shared components, anywhere they appear |
 
 ### What the name promises
