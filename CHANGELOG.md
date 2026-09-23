@@ -302,11 +302,6 @@ All notable changes to the Wire ecosystem will be documented in this file.
   needs (`->name('sales.')` on an inner group, beside hand-written routes that keep their old names). The
   prefix is now read off the last layer alone; a single group behaves as before. Covered by a regression
   test in `PanelEntryTest`.
-
-## [2.1.1]
-
-### Fixed
-
 - **A tablet can reach the row's actions.** A tablet is wide enough for the desktop table, so it got
   neither the stacked card's buttons nor anything a finger can do with a double click, a right click or a
   key — a table whose record actions were all gestures offered none of them on an iPad. The row now keeps
@@ -324,6 +319,21 @@ All notable changes to the Wire ecosystem will be documented in this file.
   the `intl` Collator for `app()->getLocale()`, or without accents where the extension is missing;
   numbers compare as numbers and an empty value sorts first, as a database would. Several sort
   clauses are one comparison now, the first deciding and the next breaking its ties.
+
+## [2.1.1]
+
+### Fixed
+
+- **A table inside another table's page keeps its own rows.** Livewire 4 applies an island fragment by
+  searching the component's DOM for the marker with the fragment's token, and the search does not stop
+  at a nested component (`renderIsland()` passes no `hasReachedBoundary`; `walkElements()` honours
+  `stop()` only for the element that matched). The token names the compiled island view, so every table
+  on a page shares `data-region` and `action-modals` — and a sort or page size on the outer table landed
+  in the nested one: the outer grid did not change, the inner one showed its rows and threw
+  `isSelected is not defined`. wire-core now hides the same-token markers of nested components for the
+  length of one message (`support/island-scope.js`). Present in every Livewire 4.x up to 4.4.6; remove the
+  workaround once Livewire scopes `renderIsland()` to the component
+  ([livewire/livewire#10737](https://github.com/livewire/livewire/pull/10737)).
 
 ## [2.1.0]
 

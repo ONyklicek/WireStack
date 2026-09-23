@@ -3,6 +3,7 @@ import { computePosition, autoUpdate, flip, shift, offset, size } from '@floatin
 import { syncNodeOf } from './editable/sync'
 import { targeting } from './support/island'
 import './support/partials'
+import './support/island-scope'
 import wireSearchableSelect from './select/controller'
 
 /**

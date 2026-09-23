@@ -109,6 +109,28 @@ Livewire provide it.
 
 ---
 
+## A nested table shows the outer table's rows
+
+**Symptom:** On a page whose component has a table and also contains another
+Livewire component with its own table (an order with its delivery notes in a
+tab), sorting or changing the page size of the outer table does nothing to it,
+while the nested table suddenly lists the outer table's rows. The console shows
+`isSelected is not defined` and similar.
+
+**Cause:** Livewire 4 applies an island fragment by searching the component's
+DOM for the marker carrying the fragment's token — and it does not stop at a
+nested component. The token names the compiled island view, so every table on
+the page shares it (`data-region`, `action-modals`), and the outer table's
+fragment lands in the inner one. Present in every Livewire 4.x up to 4.4.6
+(fix proposed in [livewire/livewire#10737](https://github.com/livewire/livewire/pull/10737)).
+
+**Fix:** Keep `@wireStackScripts` in the layout — wire-core 2.1.1 hides the
+nested markers for the length of each message, so the fragment can only land in
+its own component. A layout without the wire-core bundle does not get the
+workaround.
+
+---
+
 ## `wireX is not defined` after a `wire:navigate` visit
 
 **Symptom:** A page works when loaded directly, but reaching it through
