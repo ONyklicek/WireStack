@@ -86,6 +86,16 @@ $this->app->resolving(PluginManager::class, function (PluginManager $manager): v
   deliberately not detected, and the role and team surfaces stay off.
 - **Fortify owns the security, `wire-module-auth` owns the screens.** One-time codes are the only
   authentication this stack owns — four switches under `wire-module-auth.codes`, all off by default.
+- **An auth screen changes through its seams, never by forking the module or working around it.**
+  Fields: `AuthForms::extend(AuthForm::Login, fn (array $fields) => …)` in the application's provider
+  (it boots last and wins). The identity field is named after `fortify.username`, so an application
+  that signs in by username or staff number extends the screens that post to Fortify's `email` —
+  `ForgotPassword`, `ResetPassword`, `Register` — and tells `Fortify::createUsersUsing()` about every
+  field it adds. The frame is `wire-module-auth.layout`. A Fortify response is rebound through its
+  contract (e.g. `EmailVerificationNotificationSentResponse`; the frame prints `session('status')` as
+  text). One screen's markup: `Fortify::loginView(…)` inside `<x-wire-module-auth::screen>`; all of
+  them back with `'views' => false`. `search-wire-docs` "Customizing The Screens" has the details —
+  read it before calling any of this a package bug.
 - **Two-factor and teams are `auto` switches that look for the thing itself** (Fortify, the permission
   package) and stay off when it is absent. Do not force one on with a flag the feature cannot honour.
 - **`wire:install` never runs composer.** It offers what it found and prints the `composer require` line for

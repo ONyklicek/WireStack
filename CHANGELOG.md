@@ -2,6 +2,18 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **The boost guidance says how an auth screen is changed.** The `wire-modules` guideline and the
+  `wire-modules-development` skill said who owns what — Fortify the security, `wire-module-auth` the screens —
+  but not where a project adapts them, so an agent in an application signing in by username read the
+  identity field posting under `fortify.username` as a package bug and wrote a workaround. They now name the
+  seams: `AuthForms::extend()` for fields (and the three screens that post Fortify's `email`), the layout key,
+  rebinding a Fortify response contract, `Fortify::*View()` inside `<x-wire-module-auth::screen>`, and
+  `'views' => false`.
+
 ## [2.2.0]
 
 ### Added
