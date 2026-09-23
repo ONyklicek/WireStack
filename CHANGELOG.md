@@ -66,6 +66,42 @@ All notable changes to the Wire ecosystem will be documented in this file.
   `TourProgressTest` (9), two more in `TourAcrossPagesTest`, one in panels' `RouteAccessTest`, and seven new
   checks in `verify-demo-tour`.
 
+- **A tour can ask before it starts, and be put off.** `Tours\TourWelcome` opens a tour with a card in
+  the middle of the screen — a heading, a line or two, and two buttons — instead of dimming the page and
+  pointing at something uninvited. Opt-in per tour through `Tour::welcome()`, and shown only when the tour
+  starts from the top: somebody carried onto a page by `TourStep::on()`, or returning to a walkthrough they
+  left halfway, is put back where they were rather than asked whether to start something already running.
+  The plan is built before the card is shown, so a tour with nothing it can point at still does not greet.
+  "Later" is the third outcome, and the first that is not final — finishing and skipping are one call
+  because both are decisions. It is stamped with the **session id** rather than a clock, so "not in this
+  sitting" means the same on the `session` driver and on `database`, where a bare flag would have been a
+  skip under another name; no duration to configure and no time zone to get wrong. Each one is counted
+  under `postponed` in the tours bag, and the one that spends `Tour::postpone(int $times)`
+  (`wire-core.tours.postpone`, `WIRE_TOURS_POSTPONE`, default 3) acknowledges the tour rather than
+  recording a fourth state — so a greeting cannot return for ever. `postpone(0)` removes the button, and a
+  tour that never offered the choice records nothing when the event is forged. Escape dismisses the card
+  and means the same as Later. Five element hooks (`tour-welcome`, `-heading`, `-text`, `-start`,
+  `-later`), `tour_start` / `tour_later` in both locales, and `TourWelcome::view()` for an application's
+  own markup, included inside the tour's Alpine scope with `greeting`, `begin()`, `later()` and the
+  `welcome` payload in reach. Covered by `TourWelcomeTest` (23), one more in `TourAcknowledgementTest`,
+  and the new `verify-tour-welcome` driver (14 checks). See `docs/core/tour-welcome.md`.
+
+- **A "replay the tour" button anywhere, not only in the user menu.** The menu entry is drawn only where a
+  tour already claims the screen, so forgetting it there is enough — the browser reloads the page it is on.
+  A trigger anywhere else is for a tour that runs where the person is not, and forgetting alone appears to
+  do nothing. `TourState::replayNow()` forgets it *and* answers with the way to the screen it runs on: the
+  address is built from the tour's own `zones()`, `resource()` and `page()` through `ResolvesPageUrls`,
+  checked against the page's own rules with `AuthorizesUrls`, and carried in the same query a cross-page
+  step already travels by, so the tour is running when the page opens. It is never taken from the request —
+  what the first replay refused was a redirect target held in a public Livewire property, which is writable
+  from the browser. Null is a real answer, for a tour scoped to nothing narrower than a zone or one whose
+  page this person may not open, and the tour is forgotten either way. `Tours\TourDestination` is an
+  extraction rather than an addition: `TourHost` already answered "where is this tour's page, and may this
+  person open it", and this is the second asker. `TourState::postpone()` and `acknowledge()` are public
+  beside it, which is what a test uses. See `docs/core/tours.md` § Replaying, which now shows the four ways
+  to put the button on a screen — its own view, a table's header action, a render hook, and an entry of
+  your own in the user menu.
+
 - **A browser-sessions card on the profile page.** `BrowserSessionManagement` lists where the
   account is signed in — platform, browser, IP address, last activity — and, after the password,
   ends every other session: it deletes their rows on the `database` session driver and calls
