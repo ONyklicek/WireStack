@@ -119,8 +119,12 @@ it('ends every other session of this account, and keeps this one signed in', fun
         ->assertSet('confirming', false)
         ->assertSet('data.password', null);
 
-    expect(DB::table('sessions')->pluck('id')->sort()->values()->all())
-        ->toBe([session()->getId(), 'theirs'])
+    // Canonicalizing, because one of the two ids is `Str::random(40)`: sorting
+    // the rows and comparing them to a literal asserted that a random string
+    // sorts before `theirs`, which it does roughly nine times in ten. Which
+    // rows are left is the fact here; the order they come back in is not.
+    expect(DB::table('sessions')->pluck('id')->all())
+        ->toEqualCanonicalizing([session()->getId(), 'theirs'])
         // The rehash is what ends a session on any other driver.
         ->and($me->refresh()->password)->not->toBe($hash)
         ->and(Hash::check('secret', $me->password))->toBeTrue()
