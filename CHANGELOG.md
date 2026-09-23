@@ -2,7 +2,7 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
-## [2.1.1]
+## [2.2.0]
 
 ### Added
 
@@ -117,6 +117,24 @@ All notable changes to the Wire ecosystem will be documented in this file.
   overwritten, both halves are idempotent, and a config that is not published yet leaves the pair on disk
   with the line to add. The clean-install gate asserts the landing is a widget grid rather than a forward,
   in the shell and in a browser.
+
+### Changed
+
+- **A resource page and another route can no longer share a path — in either order.** Laravel keys routes
+  by method and URI, so a second route at a path does not shadow the first: it replaces it, name and all,
+  without a word. `Route::wireResources()` guarded only the entry at a group's root (`wire.home`), and only
+  against routes registered before it; a page could replace a route of the application's, and a route
+  further down the route file could replace a page and leave its menu entry rendered and linking nowhere.
+  The new `Routing\RouteClaims` records what the macros register. A page whose path a route already answers
+  is refused with `ResourceRoutingException::pathTaken()`, and a route registered over a page later is
+  refused with `pathTakenLater()` once every route is loaded — at boot, so `route:cache` refuses it too
+  rather than caching the broken set. **This fails where it used to pass**: an application that has such a
+  collision today stops at boot, with a message naming the resource, the page, the path and the route in
+  its way. The entry at the root yields in both orders — a route the application puts there, before the
+  group or after it, is its own claim on the root — and a page routed twice over itself, a landing page
+  taking the root from the entry, one path on two hosts, and a collection swapped wholesale (installing
+  cached routes) all still pass. Covered by eight tests in `RouteClaimsTest` and checked against the
+  workbench in both orders. See `docs/panels/routing.md` § The URL shape.
 
 ### Fixed
 
@@ -239,6 +257,20 @@ All notable changes to the Wire ecosystem will be documented in this file.
   disabled, and the server snaps whatever the browser sends to the same answer. Both bounds — the
   declaration and the grid — have one owner, `Widgets\Support\WidgetSizeOffer`, because they are the
   same question asked twice.
+- **`wireResources()` inside a nested group replaced the application's route at the group root.**
+  Laravel merges the prefix into every layer of the group stack, so the last layer already carries the
+  whole path; `ResourceRoutes::groupPrefix()` joined all of them, and a middleware or name group nested
+  under `prefix('sales')` answered `sales/sales`. The root check never matched, `wire.home` was registered
+  over the application's route at `sales` and took its name with it — silently, and against the documented
+  promise that the entry never replaces a route already at that path. It is the shape a gradual migration
+  needs (`->name('sales.')` on an inner group, beside hand-written routes that keep their old names). The
+  prefix is now read off the last layer alone; a single group behaves as before. Covered by a regression
+  test in `PanelEntryTest`.
+
+## [2.1.1]
+
+### Fixed
+
 - **A tablet can reach the row's actions.** A tablet is wide enough for the desktop table, so it got
   neither the stacked card's buttons nor anything a finger can do with a double click, a right click or a
   key — a table whose record actions were all gestures offered none of them on an iPad. The row now keeps
