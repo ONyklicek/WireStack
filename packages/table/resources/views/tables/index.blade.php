@@ -198,6 +198,14 @@
             <div
                     class="w-full"
                     wire:key="table-wrapper"
+                    {{-- The rows and the modals are islands; the poll, the search
+                         box and the filters are not, and all of them write the same
+                         table state. Livewire runs an island request and a root
+                         request side by side and lets the later response win, so a
+                         page-size change landing beside a poll tick was undone by
+                         the tick. This asks wire-core to sequence them the way
+                         Livewire sequences one scope (support/island-coordination.js). --}}
+                    data-wire-islands="shared-state"
                     @if($isSelectable)
                         data-page-keys="{{ json_encode($pageRecordKeys) }}"
                         data-matching="{{ $recordCount }}"
