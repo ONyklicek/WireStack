@@ -33,25 +33,32 @@
  * `data-wire-islands="shared-state"` on any element the component itself owns
  * (not one inside a nested component). wire-table renders it on its wrapper.
  *
+ * What is tracked is the ACTION, from the moment this sees it until its
+ * `onFinish` (which also fires on cancel, skip and error) — not the message.
+ * Livewire attaches message interceptors only when a request is sent, so a
+ * message is invisible between being created and leaving: 5 ms in the buffer,
+ * and much longer for an action held back behind another one. A tick landing
+ * in that window saw nothing in flight and went out beside it — found by an
+ * application where an event dispatched on load held the page-size change back,
+ * and the tick slipped in the moment it was released.
+ *
  * Runs after Livewire's own interceptor — that one is registered in a microtask
- * when Livewire loads, this one on `livewire:init` or later — so an action it
- * already cancelled or deferred within its scope is left to it.
+ * when Livewire loads, this one on `livewire:init` or later. An action Livewire
+ * already cancelled is ignored; one it deferred within its own scope is tracked
+ * but left to it.
+ *
+ * Registered once per page even though the bundle may execute twice (the
+ * directive and a surface's fallback partial can both emit it): the guard is on
+ * `window`, because each execution of an IIFE has a scope of its own.
  */
 
 const MARKER = '[data-wire-islands="shared-state"]'
+const GUARD = '__wireIslandCoordination'
 
-/** @type {WeakMap<object, Set<object>>} component -> messages in flight */
-const inFlight = new WeakMap()
+/** @type {WeakMap<object, Set<object>>} component -> actions not yet finished */
+const outstanding = new WeakMap()
 
 const scopeOf = (action) => action.metadata?.island?.name ?? null
-
-const messageScope = (message) => {
-    const actions = Array.from(message.actions ?? [])
-
-    return actions.length && actions.every((action) => action.metadata?.island)
-        ? actions.map(scopeOf).sort().join('|')
-        : null
-}
 
 const isPoll = (action) => action.metadata?.type === 'poll'
 
@@ -69,50 +76,45 @@ const sharesState = (component) => {
     return false
 }
 
-let registered = false
+const track = (action, onFinish) => {
+    let actions = outstanding.get(action.component)
+
+    if (! actions) outstanding.set(action.component, actions = new Set())
+
+    actions.add(action)
+    onFinish(() => actions.delete(action))
+}
 
 const register = () => {
-    if (registered || ! window.Livewire?.interceptMessage || ! window.Livewire?.interceptAction) return
-    registered = true
+    if (window[GUARD] || ! window.Livewire?.interceptAction) return
+    window[GUARD] = true
 
-    window.Livewire.interceptMessage(({ message, onFinish }) => {
-        const component = message.component
-        let messages = inFlight.get(component)
+    window.Livewire.interceptAction(({ action, onFinish }) => {
+        if (action.isCancelled?.()) return
 
-        if (! messages) inFlight.set(component, messages = new Set())
+        const others = Array.from(outstanding.get(action.component) ?? [])
+            .filter((other) => ! other.isCancelled?.() && scopeOf(other) !== scopeOf(action))
 
-        messages.add(message)
-        onFinish(() => messages.delete(message))
-    })
+        track(action, onFinish)
 
-    window.Livewire.interceptAction(({ action }) => {
-        if (action.isCancelled?.() || action.isDeferred?.()) return
-        if (action.isAsync?.()) return
-
-        const scope = scopeOf(action)
-        const others = Array.from(inFlight.get(action.component) ?? [])
-            .filter((message) => ! message.isCancelled?.() && messageScope(message) !== scope)
-
+        if (action.isDeferred?.() || action.isAsync?.()) return
         if (! others.length || ! sharesState(action.component)) return
-
-        if (others.some((message) => message.isAsync?.())) return
+        if (others.some((other) => other.isAsync?.())) return
 
         if (isPoll(action)) return action.cancel()
 
-        const polls = others.filter((message) => Array.from(message.actions).every(isPoll))
+        others.filter(isPoll).forEach((poll) => poll.cancel())
 
-        polls.forEach((message) => message.cancel())
+        const waitFor = others.filter((other) => ! isPoll(other))
 
-        const pending = others.filter((message) => ! polls.includes(message))
-
-        if (! pending.length) return
+        if (! waitFor.length) return
 
         action.defer()
 
-        let waiting = pending.length
+        let waiting = waitFor.length
 
-        pending.forEach((message) => message.addInterceptor(({ onFinish }) => {
-            onFinish(() => {
+        waitFor.forEach((other) => other.addInterceptor(({ onFinish: settled }) => {
+            settled(() => {
                 if (--waiting === 0 && ! action.isCancelled?.()) action.fire()
             })
         }))

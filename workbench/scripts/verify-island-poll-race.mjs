@@ -88,6 +88,80 @@ try {
   check('the select still says 25', await eval_('perPage().value') === '25', await eval_('perPage().value'));
   await shot('01-per-page');
 
+  // ── 1b. a change held back behind a root request, released into a tick ─
+  // The change waits for the root request, then sits in Livewire's send buffer
+  // for a few ms. A tick landing in that window used to see nothing in flight
+  // (message interceptors attach only when a request leaves) and went out
+  // beside it. Four times over: each change must land, and no uncancelled tick
+  // may overlap its request.
+  await eval_(`
+    window.__net = { log: [], holdRefresh: false };
+    const inner = window.fetch;
+    window.fetch = async (input, options = {}) => {
+      if (typeof options.body !== 'string') return inner(input, options);
+      const methods = (() => { try {
+        return JSON.parse(options.body).components.flatMap((c) => (c.calls || []).map((x) => x.method));
+      } catch (e) { return []; } })();
+      const updates = (() => { try {
+        return JSON.parse(options.body).components.some((c) => Object.keys(c.updates || {}).length);
+      } catch (e) { return false; } })();
+      const entry = { methods, updates, sent: performance.now(), done: null, aborted: false };
+      __net.log.push(entry);
+      try {
+        const response = await inner(input, options);
+        if (__net.holdRefresh && methods.includes('$refresh')) await new Promise((r) => setTimeout(r, ${HOLD_MS}));
+        entry.done = performance.now();
+        return response;
+      } catch (e) { entry.aborted = true; entry.done = performance.now(); throw e; }
+    };
+    window.$host = () => Livewire.find(perPage().closest('[wire\\\\:id]').getAttribute('wire:id'));
+
+    // The moment the held root request finishes, the change it held back is
+    // released into Livewire's 5 ms send buffer. A tick fired right then —
+    // through Livewire's own public fireAction(), with the metadata wire:poll
+    // gives it — is the worst case, reached deterministically.
+    window.__tickOnRelease = false;
+    Livewire.interceptMessage(({ message, onFinish }) => {
+      if (! Array.from(message.actions).some((a) => a.name === '$refresh')) return;
+      onFinish(() => {
+        if (! __tickOnRelease) return;
+        // The catch is for fireAction() alone: its promise rejects unhandled when
+        // an interceptor cancels the action, which wire:poll's own path does not.
+        setTimeout(() => Livewire.fireAction($host().__instance ?? $host(), 'refreshTable', [], { type: 'poll' })
+          .catch(() => null), 0);
+      });
+    });
+    true;
+  `);
+
+  const overlaps = [];
+  let landed = 0;
+  for (const size of ['50', '25', '50', '25']) {
+    await eval_(`__net.log = []; __net.holdRefresh = true; __tickOnRelease = true; $host().$refresh(); true`);
+    await until(() => eval_(`__net.log.some((e) => e.methods.includes('$refresh') && ! e.done)`), { timeout: 3000 });
+    await eval_(`perPage().value = '${size}'; perPage().dispatchEvent(new Event('change', { bubbles: true })); true`);
+    await until(() => eval_(`__net.log.some((e) => e.methods.includes('$refresh') && e.done)`), { timeout: HOLD_MS * 3 });
+    await sleep(200);
+    await eval_('__net.holdRefresh = false; __tickOnRelease = false; true');
+    await sleep(2500);
+
+    const expected = size === '50' ? 40 : 25;
+    if (await rowCount() === expected && await eval_('perPage().value') === size) landed++;
+
+    overlaps.push(...JSON.parse(await eval_(`JSON.stringify((() => {
+      const change = __net.log.find((e) => e.updates && e.methods.includes('$commit'));
+      if (! change) return ['change never sent'];
+      return __net.log
+        .filter((e) => e.methods.includes('refreshTable') && ! e.aborted)
+        .filter((e) => e.sent < (change.done ?? Infinity) && (e.done ?? Infinity) > change.sent)
+        .map((e) => 'tick ' + Math.round(e.sent) + '..' + Math.round(e.done ?? -1) + ' over change ' + Math.round(change.sent) + '..' + Math.round(change.done ?? -1));
+    })())`)));
+  }
+  check('a change held back behind a root request lands every time', landed === 4, `${landed}/4`);
+  check('…and no tick runs beside it once it is released', overlaps.length === 0, overlaps.slice(0, 2).join('; ') || 'none');
+  await eval_(`perPage().value = '25'; perPage().dispatchEvent(new Event('change', { bubbles: true })); true`);
+  await until(async () => await rowCount() === 25, { timeout: 5000 });
+
   // ── 2. sort changed while a tick is held ───────────────────────────────
   const before = await eval_('firstName()');
   await until(pollHeld, { timeout: 5000 });

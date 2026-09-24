@@ -2,6 +2,21 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.2.5]
+
+### Fixed
+
+- **A poll tick no longer slips past a table control that was held back.** 2.2.3 sequenced a table's island and
+  root requests by the messages in flight, but Livewire attaches message interceptors only when a request
+  leaves: a control held back behind another root request, and then released into Livewire's 5 ms send
+  buffer, was invisible for that moment, and a tick landing in it went out beside it — the page-size change
+  was undone just as before. `support/island-coordination.js` now tracks each action from the moment it is
+  seen until its `onFinish` (which also fires on cancel, skip and error), including actions Livewire deferred
+  within their own scope, and registers once per page even when the bundle executes twice (the guard moved
+  onto `window`). Found by an application whose order detail dispatched an event on load that held the change
+  back; `verify-island-poll-race.mjs` now fires a tick at the moment of release through `Livewire.fireAction()`
+  and fails against 2.2.3.
+
 ## [2.2.4]
 
 ### Fixed
