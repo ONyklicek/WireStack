@@ -2,6 +2,21 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.2.4]
+
+### Fixed
+
+- **The one-time codes table migrates on MariaDB before 10.10.** `create_wire_auth_one_time_codes_table`
+  declared `expires_at` and `created_at` as NOT NULL `timestamp` columns with no default. With
+  `explicit_defaults_for_timestamp` off — the default on MariaDB up to 10.9 and on MySQL 5.7 — the database
+  gives the second a zero date, which strict mode refuses (`1067 Invalid default value for 'created_at'`), so
+  the migration failed; and it gives the first `ON UPDATE CURRENT_TIMESTAMP`, which would have moved a code's
+  expiry to "now" on every wrong guess. Both are `dateTime` now; `DatabaseOneTimeCodes` writes them itself.
+  An application that already published the migration and has not run it yet should change its copy the same
+  way; one that already ran it (MySQL 8, MariaDB 10.10+) has correct columns and needs nothing. Found by an
+  application deploying to MariaDB 10.6; `MigrationTimestampPortabilityTest` now refuses a NOT NULL timestamp
+  without a default in any shipped migration, since CI's MySQL 8 and MariaDB 11 cannot produce the failure.
+
 ## [2.2.3]
 
 ### Fixed

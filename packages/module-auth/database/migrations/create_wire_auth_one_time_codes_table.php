@@ -37,8 +37,14 @@ return new class extends Migration
             // guessed.
             $table->unsignedTinyInteger('attempts')->default(0);
 
-            $table->timestamp('expires_at');
-            $table->timestamp('created_at');
+            // dateTime, not timestamp. MariaDB before 10.10 (and MySQL with
+            // explicit_defaults_for_timestamp off) gives the first NOT NULL
+            // timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP —
+            // every wrong guess would move the expiry to "now" — and the second
+            // a zero date, which strict mode refuses, so the migration fails.
+            // Both values are written by DatabaseOneTimeCodes; no default is wanted.
+            $table->dateTime('expires_at');
+            $table->dateTime('created_at');
         });
     }
 
