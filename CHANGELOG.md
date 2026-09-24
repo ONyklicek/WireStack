@@ -2,6 +2,25 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.2.3]
+
+### Fixed
+
+- **A table control no longer undoes itself beside a poll tick.** The rows and modals of a table are Livewire
+  islands and its `wire:poll` is not; Livewire 4 coordinates overlapping requests only within one scope, so a
+  page-size change or a sort fired inside the island while a tick was in flight went out beside it with the
+  same snapshot, and when the tick came back last its older snapshot overwrote the change — the select jumped
+  back and the rows stayed. Cell saves and opened modals raced the same way, and so did the search box against
+  a sort. wire-core now applies Livewire's own rules across all scopes of a component that renders
+  `data-wire-islands="shared-state"`: a tick arriving while another request is in flight is dropped, a tick in
+  flight is cancelled for a user action, anything else waits (`support/island-coordination.js`). The table
+  renders the marker on its wrapper; a published table view needs re-publishing to get it. Opt-in, because
+  independent island scopes are Livewire's documented default. Found by an application whose order detail
+  lost page-size changes on a `live()` table; covered by `verify-island-poll-race.mjs`, which holds a tick's
+  response back and fails against the previous bundle. `verify-island-cell-lock.mjs` holds the optimistic lock
+  to the new ordering: an own edit during a tick lands and stays, another user's write made while the tick is
+  cancelled is still refused as a conflict, and a save behind a root request leaves only after it.
+
 ## [2.2.2]
 
 ### Fixed

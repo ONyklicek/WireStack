@@ -130,6 +130,30 @@ jen do své komponenty. Layout bez bundlu wire-core obcházku nedostane.
 ---
 
 <a id="wirex-is-not-defined-after-a-wire-navigate-visit"></a>
+## Ovládací prvek tabulky s pollingem se sám vrátí
+
+**Příznak:** Na tabulce s `poll()` nebo `live()` občas změna počtu na stránku
+nebo klik na řazení nic neudělá: výběr skočí na původní hodnotu a řádky zůstanou,
+jak byly. Napodruhé to projde. Stejně může přijít vniveč otevřený modal nebo
+uložená buňka.
+
+**Příčina:** Řádky a modaly tabulky jsou islandy Livewiru; poll, vyhledávání
+a filtry ne. Livewire 4 koordinuje souběžné požadavky jen v rámci jednoho scope,
+takže akce z islandu vyslaná během tiku pollingu odejde vedle něj se stejným
+snapshotem — a podle dokumentace islandů „the last response to return will win
+the state battle". Když poslední doběhne tik, jeho starší snapshot změnu přepíše.
+
+**Řešení:** Nechte v layoutu `@wireStackScripts`. Od wire-core 2.2.3 tabulka
+vykresluje `data-wire-islands="shared-state"` a wire-core na islandy a kořen té
+komponenty uplatní pravidla, která Livewire drží v jednom scope: tik, který
+přijde, když běží něco jiného, zahodí, běžící tik kvůli akci uživatele zruší
+a cokoli jiného nechá počkat, než druhý požadavek doběhne. Pohled tabulky
+publikovaný před 2.2.3 značku nemá — publikujte ho znovu
+(`--tag=wire-table::views --force`). Vlastní komponenta s islandy nad sdíleným
+stavem se může přihlásit stejným atributem na elementu, který jí patří.
+
+---
+
 ## `wireX is not defined` po návštěvě přes `wire:navigate`
 
 **Příznak:** Stránka funguje, když se načte přímo, ale při příchodu přes

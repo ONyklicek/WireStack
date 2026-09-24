@@ -131,6 +131,31 @@ workaround.
 
 ---
 
+## A table control undoes itself on a polling table
+
+**Symptom:** On a table with `poll()` or `live()`, changing the page size or
+clicking a sort header now and then does nothing: the select jumps back to the
+old value and the rows stay as they were. Doing it again works. Opening a modal
+or saving a cell can lose its effect the same way.
+
+**Cause:** The table's rows and modals are Livewire islands; the poll, the search
+box and the filters are not. Livewire 4 coordinates overlapping requests only
+within one scope, so a control fired inside the island while a poll tick is in
+flight goes out beside it with the same snapshot — and, as the Livewire islands
+documentation puts it, "the last response to return will win the state battle".
+When that is the tick, its older snapshot overwrites the change.
+
+**Fix:** Keep `@wireStackScripts` in the layout. From wire-core 2.2.3 the table
+renders `data-wire-islands="shared-state"` and wire-core applies Livewire's own
+rules across that component's islands and its root: a tick arriving while
+something else is in flight is dropped, a tick in flight is cancelled for a user
+action, anything else waits for the other request. A table view published before
+2.2.3 lacks the marker — re-publish it (`--tag=wire-table::views --force`). Your
+own component with islands over shared state can opt in with the same attribute
+on an element it owns.
+
+---
+
 ## `wireX is not defined` after a `wire:navigate` visit
 
 **Symptom:** A page works when loaded directly, but reaching it through
