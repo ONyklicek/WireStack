@@ -11,7 +11,11 @@ use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireCore\Infolists\Contracts\ProvidesResourceInfolist;
 use NyonCode\WireCore\Infolists\Infolist;
+use NyonCode\WirePanels\Pages\Concerns\HostsPageActions;
+use NyonCode\WirePanels\Pages\Concerns\InteractsWithPageWidgets;
+use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
+use NyonCode\WirePanels\Resources\Concerns\CanDeleteRecord;
 use NyonCode\WirePanels\Resources\Concerns\EmbedsRelationManagers;
 use NyonCode\WirePanels\Resources\Concerns\LinksToRecordPages;
 use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
@@ -34,10 +38,13 @@ use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
  *
  * The record travels as a key, for the reason {@see EditPage} gives.
  */
-abstract class ViewPage extends Component implements IdentifiesHookTarget, ProvidesBreadcrumbs
+abstract class ViewPage extends Component implements HasHeaderActions, IdentifiesHookTarget, ProvidesBreadcrumbs
 {
     use BelongsToResource;
+    use CanDeleteRecord;
     use EmbedsRelationManagers;
+    use HostsPageActions;
+    use InteractsWithPageWidgets;
     use LinksToRecordPages;
     use ResolvesOneRecord;
 
@@ -69,6 +76,22 @@ abstract class ViewPage extends Component implements IdentifiesHookTarget, Provi
         return $infolist->livewireComponent($this);
     }
 
+    /**
+     * The infolist this page shows, beside whatever an open action modal shows.
+     *
+     * What lets an entry's or a section's own callback action run here: the
+     * engine finds such an action by searching the infolists its host exposes,
+     * and by default that is only the one inside a modal.
+     *
+     * @return array<int, Infolist>
+     */
+    protected function infolistsForActions(): array
+    {
+        $modal = $this->getActionModalInfolistInstance();
+
+        return [...($modal instanceof Infolist ? [$modal] : []), $this->infolist()];
+    }
+
     /** A view page is titled by the singular. */
     public function getTitle(): ?string
     {
@@ -89,6 +112,9 @@ abstract class ViewPage extends Component implements IdentifiesHookTarget, Provi
         return view('wire-panels::pages.view-page', [
             'title' => $this->getTitle(),
             'breadcrumbs' => $this->breadcrumbs(),
+            'headerActions' => $this->renderedHeaderActions(),
+            'headerWidgets' => $this->pageWidgetsForView('header'),
+            'footerWidgets' => $this->pageWidgetsForView('footer'),
             'subNavigation' => $this->subNavigation($record),
             'relationManagers' => $this->relationManagers(),
             // Not `record`: that is the public property holding the *key*, and

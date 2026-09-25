@@ -29,6 +29,8 @@ use NyonCode\WirePanels\Exceptions\ResourcePageException;
  */
 trait BelongsToResource
 {
+    use BelongsToParentRecord;
+
     /**
      * Optional heading. Each page decides what it falls back to, because a list
      * wants the plural and a form wants the singular.
@@ -90,9 +92,10 @@ trait BelongsToResource
     /**
      * Where this page sits: the resource's list, then the page itself.
      *
-     * Two crumbs at most, because that is the whole depth these pages have — a
-     * list is inside nothing, and an edit page is inside its list. A trail of one
-     * renders nothing, so a list page pays for none of this.
+     * Two crumbs at most for an ordinary resource, because that is the whole
+     * depth its pages have — a list is inside nothing, and an edit page is inside
+     * its list. A trail of one renders nothing, so a list page pays for none of
+     * this. A nested resource's trail starts at its parent's list and record.
      *
      * @return array<int, NavigationItem>
      */
@@ -104,9 +107,12 @@ trait BelongsToResource
             return [];
         }
 
+        // A nested resource's list sits inside its parent record, so the trail
+        // walks through that first: Orders › Order 17 › Order lines › Line 3.
         $crumbs = [
+            ...$this->parentBreadcrumbs(),
             NavigationItem::make($resource::pluralLabel())->url(
-                app(ResolvesPageUrls::class)->urlFor($resource::key(), 'index', [], $this->breadcrumbZone),
+                app(ResolvesPageUrls::class)->urlFor($resource::key(), 'index', $this->parentRouteParameters(), $this->breadcrumbZone),
             ),
         ];
 
@@ -114,6 +120,10 @@ trait BelongsToResource
 
         if ($title !== null && $title !== $resource::pluralLabel()) {
             $crumbs[] = NavigationItem::make($title);
+        } elseif (count($crumbs) > 1) {
+            // A nested list is its own last crumb: drop its link, it is the page.
+            $last = array_pop($crumbs);
+            $crumbs[] = NavigationItem::make($last->getLabel());
         }
 
         return $crumbs;
@@ -144,9 +154,10 @@ trait BelongsToResource
             return null;
         }
 
-        $parameters = $record instanceof Model
-            ? ['record' => $record->getKey()]
-            : [];
+        $parameters = [
+            ...$this->parentRouteParameters(),
+            ...($record instanceof Model ? ['record' => $record->getKey()] : []),
+        ];
 
         return app(ResolvesPageUrls::class)->urlFor($resource::key(), $page, $parameters, $this->breadcrumbZone);
     }

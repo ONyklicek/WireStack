@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace NyonCode\WirePanels\Resources\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use NyonCode\WireCore\Core\Data\RecordContract;
 use NyonCode\WirePanels\Exceptions\ResourcePageException;
+use NyonCode\WirePanels\Resources\Support\TrashedRecords;
 
 /**
  * A page that shows exactly one record, and how it finds it.
@@ -33,50 +35,22 @@ trait ResolvesOneRecord
         $this->abortUnlessRecordExists();
 
         $this->mountedRecord();
-
-        $this->mountActionFromRequest();
     }
 
     /**
-     * Open the action the command palette sent this page here to open.
+     * The record a page's actions are about: this one, when it is a model.
      *
-     * The palette cannot host a modal — it sits in a module that may not import
-     * the Actions one — so an action that has to ask something is answered by
-     * navigating to the page that owns the record, with the action named in the
-     * query string. This is the far end of that.
-     *
-     * Here rather than in `BelongsToResource`, which every resource page composes,
-     * because only the pages that resolve a record can supply one — and a version
-     * that asked `method_exists($this, 'resolveRecord')` was a duck-type over a
-     * question the type system already answers.
-     *
-     * Last in the mount, after `mountedRecord()`, so the edit page has seeded its
-     * form before an action is asked whether it may run against the record.
-     *
-     * A page composing no action host does nothing, which is the honest answer for
-     * a URL pasted at a page that cannot run actions — and so is an unknown name:
-     * `mountAction()` resolves nothing and returns, leaving the user on the page
-     * they asked for rather than on an error about a link they did not write.
+     * Here rather than on each page because it is this trait that knows the
+     * record — so a page of your own that composes it beside
+     * `HostsPageActions` mounts its actions against the record with nothing
+     * else written. A record that does not unwrap to a model gives the actions
+     * none, because an action's record is a model all the way down.
      */
-    private function mountActionFromRequest(): void
+    protected function headerActionRecord(): ?Model
     {
-        if (! method_exists($this, 'mountAction')) {
-            return;
-        }
+        $record = $this->nativeRecord();
 
-        $name = request()->query('action');
-
-        if (! is_string($name) || $name === '') {
-            return;
-        }
-
-        $record = $this->resolveRecord();
-
-        if ($record instanceof RecordContract) {
-            $record = $record->unwrap();
-        }
-
-        $this->mountAction($name, $record instanceof Model ? ['record' => $record] : []);
+        return $record instanceof Model ? $record : null;
     }
 
     /**
@@ -156,7 +130,20 @@ trait ResolvesOneRecord
             throw ResourcePageException::unresolvableRecord(static::class, (string) $resource);
         }
 
-        return $model::query()->find($this->record);
+        // A nested resource finds its record through the parent's relationship,
+        // so a key that belongs to another parent reaches nothing — a 404, not
+        // somebody else's line.
+        $relation = $this->parentRelation();
+        $query = $relation !== null ? $relation->getQuery() : $model::query();
+
+        // A resource that manages its trash has pages for trashed records too:
+        // the list offers *Restore* on them, and the record's own page must not
+        // answer that with a 404.
+        if (TrashedRecords::managedBy($resource)) {
+            $query->withoutGlobalScope(SoftDeletingScope::class);
+        }
+
+        return $query->find($this->record);
     }
 
     /**

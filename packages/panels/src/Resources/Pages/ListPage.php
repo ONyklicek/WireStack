@@ -5,12 +5,22 @@ declare(strict_types=1);
 namespace NyonCode\WirePanels\Resources\Pages;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Model;
 use Livewire\Component;
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\BaseAction;
+use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
+use NyonCode\WirePanels\Pages\Concerns\InteractsWithHeaderActions;
+use NyonCode\WirePanels\Pages\Concerns\InteractsWithPageWidgets;
+use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
+use NyonCode\WirePanels\Resources\Concerns\InteractsWithListTabs;
+use NyonCode\WirePanels\Resources\Concerns\InteractsWithTrashedRecords;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
+use NyonCode\WireTable\Actions\HeaderActionClickResolver;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\RelationManagers\RelationManager;
 use NyonCode\WireTable\Table;
@@ -47,10 +57,17 @@ use NyonCode\WireTable\Table;
  * application mounts wherever it likes; the registry holds no URL shell, and
  * this holds none either.
  */
-abstract class ListPage extends Component implements IdentifiesHookTarget, ProvidesBreadcrumbs
+abstract class ListPage extends Component implements HasHeaderActions, IdentifiesHookTarget, ProvidesBreadcrumbs
 {
     use BelongsToResource;
-    use WithTable;
+    use InteractsWithHeaderActions;
+    use InteractsWithListTabs;
+    use InteractsWithPageWidgets;
+    use InteractsWithTrashedRecords;
+    use WithTable {
+        findHeaderAction as protected findTableHeaderAction;
+        getTable as protected composeTable;
+    }
 
     /**
      * The resource whose list this is, or null when the page defines its own.
@@ -80,6 +97,27 @@ abstract class ListPage extends Component implements IdentifiesHookTarget, Provi
         return $resource->table($model !== null ? $table->model($model) : $table);
     }
 
+    /**
+     * The table, with the resource's trash managed on it and narrowed by the active tab.
+     *
+     * Applied here, once, to the instance `WithTable` has just composed — not in
+     * `table()`, which a page is free to write itself: a tab has to hold on a
+     * page that builds its own table just as on one that borrows a resource's.
+     */
+    public function getTable(): Table
+    {
+        $fresh = $this->tableInstance === null;
+        $table = $this->composeTable();
+
+        if ($fresh) {
+            $this->applyParentScope($table);
+            $this->applyTrashedRecords($table);
+            $this->applyActiveListTab($table);
+        }
+
+        return $table;
+    }
+
     /** A list is titled by the plural: "Orders", not "Order". */
     public function getTitle(): ?string
     {
@@ -92,11 +130,68 @@ abstract class ListPage extends Component implements IdentifiesHookTarget, Provi
         return $resource !== null ? $resource::pluralLabel() : null;
     }
 
+    /**
+     * *New*, when the resource has a create page this user may open.
+     *
+     * A link and nothing more, guarded by the permission the create route is
+     * guarded by — so it cannot offer anything the router would refuse, which is
+     * why it is drawn by default when *Delete* on a record page is not.
+     *
+     * @return array<int, Action|null>
+     */
+    protected function headerActions(): array
+    {
+        return [$this->createHeaderAction()];
+    }
+
+    /** The ready-made *New*: a link to the create page, or nothing when there is none to open. */
+    protected function createHeaderAction(): ?Action
+    {
+        $url = $this->reachablePageUrl('create');
+
+        if ($url === null) {
+            return null;
+        }
+
+        return Action::make('create')
+            ->label(__('wire-panels::messages.create', ['label' => $this->resourceLabel() ?? '']))
+            ->icon('plus')
+            ->url($url)
+            ->extraAttributes(['wire:navigate' => '']);
+    }
+
+    /**
+     * A page header action, then the table's own.
+     *
+     * The page's actions run through the table's engine rather than one of
+     * their own: a second engine on this component would be a second modal
+     * stack, and the table already renders the one its header actions open in.
+     */
+    protected function findHeaderAction(string $actionName): ?BaseAction
+    {
+        return $this->findPageHeaderAction($actionName) ?? $this->findTableHeaderAction($actionName);
+    }
+
+    /** A list is about no record, so neither are its actions. */
+    protected function headerActionRecord(): ?Model
+    {
+        return null;
+    }
+
+    protected function headerActionClick(): ResolvesActionClick
+    {
+        return new HeaderActionClickResolver;
+    }
+
     public function render(): View
     {
         return view('wire-panels::pages.list-page', [
             'title' => $this->getTitle(),
             'breadcrumbs' => $this->breadcrumbs(),
+            'headerActions' => $this->renderedHeaderActions(),
+            'listTabs' => $this->listTabsForView(),
+            'headerWidgets' => $this->pageWidgetsForView('header'),
+            'footerWidgets' => $this->pageWidgetsForView('footer'),
         ]);
     }
 }

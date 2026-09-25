@@ -561,13 +561,14 @@ které mění:
 
 ## Zbytek `wire-core`
 
-Tři klíče v `config/wire-core.php` jsou deklarace, ne nastavení, a každý je
+Čtyři klíče v `config/wire-core.php` jsou deklarace, ne nastavení, a každý je
 popsaný tam, kde se vysvětluje věc, kterou deklaruje:
 
 | Klíč | Co drží | Stránka |
 | --- | --- | --- |
 | `resources` | Třídy resourců, které aplikace registruje | [Resources → Registrace](../panels/resources.md#registrace) |
 | `dashboards` | Třídy dashboardů, stejným způsobem | [Dashboardy](../core/widgets/dashboards.md) |
+| `discover` | Adresáře, ve kterých hledat resource a dashboardy — `'resources' => [namespace => adresář]`, vypnuté, dokud se nic nepojmenuje | [Resources](../panels/resources.md#jak-je-najit-samy) |
 | `tenancy` | `enabled` a `column`, na který se aplikuje tenant scope | [Autorizace](authorization.md) |
 
 `config/wire-table.php` má ještě jeden: `preferences` volí driver, do kterého se

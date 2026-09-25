@@ -2,6 +2,80 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.3.0]
+
+### Added
+
+- **Every resource page can put actions beside its heading.** `protected function headerActions(): array` on
+  `ListPage`, `CreatePage`, `EditPage` and `ViewPage` declares them; they are ordinary actions (modal, form,
+  wizard, confirmation, halt) drawn by the canonical button view. Each page runs them through the engine it
+  already has, never a second one: the list through its table (`findHeaderAction()` looks at the page's
+  actions first), the others through the new `Pages\Concerns\HostsPageActions` over `WithActions`, which also
+  mounts every action against the page's record so a record-aware `visible()` is asked the same question when
+  the button is drawn and when it is clicked.
+- **The list page offers *New* by default** — a link to the create page when the resource routes one and the
+  user may open it (the same question the create route's `can:` middleware asks). `createHeaderAction()`
+  builds it; `...parent::headerActions()` keeps it beside your own.
+- **Edit and view pages offer *Delete* on request** — `$this->deleteHeaderAction()`. It is opt-in because who
+  may delete what is the application's rule. The model's policy decides when it has one; without one, whoever
+  may open the record's edit page may delete; with no edit page, nobody may. It deletes through the model (a
+  soft-deleting model soft-deletes), flashes a notification and returns to the list.
+- **`Pages\Page` — a page of the application's own** (a board, a calendar, a report) with the same heading,
+  trail, header actions and action host as the resource pages, around a view it names in `$view`.
+- **An infolist's own callback actions run on the view page.** It composes the action runtime now and hands
+  its infolist to it; before, such an action needed a `url()` to do anything there.
+- `ComponentRenderer` renders a component that names its view as a string, as the action modal host does.
+- **A resource can manage its trash** — `ManagesTrashedRecords` on a resource over a soft-deleting model gives
+  its list a `trashed` filter, *Restore* and *Force delete* per row and in bulk (bulk acting only on the trashed
+  records of a selection), and its record pages a trashed record instead of a 404, with `restoreHeaderAction()`
+  and `forceDeleteHeaderAction()` beside *Delete*. Policy first, then the edit page, per record.
+- `RestoreAction` and `ForceDeleteAction` — record-level presets beside the bulk ones.
+- **Nested resources** — `NestedResource` (`parentResource()`, `parentRelationship()`) routes a resource's pages
+  under one record of its parent (`orders/{parent}/order-lines`, inheriting the parent's middleware and domain),
+  scopes its list, record lookup and create page through the parent's relationship (a line of another order is
+  a 404; a new line is filed under the order), leads the trail through the parent, and gives the parent record
+  a tab to the list. One level deep; creating needs a `hasMany`-like relationship.
+- **A board (kanban)** in `wire-sortable` — `Board` declares lanes over a model's column (`Lane`s, value => label,
+  or a backed enum labelled and coloured by its own contracts), what a card shows and an optional order
+  column; `WithBoard` renders it on any Livewire component and answers a drop. The drag is Livewire's own
+  `wire:sort` across the lanes; a drop is checked against the board's lanes and query and
+  `canMoveBoardCard()`, then `MoveBoardCard` writes the lane and renumbers it in one transaction. A board page is
+  a `Page` composing `WithBoard`.
+- **Resources and dashboards can be discovered** — `config('wire-core.discover')` maps a namespace to a
+  directory, and every concrete resource (or dashboard) under it registers at boot, after the listed ones. Off
+  until a directory is named.
+- **A CLI for the panel.** `make:wire-resource` writes a resource and its pages (`--generate` reads fields,
+  columns and entries off the model's table; `--view`, `--simple`, `--soft-deletes`, `--register`);
+  `make:wire-page` writes a page of your own, or with `--resource` a record page that becomes one of the
+  record's tabs; `make:wire-relation-manager` writes a relation manager; `wire:resources` lists what is
+  registered — surfaces, pages, every route per zone and the permission each requires. No command overwrites a
+  file without `--force`, and every template publishes with `wire-panels::stubs`.
+- **`ManagePage` — a resource on one page**: the list, with *New* and *Edit* as modals rendering the resource's
+  `form()`, and *Delete* on the row. Saving is `Model::create()` / `$record->update()`; the model's policy
+  decides each action when there is one, the page's route otherwise.
+- **Tabs above a list.** `tabs()` on `ListPage` returns `ListTab`s — a name, a `query()` that narrows the base
+  query (wrapping the table's own `modifyQueryUsing()`, so a resource's scope holds in every tab), an icon, and
+  `showCount()` or a `badge()` of your own. The active tab is `$activeTab`, kept in the URL as `?tab=`.
+- **Widgets above and below any page's content** — `headerWidgets()`, `footerWidgets()`,
+  `pageWidgetColumns()`. Drawn through the dashboard's grid, not hosted: polling, lazy and widget actions stay a
+  dashboard page's.
+- **Create and edit pages warn before unsaved input is left behind** — a reload, a closed tab or a
+  `wire:navigate` link. `wireUnsavedChanges` (forms fields bundle) compares the form's state with what was last
+  saved, holds off while the save is in flight (a create page redirects from inside it) and moves its baseline
+  only on success; any form can use it. A page turns it off with `warnsAboutUnsavedChanges(): bool`.
+
+### Changed
+
+- **A table carrying a `TrashedFilter` finds a trashed row by its key** when that row's action is clicked, and
+  keeps a ticked trashed row in a keyed selection. It used to look the key up in the base query, whose
+  soft-delete scope hid the row — a *Restore* on a trashed row found nothing and did nothing. A row action with
+  a modal now resolves its record through the data source, as one without a modal always did.
+- **The `?action=` hand-off from the command palette is answered by `HostsPageActions`**, not by
+  `ResolvesOneRecord`, so stock edit and view pages answer it. A page of your own that composed
+  `WithActions` beside `ResolvesOneRecord` by hand composes `HostsPageActions` instead to keep receiving it.
+- The users module's user and role lists draw *New* as the page's header action rather than as a table header
+  action; its test id is `action-create` (was `header-action-create`).
+
 ## [2.2.6]
 
 ### Fixed

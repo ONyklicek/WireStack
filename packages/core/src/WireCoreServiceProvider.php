@@ -30,6 +30,7 @@ use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Modules\Module;
 use NyonCode\WireCore\Core\Plugin\Contracts\Plugin;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\ResourceRecordUrls;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
@@ -51,6 +52,7 @@ use NyonCode\WireCore\Foundation\Icons\IconSet;
 use NyonCode\WireCore\Foundation\Mentions\MentionRegistry;
 use NyonCode\WireCore\Foundation\Mentions\MentionRenderer;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Registration\ClassDiscovery;
 use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
@@ -92,6 +94,7 @@ use NyonCode\WireCore\Tours\TourReplay;
 use NyonCode\WireCore\Tours\Tours;
 use NyonCode\WireCore\Widgets\Console\MakeDashboardCommand;
 use NyonCode\WireCore\Widgets\Console\MakeWidgetCommand;
+use NyonCode\WireCore\Widgets\Dashboard;
 use NyonCode\WireCore\Widgets\DashboardRegistry;
 
 class WireCoreServiceProvider extends PackageServiceProvider
@@ -745,10 +748,42 @@ class WireCoreServiceProvider extends PackageServiceProvider
         $chrome->add('wire-core::tours.replay-entry', PageChrome::USER_MENU, sort: 20);
     }
 
+    /**
+     * The classes of one kind under the directories `config('wire-core.discover')`
+     * names for it — namespace => directory — or none when it names nothing.
+     *
+     * @param  class-string  $kind
+     * @return array<int, class-string>
+     */
+    private function discovered(string $key, string $kind): array
+    {
+        $directories = config("wire-core.discover.{$key}", []);
+
+        if (! is_array($directories) || $directories === []) {
+            return [];
+        }
+
+        $discovery = $this->app->make(ClassDiscovery::class);
+        $found = [];
+
+        foreach ($directories as $namespace => $directory) {
+            if (is_string($namespace) && is_string($directory)) {
+                array_push($found, ...$discovery->in($directory, $namespace, $kind));
+            }
+        }
+
+        return $found;
+    }
+
     protected function bootResources(): void
     {
         $this->app->make(ResourceRegistry::class)->registerMany(config('wire-core.resources', []));
         $this->app->make(DashboardRegistry::class)->registerMany(config('wire-core.dashboards', []));
+
+        // After the lists, so a class both listed and discovered registers once
+        // (registering one class twice is a no-op) and the listed order wins.
+        $this->app->make(ResourceRegistry::class)->registerMany($this->discovered('resources', DescribesResource::class));
+        $this->app->make(DashboardRegistry::class)->registerMany($this->discovered('dashboards', Dashboard::class));
 
         $this->bootModules();
 

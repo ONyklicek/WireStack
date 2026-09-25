@@ -113,4 +113,14 @@ final class ResourceRoutingException extends RuntimeException implements WireExc
     {
         return $route === null ? 'an unnamed route' : "the route [{$route}]";
     }
+
+    /** A nested resource whose parent is itself nested. */
+    public static function nestedTooDeep(string $resource, string $parent): self
+    {
+        return new self(
+            "[{$resource}] is nested under [{$parent}], which is nested itself. A nested resource's ".
+            'pages carry one {parent} in their URL, so nesting goes one level deep: nest it under '.
+            "the top-level resource instead, or give [{$resource}] pages of its own."
+        );
+    }
 }

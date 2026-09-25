@@ -56,6 +56,12 @@ Table::make()
     ])
 ```
 
+That works because the filter changes how the table finds a record, not only
+what it lists: a table carrying a `TrashedFilter` looks a row's key up among the
+trashed too when its action is clicked, and keeps a ticked trashed row in a
+selection. A table without one keeps the soft-delete scope on every lookup —
+it never lists a trashed row, so none of its keys should reach one.
+
 ## Requirements
 
 The table's model must use `SoftDeletes`. If it does not, applying the filter

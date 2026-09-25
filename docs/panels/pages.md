@@ -1,6 +1,6 @@
 ---
 order: 30
-summary: The five Livewire components that render a resource — list, create, edit, view and dashboard — what each composes, and how one record reaches them.
+summary: The Livewire components that render a resource — list, create, edit, view and dashboard — plus a page of your own; what each composes, the actions beside their heading, and how one record reaches them.
 ---
 
 # Pages
@@ -21,24 +21,22 @@ Five pages, and each one is a host component plus a pointer at an owner:
 | Page | Composes | Reads | Renders |
 | --- | --- | --- | --- |
 | `ListPage` | `WithTable` | `ProvidesResourceTable` | the list |
-| `CreatePage` | `WithForms` | `ProvidesResourceForm` | an empty form |
-| `EditPage` | `WithForms` | `ProvidesResourceForm` | that form, bound to one record |
-| `ViewPage` | nothing | `ProvidesResourceInfolist` | one record, read-only |
+| `ManagePage` | `WithTable` | `ProvidesResourceTable`, `ProvidesResourceForm` | the list, with create and edit as modals |
+| `CreatePage` | `WithForms`, `WithActions` | `ProvidesResourceForm` | an empty form |
+| `EditPage` | `WithForms`, `WithActions` | `ProvidesResourceForm` | that form, bound to one record |
+| `ViewPage` | `WithActions` | `ProvidesResourceInfolist` | one record, read-only |
 | `DashboardPage` | `WithWidgets` | a `Dashboard` | a grid of widgets |
 
-`ViewPage` composes no host trait on purpose: read-only means no state to bind
-and nothing to submit, so `Infolist` is the whole surface.
+`ViewPage` composes no form or table trait: read-only means no state to bind and
+nothing to submit, so `Infolist` is the whole surface.
 
-**What that costs is the callback action.** An infolist action — an entry button,
-a section header action — dispatches to the host's `callInfolistAction()`, which
-belongs to the action runtime this page does not compose; a
-[halt](../core/actions/lifecycle.md#halt-execution), raised inside that same
-pipeline, has nowhere to appear either. Of the five pages only `ListPage` hosts
-actions, and it does so through `WithTable`. On a detail page there are two ways
-round it: give the action a `url()`, which renders as a link and asks nothing of
-the host — the framework's own `MediaResource` opens and downloads exactly that
-way — or put the surface in a Livewire component of your own composing
-[`WithActions`](../core/actions/standalone.md) and mount that on the page.
+**Every page can run actions**, and each runs them through one engine. The list
+has the one `WithTable` brings; the other three compose
+[`WithActions`](../core/actions/standalone.md), which is what runs their
+[header actions](#header-actions), a [halt](../core/actions/lifecycle.md#halt-execution)
+raised inside one, and on the view page an infolist's own callback actions — an
+entry button, a section header action — which dispatch to the host's
+`callInfolistAction()` and used to find nobody there.
 
 Every page also works with **no owner at all** — write `table()`, `form()` or
 `widgets()` on the page itself and it is an ordinary host component. What a page
@@ -210,6 +208,98 @@ it too, and the toast container renders that on arrival. Nothing has to be
 switched on: it is what the [session driver](../core/notifications/index.md#drivers)
 has always done, now that something reads it.
 
+## Unsaved Changes
+
+The create and edit pages ask before their input is left behind — a reload, a
+closed tab, a `wire:navigate` link in the menu. What is compared is the form's
+state against what was last saved, so typing a value and putting it back asks
+nothing, and pressing *Save* is never stopped by the warning it makes
+unnecessary. The mechanism is the forms bundle's `wireUnsavedChanges`
+([Forms](../forms/overview.md#warning-before-unsaved-input-is-lost)); the page
+only says it wants it, on its `data` path and its `save()` method.
+
+A page that should not ask turns it off:
+
+```php
+protected function warnsAboutUnsavedChanges(): bool
+{
+    return false;
+}
+```
+
+## List Tabs
+
+A list can be several lists of the same records — all invoices, the open ones,
+the overdue ones. A tab is a name and how it narrows the query:
+
+```php
+use Illuminate\Database\Eloquent\Builder;
+use NyonCode\WirePanels\Resources\ListTab;
+
+final class ListInvoices extends ListPage
+{
+    protected static ?string $resource = InvoiceResource::class;
+
+    protected function tabs(): array                  // [tl! focus:start]
+    {
+        return [
+            ListTab::make('all')->showCount(),
+            ListTab::make('open')->query(fn (Builder $q) => $q->whereNull('paid_at'))->showCount(),
+            ListTab::make('overdue')
+                ->icon('outline:exclamation-triangle')
+                ->badgeColor('danger')
+                ->query(fn (Builder $q) => $q->where('due_at', '<', now()))
+                ->showCount(),
+        ];
+    }                                                  // [tl! focus:end]
+}
+```
+
+**A tab narrows the base query**, before search, filters and sort, so everything
+the table does still works inside it. It wraps whatever `modifyQueryUsing()` the
+table already had rather than replacing it: a resource that never lists archived
+invoices keeps not listing them on every tab. It is applied to the table
+`WithTable` has just composed, so it holds on a page that writes its own
+`table()` too.
+
+**The active tab is `$activeTab`, carried in the URL as `?tab=`.** A link, a
+reload and the back button land on the same tab. An empty or unknown name is the
+first tab, and switching starts the list again from its first page.
+
+**A count is asked of the same base scope** — the resource's scope, not the
+search or the filters — with one `count()` per tab that shows one, on every
+render. `badge()` sets a number of your own instead and asks nothing. The count
+is gray unless `badgeColor()` says otherwise.
+
+```php
+ListTab::make(string $name)                     // the name the URL carries
+->label(string|Closure|null $label)             // default: the name, humanised
+->icon(string|Icon|Closure|null $icon)
+->query(?Closure $callback)                     // fn (Builder $query) => $query->…
+->showCount(bool $condition = true)             // count the tab's records
+->badge(int|Closure|null $count)                // a number of your own
+->badgeColor(string|Color|null $color)          // default 'gray'
+```
+
+## Page Widgets
+
+Any page — a list, a record, a page of your own — can put widgets above and
+below its content:
+
+```php
+protected function headerWidgets(): array
+{
+    return [StatsOverviewWidget::make()->stats([Stat::make('Open', (string) Invoice::open()->count())])];
+}
+```
+
+`footerWidgets()` is the same below the content, `pageWidgetColumns()` says how
+wide the row is (3 by default), and a `null` entry is skipped. They are
+**drawn, not hosted**: the page renders them through the grid a dashboard uses
+and does not become a widget host. A widget that polls, loads lazily or has
+actions of its own needs `WithWidgets` behind it, which is what a
+[dashboard page](#dashboard-pages) is for.
+
 ## Dashboard Pages
 
 A dashboard is declared the same way a resource is, and `DashboardPage` is its
@@ -229,6 +319,222 @@ visibility, the grid, and answering a poll tick with one widget instead of the
 whole page — arrives unchanged. As with the resource pages, writing the widgets
 on the page and declaring no dashboard is equally first class. See
 [Widgets](../core/widgets/index.md) for what a dashboard declares and what a widget is.
+
+## Header Actions
+
+A page puts actions beside its heading by declaring them:
+
+```php
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WirePanels\Resources\Pages\ViewPage;
+
+final class ViewOrder extends ViewPage
+{
+    protected static ?string $resource = OrderResource::class;
+
+    protected function headerActions(): array     // [tl! focus:start]
+    {
+        return [
+            Action::make('ship')
+                ->label('Mark shipped')
+                ->requiresConfirmation()
+                ->visible(fn (Order $record): bool => $record->shipped_at === null)
+                ->action(fn (Order $record) => $record->update(['shipped_at' => now()])),
+            $this->deleteHeaderAction(),
+        ];
+    }                                              // [tl! focus:end]
+}
+```
+
+They are ordinary [actions](../core/actions/index.md) — a modal, a form, a
+wizard, a confirmation and a halt all work — drawn by the same button view as
+every other action, beside the title from `sm` up and under it on a phone.
+
+**A record page's actions are about its record.** Edit and view mount every
+action against the record they show, so `visible(fn ($record))` and a
+record-aware `authorizeUsing()` are asked about the same record when the button
+is drawn and when it is clicked. Without that, the button would ask about the
+order and the click about nothing.
+
+**Where the click lands depends on the page, and nothing else does.** The list
+page's actions run through its table's engine — a second engine would be a
+second modal stack on one component — so a click calls `openHeaderActionModal()`
+or `executeHeaderAction()`, and the table finds the page's action before its own.
+The other pages call `mountAction()`. `headerActionClick()` is where each page
+says which; the button is `Action::render()` either way.
+
+An `ActionGroup` works as a header action too, and an entry that is `null` is
+skipped, so a conditional action is written inline:
+
+```php
+protected function headerActions(): array
+{
+    return [
+        ...parent::headerActions(),
+        $this->headerActionRecord()?->locked_at !== null ? null : Action::make('lock')->action(...),
+    ];
+}
+```
+
+### The ones that come with it
+
+**The list page offers *New*** — a link to the create page, drawn when the
+resource routes one and this user may open it. It asks exactly what the create
+route's `can:` middleware asks, so it can never offer something the router
+would refuse, and that is why it is on by default. Keep it with
+`...parent::headerActions()`, or build it yourself with `createHeaderAction()`.
+
+**Edit and view offer *Delete*, and draw it only when asked** —
+`$this->deleteHeaderAction()`, as above. Who may delete what is an
+application's rule: the users module will not delete the last super-admin, and a
+default button would walk straight past that. When asked, it decides like this:
+
+```text
+the model has a policy     →  the policy's delete() decides
+it has none                →  whoever may open the record's edit page may delete
+there is no edit page      →  nobody — a read-only resource grows no Delete
+```
+
+It confirms, deletes through the model — so a model with soft deletes
+soft-deletes — flashes a success notification and goes back to the list with
+`wire:navigate`. Where no list is routed, it stays.
+
+## A Resource On One Page
+
+An entity whose form is a field or two — tags, units, payment terms — does not
+need a page to create one and another to edit it. `ManagePage` is the list with
+both as modals over it, and *Delete* on the row:
+
+```php
+use NyonCode\WirePanels\Resources\Pages\ManagePage;
+
+final class ManageTags extends ManagePage
+{
+    protected static ?string $resource = TagResource::class;   // [tl! focus]
+}
+
+public static function pages(): array
+{
+    return ['index' => ManageTags::class];
+}
+```
+
+The resource's one `form()` renders in both modals. **What they save is the
+model's**: a modal keeps its state in the action's frame rather than in a page's
+`$data`, so creating is `Model::create($data)` and editing is
+`$record->update($data)` with the validated data. A form that needs the page
+lifecycle — a relationship repeater, an optimistic lock, `Form::using()` — wants
+a create and an edit page instead.
+
+**Who may do what is the model's policy** — `create`, `update`, `delete` — when
+it has one. Without one there is no check here at all and the page's route is
+the guard: whoever may open the page may manage its records. It is deliberately
+not a check that answers yes, because every authorization callback refuses a
+request with no signed-in user, and an unguarded page would list records with
+no way to change them.
+
+## Trashed Records
+
+A resource over a soft-deleting model can manage its trash in the panel rather
+than hide it, by saying so:
+
+```php
+use NyonCode\WirePanels\Resources\Contracts\ManagesTrashedRecords;
+
+final class InvoiceResource implements DescribesResource, ManagesTrashedRecords, ProvidesResourceTable
+{
+    // …the model uses SoftDeletes
+}
+```
+
+That one declaration reaches every page, so the list and a record's page cannot
+disagree about whether a trashed record exists:
+
+- **The list** gains a `trashed` filter, *Restore* and *Force delete* on a
+  trashed row, and both as bulk actions — which act only on the trashed records
+  of a selection, because a force delete swept across live rows is data loss,
+  not the mirror image of a restore.
+- **A record page** opens a trashed record rather than answering 404, hides
+  `deleteHeaderAction()` on it, and offers `restoreHeaderAction()` and
+  `forceDeleteHeaderAction()` to a page that asks for them:
+
+```php
+protected function headerActions(): array
+{
+    return [$this->deleteHeaderAction(), $this->restoreHeaderAction(), $this->forceDeleteHeaderAction()];
+}
+```
+
+Each of them is decided like *Delete*: the model policy's `restore()` or
+`forceDelete()` when there is a policy, the record's edit page otherwise, per
+record. The contract over a model that does not use `SoftDeletes` refuses with a
+message naming both, instead of failing inside a query.
+
+## A Page Of Your Own
+
+A board, a calendar, a report: a page that is not one of a resource's surfaces
+still wants the same heading, trail and header actions as the pages around it.
+`Page` is those, around a view you write:
+
+```php
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WirePanels\Pages\Page;
+
+final class TaskBoard extends Page
+{
+    protected static string $view = 'livewire.task-board';   // [tl! focus]
+
+    protected ?string $title = 'Board';
+
+    protected function headerActions(): array      // [tl! focus:start]
+    {
+        return [
+            Action::make('newTask')
+                ->form([TextInput::make('title')->required()])
+                ->action(fn (array $data) => Task::create($data)),
+        ];
+    }                                               // [tl! focus:end]
+
+    /** A card's own button — the same engine, declared beside the header. */
+    protected function actions(): array
+    {
+        return [
+            Action::make('moveTask')->action(fn (array $arguments) => $this->move($arguments)),
+        ];
+    }
+
+    protected function getViewData(): array
+    {
+        return ['lanes' => Task::query()->get()->groupBy('status')];
+    }
+}
+```
+
+The view is the content only — the page draws the heading above it and the
+modal host below it, and the component's public properties, `$this` and
+whatever `getViewData()` returns all reach it:
+
+```blade
+<div class="grid grid-cols-3 gap-4">
+    @foreach($lanes as $status => $tasks)
+        <section>…</section>
+    @endforeach
+</div>
+```
+
+It is routed like any page — `RoutePage::make(TaskBoard::class)` in an owner's
+`pages()`, which gives it a URL, a `can:` guard and a menu entry — or mounted by
+hand. A trail is an opt-in: implement `ProvidesBreadcrumbs` and return one. A
+page that names no view refuses to render rather than drawing an empty frame.
+
+`Page` is a convenience, not a requirement. It composes `HostsPageActions`, and a
+component of your own composing the same trait gets the same header actions
+without extending anything.
+
+A board — records in lanes, dragged between them — is exactly this: a `Page`
+that composes [`WithBoard`](../sortable/board.md) and names
+`wire-sortable::board.content` as its view.
 
 ## Embedded Relation Managers
 
@@ -265,9 +571,11 @@ $page->breadcrumbs();
 The crumbs are `NavigationItem`s rather than a shape of their own — a crumb is a
 label and, usually, a URL, which is exactly what [that
 class](navigation.md#navigationitem-api) has carried since the menu needed it. The
-last crumb carries no URL: it is the page you are on. **Two crumbs at most**,
-because that is the whole depth these pages have — a list is inside nothing, and
-a trail of one draws nothing at all, so a list page pays for none of this.
+last crumb carries no URL: it is the page you are on. **Two crumbs at most** for
+an ordinary resource, because that is the whole depth its pages have — a list is
+inside nothing, and a trail of one draws nothing at all, so a list page pays for
+none of this. A [nested resource](resources.md#nested-resources) starts its
+trail at its parent's list and record.
 
 The zone the trail links into is read **once, at mount**, and kept in the public
 `$breadcrumbZone`. It has to be public to survive the round trip, and it has to be
@@ -418,7 +726,7 @@ Every resource page composes `BelongsToResource`, which is the half that is abou
 | `protected ?string $title` | `string\|null` | Heading override. Each page decides its own fallback, because a list wants the plural and a form the singular |
 | `public ?string $breadcrumbZone` | `string\|null` | The zone read at mount and carried across the round trip |
 | `getTitle(): ?string` | `string\|null` | The heading; the trail's last crumb is it |
-| `breadcrumbs(): array` | `array<int, NavigationItem>` | Where the page sits — two crumbs at most |
+| `breadcrumbs(): array` | `array<int, NavigationItem>` | Where the page sits — two crumbs at most, four for a nested resource |
 | `public ?string $currentPage` | `string\|null` | The kind of page this is — `view`, `edit`, or one the resource named — read at mount and carried |
 | `subNavigation(mixed $record = null): array` | `array<string, NavigationItem>` | The record's other pages, keyed by page kind. Empty below two |
 | `static resourceClass(): ?string` | `class-string\|null` | The declared resource, for anything asking from outside |
@@ -433,10 +741,13 @@ What each page adds is only its own surface:
 
 | Page | Adds |
 | --- | --- |
-| `ListPage` | `table(Table $table): Table` |
+| `ListPage` | `table(Table $table): Table`, `tabs(): array`, `public string $activeTab`, `getListTabs(): array`, `getActiveListTab(): ?ListTab` |
 | `CreatePage` | `public ?array $data`, `form(Form $form): Form`, `save(): mixed`, `getRedirectUrl(mixed $record): ?string` |
 | `EditPage` | the same, plus `recordData(): array` and a `mountedRecord()` that seeds the form |
+| `CreatePage`, `EditPage` | `warnsAboutUnsavedChanges(): bool` — `true` by default |
+| every page but the dashboard | `headerWidgets(): array`, `footerWidgets(): array`, `pageWidgetColumns(): int` |
 | `ViewPage` | `infolist(): Infolist` |
+| `ManagePage` | everything `ListPage` has, plus `createHeaderAction()` as a modal, *Edit* and *Delete* on the row, `guardedByPolicy(Action, string, bool): Action`, `manageForm(): Form` |
 | `DashboardPage` | `protected static ?string $dashboard`, `protected static ?string $layoutKey`, `static dashboardClass(): ?string`, `getWidgets(): array`, `getWidgetColumns(): int`, `widgetLayoutKey(): ?string` |
 
 `DashboardPage` composes no resource at all — it has its own `$title`,
@@ -460,6 +771,29 @@ Edit and view resolve one record, through `ResolvesOneRecord`:
 
 Edit and view also compose `EmbedsRelationManagers`, whose one method is
 `relationManagers(): array`.
+
+Every page but the dashboard composes `InteractsWithHeaderActions`, and every page
+but the list composes it through `HostsPageActions`, which adds `WithActions`:
+
+| Member | Type | Purpose |
+| --- | --- | --- |
+| `headerActions(): array` | `array<int, Action\|ActionGroup\|null>` | *(protected)* Declare the page's header actions; `null` entries are skipped |
+| `getHeaderActions(): array` | `array<int, Action\|ActionGroup>` | The declared actions, resolved once per request |
+| `headerActionRecord(): ?Model` | `Model\|null` | *(protected)* The record the actions are about — edit and view answer with theirs |
+| `headerActionClick(): ResolvesActionClick` | `ResolvesActionClick` | *(protected)* Which Livewire method a click lands in on this page |
+| `createHeaderAction(): ?Action` | `Action\|null` | *(protected, list)* The ready-made *New*, or `null` where there is no create page to open |
+| `deleteHeaderAction(): DeleteAction` | `DeleteAction` | *(protected, edit and view)* The ready-made *Delete* — confirm, delete, back to the list |
+| `mayDeleteRecord(): bool` | `bool` | *(protected, edit and view)* Policy first, then the edit page's permission, then no |
+| `restoreHeaderAction(): RestoreAction` | `RestoreAction` | *(protected, edit and view)* *Restore*, drawn only on a trashed record |
+| `forceDeleteHeaderAction(): ForceDeleteAction` | `ForceDeleteAction` | *(protected, edit and view)* *Force delete*, drawn only on a trashed record, back to the list |
+
+`Page` adds only what a page of your own needs:
+
+| Member | Type | Purpose |
+| --- | --- | --- |
+| `protected static string $view` | `string` | The view drawn under the heading. Required |
+| `protected ?string $title` | `string\|null` | The heading, or none |
+| `getViewData(): array` | `array<string, mixed>` | *(protected)* Anything the view needs beside the public properties |
 
 ## A Layout Is Yours
 

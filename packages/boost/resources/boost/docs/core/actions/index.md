@@ -28,6 +28,8 @@ All extend `BaseAction` and share the same fluent API for label, icon, color, si
 |-------|-------------|
 | `DeleteAction` | Single record delete with confirmation |
 | `DeleteBulkAction` | Bulk delete with confirmation |
+| `RestoreAction` | Restore of one soft-deleted record, with confirmation |
+| `ForceDeleteAction` | Permanent delete of one soft-deleted record, with confirmation |
 | `RestoreBulkAction` | Bulk restore of soft-deleted records, with confirmation |
 | `ForceDeleteBulkAction` | Bulk permanent delete of soft-deleted records, with confirmation |
 | `EditAction` | Opens edit modal/form |

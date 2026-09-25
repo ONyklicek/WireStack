@@ -127,6 +127,30 @@ konfigurace, tak provider nabootovaný dvakrát. Dvě *různé* třídy hlásíc
 k jednomu klíči naopak vyhodí výjimku: ta druhá by tiše převzala routing té
 první.
 
+### Jak je najít samy
+
+Složku resource jde zaregistrovat jako složku:
+
+```php
+// config/wire-core.php
+'discover' => [
+    'resources' => ['App\\Resources' => app_path('Resources')],   // [tl! focus]
+    'dashboards' => ['App\\Dashboards' => app_path('Dashboards')],
+],
+```
+
+Namespace na adresář, tak jak je mapuje PSR-4. Při bootu se zaregistruje každá
+konkrétní třída v adresáři, která implementuje `DescribesResource` (u
+`dashboards` dědí z `Dashboard`) — až po vyjmenovaných, takže třída vyjmenovaná
+i nalezená se zaregistruje jednou a pořadí seznamu vyhrává. Cokoli dalšího ve
+složce — abstraktní základ, trait, pomocník — se přeskočí, protože složka
+resource smí obsahovat to, z čeho se skládají. Třída, která se nenačte
+autoloaderem, se nenajde: discovery jde přes autoloader, takže vidí to, co
+aplikace umí načíst.
+
+Při každém bootu je to jeden výpis adresáře a jedno `class_exists()` na soubor,
+a proto je to vypnuté, dokud se nějaký adresář nepojmenuje.
+
 ## Čtení registru
 
 ```php
@@ -215,6 +239,60 @@ aby resource deklaroval dva.
 Perzistence zůstává formuláři: `Form` už vlastní životní cyklus ukládání a resource nad
 non-Eloquent zdrojem zapisuje přes `Form::using()`.
 
+## Vnořené resource
+
+Některé záznamy dávají smysl jen uvnitř jiného — řádky objednávky, úkoly
+projektu. Resource to řekne tím, že pojmenuje rodiče a relaci rodičovského
+modelu, která ho drží:
+
+```php
+use NyonCode\WirePanels\Resources\Contracts\NestedResource;
+
+final class OrderLineResource implements DescribesResource, NestedResource, ProvidesPages, ProvidesResourceForm, ProvidesResourceTable
+{
+    use DescribesRecords;
+
+    public static function parentResource(): string    // [tl! focus:start]
+    {
+        return OrderResource::class;
+    }
+
+    public static function parentRelationship(): string
+    {
+        return 'lines';                                   // Order::lines(), hasMany
+    }                                                     // [tl! focus:end]
+
+    public static function pages(): array
+    {
+        return ['index' => ListOrderLines::class, 'create' => CreateOrderLine::class, 'edit' => EditOrderLine::class];
+    }
+
+    // table(), form() — jako u každého resource
+}
+```
+
+**Všechno jde přes rodičovský záznam.** Stránky jsou routované pod ním —
+`orders/{parent}/order-lines`, `…/create`, `…/{record}/edit` — a klíč `{parent}`
+čtou z routy. Seznam ukáže jen řádky té objednávky; stránka záznamu hledá svůj
+řádek přes `$order->lines()`, takže klíč řádku jiné objednávky je 404, ne cizí
+řádek; a stránka založení váže formulář na `$order->lines()->make()`, takže nový
+řádek se založí pod objednávkou s už nastaveným klíčem. URL stránek nesou
+rodiče, takže *Nový*, přesměrování po uložení i záložky záznamu zůstanou uvnitř.
+
+**Drobečková navigace a záložky následují.** Stránka řádku vede *Orders ›
+ORD-17 › Order lines › Edit Order line*, rodičovský záznam pojmenovaný podle
+`name`, `title`, `number`, `label` nebo `subject`, jinak podle štítku a klíče.
+A stránky rodičovského záznamu dostanou záložku na seznam — rodič pro to nic
+nedeklaruje, stačí, že ho vnořený resource jmenuje, a záložka chybí tomu, koho
+by routa seznamu odmítla.
+
+**Meze dává URL.** Routa nese jeden `{parent}`, takže rodič vnořeného resource
+sám vnořený není — to se odmítne při registraci rout. Založení potřebuje relaci,
+která umí vyrobit potomka znalého rodiče — `hasMany`, `morphMany` a jejich
+jedna-k-jedné příbuzné; `belongsToMany` odmítne se zprávou, která jmenuje cestu
+ven. Vnořený resource bez rodiče nemá URL, a tedy ani místo v menu: nechte ho
+bez `ProvidesNavigation`.
+
 ## Introspekce
 
 `describe-resource` hlásí, co resources aplikace deklarují — identitu, které
@@ -247,6 +325,8 @@ a `describe-form` na to už odpovídají za stránky, které je vykreslují.
 | `ProvidesResourceForm` | `form(Form $form): Form` | `wire-forms` |
 | `ProvidesResourceInfolist` | `infolist(Infolist $infolist): Infolist` | `wire-core` |
 | `ProvidesRelationManagers` | `relationManagers(): array` | `wire-panels` |
+| `ManagesTrashedRecords` | *(značka)* | `wire-panels` |
+| `NestedResource` | `static parentResource(): string`, `static parentRelationship(): string` | `wire-panels` |
 | `ProvidesNavigation` | `static navigation(): NavigationItem` | `wire-core` |
 | `ProvidesBreadcrumbs` | `breadcrumbs(): array` | `wire-core` |
 | `ProvidesPages` | `static pages(): array` | `wire-core` |

@@ -6,8 +6,11 @@ namespace NyonCode\WirePanels\Resources\Navigation;
 
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
+use NyonCode\WirePanels\Resources\Contracts\NestedResource;
 use NyonCode\WirePanels\Routing\ResourceRoutes;
 
 /**
@@ -80,6 +83,37 @@ final class RecordPages
         uasort($pages, static fn (RoutePage $a, RoutePage $b): int => $a->getSort() <=> $b->getSort());
 
         return $pages;
+    }
+
+    /**
+     * The nested resources whose records belong to one of this resource's, and
+     * that have a list to show them in — each is a tab of the parent record.
+     *
+     * Read off the catalogue, so a parent declares nothing about its children:
+     * a {@see NestedResource} that names it is enough.
+     *
+     * @param  class-string|null  $resource
+     * @return array<string, class-string<NestedResource&ProvidesPages&DescribesResource>> Keyed by the child's registered key.
+     */
+    public static function children(?string $resource): array
+    {
+        if ($resource === null) {
+            return [];
+        }
+
+        $children = [];
+
+        foreach (app(Catalog::class)->implementing(NestedResource::class) as $key => $child) {
+            if (is_subclass_of($child, NestedResource::class)
+                && is_subclass_of($child, ProvidesPages::class)
+                && is_subclass_of($child, DescribesResource::class)
+                && $child::parentResource() === $resource
+                && isset($child::pages()['index'])) {
+                $children[(string) $key] = $child;
+            }
+        }
+
+        return $children;
     }
 
     /**

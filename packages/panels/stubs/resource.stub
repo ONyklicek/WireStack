@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+{{ imports }}
+
+/**
+ * {{ plural }}, declared once — the list, the form and the pages that render them.
+ *
+ * Register it in `config('wire-core.resources')`, and `Route::wireResources()`
+ * gives its pages their URLs.
+ */
+final class {{ class }} implements {{ contracts }}
+{
+    use DescribesRecords;
+
+    public static function modelClass(): ?string
+    {
+        return {{ model }}::class;
+    }
+
+    public static function pages(): array
+    {
+        return [
+{{ pages }}
+        ];
+    }
+
+    public function table(Table $table): Table
+    {
+        return $table->columns([
+{{ columns }}
+        ]);
+    }
+
+    public function form(Form $form): Form
+    {
+        return $form->schema([
+{{ fields }}
+        ]);
+    }
+{{ infolist }}}

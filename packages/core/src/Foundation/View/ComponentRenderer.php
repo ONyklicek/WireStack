@@ -63,8 +63,15 @@ final class ComponentRenderer
             $slot instanceof Htmlable ? $slot->toHtml() : e($slot),
         );
 
-        /** @var View $view every Foundation\View component answers render() with one */
         $view = $component->resolveView();
+
+        // A component may name its view instead of building it — the action
+        // modal host does — and Laravel's resolver hands that back as the name.
+        if (is_string($view)) {
+            $view = view($view);
+        }
+
+        /** @var View $view */
 
         // Merged on top of the view the component built, so the data it passed
         // itself survives — `crumbs` arrives that way, and is protected precisely

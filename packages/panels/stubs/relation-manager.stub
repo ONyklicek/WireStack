@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\RelationManagers\RelationManager;
+use NyonCode\WireTable\Table;
+
+/**
+ * The {{ relationship }} of one {{ owner }}: a table scoped to the relationship,
+ * embedded under the record's edit and view pages once the resource lists it in
+ * `relationManagers()`.
+ */
+class {{ class }} extends RelationManager
+{
+    protected string $relationship = '{{ relationship }}';
+
+    protected ?string $title = '{{ title }}';
+
+    public function table(Table $table): Table
+    {
+        return $table->columns([
+            TextColumn::make('id')->sortable(),
+        ]);
+    }
+}

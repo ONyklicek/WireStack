@@ -13,8 +13,13 @@ use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireForms\Contracts\ProvidesResourceForm;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
+use NyonCode\WirePanels\Pages\Concerns\HostsPageActions;
+use NyonCode\WirePanels\Pages\Concerns\InteractsWithPageWidgets;
+use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
+use NyonCode\WirePanels\Resources\Concerns\CanDeleteRecord;
 use NyonCode\WirePanels\Resources\Concerns\EmbedsRelationManagers;
+use NyonCode\WirePanels\Resources\Concerns\InteractsWithUnsavedChanges;
 use NyonCode\WirePanels\Resources\Concerns\LinksToRecordPages;
 use NyonCode\WirePanels\Resources\Concerns\RedirectsAfterSave;
 use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
@@ -38,10 +43,14 @@ use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
  * than the key and stale by the time the next request lands — so the key is what
  * travels and the record is resolved per request.
  */
-abstract class EditPage extends Component implements IdentifiesHookTarget, ProvidesBreadcrumbs
+abstract class EditPage extends Component implements HasHeaderActions, IdentifiesHookTarget, ProvidesBreadcrumbs
 {
     use BelongsToResource;
+    use CanDeleteRecord;
     use EmbedsRelationManagers;
+    use HostsPageActions;
+    use InteractsWithPageWidgets;
+    use InteractsWithUnsavedChanges;
     use LinksToRecordPages;
     use RedirectsAfterSave;
     use ResolvesOneRecord;
@@ -143,6 +152,10 @@ abstract class EditPage extends Component implements IdentifiesHookTarget, Provi
         return view('wire-panels::pages.edit-page', [
             'title' => $this->getTitle(),
             'breadcrumbs' => $this->breadcrumbs(),
+            'headerActions' => $this->renderedHeaderActions(),
+            'headerWidgets' => $this->pageWidgetsForView('header'),
+            'footerWidgets' => $this->pageWidgetsForView('footer'),
+            'unsavedChanges' => $this->unsavedChangesConfig(),
             'subNavigation' => $this->subNavigation($record),
             'relationManagers' => $this->relationManagers(),
             // Not `record`: that is the public property holding the *key*, and

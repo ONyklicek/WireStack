@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\HtmlString;
+use Illuminate\View\Component;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\View\Breadcrumbs;
 use NyonCode\WireCore\Foundation\View\Button;
@@ -62,4 +63,22 @@ it('keeps the data a component passes its own view', function () {
     $html = ComponentRenderer::render(new FileThumb(name: 'prices.xlsx', size: 'md'));
 
     expect($html)->toContain('XLSX');
+});
+
+it('renders a component that names its view rather than building it', function () {
+    // The action modal host answers render() with a view *name*. A page draws it
+    // through this renderer, so a name has to become the view it names.
+    $named = new class extends Component
+    {
+        public string $greeting = 'Hello from a named view';
+
+        public function render(): string
+        {
+            return 'wire-core-test::named-component';
+        }
+    };
+
+    view()->addNamespace('wire-core-test', __DIR__.'/fixtures');
+
+    expect(ComponentRenderer::render($named))->toContain('Hello from a named view');
 });

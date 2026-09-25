@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'create' => 'New :label',
     'edit' => 'Edit :label',
+    'deleted' => ':label deleted',
+    'unsaved_changes' => 'You have unsaved changes. Leave this page anyway?',
+    'restored' => ':label restored',
+    'created' => ':label created',
+    'saved' => 'Saved',
     'save' => 'Save',
 
     /*
@@ -17,6 +22,8 @@ return [
         'view' => 'View',
         'edit' => 'Edit',
     ],
+
+    'list_tabs' => 'List views',
 
     'record_pages' => 'Record pages',
 ];

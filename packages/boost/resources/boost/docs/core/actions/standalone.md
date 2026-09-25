@@ -104,5 +104,5 @@ request, without which its fields do not come back after a failed validation.
 
 - [Actions](index.md) — the classes declared here
 - [Action Modals](modals.md) — everything a standalone action may open
-- [Panels: Pages](../../panels/pages.md) — `ListPage` hosts actions through `WithTable`; the other four compose no runtime
+- [Panels: Pages](../../panels/pages.md) — every resource page hosts actions: the list through `WithTable`, the others through this trait, and `Page` for a page of your own
 - [Forms](../../forms/overview.md) — the other half of `WithActions`' host component

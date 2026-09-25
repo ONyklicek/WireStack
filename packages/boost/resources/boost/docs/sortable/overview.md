@@ -66,6 +66,7 @@ class TaskTable extends Component
 | [Installation](installation.md) | Composer, migrations, SortableJS, Tailwind |
 | [Row Reordering](row-sorting.md) | Toggle mode, drag & drop, lifecycle hooks |
 | [Column Reordering](column-sorting.md) | Per-user column ordering, DB persistence |
+| [Board](board.md) | Records in lanes — a kanban, cards dragged between lanes |
 | [Customization](customization.md) | CSS classes, dark mode, view publishing |
 | [Advanced Usage](advanced.md) | Full example, configuration details, and troubleshooting |
 | [API Reference](api-reference.md) | SortableTable, WithSortable, ReorderableColumnOrder, config |

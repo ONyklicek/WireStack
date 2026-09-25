@@ -7,7 +7,6 @@ namespace NyonCode\WireModuleUsers\Pages;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Actions\DeleteAction;
 use NyonCode\WireCore\Actions\EditAction;
-use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Actions\ViewAction;
 use NyonCode\WireModuleUsers\Resources\RoleResource;
 use NyonCode\WireModuleUsers\Support\Roles;
@@ -34,21 +33,9 @@ class ListRoles extends ListPage
 
     public function table(Table $table): Table
     {
-        // Resolved once, not per render: a header action's URL is
-        // record-independent by definition, and `HeaderAction::url()` takes the
-        // string rather than a closure for exactly that reason. An unrouted
-        // create page contributes no button at all — better than one that leads
-        // nowhere.
-        $create = $this->pageUrl('create');
-
+        // *New* is the list page's own header action: the page draws it
+        // beside the heading when the create page is routed and allowed.
         return parent::table($table)
-            ->headerActions(array_values(array_filter([
-                $create === null ? null : HeaderAction::make('create')
-                    ->label(__('wire-panels::messages.create', ['label' => RoleResource::label()]))
-                    ->icon('plus')
-                    ->url($create)
-                    ->permission($this->pagePermission('create')),
-            ])))
             ->actions([
                 ViewAction::make()
                     ->url(fn (Model $record): ?string => $this->pageUrl('view', $record))

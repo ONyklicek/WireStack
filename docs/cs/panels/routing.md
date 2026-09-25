@@ -84,6 +84,15 @@ odmítne, jakmile jsou načtené všechny routy — při bootu, a tedy i při
 `route:cache`, ne až při prvním kliknutí. Stejná stránka zaroutovaná dvakrát přes
 sebe nic nemění a projde.
 
+[Vnořený resource](resources.md#vnorene-resource) sedí pod jedním záznamem
+rodiče — `{prefix rodiče}/{parent}/{jeho prefix}` — a dědí middleware a doménu
+rodiče, takže co chrání objednávku, chrání i její řádky:
+
+| Druh stránky | URL | Jméno routy |
+| --- | --- | --- |
+| `index` | `orders/{parent}/order-lines` | `wire.order-lines.index` |
+| `edit` | `orders/{parent}/order-lines/{record}/edit` | `wire.order-lines.edit` |
+
 ## Oprávnění, middleware a domény
 
 `RoutePage::permission()` dosedne na routu jako Laravelí `can:` middleware. Nic

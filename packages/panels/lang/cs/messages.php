@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'create' => 'Nový/á :label',
     'edit' => 'Upravit :label',
+    'deleted' => ':label – smazáno',
+    'unsaved_changes' => 'Máte neuložené změny. Opravdu chcete stránku opustit?',
+    'restored' => ':label – obnoveno',
+    'created' => ':label – vytvořeno',
+    'saved' => 'Uloženo',
     'save' => 'Uložit',
 
     /*
@@ -17,6 +22,8 @@ return [
         'view' => 'Detail',
         'edit' => 'Upravit',
     ],
+
+    'list_tabs' => 'Pohledy seznamu',
 
     'record_pages' => 'Stránky záznamu',
 ];

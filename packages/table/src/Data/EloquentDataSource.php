@@ -9,6 +9,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\Pagination\Paginator as PaginatorContract;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Collection;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Capabilities\CapabilitySet;
@@ -43,8 +44,15 @@ final class EloquentDataSource implements DataSource
 {
     /**
      * @param  Builder<Model>  $query  A query already narrowed by TableQueryService.
+     * @param  bool  $resolvesTrashed  Find a soft-deleted record by its key too. What a
+     *                                 table that lists trashed records asks for: its
+     *                                 restore button sits on a row the base query's
+     *                                 soft-delete scope would never find again.
      */
-    public function __construct(private readonly Builder $query) {}
+    public function __construct(
+        private readonly Builder $query,
+        private readonly bool $resolvesTrashed = false,
+    ) {}
 
     public function paginate(QueryPlan $plan, PagingRequest $paging): LengthAwarePaginator|PaginatorContract|CursorPaginator
     {
@@ -94,9 +102,22 @@ final class EloquentDataSource implements DataSource
 
     public function resolveRecord(int|string $key): ?RecordContract
     {
-        $model = (clone $this->query)->find($key);
+        $model = $this->keyedQuery()->find($key);
 
         return $model === null ? null : new EloquentRecord($model);
+    }
+
+    /**
+     * The base query a key is looked up in, with the soft-delete scope lifted
+     * when this source was asked to find trashed records.
+     *
+     * @return Builder<Model>
+     */
+    private function keyedQuery(): Builder
+    {
+        $query = clone $this->query;
+
+        return $this->resolvesTrashed ? $query->withoutGlobalScope(SoftDeletingScope::class) : $query;
     }
 
     /**
@@ -111,7 +132,7 @@ final class EloquentDataSource implements DataSource
             return new Collection;
         }
 
-        $query = clone $this->query;
+        $query = $this->keyedQuery();
         $model = $query->getModel();
 
         // Qualified, because a selection over a joined query is the ordinary

@@ -11,6 +11,7 @@ use NyonCode\WireCore\Core\Data\DataSource;
 use NyonCode\WireTable\Data\EloquentDataSource;
 use NyonCode\WireTable\Exceptions\CustomDataSourceException;
 use NyonCode\WireTable\Exceptions\TableHasNoDataSourceException;
+use NyonCode\WireTable\Filters\TrashedFilter;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Table;
 
@@ -186,7 +187,25 @@ trait HasDataSource
      */
     public function getDataSource(): DataSource
     {
-        return $this->dataSource ??= new EloquentDataSource($this->getQuery());
+        return $this->dataSource ??= new EloquentDataSource($this->getQuery(), $this->resolvesTrashedRecords());
+    }
+
+    /**
+     * Whether a record is looked up by key among the soft-deleted too.
+     *
+     * True exactly when the table can list them — it carries a `TrashedFilter`.
+     * A row the filter brought in must still be found when its action is
+     * clicked, and the base query's soft-delete scope would hide it.
+     */
+    public function resolvesTrashedRecords(): bool
+    {
+        foreach ($this->getFilters() as $filter) {
+            if ($filter instanceof TrashedFilter) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

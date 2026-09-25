@@ -203,6 +203,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Discovery
+    |--------------------------------------------------------------------------
+    |
+    | Directories to find resources and dashboards in, instead of listing
+    | them one by one above — namespace => directory, the way PSR-4 maps them.
+    | Every concrete class there of the right kind is registered at boot;
+    | anything else in the folder (an abstract base, a trait) is passed over.
+    |
+    | Off until named: it is one directory listing per boot, and an application
+    | that lists its resources pays nothing for it. Both paths may be used at
+    | once — a class listed and discovered registers once.
+    |
+    |   'discover' => [
+    |       'resources' => ['App\\Resources' => app_path('Resources')],
+    |       'dashboards' => ['App\\Dashboards' => app_path('Dashboards')],
+    |   ],
+    |
+    */
+    'discover' => [
+        'resources' => [],
+        'dashboards' => [],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Multi-tenancy
     |--------------------------------------------------------------------------
     |

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WirePanels\Resources\Pages;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
@@ -12,7 +14,12 @@ use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireForms\Contracts\ProvidesResourceForm;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
+use NyonCode\WirePanels\Exceptions\ResourcePageException;
+use NyonCode\WirePanels\Pages\Concerns\HostsPageActions;
+use NyonCode\WirePanels\Pages\Concerns\InteractsWithPageWidgets;
+use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
+use NyonCode\WirePanels\Resources\Concerns\InteractsWithUnsavedChanges;
 use NyonCode\WirePanels\Resources\Concerns\RedirectsAfterSave;
 
 /**
@@ -37,9 +44,12 @@ use NyonCode\WirePanels\Resources\Concerns\RedirectsAfterSave;
  * `Form::using()` in its own `form()` and this page is unchanged, which is the
  * whole of ADR 0020's answer to non-Eloquent writes.
  */
-abstract class CreatePage extends Component implements IdentifiesHookTarget, ProvidesBreadcrumbs
+abstract class CreatePage extends Component implements HasHeaderActions, IdentifiesHookTarget, ProvidesBreadcrumbs
 {
     use BelongsToResource;
+    use HostsPageActions;
+    use InteractsWithPageWidgets;
+    use InteractsWithUnsavedChanges;
     use RedirectsAfterSave;
     use WithForms;
 
@@ -92,7 +102,32 @@ abstract class CreatePage extends Component implements IdentifiesHookTarget, Pro
 
         $form = $form->statePath('data');
 
-        return $resource->form($model !== null ? $form->model($model) : $form);
+        return $resource->form($model !== null ? $form->model($this->newRecord($model)) : $form);
+    }
+
+    /**
+     * What the form creates: the model's class, or — for a nested resource — a
+     * child the parent's relationship has already made, carrying the parent's key.
+     *
+     * The form's save fills and saves whatever it is bound to, so a made child
+     * is filed under its parent with nothing else to do.
+     *
+     * @param  class-string<Model>  $model
+     * @return class-string<Model>|Model
+     */
+    protected function newRecord(string $model): string|Model
+    {
+        $relation = $this->parentRelation();
+
+        if ($relation === null) {
+            return $model;
+        }
+
+        if (! $relation instanceof HasOneOrMany) {
+            throw ResourcePageException::cannotCreateThrough((string) static::$resource, static::$resource::parentRelationship(), $relation::class);
+        }
+
+        return $relation->make();
     }
 
     /** A create page is titled by the singular: "New order", not "Orders". */
@@ -129,11 +164,21 @@ abstract class CreatePage extends Component implements IdentifiesHookTarget, Pro
             ?? $this->reachablePageUrl('index');
     }
 
+    /** A create page is about no record, so neither are its actions. */
+    protected function headerActionRecord(): ?Model
+    {
+        return null;
+    }
+
     public function render(): View
     {
         return view('wire-panels::pages.create-page', [
             'title' => $this->getTitle(),
             'breadcrumbs' => $this->breadcrumbs(),
+            'headerActions' => $this->renderedHeaderActions(),
+            'headerWidgets' => $this->pageWidgetsForView('header'),
+            'footerWidgets' => $this->pageWidgetsForView('footer'),
+            'unsavedChanges' => $this->unsavedChangesConfig(),
         ]);
     }
 }

@@ -55,6 +55,12 @@ Table::make()
     ])
 ```
 
+Funguje to proto, že filtr mění, jak tabulka záznam najde, ne jen co vypisuje:
+tabulka s `TrashedFilter` hledá klíč řádku při kliknutí na jeho akci i mezi
+smazanými a zaškrtnutý smazaný řádek ve výběru ponechá. Tabulka bez něj drží
+soft-delete scope při každém hledání — smazaný řádek nikdy nevypíše, takže
+k němu nemá vést žádný její klíč.
+
 ## Požadavky
 
 Model tabulky musí používat `SoftDeletes`. Pokud ne, aplikace filtru vyhodí

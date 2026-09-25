@@ -39,3 +39,8 @@ script leaving a global behind, it must now set the key or bundle SortableJS its
 
 As with every wireStack package, put `@@wireStackScripts` in the layout `<head>` so the bundle is in the
 initial document; the view's own `@@include` remains a fallback.
+
+### Boards (kanban)
+
+- **`Board` declares, `WithBoard` hosts.** `Board::make()->model(Task::class)->groupBy('status')->lanes(TaskStatus::class)->cardTitle('title')->orderColumn('position')`; lanes are `Lane`s, `value => label`, or a backed enum (its core `HasLabel`/`HasColor` label and colour the lanes). A board page is a wire-panels `Page` that composes `WithBoard` with `protected static string $view = 'wire-sortable::board.content'` — neither package depends on the other, so never add a `BoardPage` class to either.
+- **The drag is Livewire's `wire:sort`** (one group across the lanes, the lane as group id) — no script of this package. A drop calls `moveBoardCard($key, $position, $lane)`: unknown lane or a record outside the board's `query()` is ignored, `canMoveBoardCard(Model, string)` may refuse, then `MoveBoardCard` writes the lane and renumbers the lane in one transaction (only when `orderColumn()` is set). Override `boardCardMoved()` to react — never write the lane column yourself from the view.

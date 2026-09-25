@@ -6,6 +6,7 @@ namespace NyonCode\WirePanels\Resources\Console;
 
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Support\Str;
+use NyonCode\WirePanels\Resources\Console\Concerns\InteractsWithPublishedStubs;
 use NyonCode\WirePanels\Resources\Pages\DashboardPage;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputOption;
@@ -28,11 +29,13 @@ use Symfony\Component\Console\Input\InputOption;
  * what to install when it does not.
  *
  * The template is publishable with `vendor:publish --tag=wire-panels::stubs`,
- * and a published copy wins ({@see resolveStubPath()}).
+ * and a published copy wins ({@see InteractsWithPublishedStubs}).
  */
 #[AsCommand(name: 'make:wire-dashboard-page')]
 class MakeDashboardPageCommand extends GeneratorCommand
 {
+    use InteractsWithPublishedStubs;
+
     protected $name = 'make:wire-dashboard-page';
 
     protected $description = 'Create the page that renders a Wire dashboard';
@@ -41,26 +44,7 @@ class MakeDashboardPageCommand extends GeneratorCommand
 
     protected function getStub(): string
     {
-        return $this->resolveStubPath('/../../../stubs/dashboard-page.stub');
-    }
-
-    /**
-     * A published stub wins, so an application can change what this produces.
-     *
-     * `stubs/wire-panels/` first — where `vendor:publish --tag=wire-panels::stubs`
-     * puts it, the toolkit namespacing published stubs by package so two
-     * packages shipping the same file name cannot overwrite each other — then
-     * `stubs/`, Laravel's own `stub:publish` convention.
-     */
-    protected function resolveStubPath(string $stub): string
-    {
-        foreach ([base_path('stubs/wire-panels/dashboard-page.stub'), base_path('stubs/dashboard-page.stub')] as $published) {
-            if (file_exists($published)) {
-                return $published;
-            }
-        }
-
-        return __DIR__.$stub;
+        return $this->publishedStubPath('dashboard-page.stub');
     }
 
     protected function getDefaultNamespace($rootNamespace): string

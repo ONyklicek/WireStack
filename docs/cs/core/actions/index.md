@@ -28,6 +28,8 @@ Všechny rozšiřují `BaseAction` a sdílejí stejné fluent API pro popisek, i
 |-------|-------------|
 | `DeleteAction` | Smazání jednoho záznamu s potvrzením |
 | `DeleteBulkAction` | Hromadné smazání s potvrzením |
+| `RestoreAction` | Obnovení jednoho soft-smazaného záznamu s potvrzením |
+| `ForceDeleteAction` | Trvalé smazání jednoho soft-smazaného záznamu s potvrzením |
 | `RestoreBulkAction` | Hromadné obnovení soft-smazaných záznamů, s potvrzením |
 | `ForceDeleteBulkAction` | Hromadné trvalé smazání soft-smazaných záznamů, s potvrzením |
 | `EditAction` | Otevře edit modal/formulář |

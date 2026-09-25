@@ -116,6 +116,23 @@ try {
   check('list heading comes from the resource plural label', list.heading === 'Invoices', `heading=${list.heading}`);
   check('list shows the declared columns', list.body.includes('customer') || /INV|Invoice/i.test(list.body));
 
+  // ── the list's tabs narrow it, and the URL keeps the choice ──
+  check('list draws its tabs', await evaluate(`!! document.querySelector('[data-testid="list-tab-paid"]')`));
+  await evaluate(`document.querySelector('[data-testid="list-tab-paid"]').click()`);
+  let narrowed = null;
+  for (let i = 0; i < 40 && ! narrowed; i++) {
+    await sleep(100);
+    narrowed = await evaluate(`(() => {
+      const tab = document.querySelector('[data-testid="list-tab-paid"]');
+      if (tab?.getAttribute('aria-current') !== 'true') return null;
+      const statuses = [...document.querySelectorAll('[data-testid="table-row"]')].map((r) => r.innerText);
+      return { rows: statuses.length, allPaid: statuses.every((t) => t.includes('paid')), url: location.search };
+    })()`);
+  }
+  await shot('01b-list-paid');
+  check('a tab narrows the list to its own records', !! narrowed && narrowed.rows > 0 && narrowed.allPaid, JSON.stringify(narrowed));
+  check('the URL carries the tab', !! narrowed && narrowed.url.includes('tab=paid'), narrowed?.url);
+
   // ── create ──
   await go(URLS.create);
   await shot('02-create');
@@ -162,6 +179,28 @@ try {
   check('view renders the infolist entries', /INV|Invoice/i.test(view.body));
   check('view embeds the same relation manager', view.relationHeading.includes('Line items'));
   check('the relation manager still lists rows on the view page', view.relationRows > 0);
+
+  // ── a header action on a record page: drawn beside the heading, opens its
+  //    confirmation through the page's own action host, and closes on confirm ──
+  const headerButton = await evaluate(`!! document.querySelector('[data-testid="page-header-actions"] [data-testid="action-remind"]')`);
+  check('view page draws its header action beside the heading', headerButton);
+
+  await evaluate(`document.querySelector('[data-testid="action-remind"]').click()`);
+  let confirmShown = false;
+  for (let i = 0; i < 40 && ! confirmShown; i++) {
+    await sleep(100);
+    confirmShown = await evaluate(`(() => { const b = document.querySelector('[data-testid="confirmation-confirm"]'); return !! b && b.offsetParent !== null; })()`);
+  }
+  await shot('05-view-header-action');
+  check('the header action opens its confirmation', confirmShown);
+
+  await evaluate(`document.querySelector('[data-testid="confirmation-confirm"]')?.click()`);
+  let closed = false;
+  for (let i = 0; i < 40 && ! closed; i++) {
+    await sleep(100);
+    closed = await evaluate(`(() => { const b = document.querySelector('[data-testid="confirmation-confirm"]'); return ! b || b.offsetParent === null; })()`);
+  }
+  check('confirming runs it and closes the modal', closed);
 
   // ── console must stay clean across all four ──
   const errors = browser.events

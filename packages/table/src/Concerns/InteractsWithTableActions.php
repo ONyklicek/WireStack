@@ -247,7 +247,10 @@ trait InteractsWithTableActions
         }
 
         $table = $this->getTable();
-        $record = $table->getQuery()->where($table->getPrimaryKey(), $recordKey)->first();
+        // Through the source, like executeTableAction(): one lookup rule for a
+        // row whether its action runs at once or asks first — which is also
+        // what finds a trashed row a TrashedFilter brought into the list.
+        $record = $table->getDataSource()->resolveRecord($recordKey)?->unwrap();
 
         // An inactive record whose state withholds its actions refuses the modal
         // too: the inert action cell is a client fact, and a modal opened from a
