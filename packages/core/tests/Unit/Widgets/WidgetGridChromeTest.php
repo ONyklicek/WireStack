@@ -133,3 +133,21 @@ it('fills a tall tile with the widget alone, never with the chrome beside it', f
                 ->and($html)->not->toContain('[&>*>*]:h-full');
         });
 });
+
+it('compiles every loop it opens with the marker Livewire closes it with', function (string $view) {
+    // Livewire's morph-aware precompiler reads a directive's arguments from the
+    // raw template, comments included, and a stray quote in a comment inside
+    // `@class([...])` made it lose the `@foreach` while still closing it. The
+    // grid itself rendered; the NEXT keyed loop on the page — the admin's
+    // search palette — then read a null loop and the whole page answered 500.
+    $compiled = app('blade.compiler')->compileString(
+        file_get_contents(app('view')->getFinder()->find($view)),
+    );
+
+    expect(substr_count($compiled, 'SupportCompiledWireKeys::openLoop()'))
+        ->toBe(substr_count($compiled, 'SupportCompiledWireKeys::endLoop()'))
+        ->toBeGreaterThan(0);
+})->with([
+    'the grid' => 'wire-core::widgets.widget-grid',
+    'the edit strip' => 'wire-core::widgets.partials.widget-edit-controls',
+]);

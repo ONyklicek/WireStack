@@ -81,8 +81,12 @@
         //
         // The cell is a column and only its LAST child — the widget, always
         // drawn after any chrome — fills and scrolls. Stretching every child
-        // made the edit strip a row tall and gave the "not filtered" mark the
-        // whole cell's height.
+        // made the edit strip a row tall and gave the unfiltered mark the
+        // whole height of the cell.
+        //
+        // No quote characters in comments inside this directive: Livewire reads
+        // its arguments from the raw template, comments included, and an odd
+        // quote makes it lose the loop below. See WidgetGridChromeTest.
         'auto-rows-[minmax(11rem,auto)] md:auto-rows-[11rem] [&>*]:min-h-0 [&>*]:flex [&>*]:flex-col [&>*>:last-child]:min-h-0 [&>*>:last-child]:flex-1 [&>*>:last-child]:overflow-auto' => $anySpansRows,
     ])>
         @foreach($widgets as $widget)
