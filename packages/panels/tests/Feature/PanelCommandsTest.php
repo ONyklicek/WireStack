@@ -202,3 +202,13 @@ it('leaves an existing relation manager alone without --force', function () {
         ->expectsOutputToContain('already exists')
         ->assertSuccessful();
 });
+
+it('says a page is ready when its folder is discovered and routing is in place', function () {
+    config()->set('wire-core.discover.pages', ['App\Livewire\Pages' => app_path('Livewire/Pages')]);
+    config()->set('wire-panels.routes.enabled', true);
+    config()->set('wire-panels.routes.prefix', 'admin');
+
+    $this->artisan('make:wire-page', ['name' => 'TaskBoardPage'])
+        ->expectsOutputToContain('Ready: registered and routed at /admin/task-board.')
+        ->assertSuccessful();
+});

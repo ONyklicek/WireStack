@@ -49,6 +49,16 @@ that is neither nullable nor defaulted is `required()`. The key, the timestamps,
 a table that does not exist yet writes the resource without generated lines
 and says so, rather than failing.
 
+**It ends by saying where the pages are, or what is missing.** It reads the
+application as it is: whether the resource is registered — listed in
+`config('wire-core.resources')`, just added with `--register`, or inside a
+folder `config('wire-core.discover.resources')` names — and whether anything
+routes registered classes — `'routes' => ['enabled' => true]` in
+`config/wire-panels.php`, or a route file calling `Route::wireResources()`. With
+both in place it prints *Ready: registered and routed at /admin/order-lines*;
+otherwise it names only the step that is missing, written out for this
+resource. `make:wire-page` does the same for a page of your own.
+
 **`--register` only writes where it can do so safely** — into a published
 `config/wire-core.php` that has a `resources` list, and only once. Anywhere else
 it prints the line to add.

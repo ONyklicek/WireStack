@@ -207,3 +207,55 @@ it('writes without generated fields when the model table cannot be read', functi
 
     expect(File::get(app_path('Resources/MrOrphanResource.php')))->toContain("// TextInput::make('name')->required(),");
 });
+
+it('says ready, with the address, when discovery and routing are in place', function () {
+    config()->set('wire-core.discover.resources', ['App\Resources' => app_path('Resources')]);
+    config()->set('wire-panels.routes.enabled', true);
+    config()->set('wire-panels.routes.prefix', 'admin');
+
+    $this->artisan('make:wire-resource', ['name' => 'OrderLine'])
+        ->expectsOutputToContain('Ready: registered and routed at /admin/order-lines.')
+        ->doesntExpectOutputToContain('Register it')
+        ->assertSuccessful();
+});
+
+it('names only the routing step when the resource is already registered', function () {
+    config()->set('wire-core.discover.resources', ['App\Resources' => app_path('Resources')]);
+
+    $this->artisan('make:wire-resource', ['name' => 'Order'])
+        ->expectsOutputToContain('Route::wireResources()')
+        ->doesntExpectOutputToContain('Register it')
+        ->assertSuccessful();
+});
+
+it('reads a route file that calls the macro as routing in place', function () {
+    File::put(base_path('routes/wire-panel-test.php'), "<?php\n\nRoute::prefix('admin')->group(fn () => Route::wireResources());\n");
+    config()->set('wire-core.resources', ['App\Resources\OrderResource']);
+
+    try {
+        $this->artisan('make:wire-resource', ['name' => 'Order'])
+            ->expectsOutputToContain('Ready: registered and routed at /orders, under the group your routes file puts Route::wireResources() in.')
+            ->assertSuccessful();
+    } finally {
+        File::delete(base_path('routes/wire-panel-test.php'));
+    }
+});
+
+it('names only the registration step when routing is in place', function () {
+    config()->set('wire-panels.routes.enabled', true);
+
+    $this->artisan('make:wire-resource', ['name' => 'Order'])
+        ->expectsOutputToContain("'discover' => ['resources' => ['App\\\\Resources' => app_path('Resources')]]")
+        ->doesntExpectOutputToContain('Give registered classes URLs')
+        ->assertSuccessful();
+});
+
+it('leaves a published config without a resources list alone, and says how to register', function () {
+    File::put(config_path('wire-core.php'), "<?php\n\nreturn [];\n");
+
+    $this->artisan('make:wire-resource', ['name' => 'Order', '--register' => true])
+        ->expectsOutputToContain('Register it')
+        ->assertSuccessful();
+
+    expect(File::get(config_path('wire-core.php')))->toBe("<?php\n\nreturn [];\n");
+});

@@ -2,6 +2,17 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.3.2]
+
+### Fixed
+
+- **The generators say whether what they wrote is reachable.** `make:wire-resource` and `make:wire-page` ended
+  with the same two reminders whatever was already set up, so people learned to skip them. They now read the
+  application: a class listed in config, just added with `--register`, or inside a discovered folder counts as
+  registered; `'routes' => ['enabled' => true]` or a route file calling `Route::wireResources()` counts as
+  routed. With both in place they print *Ready* and the address (`/admin/order-lines`); otherwise only the
+  missing step, written out for the class — including the exact `discover` line for its folder.
+
 ## [2.3.1]
 
 ### Fixed
