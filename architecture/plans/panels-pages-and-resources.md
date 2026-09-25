@@ -54,11 +54,11 @@ button is `Action::render()` in both — one view, two resolvers
 
 Each is its own commit, with tests, EN/CS docs and the boost guideline.
 
-1. **`Page` and header actions.** *(done — `8b80c130`)* Defaults: *New* on the list (a link to the
-   create page, when reachable), *Delete* on edit and view (confirmation,
-   policy-aware, back to the list). A page adds its own by overriding
+1. **`Page` and header actions.** *(done — `8b80c130`)* *New* on the list by default (a link to
+   the create page, when reachable); *Delete* on edit and view on request
+   (`deleteHeaderAction()` — policy, then the edit page's permission, then no). A page adds its own by overriding
    `headerActions()`.
-2. **Unsaved changes.** *(done)* The edit and create pages warn before a navigation
+2. **Unsaved changes.** *(done — `f940a0be`)* The edit and create pages warn before a navigation
    loses typed input — the browser's `beforeunload` and Livewire's
    `wire:navigate`, both from the form's own dirty state.
 3. **List tabs and page widgets.** `tabs()` on the list — named query scopes
