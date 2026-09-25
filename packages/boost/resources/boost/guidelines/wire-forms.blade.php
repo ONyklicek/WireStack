@@ -274,3 +274,9 @@ named actions in `actions()`, and drop the modal host in the view once:
   handling on a component.
 
 Use `describe-component-api` to see a field's full fluent surface.
+
+- **Warn before a form's unsaved input is left behind** with the fields bundle's controller on the element that
+  owns the form: `x-data="wireUnsavedChanges({ path: 'data', method: 'save' })"`. It compares the state bag
+  with the last successful save (so typing and putting back is no change), holds off while the save is in
+  flight (a redirect from inside it never prompts), and answers `beforeunload` and `wire:navigate`. The
+  panel's create and edit pages already arm it — never add a `beforeunload` listener of your own.

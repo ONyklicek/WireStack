@@ -89,7 +89,9 @@ Builder. It receives the value already normalized for its filter type — a `Ter
 `bool`, never the `'true'`/`'false'` option key, so branch with `$value ? … : …` and never compare to a
 string. Use `->indicator()` for filter chips and `->subRows()` to scope sub-row filtering. `TrashedFilter` constrains no
 column — it switches the soft-delete scope (`'with'` → `withTrashed()`, `'only'` → `onlyTrashed()`, cleared → live
-records) and requires the model to use `SoftDeletes`.
+records) and requires the model to use `SoftDeletes`. It also makes the table find a trashed row **by its key** when that row's action is
+clicked and keep a ticked trashed row in a keyed selection, so a *Restore* row action works; a table without it
+keeps the soft-delete scope on every lookup.
 
 Filtering by a relation aggregate uses the `orders->count()` / `orders->exists()` path syntax
 (`Filter::make('orders->count()')`). It is applied as a `WHERE` over the aggregate subquery via Eloquent's

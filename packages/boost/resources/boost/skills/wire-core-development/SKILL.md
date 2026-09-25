@@ -61,3 +61,7 @@ app(Tours::class)->register(
   (`->sizes(['S' => [1, 1], 'L' => [4, 1]])`) and `filters()` — one `DashboardFilter` selection in the address
   that `widgets()` reads through `$this->filter()`. Never repeat a per-widget `filter()` to fake a
   dashboard-wide one; mark a widget that cannot be narrowed with `->ignoresDashboardFilters()`.
+- Register resources and dashboards from `config('wire-core.discover')` (namespace => directory) instead of
+  listing each one; `Foundation\Registration\ClassDiscovery` is the one scanner. `ComponentRenderer::render()`
+  also takes a component whose `render()` names its view (`ModalHostComponent`), so draw it as an object rather
+  than through `<x-*>` in framework views.

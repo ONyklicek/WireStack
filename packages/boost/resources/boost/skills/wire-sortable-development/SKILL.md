@@ -37,3 +37,8 @@ public function table(Table $table): Table
 - The order column defaults to `wire-sortable.order_column` (`sort_order`); pass a column name to override.
 - The drag handle is rendered from `Table::getDragHandleHtml()` (a Blade partial) — do not hand-build the
   handle markup in JS.
+- **A board (kanban) is `Board` + `WithBoard`**, not a table: `Board::make()->model(Task::class)->groupBy('status')
+  ->lanes(TaskStatus::class)->cardTitle('title')->orderColumn('position')`. Host it on a wire-panels `Page`
+  (`use WithBoard;` + `protected static string $view = 'wire-sortable::board.content';`) or any Livewire
+  component. The drag is Livewire's `wire:sort` — no script to write; guard transitions in
+  `canMoveBoardCard()`, react in `boardCardMoved()`.

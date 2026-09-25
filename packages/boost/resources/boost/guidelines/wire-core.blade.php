@@ -13,7 +13,7 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
         ->requiresConfirmation()
         ->action(fn ($record) => $record->approve());
 
-- Presets: `DeleteAction`, `EditAction`, `ViewAction`, plus bulk presets (`DeleteBulkAction`, …).
+- Presets: `DeleteAction`, `EditAction`, `ViewAction`, `RestoreAction`, `ForceDeleteAction`, plus bulk presets (`DeleteBulkAction`, `RestoreBulkAction`, `ForceDeleteBulkAction`). They confirm and label themselves; the host supplies `->action()`.
 - `->url()` takes a **static string or a per-record Closure**, and the two are not interchangeable on a
   record-less surface (a header action, the table's empty state): a string resolves with or without a
   record, a Closure needs one and stays unresolved — the action then renders as a plain button, not a
@@ -574,3 +574,9 @@ for `weight()`, `Alignment` (`left`/`center`/`right`) for `alignment()`/`actions
 (`before`/`after`) for `->icon($icon, $position)`, `Placement` for `ActionGroup::dropdownPosition()`, and
 `ModalWidth` (`sm`…`7xl`/`full`) for modal `width()`. Each enum owns its vocabulary (`values()`/`resolve()`)
 and, where relevant, the literal Tailwind class its tokens map to — extend the enum, not a local `match`.
+
+- **Resources and dashboards register from a list or from a folder.** `config('wire-core.resources')` /
+  `dashboards` list classes; `config('wire-core.discover')` maps a namespace to a directory
+  (`'resources' => ['App\\Resources' => app_path('Resources')]`) and every concrete class of the kind under it
+  registers at boot, after the lists (a class in both registers once). It goes through the autoloader
+  (`Foundation\Registration\ClassDiscovery`) — never scan a folder of your own for the same purpose.

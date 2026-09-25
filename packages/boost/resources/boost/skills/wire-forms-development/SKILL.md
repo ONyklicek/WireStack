@@ -128,3 +128,5 @@ The modal form binds to the public `actionModalFormData` property; `fillFormUsin
 - Reactivity is opt-in via `->live()`; `afterStateUpdated()` enables it for you.
 - `->nativeSubmit()` is for a form whose endpoint is not yours (a sign-in screen posting to Fortify): fields bind by `name`/`old()` rather than `wire:model`, and you keep the form element, its action and its submit button in the view. Only fields implementing `Contracts\SupportsNativeSubmit` are allowed (`TextInput`, `Checkbox`, `Hidden` for a value nobody typed such as a reset token, `OtpInput` for a code) — anything else throws at render rather than silently posting an empty value, including a field a `form.configuring` hook added. Do not reach for it inside a Livewire component that can submit normally.
 - Read/write sibling state inside closures with `$get`/`$set`; do not reach for `Livewire::current()`.
+- Unsaved-changes warning: `x-data="wireUnsavedChanges({ path: 'data', method: 'save' })"` on the form's element.
+  The wire-panels create/edit pages arm it already; do not write a `beforeunload` handler of your own.
