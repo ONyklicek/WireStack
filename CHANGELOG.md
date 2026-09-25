@@ -30,6 +30,9 @@ All notable changes to the Wire ecosystem will be documented in this file.
   records of a selection), and its record pages a trashed record instead of a 404, with `restoreHeaderAction()`
   and `forceDeleteHeaderAction()` beside *Delete*. Policy first, then the edit page, per record.
 - `RestoreAction` and `ForceDeleteAction` — record-level presets beside the bulk ones.
+- **`ManagePage` — a resource on one page**: the list, with *New* and *Edit* as modals rendering the resource's
+  `form()`, and *Delete* on the row. Saving is `Model::create()` / `$record->update()`; the model's policy
+  decides each action when there is one, the page's route otherwise.
 - **Tabs above a list.** `tabs()` on `ListPage` returns `ListTab`s — a name, a `query()` that narrows the base
   query (wrapping the table's own `modifyQueryUsing()`, so a resource's scope holds in every tab), an icon, and
   `showCount()` or a `badge()` of your own. The active tab is `$activeTab`, kept in the URL as `?tab=`.

@@ -8,6 +8,8 @@ return [
     'deleted' => ':label – smazáno',
     'unsaved_changes' => 'Máte neuložené změny. Opravdu chcete stránku opustit?',
     'restored' => ':label – obnoveno',
+    'created' => ':label – vytvořeno',
+    'saved' => 'Uloženo',
     'save' => 'Uložit',
 
     /*

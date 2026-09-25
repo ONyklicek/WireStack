@@ -21,6 +21,7 @@ Five pages, and each one is a host component plus a pointer at an owner:
 | Page | Composes | Reads | Renders |
 | --- | --- | --- | --- |
 | `ListPage` | `WithTable` | `ProvidesResourceTable` | the list |
+| `ManagePage` | `WithTable` | `ProvidesResourceTable`, `ProvidesResourceForm` | the list, with create and edit as modals |
 | `CreatePage` | `WithForms`, `WithActions` | `ProvidesResourceForm` | an empty form |
 | `EditPage` | `WithForms`, `WithActions` | `ProvidesResourceForm` | that form, bound to one record |
 | `ViewPage` | `WithActions` | `ProvidesResourceInfolist` | one record, read-only |
@@ -398,6 +399,40 @@ It confirms, deletes through the model — so a model with soft deletes
 soft-deletes — flashes a success notification and goes back to the list with
 `wire:navigate`. Where no list is routed, it stays.
 
+## A Resource On One Page
+
+An entity whose form is a field or two — tags, units, payment terms — does not
+need a page to create one and another to edit it. `ManagePage` is the list with
+both as modals over it, and *Delete* on the row:
+
+```php
+use NyonCode\WirePanels\Resources\Pages\ManagePage;
+
+final class ManageTags extends ManagePage
+{
+    protected static ?string $resource = TagResource::class;   // [tl! focus]
+}
+
+public static function pages(): array
+{
+    return ['index' => ManageTags::class];
+}
+```
+
+The resource's one `form()` renders in both modals. **What they save is the
+model's**: a modal keeps its state in the action's frame rather than in a page's
+`$data`, so creating is `Model::create($data)` and editing is
+`$record->update($data)` with the validated data. A form that needs the page
+lifecycle — a relationship repeater, an optimistic lock, `Form::using()` — wants
+a create and an edit page instead.
+
+**Who may do what is the model's policy** — `create`, `update`, `delete` — when
+it has one. Without one there is no check here at all and the page's route is
+the guard: whoever may open the page may manage its records. It is deliberately
+not a check that answers yes, because every authorization callback refuses a
+request with no signed-in user, and an unguarded page would list records with
+no way to change them.
+
 ## Trashed Records
 
 A resource over a soft-deleting model can manage its trash in the panel rather
@@ -706,6 +741,7 @@ What each page adds is only its own surface:
 | `CreatePage`, `EditPage` | `warnsAboutUnsavedChanges(): bool` — `true` by default |
 | every page but the dashboard | `headerWidgets(): array`, `footerWidgets(): array`, `pageWidgetColumns(): int` |
 | `ViewPage` | `infolist(): Infolist` |
+| `ManagePage` | everything `ListPage` has, plus `createHeaderAction()` as a modal, *Edit* and *Delete* on the row, `guardedByPolicy(Action, string, bool): Action`, `manageForm(): Form` |
 | `DashboardPage` | `protected static ?string $dashboard`, `protected static ?string $layoutKey`, `static dashboardClass(): ?string`, `getWidgets(): array`, `getWidgetColumns(): int`, `widgetLayoutKey(): ?string` |
 
 `DashboardPage` composes no resource at all — it has its own `$title`,

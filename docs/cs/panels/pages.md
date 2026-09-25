@@ -21,6 +21,7 @@ Pět stránek a každá z nich je hostitelská komponenta plus ukazatel na vlast
 | Stránka | Skládá | Čte | Vykreslí |
 | --- | --- | --- | --- |
 | `ListPage` | `WithTable` | `ProvidesResourceTable` | seznam |
+| `ManagePage` | `WithTable` | `ProvidesResourceTable`, `ProvidesResourceForm` | seznam se založením a editací v modálech |
 | `CreatePage` | `WithForms`, `WithActions` | `ProvidesResourceForm` | prázdný formulář |
 | `EditPage` | `WithForms`, `WithActions` | `ProvidesResourceForm` | ten samý formulář navázaný na záznam |
 | `ViewPage` | `WithActions` | `ProvidesResourceInfolist` | jeden záznam, read-only |
@@ -393,6 +394,38 @@ Potvrdí, smaže přes model — takže model se soft deletes maže měkce — p
 notifikaci o úspěchu a vrátí se na seznam přes `wire:navigate`. Kde žádný seznam
 routovaný není, zůstane.
 
+## Resource na jedné stránce
+
+Entita, jejíž formulář má pole nebo dvě — štítky, jednotky, platební podmínky —
+nepotřebuje stránku na založení a další na editaci. `ManagePage` je seznam
+s oběma jako modály nad ním a *Smazat* na řádku:
+
+```php
+use NyonCode\WirePanels\Resources\Pages\ManagePage;
+
+final class ManageTags extends ManagePage
+{
+    protected static ?string $resource = TagResource::class;   // [tl! focus]
+}
+
+public static function pages(): array
+{
+    return ['index' => ManageTags::class];
+}
+```
+
+Jediný `form()` resource se vykreslí v obou modálech. **Co ukládají, je věc
+modelu**: modal drží stav v rámci akce, ne v `$data` stránky, takže založení je
+`Model::create($data)` a editace `$record->update($data)` s validovanými daty.
+Formulář, který potřebuje životní cyklus stránky — repeater nad relací,
+optimistický zámek, `Form::using()` — chce stránku založení a stránku editace.
+
+**Kdo smí co, rozhoduje policy modelu** — `create`, `update`, `delete` — když ji
+model má. Bez ní tu žádná kontrola není a strážcem je routa stránky: kdo smí
+stránku otevřít, smí spravovat její záznamy. Záměrně to není kontrola, která
+odpoví ano, protože každý autorizační callback odmítne request bez přihlášeného
+uživatele a nechráněná stránka by vypsala záznamy bez možnosti je změnit.
+
 ## Záznamy v koši
 
 Resource nad soft-deletujícím modelem může svůj koš v panelu spravovat místo
@@ -695,6 +728,7 @@ Co každá stránka přidává, je jen její vlastní povrch:
 | `CreatePage`, `EditPage` | `warnsAboutUnsavedChanges(): bool` — ve výchozím stavu `true` |
 | každá stránka kromě dashboardu | `headerWidgets(): array`, `footerWidgets(): array`, `pageWidgetColumns(): int` |
 | `ViewPage` | `infolist(): Infolist` |
+| `ManagePage` | vše, co má `ListPage`, navíc `createHeaderAction()` jako modal, *Upravit* a *Smazat* na řádku, `guardedByPolicy(Action, string, bool): Action`, `manageForm(): Form` |
 | `DashboardPage` | `protected static ?string $dashboard`, `protected static ?string $layoutKey`, `static dashboardClass(): ?string`, `getWidgets(): array`, `getWidgetColumns(): int`, `widgetLayoutKey(): ?string` |
 
 `DashboardPage` neskládá žádný resource — má vlastní `$title`, `getTitle()`

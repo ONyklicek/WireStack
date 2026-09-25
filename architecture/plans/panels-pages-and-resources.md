@@ -66,7 +66,7 @@ Each is its own commit, with tests, EN/CS docs and the boost guideline.
 4. **Soft deletes.** *(done — as `ManagesTrashedRecords`, opt-in per resource)* Detected from the model. A *Trashed* filter on the list,
    restore and force-delete on the row, the bulk bar and the record pages; the
    record pages resolve `withTrashed()`.
-5. **Simple resources.** `ManagePage` — the list, with create and edit opened
+5. **Simple resources.** *(done)* `ManagePage` — the list, with create and edit opened
    as modals over it, for a resource whose form is too small for its own page.
 6. **CLI.** Asked for on 2026-09-25 ("doplnil bych ještě CLI"). Everything a
    page or a resource is made of, generated in the shape above, and one command

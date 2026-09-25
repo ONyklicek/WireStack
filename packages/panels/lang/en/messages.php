@@ -8,6 +8,8 @@ return [
     'deleted' => ':label deleted',
     'unsaved_changes' => 'You have unsaved changes. Leave this page anyway?',
     'restored' => ':label restored',
+    'created' => ':label created',
+    'saved' => 'Saved',
     'save' => 'Save',
 
     /*
