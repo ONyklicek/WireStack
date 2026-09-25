@@ -13,6 +13,7 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
+use NyonCode\WirePanels\Resources\Contracts\NestedResource;
 
 /**
  * Turns declared pages into routes — and owns nothing else.
@@ -349,9 +350,24 @@ final class ResourceRoutes
      */
     private static function prefixFor(string $resource, string $key): string
     {
-        return is_subclass_of($resource, ConfiguresRoutes::class)
+        $own = is_subclass_of($resource, ConfiguresRoutes::class)
             ? ($resource::routePrefix() ?? $key)
             : $key;
+
+        if (! is_subclass_of($resource, NestedResource::class)) {
+            return $own;
+        }
+
+        // Under one record of the parent: orders/{parent}/order-lines. One level,
+        // because the route carries one {parent} — a grandchild would need two,
+        // and a second name for the first.
+        $parent = $resource::parentResource();
+
+        if (is_subclass_of($parent, NestedResource::class)) {
+            throw ResourceRoutingException::nestedTooDeep($resource, $parent);
+        }
+
+        return trim(self::prefixFor($parent, $parent::key()).'/{parent}/'.$own, '/');
     }
 
     /**
@@ -360,9 +376,15 @@ final class ResourceRoutes
      */
     private static function middlewareFor(string $resource): array
     {
-        return is_subclass_of($resource, ConfiguresRoutes::class)
+        $own = is_subclass_of($resource, ConfiguresRoutes::class)
             ? $resource::routeMiddleware()
             : [];
+
+        // A nested resource sits inside its parent's pages, so whatever guards
+        // those guards it too — a line of an order nobody may see stays unseen.
+        return is_subclass_of($resource, NestedResource::class)
+            ? [...self::middlewareFor($resource::parentResource()), ...$own]
+            : $own;
     }
 
     /**
@@ -370,8 +392,10 @@ final class ResourceRoutes
      */
     private static function domainFor(string $resource): ?string
     {
-        return is_subclass_of($resource, ConfiguresRoutes::class)
+        $own = is_subclass_of($resource, ConfiguresRoutes::class)
             ? $resource::routeDomain()
             : null;
+
+        return $own ?? (is_subclass_of($resource, NestedResource::class) ? self::domainFor($resource::parentResource()) : null);
     }
 }

@@ -560,9 +560,11 @@ $page->breadcrumbs();
 Drobky jsou `NavigationItem`y, ne vlastní tvar — drobek je popisek a obvykle URL,
 což je přesně to, co [ta třída](navigation.md#navigationitem-api) veze od chvíle,
 kdy ji potřebovalo menu. Poslední drobek URL nenese: to je stránka, na které jste.
-**Nejvýš dva drobky**, protože tohle je celá hloubka, kterou tyhle stránky mají —
-seznam není uvnitř ničeho a stopa o jednom drobku se nevykreslí vůbec, takže
-stránka se seznamem za tohle neplatí nic.
+**Nejvýš dva drobky** u běžného resource, protože tohle je celá hloubka, kterou
+jeho stránky mají — seznam není uvnitř ničeho a stopa o jednom drobku se
+nevykreslí vůbec, takže stránka se seznamem za tohle neplatí nic.
+[Vnořený resource](resources.md#vnorene-resource) začíná stopu u seznamu
+a záznamu svého rodiče.
 
 Zóna, do které stopa odkazuje, se čte **jednou, při mountu**, a drží se ve veřejné
 `$breadcrumbZone`. Veřejná být musí, aby přežila round trip, a číst se musí při
@@ -707,7 +709,7 @@ Každá resourcová stránka skládá `BelongsToResource` — tu polovinu, kter�
 | `protected ?string $title` | `string\|null` | Přebití nadpisu. Fallback si každá stránka určuje sama, protože seznam chce plurál a formulář singulár |
 | `public ?string $breadcrumbZone` | `string\|null` | Zóna přečtená při mountu a nesená přes round trip |
 | `getTitle(): ?string` | `string\|null` | Nadpis; poslední drobek stopy je on |
-| `breadcrumbs(): array` | `array<int, NavigationItem>` | Kde stránka sedí — nejvýš dva drobky |
+| `breadcrumbs(): array` | `array<int, NavigationItem>` | Kde stránka sedí — nejvýš dva drobky, u vnořeného resource čtyři |
 | `public ?string $currentPage` | `string\|null` | Druh téhle stránky — `view`, `edit`, nebo ten, který resource pojmenoval — čtený při mountu a nesený dál |
 | `subNavigation(mixed $record = null): array` | `array<string, NavigationItem>` | Ostatní stránky záznamu, klíčované druhem stránky. Pod dvěma prázdné |
 | `static resourceClass(): ?string` | `class-string\|null` | Deklarovaný resource, pro cokoli, co se ptá zvenčí |

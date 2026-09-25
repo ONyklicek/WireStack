@@ -110,6 +110,7 @@ abstract class ListPage extends Component implements HasHeaderActions, Identifie
         $table = $this->composeTable();
 
         if ($fresh) {
+            $this->applyParentScope($table);
             $this->applyTrashedRecords($table);
             $this->applyActiveListTab($table);
         }

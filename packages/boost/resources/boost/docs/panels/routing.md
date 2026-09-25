@@ -86,6 +86,15 @@ refused once every route is loaded — at boot, and so at `route:cache` too, not
 the first click. The same page routed twice over itself changes nothing and
 passes.
 
+A [nested resource](resources.md#nested-resources) sits under one record of its
+parent — `{parent prefix}/{parent}/{its prefix}` — and inherits the parent's
+middleware and domain, so what guards an order guards its lines:
+
+| Page kind | URL | Route name |
+| --- | --- | --- |
+| `index` | `orders/{parent}/order-lines` | `wire.order-lines.index` |
+| `edit` | `orders/{parent}/order-lines/{record}/edit` | `wire.order-lines.edit` |
+
 ## Authorization, middleware and domains
 
 `RoutePage::permission()` lands on the route as Laravel's own `can:` middleware.

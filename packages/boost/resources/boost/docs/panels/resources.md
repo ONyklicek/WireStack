@@ -239,6 +239,61 @@ the resource declaring two.
 Persistence stays the form's: `Form` already owns the save lifecycle, and a
 resource over a non-Eloquent source writes through `Form::using()`.
 
+## Nested Resources
+
+Some records only make sense inside another — an order's lines, a project's
+tasks. A resource says so by naming its parent and the parent model's
+relationship that holds it:
+
+```php
+use NyonCode\WirePanels\Resources\Contracts\NestedResource;
+
+final class OrderLineResource implements DescribesResource, NestedResource, ProvidesPages, ProvidesResourceForm, ProvidesResourceTable
+{
+    use DescribesRecords;
+
+    public static function parentResource(): string    // [tl! focus:start]
+    {
+        return OrderResource::class;
+    }
+
+    public static function parentRelationship(): string
+    {
+        return 'lines';                                   // Order::lines(), a hasMany
+    }                                                     // [tl! focus:end]
+
+    public static function pages(): array
+    {
+        return ['index' => ListOrderLines::class, 'create' => CreateOrderLine::class, 'edit' => EditOrderLine::class];
+    }
+
+    // table(), form() — as any resource
+}
+```
+
+**Everything goes through the parent record.** The pages are routed under it —
+`orders/{parent}/order-lines`, `…/create`, `…/{record}/edit` — and read the
+`{parent}` key from the route. The list shows that order's lines only; a record
+page looks its line up through `$order->lines()`, so the key of another order's
+line is a 404, not somebody else's line; and a create page binds its form to
+`$order->lines()->make()`, so the new line is filed under the order with its key
+already set. The pages' URLs carry the parent, so *New*, the redirect after a
+save and the record's tabs all stay inside it.
+
+**The trail and the tabs follow.** A line's page leads *Orders › ORD-17 › Order
+lines › Edit Order line*, the parent record named by its `name`, `title`,
+`number`, `label` or `subject`, else by its label and key. And the parent
+record's pages gain a tab to the list — the parent declares nothing for it; the
+nested resource naming it is enough, and the tab is left out for someone the
+list's route would refuse.
+
+**The limits are the URL's.** A route carries one `{parent}`, so a nested
+resource's parent is not nested itself — that is refused when the routes are
+registered. Creating needs a relationship that can make a child that knows its
+parent — `hasMany`, `morphMany` and their one-to-one kin; a `belongsToMany`
+refuses with a message naming the way out. A nested resource has no URL without
+a parent, so it has no place in a menu either: leave `ProvidesNavigation` off it.
+
 ## Introspection
 
 `describe-resource` reports what an application's resources declare — identity,
@@ -272,6 +327,7 @@ would cost exactly what the static half exists to avoid, and `describe-table` an
 | `ProvidesResourceInfolist` | `infolist(Infolist $infolist): Infolist` | `wire-core` |
 | `ProvidesRelationManagers` | `relationManagers(): array` | `wire-panels` |
 | `ManagesTrashedRecords` | *(marker)* | `wire-panels` |
+| `NestedResource` | `static parentResource(): string`, `static parentRelationship(): string` | `wire-panels` |
 | `ProvidesNavigation` | `static navigation(): NavigationItem` | `wire-core` |
 | `ProvidesBreadcrumbs` | `breadcrumbs(): array` | `wire-core` |
 | `ProvidesPages` | `static pages(): array` | `wire-core` |

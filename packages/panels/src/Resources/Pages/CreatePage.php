@@ -6,6 +6,7 @@ namespace NyonCode\WirePanels\Resources\Pages;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
@@ -13,6 +14,7 @@ use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireForms\Contracts\ProvidesResourceForm;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
+use NyonCode\WirePanels\Exceptions\ResourcePageException;
 use NyonCode\WirePanels\Pages\Concerns\HostsPageActions;
 use NyonCode\WirePanels\Pages\Concerns\InteractsWithPageWidgets;
 use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
@@ -100,7 +102,32 @@ abstract class CreatePage extends Component implements HasHeaderActions, Identif
 
         $form = $form->statePath('data');
 
-        return $resource->form($model !== null ? $form->model($model) : $form);
+        return $resource->form($model !== null ? $form->model($this->newRecord($model)) : $form);
+    }
+
+    /**
+     * What the form creates: the model's class, or — for a nested resource — a
+     * child the parent's relationship has already made, carrying the parent's key.
+     *
+     * The form's save fills and saves whatever it is bound to, so a made child
+     * is filed under its parent with nothing else to do.
+     *
+     * @param  class-string<Model>  $model
+     * @return class-string<Model>|Model
+     */
+    protected function newRecord(string $model): string|Model
+    {
+        $relation = $this->parentRelation();
+
+        if ($relation === null) {
+            return $model;
+        }
+
+        if (! $relation instanceof HasOneOrMany) {
+            throw ResourcePageException::cannotCreateThrough((string) static::$resource, static::$resource::parentRelationship(), $relation::class);
+        }
+
+        return $relation->make();
     }
 
     /** A create page is titled by the singular: "New order", not "Orders". */

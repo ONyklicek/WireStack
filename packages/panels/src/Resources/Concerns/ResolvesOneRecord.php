@@ -130,7 +130,11 @@ trait ResolvesOneRecord
             throw ResourcePageException::unresolvableRecord(static::class, (string) $resource);
         }
 
-        $query = $model::query();
+        // A nested resource finds its record through the parent's relationship,
+        // so a key that belongs to another parent reaches nothing — a 404, not
+        // somebody else's line.
+        $relation = $this->parentRelation();
+        $query = $relation !== null ? $relation->getQuery() : $model::query();
 
         // A resource that manages its trash has pages for trashed records too:
         // the list offers *Restore* on them, and the record's own page must not

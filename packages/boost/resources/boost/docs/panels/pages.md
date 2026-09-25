@@ -567,9 +567,11 @@ $page->breadcrumbs();
 The crumbs are `NavigationItem`s rather than a shape of their own — a crumb is a
 label and, usually, a URL, which is exactly what [that
 class](navigation.md#navigationitem-api) has carried since the menu needed it. The
-last crumb carries no URL: it is the page you are on. **Two crumbs at most**,
-because that is the whole depth these pages have — a list is inside nothing, and
-a trail of one draws nothing at all, so a list page pays for none of this.
+last crumb carries no URL: it is the page you are on. **Two crumbs at most** for
+an ordinary resource, because that is the whole depth its pages have — a list is
+inside nothing, and a trail of one draws nothing at all, so a list page pays for
+none of this. A [nested resource](resources.md#nested-resources) starts its
+trail at its parent's list and record.
 
 The zone the trail links into is read **once, at mount**, and kept in the public
 `$breadcrumbZone`. It has to be public to survive the round trip, and it has to be
@@ -720,7 +722,7 @@ Every resource page composes `BelongsToResource`, which is the half that is abou
 | `protected ?string $title` | `string\|null` | Heading override. Each page decides its own fallback, because a list wants the plural and a form the singular |
 | `public ?string $breadcrumbZone` | `string\|null` | The zone read at mount and carried across the round trip |
 | `getTitle(): ?string` | `string\|null` | The heading; the trail's last crumb is it |
-| `breadcrumbs(): array` | `array<int, NavigationItem>` | Where the page sits — two crumbs at most |
+| `breadcrumbs(): array` | `array<int, NavigationItem>` | Where the page sits — two crumbs at most, four for a nested resource |
 | `public ?string $currentPage` | `string\|null` | The kind of page this is — `view`, `edit`, or one the resource named — read at mount and carried |
 | `subNavigation(mixed $record = null): array` | `array<string, NavigationItem>` | The record's other pages, keyed by page kind. Empty below two |
 | `static resourceClass(): ?string` | `class-string\|null` | The declared resource, for anything asking from outside |

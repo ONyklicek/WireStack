@@ -5,8 +5,14 @@ declare(strict_types=1);
 namespace NyonCode\WirePanels\Resources\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
+use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
+use NyonCode\WireCore\Foundation\Routing\RoutePage;
 use NyonCode\WireCore\Foundation\Routing\Zone;
+use NyonCode\WirePanels\Resources\Contracts\NestedResource;
 use NyonCode\WirePanels\Resources\Navigation\RecordPages;
 
 /**
@@ -71,8 +77,9 @@ trait LinksToRecordPages
     public function subNavigation(mixed $record = null): array
     {
         $pages = RecordPages::of(static::$resource);
+        $children = RecordPages::children(static::$resource);
 
-        if (count($pages) < 2) {
+        if (count($pages) + count($children) < 2) {
             return [];
         }
 
@@ -93,6 +100,36 @@ trait LinksToRecordPages
                 ->sort($page->getSort());
         }
 
+        // The lists of the records that belong to this one — an order's lines —
+        // after the record's own pages, each only where this user may open it.
+        foreach ($children as $childKey => $child) {
+            $url = $record instanceof Model ? $this->childListUrl($child, $record) : null;
+
+            if ($url !== null) {
+                $index = $child::pages()['index'];
+
+                $items[$childKey] = NavigationItem::make($child::pluralLabel())
+                    ->icon($index instanceof RoutePage ? $index->getIcon() : null)
+                    ->url($url)
+                    ->sort($index instanceof RoutePage ? $index->getSort() : 100);
+            }
+        }
+
         return count($items) > 1 ? $items : [];
+    }
+
+    /**
+     * Where a nested resource's list of this record's children is, or null
+     * when it is not routed here or this user may not open it.
+     *
+     * @param  class-string<NestedResource&ProvidesPages&DescribesResource>  $child
+     */
+    private function childListUrl(string $child, Model $record): ?string
+    {
+        $url = app(ResolvesPageUrls::class)->urlFor($child::key(), 'index', ['parent' => $record->getKey()], $this->breadcrumbZone);
+        $index = $child::pages()['index'];
+        $permission = $index instanceof RoutePage ? $index->getPermission() : null;
+
+        return $url !== null && ($permission === null || Gate::allows($permission)) ? $url : null;
     }
 }

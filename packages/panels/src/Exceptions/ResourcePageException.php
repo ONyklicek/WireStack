@@ -70,6 +70,26 @@ final class ResourcePageException extends RuntimeException implements WireExcept
         );
     }
 
+    /** A nested resource's page opened without the parent record it belongs to. */
+    public static function missingParent(string $page, string $parent): self
+    {
+        return new self(
+            "[{$page}] belongs to a record of [{$parent}] and was mounted without one. ".
+            'Route it with Route::wireResources(), which puts {parent} in its URL, or mount '.
+            'it with [\'parent\' => $key].'
+        );
+    }
+
+    /** A nested resource asked to create through a relationship that cannot make a child. */
+    public static function cannotCreateThrough(string $resource, string $relationship, string $relation): self
+    {
+        return new self(
+            "[{$resource}] creates its records through [{$relationship}], a [{$relation}], which ".
+            'cannot make a child that knows its parent. Nest it under a hasMany or morphMany '.
+            'relationship, or override form() on the create page and attach the record yourself.'
+        );
+    }
+
     public static function missingRecord(string $page): self
     {
         return new self(

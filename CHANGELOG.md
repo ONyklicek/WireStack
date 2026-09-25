@@ -30,6 +30,11 @@ All notable changes to the Wire ecosystem will be documented in this file.
   records of a selection), and its record pages a trashed record instead of a 404, with `restoreHeaderAction()`
   and `forceDeleteHeaderAction()` beside *Delete*. Policy first, then the edit page, per record.
 - `RestoreAction` and `ForceDeleteAction` — record-level presets beside the bulk ones.
+- **Nested resources** — `NestedResource` (`parentResource()`, `parentRelationship()`) routes a resource's pages
+  under one record of its parent (`orders/{parent}/order-lines`, inheriting the parent's middleware and domain),
+  scopes its list, record lookup and create page through the parent's relationship (a line of another order is
+  a 404; a new line is filed under the order), leads the trail through the parent, and gives the parent record
+  a tab to the list. One level deep; creating needs a `hasMany`-like relationship.
 - **Resources and dashboards can be discovered** — `config('wire-core.discover')` maps a namespace to a
   directory, and every concrete resource (or dashboard) under it registers at boot, after the listed ones. Off
   until a directory is named.
