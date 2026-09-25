@@ -20,8 +20,9 @@ use Symfony\Component\Console\Attribute\AsCommand;
  * A record page composes `BelongsToResource`, `ResolvesOneRecord` and
  * `LinksToRecordPages`, so it takes the record's key, draws the record's tabs
  * and — once the resource routes it under `{record}/…` — becomes one of them.
- * The command prints the `pages()` line either way, because routing a page is
- * the owner's declaration to make, not a file this command should edit.
+ * A page of its own is registered like a resource — the command says where; a
+ * record page is routed from its resource's `pages()`, and the command prints
+ * that line rather than editing the resource.
  */
 #[AsCommand(name: 'make:wire-page')]
 final class MakePageCommand extends Command
@@ -56,7 +57,9 @@ final class MakePageCommand extends Command
             'title' => $title,
             'view' => $view,
             'kind' => $kind,
-            'uri' => $resource === null ? '' : "->uri('{record}/{$kind}')",
+            'registration' => $resource === null
+                ? "Registered in config('wire-panels.pages') or discovered, it is routed at /{$kind}\n * and listed in the menu — see the navigation statics on Page."
+                : "Routed from the resource's `pages()`:\n *\n *   '{$kind}' => RoutePage::make({$class}::class)->uri('{record}/{$kind}'),",
             'implements' => $resource === null ? '' : ' implements ProvidesBreadcrumbs',
             'traits' => $resource === null ? '' : "    use BelongsToResource;\n    use LinksToRecordPages;\n    use ResolvesOneRecord;\n\n    protected static ?string \$resource = ".class_basename($resource)."::class;\n\n",
             'titleDeclaration' => $resource === null
@@ -76,9 +79,12 @@ final class MakePageCommand extends Command
 
         $this->report($viewWritten, "view [{$view}]");
 
-        $this->components->bulletList([
-            'Route it from an owner\'s pages(): '.var_export($kind, true).' => RoutePage::make(\\'.$namespace.'\\'.$class.'::class)'.($resource === null ? '' : "->uri('{record}/{$kind}')").',',
-        ]);
+        $this->components->bulletList($resource === null
+            ? [
+                'Register it in config(\'wire-panels.pages\'): \\'.$namespace.'\\'.$class.'::class, — or name its folder in config(\'wire-core.discover.pages\').',
+                'Route::wireResources() then routes it at /'.$kind.' and the menu lists it.',
+            ]
+            : ['Route it from the resource\'s pages(): '.var_export($kind, true).' => RoutePage::make(\\'.$namespace.'\\'.$class."::class)->uri('{record}/{$kind}'),"]);
 
         return self::SUCCESS;
     }

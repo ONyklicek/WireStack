@@ -8,9 +8,13 @@ use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\RoutePage;
 use NyonCode\WireCore\Infolists\Components\TextEntry;
 use NyonCode\WireCore\Infolists\Contracts\ProvidesResourceInfolist;
 use NyonCode\WireCore\Infolists\Infolist;
+use NyonCode\WirePanels\Resources\Contracts\ManagesTrashedRecords;
+use NyonCode\WirePanels\Resources\Contracts\NestedResource;
 
 /*
  * What an application's resources declare, for the describe-resource tool.
@@ -66,8 +70,43 @@ class RrfPlainResource implements DescribesResource
     }
 }
 
+/** A nested resource that manages its trash and declares its pages. */
+class RrfLineResource implements DescribesResource, ManagesTrashedRecords, NestedResource, ProvidesPages
+{
+    use DescribesRecords;
+
+    public static function modelClass(): ?string
+    {
+        return null;
+    }
+
+    public static function key(): string
+    {
+        return 'order-lines';
+    }
+
+    public static function parentResource(): string
+    {
+        return RrfOrderResource::class;
+    }
+
+    public static function parentRelationship(): string
+    {
+        return 'lines';
+    }
+
+    public static function pages(): array
+    {
+        return [
+            'index' => 'App\\Livewire\\ListOrderLines',
+            'edit' => RoutePage::make('App\\Livewire\\EditOrderLine')->permission('orders.update'),
+        ];
+    }
+}
+
 beforeEach(function () {
     $registry = new ResourceRegistry;
+    $registry->register(RrfLineResource::class);
     $registry->register(RrfOrderResource::class);
     $registry->register(RrfPlainResource::class);
 
@@ -112,7 +151,7 @@ it('answers null for something that is not registered', function () {
 });
 
 it('lists every registered resource', function () {
-    expect(array_column($this->reflector->all(), 'key'))->toBe(['orders', 'rrf-plains']);
+    expect(array_column($this->reflector->all(), 'key'))->toBe(['order-lines', 'orders', 'rrf-plains']);
 });
 
 it('reports a surface from a package that is not installed as absent', function () {
@@ -120,6 +159,21 @@ it('reports a surface from a package that is not installed as absent', function 
     // wire-core, so this must answer without them on the autoloader.
     $described = $this->reflector->describe('rrf-plains');
 
-    expect($described['surfaces'])->toHaveKeys(['table', 'form', 'infolist', 'relationManagers'])
+    expect($described['surfaces'])->toHaveKeys(['table', 'form', 'infolist', 'relationManagers', 'trash'])
         ->and(array_filter($described['surfaces']))->toBe([]);
+});
+
+it('reports the trash, the parent and the pages of a nested resource', function () {
+    $described = $this->reflector->describe('order-lines');
+
+    expect($described['surfaces']['trash'])->toBeTrue()
+        ->and($described['parent'])->toBe(['resource' => RrfOrderResource::class, 'relationship' => 'lines'])
+        ->and($described['pages'])->toBe([
+            'index' => ['component' => 'App\\Livewire\\ListOrderLines', 'permission' => null],
+            'edit' => ['component' => 'App\\Livewire\\EditOrderLine', 'permission' => 'orders.update'],
+        ]);
+});
+
+it('omits parent and pages for a resource that declares neither', function () {
+    expect($this->reflector->describe('orders'))->not->toHaveKey('parent')->not->toHaveKey('pages');
 });

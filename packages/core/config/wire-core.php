@@ -218,12 +218,14 @@ return [
     |   'discover' => [
     |       'resources' => ['App\\Resources' => app_path('Resources')],
     |       'dashboards' => ['App\\Dashboards' => app_path('Dashboards')],
+    |       'pages' => ['App\\Livewire\\Pages' => app_path('Livewire/Pages')],   // wire-panels
     |   ],
     |
     */
     'discover' => [
         'resources' => [],
         'dashboards' => [],
+        'pages' => [],
     ],
 
     /*

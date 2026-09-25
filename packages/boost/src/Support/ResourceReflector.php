@@ -7,6 +7,8 @@ namespace NyonCode\WireBoost\Support;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\RoutePage;
 
 /**
  * What an application's resources declare.
@@ -38,7 +40,13 @@ class ResourceReflector
         'form' => 'NyonCode\\WireForms\\Contracts\\ProvidesResourceForm',
         'infolist' => 'NyonCode\\WireCore\\Infolists\\Contracts\\ProvidesResourceInfolist',
         'relationManagers' => 'NyonCode\\WirePanels\\Resources\\Contracts\\ProvidesRelationManagers',
+        // Not a surface of its own but a switch on the list and record pages —
+        // reported beside them because it changes what those pages offer.
+        'trash' => 'NyonCode\\WirePanels\\Resources\\Contracts\\ManagesTrashedRecords',
     ];
+
+    /** A resource whose records live under one record of another. */
+    private const NESTED = 'NyonCode\\WirePanels\\Resources\\Contracts\\NestedResource';
 
     public function __construct(private readonly ResourceRegistry $registry) {}
 
@@ -99,6 +107,19 @@ class ResourceReflector
             'surfaces' => $surfaces,
         ];
 
+        // Where a nested resource belongs: the pages route under the parent's
+        // record, and an agent writing a link or a test needs the parent key too.
+        if (interface_exists(self::NESTED) && is_subclass_of($resource, self::NESTED)) {
+            $described['parent'] = [
+                'resource' => $resource::parentResource(),
+                'relationship' => $resource::parentRelationship(),
+            ];
+        }
+
+        if (is_subclass_of($resource, ProvidesPages::class)) {
+            $described['pages'] = $this->pages($resource::pages());
+        }
+
         if (is_subclass_of($resource, ProvidesNavigation::class)) {
             $item = $resource::navigation();
 
@@ -109,6 +130,26 @@ class ResourceReflector
                 'sort' => $item->getSort(),
                 'visible' => $item->isVisible(),
             ];
+        }
+
+        return $described;
+    }
+
+    /**
+     * The pages a resource declares — the component each kind renders and the
+     * ability its route is guarded by — without building or routing any of them.
+     *
+     * @param  array<array-key, class-string|RoutePage>  $pages
+     * @return array<string, array{component: string, permission: string|null}>
+     */
+    private function pages(array $pages): array
+    {
+        $described = [];
+
+        foreach ($pages as $kind => $page) {
+            $described[(string) $kind] = $page instanceof RoutePage
+                ? ['component' => $page->component, 'permission' => $page->getPermission()]
+                : ['component' => (string) $page, 'permission' => null];
         }
 
         return $described;

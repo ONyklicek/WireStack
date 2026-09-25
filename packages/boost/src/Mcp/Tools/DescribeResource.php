@@ -12,7 +12,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use NyonCode\WireBoost\Support\ResourceReflector;
 
 #[Name('describe-resource')]
-#[Description('List the application\'s registered resources — key, model, labels, which surfaces (table/form/infolist/relation managers) each declares, and its navigation entry. Omit `resource` for all of them.')]
+#[Description('List the application\'s registered resources — key, model, labels, which surfaces (table/form/infolist/relation managers) each declares, whether it manages its trash, the parent a nested resource belongs to, its pages with the permission each requires, and its navigation entry. Omit `resource` for all of them.')]
 class DescribeResource extends BoostTool
 {
     public function __construct(private ResourceReflector $reflector) {}

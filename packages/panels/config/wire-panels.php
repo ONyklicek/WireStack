@@ -95,4 +95,21 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Pages
+    |--------------------------------------------------------------------------
+    |
+    | Pages of the application's own — classes extending
+    | NyonCode\WirePanels\Pages\Page — registered the way resources are: each
+    | is routed at its key by Route::wireResources(), listed in the menu and
+    | shown by wire:resources. A folder of them can be discovered instead, with
+    | config('wire-core.discover.pages').
+    |
+    |   'pages' => [
+    |       App\Livewire\Pages\TaskBoard::class,
+    |   ],
+    |
+    */
+    'pages' => [],
 ];

@@ -568,7 +568,7 @@ popsaný tam, kde se vysvětluje věc, kterou deklaruje:
 | --- | --- | --- |
 | `resources` | Třídy resourců, které aplikace registruje | [Resources → Registrace](../panels/resources.md#registrace) |
 | `dashboards` | Třídy dashboardů, stejným způsobem | [Dashboardy](../core/widgets/dashboards.md) |
-| `discover` | Adresáře, ve kterých hledat resource a dashboardy — `'resources' => [namespace => adresář]`, vypnuté, dokud se nic nepojmenuje | [Resources](../panels/resources.md#jak-je-najit-samy) |
+| `discover` | Adresáře, ve kterých hledat resource, dashboardy a stránky wire-panels — `'resources' => [namespace => adresář]`, vypnuté, dokud se nic nepojmenuje | [Resources](../panels/resources.md#jak-je-najit-samy) |
 | `tenancy` | `enabled` a `column`, na který se aplikuje tenant scope | [Autorizace](authorization.md) |
 
 `config/wire-table.php` má ještě jeden: `preferences` volí driver, do kterého se

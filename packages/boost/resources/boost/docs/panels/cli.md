@@ -65,15 +65,17 @@ The first writes a [`Page`](pages.md#a-page-of-your-own) and the view it draws �
 `resources/views/livewire/pages/task-board.blade.php`. The second writes a page
 about **one record** of `OrderResource`: it composes `BelongsToResource`,
 `ResolvesOneRecord` and `LinksToRecordPages`, so it takes the record's key and
-draws the record's tabs. Both print the line to add to the owner's `pages()`:
+draws the record's tabs. The command prints what is left to do: a page of its own
+is [registered like a resource](pages.md#registering-it) — `config('wire-panels.pages')`
+or a discovered folder — and is then routed and listed by itself; a record page
+is routed from its resource's `pages()`:
 
 ```php
 'history' => RoutePage::make(\App\Livewire\Resources\Orders\History::class)->uri('{record}/history'),
 ```
 
-— which, for a record page, is also what makes it one of the record's tabs.
-Routing is the owner's declaration, so the command prints it rather than editing
-the resource.
+— which is also what makes it one of the record's tabs. Routing is the owner's
+declaration, so the command prints it rather than editing the resource.
 
 ## Generating A Relationship's Table
 

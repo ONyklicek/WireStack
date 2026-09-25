@@ -523,10 +523,53 @@ whatever `getViewData()` returns all reach it:
 </div>
 ```
 
-It is routed like any page — `RoutePage::make(TaskBoard::class)` in an owner's
-`pages()`, which gives it a URL, a `can:` guard and a menu entry — or mounted by
-hand. A trail is an opt-in: implement `ProvidesBreadcrumbs` and return one. A
-page that names no view refuses to render rather than drawing an empty frame.
+A trail is an opt-in: implement `ProvidesBreadcrumbs` and return one. A page
+that names no view refuses to render rather than drawing an empty frame.
+
+### Registering It
+
+A page is registered the way a resource is, and then it is everywhere a
+resource is — routed by `Route::wireResources()`, listed in the menu, shown by
+`wire:resources` — with nothing else written for it:
+
+```php
+// config/wire-panels.php
+'pages' => [App\Livewire\Pages\TaskBoard::class],
+
+// or a whole folder — config/wire-core.php
+'discover' => ['pages' => ['App\\Livewire\\Pages' => app_path('Livewire/Pages')]],
+```
+
+Where it goes and what the menu says are statics on the page, each with a
+default:
+
+```php
+final class TaskBoard extends Page
+{
+    protected static ?string $slug = 'board';                    // [tl! focus:start]
+    protected static ?string $navigationLabel = 'Board';
+    protected static ?string $navigationIcon = 'outline:view-columns';
+    protected static ?string $navigationGroup = 'work';
+    protected static int $navigationSort = 30;
+    protected static ?string $permission = 'tasks.view';        // [tl! focus:end]
+    protected static bool $shouldRegisterNavigation = true;
+
+    protected static string $view = 'livewire.task-board';
+}
+```
+
+The key — the URL segment and the menu's key — is `$slug`, or the class name
+kebab-cased with a trailing `Page` dropped (`TaskBoardPage` → `task-board`); the
+label is `$navigationLabel`, or the class name humanised. `$permission` becomes
+the route's `can:` middleware **and** hides the menu entry from someone who lacks
+it, so the menu never offers a page its route would refuse;
+`$shouldRegisterNavigation = false` keeps a page routed and out of the menu. Two
+pages on one key are refused, as two resources are.
+
+The registry fills itself on its first read rather than at boot, so a page is
+there for config-declared routes too. A page can still be routed from an
+owner's `pages()` instead — a page about one record always is, under
+`{record}/…` — or mounted by hand.
 
 `Page` is a convenience, not a requirement. It composes `HostsPageActions`, and a
 component of your own composing the same trait gets the same header actions

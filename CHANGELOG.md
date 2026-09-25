@@ -2,6 +2,23 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.3.1]
+
+### Fixed
+
+- **A page of the application's own can be registered by itself.** 2.3.0 gave `Pages\Page` the panel's
+  chrome but no way into the menu or the router except through a resource's `pages()`, so a standalone board
+  or report needed a model-less resource to own it. A `Page` is now registered like a resource —
+  `config('wire-panels.pages')` or a folder in `config('wire-core.discover.pages')` — and is routed at its key
+  by `Route::wireResources()`, listed in the menu and shown by `wire:resources`. Statics on the page say where
+  and how: `$slug`, `$navigationLabel`, `$navigationIcon`, `$navigationGroup`, `$navigationSort`,
+  `$permission` (the route's `can:`, and it hides the entry) and `$shouldRegisterNavigation`. The pages join
+  the catalogue as its third source through `Catalog::withSource()`. `make:wire-page` now says how to register
+  the page it writes.
+- **Boost knew nothing of 2.3.0.** `describe-resource` now reports whether a resource manages its trash, the
+  parent of a nested resource, and every page with its component and permission; the guidelines and skills for
+  panels, sortable, forms, core and table cover what 2.3.0 added.
+
 ## [2.3.0]
 
 ### Added

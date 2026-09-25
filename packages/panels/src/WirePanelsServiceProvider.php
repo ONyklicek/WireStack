@@ -9,12 +9,14 @@ use Illuminate\Support\Facades\Route;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
+use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
 use NyonCode\WirePanels\Install\RegisterResourceRoutes;
+use NyonCode\WirePanels\Pages\PageRegistry;
 use NyonCode\WirePanels\Resources\Console\ListResourcesCommand;
 use NyonCode\WirePanels\Resources\Console\MakeDashboardPageCommand;
 use NyonCode\WirePanels\Resources\Console\MakePageCommand;
@@ -72,6 +74,13 @@ class WirePanelsServiceProvider extends PackageServiceProvider
                 // rather than depending on which provider the manifest lists
                 // first — see ConfiguredRoutes.
                 $this->app->bind(RegistersPageRoutes::class, ConfiguredRoutes::class);
+
+                // The application's own pages join the catalogue as a third
+                // source, so the router, the menu and wire:resources read them
+                // the way they read resources — nothing of theirs learns a page
+                // exists. Appended, so a source another package added stays.
+                $this->app->singleton(PageRegistry::class);
+                $this->app->extend(Catalog::class, fn (Catalog $catalog, $app): Catalog => $catalog->withSource($app->make(PageRegistry::class)));
 
                 // The last thing between a complete installation and a 404 on every
                 // screen. The prefix and the middleware are the application's to

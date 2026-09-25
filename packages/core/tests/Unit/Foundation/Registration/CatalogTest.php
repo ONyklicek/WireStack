@@ -125,3 +125,25 @@ it('sees a class registered after it was constructed', function () {
 
     expect($catalog->all())->toBe(['orders' => CatOrders::class]);
 });
+
+it('reads a source added with withSource after the ones it was built with', function () {
+    $first = new class implements RegistrySource
+    {
+        public function registeredClasses(): array
+        {
+            return ['a' => 'A'];
+        }
+    };
+    $second = new class implements RegistrySource
+    {
+        public function registeredClasses(): array
+        {
+            return ['b' => 'B'];
+        }
+    };
+
+    $catalog = new Catalog([$first]);
+
+    expect($catalog->withSource($second)->all())->toBe(['a' => 'A', 'b' => 'B'])
+        ->and($catalog->all())->toBe(['a' => 'A']);
+});

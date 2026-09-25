@@ -12,10 +12,14 @@ changing what the menu, the router or the search palette shows for one.
 
 ## Workflow
 
-1. `describe-resource` first. It reports what is already registered, which surfaces each declares, and the
+1. `describe-resource` first — it also reports whether a resource manages its trash, the parent of a nested
+   one, and every page with the permission its route requires. It reports what is already registered, which surfaces each declares, and the
    navigation entry — a second resource on the same key is refused, not merged.
-2. Write the resource: `DescribesRecords` for identity, plus one contract per surface it really has.
-3. Register it in `config('wire-core.resources')` (or `ResourceRegistry::registerMany()` at runtime).
+2. Start from `php artisan make:wire-resource Order` (`--generate` reads fields and columns off the table,
+   `--view`, `--simple`, `--soft-deletes`, `--register`), then edit — or write the resource by hand:
+   `DescribesRecords` for identity, plus one contract per surface it really has.
+3. Register it in `config('wire-core.resources')`, or name its folder in `config('wire-core.discover.resources')`
+   so every resource there registers itself. `php artisan wire:resources` shows what is registered and routed.
 4. Add pages only for the surfaces the resource declares, and give each new concrete `WithTable`/`WithForms`/
    `WithActions` host a `phpstan.neon` excludePaths entry.
 
@@ -99,3 +103,17 @@ class EditOrder extends EditPage
   list by default; *Delete* is opt-in with `$this->deleteHeaderAction()` (policy first, then the edit page's
   permission, then nobody). A page that is not a resource surface — a board, a report — extends `Pages\Page`
   and names its content view.
+- **Pages are composed capabilities (ADR 0038).** Header actions go in `headerActions()` (list: *New* by
+  default; edit/view: `deleteHeaderAction()`, `restoreHeaderAction()`, `forceDeleteHeaderAction()` on
+  request); widgets in `headerWidgets()` / `footerWidgets()` (drawn, not hosted — polling widgets stay on a
+  `DashboardPage`); list tabs in `tabs()` of `ListTab`s (narrow the base query, `?tab=` in the URL). Create and
+  edit pages warn before unsaved input is lost; turn it off with `warnsAboutUnsavedChanges(): bool`.
+- **A page that is not a resource surface extends `Pages\Page`** and names its content `$view`
+  (`make:wire-page TaskBoard`, or `--resource=Order` for a record page that becomes one of the record's tabs).
+- **Whole-resource behaviour is a contract on the resource, never a page switch**: `ManagesTrashedRecords`
+  (trashed filter, restore/force delete — model must use `SoftDeletes`) and `NestedResource`
+  (`parentResource()` + `parentRelationship()`; routed under `{parent}`, one level deep). A resource small
+  enough for modals is one `ManagePage` as `pages()`'s `index`.
+- **A standalone page registers itself**: list it in `config('wire-panels.pages')` or discover its folder with
+  `config('wire-core.discover.pages')`; `$slug`, `$navigationLabel`, `$navigationIcon`, `$navigationGroup`,
+  `$navigationSort`, `$permission` and `$shouldRegisterNavigation` place it. No wrapper resource needed.
