@@ -2,7 +2,7 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
-## [Unreleased]
+## [2.3.1]
 
 ### Fixed
 
