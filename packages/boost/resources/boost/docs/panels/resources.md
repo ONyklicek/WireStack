@@ -127,6 +127,30 @@ Registering the same class twice is a no-op, because config merging and a
 provider booted twice both do it. Two *different* classes claiming one key throws
 instead: the second would silently take over routing for the first.
 
+### Discovering Them
+
+A folder of resources can be registered as a folder:
+
+```php
+// config/wire-core.php
+'discover' => [
+    'resources' => ['App\\Resources' => app_path('Resources')],   // [tl! focus]
+    'dashboards' => ['App\\Dashboards' => app_path('Dashboards')],
+],
+```
+
+Namespace to directory, the way PSR-4 maps them. At boot, every concrete class
+under the directory that implements `DescribesResource` (for `dashboards`,
+extends `Dashboard`) is registered — after the listed ones, so a class both
+listed and discovered registers once and a listed order wins. What else the
+folder holds — an abstract base, a trait, a helper — is passed over, because a
+folder of resources is allowed to hold what they are built from. A class that
+does not autoload is not found: discovery goes through the autoloader, so it
+sees what the application can load.
+
+It is one directory listing and one `class_exists()` per file on every boot,
+which is why it is off until a directory is named.
+
 ## Reading The Registry
 
 ```php

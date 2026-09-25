@@ -83,8 +83,9 @@ Each is its own commit, with tests, EN/CS docs and the boost guideline.
    - `wire:resources` — every registered resource with its surfaces, pages,
      routes per zone and permissions: `describe-resource` for a terminal.
    Stubs publishable, like the dashboard page's already are.
-7. **Discovery.** `#[AsResource]` plus a scanned directory in config; the
-   config list stays the reference path.
+7. **Discovery.** *(done — a scanned directory in config; no attribute: the
+   contract a class already implements is what marks it)* The config list stays
+   the reference path.
 8. **Nested resources.** A resource that belongs to a parent record: its pages
    under the parent's URL, the parent in the trail, its query scoped to it.
 9. **Board.** A lanes-of-cards surface over a model and a state column, drag to

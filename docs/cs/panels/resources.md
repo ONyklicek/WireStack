@@ -127,6 +127,30 @@ konfigurace, tak provider nabootovaný dvakrát. Dvě *různé* třídy hlásíc
 k jednomu klíči naopak vyhodí výjimku: ta druhá by tiše převzala routing té
 první.
 
+### Jak je najít samy
+
+Složku resource jde zaregistrovat jako složku:
+
+```php
+// config/wire-core.php
+'discover' => [
+    'resources' => ['App\\Resources' => app_path('Resources')],   // [tl! focus]
+    'dashboards' => ['App\\Dashboards' => app_path('Dashboards')],
+],
+```
+
+Namespace na adresář, tak jak je mapuje PSR-4. Při bootu se zaregistruje každá
+konkrétní třída v adresáři, která implementuje `DescribesResource` (u
+`dashboards` dědí z `Dashboard`) — až po vyjmenovaných, takže třída vyjmenovaná
+i nalezená se zaregistruje jednou a pořadí seznamu vyhrává. Cokoli dalšího ve
+složce — abstraktní základ, trait, pomocník — se přeskočí, protože složka
+resource smí obsahovat to, z čeho se skládají. Třída, která se nenačte
+autoloaderem, se nenajde: discovery jde přes autoloader, takže vidí to, co
+aplikace umí načíst.
+
+Při každém bootu je to jeden výpis adresáře a jedno `class_exists()` na soubor,
+a proto je to vypnuté, dokud se nějaký adresář nepojmenuje.
+
 ## Čtení registru
 
 ```php

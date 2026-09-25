@@ -30,6 +30,9 @@ All notable changes to the Wire ecosystem will be documented in this file.
   records of a selection), and its record pages a trashed record instead of a 404, with `restoreHeaderAction()`
   and `forceDeleteHeaderAction()` beside *Delete*. Policy first, then the edit page, per record.
 - `RestoreAction` and `ForceDeleteAction` — record-level presets beside the bulk ones.
+- **Resources and dashboards can be discovered** — `config('wire-core.discover')` maps a namespace to a
+  directory, and every concrete resource (or dashboard) under it registers at boot, after the listed ones. Off
+  until a directory is named.
 - **A CLI for the panel.** `make:wire-resource` writes a resource and its pages (`--generate` reads fields,
   columns and entries off the model's table; `--view`, `--simple`, `--soft-deletes`, `--register`);
   `make:wire-page` writes a page of your own, or with `--resource` a record page that becomes one of the

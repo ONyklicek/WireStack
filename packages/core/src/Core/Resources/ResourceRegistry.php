@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Core\Resources;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Exceptions\ResourceRegistrationException;
+use NyonCode\WireCore\Foundation\Registration\ClassDiscovery;
 use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
 
 /**
@@ -19,9 +20,10 @@ use NyonCode\WireCore\Foundation\Registration\Contracts\RegistrySource;
  * listing a menu or routing a model never instantiates a resource or composes a
  * table.
  *
- * Registration is a config array first (`config('wire-table.resources')`);
- * attribute discovery is the opt-in second path and belongs with boost's
- * `ComponentScanner`, not here.
+ * Registration is a config array first (`config('wire-core.resources')`);
+ * a scanned directory (`config('wire-core.discover.resources')`, read by
+ * {@see ClassDiscovery}) is the opt-in second path, and both end in
+ * {@see registerMany()}.
  */
 final class ResourceRegistry implements RegistrySource
 {
