@@ -1,6 +1,6 @@
 ---
 order: 80
-summary: Artisan příkazy, které napíšou resource, jeho stránky, vlastní stránku a relation manager — a ten, který přečte, co je zaregistrované.
+summary: Artisan příkazy, které napíšou resource, jeho stránky, vlastní stránku a tabulku relace — a ten, který přečte, co je zaregistrované.
 ---
 
 # Příkazová řádka
@@ -75,7 +75,7 @@ jeho záložky. Oba vypíšou řádek, který patří do `pages()` vlastníka:
 Routování je deklarace vlastníka, takže ho příkaz vypíše, místo aby upravoval
 resource.
 
-## Generování relation manageru
+## Generování tabulky relace
 
 ```bash
 php artisan make:wire-relation-manager Order items

@@ -133,6 +133,12 @@ Before changing shared behavior, ask:
   archived row, its lock on inline editing (server-side) and the optional locks
   on its checkbox and its actions: `architecture/table.md` § Inactive records,
   then `docs/table/inactive-records.md`
+- A panel page — header actions, a page of your own (`Pages\Page`), list tabs,
+  page widgets, the unsaved-changes warning, trash (`ManagesTrashedRecords`),
+  `ManagePage`, nested resources (`NestedResource`), the `make:wire-*` /
+  `wire:resources` CLI, or a board (`wire-sortable` `Board` + `WithBoard`):
+  `docs/panels/pages.md`, then ADR `architecture/decisions/0038-pages-as-composed-capabilities.md`
+  and `architecture/plans/panels-pages-and-resources.md`
 - Anything spanning package boundaries:
   `architecture/integrations.md`
 - Shared design-system ownership, canonical UI semantics, color/size/icon surface work:

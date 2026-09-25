@@ -1,6 +1,6 @@
 ---
 order: 80
-summary: The artisan commands that write a resource, its pages, a page of your own and a relation manager — and the one that reads back what is registered.
+summary: The artisan commands that write a resource, its pages, a page of your own and a relationship's table — and the one that reads back what is registered.
 ---
 
 # Command Line
@@ -75,7 +75,7 @@ draws the record's tabs. Both print the line to add to the owner's `pages()`:
 Routing is the owner's declaration, so the command prints it rather than editing
 the resource.
 
-## Generating A Relation Manager
+## Generating A Relationship's Table
 
 ```bash
 php artisan make:wire-relation-manager Order items
