@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace NyonCode\WirePanels\Resources\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use NyonCode\WireCore\Core\Data\RecordContract;
 use NyonCode\WirePanels\Exceptions\ResourcePageException;
+use NyonCode\WirePanels\Resources\Support\TrashedRecords;
 
 /**
  * A page that shows exactly one record, and how it finds it.
@@ -128,7 +130,16 @@ trait ResolvesOneRecord
             throw ResourcePageException::unresolvableRecord(static::class, (string) $resource);
         }
 
-        return $model::query()->find($this->record);
+        $query = $model::query();
+
+        // A resource that manages its trash has pages for trashed records too:
+        // the list offers *Restore* on them, and the record's own page must not
+        // answer that with a 404.
+        if (TrashedRecords::managedBy($resource)) {
+            $query->withoutGlobalScope(SoftDeletingScope::class);
+        }
+
+        return $query->find($this->record);
     }
 
     /**

@@ -6,6 +6,7 @@ namespace NyonCode\WireTable\Concerns;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Collection;
 use NyonCode\WireTable\Data\CollectionRow;
 use NyonCode\WireTable\Services\AggregateSubqueries;
@@ -418,6 +419,12 @@ trait CanSelectRecords
         }
 
         $query = $table->getQuery()->whereIn($table->getPrimaryKey(), $listed);
+
+        // A ticked trashed row is still a ticked row: the table lists them when
+        // it can, so the keys it hands back are looked up among them too.
+        if ($table->resolvesTrashedRecords()) {
+            $query->withoutGlobalScope(SoftDeletingScope::class);
+        }
 
         // Aggregate columns (e.g. ->sums('items', 'line_total')) need their
         // subqueries replayed, or the computed attribute is absent and a

@@ -5,7 +5,9 @@ declare(strict_types=1);
 use NyonCode\WireCore\Actions\DeleteAction;
 use NyonCode\WireCore\Actions\DeleteBulkAction;
 use NyonCode\WireCore\Actions\EditAction;
+use NyonCode\WireCore\Actions\ForceDeleteAction;
 use NyonCode\WireCore\Actions\ForceDeleteBulkAction;
+use NyonCode\WireCore\Actions\RestoreAction;
 use NyonCode\WireCore\Actions\RestoreBulkAction;
 use NyonCode\WireCore\Actions\ViewAction;
 
@@ -91,4 +93,26 @@ it('ViewAction has preconfigured settings', function () {
     expect($action->getLabel())->not->toBeEmpty()
         ->and($action->getIcon())->toBe('eye')
         ->and($action->getColor())->toBe('gray');
+});
+
+// ─── RestoreAction / ForceDeleteAction ────────────────────────────────────
+
+it('RestoreAction is the record-level restore preset', function () {
+    $action = RestoreAction::make();
+
+    expect($action->getName())->toBe('restore')
+        ->and($action->getLabel())->toBe('Restore')
+        ->and($action->getIcon())->toBe('arrow-uturn-left')
+        ->and($action->getColor())->toBe('success')
+        ->and($action->hasModal())->toBeTrue();
+});
+
+it('ForceDeleteAction is the record-level permanent delete preset', function () {
+    $action = ForceDeleteAction::make();
+
+    expect($action->getName())->toBe('forceDelete')
+        ->and($action->getLabel())->toBe('Force delete')
+        ->and($action->getIcon())->toBe('trash')
+        ->and($action->getColor())->toBe('danger')
+        ->and($action->hasModal())->toBeTrue();
 });

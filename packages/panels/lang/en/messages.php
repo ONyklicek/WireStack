@@ -7,6 +7,7 @@ return [
     'edit' => 'Edit :label',
     'deleted' => ':label deleted',
     'unsaved_changes' => 'You have unsaved changes. Leave this page anyway?',
+    'restored' => ':label restored',
     'save' => 'Save',
 
     /*

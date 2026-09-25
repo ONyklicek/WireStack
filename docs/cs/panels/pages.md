@@ -393,6 +393,43 @@ Potvrdí, smaže přes model — takže model se soft deletes maže měkce — p
 notifikaci o úspěchu a vrátí se na seznam přes `wire:navigate`. Kde žádný seznam
 routovaný není, zůstane.
 
+## Záznamy v koši
+
+Resource nad soft-deletujícím modelem může svůj koš v panelu spravovat místo
+toho, aby ho skrýval — stačí to říct:
+
+```php
+use NyonCode\WirePanels\Resources\Contracts\ManagesTrashedRecords;
+
+final class InvoiceResource implements DescribesResource, ManagesTrashedRecords, ProvidesResourceTable
+{
+    // …model používá SoftDeletes
+}
+```
+
+Ta jedna deklarace dosáhne na každou stránku, takže seznam a stránka záznamu se
+nemohou rozejít v tom, jestli záznam v koši existuje:
+
+- **Seznam** dostane filtr `trashed`, *Obnovit* a *Trvale smazat* na řádku
+  v koši a obojí i jako hromadné akce — ty působí jen na záznamy výběru, které
+  jsou v koši, protože trvalé smazání přes živé řádky je ztráta dat, ne zrcadlo
+  obnovení.
+- **Stránka záznamu** otevře záznam v koši místo 404, skryje na něm
+  `deleteHeaderAction()` a stránce, která o ně požádá, nabídne
+  `restoreHeaderAction()` a `forceDeleteHeaderAction()`:
+
+```php
+protected function headerActions(): array
+{
+    return [$this->deleteHeaderAction(), $this->restoreHeaderAction(), $this->forceDeleteHeaderAction()];
+}
+```
+
+Každá z nich se rozhoduje jako *Smazat*: `restore()` nebo `forceDelete()` policy
+modelu, když policy existuje, jinak stránka editace záznamu, pro každý záznam
+zvlášť. Kontrakt nad modelem bez `SoftDeletes` odmítne se zprávou, která jmenuje
+oba, místo aby selhal uvnitř dotazu.
+
 ## Vlastní stránka
 
 Tabule, kalendář, report: stránka, která není žádným z povrchů resource, chce
@@ -694,6 +731,8 @@ seznamu ji skládá skrze `HostsPageActions`, která přidává `WithActions`:
 | `createHeaderAction(): ?Action` | `Action\|null` | *(protected, seznam)* Hotové *Nový*, nebo `null`, kde není žádná stránka založení k otevření |
 | `deleteHeaderAction(): DeleteAction` | `DeleteAction` | *(protected, editace a detail)* Hotové *Smazat* — potvrdit, smazat, zpět na seznam |
 | `mayDeleteRecord(): bool` | `bool` | *(protected, editace a detail)* Nejdřív policy, pak oprávnění editace, jinak ne |
+| `restoreHeaderAction(): RestoreAction` | `RestoreAction` | *(protected, editace a detail)* *Obnovit*, jen na záznamu v koši |
+| `forceDeleteHeaderAction(): ForceDeleteAction` | `ForceDeleteAction` | *(protected, editace a detail)* *Trvale smazat*, jen na záznamu v koši, zpět na seznam |
 
 `Page` přidává jen to, co potřebuje vlastní stránka:
 

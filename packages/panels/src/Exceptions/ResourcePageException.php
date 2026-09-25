@@ -60,6 +60,16 @@ final class ResourcePageException extends RuntimeException implements WireExcept
         );
     }
 
+    /** A resource managing trashed records over a model that has none. */
+    public static function notSoftDeletable(string $resource, string $model): self
+    {
+        return new self(
+            "[{$resource}] implements ManagesTrashedRecords, but its model [{$model}] does not ".
+            'use SoftDeletes, so it has no trashed records to manage. Add the trait to the '.
+            'model, or drop the contract from the resource.'
+        );
+    }
+
     public static function missingRecord(string $page): self
     {
         return new self(

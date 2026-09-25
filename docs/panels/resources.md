@@ -247,6 +247,7 @@ would cost exactly what the static half exists to avoid, and `describe-table` an
 | `ProvidesResourceForm` | `form(Form $form): Form` | `wire-forms` |
 | `ProvidesResourceInfolist` | `infolist(Infolist $infolist): Infolist` | `wire-core` |
 | `ProvidesRelationManagers` | `relationManagers(): array` | `wire-panels` |
+| `ManagesTrashedRecords` | *(marker)* | `wire-panels` |
 | `ProvidesNavigation` | `static navigation(): NavigationItem` | `wire-core` |
 | `ProvidesBreadcrumbs` | `breadcrumbs(): array` | `wire-core` |
 | `ProvidesPages` | `static pages(): array` | `wire-core` |

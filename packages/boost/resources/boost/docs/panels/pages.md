@@ -398,6 +398,43 @@ It confirms, deletes through the model — so a model with soft deletes
 soft-deletes — flashes a success notification and goes back to the list with
 `wire:navigate`. Where no list is routed, it stays.
 
+## Trashed Records
+
+A resource over a soft-deleting model can manage its trash in the panel rather
+than hide it, by saying so:
+
+```php
+use NyonCode\WirePanels\Resources\Contracts\ManagesTrashedRecords;
+
+final class InvoiceResource implements DescribesResource, ManagesTrashedRecords, ProvidesResourceTable
+{
+    // …the model uses SoftDeletes
+}
+```
+
+That one declaration reaches every page, so the list and a record's page cannot
+disagree about whether a trashed record exists:
+
+- **The list** gains a `trashed` filter, *Restore* and *Force delete* on a
+  trashed row, and both as bulk actions — which act only on the trashed records
+  of a selection, because a force delete swept across live rows is data loss,
+  not the mirror image of a restore.
+- **A record page** opens a trashed record rather than answering 404, hides
+  `deleteHeaderAction()` on it, and offers `restoreHeaderAction()` and
+  `forceDeleteHeaderAction()` to a page that asks for them:
+
+```php
+protected function headerActions(): array
+{
+    return [$this->deleteHeaderAction(), $this->restoreHeaderAction(), $this->forceDeleteHeaderAction()];
+}
+```
+
+Each of them is decided like *Delete*: the model policy's `restore()` or
+`forceDelete()` when there is a policy, the record's edit page otherwise, per
+record. The contract over a model that does not use `SoftDeletes` refuses with a
+message naming both, instead of failing inside a query.
+
 ## A Page Of Your Own
 
 A board, a calendar, a report: a page that is not one of a resource's surfaces
@@ -705,6 +742,8 @@ but the list composes it through `HostsPageActions`, which adds `WithActions`:
 | `createHeaderAction(): ?Action` | `Action\|null` | *(protected, list)* The ready-made *New*, or `null` where there is no create page to open |
 | `deleteHeaderAction(): DeleteAction` | `DeleteAction` | *(protected, edit and view)* The ready-made *Delete* — confirm, delete, back to the list |
 | `mayDeleteRecord(): bool` | `bool` | *(protected, edit and view)* Policy first, then the edit page's permission, then no |
+| `restoreHeaderAction(): RestoreAction` | `RestoreAction` | *(protected, edit and view)* *Restore*, drawn only on a trashed record |
+| `forceDeleteHeaderAction(): ForceDeleteAction` | `ForceDeleteAction` | *(protected, edit and view)* *Force delete*, drawn only on a trashed record, back to the list |
 
 `Page` adds only what a page of your own needs:
 

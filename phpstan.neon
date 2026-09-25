@@ -81,6 +81,7 @@ parameters:
         # ListPage, so its body is still checked against the class it serves.
         - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/InteractsWithListTabs.php }
         - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/InteractsWithUnsavedChanges.php }
+        - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/InteractsWithTrashedRecords.php }
         # Every user is a resource page in wire-module-users or
         # wire-module-notifications, all outside the analysed paths. No
         # @phpstan-require-extends to keep the body checked, unlike

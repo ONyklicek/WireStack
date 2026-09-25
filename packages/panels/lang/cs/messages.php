@@ -7,6 +7,7 @@ return [
     'edit' => 'Upravit :label',
     'deleted' => ':label – smazáno',
     'unsaved_changes' => 'Máte neuložené změny. Opravdu chcete stránku opustit?',
+    'restored' => ':label – obnoveno',
     'save' => 'Uložit',
 
     /*

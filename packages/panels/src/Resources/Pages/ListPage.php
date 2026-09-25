@@ -18,6 +18,7 @@ use NyonCode\WirePanels\Pages\Concerns\InteractsWithPageWidgets;
 use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
 use NyonCode\WirePanels\Resources\Concerns\InteractsWithListTabs;
+use NyonCode\WirePanels\Resources\Concerns\InteractsWithTrashedRecords;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
 use NyonCode\WireTable\Actions\HeaderActionClickResolver;
 use NyonCode\WireTable\Concerns\WithTable;
@@ -62,6 +63,7 @@ abstract class ListPage extends Component implements HasHeaderActions, Identifie
     use InteractsWithHeaderActions;
     use InteractsWithListTabs;
     use InteractsWithPageWidgets;
+    use InteractsWithTrashedRecords;
     use WithTable {
         findHeaderAction as protected findTableHeaderAction;
         getTable as protected composeTable;
@@ -96,7 +98,7 @@ abstract class ListPage extends Component implements HasHeaderActions, Identifie
     }
 
     /**
-     * The table, narrowed by the active tab.
+     * The table, with the resource's trash managed on it and narrowed by the active tab.
      *
      * Applied here, once, to the instance `WithTable` has just composed — not in
      * `table()`, which a page is free to write itself: a tab has to hold on a
@@ -108,6 +110,7 @@ abstract class ListPage extends Component implements HasHeaderActions, Identifie
         $table = $this->composeTable();
 
         if ($fresh) {
+            $this->applyTrashedRecords($table);
             $this->applyActiveListTab($table);
         }
 
