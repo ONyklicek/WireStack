@@ -13,6 +13,7 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
 use NyonCode\WireCore\Infolists\Contracts\ProvidesResourceInfolist;
 use NyonCode\WireForms\Contracts\ProvidesResourceForm;
+use NyonCode\WirePanels\Pages\Page;
 use NyonCode\WirePanels\Resources\Contracts\ManagesTrashedRecords;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesRelationManagers;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
@@ -34,7 +35,7 @@ final class ListResourcesCommand extends Command
 {
     protected $signature = 'wire:resources {key? : One resource, by its key}';
 
-    protected $description = 'List the registered Wire resources, their surfaces, pages and routes';
+    protected $description = 'List the registered Wire resources and pages, their surfaces, routes and permissions';
 
     public function handle(Catalog $catalog, Router $router): int
     {
@@ -53,23 +54,33 @@ final class ListResourcesCommand extends Command
             return self::SUCCESS;
         }
 
-        if ($resources === []) {
+        $pages = $catalog->implementing(Page::class);
+
+        if ($resources === [] && $pages === []) {
             $this->components->info('No resources are registered. Add one to config(\'wire-core.resources\'), or run make:wire-resource.');
 
+            return self::SUCCESS;
+        }
+
+        if ($pages !== []) {
+            $this->listPages($pages, $router);
+        }
+
+        if ($resources === []) {
             return self::SUCCESS;
         }
 
         $rows = [];
 
         foreach ($resources as $resourceKey => $class) {
-            $pages = $this->pages($class);
+            $declared = $this->pages($class);
 
             $rows[] = [
                 $resourceKey,
                 $class,
                 $class::modelClass() ?? '—',
                 implode(', ', $this->surfaces($class)) ?: '—',
-                $pages === [] ? '—' : implode(', ', array_keys($pages)),
+                $declared === [] ? '—' : implode(', ', array_keys($declared)),
                 (string) count($this->routesOf($router, (string) $resourceKey)),
             ];
         }
@@ -110,6 +121,29 @@ final class ListResourcesCommand extends Command
         }
 
         $this->table(['Page', 'Component', 'Route', 'URI', 'Permission'], $rows);
+    }
+
+    /**
+     * The application's own registered pages: where each is routed and what it requires.
+     *
+     * @param  array<string, class-string<Page>>  $pages
+     */
+    private function listPages(array $pages, Router $router): void
+    {
+        $rows = [];
+
+        foreach ($pages as $key => $page) {
+            $routes = $this->routesOf($router, (string) $key);
+
+            $rows[] = [
+                $key,
+                $page,
+                $routes === [] ? 'not routed' : implode(', ', array_map(fn (Route $route): string => '/'.ltrim($route->uri(), '/'), $routes)),
+                $page::pages()['index']->getPermission() ?? '—',
+            ];
+        }
+
+        $this->table(['Page', 'Class', 'URI', 'Permission'], $rows);
     }
 
     /**

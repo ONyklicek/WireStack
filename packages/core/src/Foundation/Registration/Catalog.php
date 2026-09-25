@@ -32,6 +32,18 @@ final class Catalog
     public function __construct(private readonly array $sources) {}
 
     /**
+     * The same catalogue with one more source read after the others.
+     *
+     * What a package that owns a kind of registered thing uses to join — the
+     * panels' own pages — without restating the list core assembled, and so
+     * without dropping a source a later package added the same way.
+     */
+    public function withSource(RegistrySource $source): self
+    {
+        return new self([...$this->sources, $source]);
+    }
+
+    /**
      * Every registered class, keyed, in registration order.
      *
      * @return array<string, class-string>

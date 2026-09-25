@@ -574,7 +574,7 @@ each one is covered where the thing it declares is explained:
 | --- | --- | --- |
 | `resources` | The resource classes an application registers | [Resources → Registration](../panels/resources.md#registration) |
 | `dashboards` | The dashboard classes, the same way | [Dashboards](../core/widgets/dashboards.md) |
-| `discover` | Directories to find resources and dashboards in — `'resources' => [namespace => directory]`, off until named | [Resources](../panels/resources.md#discovering-them) |
+| `discover` | Directories to find resources, dashboards and wire-panels pages in — `'resources' => [namespace => directory]`, off until named | [Resources](../panels/resources.md#discovering-them) |
 | `tenancy` | `enabled` and the `column` a tenant scope is applied on | [Authorization](authorization.md) |
 
 `config/wire-table.php` has one more: `preferences` picks the driver a table's

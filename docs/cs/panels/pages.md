@@ -516,11 +516,54 @@ doputují:
 </div>
 ```
 
-Routuje se jako každá stránka — `RoutePage::make(TaskBoard::class)` v `pages()`
-některého vlastníka, což jí dá URL, `can:` stráž a položku v menu — nebo se
-namountuje ručně. Drobečková navigace je opt-in: implementujte
-`ProvidesBreadcrumbs` a nějakou vraťte. Stránka, která nejmenuje žádný pohled, se
-odmítne vykreslit, místo aby nakreslila prázdný rámeček.
+Drobečková navigace je opt-in: implementujte `ProvidesBreadcrumbs` a nějakou
+vraťte. Stránka, která nejmenuje žádný pohled, se odmítne vykreslit, místo aby
+nakreslila prázdný rámeček.
+
+### Registrace
+
+Stránka se registruje stejně jako resource a pak je všude, kde resource —
+routovaná přes `Route::wireResources()`, v menu, ve výpisu `wire:resources` —
+aniž by se pro ni psalo cokoli dalšího:
+
+```php
+// config/wire-panels.php
+'pages' => [App\Livewire\Pages\TaskBoard::class],
+
+// nebo celá složka — config/wire-core.php
+'discover' => ['pages' => ['App\\Livewire\\Pages' => app_path('Livewire/Pages')]],
+```
+
+Kam patří a co o ní říká menu, jsou statické vlastnosti stránky, každá
+s výchozí hodnotou:
+
+```php
+final class TaskBoard extends Page
+{
+    protected static ?string $slug = 'board';                    // [tl! focus:start]
+    protected static ?string $navigationLabel = 'Tabule';
+    protected static ?string $navigationIcon = 'outline:view-columns';
+    protected static ?string $navigationGroup = 'work';
+    protected static int $navigationSort = 30;
+    protected static ?string $permission = 'tasks.view';        // [tl! focus:end]
+    protected static bool $shouldRegisterNavigation = true;
+
+    protected static string $view = 'livewire.task-board';
+}
+```
+
+Klíč — segment URL a klíč v menu — je `$slug`, jinak jméno třídy v kebab-case
+bez koncového `Page` (`TaskBoardPage` → `task-board`); popisek je
+`$navigationLabel`, jinak polidštěné jméno třídy. `$permission` se stane `can:`
+middlewarem routy **a** skryje položku v menu tomu, kdo ho nemá, takže menu nikdy
+nenabídne stránku, kterou by routa odmítla; `$shouldRegisterNavigation = false`
+nechá stránku routovanou a mimo menu. Dvě stránky na jednom klíči se odmítnou,
+stejně jako dva resource.
+
+Registr se naplní při prvním čtení, ne při bootu, takže stránka je k dispozici
+i pro routy deklarované v configu. Stránku lze pořád routovat z `pages()`
+vlastníka — stránka o jednom záznamu tak routovaná je vždy, pod `{record}/…` —
+nebo ji namountovat ručně.
 
 `Page` je pohodlí, ne podmínka. Skládá `HostsPageActions` a vlastní komponenta,
 která skládá tutéž traitu, dostane tytéž akce v hlavičce bez dědění od čehokoli.

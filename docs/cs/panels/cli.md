@@ -65,15 +65,17 @@ První napíše [`Page`](pages.md#vlastni-stranka) a pohled, který kreslí —
 `resources/views/livewire/pages/task-board.blade.php`. Druhý napíše stránku
 o **jednom záznamu** `OrderResource`: skládá `BelongsToResource`,
 `ResolvesOneRecord` a `LinksToRecordPages`, takže přijme klíč záznamu a kreslí
-jeho záložky. Oba vypíšou řádek, který patří do `pages()` vlastníka:
+jeho záložky. Příkaz vypíše, co zbývá udělat: vlastní stránka se
+[registruje jako resource](pages.md#registrace) — `config('wire-panels.pages')`
+nebo nalezená složka — a pak se routuje a objeví v menu sama; stránka záznamu se
+routuje z `pages()` svého resource:
 
 ```php
 'history' => RoutePage::make(\App\Livewire\Resources\Orders\History::class)->uri('{record}/history'),
 ```
 
-— a u stránky záznamu je to zároveň to, co z ní udělá jednu ze záložek záznamu.
-Routování je deklarace vlastníka, takže ho příkaz vypíše, místo aby upravoval
-resource.
+— a to z ní zároveň udělá jednu ze záložek záznamu. Routování je deklarace
+vlastníka, takže ho příkaz vypíše, místo aby upravoval resource.
 
 ## Generování tabulky relace
 

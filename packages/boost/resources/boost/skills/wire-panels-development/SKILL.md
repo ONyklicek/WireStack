@@ -114,3 +114,6 @@ class EditOrder extends EditPage
   (trashed filter, restore/force delete — model must use `SoftDeletes`) and `NestedResource`
   (`parentResource()` + `parentRelationship()`; routed under `{parent}`, one level deep). A resource small
   enough for modals is one `ManagePage` as `pages()`'s `index`.
+- **A standalone page registers itself**: list it in `config('wire-panels.pages')` or discover its folder with
+  `config('wire-core.discover.pages')`; `$slug`, `$navigationLabel`, `$navigationIcon`, `$navigationGroup`,
+  `$navigationSort`, `$permission` and `$shouldRegisterNavigation` place it. No wrapper resource needed.

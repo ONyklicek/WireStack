@@ -85,7 +85,7 @@ afterEach(function () {
 
 it('writes a page of the application own and its view', function () {
     $this->artisan('make:wire-page', ['name' => 'TaskBoard'])
-        ->expectsOutputToContain("'task-board' => RoutePage::make(")
+        ->expectsOutputToContain("config('wire-panels.pages')")
         ->assertSuccessful();
 
     $page = File::get(app_path('Livewire/Pages/TaskBoard.php'));
