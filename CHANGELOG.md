@@ -2,6 +2,18 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.2.6]
+
+### Fixed
+
+- **A refused recovery code comes back on the recovery half of the two-factor challenge.** The screen always
+  opened on the authenticator-code boxes (`recovery: false`), so after a wrong recovery code the page came back
+  with the error rendered under the recovery input, which was hidden. The person saw the code boxes, no error,
+  and no hint that the code had been refused. The screen now opens on the half whose input the error belongs to
+  (`$errors->has('recovery_code')`), and whichever half starts hidden carries `x-cloak`. It holds with and
+  without JavaScript, because the challenge is rendered again either way. Found by an application that submits
+  the auth screens in the background and morphs the card.
+
 ## [2.2.5]
 
 ### Fixed

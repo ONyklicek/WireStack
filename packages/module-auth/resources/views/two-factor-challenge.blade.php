@@ -11,7 +11,15 @@
      second step that the earlier version had. Both schemas leave their input
      optional for the same reason: the hidden half is still in the document, and
      a browser asked to validate a required control it cannot focus refuses the
-     submit and reports it nowhere. --}}
+     submit and reports it nowhere.
+
+     A refused recovery code comes back to this screen with its error under the
+     recovery input, so the screen opens on that half — starting on the code
+     boxes would put the only answer to what went wrong under a hidden field.
+     Whichever half starts hidden carries `x-cloak`, so neither flashes before
+     Alpine takes over. --}}
+
+@php($recovery = $errors->has('recovery_code'))
 
 <x-wire-module-auth::screen
     :title="__('wire-module-auth::messages.two_factor_heading')"
@@ -19,7 +27,7 @@
 >
     <div
         x-data="{
-            recovery: false,
+            recovery: @js($recovery),
 
             /*
              * Switch, then put the caret in the field that just appeared.
@@ -48,18 +56,18 @@
         data-testid="auth-two-factor" @wireEl('auth-two-factor')
     >
         <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-            <span x-show="! recovery">{{ __('wire-module-auth::messages.two_factor_description') }}</span>
-            <span x-show="recovery" x-cloak>{{ __('wire-module-auth::messages.two_factor_recovery_description') }}</span>
+            <span x-show="! recovery" @if ($recovery) x-cloak @endif>{{ __('wire-module-auth::messages.two_factor_description') }}</span>
+            <span x-show="recovery" @unless ($recovery) x-cloak @endunless>{{ __('wire-module-auth::messages.two_factor_recovery_description') }}</span>
         </p>
 
         <form method="POST" action="{{ route('two-factor.login') }}" class="space-y-4" data-testid="auth-two-factor-form" @wireEl('auth-two-factor-form')>
             @csrf
 
-            <div x-show="! recovery">
+            <div x-show="! recovery" @if ($recovery) x-cloak @endif>
                 {{ $forms->twoFactorCode() }}
             </div>
 
-            <div x-show="recovery" x-cloak>
+            <div x-show="recovery" @unless ($recovery) x-cloak @endunless>
                 {{ $forms->twoFactorRecovery() }}
             </div>
 
@@ -74,8 +82,8 @@
                     class="text-sm text-primary-600 hover:underline dark:text-primary-400"
                     data-testid="auth-two-factor-toggle" @wireEl('auth-two-factor-toggle')
                 >
-                    <span x-show="! recovery">{{ __('wire-module-auth::messages.use_recovery_code') }}</span>
-                    <span x-show="recovery" x-cloak>{{ __('wire-module-auth::messages.use_authentication_code') }}</span>
+                    <span x-show="! recovery" @if ($recovery) x-cloak @endif>{{ __('wire-module-auth::messages.use_recovery_code') }}</span>
+                    <span x-show="recovery" @unless ($recovery) x-cloak @endunless>{{ __('wire-module-auth::messages.use_authentication_code') }}</span>
                 </button>
             </p>
         </form>
