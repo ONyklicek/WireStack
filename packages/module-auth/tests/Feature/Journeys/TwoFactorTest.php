@@ -97,6 +97,27 @@ it('refuses a recovery code that was never issued', function () {
     expect(Auth::check())->toBeFalse();
 });
 
+it('comes back on the half whose answer was refused', function (array $attempt, bool $recovery) {
+    // The error sits under the input that was filled in. Opening on the other
+    // half would hide the only explanation of what went wrong — with or without
+    // JavaScript, since the page is rendered again either way.
+    personWithSecondFactor();
+
+    $this->post('/login', ['email' => 'ann@example.com', 'password' => 'correct-horse']);
+
+    if ($attempt !== []) {
+        $this->from('/two-factor-challenge')->post('/two-factor-challenge', $attempt);
+    }
+
+    $this->get('/two-factor-challenge')
+        ->assertOk()
+        ->assertSee('recovery: '.($recovery ? 'true' : 'false').',', false);
+})->with([
+    'first visit' => [[], false],
+    'wrong authenticator code' => [['code' => '000000'], false],
+    'wrong recovery code' => [['recovery_code' => 'never-issued'], true],
+]);
+
 it('refuses a wrong authenticator code', function () {
     personWithSecondFactor();
 
