@@ -8,6 +8,8 @@ use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 use NyonCode\WirePanels\Resources\Console\Concerns\InteractsWithPublishedStubs;
+use NyonCode\WirePanels\Resources\Console\Concerns\ReportsNextSteps;
+use NyonCode\WirePanels\Resources\Console\Support\PanelSetup;
 use NyonCode\WirePanels\Resources\Console\Support\ResourceScaffold;
 use NyonCode\WirePanels\Resources\Console\Support\SchemaFields;
 use NyonCode\WirePanels\Resources\Console\Support\StubWriter;
@@ -32,6 +34,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 final class MakeResourceCommand extends Command
 {
     use InteractsWithPublishedStubs;
+    use ReportsNextSteps;
 
     protected $signature = 'make:wire-resource
         {name : The entity, e.g. Order — "Resource" is added}
@@ -79,7 +82,17 @@ final class MakeResourceCommand extends Command
             ), $fqn);
         }
 
-        $this->registerOrExplain($files, $scaffold->resourceFqn());
+        $setup = new PanelSetup($files);
+        $fqn = $scaffold->resourceFqn();
+        $namespace = $scaffold->resourceNamespace;
+
+        $this->reportNextSteps(
+            $setup,
+            $setup->resourceKey($scaffold->model),
+            $this->register($files, $fqn) || $setup->isRegistered($fqn, 'resources', (array) config('wire-core.resources', [])),
+            "Register it: rerun with --register, add \\{$fqn}::class to config('wire-core.resources'), "
+                ."or discover the whole folder — 'discover' => ['resources' => ['".str_replace('\\', '\\\\', $namespace)."' => app_path('Resources')]] in config/wire-core.php.",
+        );
 
         return self::SUCCESS;
     }
@@ -124,40 +137,39 @@ final class MakeResourceCommand extends Command
     }
 
     /**
-     * Add the resource to `config/wire-core.php`, or say how.
+     * Add the resource to `config/wire-core.php` when `--register` asks, and say
+     * whether it is now in that file.
      *
      * Only into a published config that has a `resources` list, and only once.
      * Anything else — no published file, a list built some other way — is the
-     * application's to edit, so the command prints the line instead of guessing.
+     * application's to edit, and the next steps say how.
      */
-    private function registerOrExplain(Filesystem $files, string $resource): void
+    private function register(Filesystem $files, string $resource): bool
     {
-        $line = '\\'.$resource.'::class,';
         $config = config_path('wire-core.php');
 
-        if ($this->option('register') && $files->exists($config)) {
-            $contents = $files->get($config);
-
-            if (str_contains($contents, $resource.'::class')) {
-                $this->components->info('Already registered in config/wire-core.php.');
-
-                return;
-            }
-
-            $updated = preg_replace("/('resources'\s*=>\s*\[)/", "$1\n        ".$line, $contents, 1, $count);
-
-            if ($count === 1 && is_string($updated)) {
-                $files->put($config, $updated);
-                $this->components->info('Registered in config/wire-core.php.');
-
-                return;
-            }
+        if (! $this->option('register') || ! $files->exists($config)) {
+            return false;
         }
 
-        $this->components->bulletList([
-            "Register it in config('wire-core.resources'): {$line}",
-            'Give its pages URLs with Route::wireResources() inside your panel\'s route group.',
-        ]);
+        $contents = $files->get($config);
+
+        if (str_contains($contents, $resource.'::class')) {
+            $this->components->info('Already registered in config/wire-core.php.');
+
+            return true;
+        }
+
+        $updated = preg_replace("/('resources'\s*=>\s*\[)/", "$1\n        \\\\".$resource.'::class,', $contents, 1, $count);
+
+        if ($count === 1 && is_string($updated)) {
+            $files->put($config, $updated);
+            $this->components->info('Registered in config/wire-core.php.');
+
+            return true;
+        }
+
+        return false;
     }
 
     /** Where a class of the application's lives on disk. */

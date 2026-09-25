@@ -8,6 +8,8 @@ use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 use NyonCode\WirePanels\Resources\Console\Concerns\InteractsWithPublishedStubs;
+use NyonCode\WirePanels\Resources\Console\Concerns\ReportsNextSteps;
+use NyonCode\WirePanels\Resources\Console\Support\PanelSetup;
 use NyonCode\WirePanels\Resources\Console\Support\StubWriter;
 use Symfony\Component\Console\Attribute\AsCommand;
 
@@ -28,6 +30,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 final class MakePageCommand extends Command
 {
     use InteractsWithPublishedStubs;
+    use ReportsNextSteps;
 
     protected $signature = 'make:wire-page
         {name : The page, e.g. TaskBoard}
@@ -79,12 +82,25 @@ final class MakePageCommand extends Command
 
         $this->report($viewWritten, "view [{$view}]");
 
-        $this->components->bulletList($resource === null
-            ? [
-                'Register it in config(\'wire-panels.pages\'): \\'.$namespace.'\\'.$class.'::class, — or name its folder in config(\'wire-core.discover.pages\').',
-                'Route::wireResources() then routes it at /'.$kind.' and the menu lists it.',
-            ]
-            : ['Route it from the resource\'s pages(): '.var_export($kind, true).' => RoutePage::make(\\'.$namespace.'\\'.$class."::class)->uri('{record}/{$kind}'),"]);
+        if ($resource !== null) {
+            // A record page is not registered on its own: its resource routes it.
+            $this->components->bulletList([
+                'Route it from the resource\'s pages(): '.var_export($kind, true).' => RoutePage::make(\\'.$namespace.'\\'.$class."::class)->uri('{record}/{$kind}'),",
+            ]);
+
+            return self::SUCCESS;
+        }
+
+        $setup = new PanelSetup($files);
+        $fqn = $namespace.'\\'.$class;
+
+        $this->reportNextSteps(
+            $setup,
+            Str::kebab((string) Str::of($class)->beforeLast('Page')->whenEmpty(fn () => 'page')),
+            $setup->isRegistered($fqn, 'pages', (array) config('wire-panels.pages', [])),
+            "Register it: add \\{$fqn}::class to config('wire-panels.pages'), "
+                ."or discover the whole folder — 'discover' => ['pages' => ['".str_replace('\\', '\\\\', $namespace)."' => app_path('Livewire/Pages')]] in config/wire-core.php.",
+        );
 
         return self::SUCCESS;
     }

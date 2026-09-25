@@ -49,6 +49,16 @@ a přihlašovací údaje se vynechají. Je to výchozí bod napsaný jednou: tab
 která ještě neexistuje, napíše resource bez generovaných řádků a řekne to,
 místo aby selhala.
 
+**Na konci řekne, kde stránky jsou, nebo co chybí.** Čte aplikaci tak, jak je:
+jestli je resource zaregistrovaný — vyjmenovaný v `config('wire-core.resources')`,
+právě přidaný přes `--register`, nebo ve složce, kterou jmenuje
+`config('wire-core.discover.resources')` — a jestli zaregistrované třídy něco
+routuje — `'routes' => ['enabled' => true]` v `config/wire-panels.php`, nebo
+route soubor, který volá `Route::wireResources()`. Když je obojí na místě, vypíše
+*Ready: registered and routed at /admin/order-lines*; jinak pojmenuje jen krok,
+který chybí, napsaný pro tento resource. `make:wire-page` dělá totéž pro vlastní
+stránku.
+
 **`--register` zapisuje jen tam, kde to jde bezpečně** — do publikovaného
 `config/wire-core.php`, který má seznam `resources`, a jen jednou. Jinde
 vypíše řádek, který je potřeba přidat.
