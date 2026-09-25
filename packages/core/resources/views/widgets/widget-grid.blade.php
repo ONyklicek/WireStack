@@ -78,10 +78,20 @@
         // Tall tiles need a row to be a fixed size; a card taller than two of
         // them scrolls inside itself rather than stretching the row, or the
         // span would mean nothing. Only ever emitted on a grid that has one.
-        'auto-rows-[minmax(11rem,auto)] md:auto-rows-[11rem] [&>*]:min-h-0 [&>*>*]:h-full [&>*>*]:overflow-auto' => $anySpansRows,
+        //
+        // The cell is a column and only its LAST child — the widget, always
+        // drawn after any chrome — fills and scrolls. Stretching every child
+        // made the edit strip a row tall and gave the unfiltered mark the
+        // whole height of the cell.
+        //
+        // No quote characters in comments inside this directive: Livewire reads
+        // its arguments from the raw template, comments included, and an odd
+        // quote makes it lose the loop below. See WidgetGridChromeTest.
+        'auto-rows-[minmax(11rem,auto)] md:auto-rows-[11rem] [&>*]:min-h-0 [&>*]:flex [&>*]:flex-col [&>*>:last-child]:min-h-0 [&>*>:last-child]:flex-1 [&>*>:last-child]:overflow-auto' => $anySpansRows,
     ])>
         @foreach($widgets as $widget)
             @if($widget->isVisible())
+                @php($unfiltered = $filtersNarrowed && $widget->isIgnoringDashboardFilters())
                 {{-- `wire:key` is what lets the server be the one that places a
                      tile. SortableJS leaves the DOM in the dropped order and the
                      re-render arrives over it; paired by key, the two cannot
@@ -97,7 +107,7 @@
                           dashed outline over a faded tile — so the reader sees
                           where the widget goes before letting go, with no
                           JavaScript of ours. --}}
-                     class="{{ $widget->inGridOf($ladder)->getColumnSpanClass() }} {{ $widget->getRowSpanClass() }} {{ $editing ? 'relative rounded-lg [&.sortable-ghost]:opacity-60 [&.sortable-ghost]:outline-dashed [&.sortable-ghost]:outline-2 [&.sortable-ghost]:outline-offset-2 [&.sortable-ghost]:outline-primary-500' : '' }}"
+                     class="{{ $widget->inGridOf($ladder)->getColumnSpanClass() }} {{ $widget->getRowSpanClass() }} {{ $editing || $unfiltered ? 'relative' : '' }} {{ $editing ? 'rounded-lg [&.sortable-ghost]:opacity-60 [&.sortable-ghost]:outline-dashed [&.sortable-ghost]:outline-2 [&.sortable-ghost]:outline-offset-2 [&.sortable-ghost]:outline-primary-500' : '' }}"
                      {{-- `@js`, not the bare key: the plugin *evaluates* what
                           `x-sort:item` holds (`el._x_sort_key = evaluate(expression)`),
                           so a bare `revenue` is an identifier and throws
@@ -113,9 +123,17 @@
                     @endif
                     {{-- Said, not hidden: the widget still shows everything,
                          and a reader comparing it with its filtered neighbours
-                         needs to know it is not one of them. --}}
-                    @if($filtersNarrowed && $widget->isIgnoringDashboardFilters())
-                        <p class="mb-1 text-[11px] font-medium text-gray-400 dark:text-gray-500"
+                         needs to know it is not one of them.
+
+                         Laid over the cell's bottom edge, half in the gap below
+                         it, and taking no room: in the flow it pushed its card a
+                         line below its neighbours whenever a filter narrowed,
+                         which is exactly when a reader compares them. The
+                         bottom rather than the top, because the top of a card is
+                         its heading and its header actions, and the edit strip
+                         sits above it. --}}
+                    @if($unfiltered)
+                        <p class="pointer-events-none absolute bottom-0 right-3 z-10 translate-y-1/2 rounded-full border border-gray-200 bg-white px-2 py-px text-[11px] font-medium leading-4 text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
                            data-testid="widget-unfiltered-{{ $widget->getKey() }}" @wireEl('widget-unfiltered')>
                             {{ __('wire-core::messages.widget_ignores_filters') }}
                         </p>

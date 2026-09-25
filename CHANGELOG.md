@@ -2,6 +2,25 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **The "Not filtered" mark no longer pushes its card below its neighbours.** The mark a widget declaring
+  `ignoresDashboardFilters()` wears while a dashboard filter narrows was a paragraph in the grid cell's flow,
+  above the card, so the moment a filter narrowed that card started a line lower than every card beside it —
+  exactly when a reader compares them. It is now a small pill laid over the cell's bottom edge (`absolute`,
+  half in the gap below), and takes no room; `data-testid="widget-unfiltered-{key}"` is unchanged.
+- **The layout-edit toolbar no longer covers a card's header actions.** The handle, size steppers and remove
+  button were an `absolute -top-3 right-2` pill laid over the card's top-right corner, which is where a
+  widget's own header actions live — a "View all →" link was hidden under it, and a click on it hit the
+  toolbar, for as long as the mode lasted. The toolbar is now a strip in the flow above the card: every tile in
+  the mode gets the same strip, so the cards stay level with each other and the header stays visible and
+  clickable. On a grid with a tall (`row-span`) tile the cell became a flex column in which only the widget
+  fills and scrolls — the old `[&>*>*]:h-full` stretched every child of the cell, so the chrome would have been
+  given the whole row height. `workbench/scripts/verify-dashboard-edit-chrome.mjs` drives both on the new
+  `/previews/widgets-editable-filtered` page and fails against 2.2.6.
+
 ## [2.2.6]
 
 ### Fixed
