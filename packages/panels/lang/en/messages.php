@@ -6,6 +6,7 @@ return [
     'create' => 'New :label',
     'edit' => 'Edit :label',
     'deleted' => ':label deleted',
+    'unsaved_changes' => 'You have unsaved changes. Leave this page anyway?',
     'save' => 'Save',
 
     /*

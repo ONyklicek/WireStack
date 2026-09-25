@@ -54,11 +54,11 @@ button is `Action::render()` in both — one view, two resolvers
 
 Each is its own commit, with tests, EN/CS docs and the boost guideline.
 
-1. **`Page` and header actions.** Defaults: *New* on the list (a link to the
+1. **`Page` and header actions.** *(done — `8b80c130`)* Defaults: *New* on the list (a link to the
    create page, when reachable), *Delete* on edit and view (confirmation,
    policy-aware, back to the list). A page adds its own by overriding
    `headerActions()`.
-2. **Unsaved changes.** The edit and create pages warn before a navigation
+2. **Unsaved changes.** *(done)* The edit and create pages warn before a navigation
    loses typed input — the browser's `beforeunload` and Livewire's
    `wire:navigate`, both from the form's own dirty state.
 3. **List tabs and page widgets.** `tabs()` on the list — named query scopes
@@ -68,8 +68,21 @@ Each is its own commit, with tests, EN/CS docs and the boost guideline.
    record pages resolve `withTrashed()`.
 5. **Simple resources.** `ManagePage` — the list, with create and edit opened
    as modals over it, for a resource whose form is too small for its own page.
-6. **Generator.** `make:wire-resource Order` — the resource and its pages in
-   the shape above, `--simple` for step 5, `--soft-deletes` for step 4.
+6. **CLI.** Asked for on 2026-09-25 ("doplnil bych ještě CLI"). Everything a
+   page or a resource is made of, generated in the shape above, and one command
+   that reads back what is there:
+   - `make:wire-resource Order` — the resource and its list/create/edit/view
+     pages with `pages()` declared; `--model=`, `--generate` (columns and fields
+     from the table's schema), `--view`, `--simple` (step 5), `--soft-deletes`
+     (step 4), `--register` (adds it to `config('wire-core.resources')`).
+   - `make:wire-page TaskBoard` — a `Pages\Page` and its content view;
+     `--resource=Order` makes it a record page (`{record}` URI, composes
+     `ResolvesOneRecord`), printed as the `RoutePage` line to paste.
+   - `make:wire-relation-manager Order items` — the relation-scoped table, and
+     the `relationManagers()` line to paste.
+   - `wire:resources` — every registered resource with its surfaces, pages,
+     routes per zone and permissions: `describe-resource` for a terminal.
+   Stubs publishable, like the dashboard page's already are.
 7. **Discovery.** `#[AsResource]` plus a scanned directory in config; the
    config list stays the reference path.
 8. **Nested resources.** A resource that belongs to a parent record: its pages

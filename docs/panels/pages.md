@@ -207,6 +207,25 @@ it too, and the toast container renders that on arrival. Nothing has to be
 switched on: it is what the [session driver](../core/notifications/index.md#drivers)
 has always done, now that something reads it.
 
+## Unsaved Changes
+
+The create and edit pages ask before their input is left behind — a reload, a
+closed tab, a `wire:navigate` link in the menu. What is compared is the form's
+state against what was last saved, so typing a value and putting it back asks
+nothing, and pressing *Save* is never stopped by the warning it makes
+unnecessary. The mechanism is the forms bundle's `wireUnsavedChanges`
+([Forms](../forms/overview.md#warning-before-unsaved-input-is-lost)); the page
+only says it wants it, on its `data` path and its `save()` method.
+
+A page that should not ask turns it off:
+
+```php
+protected function warnsAboutUnsavedChanges(): bool
+{
+    return false;
+}
+```
+
 ## Dashboard Pages
 
 A dashboard is declared the same way a resource is, and `DashboardPage` is its
@@ -574,6 +593,7 @@ What each page adds is only its own surface:
 | `ListPage` | `table(Table $table): Table` |
 | `CreatePage` | `public ?array $data`, `form(Form $form): Form`, `save(): mixed`, `getRedirectUrl(mixed $record): ?string` |
 | `EditPage` | the same, plus `recordData(): array` and a `mountedRecord()` that seeds the form |
+| `CreatePage`, `EditPage` | `warnsAboutUnsavedChanges(): bool` — `true` by default |
 | `ViewPage` | `infolist(): Infolist` |
 | `DashboardPage` | `protected static ?string $dashboard`, `protected static ?string $layoutKey`, `static dashboardClass(): ?string`, `getWidgets(): array`, `getWidgetColumns(): int`, `widgetLayoutKey(): ?string` |
 

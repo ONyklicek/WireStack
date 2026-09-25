@@ -205,6 +205,25 @@ ji po příchodu vykreslí. Nemusí se nic zapínat: je to to, co
 [session driver](../core/notifications/index.md#drivery) dělal odjakživa, jen to
 teď někdo čte.
 
+## Neuložené změny
+
+Stránky založení a editace se zeptají, než jejich vstup zůstane ležet — reload,
+zavřený panel, odkaz s `wire:navigate` v menu. Porovnává se stav formuláře proti
+naposledy uloženému, takže hodnota napsaná a vrácená zpět se na nic neptá a
+stisk *Uložit* varování, které tím přestává být potřeba, nikdy nezastaví.
+Mechanismus je `wireUnsavedChanges` z bundlu formulářů
+([Formuláře](../forms/overview.md#varovani-pred-ztratou-neulozeneho-vstupu)); stránka
+jen říká, že ho chce, na své cestě `data` a metodě `save()`.
+
+Stránka, která se ptát nemá, ho vypne:
+
+```php
+protected function warnsAboutUnsavedChanges(): bool
+{
+    return false;
+}
+```
+
 ## Stránky s dashboardem
 
 Dashboard se deklaruje stejně jako resource a `DashboardPage` je jeho seznamová
@@ -565,6 +584,7 @@ Co každá stránka přidává, je jen její vlastní povrch:
 | `ListPage` | `table(Table $table): Table` |
 | `CreatePage` | `public ?array $data`, `form(Form $form): Form`, `save(): mixed`, `getRedirectUrl(mixed $record): ?string` |
 | `EditPage` | totéž, plus `recordData(): array` a `mountedRecord()`, který naplní formulář |
+| `CreatePage`, `EditPage` | `warnsAboutUnsavedChanges(): bool` — ve výchozím stavu `true` |
 | `ViewPage` | `infolist(): Infolist` |
 | `DashboardPage` | `protected static ?string $dashboard`, `protected static ?string $layoutKey`, `static dashboardClass(): ?string`, `getWidgets(): array`, `getWidgetColumns(): int`, `widgetLayoutKey(): ?string` |
 

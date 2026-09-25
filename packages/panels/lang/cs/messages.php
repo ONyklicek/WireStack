@@ -6,6 +6,7 @@ return [
     'create' => 'Nový/á :label',
     'edit' => 'Upravit :label',
     'deleted' => ':label – smazáno',
+    'unsaved_changes' => 'Máte neuložené změny. Opravdu chcete stránku opustit?',
     'save' => 'Uložit',
 
     /*

@@ -18,6 +18,7 @@ use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
 use NyonCode\WirePanels\Resources\Concerns\CanDeleteRecord;
 use NyonCode\WirePanels\Resources\Concerns\EmbedsRelationManagers;
+use NyonCode\WirePanels\Resources\Concerns\InteractsWithUnsavedChanges;
 use NyonCode\WirePanels\Resources\Concerns\LinksToRecordPages;
 use NyonCode\WirePanels\Resources\Concerns\RedirectsAfterSave;
 use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
@@ -47,6 +48,7 @@ abstract class EditPage extends Component implements HasHeaderActions, Identifie
     use CanDeleteRecord;
     use EmbedsRelationManagers;
     use HostsPageActions;
+    use InteractsWithUnsavedChanges;
     use LinksToRecordPages;
     use RedirectsAfterSave;
     use ResolvesOneRecord;
@@ -149,6 +151,7 @@ abstract class EditPage extends Component implements HasHeaderActions, Identifie
             'title' => $this->getTitle(),
             'breadcrumbs' => $this->breadcrumbs(),
             'headerActions' => $this->renderedHeaderActions(),
+            'unsavedChanges' => $this->unsavedChangesConfig(),
             'subNavigation' => $this->subNavigation($record),
             'relationManagers' => $this->relationManagers(),
             // Not `record`: that is the public property holding the *key*, and

@@ -346,6 +346,26 @@ class MyComponent extends Component
 }
 ```
 
+### Warning Before Unsaved Input Is Lost
+
+`wireUnsavedChanges` — in the fields bundle every form page already loads — asks
+before a reload, a closed tab or a `wire:navigate` link leaves a changed form
+behind. Put it on the element that owns the form, with the form's state path and
+the method that saves it:
+
+```blade
+<form wire:submit="save" x-data="wireUnsavedChanges({ path: 'data', method: 'save' })">
+    {{ $this->form }}
+</form>
+```
+
+"Changed" is the form's state against what was last saved, not a key having been
+pressed: a value typed and put back is no change, and a picker or a rich editor
+that writes its state without a DOM event counts like any input. A save in
+flight holds the warning off — a create page redirects from inside its save —
+and only a successful one moves the baseline. The resource create and edit pages
+turn this on by themselves ([Panels: Pages](../panels/pages.md#unsaved-changes)).
+
 ---
 
 ## Field Types

@@ -25,6 +25,10 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **An infolist's own callback actions run on the view page.** It composes the action runtime now and hands
   its infolist to it; before, such an action needed a `url()` to do anything there.
 - `ComponentRenderer` renders a component that names its view as a string, as the action modal host does.
+- **Create and edit pages warn before unsaved input is left behind** — a reload, a closed tab or a
+  `wire:navigate` link. `wireUnsavedChanges` (forms fields bundle) compares the form's state with what was last
+  saved, holds off while the save is in flight (a create page redirects from inside it) and moves its baseline
+  only on success; any form can use it. A page turns it off with `warnsAboutUnsavedChanges(): bool`.
 
 ### Changed
 

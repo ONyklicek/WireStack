@@ -16,6 +16,7 @@ use NyonCode\WireForms\Forms\WithForms;
 use NyonCode\WirePanels\Pages\Concerns\HostsPageActions;
 use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
+use NyonCode\WirePanels\Resources\Concerns\InteractsWithUnsavedChanges;
 use NyonCode\WirePanels\Resources\Concerns\RedirectsAfterSave;
 
 /**
@@ -44,6 +45,7 @@ abstract class CreatePage extends Component implements HasHeaderActions, Identif
 {
     use BelongsToResource;
     use HostsPageActions;
+    use InteractsWithUnsavedChanges;
     use RedirectsAfterSave;
     use WithForms;
 
@@ -145,6 +147,7 @@ abstract class CreatePage extends Component implements HasHeaderActions, Identif
             'title' => $this->getTitle(),
             'breadcrumbs' => $this->breadcrumbs(),
             'headerActions' => $this->renderedHeaderActions(),
+            'unsavedChanges' => $this->unsavedChangesConfig(),
         ]);
     }
 }

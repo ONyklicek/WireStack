@@ -346,6 +346,26 @@ class MyComponent extends Component
 }
 ```
 
+### Varování před ztrátou neuloženého vstupu
+
+`wireUnsavedChanges` — v bundlu polí, který každá stránka s formulářem už načítá —
+se zeptá, než reload, zavřený panel nebo odkaz s `wire:navigate` nechá změněný
+formulář za sebou. Dejte ho na element, který formulář vlastní, se state path
+formuláře a metodou, která ho ukládá:
+
+```blade
+<form wire:submit="save" x-data="wireUnsavedChanges({ path: 'data', method: 'save' })">
+    {{ $this->form }}
+</form>
+```
+
+„Změněný“ znamená stav formuláře proti naposledy uloženému, ne stisknutou klávesu:
+hodnota napsaná a vrácená zpět změnou není, a picker nebo rich editor, který
+zapisuje stav bez DOM události, se počítá jako každý input. Probíhající uložení
+varování pozdrží — stránka založení přesměrovává zevnitř svého uložení — a
+základ posune jen úspěšné. Stránky založení a editace resource si to zapínají
+samy ([Panely: Stránky](../panels/pages.md#neulozene-zmeny)).
+
 ---
 
 ## Typy polí

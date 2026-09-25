@@ -18,6 +18,7 @@ import wireOtpInput from './fields/otp-input'
 import wirePhoneInput from './fields/phone-input'
 import wireSignaturePad from './fields/signature-pad'
 import wireSlider from './fields/slider'
+import wireUnsavedChanges from './unsaved-changes'
 
 /**
  * The wire-forms field controllers.
@@ -66,6 +67,7 @@ const registerWireFormsFields = () => {
     window.Alpine.data('wirePhoneInput', wirePhoneInput)
     window.Alpine.data('wireSignaturePad', wireSignaturePad)
     window.Alpine.data('wireSlider', wireSlider)
+    window.Alpine.data('wireUnsavedChanges', wireUnsavedChanges)
 }
 
 if (window.Alpine) registerWireFormsFields()
