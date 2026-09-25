@@ -104,5 +104,5 @@ neúspěšné validaci nevrátí jeho pole — popisují
 
 - [Akce](index.md) — třídy, které se tu deklarují
 - [Modaly akcí](modals.md) — všechno, co samostatná akce může otevřít
-- [Panely: Stránky](../../panels/pages.md) — `ListPage` hostí akce skrze `WithTable`; zbylé čtyři žádný runtime neskládají
+- [Panely: Stránky](../../panels/pages.md) — akce hostí každá stránka resource: seznam skrze `WithTable`, ostatní skrze tuto traitu, a `Page` pro vlastní stránku
 - [Formuláře](../../forms/overview.md) — druhá polovina hostitelské komponenty `WithActions`

@@ -163,6 +163,28 @@ try {
   check('view embeds the same relation manager', view.relationHeading.includes('Line items'));
   check('the relation manager still lists rows on the view page', view.relationRows > 0);
 
+  // ── a header action on a record page: drawn beside the heading, opens its
+  //    confirmation through the page's own action host, and closes on confirm ──
+  const headerButton = await evaluate(`!! document.querySelector('[data-testid="page-header-actions"] [data-testid="action-remind"]')`);
+  check('view page draws its header action beside the heading', headerButton);
+
+  await evaluate(`document.querySelector('[data-testid="action-remind"]').click()`);
+  let confirmShown = false;
+  for (let i = 0; i < 40 && ! confirmShown; i++) {
+    await sleep(100);
+    confirmShown = await evaluate(`(() => { const b = document.querySelector('[data-testid="confirmation-confirm"]'); return !! b && b.offsetParent !== null; })()`);
+  }
+  await shot('05-view-header-action');
+  check('the header action opens its confirmation', confirmShown);
+
+  await evaluate(`document.querySelector('[data-testid="confirmation-confirm"]')?.click()`);
+  let closed = false;
+  for (let i = 0; i < 40 && ! closed; i++) {
+    await sleep(100);
+    closed = await evaluate(`(() => { const b = document.querySelector('[data-testid="confirmation-confirm"]'); return ! b || b.offsetParent === null; })()`);
+  }
+  check('confirming runs it and closes the modal', closed);
+
   // ── console must stay clean across all four ──
   const errors = browser.events
     .filter((e) => e.method === 'Runtime.consoleAPICalled' && e.params?.type === 'error')

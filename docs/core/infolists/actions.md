@@ -14,7 +14,7 @@ a page composing no host trait can and cannot run.
 
 Entries, section headers, and repeatable rows can carry interactive [`Action`](actions.md) buttons — built from the same fluent `Action` API as table and modal actions, and sharing the field-action dispatch contract (`HasFieldActions`). Action **names must be unique** within an infolist.
 
-> **Host requirement.** Infolist actions dispatch through the host's `callInfolistAction()`, provided by the core action runtime (`InteractsWithActions`). They work out of the box when the infolist is shown [inside an action modal](#inside-an-action-modal) (the table / `WithActions` host composes it). A standalone infolist echoed in a plain Livewire component only dispatches if that component composes the action runtime — and the resource `ViewPage` is such a component, so on a resource detail page an action needs a `url()` to do anything at all. See [Panels: Pages](../../panels/pages.md).
+> **Host requirement.** Infolist actions dispatch through the host's `callInfolistAction()`, provided by the core action runtime (`InteractsWithActions`). They work out of the box when the infolist is shown [inside an action modal](#inside-an-action-modal) (the table / `WithActions` host composes it). A standalone infolist echoed in a plain Livewire component only dispatches if that component composes the action runtime. The resource `ViewPage` does, and hands its own infolist to it, so a callback action on a resource detail page runs. See [Panels: Pages](../../panels/pages.md).
 
 **Section header actions** — rendered in the section header, receive the bound record:
 

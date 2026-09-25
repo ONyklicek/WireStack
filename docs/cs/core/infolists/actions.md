@@ -14,7 +14,7 @@ stránka, která neskládá žádnou hostitelskou traitu.
 
 Entries, hlavičky sekcí a repeatable řádky mohou nést interaktivní [`Action`](actions.md) tlačítka — postavená ze stejného fluent `Action` API jako table a modal akce a sdílející field-action dispatch kontrakt (`HasFieldActions`). Názvy akcí **musí být unikátní** v rámci infolistu.
 
-> **Požadavek na hostitele.** Akce infolistu dispatchují přes hostitelův `callInfolistAction()`, poskytovaný core action runtime (`InteractsWithActions`). Fungují hned, když je infolist zobrazen [uvnitř action modalu](#uvnitr-action-modalu) (table / `WithActions` hostitel ho skládá). Samostatný infolist vyechovaný v prosté Livewire komponentě dispatchuje jen když ta komponenta skládá action runtime — a resource `ViewPage` je právě taková komponenta, takže na detailu resource musí mít akce `url()`, aby vůbec něco dělala. Viz [Panely: Stránky](../../panels/pages.md).
+> **Požadavek na hostitele.** Akce infolistu dispatchují přes hostitelův `callInfolistAction()`, poskytovaný core action runtime (`InteractsWithActions`). Fungují hned, když je infolist zobrazen [uvnitř action modalu](#uvnitr-action-modalu) (table / `WithActions` hostitel ho skládá). Samostatný infolist vyechovaný v prosté Livewire komponentě dispatchuje jen když ta komponenta skládá action runtime. Resource `ViewPage` ho skládá a svůj infolist mu předává, takže akce s callbackem na detailu resource proběhne. Viz [Panely: Stránky](../../panels/pages.md).
 
 **Hlavičkové akce sekce** — vykreslené v hlavičce sekce, dostanou navázaný záznam:
 

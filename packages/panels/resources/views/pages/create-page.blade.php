@@ -7,4 +7,6 @@
 
         @include('wire-panels::pages.partials.form-actions')
     </form>
+
+    @include('wire-panels::pages.partials.action-modals')
 </div>

@@ -50,7 +50,7 @@ try {
   check('every row but a super-admin\'s offers a way into the record', await eval_(`
     document.querySelectorAll('[data-testid="action-edit"]').length === document.querySelectorAll('[data-testid="admin-content"] tbody tr').length - ${superAdminRows}
   `), `${superAdminRows} super-admin row(s)`);
-  check('and a header action to add one', await eval_(`!! document.querySelector('[data-testid="header-action-create"]')`));
+  check('and a page header action to add one', await eval_(`!! document.querySelector('[data-testid="action-create"]')`));
 
   // Not politeness: an administrator who removes their own row is signed out
   // mid-request into an application they can no longer reach.

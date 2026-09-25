@@ -2,6 +2,38 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **Every resource page can put actions beside its heading.** `protected function headerActions(): array` on
+  `ListPage`, `CreatePage`, `EditPage` and `ViewPage` declares them; they are ordinary actions (modal, form,
+  wizard, confirmation, halt) drawn by the canonical button view. Each page runs them through the engine it
+  already has, never a second one: the list through its table (`findHeaderAction()` looks at the page's
+  actions first), the others through the new `Pages\Concerns\HostsPageActions` over `WithActions`, which also
+  mounts every action against the page's record so a record-aware `visible()` is asked the same question when
+  the button is drawn and when it is clicked.
+- **The list page offers *New* by default** — a link to the create page when the resource routes one and the
+  user may open it (the same question the create route's `can:` middleware asks). `createHeaderAction()`
+  builds it; `...parent::headerActions()` keeps it beside your own.
+- **Edit and view pages offer *Delete* on request** — `$this->deleteHeaderAction()`. It is opt-in because who
+  may delete what is the application's rule. The model's policy decides when it has one; without one, whoever
+  may open the record's edit page may delete; with no edit page, nobody may. It deletes through the model (a
+  soft-deleting model soft-deletes), flashes a notification and returns to the list.
+- **`Pages\Page` — a page of the application's own** (a board, a calendar, a report) with the same heading,
+  trail, header actions and action host as the resource pages, around a view it names in `$view`.
+- **An infolist's own callback actions run on the view page.** It composes the action runtime now and hands
+  its infolist to it; before, such an action needed a `url()` to do anything there.
+- `ComponentRenderer` renders a component that names its view as a string, as the action modal host does.
+
+### Changed
+
+- **The `?action=` hand-off from the command palette is answered by `HostsPageActions`**, not by
+  `ResolvesOneRecord`, so stock edit and view pages answer it. A page of your own that composed
+  `WithActions` beside `ResolvesOneRecord` by hand composes `HostsPageActions` instead to keep receiving it.
+- The users module's user and role lists draw *New* as the page's header action rather than as a table header
+  action; its test id is `action-create` (was `header-action-create`).
+
 ## [2.2.6]
 
 ### Fixed

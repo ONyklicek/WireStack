@@ -60,6 +60,17 @@ class ListOrders extends ListPage
 // Edit and view take a record KEY, not a model — a hydrated model in the
 // Livewire snapshot is larger than the key and stale by the next request.
 @livewire(EditOrder::class, ['record' => $order->getKey()])
+
+// Actions beside the heading run against the page's record.
+class EditOrder extends EditPage
+{
+    protected static ?string $resource = OrderResource::class;
+
+    protected function headerActions(): array
+    {
+        return [$this->deleteHeaderAction()];
+    }
+}
 ```
 
 ## Rules
@@ -82,5 +93,9 @@ class ListOrders extends ListPage
   listed ≠ routed ≠ searchable.
 - **Which entry is active is `ActiveNavigation`'s**, matched exactly, never by prefix. An entry that means a
   whole section says `->activeWhen('settings/*')`, which *replaces* the convention rather than adding to it.
-- `ViewPage` composes no host trait on purpose — read-only means no state to bind and nothing to submit.
-  That is also what keeps it analysable, so do not add it to the PHPStan exclusions.
+- `ViewPage` composes the action runtime and no form or table trait — read-only means no state to bind
+  and nothing to submit. That is also what keeps it analysable, so do not add it to the PHPStan exclusions.
+- **Header actions go in `headerActions()` on the page**, never in a second action engine. *New* is on the
+  list by default; *Delete* is opt-in with `$this->deleteHeaderAction()` (policy first, then the edit page's
+  permission, then nobody). A page that is not a resource surface — a board, a report — extends `Pages\Page`
+  and names its content view.

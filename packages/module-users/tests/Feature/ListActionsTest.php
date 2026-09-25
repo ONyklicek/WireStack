@@ -100,7 +100,7 @@ it('links every row to the pages this application routes', function () {
     expect($html)->toContain('data-testid="action-view"')
         ->and($html)->toContain('data-testid="action-edit"')
         ->and($html)->toContain('users/'.$other->getKey().'/edit')
-        ->and($html)->toContain('data-testid="header-action-create"')
+        ->and($html)->toContain('data-testid="action-create"')
         ->and($html)->toContain('users/create');
 });
 
@@ -151,7 +151,7 @@ it('draws no buttons at all where nothing is routed', function () {
 
     expect($html)->not->toContain('data-testid="action-view"')
         ->and($html)->not->toContain('data-testid="action-edit"')
-        ->and($html)->not->toContain('data-testid="header-action-create"');
+        ->and($html)->not->toContain('data-testid="action-create"');
 });
 
 it('gives roles all three actions, view included', function () {

@@ -33,50 +33,22 @@ trait ResolvesOneRecord
         $this->abortUnlessRecordExists();
 
         $this->mountedRecord();
-
-        $this->mountActionFromRequest();
     }
 
     /**
-     * Open the action the command palette sent this page here to open.
+     * The record a page's actions are about: this one, when it is a model.
      *
-     * The palette cannot host a modal — it sits in a module that may not import
-     * the Actions one — so an action that has to ask something is answered by
-     * navigating to the page that owns the record, with the action named in the
-     * query string. This is the far end of that.
-     *
-     * Here rather than in `BelongsToResource`, which every resource page composes,
-     * because only the pages that resolve a record can supply one — and a version
-     * that asked `method_exists($this, 'resolveRecord')` was a duck-type over a
-     * question the type system already answers.
-     *
-     * Last in the mount, after `mountedRecord()`, so the edit page has seeded its
-     * form before an action is asked whether it may run against the record.
-     *
-     * A page composing no action host does nothing, which is the honest answer for
-     * a URL pasted at a page that cannot run actions — and so is an unknown name:
-     * `mountAction()` resolves nothing and returns, leaving the user on the page
-     * they asked for rather than on an error about a link they did not write.
+     * Here rather than on each page because it is this trait that knows the
+     * record — so a page of your own that composes it beside
+     * `HostsPageActions` mounts its actions against the record with nothing
+     * else written. A record that does not unwrap to a model gives the actions
+     * none, because an action's record is a model all the way down.
      */
-    private function mountActionFromRequest(): void
+    protected function headerActionRecord(): ?Model
     {
-        if (! method_exists($this, 'mountAction')) {
-            return;
-        }
+        $record = $this->nativeRecord();
 
-        $name = request()->query('action');
-
-        if (! is_string($name) || $name === '') {
-            return;
-        }
-
-        $record = $this->resolveRecord();
-
-        if ($record instanceof RecordContract) {
-            $record = $record->unwrap();
-        }
-
-        $this->mountAction($name, $record instanceof Model ? ['record' => $record] : []);
+        return $record instanceof Model ? $record : null;
     }
 
     /**

@@ -12,7 +12,7 @@ use NyonCode\WireCore\Core\Data\ArrayRecord;
 use NyonCode\WireCore\Core\Data\RecordContract;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
-use NyonCode\WireForms\Concerns\WithActions;
+use NyonCode\WirePanels\Pages\Concerns\HostsPageActions;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
 use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
 
@@ -22,22 +22,17 @@ use NyonCode\WirePanels\Resources\Concerns\ResolvesOneRecord;
  * The palette cannot host a modal — it is in a sibling module that may not import
  * the Actions one — so an action that has to ask something is answered by
  * navigating to the page that owns the record, with the action named in the query
- * string. `BelongsToResource` reads it there.
+ * string. `HostsPageActions` reads it there.
  *
  * Read in the trait's mount hook rather than in a page's own `mount()`, and that
  * placement is the point: Livewire calls the component's `mount()` first, so by
  * the time this runs the record is resolved — which is what `canExecute($record)`
  * needs in order to answer about anything at all.
  *
- * ## What this does not prove
- *
- * That any *shipped* page answers it. None do: `ListPage` composes `WithTable`,
- * the form pages compose `WithForms`, and `ViewPage` deliberately composes no host
- * trait at all (ADR 0020 Q2) — so none of them has `mountAction()`. The seam is
- * real and an application that composes `WithActions` on its own page gets it,
- * which is what the host below is. On a stock page the query parameter is inert
- * by design rather than by accident, and the palette's other two branches are
- * what carry the feature there.
+ * The edit and view pages compose that trait, so a stock record page answers the
+ * hand-off; the hosts below are pages of an application's own composing the same
+ * two traits, which is the smallest thing that does. A page with no action host
+ * leaves the parameter inert.
  */
 class PaOrder extends Model
 {
@@ -62,8 +57,8 @@ class PaOrderResource implements DescribesResource
 class PaHostPage extends Component
 {
     use BelongsToResource;
+    use HostsPageActions;
     use ResolvesOneRecord;
-    use WithActions;
 
     protected static ?string $resource = PaOrderResource::class;
 
@@ -94,7 +89,7 @@ class PaHostPage extends Component
     }
 }
 
-/** The same page without a host, which is every shipped resource page. */
+/** The same page without an action host. */
 class PaHostlessPage extends Component
 {
     use BelongsToResource;
@@ -117,8 +112,8 @@ class PaHostlessPage extends Component
 class PaSourcePage extends Component
 {
     use BelongsToResource;
+    use HostsPageActions;
     use ResolvesOneRecord;
-    use WithActions;
 
     protected static ?string $resource = PaOrderResource::class;
 

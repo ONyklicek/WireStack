@@ -7,4 +7,6 @@
     @foreach($relationManagers as $manager)
         @livewire($manager, ['ownerRecord' => $ownerRecord], key('rm-'.$loop->index))
     @endforeach
+
+    @include('wire-panels::pages.partials.action-modals')
 </div>

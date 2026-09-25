@@ -124,7 +124,7 @@ separate package for exactly this reason.
 | Page | What it covers |
 | --- | --- |
 | [Resources](resources.md) | Identity, the surface contracts, naming, registration, reading the registry |
-| [Pages](pages.md) | `ListPage`, `CreatePage`, `EditPage`, `ViewPage`, record resolution, embedded relation managers |
+| [Pages](pages.md) | `ListPage`, `CreatePage`, `EditPage`, `ViewPage`, header actions, `Page` for a page of your own, record resolution, embedded relation managers |
 | [Navigation](navigation.md) | `NavigationItem`, `NavigationGroup`, `Workspace`, the catalogue all three surfaces read |
 | [Routing](routing.md) | `pages()`, `Route::wireResources()`, the URL shape, zones, config-declared routes |
 | [Modules](modules.md) | One business area's manifest — its resources, dashboards and menu heading in one class |

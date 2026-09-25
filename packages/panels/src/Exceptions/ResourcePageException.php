@@ -51,6 +51,15 @@ final class ResourcePageException extends RuntimeException implements WireExcept
         );
     }
 
+    /** A page of the application's own that names nothing to draw inside it. */
+    public static function noView(string $page): self
+    {
+        return new self(
+            "[{$page}] has no content view. Set `protected static string \$view` to the ".
+            'view the page draws inside its heading.'
+        );
+    }
+
     public static function missingRecord(string $page): self
     {
         return new self(

@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'create' => 'New :label',
     'edit' => 'Edit :label',
+    'deleted' => ':label deleted',
     'save' => 'Save',
 
     /*

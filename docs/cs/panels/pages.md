@@ -1,6 +1,6 @@
 ---
 order: 30
-summary: Pět Livewire komponent, které vykreslí resource — seznam, založení, editaci, detail a dashboard — co která skládá a jak se k nim dostane jeden záznam.
+summary: Livewire komponenty, které vykreslí resource — seznam, založení, editaci, detail a dashboard — a k tomu vlastní stránka; co která skládá, akce vedle jejich nadpisu a jak se k nim dostane jeden záznam.
 ---
 
 # Stránky
@@ -21,24 +21,21 @@ Pět stránek a každá z nich je hostitelská komponenta plus ukazatel na vlast
 | Stránka | Skládá | Čte | Vykreslí |
 | --- | --- | --- | --- |
 | `ListPage` | `WithTable` | `ProvidesResourceTable` | seznam |
-| `CreatePage` | `WithForms` | `ProvidesResourceForm` | prázdný formulář |
-| `EditPage` | `WithForms` | `ProvidesResourceForm` | ten samý formulář navázaný na záznam |
-| `ViewPage` | nic | `ProvidesResourceInfolist` | jeden záznam, read-only |
+| `CreatePage` | `WithForms`, `WithActions` | `ProvidesResourceForm` | prázdný formulář |
+| `EditPage` | `WithForms`, `WithActions` | `ProvidesResourceForm` | ten samý formulář navázaný na záznam |
+| `ViewPage` | `WithActions` | `ProvidesResourceInfolist` | jeden záznam, read-only |
 | `DashboardPage` | `WithWidgets` | `Dashboard` | mřížku widgetů |
 
-`ViewPage` záměrně neskládá žádnou hostitelskou traitu: read-only znamená žádný
-stav k navázání a nic k odeslání, takže `Infolist` je celý povrch.
+`ViewPage` neskládá žádnou formulářovou ani tabulkovou traitu: read-only znamená
+žádný stav k navázání a nic k odeslání, takže `Infolist` je celý povrch.
 
-**Co to stojí, je akce s callbackem.** Akce infolistu — tlačítko u entry, akce
-v hlavičce sekce — dispatchuje na hostitelův `callInfolistAction()`, který patří
-action runtimu, jejž tahle stránka neskládá; a
-[halt](../core/actions/lifecycle.md#halt-vykonavani), který vzniká uvnitř téhož
-pipeline, se také nemá kde objevit. Z pěti stránek hostí akce jedině `ListPage`,
-a to skrze `WithTable`. Na detailu z toho vedou dvě cesty: dejte akci `url()`, což
-ji vykreslí jako odkaz a po hostiteli nechce nic — vlastní `MediaResource`
-frameworku otevírá a stahuje přesně takhle — nebo dejte povrch do vlastní Livewire
-komponenty skládající [`WithActions`](../core/actions/standalone.md) a tu na
-stránku namountuj.
+**Akce umí spustit každá stránka**, a každá je spouští jedním enginem. Seznam má
+ten, který přináší `WithTable`; ostatní tři skládají
+[`WithActions`](../core/actions/standalone.md), který spouští jejich
+[akce v hlavičce](#akce-v-hlavicce), [halt](../core/actions/lifecycle.md#halt-vykonavani)
+vyvolaný uvnitř jedné z nich a na detailu i vlastní akce infolistu s callbackem —
+tlačítko u entry, akci v hlavičce sekce — které dispatchují na hostitelův
+`callInfolistAction()` a dřív tam nikoho nenašly.
 
 Každá stránka funguje i **bez vlastníka** — napište si na ni `table()`, `form()`
 nebo `widgets()` a je to obyčejná hostitelská komponenta. Co ale stránka *napůl*
@@ -227,6 +224,146 @@ viditelnosti, mřížka i odpověď na tik pollingu jedním widgetem místo cel�
 — přichází beze změny. Stejně jako u resource stránek je i tady plnohodnotné
 napsat widgety přímo na stránku a žádný dashboard nedeklarovat. Co dashboard
 deklaruje a co je widget, popisují [Widgety](../core/widgets/index.md).
+
+## Akce v hlavičce
+
+Stránka dá akce vedle svého nadpisu tím, že je deklaruje:
+
+```php
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WirePanels\Resources\Pages\ViewPage;
+
+final class ViewOrder extends ViewPage
+{
+    protected static ?string $resource = OrderResource::class;
+
+    protected function headerActions(): array     // [tl! focus:start]
+    {
+        return [
+            Action::make('ship')
+                ->label('Označit jako odeslané')
+                ->requiresConfirmation()
+                ->visible(fn (Order $record): bool => $record->shipped_at === null)
+                ->action(fn (Order $record) => $record->update(['shipped_at' => now()])),
+            $this->deleteHeaderAction(),
+        ];
+    }                                              // [tl! focus:end]
+}
+```
+
+Jsou to obyčejné [akce](../core/actions/index.md) — modal, formulář, wizard,
+potvrzení i halt fungují — vykreslené stejným pohledem tlačítka jako každá jiná
+akce, od `sm` vedle nadpisu a na telefonu pod ním.
+
+**Akce stránky záznamu se týkají jejího záznamu.** Editace a detail mountují každou
+akci proti záznamu, který ukazují, takže `visible(fn ($record))` i `authorizeUsing()`
+pracující se záznamem se ptají na tentýž záznam při vykreslení tlačítka i při
+kliknutí. Bez toho by se tlačítko ptalo na objednávku a kliknutí na nic.
+
+**Kam kliknutí dopadne, závisí na stránce, a nic jiného ne.** Akce stránky se
+seznamem běží enginem její tabulky — druhý engine by byl druhý zásobník modalů na
+jedné komponentě — takže kliknutí volá `openHeaderActionModal()` nebo
+`executeHeaderAction()` a tabulka najde akci stránky dřív než svou vlastní.
+Ostatní stránky volají `mountAction()`. `headerActionClick()` je místo, kde to
+každá stránka říká; tlačítko je v obou případech `Action::render()`.
+
+Akcí v hlavičce může být i `ActionGroup` a položka, která je `null`, se přeskočí,
+takže podmíněná akce se píše rovnou do pole:
+
+```php
+protected function headerActions(): array
+{
+    return [
+        ...parent::headerActions(),
+        $this->headerActionRecord()?->locked_at !== null ? null : Action::make('lock')->action(...),
+    ];
+}
+```
+
+### Ty, které přicházejí s ní
+
+**Stránka se seznamem nabízí *Nový*** — odkaz na stránku založení, vykreslený, když
+resource nějakou routuje a tento uživatel ji smí otevřít. Ptá se přesně na to, na
+co se ptá `can:` middleware routy pro založení, takže nikdy nenabídne nic, co by
+router odmítl — a proto je zapnutý ve výchozím stavu. Ponechte ho přes
+`...parent::headerActions()`, nebo si ho postavte sami přes `createHeaderAction()`.
+
+**Editace a detail nabízejí *Smazat* a vykreslí ho, jen když se o něj řekne** —
+`$this->deleteHeaderAction()`, jako výše. Kdo smí smazat co, je pravidlo aplikace:
+modul uživatelů nesmaže posledního super-admina a výchozí tlačítko by kolem toho
+prošlo bez povšimnutí. Když se o něj řekne, rozhoduje takhle:
+
+```text
+model má policy            →  rozhodne delete() té policy
+žádnou nemá                →  smazat smí ten, kdo smí otevřít editaci záznamu
+editace neexistuje         →  nikdo — read-only resource tlačítko Smazat nedostane
+```
+
+Potvrdí, smaže přes model — takže model se soft deletes maže měkce — pošle
+notifikaci o úspěchu a vrátí se na seznam přes `wire:navigate`. Kde žádný seznam
+routovaný není, zůstane.
+
+## Vlastní stránka
+
+Tabule, kalendář, report: stránka, která není žádným z povrchů resource, chce
+pořád stejný nadpis, drobečkovou navigaci a akce v hlavičce jako stránky kolem ní.
+`Page` je přesně tohle, kolem pohledu, který napíšete vy:
+
+```php
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WirePanels\Pages\Page;
+
+final class TaskBoard extends Page
+{
+    protected static string $view = 'livewire.task-board';   // [tl! focus]
+
+    protected ?string $title = 'Tabule';
+
+    protected function headerActions(): array      // [tl! focus:start]
+    {
+        return [
+            Action::make('newTask')
+                ->form([TextInput::make('title')->required()])
+                ->action(fn (array $data) => Task::create($data)),
+        ];
+    }                                               // [tl! focus:end]
+
+    /** Vlastní tlačítko karty — tentýž engine, deklarovaný vedle hlavičky. */
+    protected function actions(): array
+    {
+        return [
+            Action::make('moveTask')->action(fn (array $arguments) => $this->move($arguments)),
+        ];
+    }
+
+    protected function getViewData(): array
+    {
+        return ['lanes' => Task::query()->get()->groupBy('status')];
+    }
+}
+```
+
+Pohled je jen obsah — stránka nad ním vykreslí nadpis a pod ním hostitele modalů,
+a veřejné vlastnosti komponenty, `$this` i cokoli vrátí `getViewData()` do něj
+doputují:
+
+```blade
+<div class="grid grid-cols-3 gap-4">
+    @foreach($lanes as $status => $tasks)
+        <section>…</section>
+    @endforeach
+</div>
+```
+
+Routuje se jako každá stránka — `RoutePage::make(TaskBoard::class)` v `pages()`
+některého vlastníka, což jí dá URL, `can:` stráž a položku v menu — nebo se
+namountuje ručně. Drobečková navigace je opt-in: implementujte
+`ProvidesBreadcrumbs` a nějakou vraťte. Stránka, která nejmenuje žádný pohled, se
+odmítne vykreslit, místo aby nakreslila prázdný rámeček.
+
+`Page` je pohodlí, ne podmínka. Skládá `HostsPageActions` a vlastní komponenta,
+která skládá tutéž traitu, dostane tytéž akce v hlavičce bez dědění od čehokoli.
 
 ## Vnořené relation managery
 
@@ -452,6 +589,27 @@ Editace a detail řeší jeden záznam přes `ResolvesOneRecord`:
 
 Editace a detail skládají navíc `EmbedsRelationManagers`, jehož jediná metoda je
 `relationManagers(): array`.
+
+Každá stránka kromě dashboardu skládá `InteractsWithHeaderActions` a každá kromě
+seznamu ji skládá skrze `HostsPageActions`, která přidává `WithActions`:
+
+| Člen | Typ | Účel |
+| --- | --- | --- |
+| `headerActions(): array` | `array<int, Action\|ActionGroup\|null>` | *(protected)* Deklarace akcí v hlavičce stránky; položky `null` se přeskočí |
+| `getHeaderActions(): array` | `array<int, Action\|ActionGroup>` | Deklarované akce, vyřešené jednou za request |
+| `headerActionRecord(): ?Model` | `Model\|null` | *(protected)* Záznam, kterého se akce týkají — editace a detail odpoví svým |
+| `headerActionClick(): ResolvesActionClick` | `ResolvesActionClick` | *(protected)* Do které Livewire metody kliknutí na této stránce dopadne |
+| `createHeaderAction(): ?Action` | `Action\|null` | *(protected, seznam)* Hotové *Nový*, nebo `null`, kde není žádná stránka založení k otevření |
+| `deleteHeaderAction(): DeleteAction` | `DeleteAction` | *(protected, editace a detail)* Hotové *Smazat* — potvrdit, smazat, zpět na seznam |
+| `mayDeleteRecord(): bool` | `bool` | *(protected, editace a detail)* Nejdřív policy, pak oprávnění editace, jinak ne |
+
+`Page` přidává jen to, co potřebuje vlastní stránka:
+
+| Člen | Typ | Účel |
+| --- | --- | --- |
+| `protected static string $view` | `string` | Pohled vykreslený pod nadpisem. Povinný |
+| `protected ?string $title` | `string\|null` | Nadpis, nebo žádný |
+| `getViewData(): array` | `array<string, mixed>` | *(protected)* Cokoli, co pohled potřebuje vedle veřejných vlastností |
 
 ## Layout je váš
 
