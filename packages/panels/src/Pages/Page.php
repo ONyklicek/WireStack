@@ -10,6 +10,7 @@ use Livewire\Component;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WirePanels\Exceptions\ResourcePageException;
 use NyonCode\WirePanels\Pages\Concerns\HostsPageActions;
+use NyonCode\WirePanels\Pages\Concerns\InteractsWithPageWidgets;
 use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 
 /**
@@ -42,6 +43,7 @@ use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 abstract class Page extends Component implements HasHeaderActions
 {
     use HostsPageActions;
+    use InteractsWithPageWidgets;
 
     /** The view the page's content is drawn from. */
     protected static string $view = '';
@@ -82,6 +84,8 @@ abstract class Page extends Component implements HasHeaderActions
             'title' => $this->getTitle(),
             'breadcrumbs' => $this instanceof ProvidesBreadcrumbs ? $this->breadcrumbs() : [],
             'headerActions' => $this->renderedHeaderActions(),
+            'headerWidgets' => $this->pageWidgetsForView('header'),
+            'footerWidgets' => $this->pageWidgetsForView('footer'),
             'contentView' => static::$view,
         ]);
     }

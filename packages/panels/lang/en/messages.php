@@ -20,5 +20,7 @@ return [
         'edit' => 'Edit',
     ],
 
+    'list_tabs' => 'List views',
+
     'record_pages' => 'Record pages',
 ];

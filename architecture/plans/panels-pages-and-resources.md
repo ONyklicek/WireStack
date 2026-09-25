@@ -61,7 +61,7 @@ Each is its own commit, with tests, EN/CS docs and the boost guideline.
 2. **Unsaved changes.** *(done — `f940a0be`)* The edit and create pages warn before a navigation
    loses typed input — the browser's `beforeunload` and Livewire's
    `wire:navigate`, both from the form's own dirty state.
-3. **List tabs and page widgets.** `tabs()` on the list — named query scopes
+3. **List tabs and page widgets.** *(done)* `tabs()` on the list — named query scopes
    with counts, kept in the URL. Widgets above and below any page's content.
 4. **Soft deletes.** Detected from the model. A *Trashed* filter on the list,
    restore and force-delete on the row, the bulk bar and the record pages; the

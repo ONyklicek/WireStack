@@ -224,6 +224,77 @@ protected function warnsAboutUnsavedChanges(): bool
 }
 ```
 
+## Záložky seznamu
+
+Seznam může být několika seznamy týchž záznamů — všechny faktury, otevřené,
+po splatnosti. Záložka je jméno a to, jak zúží dotaz:
+
+```php
+use Illuminate\Database\Eloquent\Builder;
+use NyonCode\WirePanels\Resources\ListTab;
+
+final class ListInvoices extends ListPage
+{
+    protected static ?string $resource = InvoiceResource::class;
+
+    protected function tabs(): array                  // [tl! focus:start]
+    {
+        return [
+            ListTab::make('all')->showCount(),
+            ListTab::make('open')->query(fn (Builder $q) => $q->whereNull('paid_at'))->showCount(),
+            ListTab::make('overdue')
+                ->icon('outline:exclamation-triangle')
+                ->badgeColor('danger')
+                ->query(fn (Builder $q) => $q->where('due_at', '<', now()))
+                ->showCount(),
+        ];
+    }                                                  // [tl! focus:end]
+}
+```
+
+**Záložka zužuje základní dotaz**, před vyhledáváním, filtry a řazením, takže
+všechno, co tabulka umí, v ní dál funguje. Obaluje `modifyQueryUsing()`, který
+tabulka už měla, místo aby ho nahradila: resource, který archivované faktury
+nikdy nevypisuje, je nevypisuje v žádné záložce. Aplikuje se na tabulku, kterou
+`WithTable` právě složila, takže platí i pro stránku, která si `table()` píše sama.
+
+**Aktivní záložka je `$activeTab`, nesená v URL jako `?tab=`.** Odkaz, reload
+i tlačítko zpět skončí na téže záložce. Prázdné nebo neznámé jméno je první
+záložka a přepnutí začne seznam znovu od první stránky.
+
+**Počet se ptá téhož základního rozsahu** — rozsahu resource, ne vyhledávání ani
+filtrů — jedním `count()` za každou záložku, která ho ukazuje, při každém
+vykreslení. `badge()` místo toho nastaví vlastní číslo a na nic se neptá. Počet
+je šedý, pokud `badgeColor()` neřekne jinak.
+
+```php
+ListTab::make(string $name)                     // jméno, které nese URL
+->label(string|Closure|null $label)             // výchozí: jméno, polidštěné
+->icon(string|Icon|Closure|null $icon)
+->query(?Closure $callback)                     // fn (Builder $query) => $query->…
+->showCount(bool $condition = true)             // spočítat záznamy záložky
+->badge(int|Closure|null $count)                // vlastní číslo
+->badgeColor(string|Color|null $color)          // výchozí 'gray'
+```
+
+## Widgety na stránce
+
+Kterákoli stránka — seznam, záznam, vlastní stránka — může dát widgety nad
+a pod svůj obsah:
+
+```php
+protected function headerWidgets(): array
+{
+    return [StatsOverviewWidget::make()->stats([Stat::make('Otevřené', (string) Invoice::open()->count())])];
+}
+```
+
+`footerWidgets()` je totéž pod obsahem, `pageWidgetColumns()` říká, jak široký je
+řádek (ve výchozím stavu 3), a položka `null` se přeskočí. Jsou **vykreslené, ne
+hostované**: stránka je vykreslí mřížkou, kterou používá dashboard, a hostitelem
+widgetů se nestane. Widget, který polluje, načítá se líně nebo má vlastní akce,
+potřebuje za sebou `WithWidgets`, a na to je [stránka s dashboardem](#stranky-s-dashboardem).
+
 ## Stránky s dashboardem
 
 Dashboard se deklaruje stejně jako resource a `DashboardPage` je jeho seznamová
@@ -581,10 +652,11 @@ Co každá stránka přidává, je jen její vlastní povrch:
 
 | Stránka | Přidává |
 | --- | --- |
-| `ListPage` | `table(Table $table): Table` |
+| `ListPage` | `table(Table $table): Table`, `tabs(): array`, `public string $activeTab`, `getListTabs(): array`, `getActiveListTab(): ?ListTab` |
 | `CreatePage` | `public ?array $data`, `form(Form $form): Form`, `save(): mixed`, `getRedirectUrl(mixed $record): ?string` |
 | `EditPage` | totéž, plus `recordData(): array` a `mountedRecord()`, který naplní formulář |
 | `CreatePage`, `EditPage` | `warnsAboutUnsavedChanges(): bool` — ve výchozím stavu `true` |
+| každá stránka kromě dashboardu | `headerWidgets(): array`, `footerWidgets(): array`, `pageWidgetColumns(): int` |
 | `ViewPage` | `infolist(): Infolist` |
 | `DashboardPage` | `protected static ?string $dashboard`, `protected static ?string $layoutKey`, `static dashboardClass(): ?string`, `getWidgets(): array`, `getWidgetColumns(): int`, `widgetLayoutKey(): ?string` |
 

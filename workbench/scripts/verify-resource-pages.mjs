@@ -116,6 +116,23 @@ try {
   check('list heading comes from the resource plural label', list.heading === 'Invoices', `heading=${list.heading}`);
   check('list shows the declared columns', list.body.includes('customer') || /INV|Invoice/i.test(list.body));
 
+  // ── the list's tabs narrow it, and the URL keeps the choice ──
+  check('list draws its tabs', await evaluate(`!! document.querySelector('[data-testid="list-tab-paid"]')`));
+  await evaluate(`document.querySelector('[data-testid="list-tab-paid"]').click()`);
+  let narrowed = null;
+  for (let i = 0; i < 40 && ! narrowed; i++) {
+    await sleep(100);
+    narrowed = await evaluate(`(() => {
+      const tab = document.querySelector('[data-testid="list-tab-paid"]');
+      if (tab?.getAttribute('aria-current') !== 'true') return null;
+      const statuses = [...document.querySelectorAll('[data-testid="table-row"]')].map((r) => r.innerText);
+      return { rows: statuses.length, allPaid: statuses.every((t) => t.includes('paid')), url: location.search };
+    })()`);
+  }
+  await shot('01b-list-paid');
+  check('a tab narrows the list to its own records', !! narrowed && narrowed.rows > 0 && narrowed.allPaid, JSON.stringify(narrowed));
+  check('the URL carries the tab', !! narrowed && narrowed.url.includes('tab=paid'), narrowed?.url);
+
   // ── create ──
   await go(URLS.create);
   await shot('02-create');

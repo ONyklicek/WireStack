@@ -2,6 +2,8 @@
 <div class="wire-resource-page space-y-4 sm:space-y-6">
     @include('wire-panels::pages.partials.header')
 
+    @include('wire-panels::pages.partials.page-widgets', ['pageWidgets' => $headerWidgets])
+
     {{-- The warning before unsaved input is left behind, when the page wants
          it: `wireUnsavedChanges` compares the form's state with what was last
          saved, and holds off while a save is in flight. --}}
@@ -18,6 +20,8 @@
     @foreach($relationManagers as $manager)
         @livewire($manager, ['ownerRecord' => $ownerRecord], key('rm-'.$loop->index))
     @endforeach
+
+    @include('wire-panels::pages.partials.page-widgets', ['pageWidgets' => $footerWidgets])
 
     @include('wire-panels::pages.partials.action-modals')
 </div>

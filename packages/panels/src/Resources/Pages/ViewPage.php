@@ -12,6 +12,7 @@ use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireCore\Infolists\Contracts\ProvidesResourceInfolist;
 use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WirePanels\Pages\Concerns\HostsPageActions;
+use NyonCode\WirePanels\Pages\Concerns\InteractsWithPageWidgets;
 use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
 use NyonCode\WirePanels\Resources\Concerns\CanDeleteRecord;
@@ -43,6 +44,7 @@ abstract class ViewPage extends Component implements HasHeaderActions, Identifie
     use CanDeleteRecord;
     use EmbedsRelationManagers;
     use HostsPageActions;
+    use InteractsWithPageWidgets;
     use LinksToRecordPages;
     use ResolvesOneRecord;
 
@@ -111,6 +113,8 @@ abstract class ViewPage extends Component implements HasHeaderActions, Identifie
             'title' => $this->getTitle(),
             'breadcrumbs' => $this->breadcrumbs(),
             'headerActions' => $this->renderedHeaderActions(),
+            'headerWidgets' => $this->pageWidgetsForView('header'),
+            'footerWidgets' => $this->pageWidgetsForView('footer'),
             'subNavigation' => $this->subNavigation($record),
             'relationManagers' => $this->relationManagers(),
             // Not `record`: that is the public property holding the *key*, and

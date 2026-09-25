@@ -14,6 +14,7 @@ use NyonCode\WireForms\Contracts\ProvidesResourceForm;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
 use NyonCode\WirePanels\Pages\Concerns\HostsPageActions;
+use NyonCode\WirePanels\Pages\Concerns\InteractsWithPageWidgets;
 use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
 use NyonCode\WirePanels\Resources\Concerns\CanDeleteRecord;
@@ -48,6 +49,7 @@ abstract class EditPage extends Component implements HasHeaderActions, Identifie
     use CanDeleteRecord;
     use EmbedsRelationManagers;
     use HostsPageActions;
+    use InteractsWithPageWidgets;
     use InteractsWithUnsavedChanges;
     use LinksToRecordPages;
     use RedirectsAfterSave;
@@ -151,6 +153,8 @@ abstract class EditPage extends Component implements HasHeaderActions, Identifie
             'title' => $this->getTitle(),
             'breadcrumbs' => $this->breadcrumbs(),
             'headerActions' => $this->renderedHeaderActions(),
+            'headerWidgets' => $this->pageWidgetsForView('header'),
+            'footerWidgets' => $this->pageWidgetsForView('footer'),
             'unsavedChanges' => $this->unsavedChangesConfig(),
             'subNavigation' => $this->subNavigation($record),
             'relationManagers' => $this->relationManagers(),

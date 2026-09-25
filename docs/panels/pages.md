@@ -226,6 +226,79 @@ protected function warnsAboutUnsavedChanges(): bool
 }
 ```
 
+## List Tabs
+
+A list can be several lists of the same records — all invoices, the open ones,
+the overdue ones. A tab is a name and how it narrows the query:
+
+```php
+use Illuminate\Database\Eloquent\Builder;
+use NyonCode\WirePanels\Resources\ListTab;
+
+final class ListInvoices extends ListPage
+{
+    protected static ?string $resource = InvoiceResource::class;
+
+    protected function tabs(): array                  // [tl! focus:start]
+    {
+        return [
+            ListTab::make('all')->showCount(),
+            ListTab::make('open')->query(fn (Builder $q) => $q->whereNull('paid_at'))->showCount(),
+            ListTab::make('overdue')
+                ->icon('outline:exclamation-triangle')
+                ->badgeColor('danger')
+                ->query(fn (Builder $q) => $q->where('due_at', '<', now()))
+                ->showCount(),
+        ];
+    }                                                  // [tl! focus:end]
+}
+```
+
+**A tab narrows the base query**, before search, filters and sort, so everything
+the table does still works inside it. It wraps whatever `modifyQueryUsing()` the
+table already had rather than replacing it: a resource that never lists archived
+invoices keeps not listing them on every tab. It is applied to the table
+`WithTable` has just composed, so it holds on a page that writes its own
+`table()` too.
+
+**The active tab is `$activeTab`, carried in the URL as `?tab=`.** A link, a
+reload and the back button land on the same tab. An empty or unknown name is the
+first tab, and switching starts the list again from its first page.
+
+**A count is asked of the same base scope** — the resource's scope, not the
+search or the filters — with one `count()` per tab that shows one, on every
+render. `badge()` sets a number of your own instead and asks nothing. The count
+is gray unless `badgeColor()` says otherwise.
+
+```php
+ListTab::make(string $name)                     // the name the URL carries
+->label(string|Closure|null $label)             // default: the name, humanised
+->icon(string|Icon|Closure|null $icon)
+->query(?Closure $callback)                     // fn (Builder $query) => $query->…
+->showCount(bool $condition = true)             // count the tab's records
+->badge(int|Closure|null $count)                // a number of your own
+->badgeColor(string|Color|null $color)          // default 'gray'
+```
+
+## Page Widgets
+
+Any page — a list, a record, a page of your own — can put widgets above and
+below its content:
+
+```php
+protected function headerWidgets(): array
+{
+    return [StatsOverviewWidget::make()->stats([Stat::make('Open', (string) Invoice::open()->count())])];
+}
+```
+
+`footerWidgets()` is the same below the content, `pageWidgetColumns()` says how
+wide the row is (3 by default), and a `null` entry is skipped. They are
+**drawn, not hosted**: the page renders them through the grid a dashboard uses
+and does not become a widget host. A widget that polls, loads lazily or has
+actions of its own needs `WithWidgets` behind it, which is what a
+[dashboard page](#dashboard-pages) is for.
+
 ## Dashboard Pages
 
 A dashboard is declared the same way a resource is, and `DashboardPage` is its
@@ -590,10 +663,11 @@ What each page adds is only its own surface:
 
 | Page | Adds |
 | --- | --- |
-| `ListPage` | `table(Table $table): Table` |
+| `ListPage` | `table(Table $table): Table`, `tabs(): array`, `public string $activeTab`, `getListTabs(): array`, `getActiveListTab(): ?ListTab` |
 | `CreatePage` | `public ?array $data`, `form(Form $form): Form`, `save(): mixed`, `getRedirectUrl(mixed $record): ?string` |
 | `EditPage` | the same, plus `recordData(): array` and a `mountedRecord()` that seeds the form |
 | `CreatePage`, `EditPage` | `warnsAboutUnsavedChanges(): bool` — `true` by default |
+| every page but the dashboard | `headerWidgets(): array`, `footerWidgets(): array`, `pageWidgetColumns(): int` |
 | `ViewPage` | `infolist(): Infolist` |
 | `DashboardPage` | `protected static ?string $dashboard`, `protected static ?string $layoutKey`, `static dashboardClass(): ?string`, `getWidgets(): array`, `getWidgetColumns(): int`, `widgetLayoutKey(): ?string` |
 

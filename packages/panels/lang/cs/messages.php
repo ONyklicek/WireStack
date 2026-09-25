@@ -20,5 +20,7 @@ return [
         'edit' => 'Upravit',
     ],
 
+    'list_tabs' => 'Pohledy seznamu',
+
     'record_pages' => 'Stránky záznamu',
 ];

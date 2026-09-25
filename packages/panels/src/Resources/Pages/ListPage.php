@@ -14,8 +14,10 @@ use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WirePanels\Pages\Concerns\InteractsWithHeaderActions;
+use NyonCode\WirePanels\Pages\Concerns\InteractsWithPageWidgets;
 use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
+use NyonCode\WirePanels\Resources\Concerns\InteractsWithListTabs;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
 use NyonCode\WireTable\Actions\HeaderActionClickResolver;
 use NyonCode\WireTable\Concerns\WithTable;
@@ -58,8 +60,11 @@ abstract class ListPage extends Component implements HasHeaderActions, Identifie
 {
     use BelongsToResource;
     use InteractsWithHeaderActions;
+    use InteractsWithListTabs;
+    use InteractsWithPageWidgets;
     use WithTable {
         findHeaderAction as protected findTableHeaderAction;
+        getTable as protected composeTable;
     }
 
     /**
@@ -88,6 +93,25 @@ abstract class ListPage extends Component implements HasHeaderActions, Identifie
         $model = static::$resource::modelClass();
 
         return $resource->table($model !== null ? $table->model($model) : $table);
+    }
+
+    /**
+     * The table, narrowed by the active tab.
+     *
+     * Applied here, once, to the instance `WithTable` has just composed — not in
+     * `table()`, which a page is free to write itself: a tab has to hold on a
+     * page that builds its own table just as on one that borrows a resource's.
+     */
+    public function getTable(): Table
+    {
+        $fresh = $this->tableInstance === null;
+        $table = $this->composeTable();
+
+        if ($fresh) {
+            $this->applyActiveListTab($table);
+        }
+
+        return $table;
     }
 
     /** A list is titled by the plural: "Orders", not "Order". */
@@ -161,6 +185,9 @@ abstract class ListPage extends Component implements HasHeaderActions, Identifie
             'title' => $this->getTitle(),
             'breadcrumbs' => $this->breadcrumbs(),
             'headerActions' => $this->renderedHeaderActions(),
+            'listTabs' => $this->listTabsForView(),
+            'headerWidgets' => $this->pageWidgetsForView('header'),
+            'footerWidgets' => $this->pageWidgetsForView('footer'),
         ]);
     }
 }
