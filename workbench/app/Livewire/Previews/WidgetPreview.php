@@ -10,6 +10,7 @@ use NyonCode\WireCore\Widgets\BarChartWidget;
 use NyonCode\WireCore\Widgets\ChartItem;
 use NyonCode\WireCore\Widgets\ChartWidget;
 use NyonCode\WireCore\Widgets\Concerns\WithWidgets;
+use NyonCode\WireCore\Widgets\DashboardFilter;
 use NyonCode\WireCore\Widgets\ListItem;
 use NyonCode\WireCore\Widgets\ListWidget;
 use NyonCode\WireCore\Widgets\ProgressItem;
@@ -59,7 +60,29 @@ class WidgetPreview extends Component
      */
     protected function widgetLayoutKey(): ?string
     {
-        return $this->variant === 'editable' ? 'preview-editable' : null;
+        return match ($this->variant) {
+            'editable' => 'preview-editable',
+            'editable-filtered' => 'preview-editable-filtered',
+            default => null,
+        };
+    }
+
+    /**
+     * A period over the whole dashboard, for the variant that draws the
+     * "not filtered" mark — and nothing for the rest, which would otherwise
+     * gain a filter bar they were never about.
+     */
+    protected function getDashboardFilters(): array
+    {
+        if ($this->variant !== 'editable-filtered') {
+            return [];
+        }
+
+        return [
+            DashboardFilter::make('period')->label('Period')->buttons()
+                ->options(['week' => 'This week', 'month' => 'This month'])
+                ->default('month'),
+        ];
     }
 
     protected function getWidgets(): array
@@ -75,6 +98,10 @@ class WidgetPreview extends Component
                 StatsOverviewWidget::make()->key('capacity')->heading('Capacity')
                     ->stats([Stat::make('Seats used', '96%')]),
             ];
+        }
+
+        if ($this->variant === 'editable-filtered') {
+            return $this->editableFilteredWidgets();
         }
 
         if ($this->variant === 'interactive') {
@@ -197,6 +224,36 @@ class WidgetPreview extends Component
         ];
     }
 
+    /**
+     * Where the edit chrome meets a card's own header.
+     *
+     * Two defects lived here: the "not filtered" mark on `server` sat in the
+     * flow above the card and pushed it a line below its neighbours, and the
+     * edit toolbar sat over the right end of the header — exactly where
+     * `orders` keeps its "View all" link. Both cards are side by side so a
+     * driver can compare their tops, and the link is a real header action so it
+     * is the markup an application writes.
+     *
+     * @return array<int, Widget>
+     */
+    private function editableFilteredWidgets(): array
+    {
+        return [
+            ListWidget::make()->key('orders')->heading('Orders')
+                ->headerActions([Action::make('view-all')->label('View all →')->url('#orders')->color('gray')])
+                ->items([
+                    ListItem::make('#1042 · Acme s.r.o.')->description('Made '.$this->dashboardFilter('period')),
+                    ListItem::make('#1041 · Bravo a.s.')->description('Made '.$this->dashboardFilter('period')),
+                ]),
+            ListWidget::make()->key('server')->heading('Server')->ignoresDashboardFilters()
+                ->headerActions([Action::make('status')->label('Status →')->url('#status')->color('gray')])
+                ->items([
+                    ListItem::make('Uptime')->description('99.98 %'),
+                    ListItem::make('Queue')->description('3 jobs'),
+                ]),
+        ];
+    }
+
     private function quotaWidget(): ProgressWidget
     {
         return ProgressWidget::make()
@@ -263,7 +320,7 @@ class WidgetPreview extends Component
 
     public function render()
     {
-        if ($this->variant === 'editable') {
+        if ($this->variant === 'editable' || $this->variant === 'editable-filtered') {
             return view('livewire.previews.widget-editable', $this->widgetGridData(2));
         }
 
