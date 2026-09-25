@@ -66,6 +66,7 @@ class TaskTable extends Component
 | [Instalace](installation.md) | Composer, migrace, SortableJS, Tailwind |
 | [Řazení řádků](row-sorting.md) | Přepínací režim, drag & drop, hooky životního cyklu |
 | [Řazení sloupců](column-sorting.md) | Pořadí sloupců pro každého uživatele, ukládané do databáze |
+| [Tabule](board.md) | Záznamy v drahách — kanban, karty přetahované mezi drahami |
 | [Přizpůsobení](customization.md) | CSS třídy, dark mode, publikování pohledů |
 | [Pokročilé použití](advanced.md) | Kompletní příklad, detaily konfigurace a řešení potíží |
 | [Reference API](api-reference.md) | SortableTable, WithSortable, ReorderableColumnOrder, config |

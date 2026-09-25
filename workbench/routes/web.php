@@ -11,6 +11,7 @@ use NyonCode\WireCore\Core\Resources\Workspace;
 use NyonCode\WireCore\Tours\TourLedger;
 use Workbench\App\Http\Middleware\SignInDemoUser;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
+use Workbench\App\Livewire\Pages\TaskBoard;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
@@ -199,6 +200,7 @@ $resourcePages = [
     'resource-edit' => ['Invoice (edit)', 'EditPage seeded from the record, with the line-items relation manager embedded.', EditInvoice::class, ['record' => 1]],
     'resource-view' => ['Invoice (view)', 'ViewPage: a read-only infolist plus the same relation manager.', ViewInvoice::class, ['record' => 1]],
     'resource-manage' => ['Teams (manage)', 'ManagePage: the list, with create and edit in modals over it.', ManageTeams::class, []],
+    'task-board' => ['Tasks (board)', 'A Page composing WithBoard: the tasks in lanes by status, dragged between them.', TaskBoard::class, []],
 ];
 
 // The workspace shell: one sidebar built from Workspace::navigation() over every

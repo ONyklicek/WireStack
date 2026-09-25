@@ -35,6 +35,12 @@ All notable changes to the Wire ecosystem will be documented in this file.
   scopes its list, record lookup and create page through the parent's relationship (a line of another order is
   a 404; a new line is filed under the order), leads the trail through the parent, and gives the parent record
   a tab to the list. One level deep; creating needs a `hasMany`-like relationship.
+- **A board (kanban)** in `wire-sortable` — `Board` declares lanes over a model's column (`Lane`s, value => label,
+  or a backed enum labelled and coloured by its own contracts), what a card shows and an optional order
+  column; `WithBoard` renders it on any Livewire component and answers a drop. The drag is Livewire's own
+  `wire:sort` across the lanes; a drop is checked against the board's lanes and query and
+  `canMoveBoardCard()`, then `MoveBoardCard` writes the lane and renumbers it in one transaction. A board page is
+  a `Page` composing `WithBoard`.
 - **Resources and dashboards can be discovered** — `config('wire-core.discover')` maps a namespace to a
   directory, and every concrete resource (or dashboard) under it registers at boot, after the listed ones. Off
   until a directory is named.

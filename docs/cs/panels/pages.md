@@ -525,6 +525,10 @@ odmítne vykreslit, místo aby nakreslila prázdný rámeček.
 `Page` je pohodlí, ne podmínka. Skládá `HostsPageActions` a vlastní komponenta,
 která skládá tutéž traitu, dostane tytéž akce v hlavičce bez dědění od čehokoli.
 
+Tabule — záznamy v drahách, přetahované mezi nimi — je přesně tohle: `Page`,
+která skládá [`WithBoard`](../sortable/board.md) a jako pohled jmenuje
+`wire-sortable::board.content`.
+
 ## Vnořené relation managery
 
 Resource může pojmenovat relací omezené tabulky, které patří vedle jeho záznamu:

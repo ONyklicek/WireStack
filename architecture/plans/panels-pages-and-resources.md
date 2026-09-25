@@ -88,7 +88,8 @@ Each is its own commit, with tests, EN/CS docs and the boost guideline.
    the reference path.
 8. **Nested resources.** *(done — one level)* A resource that belongs to a parent record: its pages
    under the parent's URL, the parent in the trail, its query scoped to it.
-9. **Board.** A lanes-of-cards surface over a model and a state column, drag to
+9. **Board.** *(done — `Board` + `WithBoard` in wire-sortable, a board page is a
+   `Page` composing it, so neither package depends on the other)* A lanes-of-cards surface over a model and a state column, drag to
    move between lanes and to reorder inside one, rendered by a `BoardPage`.
    Belongs to `wire-sortable`, which already owns drag and order persistence.
 

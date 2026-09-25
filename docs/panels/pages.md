@@ -532,6 +532,10 @@ page that names no view refuses to render rather than drawing an empty frame.
 component of your own composing the same trait gets the same header actions
 without extending anything.
 
+A board — records in lanes, dragged between them — is exactly this: a `Page`
+that composes [`WithBoard`](../sortable/board.md) and names
+`wire-sortable::board.content` as its view.
+
 ## Embedded Relation Managers
 
 A resource can name the relation-scoped tables that belong beside its record:
