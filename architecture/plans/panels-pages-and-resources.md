@@ -68,7 +68,7 @@ Each is its own commit, with tests, EN/CS docs and the boost guideline.
    record pages resolve `withTrashed()`.
 5. **Simple resources.** *(done)* `ManagePage` — the list, with create and edit opened
    as modals over it, for a resource whose form is too small for its own page.
-6. **CLI.** Asked for on 2026-09-25 ("doplnil bych ještě CLI"). Everything a
+6. **CLI.** *(done)* Asked for on 2026-09-25 ("doplnil bych ještě CLI"). Everything a
    page or a resource is made of, generated in the shape above, and one command
    that reads back what is there:
    - `make:wire-resource Order` — the resource and its list/create/edit/view

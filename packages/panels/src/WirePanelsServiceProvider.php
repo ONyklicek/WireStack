@@ -15,7 +15,11 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
 use NyonCode\WirePanels\Install\RegisterResourceRoutes;
+use NyonCode\WirePanels\Resources\Console\ListResourcesCommand;
 use NyonCode\WirePanels\Resources\Console\MakeDashboardPageCommand;
+use NyonCode\WirePanels\Resources\Console\MakePageCommand;
+use NyonCode\WirePanels\Resources\Console\MakeRelationManagerCommand;
+use NyonCode\WirePanels\Resources\Console\MakeResourceCommand;
 use NyonCode\WirePanels\Routing\ConfiguredRoutes;
 use NyonCode\WirePanels\Routing\RegisteredPageUrls;
 use NyonCode\WirePanels\Routing\ResourceRoutes;
@@ -88,7 +92,21 @@ class WirePanelsServiceProvider extends PackageServiceProvider
             // from a package above it, so `make:wire-dashboard` asks for this
             // one by name — see MakeDashboardPageCommand.
             ->hasCommand(MakeDashboardPageCommand::class)
-            ->hasStubs(['../stubs/dashboard-page.stub'])
+            // Everything else a panel is made of, and the one command that
+            // reads back what is registered. Their templates publish with the
+            // dashboard page's, under one tag.
+            ->hasCommand(MakeResourceCommand::class)
+            ->hasCommand(MakePageCommand::class)
+            ->hasCommand(MakeRelationManagerCommand::class)
+            ->hasCommand(ListResourcesCommand::class)
+            ->hasStubs([
+                '../stubs/dashboard-page.stub',
+                '../stubs/resource.stub',
+                '../stubs/resource-page.stub',
+                '../stubs/page.stub',
+                '../stubs/page-view.stub',
+                '../stubs/relation-manager.stub',
+            ])
             ->hasAbout();
     }
 

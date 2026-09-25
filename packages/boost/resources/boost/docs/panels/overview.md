@@ -128,6 +128,7 @@ separate package for exactly this reason.
 | [Navigation](navigation.md) | `NavigationItem`, `NavigationGroup`, `Workspace`, the catalogue all three surfaces read |
 | [Routing](routing.md) | `pages()`, `Route::wireResources()`, the URL shape, zones, config-declared routes |
 | [Modules](modules.md) | One business area's manifest — its resources, dashboards and menu heading in one class |
+| [Command Line](cli.md) | `make:wire-resource`, `make:wire-page`, `make:wire-relation-manager`, `wire:resources` |
 
 ## Reaching A Page A Module Ships
 

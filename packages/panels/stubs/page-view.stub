@@ -1,0 +1,6 @@
+{{-- The content of {{ class }}. The page draws the heading above it and the
+     modal host below it; the component's public properties and `$this` are in
+     scope, and so is whatever getViewData() returns. --}}
+<div class="space-y-4">
+    {{-- … --}}
+</div>

@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+{{ imports }}
+
+/**
+ * {{ title }} — a page of the application's own, drawn with the panel's heading,
+ * trail and header actions around `{{ view }}`.
+ *
+ * Route it from an owner's `pages()`:
+ *
+ *   '{{ kind }}' => RoutePage::make({{ class }}::class){{ uri }},
+ */
+class {{ class }} extends Page{{ implements }}
+{
+{{ traits }}    protected static string $view = '{{ view }}';
+{{ titleDeclaration }}{{ body }}}

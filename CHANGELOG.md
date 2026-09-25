@@ -30,6 +30,12 @@ All notable changes to the Wire ecosystem will be documented in this file.
   records of a selection), and its record pages a trashed record instead of a 404, with `restoreHeaderAction()`
   and `forceDeleteHeaderAction()` beside *Delete*. Policy first, then the edit page, per record.
 - `RestoreAction` and `ForceDeleteAction` — record-level presets beside the bulk ones.
+- **A CLI for the panel.** `make:wire-resource` writes a resource and its pages (`--generate` reads fields,
+  columns and entries off the model's table; `--view`, `--simple`, `--soft-deletes`, `--register`);
+  `make:wire-page` writes a page of your own, or with `--resource` a record page that becomes one of the
+  record's tabs; `make:wire-relation-manager` writes a relation manager; `wire:resources` lists what is
+  registered — surfaces, pages, every route per zone and the permission each requires. No command overwrites a
+  file without `--force`, and every template publishes with `wire-panels::stubs`.
 - **`ManagePage` — a resource on one page**: the list, with *New* and *Edit* as modals rendering the resource's
   `form()`, and *Delete* on the row. Saving is `Model::create()` / `$record->update()`; the model's policy
   decides each action when there is one, the page's route otherwise.

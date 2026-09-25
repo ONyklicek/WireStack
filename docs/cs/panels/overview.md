@@ -127,6 +127,7 @@ samostatný balíček.
 | [Navigace](navigation.md) | `NavigationItem`, `NavigationGroup`, `Workspace`, katalog, který čtou všechny tři povrchy |
 | [Routování](routing.md) | `pages()`, `Route::wireResources()`, tvar URL, zóny, routy z configu |
 | [Moduly](modules.md) | Manifest jedné byznysové oblasti — její resource, dashboardy a nadpis v menu v jedné třídě |
+| [Příkazová řádka](cli.md) | `make:wire-resource`, `make:wire-page`, `make:wire-relation-manager`, `wire:resources` |
 
 ## Jak dosáhnout na stránku, kterou posílá modul
 
