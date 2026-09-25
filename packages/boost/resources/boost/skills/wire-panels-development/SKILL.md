@@ -16,8 +16,8 @@ changing what the menu, the router or the search palette shows for one.
    navigation entry — a second resource on the same key is refused, not merged.
 2. Write the resource: `DescribesRecords` for identity, plus one contract per surface it really has.
 3. Register it in `config('wire-core.resources')` (or `ResourceRegistry::registerMany()` at runtime).
-4. Add pages only for the surfaces the resource declares, and give each new concrete `WithTable`/`WithForms`
-   host a `phpstan.neon` excludePaths entry.
+4. Add pages only for the surfaces the resource declares, and give each new concrete `WithTable`/`WithForms`/
+   `WithActions` host a `phpstan.neon` excludePaths entry.
 
 ## Patterns
 
@@ -94,7 +94,7 @@ class EditOrder extends EditPage
 - **Which entry is active is `ActiveNavigation`'s**, matched exactly, never by prefix. An entry that means a
   whole section says `->activeWhen('settings/*')`, which *replaces* the convention rather than adding to it.
 - `ViewPage` composes the action runtime and no form or table trait — read-only means no state to bind
-  and nothing to submit. That is also what keeps it analysable, so do not add it to the PHPStan exclusions.
+  and nothing to submit. Like every page hosting actions it is in the PHPStan exclusions.
 - **Header actions go in `headerActions()` on the page**, never in a second action engine. *New* is on the
   list by default; *Delete* is opt-in with `$this->deleteHeaderAction()` (policy first, then the edit page's
   permission, then nobody). A page that is not a resource surface — a board, a report — extends `Pages\Page`

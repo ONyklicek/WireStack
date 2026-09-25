@@ -67,6 +67,11 @@ class TraNotesTable extends Component
     }
 }
 
+afterEach(function () {
+    // On a real server the table outlives the test; the next one creates it again.
+    Schema::dropIfExists('tra_notes');
+});
+
 beforeEach(function () {
     Schema::create('tra_notes', function (Blueprint $table) {
         $table->id();

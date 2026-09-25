@@ -92,7 +92,13 @@ it('arms the warning on an edit page', function () {
 it('carries the message in the application locale', function () {
     app()->setLocale('cs');
 
-    expect(Livewire::test(UcCreateNote::class)->html())->toContain('neuložené změny');
+    $html = Livewire::test(UcCreateNote::class)->html();
+
+    // `@js` writes non-ASCII as \u escapes on some Laravel versions and as-is on
+    // others; either is the Czech message.
+    $escaped = trim(json_encode('neuložené změny'), '"');
+
+    expect(str_contains($html, 'neuložené změny') || str_contains($html, $escaped))->toBeTrue();
 });
 
 it('lets a page turn the warning off', function () {

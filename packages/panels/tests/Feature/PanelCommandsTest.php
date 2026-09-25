@@ -188,3 +188,17 @@ it('refuses a key nothing is registered under', function () {
 it('says when nothing is registered', function () {
     $this->artisan('wire:resources')->expectsOutputToContain('No resources are registered')->assertSuccessful();
 });
+
+it('reads a short --resource as the application resource of that name', function () {
+    $this->artisan('make:wire-page', ['name' => 'Timeline', '--resource' => 'Order'])->assertSuccessful();
+
+    expect(File::get(app_path('Livewire/Resources/Orders/Timeline.php')))->toContain('use App\Resources\OrderResource;');
+});
+
+it('leaves an existing relation manager alone without --force', function () {
+    $this->artisan('make:wire-relation-manager', ['resource' => 'Order', 'relationship' => 'items'])->assertSuccessful();
+
+    $this->artisan('make:wire-relation-manager', ['resource' => 'Order', 'relationship' => 'items'])
+        ->expectsOutputToContain('already exists')
+        ->assertSuccessful();
+});

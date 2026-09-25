@@ -23,6 +23,7 @@ use NyonCode\WireForms\Forms\Form;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
 use NyonCode\WirePanels\Resources\Contracts\NestedResource;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
+use NyonCode\WirePanels\Resources\Navigation\RecordPages;
 use NyonCode\WirePanels\Resources\Pages\CreatePage;
 use NyonCode\WirePanels\Resources\Pages\EditPage;
 use NyonCode\WirePanels\Resources\Pages\ListPage;
@@ -325,4 +326,16 @@ it('takes the parent from the URL when the page is reached by its route', functi
     $this->get('/nr-orders/1/nr-lines')->assertOk()->assertSee('Toner')->assertDontSee('Stapler');
     $this->get('/nr-orders/1/nr-lines/1')->assertOk()->assertSee('Paper');
     $this->get('/nr-orders/2/nr-lines/1')->assertNotFound();
+});
+
+it('names a parent with nothing to be named by after its label and key', function () {
+    NrOrder::query()->whereKey(1)->update(['number' => '']);
+
+    $crumbs = Livewire::test(NrListLines::class, ['parent' => 1])->instance()->breadcrumbs();
+
+    expect($crumbs[1]->getLabel())->toBe('Nr Order 1');
+});
+
+it('finds no children for a page with no resource', function () {
+    expect(RecordPages::children(null))->toBe([]);
 });

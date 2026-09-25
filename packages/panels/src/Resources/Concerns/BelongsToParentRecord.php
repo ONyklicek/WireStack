@@ -167,7 +167,7 @@ trait BelongsToParentRecord
 
         return [
             NavigationItem::make($parent::pluralLabel())->url($urls->urlFor($key, 'index', [], $this->breadcrumbZone)),
-            NavigationItem::make($this->parentRecordTitle($record))->url(
+            NavigationItem::make($this->parentRecordTitle($record) ?? $parent::label().' '.$record->getKey())->url(
                 $urls->urlFor($key, 'view', ['record' => $record->getKey()], $this->breadcrumbZone)
                     ?? $urls->urlFor($key, 'edit', ['record' => $record->getKey()], $this->breadcrumbZone),
             ),
@@ -175,12 +175,12 @@ trait BelongsToParentRecord
     }
 
     /**
-     * What the parent record is called in the trail.
-     *
-     * The first of the attributes a record is usually named by, else the
-     * parent's label and key — *Order 17*. A page with a better answer says so.
+     * What the parent record is called in the trail: the first of the
+     * attributes a record is usually named by, or null — and the trail falls
+     * back to the parent's label and key, *Order 17*. A page with a better
+     * answer says so.
      */
-    protected function parentRecordTitle(Model $record): string
+    protected function parentRecordTitle(Model $record): ?string
     {
         foreach (['name', 'title', 'number', 'label', 'subject'] as $attribute) {
             $value = $record->getAttribute($attribute);
@@ -190,9 +190,6 @@ trait BelongsToParentRecord
             }
         }
 
-        $nested = $this->nestedResourceClass();
-        $label = $nested !== null ? $nested::parentResource()::label() : class_basename($record);
-
-        return $label.' '.$record->getKey();
+        return null;
     }
 }

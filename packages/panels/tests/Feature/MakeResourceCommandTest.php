@@ -103,6 +103,7 @@ it('reads fields and columns off the model table with --generate', function () {
         $table->boolean('published')->default(false);
         $table->date('published_on')->nullable();
         $table->integer('views')->default(0);
+        $table->dateTime('reviewed_at')->nullable();
         $table->timestamps();
     });
 
@@ -123,6 +124,9 @@ it('reads fields and columns off the model table with --generate', function () {
         ->toContain("TextInput::make('views')->numeric(),")
         ->toContain("BooleanColumn::make('published'),")
         ->toContain("TextEntry::make('published_on')->date(),")
+        ->toContain("DateTimePicker::make('reviewed_at'),")
+        ->toContain("TextColumn::make('reviewed_at')->dateTime()->sortable(),")
+        ->toContain("TextEntry::make('reviewed_at')->dateTime(),")
         ->not->toContain("'created_at'")
         ->not->toContain("make('id')")
         ->and(mrParses($path))->toBeTrue();
@@ -135,9 +139,9 @@ it('reads fields and columns off the model table with --generate', function () {
 
     $instance = app('App\Resources\MrArticleResource');
 
-    expect($instance->form(Form::make())->getSchema())->toHaveCount(5)
-        ->and($instance->table(Table::make())->getColumns())->toHaveCount(5)
-        ->and($instance->infolist(Infolist::make())->getSchema())->toHaveCount(5);
+    expect($instance->form(Form::make())->getSchema())->toHaveCount(6)
+        ->and($instance->table(Table::make())->getColumns())->toHaveCount(6)
+        ->and($instance->infolist(Infolist::make())->getSchema())->toHaveCount(6);
 });
 
 it('writes without generated fields when the model does not exist yet', function () {
@@ -190,4 +194,16 @@ it('prefers a published stub', function () {
     $this->artisan('make:wire-resource', ['name' => 'Order'])->assertSuccessful();
 
     expect(File::get(app_path('Livewire/Resources/Orders/ListOrders.php')))->toContain('// custom');
+});
+
+it('writes without generated fields when the model table cannot be read', function () {
+    // A model on a connection that does not exist: reading its columns throws,
+    // and the command writes the resource anyway and says why.
+    eval('namespace App\\Models; class MrOrphan extends \\Illuminate\\Database\\Eloquent\\Model { protected $connection = "nowhere"; }');
+
+    $this->artisan('make:wire-resource', ['name' => 'MrOrphan', '--generate' => true])
+        ->expectsOutputToContain('No columns could be read')
+        ->assertSuccessful();
+
+    expect(File::get(app_path('Resources/MrOrphanResource.php')))->toContain("// TextInput::make('name')->required(),");
 });

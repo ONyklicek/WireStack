@@ -19,13 +19,15 @@ parameters:
         # component composing WithTable or WithForms, so analysing one as a class
         # drags the trait in as one too and reproduces the runtime-magic errors
         # above ($this->form comes from WithForms::__get, and so on).
-        # ViewPage is deliberately absent — it composes no host trait, because a
-        # read-only page has no state to bind and nothing to submit, so it stays
-        # analysable like any other class. That is the test of whether a page
-        # belongs on this list.
+        # ViewPage and Page belong here too since they host header actions: both
+        # compose WithActions (through HostsPageActions), and analysing either as
+        # a class drags the whole action engine in as one — the same runtime-magic
+        # errors, plus every trait.unused ignore below going unmatched.
         - packages/panels/src/Resources/Pages/ListPage.php
         - packages/panels/src/Resources/Pages/CreatePage.php
         - packages/panels/src/Resources/Pages/EditPage.php
+        - packages/panels/src/Resources/Pages/ViewPage.php
+        - packages/panels/src/Pages/Page.php
         # PanelComponent is a concrete Livewire host composing WithEditablePanel;
         # like RelationManager it depends on Livewire runtime magic and is only
         # analysable via the trait's @phpstan-require-extends, not as a class.
@@ -82,6 +84,18 @@ parameters:
         - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/InteractsWithListTabs.php }
         - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/InteractsWithUnsavedChanges.php }
         - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/InteractsWithTrashedRecords.php }
+        # Every page composing these is a Livewire host excluded above — ViewPage
+        # and Page joined the list when they began hosting header actions — so
+        # "unused" is again a fact about the analysed paths, not the traits.
+        - { identifier: trait.unused, path: packages/panels/src/Pages/Concerns/HostsPageActions.php }
+        - { identifier: trait.unused, path: packages/panels/src/Pages/Concerns/InteractsWithHeaderActions.php }
+        - { identifier: trait.unused, path: packages/panels/src/Pages/Concerns/InteractsWithPageWidgets.php }
+        - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/BelongsToParentRecord.php }
+        - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/BelongsToResource.php }
+        - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/CanDeleteRecord.php }
+        - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/EmbedsRelationManagers.php }
+        - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/LinksToRecordPages.php }
+        - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/ResolvesOneRecord.php }
         # Every user is a resource page in wire-module-users or
         # wire-module-notifications, all outside the analysed paths. No
         # @phpstan-require-extends to keep the body checked, unlike

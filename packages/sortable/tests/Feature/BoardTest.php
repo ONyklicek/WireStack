@@ -103,6 +103,11 @@ function bdPositions(string $status): array
     return BdTask::query()->where('status', $status)->orderBy('position')->pluck('title')->all();
 }
 
+afterEach(function () {
+    // On a real server the table outlives the test; the next one creates it again.
+    Schema::dropIfExists('bd_tasks');
+});
+
 beforeEach(function () {
     Schema::create('bd_tasks', function (Blueprint $table) {
         $table->id();
@@ -117,7 +122,7 @@ beforeEach(function () {
     BdTask::query()->create(['title' => 'Review', 'status' => 'todo', 'position' => 0]);
     BdTask::query()->create(['title' => 'Build', 'status' => 'doing', 'position' => 0]);
     BdTask::query()->create(['title' => 'Ship', 'status' => 'done', 'position' => 0]);
-    BdTask::query()->create(['title' => 'Old idea', 'status' => 'todo', 'position' => 2, 'archived' => true]);
+    BdTask::query()->create(['title' => 'Old idea', 'status' => 'todo', 'position' => 9, 'archived' => true]);
 
     BdBoard::$ordered = true;
 });
