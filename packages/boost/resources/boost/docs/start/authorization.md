@@ -199,11 +199,14 @@ Off by default — most applications have one tenant, and scoping them would be 
 'tenancy' => [
     'enabled' => true,
     'column' => 'tenant_id',
+    'isolation' => 'column',   // or a class implementing IsolatesTenants
 ],
 ```
 
-Bind a resolver; the default answers null, which with tenancy on means an empty
-page until you do:
+**The current tenant is whatever was entered** (see
+[below](#entering-a-tenant)), and nothing entered means no tenant — with tenancy
+on, an empty page. To answer the question another way, bind a resolver of your
+own; it replaces the default entirely:
 
 ```php
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
@@ -229,6 +232,31 @@ class Invoice extends Model
 
 Opt-in per model, because the framework cannot know which of your tables are
 tenant-owned, and guessing would be a guess about who may see what.
+
+### Entering a tenant
+
+`CurrentTenant` holds the tenant being worked in, and the default resolver reads
+it — so entering a tenant is all it takes for every scoped model to follow. A
+tenant zone's middleware does it for a request; a job, a command, a seeder or a
+test does it with `runAs()`:
+
+```php
+use NyonCode\WireCore\Core\Tenancy\Tenancy;
+
+app(Tenancy::class)->runAs($company, function (Company $company) {
+    Invoice::query()->where('due_at', '<', now())->each->remind();   // [tl! focus]
+});
+```
+
+`runAs()` restores whatever was current before — another tenant, or none — even
+when the callback throws, and nested calls unwind in order. The holder is
+**scoped**: an Octane request and a queued job each start with no tenant, so one
+that forgets to enter sees no rows rather than the previous job's.
+
+How tenants are kept apart is `isolation`. `column` — one database, the tenant
+column — is the default and needs nothing entered beyond the tenant itself; a
+class implementing `IsolatesTenants` (`enter(Model $tenant)`, `leave()`) is how
+another strategy plugs in, a database per tenant among them (ADR 0040).
 
 ### The fail-safe
 

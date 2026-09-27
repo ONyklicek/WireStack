@@ -220,8 +220,12 @@ below.
 
 ### Multi-tenancy
 
-Off by default (`wire-core.tenancy.enabled`), **strict once on**. Bind a `TenantResolver`; the shipped default
-answers null. Mark models with `BelongsToTenant` — opt-in per model, because the framework cannot know which
+Off by default (`wire-core.tenancy.enabled`), **strict once on**. The shipped resolver answers the tenant held by
+`Core\Tenancy\CurrentTenant` (scoped: every request and job starts empty), null when nothing was entered; enter
+one with `app(Tenancy::class)->runAs($tenant, fn () => …)` in a job, command, seeder or test — it restores what was
+current, even on a throw. **Never keep "the current tenant" anywhere else** (ADR 0040). Isolation is
+`wire-core.tenancy.isolation`: `column` (default) or a class implementing `IsolatesTenants` (`enter`/`leave`,
+called only by `CurrentTenant`). Binding a `TenantResolver` of your own replaces the default. Mark models with `BelongsToTenant` — opt-in per model, because the framework cannot know which
 tables are tenant-owned and guessing would be a guess about who may see what.
 
 **The fail-safe is the whole story: tenancy on with no tenant resolved returns NOTHING, never everything.**

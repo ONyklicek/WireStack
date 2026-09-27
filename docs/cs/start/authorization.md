@@ -199,11 +199,14 @@ byla `WHERE` klauzule koupená za nic. Jakmile je zapnutá, je **striktní**.
 'tenancy' => [
     'enabled' => true,
     'column' => 'tenant_id',
+    'isolation' => 'column',   // or a class implementing IsolatesTenants
 ],
 ```
 
-Naváž resolver; výchozí odpovídá null, což se zapnutou tenancy znamená prázdnou
-stránku, dokud to neuděláte:
+**Aktuální tenant je ten, do kterého se vstoupilo** (viz
+[níže](#vstup-do-tenanta)), a když se nevstoupilo nikam, žádný tenant není — se
+zapnutou tenancy to znamená prázdnou stránku. Chcete-li tu otázku zodpovědět
+jinak, navažte vlastní resolver; výchozí úplně nahradí:
 
 ```php
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
@@ -229,6 +232,31 @@ class Invoice extends Model
 
 Zapíná se pro každý model zvlášť, protože framework nemůže vědět, které z vašich tabulek tenant
 vlastní, a hádat by znamenalo hádat, kdo co smí vidět.
+
+### Vstup do tenanta
+
+`CurrentTenant` drží tenanta, ve kterém se pracuje, a výchozí resolver ho čte —
+takže vstoupit do tenanta stačí k tomu, aby ho následoval každý scopovaný model.
+Pro request to udělá middleware tenantové zóny; job, příkaz, seeder nebo test to
+udělá přes `runAs()`:
+
+```php
+use NyonCode\WireCore\Core\Tenancy\Tenancy;
+
+app(Tenancy::class)->runAs($company, function (Company $company) {
+    Invoice::query()->where('due_at', '<', now())->each->remind();   // [tl! focus]
+});
+```
+
+`runAs()` obnoví, co bylo aktuální předtím — jiného tenanta, nebo žádného —, i když
+callback vyhodí výjimku, a vnořená volání se rozbalí v pořadí. Držitel je
+**scoped**: request pod Octane i job ve frontě začínají bez tenanta, takže ten,
+kdo zapomene vstoupit, neuvidí žádné řádky, a ne řádky předchozího jobu.
+
+Jak se tenanti od sebe oddělují, říká `isolation`. `column` — jedna databáze,
+sloupec tenanta — je výchozí a nepotřebuje nic kromě tenanta samotného; třída
+implementující `IsolatesTenants` (`enter(Model $tenant)`, `leave()`) je způsob, jak
+připojit jinou strategii, mezi nimi databázi pro každého tenanta (ADR 0040).
 
 ### Fail-safe
 

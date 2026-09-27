@@ -27,4 +27,12 @@ final class TenancyException extends RuntimeException implements WireException
             'set the tenant column explicitly before saving.'
         );
     }
+
+    public static function unknownIsolation(string $value): self
+    {
+        return new self(
+            "[{$value}] is not a tenant isolation. `wire-core.tenancy.isolation` takes 'column' "
+            .'or the name of a class implementing NyonCode\\WireCore\\Core\\Tenancy\\Contracts\\IsolatesTenants.'
+        );
+    }
 }

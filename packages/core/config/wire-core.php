@@ -238,8 +238,10 @@ return [
     | using BelongsToTenant is constrained, and when no tenant resolves, it is
     | constrained to NOTHING rather than to everything.
     |
-    | Bind your own resolver; the default answers null, which with tenancy on
-    | means an empty page until you do:
+    | The current tenant is whatever was entered — by a tenant zone's middleware,
+    | or `app(Tenancy::class)->runAs($tenant, fn () => …)` in a job or command.
+    | Nothing entered means no tenant. To answer it another way, bind your own
+    | resolver:
     |
     |   app()->bind(TenantResolver::class, fn () => new class implements TenantResolver {
     |       public function resolve(): int|string|null
@@ -252,6 +254,10 @@ return [
     'tenancy' => [
         'enabled' => env('WIRE_TENANCY', false),
         'column' => env('WIRE_TENANCY_COLUMN', 'tenant_id'),
+
+        // How tenants are kept apart: 'column' — one database, the column
+        // above — or the name of a class implementing IsolatesTenants.
+        'isolation' => env('WIRE_TENANCY_ISOLATION', 'column'),
     ],
 
     'plugins' => [

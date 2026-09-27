@@ -36,12 +36,16 @@ use NyonCode\WireCore\Core\Resources\ResourceRecordUrls;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Core\Resources\View\Breadcrumbs;
 use NyonCode\WireCore\Core\Resources\Workspace;
+use NyonCode\WireCore\Core\Tenancy\Contracts\IsolatesTenants;
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
-use NyonCode\WireCore\Core\Tenancy\NullTenantResolver;
+use NyonCode\WireCore\Core\Tenancy\CurrentTenant;
+use NyonCode\WireCore\Core\Tenancy\CurrentTenantResolver;
+use NyonCode\WireCore\Core\Tenancy\Isolation\ColumnIsolation;
 use NyonCode\WireCore\Core\Tenancy\Tenancy;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Exceptions\IconSetRegistrationException;
 use NyonCode\WireCore\Exceptions\PluginRegistrationException;
+use NyonCode\WireCore\Exceptions\TenancyException;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Contracts\ClassifiesComponentActions;
@@ -622,17 +626,34 @@ class WireCoreServiceProvider extends PackageServiceProvider
     /**
      * Bind the tenancy seam.
      *
-     * The resolver defaults to "no tenant" rather than to the authenticated
-     * user: the framework does not know which column holds an application's
-     * tenant, and guessing would be a guess about who may see what. With
-     * tenancy off the default costs nothing; with it on, an application that
-     * has not bound its own resolver sees an empty page, which is the safe
-     * direction to fail in.
+     * The resolver defaults to whatever tenant was entered ({@see CurrentTenant})
+     * rather than to the authenticated user: the framework does not know which
+     * column holds an application's tenant, and guessing would be a guess about
+     * who may see what. Nothing entered is still "no tenant" — with tenancy on,
+     * an empty page until something enters one, which is the safe direction to
+     * fail in. An application binding its own resolver keeps it.
+     *
+     * The holder is scoped, so a request under Octane and a queued job each
+     * start with none (ADR 0040 §1).
      */
     protected function registerTenancy(): void
     {
-        $this->app->bindIf(TenantResolver::class, NullTenantResolver::class);
+        $this->app->bindIf(TenantResolver::class, CurrentTenantResolver::class);
         $this->app->singleton(Tenancy::class);
+        $this->app->scoped(CurrentTenant::class);
+        $this->app->bindIf(IsolatesTenants::class, function ($app): IsolatesTenants {
+            $isolation = config('wire-core.tenancy.isolation', 'column');
+
+            if ($isolation === 'column' || $isolation === null) {
+                return new ColumnIsolation;
+            }
+
+            if (is_string($isolation) && is_a($isolation, IsolatesTenants::class, true)) {
+                return $app->make($isolation);
+            }
+
+            throw TenancyException::unknownIsolation(is_string($isolation) ? $isolation : get_debug_type($isolation));
+        });
     }
 
     protected function registerResources(): void

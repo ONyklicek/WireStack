@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Core\Tenancy\Concerns\BelongsToTenant;
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
+use NyonCode\WireCore\Core\Tenancy\CurrentTenantResolver;
 use NyonCode\WireCore\Core\Tenancy\NullTenantResolver;
 use NyonCode\WireCore\Core\Tenancy\Tenancy;
 use NyonCode\WireCore\Core\Tenancy\TenantScope;
@@ -203,12 +204,14 @@ it('can be stepped past deliberately, and that reads as deliberate', function ()
     expect(TnInvoice::acrossAllTenants()->count())->toBe(4);
 });
 
-it('answers no tenant until an application binds its own resolver', function () {
-    // The shipped default, and the reason tenancy-on-without-a-resolver is an
-    // empty page rather than a full one: the framework does not know which
-    // column holds a tenant, and guessing would be a guess about who may see
-    // what.
-    expect((new NullTenantResolver)->resolve())->toBeNull();
+it('answers no tenant until one is entered or an application binds its own resolver', function () {
+    // The reason tenancy-on-with-nothing-entered is an empty page rather than
+    // a full one: the framework does not know which column holds a tenant,
+    // and guessing would be a guess about who may see what. The shipped
+    // default (CurrentTenantResolver) and the explicit NullTenantResolver both
+    // answer null while nothing is entered.
+    expect((new NullTenantResolver)->resolve())->toBeNull()
+        ->and((new CurrentTenantResolver)->resolve())->toBeNull();
 
     app()->forgetInstance(TenantResolver::class);
     app()->bind(TenantResolver::class, NullTenantResolver::class);
