@@ -44,7 +44,10 @@ try {
   check('the switcher names the current company', (await eval_(`document.querySelector('[data-testid="panels-tenant-switcher-trigger"]')?.textContent ?? ''`)).includes('Acme'));
   await openSwitcher();
   const offered = JSON.parse(await eval_(`JSON.stringify([...document.querySelectorAll('[data-testid="panels-tenant-switcher-item"]')].map(a => a.textContent.trim()))`));
-  check('it offers the companies this person belongs to, and only those', JSON.stringify(offered) === JSON.stringify(['Acme', 'Globex']), JSON.stringify(offered));
+  // Acme and Globex are the demo user's, Initech is not. Compared by what must
+  // and must not be there rather than the whole list: a company another driver
+  // registered for the same user is also rightly offered.
+  check('it offers the companies this person belongs to, and only those', offered.includes('Acme') && offered.includes('Globex') && ! offered.includes('Initech'), JSON.stringify(offered));
   await shot('01-switcher');
   await eval_(`document.body.click()`);
 

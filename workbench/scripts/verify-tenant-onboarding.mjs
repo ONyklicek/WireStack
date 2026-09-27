@@ -38,6 +38,8 @@ const type = (selector, value) => eval_(`(() => {
 const rowOf = (text) => `[...document.querySelectorAll('[data-testid="table-row"]')].find((r) => r.innerText.includes(${JSON.stringify(text)}))`;
 const rows = () => eval_(`JSON.stringify([...document.querySelectorAll('[data-testid="table-row"]')].map(r => r.innerText.replace(/\\s+/g, ' ').trim()))`).then(JSON.parse);
 const switcherItems = async () => {
+  // The address changes before the new page is swapped in; wait for its bar.
+  await waitFor(`!! document.querySelector('[data-testid="panels-tenant-switcher-trigger"]')`);
   await eval_(`document.querySelector('[data-testid="panels-tenant-switcher-trigger"]').click()`);
   await sleep(300);
   const items = JSON.parse(await eval_(`JSON.stringify([...document.querySelectorAll('[data-testid="panels-tenant-switcher-item"]')].map(a => a.textContent.trim()))`));
