@@ -41,6 +41,7 @@ use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
 use NyonCode\WireCore\Core\Tenancy\CurrentTenant;
 use NyonCode\WireCore\Core\Tenancy\CurrentTenantResolver;
 use NyonCode\WireCore\Core\Tenancy\Isolation\ColumnIsolation;
+use NyonCode\WireCore\Core\Tenancy\Queue\CarriesTenantThroughQueue;
 use NyonCode\WireCore\Core\Tenancy\Tenancy;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use NyonCode\WireCore\Exceptions\IconSetRegistrationException;
@@ -131,6 +132,8 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 $this->bootPlugins();
                 $this->bootResources();
                 $this->bootTours();
+                // Queued work runs in the tenant it was dispatched in (ADR 0040 §9).
+                $this->app->make(CarriesTenantThroughQueue::class)->register($this->app->make('events'));
                 Bundle::serve('wire-core', self::ASSETS_PATH);
             })
             ->hasConfig()
@@ -642,6 +645,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
         $this->app->bindIf(TenantResolver::class, CurrentTenantResolver::class);
         $this->app->singleton(Tenancy::class);
         $this->app->scoped(CurrentTenant::class);
+        $this->app->singleton(CarriesTenantThroughQueue::class);
         $this->app->bindIf(IsolatesTenants::class, function ($app): IsolatesTenants {
             $isolation = config('wire-core.tenancy.isolation', 'column');
 

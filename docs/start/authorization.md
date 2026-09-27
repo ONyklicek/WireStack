@@ -253,6 +253,20 @@ when the callback throws, and nested calls unwind in order. The holder is
 **scoped**: an Octane request and a queued job each start with no tenant, so one
 that forgets to enter sees no rows rather than the previous job's.
 
+**Queued work carries its tenant.** A job dispatched inside a tenant records
+the tenant's class and key in its payload, and the worker enters it before
+`handle()` — so a notification, an export or an import started in Acme runs in
+Acme, on a worker that knows nothing of the request. A job dispatched outside
+any tenant runs outside one and, by the fail-safe, sees no rows. A job whose
+tenant has been deleted in the meantime **fails** rather than running in none.
+A `sync` job runs inside the request, and the request's own tenant is handed
+back when it finishes.
+
+One trap: dispatch **as a statement** inside `runAs()`. `Job::dispatch()`
+returns a `PendingDispatch` that queues the job when it is destroyed, and one
+returned out of an arrow function — `runAs($c, fn () => Job::dispatch())` — is
+destroyed after the tenant has been left, so it carries none.
+
 How tenants are kept apart is `isolation`. `column` — one database, the tenant
 column — is the default and needs nothing entered beyond the tenant itself; a
 class implementing `IsolatesTenants` (`enter(Model $tenant)`, `leave()`) is how

@@ -253,6 +253,19 @@ callback vyhodí výjimku, a vnořená volání se rozbalí v pořadí. Držitel
 **scoped**: request pod Octane i job ve frontě začínají bez tenanta, takže ten,
 kdo zapomene vstoupit, neuvidí žádné řádky, a ne řádky předchozího jobu.
 
+**Práce ve frontě si nese svého tenanta.** Job zařazený uvnitř tenanta si do
+payloadu zapíše třídu a klíč tenanta a worker do něj před `handle()` vstoupí —
+takže notifikace, export nebo import spuštěný v Acme poběží v Acme, na workeru,
+který o requestu nic neví. Job zařazený mimo tenanta běží mimo něj a podle
+fail-safe nevidí žádné řádky. Job, jehož tenant byl mezitím smazán, **selže**,
+místo aby běžel v žádném. Job `sync` běží uvnitř requestu a vlastní tenant
+requestu se mu po doběhnutí vrátí.
+
+Jedna past: uvnitř `runAs()` zařazujte **příkazem**. `Job::dispatch()` vrací
+`PendingDispatch`, který job zařadí, až zanikne, a ten vrácený z arrow funkce —
+`runAs($c, fn () => Job::dispatch())` — zanikne až po opuštění tenanta, takže
+žádného nenese.
+
 Jak se tenanti od sebe oddělují, říká `isolation`. `column` — jedna databáze,
 sloupec tenanta — je výchozí a nepotřebuje nic kromě tenanta samotného; třída
 implementující `IsolatesTenants` (`enter(Model $tenant)`, `leave()`) je způsob, jak

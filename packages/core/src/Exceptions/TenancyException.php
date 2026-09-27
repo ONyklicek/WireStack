@@ -35,4 +35,14 @@ final class TenancyException extends RuntimeException implements WireException
             .'or the name of a class implementing NyonCode\\WireCore\\Core\\Tenancy\\Contracts\\IsolatesTenants.'
         );
     }
+
+    public static function tenantGone(string $model, mixed $key): self
+    {
+        $key = is_scalar($key) ? (string) $key : get_debug_type($key);
+
+        return new self(
+            "A queued job was dispatched in the tenant [{$model}:{$key}], which no longer exists. "
+            .'It fails rather than running in no tenant, where every scoped query would return nothing.'
+        );
+    }
 }

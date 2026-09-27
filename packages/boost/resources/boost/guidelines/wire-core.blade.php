@@ -225,7 +225,10 @@ Off by default (`wire-core.tenancy.enabled`), **strict once on**. The shipped re
 one with `app(Tenancy::class)->runAs($tenant, fn () => …)` in a job, command, seeder or test — it restores what was
 current, even on a throw. **Never keep "the current tenant" anywhere else** (ADR 0040). Isolation is
 `wire-core.tenancy.isolation`: `column` (default) or a class implementing `IsolatesTenants` (`enter`/`leave`,
-called only by `CurrentTenant`). Binding a `TenantResolver` of your own replaces the default. Mark models with `BelongsToTenant` — opt-in per model, because the framework cannot know which
+called only by `CurrentTenant`). Binding a `TenantResolver` of your own replaces the default. **Queued jobs carry the tenant** (payload
+`wireTenant`, re-entered on `JobProcessing`, the previous tenant restored after — so `sync` jobs do not strip the
+request's); a deleted tenant fails the job. Dispatch as a *statement* inside `runAs()` — a `PendingDispatch`
+returned from an arrow function queues after the tenant is left. Mark models with `BelongsToTenant` — opt-in per model, because the framework cannot know which
 tables are tenant-owned and guessing would be a guess about who may see what.
 
 **The fail-safe is the whole story: tenancy on with no tenant resolved returns NOTHING, never everything.**
