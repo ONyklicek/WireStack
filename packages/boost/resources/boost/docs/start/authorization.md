@@ -262,10 +262,11 @@ tenant has been deleted in the meantime **fails** rather than running in none.
 A `sync` job runs inside the request, and the request's own tenant is handed
 back when it finishes.
 
-One trap: dispatch **as a statement** inside `runAs()`. `Job::dispatch()`
-returns a `PendingDispatch` that queues the job when it is destroyed, and one
-returned out of an arrow function — `runAs($c, fn () => Job::dispatch())` — is
-destroyed after the tenant has been left, so it carries none.
+`runAs($company, fn () => SendReport::dispatch())` works too. `dispatch()`
+returns a `PendingDispatch` that queues when it is destroyed, and returned out
+of the callback it would be destroyed after the tenant is left — so `runAs()`
+drops it while still inside, the job is queued in the tenant, and the call
+returns null.
 
 How tenants are kept apart is `isolation`. `column` — one database, the tenant
 column — is the default and needs nothing entered beyond the tenant itself; a

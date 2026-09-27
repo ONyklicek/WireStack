@@ -112,9 +112,6 @@ function tqWork(): void
 }
 
 it('runs a queued job in the tenant it was dispatched in', function () {
-    // A statement, not an arrow function's return value: a PendingDispatch
-    // queues the job when it is destroyed, and one returned out of runAs()
-    // is destroyed after the tenant has been left.
     app(Tenancy::class)->runAs(TqCompany::query()->find(2), function (): void {
         TqJob::dispatch()->onConnection('database');
     });
@@ -176,3 +173,16 @@ it('refuses a payload whose tenant is not a model at all', function () {
 
     event(new JobProcessing('sync', $job));
 })->throws(TenancyException::class, '[stdClass:1]');
+
+it('dispatches a job returned out of runAs inside the tenant, not after it', function () {
+    // `fn () => Job::dispatch()` hands the PendingDispatch back to runAs; left
+    // to the caller it would queue after the tenant had been left.
+    $returned = app(Tenancy::class)->runAs(TqCompany::query()->find(1), fn () => TqJob::dispatch()->onConnection('database'));
+
+    expect($returned)->toBeNull();
+
+    tqWork();
+
+    expect(TqJob::$seen[0]['tenant'])->toBe(1)
+        ->and(TqJob::$seen[0]['invoices'])->toBe(['N-1']);
+});

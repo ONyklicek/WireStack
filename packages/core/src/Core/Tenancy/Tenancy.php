@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Core\Tenancy;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Bus\PendingDispatch;
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
 
 /**
@@ -76,6 +77,13 @@ final class Tenancy
      * when the callback throws, so nothing is left entered by accident. Nested
      * calls unwind in order.
      *
+     * **A job the callback returns is dispatched here, inside the tenant.**
+     * `Job::dispatch()` gives back a `PendingDispatch` that queues when it is
+     * destroyed, and one returned out of `fn () => Job::dispatch()` would be
+     * destroyed by the caller — after the tenant is left, carrying none. This
+     * holds the only reference to it, so dropping it here queues it now; the
+     * return value is then null, since the job is already on its way.
+     *
      * @template TReturn
      *
      * @param  Closure(Model): TReturn  $callback  Receives the tenant.
@@ -89,7 +97,15 @@ final class Tenancy
         $current->enter($tenant);
 
         try {
-            return $callback($tenant);
+            $result = $callback($tenant);
+
+            if ($result instanceof PendingDispatch) {
+                unset($result);
+
+                return null;
+            }
+
+            return $result;
         } finally {
             $previous === null ? $current->leave() : $current->enter($previous);
         }

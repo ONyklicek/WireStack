@@ -261,10 +261,10 @@ fail-safe nevidí žádné řádky. Job, jehož tenant byl mezitím smazán, **s
 místo aby běžel v žádném. Job `sync` běží uvnitř requestu a vlastní tenant
 requestu se mu po doběhnutí vrátí.
 
-Jedna past: uvnitř `runAs()` zařazujte **příkazem**. `Job::dispatch()` vrací
-`PendingDispatch`, který job zařadí, až zanikne, a ten vrácený z arrow funkce —
-`runAs($c, fn () => Job::dispatch())` — zanikne až po opuštění tenanta, takže
-žádného nenese.
+Funguje i `runAs($company, fn () => SendReport::dispatch())`. `dispatch()` vrací
+`PendingDispatch`, který job zařadí, až zanikne, a vrácený z callbacku by zanikl
+až po opuštění tenanta — proto ho `runAs()` zahodí ještě uvnitř, job se zařadí
+v tenantovi a volání vrátí null.
 
 Jak se tenanti od sebe oddělují, říká `isolation`. `column` — jedna databáze,
 sloupec tenanta — je výchozí a nepotřebuje nic kromě tenanta samotného; třída
