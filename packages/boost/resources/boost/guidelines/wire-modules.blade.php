@@ -60,6 +60,10 @@ palette find the area without being told.
   and one that writes an answer into a file asks it through `Foundation\Setup\Answers`. A published
   migration whose tables already exist, or a quote written into PHP source, is an application that
   no longer migrates or no longer boots.
+- **With tenancy, a team is a project of one company** (ADR 0040 §6): make the team model `BelongsToTenant`, and
+  the switcher lists the current company's projects only, the current team is kept per company
+  (`wire.team.{tenant}`), and `Teams::followTenant()` re-points the permission registrar on `TenantEntered` —
+  `SetCurrentTeam` runs before a tenant zone enters the company. Never keep a second "current team" beside it.
 - **The super-admin is never a role among others.** It can do everything, in every team, so it is given
   only through `Accounts::makeSuperAdmin()` — a *global* assignment (`assignGlobalRole()`), which is all
   the permission gate honours with teams on — from `--super-admin` or the installer's confirmation.

@@ -6,6 +6,8 @@ namespace NyonCode\WireCore\Core\Tenancy;
 
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Tenancy\Contracts\IsolatesTenants;
+use NyonCode\WireCore\Core\Tenancy\Events\TenantEntered;
+use NyonCode\WireCore\Core\Tenancy\Events\TenantLeft;
 
 /**
  * The tenant this request — or this job, or this callback — is working in.
@@ -19,8 +21,10 @@ use NyonCode\WireCore\Core\Tenancy\Contracts\IsolatesTenants;
  * queued job each start with no tenant rather than inheriting the last one's —
  * which under the fail-safe means an empty result, never someone else's rows.
  *
- * Entering drives the isolation ({@see IsolatesTenants}); entering the tenant
- * already entered does nothing, and entering another leaves the first.
+ * Entering drives the isolation ({@see IsolatesTenants}) and then announces
+ * itself ({@see TenantEntered}, {@see TenantLeft}) for state that hangs off the
+ * tenant without being a query; entering the tenant already entered does
+ * nothing, and entering another leaves the first.
  */
 final class CurrentTenant
 {
@@ -40,6 +44,8 @@ final class CurrentTenant
 
         $this->isolation->enter($tenant);
         $this->tenant = $tenant;
+
+        event(new TenantEntered($tenant));
     }
 
     public function leave(): void
@@ -48,8 +54,12 @@ final class CurrentTenant
             return;
         }
 
+        $left = $this->tenant;
+
         $this->isolation->leave();
         $this->tenant = null;
+
+        event(new TenantLeft($left));
     }
 
     public function get(): ?Model

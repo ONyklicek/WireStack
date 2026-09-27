@@ -6,10 +6,13 @@ namespace NyonCode\WireModuleUsers;
 
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Event;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Core\Tenancy\Events\TenantEntered;
+use NyonCode\WireCore\Core\Tenancy\Events\TenantLeft;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireModuleUsers\Console\WireAssignRoleCommand;
@@ -143,6 +146,11 @@ class WireModuleUsersServiceProvider extends PackageServiceProvider
      */
     protected function bootTeams(): void
     {
+        // A team belongs to a company (ADR 0040 §6), and the company is entered
+        // after the `web` group has run: follow it when it changes. Registered
+        // whether or not teams are on at boot — followTenant() asks at the time.
+        Event::listen([TenantEntered::class, TenantLeft::class], static fn () => Teams::followTenant());
+
         if (! Teams::enabled()) {
             return;
         }

@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Core\Tenancy\Concerns\BelongsToTenant;
 use NyonCode\WireCore\Core\Tenancy\Contracts\IsolatesTenants;
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
 use NyonCode\WireCore\Core\Tenancy\CurrentTenant;
 use NyonCode\WireCore\Core\Tenancy\CurrentTenantResolver;
+use NyonCode\WireCore\Core\Tenancy\Events\TenantEntered;
+use NyonCode\WireCore\Core\Tenancy\Events\TenantLeft;
 use NyonCode\WireCore\Core\Tenancy\Isolation\ColumnIsolation;
 use NyonCode\WireCore\Core\Tenancy\Tenancy;
 use NyonCode\WireCore\Core\Tenancy\TenantScope;
@@ -188,4 +191,21 @@ it('leaves an application its own resolver', function () {
     app(CurrentTenant::class)->enter(ctCompany(1));
 
     expect(CtInvoice::query()->pluck('number')->all())->toBe(['B-1']);
+});
+
+it('announces entering and leaving, once per change', function () {
+    Event::fake([
+        TenantEntered::class,
+        TenantLeft::class,
+    ]);
+
+    $current = app(CurrentTenant::class);
+    $current->enter(ctCompany(1));
+    $current->enter(ctCompany(1));
+    $current->enter(ctCompany(2));
+    $current->leave();
+
+    Event::assertDispatchedTimes(TenantEntered::class, 2);
+    Event::assertDispatched(TenantLeft::class, fn ($event) => $event->tenant->getKey() === 2);
+    Event::assertDispatchedTimes(TenantLeft::class, 2);
 });

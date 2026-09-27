@@ -369,6 +369,36 @@ public function boot(): void
 }
 ```
 
+### Teams inside a company
+
+With [tenancy](../panels/tenancy.md), a tenant is a company and a team is one of
+its departments or projects — a person may belong to company A only, and to
+three of its five projects. Make the team model tenant-owned and the rest
+follows:
+
+```php
+use NyonCode\WireCore\Core\Tenancy\Concerns\BelongsToTenant;
+
+class Team extends Model
+{
+    use BelongsToTenant;   // [tl! focus]
+}
+```
+
+- **The switcher lists the current company's projects the person belongs to** —
+  the tenant scope already narrows every team query to the company in the URL.
+- **The current project is remembered per company**, under
+  `wire.team.{tenant}`: switching company never carries you into a project of
+  the other, and switching back finds the one you left there.
+- **Roles follow the company.** `SetCurrentTeam` runs in the `web` group, before
+  a tenant zone has entered the company, so the module listens for the company
+  being entered (`TenantEntered`) and points the permission layer at that
+  company's current project then.
+
+A role that should hold across all of one company's projects — "admin of
+company A" — is assigned in each of them for now; tenant-scoped roles are
+planned in `laravel-permission-extended` (ADR 0040 §6).
+
 ## Passkeys On The Profile Page
 
 The third thing an account can be secured with, and the newest: a passkey is the

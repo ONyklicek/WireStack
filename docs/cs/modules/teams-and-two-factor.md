@@ -362,6 +362,35 @@ public function boot(): void
 }
 ```
 
+### Týmy uvnitř firmy
+
+S [tenancy](../panels/tenancy.md) je tenant firma a tým jedno z jejích oddělení
+nebo projektů — člověk může patřit jen do firmy A a do tří z jejích pěti
+projektů. Udělejte model týmu vlastněný tenantem a zbytek plyne sám:
+
+```php
+use NyonCode\WireCore\Core\Tenancy\Concerns\BelongsToTenant;
+
+class Team extends Model
+{
+    use BelongsToTenant;   // [tl! focus]
+}
+```
+
+- **Přepínač nabídne projekty aktuální firmy, do kterých člověk patří** —
+  tenant scope už každý dotaz na týmy zúží na firmu v URL.
+- **Aktuální projekt se pamatuje pro každou firmu zvlášť**, pod
+  `wire.team.{tenant}`: přepnutí firmy vás nikdy nezanese do projektu té druhé
+  a po návratu najdete projekt, ve kterém jste skončili.
+- **Role následují firmu.** `SetCurrentTeam` běží ve skupině `web`, dřív než
+  tenantová zóna do firmy vstoupí, takže modul poslouchá vstup do firmy
+  (`TenantEntered`) a teprve tehdy nasměruje vrstvu oprávnění na aktuální
+  projekt té firmy.
+
+Roli, která má platit napříč všemi projekty jedné firmy — „admin firmy A“ —, zatím
+přiřaďte v každém z nich; role vázané na tenanta jsou v plánu pro
+`laravel-permission-extended` (ADR 0040 §6).
+
 ## Passkeys na profilu
 
 Třetí věc, kterou se dá účet zajistit, a nejnovější: passkey je vlastní

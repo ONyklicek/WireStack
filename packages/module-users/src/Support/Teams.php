@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Auth;
+use NyonCode\WireCore\Core\Tenancy\CurrentTenant;
 use Throwable;
 
 /**
@@ -108,12 +109,35 @@ final class Teams
         return is_string($configured) && $configured !== '' ? $configured : 'name';
     }
 
-    /** The session key the current team is remembered under. */
+    /**
+     * The session key the current team is remembered under.
+     *
+     * One per company inside a tenant (`wire.team.{tenant}`, ADR 0040 §6): a
+     * team is a department or a project of one company, so switching company
+     * must not carry you into a project of the other — and switching back
+     * finds the project you left there.
+     */
     public static function sessionKey(): string
     {
         $configured = config('wire-module-users.teams.session_key');
+        $key = is_string($configured) && $configured !== '' ? $configured : 'wire.team';
+        $tenant = app(CurrentTenant::class)->key();
 
-        return is_string($configured) && $configured !== '' ? $configured : 'wire.team';
+        return $tenant === null ? $key : $key.'.'.$tenant;
+    }
+
+    /**
+     * Point the permission layer at the current team again, once the tenant is known.
+     *
+     * `SetCurrentTeam` runs in the `web` group, before a tenant zone's own
+     * middleware has entered the company — so the team it set was chosen
+     * without one. Entering the tenant announces itself, and this answers.
+     */
+    public static function followTenant(): void
+    {
+        if (self::enabled()) {
+            self::apply(self::currentId());
+        }
     }
 
     /**
