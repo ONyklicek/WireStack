@@ -10,6 +10,68 @@ under which heading, in what order, and where each entry links. That question is
 answered by three small objects: an entry a resource declares, a group the
 application declares, and a workspace that arranges them.
 
+## At A Glance
+
+The seven things a menu is most often asked for, each in its smallest form. The
+sections after this one say how each of them works and what wins when two of
+them disagree.
+
+**A resource in the menu.** Implement `ProvidesNavigation` and return an entry.
+With no label the menu shows the resource's `pluralLabel()`; with no URL the
+entry links to the resource's `index` page:
+
+```php
+public static function navigation(): NavigationItem
+{
+    return NavigationItem::make()->icon('outline:shopping-cart')->group('sales')->sort(10);
+}
+```
+
+**A page of your own in the menu.** A [`Page`](pages.md#a-page-of-your-own)
+says the same with statics:
+
+```php
+protected static ?string $navigationIcon = 'outline:view-columns';
+protected static ?string $navigationGroup = 'work';
+protected static int $navigationSort = 30;
+```
+
+**A count beside it.** `badge()` takes a closure, resolved on every render:
+
+```php
+NavigationItem::make()->badge(fn () => Order::whereNull('shipped_at')->count(), 'danger');
+```
+
+**A heading with an icon, folded shut.** Declare the group once, where the
+application boots:
+
+```php
+app(NavigationGroups::class)->register(
+    NavigationGroup::make('sales')->label(__('nav.sales'))->icon('outline:banknotes')->collapsed(),
+);
+```
+
+**Under another entry.** The child names its parent, by class or by key — see
+[below](#under-an-entry-it-does-not-own):
+
+```php
+NavigationItem::make()->parent(ProductResource::class);
+```
+
+**A link that is not a page.** Add it through the hook, so it needs no class of
+its own — see [below](#changing-a-menu-you-did-not-register):
+
+```php
+$payload->items['docs'] = NavigationItem::make('Docs')->url('https://docs.example.com')->icon('outline:book-open');
+```
+
+**A link to a page, from code.** Ask the class — see
+[Routing](routing.md#linking-to-them):
+
+```php
+OrderResource::url('edit', $order);
+```
+
 ## Declaring An Entry
 
 A resource that should appear in a menu implements `ProvidesNavigation`:
@@ -84,6 +146,75 @@ children may still be a closure at that point. What a collapsed
 tooltip for a leaf, a popover for a parent — is the shell's business, not this
 layer's.
 
+## Under An Entry It Does Not Own
+
+`children()` writes a branch from the parent's side, so the parent has to know
+every child and spell out its URL. When it is the child that knows — a
+categories resource that belongs under products, a module's page that belongs
+under an entry the application wrote — the child says so itself:
+
+```php
+use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
+use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+
+final class CategoryResource implements DescribesResource, ProvidesNavigation
+{
+    use DescribesRecords;
+
+    public static function modelClass(): ?string
+    {
+        return Category::class;
+    }
+
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make()
+            ->icon('outline:tag')
+            ->parent(ProductResource::class)   // [tl! focus]
+            ->sort(20);
+    }
+}
+```
+
+`parent()` takes a registered key or the class registered under it, and a class
+is reduced to its key when the entry is built — so renaming a key cannot orphan
+the entry. A [`Page`](pages.md#registering-it) says the same with
+`protected static ?string $navigationParent`.
+
+`Workspace::navigation()` then moves each such entry, by four rules — the first
+that applies decides:
+
+1. **A parent nothing registered, or the entry itself, is refused** with a
+   `NavigationParentException`, on the first menu built rather than on one
+   user's. A quiet fallback would put the row somewhere nobody put it.
+2. **A parent that is registered but not in this menu** — hidden from this user,
+   left out by `linkedOnly`, removed by a hook — leaves the entry where it would
+   be without one, in its own group. Taking it away with the parent would hide a
+   page this user may open because of one they may not.
+3. **A parent that itself sits under another entry is refused.** The menu nests
+   one level, as `children()` does, and the exception names the entry to move
+   it under instead.
+4. Otherwise the entry leaves its group — its own `group()` no longer applies —
+   and joins the parent's children, after any the parent wrote itself, in
+   `sort()` order.
+
+**The parent stays reachable.** A branch is a disclosure, not a link, so a
+parent that is a page of its own — the products list — would lose its way in the
+moment something moved under it. It is repeated as its own first child, with the
+same label, icon, URL and key. A parent with no URL, a bare heading, gets no
+copy.
+
+**Every child keeps its key.** An entry carries the key it was registered under
+(`getKey()`), so a resource moved under another is still lit on its edit page,
+not only on its list — `ActiveNavigation` reads the key from the entry where the
+array key no longer reaches.
+
+**Only the grouped menu nests.** `Workspace::items()` stays flat and holds every
+entry, children included: the command palette searches it, and there is no
+branch there to look inside.
+
 ## Groups
 
 `group()` takes a **key**, not a heading. No resource owns the group it sits in —
@@ -144,6 +275,79 @@ Registering the same key twice replaces, which is how an application adjusts a
 group that a package shipped without editing the package. `NavigationGroups` is
 a container singleton and is otherwise a plain registry —
 [its API](#navigationgroups-api) is five methods.
+
+## Which Entry Is Active
+
+One reading of the request, built once while the page renders and handed to every
+row: `ActiveNavigation`. Three rules decide, first answer wins.
+
+1. **What the entry declared.** `activeWhen()`, below. Nothing else is consulted.
+2. **Its registered key**, against the key of the route being rendered. This is
+   what keeps the *Orders* row lit on `wire.orders.edit`: the menu knows the
+   resource, not which of its pages you are on.
+3. **Its URL**, matched exactly — a trailing slash and a relative URL are
+   normalised away, a query string is not. Two entries over one list, an *All*
+   and an *Archived*, are two entries.
+
+`aria-current` follows the same reading and splits it in two: `page` for the entry
+whose URL *is* the URL being rendered, and `true` for the branch you are inside.
+That is not pedantry — a resource row stays active on that resource's edit screen,
+and [the record's tabs](pages.md#the-records-other-pages) above the form are
+already saying "this is the page you are on".
+
+### When the convention is wrong
+
+Rule 3 is deliberately **not** a prefix match. A prefix rule would light
+`/settings` on `/settings/general/edit` — which anyone would want — and would
+equally light a *Home* entry pointing at the shell's own mount path on every page
+under it, for ever, because nothing here can tell a section from a root. A row
+that is always highlighted is a louder defect than a row that is not highlighted
+when it could be.
+
+So the entry that knows says so, and gets exactly what it meant:
+
+```php
+NavigationItem::make('Settings')
+    ->url(route('settings.general'))
+    ->activeWhen('settings/*');          // and every page under it
+```
+
+A pattern is matched against the current **path** and the current **route name**,
+so both readings of the same intent work:
+
+```php
+->activeWhen('admin.settings.*');                                  // a route-name pattern
+->activeWhen(['orders/*', 'invoices/*']);                          // several
+->activeWhen(fn (ActiveNavigation $active): bool => $active->page === 'edit');
+```
+
+Declaring it **replaces** the convention rather than adding to it, which is what
+makes "never active here" possible to write at all.
+
+## Changing A Menu You Did Not Register
+
+Installing a [module](modules.md) puts its entries in the menu, and an application
+adjusts them through the [`navigation.building` hook](../core/plugins/hooks.md)
+rather than by not installing the module:
+
+```php
+$manager->hook(Hook::NavigationBuilding, function (NavigationBuildingPayload $payload) {
+    unset($payload->items['media']);                                     // [tl! focus]
+    $payload->items['docs'] = NavigationItem::make('Docs')->url('/docs')->sort(90); // [tl! focus]
+
+    return $payload;
+}, for: 'admin');
+```
+
+It runs on the **flat, keyed list**, before grouping and sorting, so it feeds
+`navigation()` and `items()` alike — a hook in only one of them would let a sidebar
+and a command palette disagree about what is in the menu. Preserve the keys: they
+are what a consumer turns into a link. Sorting here is wasted work, because the
+item's own `sort()` orders the menu afterwards.
+
+`for:` names the **zone**, which is the only identity a menu has — it belongs to no
+component and shows no single registered class. A menu built for no zone carries no
+scope, so a scoped callback sits it out.
 
 ## The Workspace
 
@@ -231,79 +435,6 @@ sidebar](../admin/sidebar.md), which draws the same three objects, marks the
 active entry from the route being rendered, and holds no state of its own. What
 is above is for an application rendering its own frame.
 
-## Which Entry Is Active
-
-One reading of the request, built once while the page renders and handed to every
-row: `ActiveNavigation`. Three rules decide, first answer wins.
-
-1. **What the entry declared.** `activeWhen()`, below. Nothing else is consulted.
-2. **Its registered key**, against the key of the route being rendered. This is
-   what keeps the *Orders* row lit on `wire.orders.edit`: the menu knows the
-   resource, not which of its pages you are on.
-3. **Its URL**, matched exactly — a trailing slash and a relative URL are
-   normalised away, a query string is not. Two entries over one list, an *All*
-   and an *Archived*, are two entries.
-
-`aria-current` follows the same reading and splits it in two: `page` for the entry
-whose URL *is* the URL being rendered, and `true` for the branch you are inside.
-That is not pedantry — a resource row stays active on that resource's edit screen,
-and [the record's tabs](pages.md#the-records-other-pages) above the form are
-already saying "this is the page you are on".
-
-### When the convention is wrong
-
-Rule 3 is deliberately **not** a prefix match. A prefix rule would light
-`/settings` on `/settings/general/edit` — which anyone would want — and would
-equally light a *Home* entry pointing at the shell's own mount path on every page
-under it, for ever, because nothing here can tell a section from a root. A row
-that is always highlighted is a louder defect than a row that is not highlighted
-when it could be.
-
-So the entry that knows says so, and gets exactly what it meant:
-
-```php
-NavigationItem::make('Settings')
-    ->url(route('settings.general'))
-    ->activeWhen('settings/*');          // and every page under it
-```
-
-A pattern is matched against the current **path** and the current **route name**,
-so both readings of the same intent work:
-
-```php
-->activeWhen('admin.settings.*');                                  // a route-name pattern
-->activeWhen(['orders/*', 'invoices/*']);                          // several
-->activeWhen(fn (ActiveNavigation $active): bool => $active->page === 'edit');
-```
-
-Declaring it **replaces** the convention rather than adding to it, which is what
-makes "never active here" possible to write at all.
-
-## Changing A Menu You Did Not Register
-
-Installing a [module](modules.md) puts its entries in the menu, and an application
-adjusts them through the [`navigation.building` hook](../core/plugins/hooks.md)
-rather than by not installing the module:
-
-```php
-$manager->hook(Hook::NavigationBuilding, function (NavigationBuildingPayload $payload) {
-    unset($payload->items['media']);                                     // [tl! focus]
-    $payload->items['docs'] = NavigationItem::make('Docs')->url('/docs')->sort(90); // [tl! focus]
-
-    return $payload;
-}, for: 'admin');
-```
-
-It runs on the **flat, keyed list**, before grouping and sorting, so it feeds
-`navigation()` and `items()` alike — a hook in only one of them would let a sidebar
-and a command palette disagree about what is in the menu. Preserve the keys: they
-are what a consumer turns into a link. Sorting here is wasted work, because the
-item's own `sort()` orders the menu afterwards.
-
-`for:` names the **zone**, which is the only identity a menu has — it belongs to no
-component and shows no single registered class. A menu built for no zone carries no
-scope, so a scoped callback sits it out.
-
 ## NavigationItem API
 
 | Method | Returns | Purpose |
@@ -317,6 +448,9 @@ scope, so a scoped callback sits it out.
 | `badge(mixed $badge, string\|Closure\|null $color = null)` | `self` | A count or short string beside the label, with an optional colour |
 | `url(string\|Closure\|null $url)` | `self` | An explicit destination, which always beats the routed one |
 | `children(array\|Closure $children)` | `self` | Entries under this one — one level, filtered and sorted on read |
+| `parent(?string $parent)` | `self` | The entry this one sits under — a registered key, or the class registered under it (`class-string\|string\|null`). `Workspace::navigation()` moves it there |
+| `key(?string $key)` | `self` | The key the entry was registered under. `Workspace` sets it on every entry; an entry already carrying one keeps it |
+| `withAdoptedChildren(array $children): self` | `self` | A **copy** carrying the entries that named this one as their parent — `Workspace` calls it, after the entry's own `children()` |
 | `activeWhen(Closure\|array\|string\|null $activeWhen)` | `self` | When this entry counts as the page you are on, when the convention is wrong: path or route-name patterns, or a Closure taking `ActiveNavigation`. **Replaces** the convention |
 | `visible(bool\|Closure $condition = true)` / `hidden(bool\|Closure $condition = true)` | `self` | Whether the entry is in the menu at all |
 | `getLabel(): ?string` | `string\|null` | The resolved text, or `null` when nothing named it |
@@ -327,6 +461,8 @@ scope, so a scoped callback sits it out.
 | `getBadge(): ?string` | `string\|null` | The badge, resolved on **every** read, never cached |
 | `getBadgeColor(): ?string` | `string\|null` | Its colour, or `null` for the consumer's default |
 | `getUrl(): ?string` | `string\|null` | Explicit URL, else the routed one, else `null` |
+| `getParent(): ?string` | `string\|null` | The parent's key, a class already reduced to it |
+| `getKey(): ?string` | `string\|null` | The registered key, or `null` for a hand-written child |
 | `getChildren(): array` | `array<int, NavigationItem>` | The visible children, in `sort()` order |
 | `hasChildren(): bool` | `bool` | Whether a row is a disclosure rather than a plain link |
 | `isActiveWhen(ActiveNavigation $active): ?bool` | `bool\|null` | The entry's own answer, or `null` when it declared none — three-valued, so a declared “no” cannot fall through to the conventions |
@@ -382,8 +518,8 @@ application and a package both write to it.
 
 | Method | Returns | Purpose |
 | --- | --- | --- |
-| `navigation(?string $zone = null, bool $linkedOnly = false)` | `array<string, NavigationGroup>` | The menu: groups in order, each carrying its entries |
-| `items(?string $zone = null, bool $linkedOnly = false)` | `array<string, NavigationItem>` | The same menu flat, without headings |
+| `navigation(?string $zone = null, bool $linkedOnly = false)` | `array<string, NavigationGroup>` | The menu: groups in order, each carrying its entries, with every `parent()` honoured |
+| `items(?string $zone = null, bool $linkedOnly = false)` | `array<string, NavigationItem>` | The same menu flat, without headings — and without nesting, so every entry is its own row |
 | `registered()` | `array<string, class-string>` | Every class behind the menu, entry or not |
 
 ## Catalog API

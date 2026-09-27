@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Core\Resources\Concerns;
 
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Foundation\Routing\Concerns\InteractsWithPageUrls;
 
 /**
  * Default {@see DescribesResource}
@@ -22,9 +23,15 @@ use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
  * `Order Lines`. Pluralisation is Laravel's, so an irregular noun is right
  * without being spelled out, and a resource whose plural the inflector gets
  * wrong overrides `pluralLabel()` alone.
+ *
+ * It brings {@see InteractsWithPageUrls} with it, because the key derived here
+ * is the one a URL is built from: `OrderResource::url('edit', $order)` is the
+ * same key asked where it is routed.
  */
 trait DescribesRecords
 {
+    use InteractsWithPageUrls;
+
     public static function key(): string
     {
         return Str::of(static::shortModelName())->kebab()->plural()->value();

@@ -33,6 +33,8 @@ class PrTaskBoardPage extends Page
     protected static ?string $navigationGroup = 'work';
 
     protected static int $navigationSort = 30;
+
+    protected static ?string $navigationParent = 'monthly-report';
 }
 
 class PrReport extends Page
@@ -116,6 +118,7 @@ it('puts an entry in the menu, grouped, sorted and linked', function () {
     expect($items['pr-task-board']->getLabel())->toBe('Pr Task Board')
         ->and($items['pr-task-board']->getGroup())->toBe('work')
         ->and($items['pr-task-board']->getSort())->toBe(30)
+        ->and($items['pr-task-board']->getParent())->toBe('monthly-report')
         ->and($items['pr-task-board']->getUrl())->toBe(url('pr-task-board'))
         ->and($items)->toHaveKey('monthly-report');
 });

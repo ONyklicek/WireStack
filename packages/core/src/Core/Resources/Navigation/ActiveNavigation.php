@@ -103,7 +103,7 @@ final readonly class ActiveNavigation
      * Whether this entry is the place the reader is — or the place they are
      * inside of.
      *
-     * @param  string|null  $key  The key the entry was registered under, when it has one.
+     * @param  string|null  $key  The key the entry was registered under, when it has one; defaults to the key the entry carries.
      */
     public function isActive(NavigationItem $item, ?string $key = null): bool
     {
@@ -112,6 +112,8 @@ final readonly class ActiveNavigation
         if ($declared !== null) {
             return $declared;
         }
+
+        $key ??= $item->getKey();
 
         if ($key !== null && $this->key !== null && $key === $this->key) {
             return true;
@@ -152,8 +154,9 @@ final readonly class ActiveNavigation
     /**
      * Whether anything under this entry is where the reader is.
      *
-     * Children carry no registered key — they are hand-written entries — so they
-     * are matched by the rules that do not need one.
+     * A hand-written child carries no registered key and is matched by the rules
+     * that do not need one; a registered entry placed here with `parent()`
+     * carries its key, so it stays lit on every page of its resource.
      */
     public function hasActiveChild(NavigationItem $item): bool
     {

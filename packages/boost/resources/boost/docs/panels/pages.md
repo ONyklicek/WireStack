@@ -551,6 +551,7 @@ final class TaskBoard extends Page
     protected static ?string $navigationIcon = 'outline:view-columns';
     protected static ?string $navigationGroup = 'work';
     protected static int $navigationSort = 30;
+    protected static ?string $navigationParent = null;
     protected static ?string $permission = 'tasks.view';        // [tl! focus:end]
     protected static bool $shouldRegisterNavigation = true;
 
@@ -564,7 +565,11 @@ label is `$navigationLabel`, or the class name humanised. `$permission` becomes
 the route's `can:` middleware **and** hides the menu entry from someone who lacks
 it, so the menu never offers a page its route would refuse;
 `$shouldRegisterNavigation = false` keeps a page routed and out of the menu. Two
-pages on one key are refused, as two resources are.
+pages on one key are refused, as two resources are. `$navigationParent` puts the
+entry under another one, by key or class — [how that is
+decided](navigation.md#under-an-entry-it-does-not-own) — and a link to the page
+from code is `TaskBoard::url()`, any further parameter landing in the query
+string ([Routing](routing.md#linking-to-them)).
 
 The registry fills itself on its first read rather than at boot, so a page is
 there for config-declared routes too. A page can still be routed from an

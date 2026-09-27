@@ -545,6 +545,7 @@ final class TaskBoard extends Page
     protected static ?string $navigationIcon = 'outline:view-columns';
     protected static ?string $navigationGroup = 'work';
     protected static int $navigationSort = 30;
+    protected static ?string $navigationParent = null;
     protected static ?string $permission = 'tasks.view';        // [tl! focus:end]
     protected static bool $shouldRegisterNavigation = true;
 
@@ -558,7 +559,10 @@ bez koncového `Page` (`TaskBoardPage` → `task-board`); popisek je
 middlewarem routy **a** skryje položku v menu tomu, kdo ho nemá, takže menu nikdy
 nenabídne stránku, kterou by routa odmítla; `$shouldRegisterNavigation = false`
 nechá stránku routovanou a mimo menu. Dvě stránky na jednom klíči se odmítnou,
-stejně jako dva resource.
+stejně jako dva resource. `$navigationParent` dá položku pod jinou, klíčem nebo
+třídou — [jak se o tom rozhoduje](navigation.md#pod-cizi-polozkou) — a odkaz na
+stránku z kódu je `TaskBoard::url()`, přičemž každý další parametr skončí
+v query stringu ([Routing](routing.md#jak-na-ne-odkazovat)).
 
 Registr se naplní při prvním čtení, ne při bootu, takže stránka je k dispozici
 i pro routy deklarované v configu. Stránku lze pořád routovat z `pages()`

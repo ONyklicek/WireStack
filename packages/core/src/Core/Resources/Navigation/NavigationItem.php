@@ -9,6 +9,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasIcon;
 use NyonCode\WireCore\Foundation\Concerns\HasLabel;
 use NyonCode\WireCore\Foundation\Concerns\HasSortOrder;
 use NyonCode\WireCore\Foundation\Concerns\HasVisibility;
+use NyonCode\WireCore\Foundation\Registration\Contracts\HasRegistryKey;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 
@@ -68,6 +69,13 @@ final class NavigationItem
 
     /** @var array<int, self>|Closure */
     protected array|Closure $children = [];
+
+    /** @var array<int, self> Entries `Workspace` placed under this one because they named it as their parent. */
+    protected array $adoptedChildren = [];
+
+    protected ?string $parent = null;
+
+    protected ?string $key = null;
 
     public function __construct(string|Closure|null $label = null)
     {
@@ -257,6 +265,79 @@ final class NavigationItem
     }
 
     /**
+     * The entry this one belongs under, named from the child's side.
+     *
+     *   // CategoryResource
+     *   public static function navigation(): NavigationItem
+     *   {
+     *       return NavigationItem::make()->parent(ProductResource::class);
+     *   }
+     *
+     * {@see children()} is the same menu written from the parent's side, and it
+     * needs the parent to know every child and to spell out their URLs. This is
+     * for the other case — a resource, a page or a module that wants to sit
+     * under an entry it does not own — and needs neither: `Workspace` moves the
+     * entry under its parent, where it keeps its own URL, badge and sort.
+     *
+     * A registered **key** or the class registered under it; the class is
+     * reduced to its key, so renaming a key does not orphan the entry.
+     *
+     * @param  class-string<HasRegistryKey>|string|null  $parent
+     */
+    public function parent(?string $parent): self
+    {
+        $this->parent = $parent !== null && is_a($parent, HasRegistryKey::class, true)
+            ? $parent::key()
+            : $parent;
+
+        return $this;
+    }
+
+    /** The registered key of the entry this one belongs under, or null for none. */
+    public function getParent(): ?string
+    {
+        return $this->parent;
+    }
+
+    /**
+     * The key this entry was registered under — set by `Workspace`, not by you.
+     *
+     * The menu has always keyed its entries by it; the entry carries it as well
+     * so a row that ends up *under* another one — where the array key is gone —
+     * is still recognised as its resource's row on that resource's edit page.
+     */
+    public function key(?string $key): self
+    {
+        $this->key = $key;
+
+        return $this;
+    }
+
+    /** The key this entry was registered under, or null for a hand-written child. */
+    public function getKey(): ?string
+    {
+        return $this->key;
+    }
+
+    /**
+     * A copy carrying the entries that named this one with {@see parent()}.
+     *
+     * A copy, like `NavigationGroup::withItems()`, and kept apart from
+     * {@see children()} rather than merged into it: those may be a Closure,
+     * resolved per read, and folding a fixed list into it would either resolve
+     * the Closure once for everybody or lose the list.
+     *
+     * @param  array<int, self>  $children
+     */
+    public function withAdoptedChildren(array $children): self
+    {
+        $copy = clone $this;
+        $copy->adoptedChildren = array_values($children);
+
+        return $copy;
+    }
+
+    /**
      * The visible children, in `sort()` order.
      *
      * Hidden ones are dropped here rather than in the view, so every surface
@@ -269,9 +350,7 @@ final class NavigationItem
     {
         $children = $this->evaluate($this->children);
 
-        if (! is_array($children)) {
-            return [];
-        }
+        $children = [...(is_array($children) ? array_values($children) : []), ...$this->adoptedChildren];
 
         $visible = array_values(array_filter(
             $children,

@@ -340,8 +340,39 @@ a message naming both lines you could delete.
 
 ## Linking to them
 
-Nothing needs to write a URL by hand any more. A menu entry carries the URL of
-its key's page, and a search result carries the URL of its record's:
+Nothing needs to write a URL by hand any more. From code, ask the class:
+
+```php
+OrderResource::url();                                                // /admin/orders
+OrderResource::url('edit', $order);                                  // /admin/orders/7/edit
+OrderLineResource::url('index', parameters: ['parent' => $order]);   // /admin/orders/7/order-lines
+TaskBoard::url(parameters: ['week' => 12]);                          // /admin/board?week=12
+OrderResource::url(zone: 'business');                                // /business/orders
+```
+
+`url()` comes with `DescribesRecords`, which a resource already uses, and with
+[`Pages\Page`](pages.md#a-page-of-your-own); any other class that knows its key —
+a dashboard — adds it with `use InteractsWithPageUrls;`. It is the key-based call
+below with the class's own key filled in, so it answers exactly what that does,
+`null` included, and a renamed key cannot leave a link pointing at the old one.
+
+Three things decide what it builds:
+
+- **A model is reduced to its key**, the record and any parameter alike.
+  `{record}` and `{parent}` are keys the page resolves for itself, and a model
+  whose route key is a slug would otherwise produce a URL the page finds nothing
+  at.
+- **A parameter the route does not name becomes the query string**, which is how
+  a page of your own takes its options.
+- **The zone defaults to the one being rendered**, read off the route name. On a
+  full page render that is right. Inside a Livewire update the route is
+  `livewire.update` and the default falls back to the unzoned mount, so a
+  component that builds links on every round trip keeps the zone it read on
+  mount and passes it — `url(zone: $this->zone)`. A nested resource's `parent`
+  is not guessed either: pass it.
+
+A menu entry carries the URL of its key's page already, and a search result
+carries the URL of its record's:
 
 ```php
 $item->getUrl();          // /admin/orders — filled by Workspace, null when unrouted
@@ -354,7 +385,7 @@ entry without an href still renders, and a resource that declares no pages is
 deliberately unlinked. An entry or a result that names its own URL always wins —
 an external link, or an application with a shell URL scheme of its own.
 
-Reaching for it directly is the same call:
+Code that holds a key rather than a class reaches the same answer directly:
 
 ```php
 ResourceRoutes::urlFor('orders');                          // /admin/orders
@@ -368,6 +399,7 @@ one — set `livewire.component_layout` to your own.
 ## Routing API
 
 ```php
+OrderResource::url(string $page = 'index', Model|int|string|null $record = null, array $parameters = [], ?string $zone = null): ?string   // any class using InteractsWithPageUrls
 ResourceRoutes::all(array $only = [], array $except = []): array   // every declaring key, plus `wire.home` at the root
 ResourceRoutes::for(string $class, array $pages = []): array   // one, or throws; `$pages` routes only those
 ResourceRoutes::urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string

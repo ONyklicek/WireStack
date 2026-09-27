@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Resources\Contracts;
 
+use NyonCode\WireCore\Foundation\Registration\Contracts\HasRegistryKey;
+
 /**
  * What a resource *is*: the entity it owns and the words used for it.
  *
@@ -22,8 +24,13 @@ namespace NyonCode\WireCore\Core\Resources\Contracts;
  * wire-table, `ProvidesResourceForm` in wire-forms, `ProvidesResourceInfolist`
  * beside the Infolists surface. This contract names none of them, so a resource
  * that only has a form never pulls in a table package to declare its identity.
+ *
+ * It extends {@see HasRegistryKey} because `key()` below is that contract's one
+ * method, declared here before it existed: a resource is therefore addressable
+ * by class wherever a registered key is asked for — `NavigationItem::parent()`,
+ * `InteractsWithPageUrls`.
  */
-interface DescribesResource
+interface DescribesResource extends HasRegistryKey
 {
     /**
      * Stable identifier, unique within a registry.

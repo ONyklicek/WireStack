@@ -333,8 +333,38 @@ která pojmenuje obě místa, kde stačí smazat řádek.
 
 ## Jak na ně odkazovat
 
-URL už nemusí nikdo psát ručně. Položka menu nese URL stránky svého klíče
-a výsledek hledání nese URL svého záznamu:
+URL už nemusí nikdo psát ručně. Z kódu se zeptejte třídy:
+
+```php
+OrderResource::url();                                                // /admin/orders
+OrderResource::url('edit', $order);                                  // /admin/orders/7/edit
+OrderLineResource::url('index', parameters: ['parent' => $order]);   // /admin/orders/7/order-lines
+TaskBoard::url(parameters: ['week' => 12]);                          // /admin/board?week=12
+OrderResource::url(zone: 'business');                                // /business/orders
+```
+
+`url()` přichází s `DescribesRecords`, který resource už používá, a s
+[`Pages\Page`](pages.md#vlastni-stranka); jakákoli jiná třída, která zná svůj klíč
+— dashboard —, si ho přidá přes `use InteractsWithPageUrls;`. Je to volání přes
+klíč níže s vyplněným klíčem samotné třídy, takže odpovídá přesně tím, čím ono,
+včetně `null`, a přejmenovaný klíč nemůže nechat odkaz mířit na ten starý.
+
+O tom, co sestaví, rozhodují tři věci:
+
+- **Model se převede na svůj klíč**, záznam i jakýkoli parametr. `{record}`
+  a `{parent}` jsou klíče, které si stránka dohledá sama, a model, jehož route
+  key je slug, by jinak dal URL, na kterém stránka nic nenajde.
+- **Parametr, který routa nejmenuje, se stane query stringem** — takhle si
+  vlastní stránka bere své volby.
+- **Zóna je ve výchozím stavu ta vykreslovaná**, přečtená ze jména routy. Při
+  vykreslení celé stránky je to správně. Uvnitř Livewire updatu je routa
+  `livewire.update` a výchozí hodnota spadne na nezónovaný mount, takže komponenta,
+  která staví odkazy při každém round tripu, si zónu přečtenou v mountu nechá
+  a předá ji — `url(zone: $this->zone)`. Ani `parent` vnořeného resource se
+  nehádá: předejte ho.
+
+Položka menu už nese URL stránky svého klíče a výsledek hledání nese URL svého
+záznamu:
 
 ```php
 $item->getUrl();          // /admin/orders — doplní Workspace, null když neroutováno
@@ -348,7 +378,7 @@ nedeklaruje stránky, je neodkazovaný záměrně. Položka nebo výsledek, kter
 pojmenuje sám, vždy vyhraje — externí odkaz nebo aplikace s vlastním URL schématem
 shellu.
 
-Sáhnout po tom přímo je totéž volání:
+Kód, který drží klíč místo třídy, dojde ke stejné odpovědi napřímo:
 
 ```php
 ResourceRoutes::urlFor('orders');                          // /admin/orders
@@ -362,6 +392,7 @@ si `livewire.component_layout` na svůj vlastní.
 ## Routing API
 
 ```php
+OrderResource::url(string $page = 'index', Model|int|string|null $record = null, array $parameters = [], ?string $zone = null): ?string   // každá třída s InteractsWithPageUrls
 ResourceRoutes::all(array $only = [], array $except = []): array   // každý klíč, který deklaruje, navíc `wire.home` v kořeni
 ResourceRoutes::for(string $class, array $pages = []): array   // jeden, nebo vyhodí výjimku; `$pages` routuje jen ty
 ResourceRoutes::urlFor(string $key, string $page = 'index', array $parameters = [], ?string $zone = null): ?string

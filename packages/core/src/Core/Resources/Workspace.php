@@ -12,6 +12,7 @@ use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+use NyonCode\WireCore\Core\Resources\Navigation\NestNavigationEntries;
 use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
@@ -57,6 +58,7 @@ final readonly class Workspace
         private Catalog $catalog,
         private NavigationGroups $groups,
         private ResolvesPageUrls $urls = new UnroutedPageUrls,
+        private NestNavigationEntries $nest = new NestNavigationEntries,
     ) {}
 
     /**
@@ -78,16 +80,21 @@ final readonly class Workspace
      * resource in the group, which drifts the first time someone adds the n+1st
      * resource and forgets. The dropping happens once, in `entries()`.
      *
+     * An entry that named a `parent()` is not in a group of its own here: it is
+     * under its parent, by the rules {@see NestNavigationEntries} states.
+     *
      * @return array<string, NavigationGroup> Keyed by group key; the ungrouped top level is `''`.
      */
     public function navigation(?string $zone = null, bool $linkedOnly = false): array
     {
         $buckets = [];
 
+        $entries = ($this->nest)($this->entries($zone, $linkedOnly), array_keys($this->registered()));
+
         // Registration order, deliberately: it decides which group came first,
         // and sorting the entries beforehand would make that depend on the
         // entry numbering instead.
-        foreach ($this->entries($zone, $linkedOnly) as $key => $item) {
+        foreach ($entries as $key => $item) {
             $buckets[$item->getGroup() ?? ''][$key] = $item;
         }
 
@@ -117,6 +124,10 @@ final readonly class Workspace
      * not here either: "in the menu" has to mean one thing, and a flat list that
      * disagreed with {@see navigation()} about it would be two answers to one
      * question.
+     *
+     * Flat means flat: an entry that sits under a `parent()` in the grouped menu
+     * is its own row here, because a command palette that searches this list
+     * must still find the page, and nothing here draws a branch to find it in.
      *
      * @return array<string, NavigationItem> Keyed by resource key.
      */
@@ -217,7 +228,19 @@ final readonly class Workspace
             $items[$key] = $item;
         }
 
-        return $this->throughPlugins($items, $zone);
+        $items = $this->throughPlugins($items, $zone);
+
+        // Every entry carries the key it is listed under, including the ones a
+        // hook added, so a row that `NestNavigationEntries` moves under another
+        // — where the array key no longer reaches the view — is still its
+        // resource's row. An entry that already says otherwise is left alone.
+        foreach ($items as $key => $item) {
+            if ($item->getKey() === null) {
+                $item->key($key);
+            }
+        }
+
+        return $items;
     }
 
     /**

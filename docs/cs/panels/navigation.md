@@ -10,6 +10,67 @@ pod jakým nadpisem, v jakém pořadí a kam která položka odkazuje. Na tu odp
 tři malé objekty: položka, kterou deklaruje resource, skupina, kterou deklaruje
 aplikace, a workspace, který je uspořádá.
 
+## Na první pohled
+
+Sedm věcí, které se od menu chtějí nejčastěji, každá v nejmenší podobě. Sekce za
+touhle vysvětlují, jak která funguje a co vyhraje, když se dvě neshodnou.
+
+**Resource v menu.** Implementujte `ProvidesNavigation` a vraťte položku. Bez
+popisku menu ukáže `pluralLabel()` resource, bez URL položka odkazuje na jeho
+stránku `index`:
+
+```php
+public static function navigation(): NavigationItem
+{
+    return NavigationItem::make()->icon('outline:shopping-cart')->group('sales')->sort(10);
+}
+```
+
+**Vlastní stránka v menu.** [`Page`](pages.md#vlastni-stranka) řekne totéž
+statickými vlastnostmi:
+
+```php
+protected static ?string $navigationIcon = 'outline:view-columns';
+protected static ?string $navigationGroup = 'work';
+protected static int $navigationSort = 30;
+```
+
+**Počet vedle ní.** `badge()` bere closure, vyhodnocenou při každém vykreslení:
+
+```php
+NavigationItem::make()->badge(fn () => Order::whereNull('shipped_at')->count(), 'danger');
+```
+
+**Nadpis s ikonou, sbalený.** Skupinu deklarujte jednou, tam, kde aplikace
+startuje:
+
+```php
+app(NavigationGroups::class)->register(
+    NavigationGroup::make('sales')->label(__('nav.sales'))->icon('outline:banknotes')->collapsed(),
+);
+```
+
+**Pod jinou položkou.** Dítě jmenuje svého rodiče, třídou nebo klíčem — viz
+[níže](#pod-cizi-polozkou):
+
+```php
+NavigationItem::make()->parent(ProductResource::class);
+```
+
+**Odkaz, který není stránka.** Přidejte ho přes hook, takže nepotřebuje vlastní
+třídu — viz [níže](#zmena-menu-ktere-jste-neregistrovali):
+
+```php
+$payload->items['docs'] = NavigationItem::make('Dokumentace')->url('https://docs.example.com')->icon('outline:book-open');
+```
+
+**Odkaz na stránku z kódu.** Zeptejte se třídy — viz
+[Routing](routing.md#jak-na-ne-odkazovat):
+
+```php
+OrderResource::url('edit', $order);
+```
+
 ## Deklarace položky
 
 Resource, který se má objevit v menu, implementuje `ProvidesNavigation`:
@@ -82,6 +143,74 @@ děti můžou být v tu chvíli ještě closure. Co s tím rozdílem udělá zú
 [lišta](../admin/sidebar.md#sbalene-menu) — tooltip pro list, popover pro rodiče —
 je věc shellu, ne téhle vrstvy.
 
+## Pod cizí položkou
+
+`children()` píše větev ze strany rodiče, takže rodič musí znát každé dítě
+a vypsat jeho URL. Když to ví dítě — resource kategorií, který patří pod
+produkty, stránka modulu, která patří pod položku napsanou aplikací — řekne to
+samo:
+
+```php
+use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
+use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+
+final class CategoryResource implements DescribesResource, ProvidesNavigation
+{
+    use DescribesRecords;
+
+    public static function modelClass(): ?string
+    {
+        return Category::class;
+    }
+
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make()
+            ->icon('outline:tag')
+            ->parent(ProductResource::class)   // [tl! focus]
+            ->sort(20);
+    }
+}
+```
+
+`parent()` bere registrovaný klíč nebo třídu pod ním registrovanou, a třída se
+při stavbě položky převede na svůj klíč — přejmenovaný klíč tak položku
+neosiří. [`Page`](pages.md#registrace) řekne totéž vlastností
+`protected static ?string $navigationParent`.
+
+`Workspace::navigation()` pak každou takovou položku přesune podle čtyř pravidel
+— rozhoduje první, které platí:
+
+1. **Rodič, kterého nic neregistrovalo, nebo položka sama, se odmítne**
+   výjimkou `NavigationParentException`, a to při prvním sestaveném menu, ne až
+   u jednoho uživatele. Tichý fallback by dal řádek tam, kam ho nikdo nedal.
+2. **Rodič, který registrovaný je, ale v tomhle menu není** — skrytý tomuto
+   uživateli, vynechaný přes `linkedOnly`, odebraný hookem — nechá položku tam,
+   kde by byla bez něj, ve vlastní skupině. Kdyby zmizela s rodičem, schovala by
+   stránku, kterou uživatel otevřít smí, kvůli jiné, kterou nesmí.
+3. **Rodič, který sám sedí pod jinou položkou, se odmítne.** Menu se zanořuje
+   o jednu úroveň, stejně jako `children()`, a výjimka jmenuje položku, pod
+   kterou ji dát místo toho.
+4. Jinak položka opustí svou skupinu — její vlastní `group()` už neplatí —
+   a přidá se k dětem rodiče, za ty, které napsal sám, v pořadí `sort()`.
+
+**Rodič zůstane dosažitelný.** Větev je rozbalovátko, ne odkaz, takže rodič,
+který je sám stránkou — seznam produktů — by ve chvíli, kdy se pod něj něco
+přesune, ztratil cestu dovnitř. Proto se zopakuje jako své první dítě, se
+stejným popiskem, ikonou, URL a klíčem. Rodič bez URL, holý nadpis, žádnou
+kopii nedostane.
+
+**Každé dítě si nechá svůj klíč.** Položka nese klíč, pod kterým byla
+registrovaná (`getKey()`), takže resource přesunutý pod jiný svítí i na své
+editační stránce, nejen na seznamu — `ActiveNavigation` čte klíč z položky tam,
+kam klíč pole už nedosáhne.
+
+**Zanořuje se jen seskupené menu.** `Workspace::items()` zůstává ploché a drží
+každou položku včetně dětí: prohledává ho paleta příkazů a žádná větev, do které
+by se dalo nahlédnout, tam není.
+
 ## Skupiny
 
 `group()` bere **klíč**, ne nadpis. Skupinu nevlastní žádný resource — sdílí ji
@@ -140,6 +269,77 @@ Registrace téhož klíče podruhé přepíše, což je způsob, jak aplikace up
 skupinu dodanou balíčkem, aniž by ten balíček editovala. `NavigationGroups` je
 singleton v kontejneru a jinak obyčejný registr — [jeho
 API](#navigationgroups-api) má pět metod.
+
+## Která položka je aktivní
+
+Jedno čtení požadavku, postavené jednou při renderu stránky a předané každému
+řádku: `ActiveNavigation`. Rozhodují tři pravidla, vyhrává první odpověď.
+
+1. **Co položka deklarovala.** `activeWhen()` níž. Nic dalšího se neptá.
+2. **Její registrovaný klíč**, proti klíči vykreslované routy. Tohle drží řádek
+   *Objednávky* rozsvícený i na `wire.orders.edit`: menu zná resource, ne to,
+   na které z jeho stránek stojíte.
+3. **Její URL**, na přesnou shodu — lomítko na konci a relativní URL se
+   normalizují pryč, query string ne. Dvě položky nad jedním seznamem, *Vše* a
+   *Archiv*, jsou dvě položky.
+
+`aria-current` čte totéž a dělí to na dvě: `page` pro položku, jejíž URL *je*
+vykreslovaná URL, a `true` pro větev, uvnitř které stojíte. To není puntičkářství
+— řádek resource zůstává aktivní i na jeho editační stránce a [záložky
+záznamu](pages.md#ostatni-stranky-zaznamu) nad formulářem už říkají „tohle je
+stránka, na které jste“.
+
+### Když je konvence vedle
+
+Pravidlo 3 **není** shoda na prefix, a to vědomě. Prefixové pravidlo by
+rozsvítilo `/settings` na `/settings/general/edit` — což by chtěl každý — a
+stejně tak by rozsvítilo položku *Domů*, mířící na vlastní cestu shellu, na
+každé stránce pod ní, napořád, protože odsud nejde poznat sekci od kořene. Řádek,
+který svítí vždycky, je hlasitější vada než řádek, který nesvítí, i když by mohl.
+
+Řekne to tedy položka, která to ví, a dostane přesně to, co myslela:
+
+```php
+NavigationItem::make('Settings')
+    ->url(route('settings.general'))
+    ->activeWhen('settings/*');          // a každá stránka pod ní
+```
+
+Vzor se porovnává s aktuální **cestou** i s aktuálním **jménem routy**, takže
+fungují obě čtení téhož záměru:
+
+```php
+->activeWhen('admin.settings.*');                                  // vzor na jméno routy
+->activeWhen(['orders/*', 'invoices/*']);                          // několik
+->activeWhen(fn (ActiveNavigation $active): bool => $active->page === 'edit');
+```
+
+Deklarace konvenci **nahrazuje**, nepřidává se k ní — což je to jediné, díky
+čemu jde větu „tady nikdy aktivní“ vůbec napsat.
+
+## Změna menu, které jste neregistrovali
+
+Instalace [modulu](modules.md) dá jeho položky do menu a aplikace je upraví přes
+[hook `navigation.building`](../core/plugins/hooks.md), místo aby ten modul
+neinstalovala:
+
+```php
+$manager->hook(Hook::NavigationBuilding, function (NavigationBuildingPayload $payload) {
+    unset($payload->items['media']);                                     // [tl! focus]
+    $payload->items['docs'] = NavigationItem::make('Docs')->url('/docs')->sort(90); // [tl! focus]
+
+    return $payload;
+}, for: 'admin');
+```
+
+Běží nad **plochým klíčovaným seznamem**, před seskupením a seřazením, takže krmí
+`navigation()` i `items()` — hook jen v jednom z nich by nechal sidebar a command
+paletu neshodnout se na tom, co v menu je. Klíče zachovejte: právě z nich dělá
+konzument odkaz. Řadit tady je zbytečná práce, menu stejně seřadí `sort()` položky.
+
+`for:` pojmenuje **zónu** — jedinou identitu, kterou menu má: nepatří k žádné
+komponentě a neukazuje jednu registrovanou třídu. Menu stavěné bez zóny žádné
+zúžení nenese, takže zúžený callback vynechá.
 
 ## Workspace
 
@@ -226,77 +426,6 @@ aplikace. Ptá se, kam je klíč routovaný; nerozhoduje o tom.
 kreslí tytéž tři objekty, aktivní položku pozná z právě vykreslované routy a žádný
 vlastní stav nedrží. To výše je pro aplikaci, která si kreslí vlastní rám.
 
-## Která položka je aktivní
-
-Jedno čtení požadavku, postavené jednou při renderu stránky a předané každému
-řádku: `ActiveNavigation`. Rozhodují tři pravidla, vyhrává první odpověď.
-
-1. **Co položka deklarovala.** `activeWhen()` níž. Nic dalšího se neptá.
-2. **Její registrovaný klíč**, proti klíči vykreslované routy. Tohle drží řádek
-   *Objednávky* rozsvícený i na `wire.orders.edit`: menu zná resource, ne to,
-   na které z jeho stránek stojíte.
-3. **Její URL**, na přesnou shodu — lomítko na konci a relativní URL se
-   normalizují pryč, query string ne. Dvě položky nad jedním seznamem, *Vše* a
-   *Archiv*, jsou dvě položky.
-
-`aria-current` čte totéž a dělí to na dvě: `page` pro položku, jejíž URL *je*
-vykreslovaná URL, a `true` pro větev, uvnitř které stojíte. To není puntičkářství
-— řádek resource zůstává aktivní i na jeho editační stránce a [záložky
-záznamu](pages.md#ostatni-stranky-zaznamu) nad formulářem už říkají „tohle je
-stránka, na které jste“.
-
-### Když je konvence vedle
-
-Pravidlo 3 **není** shoda na prefix, a to vědomě. Prefixové pravidlo by
-rozsvítilo `/settings` na `/settings/general/edit` — což by chtěl každý — a
-stejně tak by rozsvítilo položku *Domů*, mířící na vlastní cestu shellu, na
-každé stránce pod ní, napořád, protože odsud nejde poznat sekci od kořene. Řádek,
-který svítí vždycky, je hlasitější vada než řádek, který nesvítí, i když by mohl.
-
-Řekne to tedy položka, která to ví, a dostane přesně to, co myslela:
-
-```php
-NavigationItem::make('Settings')
-    ->url(route('settings.general'))
-    ->activeWhen('settings/*');          // a každá stránka pod ní
-```
-
-Vzor se porovnává s aktuální **cestou** i s aktuálním **jménem routy**, takže
-fungují obě čtení téhož záměru:
-
-```php
-->activeWhen('admin.settings.*');                                  // vzor na jméno routy
-->activeWhen(['orders/*', 'invoices/*']);                          // několik
-->activeWhen(fn (ActiveNavigation $active): bool => $active->page === 'edit');
-```
-
-Deklarace konvenci **nahrazuje**, nepřidává se k ní — což je to jediné, díky
-čemu jde větu „tady nikdy aktivní“ vůbec napsat.
-
-## Změna menu, které jste neregistrovali
-
-Instalace [modulu](modules.md) dá jeho položky do menu a aplikace je upraví přes
-[hook `navigation.building`](../core/plugins/hooks.md), místo aby ten modul
-neinstalovala:
-
-```php
-$manager->hook(Hook::NavigationBuilding, function (NavigationBuildingPayload $payload) {
-    unset($payload->items['media']);                                     // [tl! focus]
-    $payload->items['docs'] = NavigationItem::make('Docs')->url('/docs')->sort(90); // [tl! focus]
-
-    return $payload;
-}, for: 'admin');
-```
-
-Běží nad **plochým klíčovaným seznamem**, před seskupením a seřazením, takže krmí
-`navigation()` i `items()` — hook jen v jednom z nich by nechal sidebar a command
-paletu neshodnout se na tom, co v menu je. Klíče zachovejte: právě z nich dělá
-konzument odkaz. Řadit tady je zbytečná práce, menu stejně seřadí `sort()` položky.
-
-`for:` pojmenuje **zónu** — jedinou identitu, kterou menu má: nepatří k žádné
-komponentě a neukazuje jednu registrovanou třídu. Menu stavěné bez zóny žádné
-zúžení nenese, takže zúžený callback vynechá.
-
 ## NavigationItem API
 
 | Metoda | Vrací | Účel |
@@ -310,6 +439,9 @@ zúžení nenese, takže zúžený callback vynechá.
 | `badge(mixed $badge, string\|Closure\|null $color = null)` | `self` | Počet nebo krátký text vedle popisku, volitelně s barvou |
 | `url(string\|Closure\|null $url)` | `self` | Explicitní cíl, který vždycky vyhraje nad routovaným |
 | `children(array\|Closure $children)` | `self` | Položky pod touhle — jedna úroveň, filtrované a seřazené při čtení |
+| `parent(?string $parent)` | `self` | Položka, pod kterou tahle sedí — registrovaný klíč nebo třída pod ním registrovaná (`class-string\|string\|null`). `Workspace::navigation()` ji tam přesune |
+| `key(?string $key)` | `self` | Klíč, pod kterým byla položka registrovaná. `Workspace` ho nastaví každé položce; ta, která už nějaký nese, si ho nechá |
+| `withAdoptedChildren(array $children): self` | `self` | **Kopie** nesoucí položky, které tuhle jmenovaly jako rodiče — volá ji `Workspace`, za vlastní `children()` položky |
 | `activeWhen(Closure\|array\|string\|null $activeWhen)` | `self` | Kdy položka platí za stránku, na které stojíte, když je konvence vedle: vzory na cestu nebo jméno routy, nebo Closure s `ActiveNavigation`. Konvenci **nahrazuje** |
 | `visible(bool\|Closure $condition = true)` / `hidden(bool\|Closure $condition = true)` | `self` | Jestli je položka v menu vůbec |
 | `getLabel(): ?string` | `string\|null` | Vyhodnocený text, nebo `null`, když ji nic nepojmenovalo |
@@ -320,6 +452,8 @@ zúžení nenese, takže zúžený callback vynechá.
 | `getBadge(): ?string` | `string\|null` | Badge, vyhodnocený při **každém** čtení, nikdy necachovaný |
 | `getBadgeColor(): ?string` | `string\|null` | Jeho barva, nebo `null` pro výchozí konzumenta |
 | `getUrl(): ?string` | `string\|null` | Explicitní URL, jinak routované, jinak `null` |
+| `getParent(): ?string` | `string\|null` | Klíč rodiče, třída už na něj převedená |
+| `getKey(): ?string` | `string\|null` | Registrovaný klíč, nebo `null` u ručně psaného dítěte |
 | `getChildren(): array` | `array<int, NavigationItem>` | Viditelné děti v pořadí `sort()` |
 | `hasChildren(): bool` | `bool` | Jestli je řádek rozbalovátko místo obyčejného odkazu |
 | `isActiveWhen(ActiveNavigation $active): ?bool` | `bool\|null` | Vlastní odpověď položky, nebo `null`, když žádnou nedeklarovala — trojhodnotové, aby deklarované „ne“ nepropadlo do konvencí |
@@ -375,8 +509,8 @@ Singleton v kontejneru, ve kterém deklarované skupiny žijí. `Workspace` z n�
 
 | Metoda | Vrací | Účel |
 | --- | --- | --- |
-| `navigation(?string $zone = null, bool $linkedOnly = false)` | `array<string, NavigationGroup>` | Menu: skupiny v pořadí, každá se svými položkami |
-| `items(?string $zone = null, bool $linkedOnly = false)` | `array<string, NavigationItem>` | Totéž menu ploše, bez nadpisů |
+| `navigation(?string $zone = null, bool $linkedOnly = false)` | `array<string, NavigationGroup>` | Menu: skupiny v pořadí, každá se svými položkami, s dodrženým každým `parent()` |
+| `items(?string $zone = null, bool $linkedOnly = false)` | `array<string, NavigationItem>` | Totéž menu ploše, bez nadpisů — a bez zanoření, takže každá položka je vlastní řádek |
 | `registered()` | `array<string, class-string>` | Každá třída za menu, ať má položku nebo ne |
 
 ## Catalog API

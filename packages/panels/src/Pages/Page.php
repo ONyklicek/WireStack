@@ -12,6 +12,7 @@ use Livewire\Component;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
+use NyonCode\WireCore\Foundation\Routing\Concerns\InteractsWithPageUrls;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
 use NyonCode\WirePanels\Exceptions\ResourcePageException;
@@ -48,8 +49,12 @@ use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
  *   protected static ?string $navigationIcon = 'outline:view-columns';
  *   protected static ?string $navigationGroup = 'work';
  *   protected static int $navigationSort = 30;
+ *   protected static ?string $navigationParent = BoardsResource::class;   // under another entry, by class or key
  *   protected static ?string $permission = 'tasks.view';     // the route's can:, and hides the entry
  *   protected static bool $shouldRegisterNavigation = false;  // routed, not in the menu
+ *
+ * Linking to it is `TaskBoard::url()` ({@see InteractsWithPageUrls}), with any
+ * further parameters landing in the query string.
  *
  * It can still be routed from an owner's `pages()` or mounted by hand instead.
  * A trail is opted into by implementing `ProvidesBreadcrumbs`; a page inside
@@ -62,6 +67,7 @@ use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
 abstract class Page extends Component implements HasHeaderActions, ProvidesNavigation, ProvidesPages
 {
     use HostsPageActions;
+    use InteractsWithPageUrls;
     use InteractsWithPageWidgets;
 
     /** The view the page's content is drawn from. */
@@ -80,6 +86,9 @@ abstract class Page extends Component implements HasHeaderActions, ProvidesNavig
     protected static ?string $navigationGroup = null;
 
     protected static int $navigationSort = 100;
+
+    /** The entry this page sits under — a registered key or its class; null for none. */
+    protected static ?string $navigationParent = null;
 
     /** The ability the route requires — its `can:` middleware — and the menu entry with it. */
     protected static ?string $permission = null;
@@ -119,6 +128,7 @@ abstract class Page extends Component implements HasHeaderActions, ProvidesNavig
             ->icon(static::$navigationIcon)
             ->group(static::$navigationGroup)
             ->sort(static::$navigationSort)
+            ->parent(static::$navigationParent)
             ->visible(static fn (): bool => static::$shouldRegisterNavigation
                 && (static::$permission === null || Gate::allows(static::$permission)));
     }
