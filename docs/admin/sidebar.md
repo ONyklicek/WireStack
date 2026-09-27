@@ -134,6 +134,41 @@ leaves it looking like itself.
 `config('wire-admin.navigation.filter')` is `auto` — shown from
 `filter_threshold` rows up, children counted — `always` or `never`.
 
+## Pinned And Recent
+
+Every top-level row carries a pin, shown on hover. Pinning puts a copy of the
+entry in a *Pinned* section above the groups — the row itself stays in its
+group — and the section beside it, *Recent*, lists the last pages opened, most
+recent first, five at most.
+
+**Only where something keeps them.** Pins and recent pages are stored through
+the same preference driver a table's columns use, one bag per person per
+[zone](../panels/routing.md#zones). The default driver is `null`, which keeps
+nothing — and a pin that silently does nothing is worse than no pin, so with the
+`null` driver neither the pins nor the section are drawn. Choose one in
+`config/wire-core.php`:
+
+```php
+'preferences' => [
+    'default' => 'database',   // or 'session' — pins then last as long as the session
+    'guest' => 'session',
+],
+```
+
+The rest is decided for you:
+
+- **A stored key is never drawn from storage.** What is shown is the stored
+  keys intersected with the menu this person sees now, so a pinned resource that
+  was uninstalled, hidden from them or not routed in this zone is simply absent.
+- **Recent never lists the page you are on**, nor anything already pinned.
+- **Recent is written as a page mounts** (`page.mounting`), never while the menu
+  draws: a request that renders a sidebar does not write. A page that does not
+  dispatch that hook — a page of your own that composes no resource page — is
+  not remembered, and that is visible in the list rather than silently wrong.
+- The section is the one part of the menu that is a Livewire component, so a
+  pin shows up at once, without a reload; the rows learn their own pinned state
+  back from the event it answers with.
+
 ## The Keyboard
 
 The shell settles what focus does, so a keyboard user is never left behind a

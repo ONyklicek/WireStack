@@ -127,6 +127,40 @@ zužuje seznam, na který už se díváte, a nechává ho vypadat jako on sám.
 `config('wire-admin.navigation.filter')` je `auto` — ukáže se od
 `filter_threshold` řádků výš, děti se počítají —, `always` nebo `never`.
 
+## Připnuté a nedávné
+
+Každý řádek nejvyšší úrovně nese špendlík, vidět při najetí myší. Připnutí dá
+kopii položky do sekce *Připnuté* nad skupinami — řádek sám zůstane ve své
+skupině — a sekce vedle, *Nedávné*, vypisuje naposledy otevřené stránky, od
+nejnovější, nejvýš pět.
+
+**Jen tam, kde je něco uchová.** Připnuté a nedávné se ukládají přes stejný
+driver preferencí jako sloupce tabulky, jeden pytlík na člověka a
+[zónu](../panels/routing.md#zony). Výchozí driver je `null`, který neuchová nic —
+a špendlík, který potichu nic nedělá, je horší než žádný, takže s driverem `null`
+se nevykreslí ani špendlíky, ani sekce. Zvolte ho v `config/wire-core.php`:
+
+```php
+'preferences' => [
+    'default' => 'database',   // nebo 'session' — připnuté pak vydrží jen do konce session
+    'guest' => 'session',
+],
+```
+
+Zbytek je rozhodnutý za vás:
+
+- **Uložený klíč se nikdy nekreslí přímo z úložiště.** Ukazuje se průnik
+  uložených klíčů s menu, které člověk právě vidí, takže připnutý resource, který
+  byl odinstalovaný, je mu skrytý nebo není routovaný v této zóně, prostě chybí.
+- **Nedávné nikdy nevypíše stránku, na které jste**, ani nic, co už je připnuté.
+- **Nedávné se zapisuje při mountu stránky** (`page.mounting`), nikdy při kreslení
+  menu: požadavek, který vykresluje sidebar, nezapisuje. Stránka, která ten hook
+  nedispatchuje — vlastní stránka, která neskládá žádnou stránku resource —, se
+  nezapamatuje, a to je v seznamu vidět, ne potichu špatně.
+- Sekce je jediná část menu, která je Livewire komponenta, takže připnutí se
+  projeví hned, bez přenačtení; řádky se o svém stavu dozvědí z události, kterou
+  sekce odpoví.
+
 ## Klávesnice
 
 Shell rozhoduje, co dělá fokus, takže uživatel klávesnice nikdy nezůstane za

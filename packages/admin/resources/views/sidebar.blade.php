@@ -124,6 +124,10 @@
             </div>
         @endif
 
+        @if ($pins)
+            @livewire('wire-admin.nav-pins', ['zone' => $zone, 'current' => $activeKey, 'linkedOnly' => $linkedOnly], key('wire-admin-nav-pins'))
+        @endif
+
         @forelse ($groups as $group)
             {{-- A collapsible group carries its own open state, keyed by the group
                  slug so two menus in one application never share one. Restored

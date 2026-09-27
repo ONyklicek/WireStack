@@ -68,6 +68,11 @@ resource pages and its own chrome simply does not install this (ADR 0028).
   panel). Below `lg` the drawer is still the menu (`<x-wire-admin::sidebar :drawer-only="true">`), so the bar's
   names are `admin-topnav-*`, never `admin-nav-*`. No rail toggle or ⌘B in that shape.
 @endverbatim
+- **Pins and recent pages are `NavigationMemory`** (wire-core, over the `PreferenceDriver` — `navigation[:zone]`
+  bag of keys), drawn by the one Livewire piece of the menu, `wire-admin.nav-pins`. Offered only when
+  `stores()` (never over the `null` driver); keys are intersected with the current `Workspace::items()`, never
+  drawn from storage; recent is written on `page.mounting` only, never while the menu renders. A row's pin
+  dispatches `wire-admin-pin`; the section answers `wire-admin-pinned`. Never give pins a store of their own.
 - **Focus is the shell's**: the phone drawer is `x-trap`ped while open (first row focused, focus returned to
   the opener), and `<main>` has `tabindex="-1"` for the skip link. A custom drawer must keep both.
 - **An unrouted entry keeps its row and loses its link** (`aria-disabled`), which is the honest picture of a

@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 use NyonCode\WireCore\Core\Resources\Navigation\ActiveNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationMemory;
 use NyonCode\WireCore\Core\Resources\Workspace;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 
@@ -144,8 +145,14 @@ class Sidebar extends Component
     public function render(): View
     {
         $groups = $this->groups();
+        $memory = app(NavigationMemory::class);
+        $pins = $memory->stores();
 
         return view('wire-admin::sidebar', [
+            // Asked once for the whole menu: a pin in an application that keeps
+            // nothing would be a button that silently does nothing.
+            'pins' => $pins,
+            'pinnedKeys' => $pins ? $memory->pinned($this->zone) : [],
             'groups' => $groups,
             'active' => $this->active(),
             'filter' => $filter = $this->showsFilter($groups),

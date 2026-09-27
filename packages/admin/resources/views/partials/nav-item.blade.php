@@ -104,7 +104,7 @@
             x-on:keydown.escape="open && (dismiss(), $refs.trigger?.focus())"
             data-testid="admin-nav-row" @wireEl('admin-nav-row')
         @endif
-        class="relative"
+        class="group/row relative"
     >
     <{{ $children ? 'button' : 'a' }}
         @if (! $isChild) x-ref="trigger" @endif
@@ -234,6 +234,34 @@
             >{!! icon('outline:chevron-down', 'h-4 w-4 rtl:-scale-x-100') !!}</span>
         @endif
     </{{ $children ? 'button' : 'a' }}>
+
+    {{-- The pin, beside the row rather than inside it: a button inside a link
+         is not a thing HTML allows. Only on a registered top-level row, only
+         where something keeps pins ($pins, asked once by the sidebar), and not
+         in the rail. It asks the Livewire section above the menu to pin, and
+         learns its own state back from the event that section answers with —
+         the row itself is Blade and does not redraw. --}}
+    @if (($pins ?? false) && isset($itemKey) && ! $isChild)
+        <button
+            type="button"
+            data-rail-hide
+            x-data="{ pinned: @js(in_array($itemKey, $pinnedKeys ?? [], true)) }"
+            x-on:wire-admin-pinned.window="pinned = $event.detail.keys.includes(@js($itemKey))"
+            x-on:click="$dispatch('wire-admin-pin', { key: @js($itemKey) })"
+            x-bind:aria-pressed="pinned ? 'true' : 'false'"
+            x-bind:title="pinned ? @js(__('wire-admin::messages.unpin')) : @js(__('wire-admin::messages.pin'))"
+            aria-label="{{ __('wire-admin::messages.pin') }}: {{ $item->getLabel() }}"
+            data-testid="admin-nav-pin" @wireEl('admin-nav-pin')
+            data-resource="{{ $itemKey }}"
+            x-bind:class="pinned ? 'opacity-100 text-primary-600 dark:text-primary-400' : 'opacity-0 text-gray-400'"
+            @class([
+                'absolute top-1/2 -translate-y-1/2 rounded-md bg-white p-1 opacity-0 transition group-hover/row:opacity-100 hover:text-gray-700 focus:opacity-100 dark:bg-gray-900 dark:hover:text-gray-200',
+                // Clear of the disclosure arrow on a row that has one.
+                'end-8' => $children,
+                'end-1' => ! $children,
+            ])
+        >{!! icon('outline:bookmark', 'h-4 w-4') !!}</button>
+    @endif
 
         @if (! $isChild)
             {{-- What the rail took away, given back beside the column.
