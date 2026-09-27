@@ -110,6 +110,41 @@ Two more things the shell settles for you, each of which was once wrong:
 - The rail is a **desktop** shape. Below `lg` the same element is a drawer, so a
   rail collapsed on a laptop does not follow the menu onto a phone.
 
+## Filtering The Menu
+
+Once a menu holds twelve rows or more, a field sits above it. Typing hides the
+rows whose label does not contain the term and keeps the structure around the
+ones that do: a matching child stays under its parent, with the parent's submenu
+open; a folded group holding a match opens while you filter; a group with nothing
+left in it goes; and nothing matching says so rather than leaving an empty
+column. The number of matches is announced to a screen reader.
+
+It is **not a second search**. ⌘K searches records, commands and the menu, and
+leads somewhere; the filter narrows the list you are already looking at and
+leaves it looking like itself.
+
+- `/` from anywhere on the page puts the caret in it, unless the caret is already
+  in a field.
+- Escape clears it and puts focus on the first row.
+- A page change clears it — a filter that followed you would be a menu with half
+  its rows missing and nothing on the screen saying why.
+- It is hidden in the rail, where 64 pixels have no room for a field and ⌘K is
+  the answer.
+
+`config('wire-admin.navigation.filter')` is `auto` — shown from
+`filter_threshold` rows up, children counted — `always` or `never`.
+
+## The Keyboard
+
+The shell settles what focus does, so a keyboard user is never left behind a
+layer they cannot see:
+
+- **The phone drawer keeps Tab inside it** while it is open, starts on the first
+  menu row, and hands focus back to the button that opened it however it
+  closes — Escape, the dimming layer, the close button or a link.
+- **The skip link lands in the content.** `<main>` takes `tabindex="-1"`, so the
+  link moves focus there rather than only scrolling to it.
+
 ## Zones
 
 A [zone](../panels/routing.md#zones) is a route group's name prefix, and the shell needs

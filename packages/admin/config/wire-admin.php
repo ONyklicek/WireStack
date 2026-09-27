@@ -45,4 +45,23 @@ return [
         'url' => null,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Navigation
+    |--------------------------------------------------------------------------
+    |
+    | `filter` puts a text field over the menu that hides the rows whose label
+    | does not match, keeping the groups and submenus around the ones that do.
+    | `auto` shows it once the menu holds `filter_threshold` entries or more —
+    | a filter over six rows is a field in the way. `always` and `never` do
+    | what they say. It is not a second search: ⌘K searches records and
+    | commands, this narrows the list you are looking at.
+    |
+    */
+    'navigation' => [
+        'filter' => env('WIRE_ADMIN_NAV_FILTER', 'auto'),
+
+        'filter_threshold' => 12,
+    ],
+
 ];

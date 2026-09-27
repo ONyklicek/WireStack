@@ -55,6 +55,13 @@ resource pages and its own chrome simply does not install this (ADR 0028).
 - **Zone and active key are read at page render, in the component constructor** — never re-derived per render.
   Inside a Livewire update `Route::currentRouteName()` is `livewire.update`, so a re-derived answer is right
   once and null forever after, while rendering perfectly (ADR 0027).
+- **The menu filter is `wire-admin.navigation.filter`** (`auto` from `filter_threshold` = 12 rows, `always`,
+  `never`), driven by `wireNavFilter` in the package's own bundle (`dist/wire-admin-navigation.js`, delivered
+  by `@wireStackScripts`). Rows carry `data-nav-row` / `data-nav-child` / `data-nav-label` (lower-cased) and
+  groups `data-nav-group`; `$store.wireAdmin.filtering` opens folded groups and submenus while a term is typed.
+  It is not a second search — ⌘K is. Never add another filter or a second copy of the menu for it.
+- **Focus is the shell's**: the phone drawer is `x-trap`ped while open (first row focused, focus returned to
+  the opener), and `<main>` has `tabindex="-1"` for the skip link. A custom drawer must keep both.
 - **An unrouted entry keeps its row and loses its link** (`aria-disabled`), which is the honest picture of a
   half-routed catalogue; `:linked-only="true"` drops those rows instead.
 - **The mobile handle listens to the media query, not to `resize`** — the same query the `lg:` classes are

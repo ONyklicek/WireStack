@@ -76,6 +76,12 @@
                 // navigated to.
                 mobile: false,
 
+                // Whether the menu filter holds a term. Folded groups and
+                // submenus open while it does — a match inside a folded group
+                // is otherwise a match nobody can see, which reads as "nothing
+                // found". Written by the filter controller, read by the menu.
+                filtering: false,
+
                 // Whether the viewport is wide enough for a column at all. The
                 // rail is a *desktop* shape — below `lg` the same menu is a
                 // drawer — so a stored rail preference must not follow it onto a

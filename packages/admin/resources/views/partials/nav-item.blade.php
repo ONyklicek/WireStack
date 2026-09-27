@@ -54,6 +54,9 @@
 @php($panelId = 'wire-admin-flyout-'.md5(($itemKey ?? '').'|'.($item->getLabel() ?? '')))
 
 <li
+    data-nav-row
+    @if ($isChild) data-nav-child @endif
+    data-nav-label="{{ mb_strtolower($item->getLabel() ?? '') }}"
     @if ($children)
         x-data="{
             expanded: {{ $hasActiveChild ? 'true' : 'false' }},
@@ -349,7 +352,7 @@
                  inside the 64-pixel column, where `overflow-x-hidden` showed it
                  as a stray vertical rule and a sliver of a highlighted row. --}}
             data-rail-hide
-            x-show="expanded"
+            x-show="expanded || $store.wireAdmin?.filtering"
             x-cloak
             class="ms-[1.4rem] mt-0.5 space-y-0.5 border-s border-gray-200 ps-2 dark:border-gray-800"
         >

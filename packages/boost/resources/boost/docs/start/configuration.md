@@ -550,6 +550,17 @@ markup you write (see [The Admin Shell](../admin/overview.md)):
 Why there are two logo forms, and why the choice is made before the page paints:
 [Branding And Theme](../admin/branding.md#the-logo-in-the-rail).
 
+The menu has one switch of its own, the filter over it — what it does and why it
+is not a second search: [The Sidebar](../admin/sidebar.md#filtering-the-menu).
+
+```php
+// config/wire-admin.php
+'navigation' => [
+    'filter' => 'auto',        // 'auto' | 'always' | 'never'
+    'filter_threshold' => 12,  // 'auto' shows it from this many rows up
+],
+```
+
 ## Modules
 
 Each ready-made module publishes a config file of its own, and the keys are

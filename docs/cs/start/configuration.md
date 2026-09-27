@@ -544,6 +544,17 @@ který si napíšete (viz [Admin shell](../admin/overview.md)):
 Proč jsou podoby loga dvě a proč se volí dřív, než se stránka vykreslí:
 [Branding a motiv](../admin/branding.md#logo-v-liste).
 
+Menu má jeden vlastní přepínač, filtr nad sebou — co dělá a proč to není druhé
+hledání: [Sidebar](../admin/sidebar.md#filtrovani-menu).
+
+```php
+// config/wire-admin.php
+'navigation' => [
+    'filter' => 'auto',        // 'auto' | 'always' | 'never'
+    'filter_threshold' => 12,  // 'auto' ho ukáže od tolika řádků výš
+],
+```
+
 ## Moduly
 
 Každý hotový modul publikuje vlastní config a jeho klíče jsou popsané na stránce

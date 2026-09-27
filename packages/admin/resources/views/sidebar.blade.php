@@ -84,7 +84,46 @@
         id="wire-admin-nav"
         aria-label="{{ __('wire-admin::messages.navigation') }}"
         class="flex-1 overflow-x-hidden overflow-y-auto p-3"
+        @if ($filter)
+            x-data="wireNavFilter"
+            x-on:keydown.window="focusFromShortcut($event)"
+        @endif
     >
+        @if ($filter)
+            {{-- The filter. Hidden in the rail: 64 pixels have no room for a
+                 field, and ⌘K is the answer there. It narrows what is drawn and
+                 keeps it looking like itself; it is not a second search. --}}
+            <div data-rail-hide class="mb-4">
+                <label class="sr-only" for="wire-admin-nav-filter">{{ __('wire-admin::messages.filter') }}</label>
+                <div class="relative">
+                    <span class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-2.5 text-gray-400">{!! icon('outline:funnel', 'h-4 w-4') !!}</span>
+                    <input
+                        id="wire-admin-nav-filter"
+                        type="search"
+                        x-ref="filter"
+                        x-model="query"
+                        x-on:keydown.escape.stop.prevent="clear()"
+                        placeholder="{{ __('wire-admin::messages.filter') }}"
+                        autocomplete="off"
+                        data-testid="admin-nav-filter" @wireEl('admin-nav-filter')
+                        class="w-full rounded-lg border border-gray-200 bg-gray-50 py-1.5 ps-8 pe-7 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:bg-white focus:ring-1 focus:ring-primary-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:bg-gray-900"
+                    >
+                    <kbd x-show="query === ''" class="pointer-events-none absolute inset-y-0 end-2 my-auto h-5 rounded border border-gray-200 px-1.5 text-[11px] leading-5 text-gray-400 dark:border-gray-700">/</kbd>
+                </div>
+
+                {{-- Read by a screen reader as the list changes, in the
+                     translation's own plural for each count. --}}
+                <p class="sr-only" aria-live="polite" x-text="matches === null ? '' : (@js($filterMessages)[matches] ?? '')"></p>
+
+                <p
+                    x-show="matches === 0"
+                    x-cloak
+                    data-testid="admin-nav-filter-empty" @wireEl('admin-nav-filter-empty')
+                    class="px-3 pt-3 text-sm text-gray-400 dark:text-gray-500"
+                >{{ __('wire-admin::messages.filter_none') }}</p>
+            </div>
+        @endif
+
         @forelse ($groups as $group)
             {{-- A collapsible group carries its own open state, keyed by the group
                  slug so two menus in one application never share one. Restored
@@ -94,6 +133,7 @@
             <div
                 class="mb-5 last:mb-0"
                 data-testid="admin-nav-group" @wireEl('admin-nav-group')
+                data-nav-group
                 data-group="{{ $group->getKey() }}"
                 @if ($group->isCollapsible())
                     x-data="{
@@ -167,7 +207,7 @@
                 <ul
                     id="wire-admin-group-{{ $group->getKey() }}"
                     class="mt-1 space-y-0.5"
-                    @if ($group->isCollapsible()) x-show="open || $store.wireAdmin?.railed" x-collapse x-cloak @endif
+                    @if ($group->isCollapsible()) x-show="open || $store.wireAdmin?.filtering || $store.wireAdmin?.railed" x-collapse x-cloak @endif
                 >
                     @foreach ($group->getItems() as $key => $item)
                         @include('wire-admin::partials.nav-item', [

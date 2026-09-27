@@ -12,6 +12,8 @@
         "admin-nav-badge-dot",
         "admin-nav-child",
         "admin-nav-empty",
+        "admin-nav-filter",
+        "admin-nav-filter-empty",
         "admin-nav-flyout-label",
         "admin-nav-group",
         "admin-nav-heading",

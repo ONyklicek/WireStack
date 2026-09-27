@@ -13,6 +13,7 @@ use NyonCode\WireAdmin\Install\BuildFrontend;
 use NyonCode\WireAdmin\Install\InstallOutcome;
 use NyonCode\WireAdmin\Install\InstallScaffold;
 use NyonCode\WireCore\Core\Resources\Workspace;
+use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 
 /**
@@ -36,6 +37,8 @@ use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
  */
 class WireAdminServiceProvider extends PackageServiceProvider
 {
+    public const ASSETS_PATH = __DIR__.'/../dist';
+
     /**
      * @throws \Exception
      */
@@ -54,8 +57,18 @@ class WireAdminServiceProvider extends PackageServiceProvider
                 // and the sidebar both resolve services, and a component class
                 // is where that belongs rather than in a Blade file.
                 Blade::componentNamespace('NyonCode\\WireAdmin\\View', 'wire-admin');
+                Bundle::serve('wire-admin', self::ASSETS_PATH);
             })
             ->hasViews()
+            // The menu's own controllers — the filter, and the keyboard and the
+            // horizontal menu as they land. In the initial document through
+            // `@wireStackScripts`, which the layout already carries: a menu
+            // controller that arrived late would be the one bundle a cached
+            // Back navigation initialises without (ADR 0024).
+            ->hasAssets('dist', entries: [
+                Bundle::make('wire-admin-navigation.js'),
+            ])
+            ->hasAssetFallback(Bundle::servedByRoute('wire-admin'))
             ->hasTranslations()
             // Brand only. Everything else the shell does is a slot, and this is
             // the one thing a slot cannot carry: the logo has to be known by the

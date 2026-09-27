@@ -106,6 +106,38 @@ Další dvě věci, které shell řeší za vás a které kdysi fungovaly špatn
 - Lišta je **desktopový** tvar. Pod `lg` je tentýž prvek zásuvka, takže lišta
   sbalená na notebooku menu na telefon nenásleduje.
 
+## Filtrování menu
+
+Jakmile má menu dvanáct řádků nebo víc, sedí nad ním pole. Psaní skryje řádky,
+jejichž popisek hledaný text neobsahuje, a strukturu kolem těch, které ano,
+zachová: odpovídající dítě zůstane pod rodičem s otevřeným submenu, sbalená
+skupina se shodou se při filtrování otevře, skupina, ve které nic nezbylo,
+zmizí, a když neodpovídá nic, řekne to, místo aby nechala prázdný sloupec. Počet
+shod se ohlásí čtečce obrazovky.
+
+**Není to druhé hledání.** ⌘K hledá záznamy, příkazy i menu a někam vede; filtr
+zužuje seznam, na který už se díváte, a nechává ho vypadat jako on sám.
+
+- `/` odkudkoli na stránce do něj dá kurzor, pokud už kurzor není v jiném poli.
+- Escape ho vymaže a dá fokus na první řádek.
+- Přechod na jinou stránku ho vymaže — filtr, který by vás následoval, je menu
+  s polovinou řádků pryč a ničím na obrazovce, co by řeklo proč.
+- V liště je skrytý: 64 pixelů nemá na pole místo a odpovědí je tam ⌘K.
+
+`config('wire-admin.navigation.filter')` je `auto` — ukáže se od
+`filter_threshold` řádků výš, děti se počítají —, `always` nebo `never`.
+
+## Klávesnice
+
+Shell rozhoduje, co dělá fokus, takže uživatel klávesnice nikdy nezůstane za
+vrstvou, kterou nevidí:
+
+- **Šuplík na telefonu drží Tab uvnitř**, dokud je otevřený, začne na prvním
+  řádku menu a fokus vrátí tlačítku, které ho otevřelo, ať se zavře jakkoli —
+  Escapem, ztmavenou vrstvou, zavíracím tlačítkem nebo odkazem.
+- **Odkaz pro přeskočení vede do obsahu.** `<main>` má `tabindex="-1"`, takže
+  odkaz přesune fokus, a ne jen odroluje.
+
 ## Zóny
 
 [Zóna](../panels/routing.md#zony) je name prefix route skupiny a shell k jejímu
