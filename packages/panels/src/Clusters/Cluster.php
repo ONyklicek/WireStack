@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace NyonCode\WirePanels\Clusters;
 
-use Illuminate\Contracts\View\View;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\ActiveNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
@@ -63,7 +62,13 @@ abstract class Cluster extends Page
                 && ($active->key === static::key() || isset($members[$active->key])));
     }
 
-    /** Off to the first member this person may open. */
+    /**
+     * Off to the first member this person may open.
+     *
+     * Every path out of here redirects or aborts, so the page never renders and
+     * declares no view: were it ever drawn, `Page::render()` would refuse it for
+     * having none, which is the loud failure that case deserves.
+     */
     public function mount(): void
     {
         $navigation = app(ClusterNavigation::class);
@@ -76,12 +81,6 @@ abstract class Cluster extends Page
         }
 
         $this->redirect($landing);
-    }
-
-    /** Never reached on a full page load — the mount above redirects first. */
-    public function render(): View
-    {
-        return view('wire-panels::clusters.cluster');
     }
 
     /**

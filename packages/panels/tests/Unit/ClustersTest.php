@@ -23,6 +23,7 @@ use NyonCode\WirePanels\Enums\SubNavigationPosition;
 use NyonCode\WirePanels\Exceptions\ClusterException;
 use NyonCode\WirePanels\Pages\Page;
 use NyonCode\WirePanels\Pages\PageRegistry;
+use NyonCode\WirePanels\Resources\Contracts\NestedResource;
 
 /*
  * A cluster: one section, one menu entry, one prefix, and the way across
@@ -303,4 +304,51 @@ it('refuses a member of a cluster nobody registered', function () {
 
 it('answers nothing for a page outside any cluster', function () {
     expect(app(ClusterNavigation::class)->for(ClListPage::class, null))->toBeNull();
+});
+
+class ClRateResource implements DescribesResource, NestedResource, ProvidesPages
+{
+    use DescribesRecords;
+
+    public static function modelClass(): ?string
+    {
+        return null;
+    }
+
+    public static function key(): string
+    {
+        return 'rates';
+    }
+
+    public static function parentResource(): string
+    {
+        return ClCurrencyResource::class;
+    }
+
+    public static function parentRelationship(): string
+    {
+        return 'rates';
+    }
+
+    public static function pages(): array
+    {
+        return ['index' => ClListPage::class];
+    }
+}
+
+it('draws a nested resource inside its parent cluster, marking the parent', function () {
+    app(ResourceRegistry::class)->register(ClRateResource::class);
+    clRoutes();
+
+    $navigation = app(ClusterNavigation::class)->for(ClRateResource::class, null);
+
+    expect(ClRateResource::url(parameters: ['parent' => 3]))->toBe(url('admin/settings/currencies/3/rates'))
+        ->and($navigation?->currentKey)->toBe('currencies');
+});
+
+it('mounts as a redirect when driven as a component', function () {
+    clRoutes();
+    clSignIn(['currencies.view']);
+
+    Livewire\Livewire::test(ClSettings::class)->assertRedirect(url('admin/settings/currencies'));
 });
