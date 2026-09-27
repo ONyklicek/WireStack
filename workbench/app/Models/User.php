@@ -15,6 +15,8 @@ use Laravel\Passkeys\PasskeyAuthenticatable;
 use NyonCode\PermissionExtended\Traits\HasRoles;
 use NyonCode\WireCore\Foundation\Contracts\HasAvatar;
 use NyonCode\WireModuleUsers\Concerns\InteractsWithAvatar;
+use NyonCode\WirePanels\Concerns\InteractsWithTenants;
+use NyonCode\WirePanels\Contracts\HasTenants;
 use Workbench\Database\Factories\UserFactory;
 
 // `MustVerifyEmail` because Fortify's verification feature is on in this
@@ -22,13 +24,13 @@ use Workbench\Database\Factories\UserFactory;
 // confirm, and both the link screen and the code screen send the visitor home —
 // which is the shape an application that turned the feature on and forgot this
 // interface is in.
-class User extends Authenticatable implements HasAvatar, MustVerifyEmail, PasskeyUser
+class User extends Authenticatable implements HasAvatar, HasTenants, MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     // `HasRoles` is this stack's, from nyoncode/laravel-permission-extended, and
     // not the Spatie trait it extends: the module's role screens look for exactly
     // this one, so a model on bare Spatie is deliberately not detected.
-    use HasFactory, HasRoles, InteractsWithAvatar, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasFactory, HasRoles, InteractsWithAvatar, InteractsWithTenants, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /** @var list<string> */
     protected $hidden = ['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'];

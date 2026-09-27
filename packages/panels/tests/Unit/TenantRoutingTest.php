@@ -14,15 +14,22 @@ use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
+use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Core\Tenancy\Concerns\BelongsToTenant;
 use NyonCode\WireCore\Core\Tenancy\CurrentTenant;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\Zone;
+use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WirePanels\Concerns\InteractsWithTenants;
 use NyonCode\WirePanels\Contracts\HasTenants;
 use NyonCode\WirePanels\Exceptions\TenancyConfigurationException;
 use NyonCode\WirePanels\Http\Middleware\IdentifyTenant;
 use NyonCode\WirePanels\Routing\ConfiguredRoutes;
+use NyonCode\WirePanels\Routing\TenantEntry;
+use NyonCode\WirePanels\Routing\ZoneDirectory;
+use NyonCode\WirePanels\Tenancy\TenantSwitcher;
 
 /*
  * A tenant in the URL (ADR 0040 §3–5).
@@ -81,7 +88,7 @@ class TrInvoiceList extends Component
     public function render(): string
     {
         $numbers = TrInvoice::query()->pluck('number')->implode(',');
-        $zone = NyonCode\WireCore\Foundation\Routing\Zone::current() ?? '-';
+        $zone = Zone::current() ?? '-';
         $url = TrInvoiceResource::url('edit', 7);
         $parameters = implode(',', array_keys(request()->route()?->parameters() ?? []));
 
@@ -89,8 +96,13 @@ class TrInvoiceList extends Component
     }
 }
 
-class TrInvoiceResource implements DescribesResource, ProvidesPages
+class TrInvoiceResource implements DescribesResource, ProvidesNavigation, ProvidesPages
 {
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make();
+    }
+
     use DescribesRecords;
 
     public static function modelClass(): ?string
@@ -321,3 +333,153 @@ it('refuses membership when no tenant model is configured', function () {
 
     $this->user->tenants();
 })->throws(TenancyConfigurationException::class, 'names no Eloquent model');
+
+// ─── The zone's own address, and the switcher (ADR 0040 §7) ──────────────────
+
+function trJoin(TrUser $user, string $slug): void
+{
+    $user->tenants()->attach(TrCompany::query()->firstOrCreate(['slug' => $slug]));
+}
+
+function trEntry(): void
+{
+    Route::middleware(['web'])->name('app.')->group(fn () => Route::wireTenantEntry('app', 'app/{tenant}'));
+    trRoutes();
+}
+
+it('sends the bare zone address to the person own company, and on to its first page', function () {
+    trEntry();
+    $this->actingAs($this->user);
+
+    $this->get('/app')->assertRedirect(url('app/acme'));
+    $this->get('/app/acme')->assertRedirect(url('app/acme/tr-invoices'));
+});
+
+it('refuses someone with no company, or shows the page the application named', function () {
+    trEntry();
+    $this->actingAs(TrUser::query()->create(['name' => 'Nobody']));
+
+    $this->get('/app')->assertForbidden()->assertSee('You do not belong to any company yet.');
+
+    config()->set('wire-panels.routes.tenant_entry.view', 'tr-no-tenant');
+    View::addNamespace('tr', __DIR__);
+    file_put_contents(sys_get_temp_dir().'/tr-no-tenant.blade.php', '<p>Register a company</p>');
+    View::addLocation(sys_get_temp_dir());
+
+    $this->get('/app')->assertOk()->assertSee('Register a company');
+});
+
+it('asks a guest to sign in, and refuses a user model that knows no tenants', function () {
+    trEntry();
+
+    $this->getJson('/app')->assertUnauthorized();
+
+    $this->withoutExceptionHandling();
+    $this->actingAs(TrStranger::query()->create(['name' => 'Eve']));
+
+    expect(fn () => $this->get('/app'))->toThrow(TenancyConfigurationException::class);
+});
+
+it('registers the bare address for a config zone, in a path or at a domain root', function () {
+    config()->set('wire-panels.routes', [
+        'enabled' => true,
+        'middleware' => ['web'],
+        'zones' => [
+            'app' => ['prefix' => 'app', 'tenant' => 'path', 'only' => ['tr-invoices']],
+            'portal' => ['domain' => 'example.test', 'tenant' => 'domain', 'only' => ['tr-invoices']],
+        ],
+    ]);
+
+    app(ConfiguredRoutes::class)->register();
+    Route::getRoutes()->refreshNameLookups();
+
+    $path = Route::getRoutes()->getByName('app.wire.tenants');
+    $domain = Route::getRoutes()->getByName('portal.wire.tenants');
+
+    expect($path->uri())->toBe('app')
+        ->and($path->middleware())->not->toContain('wire.tenant')
+        ->and($path->defaults[TenantEntry::TARGET])->toBe('app/{tenant}')
+        ->and($domain->getDomain())->toBe('example.test')
+        ->and($domain->defaults[TenantEntry::TARGET])->toBe('//{tenant}.example.test')
+        // And that address is the zone's, so a zone picker offers it.
+        ->and(app(ZoneDirectory::class)->all())->toHaveKey('app');
+});
+
+it('offers every company, each on the same page, and marks the current one', function () {
+    trJoin($this->user, 'globex');
+    trRoutes();
+    Route::middleware(['web', 'wire.tenant'])->prefix('app/{tenant}')->name('app.')
+        ->get('/switch-probe', fn () => app(TenantSwitcher::class)->forRequest(request()))
+        ->name('wire.tr-invoices.index-probe');
+    $this->actingAs($this->user);
+
+    Route::getRoutes()->refreshNameLookups();
+
+    $onList = $this->get('/app/acme/switch-probe')->json();
+
+    expect($onList['current'])->toBe('acme')
+        ->and(collect($onList['tenants'])->pluck('url')->all())->toBe([url('app/acme/switch-probe'), url('app/globex/switch-probe')])
+        ->and(collect($onList['tenants'])->pluck('current')->all())->toBe([true, false]);
+});
+
+it('links a record page to the same list in another company, never the same record', function () {
+    trJoin($this->user, 'globex');
+    Route::middleware(['web', 'wire.tenant'])->prefix('app/{tenant}')->name('app.')->group(function (): void {
+        Route::wireResources();
+        Route::get('/probe/{record}', fn () => app(TenantSwitcher::class)->forRequest(request()))
+            ->name('wire.tr-invoices.probe');
+    });
+    Route::getRoutes()->refreshNameLookups();
+    $this->actingAs($this->user);
+
+    $urls = collect($this->get('/app/acme/probe/7')->json('tenants'))->pluck('url')->all();
+
+    expect($urls)->toBe([url('app/acme/tr-invoices'), url('app/globex/tr-invoices')]);
+});
+
+it('offers nothing to someone with one company, or outside a tenant', function () {
+    trRoutes();
+    Route::middleware(['web', 'wire.tenant'])->prefix('app/{tenant}')
+        ->get('/single-probe', fn () => ['switcher' => app(TenantSwitcher::class)->forRequest(request())]);
+    Route::middleware(['web'])->get('/outside-probe', fn () => ['switcher' => app(TenantSwitcher::class)->forRequest(request())]);
+    $this->actingAs($this->user);
+
+    expect($this->get('/app/acme/single-probe')->json('switcher'))->toBeNull();
+
+    app(CurrentTenant::class)->leave();
+
+    expect($this->get('/outside-probe')->json('switcher'))->toBeNull();
+});
+
+it('names a company by its label, or its route key without one', function () {
+    $switcher = app(TenantSwitcher::class);
+    $acme = TrCompany::query()->where('slug', 'acme')->first();
+
+    expect($switcher->label($acme))->toBe('acme')
+        ->and($switcher->label($acme->forceFill(['name' => 'Acme Ltd'])))->toBe('Acme Ltd');
+});
+
+it('puts the switcher in the top bar', function () {
+    expect(app(PageChrome::class)->views(PageChrome::TOPBAR))
+        ->toContain('wire-panels::tenancy.switcher');
+});
+
+it('falls back to coarser places on a record page when the list cannot be linked', function () {
+    trJoin($this->user, 'globex');
+    $probe = fn () => app(TenantSwitcher::class)->forRequest(request());
+
+    Route::middleware(['web'])->name('app.')->group(fn () => Route::wireTenantEntry('app', 'app/{tenant}'));
+    Route::middleware(['web', 'wire.tenant'])->prefix('app/{tenant}')->name('app.')->group(function () use ($probe): void {
+        // No list at all for `ghost`, and a list for `needy` that asks for a
+        // parameter a switch cannot supply.
+        Route::get('/ghost/{record}', $probe)->name('wire.ghost.view');
+        Route::get('/needy-list/{missing}', fn () => 'x')->name('wire.needy.index');
+        Route::get('/needy/{record}', $probe)->name('wire.needy.view');
+    });
+    Route::getRoutes()->refreshNameLookups();
+    $this->actingAs($this->user);
+
+    // No `wire.home` in this group either, so both land on the zone's own address.
+    expect(collect($this->get('/app/acme/ghost/7')->json('tenants'))->pluck('url')->all())->toBe([url('app'), url('app')])
+        ->and(collect($this->get('/app/acme/needy/7')->json('tenants'))->pluck('url')->all())->toBe([url('app'), url('app')]);
+});

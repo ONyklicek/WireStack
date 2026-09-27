@@ -74,6 +74,40 @@ cookie domain that covers the subdomains (`SESSION_DOMAIN=.example.com`). A
 value other than `path` or `domain`, or `domain` on a zone with no `domain`, is
 refused when the routes are registered.
 
+## The Zone's Own Address
+
+Every page of a tenant zone lives under a company, so `/app` on its own would
+be a 404 — and it is the address a person types and the one signing in lands
+on. It answers instead: to the person's `getDefaultTenant()`, and from there to
+the first page of that company they may open.
+
+```php
+Route::name('app.')->middleware(['web', 'auth'])
+    ->group(fn () => Route::wireTenantEntry('app', 'app/{tenant}'));   // [tl! focus]
+```
+
+The second argument is where a company's address is, with `{tenant}` where its
+key goes — `//{tenant}.example.com` for a domain zone. A config zone with a
+`tenant` key registers this by itself, at the prefix without the tenant or at
+the domain's root, named `{zone}.wire.tenants` — which is also what a zone picker
+offers for the zone.
+
+Someone with no company at all gets `wire-panels.routes.tenant_entry.view` when
+the application names one — the place to offer registering a company — and a
+403 that says why when it does not.
+
+## The Company Switcher
+
+Inside a company, the top bar of any shell that draws `PageChrome::TOPBAR` gets
+a switcher, from wire-panels. It lists the companies this person belongs to,
+each linked to **the same page** in that company — except on a record's page,
+where the link is the same resource's list: record 7 of one company is not a
+record of another, and switching would land on a 404. Nothing is drawn outside
+a company, or for someone with only one.
+
+A company is named by `wire-core.tenancy.label` (`name`), or by its route key
+when that is empty.
+
 ## The Tenant Model
 
 ```php

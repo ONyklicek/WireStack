@@ -93,6 +93,16 @@ return [
             'primary' => null,
             'view' => null,
         ],
+
+        /*
+        | A tenant zone's bare address (`app`, without a company) sends a person
+        | to their default company. One with no company at all gets this view
+        | — the place to offer registering one — or a 403 saying why when it
+        | is null. ADR 0040.
+        */
+        'tenant_entry' => [
+            'view' => null,
+        ],
     ],
 
     /*

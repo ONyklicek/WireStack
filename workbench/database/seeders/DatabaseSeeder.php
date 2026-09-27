@@ -11,9 +11,11 @@ use NyonCode\WireModuleUsers\Support\Permissions;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
+use Workbench\App\Models\Company;
 use Workbench\App\Models\Document;
 use Workbench\App\Models\GestureRow;
 use Workbench\App\Models\Invoice;
+use Workbench\App\Models\Project;
 use Workbench\App\Models\Task;
 use Workbench\App\Models\Team;
 use Workbench\App\Models\User;
@@ -181,6 +183,34 @@ class DatabaseSeeder extends Seeder
         // data, so a seeder nothing invokes is a driver that passes on whatever
         // was left in the database from the last time somebody remembered.
         $this->call(ModuleDemoSeeder::class);
+
+        $this->seedCompanies($amelia);
+    }
+
+    /**
+     * Three companies for the `tenants` zone (ADR 0040): the demo user belongs
+     * to two of them, so the switcher has something to switch between and the
+     * third is a URL she must be refused at.
+     */
+    private function seedCompanies(User $member): void
+    {
+        $projects = [
+            'acme' => ['Acme', ['Rocket skates', 'Portable hole', 'Giant magnet']],
+            'globex' => ['Globex', ['Hammock district', 'Monorail']],
+            'initech' => ['Initech', ['TPS reports']],
+        ];
+
+        foreach ($projects as $slug => [$name, $names]) {
+            $company = Company::query()->create(['slug' => $slug, 'name' => $name]);
+
+            foreach ($names as $project) {
+                Project::query()->create(['name' => $project, 'tenant_id' => $company->id]);
+            }
+
+            if ($slug !== 'initech') {
+                $member->tenants()->attach($company);
+            }
+        }
     }
 
     /**

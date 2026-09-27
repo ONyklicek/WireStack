@@ -165,6 +165,20 @@ final class ResourceRoutes
         return RouteFacade::get($uri, ZoneEntry::class)->name('wire.zones');
     }
 
+    /**
+     * A tenant zone's bare address: to the person's default tenant, or to
+     * `routes.tenant_entry.view` when they have none (ADR 0040 §7).
+     *
+     * @param  string  $uri  Where it answers — the zone's prefix without the tenant.
+     * @param  string  $to  The tenant's address, with `{tenant}` where its key goes: `app/{tenant}`, `//{tenant}.example.com`.
+     */
+    public static function tenantEntry(string $uri, string $to): Route
+    {
+        return RouteFacade::get($uri, TenantEntry::class)
+            ->defaults(TenantEntry::TARGET, $to)
+            ->name('wire.tenants');
+    }
+
     private static function groupDomain(): ?string
     {
         $domains = array_filter(array_column(RouteFacade::getFacadeRoot()->getGroupStack(), 'domain'));

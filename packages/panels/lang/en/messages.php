@@ -26,4 +26,6 @@ return [
     'list_tabs' => 'List views',
 
     'record_pages' => 'Record pages',
+    'no_tenant' => 'You do not belong to any company yet.',
+    'switch_tenant' => 'Switch company',
 ];

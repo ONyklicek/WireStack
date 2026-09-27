@@ -5,8 +5,11 @@
 PROPOSED — 2026-09-27. Requested by the repo owner after the Filament
 comparison ("a podpora Multi-Tenant?"); the five open choices were settled with
 the owner the same day (§ Decisions confirmed). Builds on ADR 0027 (zones),
-0028 (no panel object), 0039 (clusters) and the V2.4 tenant scope. Nothing here
-is implemented yet; §10 is the order it lands in.
+0028 (no panel object), 0039 (clusters) and the V2.4 tenant scope. §11 is the
+order it lands in; **steps 1–3 are implemented** (2026-09-27), driven by
+`verify-tenants` on the workbench's `tenants` zone. Landed beside them: a
+page's zone now survives a Livewire round trip too (`RememberPage` →
+`RenderedPage`), by the same persistent-middleware mechanism as the tenant.
 
 ## Decisions confirmed
 

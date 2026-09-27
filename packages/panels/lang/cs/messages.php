@@ -26,4 +26,6 @@ return [
     'list_tabs' => 'Pohledy seznamu',
 
     'record_pages' => 'Stránky záznamu',
+    'no_tenant' => 'Zatím nepatříte do žádné firmy.',
+    'switch_tenant' => 'Přepnout firmu',
 ];

@@ -193,6 +193,8 @@
         "panels-list-tabs",
         "panels-sub-nav",
         "panels-sub-nav-item",
+        "panels-tenant-switcher",
+        "panels-tenant-switcher-item",
         "polling-toggle",
         "profile-browser-sessions",
         "profile-delete-account",

@@ -527,6 +527,14 @@ foreach ($zoneMembership as $zone => $only) {
     });
 }
 
+// A tenant zone, for verify-tenants (ADR 0040): companies in the path, the
+// bare address sending the demo user to their first company, and the
+// projects of the company in the URL.
+Route::name('tenants.')->middleware(SignInDemoUser::class)->group(fn () => Route::wireTenantEntry('previews/tenants', 'previews/tenants/{tenant}'));
+Route::name('tenants.')->prefix('previews/tenants/{tenant}')->middleware([SignInDemoUser::class, 'wire.tenant'])->group(function (): void {
+    Route::wireResources(only: ['projects']);
+});
+
 // The admin zone's menu drawn as a bar under the header, for verify-topnav. Not
 // in $zoneMembership: it is the same zone's pages in the other shape, not a
 // third set of pages, and the zones preview below is about membership.

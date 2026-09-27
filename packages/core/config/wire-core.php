@@ -264,6 +264,10 @@ return [
         // membership from. Only a tenant zone needs them.
         'model' => null,
         'members_table' => 'tenant_user',
+
+        // The attribute a company is called by in the switcher; its route key
+        // when that is empty.
+        'label' => 'name',
     ],
 
     'plugins' => [

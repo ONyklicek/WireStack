@@ -16,6 +16,7 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
+use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
 use NyonCode\WirePanels\Http\Middleware\IdentifyTenant;
 use NyonCode\WirePanels\Http\Middleware\RememberPage;
@@ -100,6 +101,10 @@ class WirePanelsServiceProvider extends PackageServiceProvider
                 $this->app->make(Router::class)->aliasMiddleware(IdentifyTenant::ALIAS, IdentifyTenant::class);
                 Livewire::addPersistentMiddleware([IdentifyTenant::class, RememberPage::class]);
 
+                // The company switcher, in whatever shell draws the top bar. It
+                // renders nothing outside a tenant zone.
+                $this->app->make(PageChrome::class)->add('wire-panels::tenancy.switcher', PageChrome::TOPBAR, sort: -10);
+
                 // Once every route is loaded: a route file registers its
                 // routes from a provider's booted callback, and the one that
                 // replaces a page may come after the page.
@@ -162,6 +167,10 @@ class WirePanelsServiceProvider extends PackageServiceProvider
 
         Route::macro('wireZoneEntry', function (string $uri = '/'): RouteDefinition {
             return ResourceRoutes::zoneEntry($uri);
+        });
+
+        Route::macro('wireTenantEntry', function (string $uri, string $to): RouteDefinition {
+            return ResourceRoutes::tenantEntry($uri, $to);
         });
     }
 

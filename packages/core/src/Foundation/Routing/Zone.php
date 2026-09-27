@@ -166,8 +166,9 @@ final class Zone
         // address — the entry wire-panels routes at a group's root when no
         // landing page claims it. That one is about no resource, so it has a
         // zone and nothing else; without it here, the entry could not tell
-        // which zone it was answering for.
-        if (preg_match('/^(?<zone>.+\.)?wire\.(?:(?<key>[^.]+)\.(?<page>[^.]+)|home)$/', $routeName, $m) !== 1) {
+        // which zone it was answering for. `wire.tenants` is a tenant zone's
+        // address without a tenant (ADR 0040), the same kind of thing.
+        if (preg_match('/^(?<zone>.+\.)?wire\.(?:(?<key>[^.]+)\.(?<page>[^.]+)|home|tenants)$/', $routeName, $m) !== 1) {
             return [];
         }
 

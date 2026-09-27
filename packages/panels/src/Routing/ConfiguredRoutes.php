@@ -104,7 +104,10 @@ final readonly class ConfiguredRoutes implements RegistersPageRoutes
      */
     private function mount(?string $zone, array $config): void
     {
-        $config = $this->withTenant((string) $zone, $config);
+        // Validated first: the entry below reads the same keys.
+        $tenanted = $this->withTenant((string) $zone, $config);
+        $this->mountTenantEntry($zone, $config);
+        $config = $tenanted;
         $registrar = RouteFacade::middleware($config['middleware'] ?? []);
 
         if ($zone !== null && $zone !== '') {
@@ -160,5 +163,39 @@ final readonly class ConfiguredRoutes implements RegistersPageRoutes
         $config['middleware'] = [...(array) ($config['middleware'] ?? []), IdentifyTenant::ALIAS];
 
         return $config;
+    }
+
+    /**
+     * The tenant zone's bare address — `app`, or the domain's root — outside the
+     * tenant, and so outside `wire.tenant`: there is no tenant in it to find.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function mountTenantEntry(?string $zone, array $config): void
+    {
+        $mode = $config['tenant'] ?? null;
+
+        if ($mode !== 'path' && $mode !== 'domain') {
+            return;
+        }
+
+        $registrar = RouteFacade::middleware($config['middleware'] ?? []);
+
+        if ($zone !== null && $zone !== '') {
+            $registrar = $registrar->name($zone.'.');
+        }
+
+        $prefix = trim((string) ($config['prefix'] ?? ''), '/');
+        $domain = $config['domain'] ?? null;
+
+        if (is_string($domain) && $domain !== '') {
+            $registrar = $registrar->domain($domain);
+        }
+
+        $to = $mode === 'path'
+            ? trim($prefix.'/{'.IdentifyTenant::PARAMETER.'}', '/')
+            : '//{'.IdentifyTenant::PARAMETER.'}.'.$domain.($prefix === '' ? '' : '/'.$prefix);
+
+        $registrar->group(fn () => ResourceRoutes::tenantEntry($prefix === '' ? '/' : $prefix, $to));
     }
 }

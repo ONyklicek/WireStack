@@ -42,15 +42,19 @@ use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
 use Workbench\App\Livewire\Resources\CreateInvoice;
 use Workbench\App\Livewire\Resources\EditInvoice;
+use Workbench\App\Livewire\Resources\EditProject;
 use Workbench\App\Livewire\Resources\InvoiceItemsRelationManager;
 use Workbench\App\Livewire\Resources\ListDocuments;
 use Workbench\App\Livewire\Resources\ListInvoices;
+use Workbench\App\Livewire\Resources\ListProjects;
 use Workbench\App\Livewire\Resources\ListTasks;
 use Workbench\App\Livewire\Resources\ViewInvoice;
+use Workbench\App\Models\Company;
 use Workbench\App\Models\Team;
 use Workbench\App\Models\User;
 use Workbench\App\Modules\BillingModule;
 use Workbench\App\Modules\OperationsModule;
+use Workbench\App\Resources\ProjectResource;
 use Workbench\App\Settings\BrandingSettings;
 use Workbench\App\Settings\MailSettings;
 
@@ -90,6 +94,13 @@ class WorkbenchServiceProvider extends ServiceProvider
         // A cluster and its two members, for verify-clusters. Registered like
         // any page; the admin zone routes them, the business zone does not.
         config()->set('wire-panels.pages', [Setup::class, General::class, Appearance::class]);
+
+        // Companies as tenants, for verify-tenants. Only Project uses
+        // BelongsToTenant, so switching tenancy on scopes nothing else.
+        config()->set('wire-core.tenancy.enabled', true);
+        config()->set('wire-core.tenancy.model', Company::class);
+        config()->set('wire-core.tenancy.members_table', 'company_user');
+        config()->set('wire-core.resources', [...(array) config('wire-core.resources', []), ProjectResource::class]);
 
         config()->set('wire-core.preferences.default', 'session');
         config()->set('wire-core.preferences.guest', 'session');
@@ -320,6 +331,8 @@ class WorkbenchServiceProvider extends ServiceProvider
             Setup::class,
             General::class,
             Appearance::class,
+            ListProjects::class,
+            EditProject::class,
         ] as $component) {
             $name = collect(explode('\\', $component))
                 ->map(fn (string $part): string => Str::kebab($part))

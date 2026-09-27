@@ -73,6 +73,39 @@ cookie, která pokryje subdomény (`SESSION_DOMAIN=.example.com`). Hodnota jiná
 než `path` nebo `domain`, nebo `domain` u zóny bez `domain`, se odmítne při
 registraci rout.
 
+## Vlastní adresa zóny
+
+Každá stránka tenantové zóny žije pod firmou, takže samotné `/app` by bylo 404 —
+a přitom je to adresa, kterou člověk napíše, a ta, kam vede přihlášení. Místo
+toho odpoví: pošle na `getDefaultTenant()` přihlášeného a odtud na první stránku
+té firmy, kterou smí otevřít.
+
+```php
+Route::name('app.')->middleware(['web', 'auth'])
+    ->group(fn () => Route::wireTenantEntry('app', 'app/{tenant}'));   // [tl! focus]
+```
+
+Druhý argument říká, kde je adresa firmy, s `{tenant}` tam, kam patří její klíč —
+`//{tenant}.example.com` pro doménovou zónu. Zóna z configu s klíčem `tenant`
+tohle zaregistruje sama, na prefixu bez tenanta nebo v kořeni domény, pod
+jménem `{zone}.wire.tenants` — a právě to nabídne výběr zón jako adresu zóny.
+
+Kdo nepatří do žádné firmy, dostane `wire-panels.routes.tenant_entry.view`, pokud
+ho aplikace pojmenuje — místo, kde nabídnout registraci firmy — a jinak 403,
+které řekne proč.
+
+## Přepínač firem
+
+Uvnitř firmy dostane horní lišta každého shellu, který kreslí
+`PageChrome::TOPBAR`, přepínač z wire-panels. Nabídne firmy, do kterých člověk
+patří, každou s odkazem na **tutéž stránku** v té firmě — kromě stránky záznamu,
+kde odkaz vede na seznam téhož resource: záznam 7 jedné firmy není záznamem
+jiné a přepnutí by skončilo na 404. Mimo firmu, nebo pro někoho s jedinou
+firmou, se nevykreslí nic.
+
+Firma se jmenuje podle `wire-core.tenancy.label` (`name`), a když je prázdné,
+podle svého route key.
+
 ## Model tenanta
 
 ```php
