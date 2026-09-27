@@ -5,7 +5,7 @@ scope: |
   packages/core (Foundation/Routing, Core/Resources/Navigation), packages/panels
   (Resources/Pages, Routing, views), packages/admin (View, views, config, lang),
   docs/{panels,admin}/ + docs/cs, workbench/scripts, scripts/hook-names.json
-status: KROK 0 a ČÁST A DODÁNY 2026-09-11 (viz §2 a §3, oddíl „Co skutečně vzniklo"). Kroky 2–6 nezahájeny. Zadání vlastníka („vylepšit navigaci v administraci i obecně"), měřeno proti stromu 2026-09-11
+status: HOTOVO. Krok 0 a část A dodány 2026-09-11; kroky 2–6 (D1, C1, B, C2, D2) dodány 2026-09-27 na `feat/navigation-urls-and-parents` (viz §7). Zadání vlastníka („vylepšit navigaci v administraci i obecně"), měřeno proti stromu 2026-09-11
 owner_request: |
   všechny čtyři směry naráz: sub-navigace záznamu, vodorovné (top) menu,
   hledání/oblíbené/nedávné v menu, klávesnice a přístupnost menu
@@ -526,11 +526,11 @@ podporovaný Tailwind (ADR 0005).
 |---|---|---|---|
 | 0 ✅ | Vlastník aktivního stavu (§2) | — | **hotovo 2026-09-11** — tři ze čtyř částí se ho ptají; jinak vznikne počtvrté |
 | 1 ✅ | A — sub-navigace záznamu (§3) | 0 | **hotovo 2026-09-11** — největší chybějící kus, nejmíň pohyblivých částí |
-| 2 | D1 — šuplík a `<main>` (§6a) | — | dvě vady, ~20 řádků, nemá smysl je držet za featurami |
-| 3 | C1 — filtr (§5a) | — | klientské, samostatné, hned viditelné |
-| 4 | B — vodorovné menu (§4) | 0, doporučeně 1 | největší povrch; bez sub-navigace působí shell mělce |
-| 5 | C2 — oblíbené a nedávné (§5b) | 0 | první krok, který zavádí úložiště a Livewire seam |
-| 6 | D2 — pohyb v menu a v pruhu (§6b, §6c) | 3, 4 | type-ahead má smysl nad filtrem, klávesy v pruhu až když pruh je |
+| 2 ✅ | D1 — šuplík a `<main>` (§6a) | — | **hotovo 2026-09-27** — `x-trap` na šuplíku, `tabindex="-1"` na `<main>`; `verify-nav-keys` |
+| 3 ✅ | C1 — filtr (§5a) | — | **hotovo 2026-09-27** — `wireNavFilter` ve vlastním bundlu `wire-admin`; `verify-nav-filter` |
+| 4 ✅ | B — vodorovné menu (§4) | 0, doporučeně 1 | **hotovo 2026-09-27** — `NavigationShape`, `TopNav`, `wireTopNav`; skupina *i osamělá položka s dětmi* je panel; `verify-topnav` |
+| 5 ✅ | C2 — oblíbené a nedávné (§5b) | 0 | **hotovo 2026-09-27** — `NavigationMemory` (core), `wire-admin.nav-pins`; `verify-nav-memory` |
+| 6 ✅ | D2 — pohyb v menu a v pruhu (§6b, §6c) | 3, 4 | **hotovo 2026-09-27** — `wireNavKeys`, klávesy v `wireTopNav`; neroutované řádky (bez `href`) se přeskakují; `verify-nav-keys` |
 
 Každý krok je samostatně vratný a samostatně dodatelný. Kroky 1–6 nesahají na
 `Workspace` ani na `NavigationGroup`.

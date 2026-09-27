@@ -23,7 +23,11 @@
     data-testid="admin-topnav" @wireEl('admin-topnav')
     class="hidden h-12 items-center gap-2 border-b border-gray-200 bg-white px-4 lg:flex dark:border-gray-800 dark:bg-gray-900"
 >
-    <ul x-ref="bar" class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+    <ul
+        x-ref="bar"
+        x-on:keydown.arrow-right="step($event, 1)"
+        x-on:keydown.arrow-left="step($event, -1)"
+        class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
         @foreach ($entries as $entry)
             <li data-topnav-entry="{{ $entry['id'] }}" class="shrink-0">
                 {{-- A panel for a group, and for a single entry with children of
@@ -43,6 +47,7 @@
                             type="button"
                             x-ref="trigger"
                             x-on:click="toggle()"
+                            x-on:keydown.arrow-down="openDown($event, open, () => toggle(), $refs.panel)"
                             x-bind:aria-expanded="open ? 'true' : 'false'"
                             data-testid="admin-topnav-group" @wireEl('admin-topnav-group')
                             data-group="{{ $group ? $group->getKey() : $entry['key'] }}"
@@ -66,6 +71,9 @@
                                 x-show="open"
                                 x-cloak
                                 x-on:click.outside="$clickedInside($event) || close()"
+                                x-on:keydown.arrow-down="panelStep($event, 1)"
+                                x-on:keydown.arrow-up="panelStep($event, -1)"
+                                x-on:keydown.tab="close()"
                                 data-testid="admin-topnav-panel" @wireEl('admin-topnav-panel')
                                 class="absolute top-0 left-0 z-50 w-64 rounded-lg bg-white p-1 shadow-lg ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10"
                                 style="display: none;"
@@ -112,6 +120,9 @@
                 x-show="open"
                 x-cloak
                 x-on:click.outside="$clickedInside($event) || close()"
+                x-on:keydown.arrow-down="panelStep($event, 1)"
+                x-on:keydown.arrow-up="panelStep($event, -1)"
+                x-on:keydown.tab="close()"
                 data-testid="admin-topnav-more-panel" @wireEl('admin-topnav-more-panel')
                 class="absolute top-0 left-0 z-50 max-h-[70vh] w-64 overflow-y-auto rounded-lg bg-white p-1 shadow-lg ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10"
                 style="display: none;"

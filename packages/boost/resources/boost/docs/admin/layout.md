@@ -63,6 +63,10 @@ not, and every one after it, so the order holds — are shown under *More*
 instead. There is nothing to collapse in a bar, so the rail toggle and its
 shortcut are not drawn.
 
+From the keyboard, ← and → move along the bar, ↓ on a group opens its panel with
+focus on the first link, ↑ and ↓ move inside it, and Escape or Tab closes it —
+Escape handing focus back to the button.
+
 ## Signing In
 
 The shell has an auth frame and **no authentication**: `<x-wire-admin::auth-layout>` is a centered card with the same head — the theme decision, the assets, the interaction layer — and no menu, no palette and no bell, because none of them mean anything before a user exists.

@@ -21,6 +21,7 @@
                             <a
                                 @if ($item->getUrl()) href="{{ $item->getUrl() }}" wire:navigate @endif
                                 data-testid="admin-nav-{{ $section }}-item"
+                                data-nav-focus
                                 data-resource="{{ $key }}"
                                 @if ($active->isActive($item, $key)) data-active="true" @endif
                                 aria-label="{{ $item->getLabel() }}"

@@ -235,7 +235,6 @@ crudeness that keeps this from becoming a panel framework by accretion.
 
 Still open, and deliberately not answered here:
 
-- **Collapsible groups.** `NavigationGroup` documents why it has no `collapsed()`
-  yet — the vocabulary exists twice already, and a third copy would be written
-  before anything could use it. The shell is now that consumer, so the next time
-  it comes up the answer is a canonical owner first, not a flag on the sidebar.
+- ~~**Collapsible groups.**~~ Answered the way this note asked: a canonical owner
+  first. `NavigationGroup` composes `CanBeCollapsed`, the concern `Section` and
+  `Repeater` already used, and the sidebar reads it.

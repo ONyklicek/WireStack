@@ -87,3 +87,18 @@ it('ships the controller in a bundle the layout already loads', function () {
 
     $this->get('/wire-admin/assets/navigation.js')->assertOk();
 });
+
+it('marks every row the keyboard moves between, and ships the controllers', function () {
+    config()->set('wire-admin.navigation.filter', 'always');
+
+    $html = nfMenu(2, 1);
+
+    // Two rows and a child — and the child once more inside the rail's popover
+    // template, which Alpine teleports to <body>, outside the aside the
+    // controller walks.
+    expect(substr_count($html, 'data-nav-focus'))->toBe(4)
+        ->and($html)->toContain('x-data="wireNavKeys"')
+        ->toContain('x-on:keydown.down="enter($event)"')
+        ->and(file_get_contents(WireAdminServiceProvider::ASSETS_PATH.'/wire-admin-navigation.js'))
+        ->toContain('wireNavKeys')->toContain('wireTopNav');
+});

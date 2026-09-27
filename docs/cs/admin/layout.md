@@ -61,6 +61,10 @@ prohlížeč změří, položky, které se nevejdou — první, která ne, a ka�
 pořadí drželo —, se ukážou pod *Další*. V pruhu není co sbalovat, takže přepínač
 lišty ani jeho zkratka se nevykreslí.
 
+Z klávesnice se po pruhu chodí ← a →, ↓ na skupině otevře její panel s fokusem
+na prvním odkazu, ↑ a ↓ se v něm pohybují a Escape nebo Tab ho zavře — Escape
+přitom vrátí fokus tlačítku.
+
 ## Přihlašování
 
 Shell má rám pro přihlášení a **žádnou autentizaci**: `<x-wire-admin::auth-layout>` je vycentrovaná karta se stejnou hlavou — rozhodnutí o motivu, assety, interakční vrstva — a bez menu, palety i zvonku, protože nic z toho před existencí uživatele nic neznamená.

@@ -180,6 +180,21 @@ layer they cannot see:
 - **The skip link lands in the content.** `<main>` takes `tabindex="-1"`, so the
   link moves focus there rather than only scrolling to it.
 
+And inside the menu, on top of Tab — which still walks every row, because the
+menu is a list of links and not an application menu, so no row leaves the tab
+order and a screen reader keeps calling them links:
+
+| Key | On a row |
+| --- | --- |
+| ↓ / ↑ | the next / previous row that is drawn, across groups and the pinned rows |
+| Home / End | the first / last row |
+| → / ← | open / close a row's submenu — in the rail, its popover; ← on a child goes back to its parent |
+| a letter | the next row whose label starts with what was typed within half a second |
+| ↓ in the filter | the first row that is left |
+
+Rows that cannot take focus — an unrouted entry is drawn without a link — are
+skipped rather than landed on.
+
 ## Zones
 
 A [zone](../panels/routing.md#zones) is a route group's name prefix, and the shell needs

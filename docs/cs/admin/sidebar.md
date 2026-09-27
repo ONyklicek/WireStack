@@ -172,6 +172,21 @@ vrstvou, kterou nevidí:
 - **Odkaz pro přeskočení vede do obsahu.** `<main>` má `tabindex="-1"`, takže
   odkaz přesune fokus, a ne jen odroluje.
 
+A uvnitř menu navíc k Tabu — který dál prochází každý řádek, protože menu je
+seznam odkazů, ne aplikační menu, takže žádný řádek z pořadí Tabu nevypadne
+a čtečka obrazovky jim dál říká odkazy:
+
+| Klávesa | Na řádku |
+| --- | --- |
+| ↓ / ↑ | další / předchozí vykreslený řádek, přes skupiny i připnuté řádky |
+| Home / End | první / poslední řádek |
+| → / ← | otevře / zavře submenu řádku — v liště jeho popover; ← na dítěti vede zpět na rodiče |
+| písmeno | další řádek, jehož popisek začíná tím, co bylo napsáno do půl sekundy |
+| ↓ ve filtru | první řádek, který zbyl |
+
+Řádky, které fokus vzít nemůžou — neroutovaná položka se kreslí bez odkazu —, se
+přeskočí, místo aby na nich fokus přistál.
+
 ## Zóny
 
 [Zóna](../panels/routing.md#zony) je name prefix route skupiny a shell k jejímu

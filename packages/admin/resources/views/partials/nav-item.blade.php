@@ -107,6 +107,7 @@
         class="group/row relative"
     >
     <{{ $children ? 'button' : 'a' }}
+        data-nav-focus
         @if (! $isChild) x-ref="trigger" @endif
         @if ($children)
             type="button"

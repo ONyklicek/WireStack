@@ -33,7 +33,11 @@
 
 <aside
     data-testid="admin-sidebar" @wireEl('admin-sidebar')
-    x-data
+    {{-- Arrow keys, Home/End and type-ahead over the rows (wireNavKeys, the
+         package's bundle). On the aside rather than the nav, so the rows, the
+         pinned copies and the filter above them are one sequence. --}}
+    x-data="wireNavKeys"
+    x-on:keydown="move($event)"
     x-on:keydown.escape.window="$store.wireAdmin.closeMobile()"
     {{-- An open drawer keeps the keyboard inside it: without this, Tab walked
          on through the page *behind* the dimming layer, to controls nobody
@@ -103,6 +107,7 @@
                         x-ref="filter"
                         x-model="query"
                         x-on:keydown.escape.stop.prevent="clear()"
+                        x-on:keydown.down="enter($event)"
                         placeholder="{{ __('wire-admin::messages.filter') }}"
                         autocomplete="off"
                         data-testid="admin-nav-filter" @wireEl('admin-nav-filter')
@@ -177,6 +182,7 @@
                         <button
                             type="button"
                             x-on:click="open = ! open"
+                            data-nav-focus
                             x-bind:aria-expanded="open ? 'true' : 'false'"
                             aria-controls="wire-admin-group-{{ $group->getKey() }}"
                             data-testid="admin-nav-heading" @wireEl('admin-nav-heading')
