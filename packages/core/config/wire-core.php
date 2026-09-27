@@ -256,8 +256,22 @@ return [
         'column' => env('WIRE_TENANCY_COLUMN', 'tenant_id'),
 
         // How tenants are kept apart: 'column' — one database, the column
-        // above — or the name of a class implementing IsolatesTenants.
+        // above — 'database' — a database per tenant, below — or the name of
+        // a class implementing IsolatesTenants.
         'isolation' => env('WIRE_TENANCY_ISOLATION', 'column'),
+
+        // Database per tenant. `connection` is the one tenant-owned models
+        // (BelongsToTenantDatabase) use — define it in config/database.php,
+        // usually as a copy of the default one. `name` is each tenant's
+        // database: `{key}` is its key, `{slug}` its route key, and for SQLite
+        // it is a file path. `admin_connection` runs CREATE DATABASE; null is
+        // the default connection. Tenant migrations live in `migrations`.
+        'database' => [
+            'connection' => 'tenant',
+            'name' => 'tenant_{key}',
+            'admin_connection' => null,
+            'migrations' => 'database/migrations/tenant',
+        ],
 
         // The tenant model a tenant zone finds by its route key (a slug when
         // the model says so), and the pivot table InteractsWithTenants reads

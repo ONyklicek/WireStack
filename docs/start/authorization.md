@@ -273,6 +273,46 @@ column — is the default and needs nothing entered beyond the tenant itself; a
 class implementing `IsolatesTenants` (`enter(Model $tenant)`, `leave()`) is how
 another strategy plugs in, a database per tenant among them (ADR 0040).
 
+### A database per tenant
+
+When a contract asks for tenants kept apart by more than a `WHERE` clause, set
+`isolation` to `database`. Each tenant then has a database of its own, and the
+connection is the boundary rather than a column:
+
+```php
+// config/wire-core.php
+'tenancy' => [
+    'enabled' => true,
+    'isolation' => 'database',                                   // [tl! focus:start]
+    'model' => App\Models\Company::class,
+    'database' => [
+        'connection' => 'tenant',                 // defined in config/database.php
+        'name' => 'tenant_{key}',                 // {key}, {slug}; a file path for SQLite
+        'admin_connection' => null,               // who runs CREATE DATABASE
+        'migrations' => 'database/migrations/tenant',
+    ],                                                           // [tl! focus:end]
+],
+```
+
+Tenant-owned models use `BelongsToTenantDatabase` instead of `BelongsToTenant`
+— no column and no scope; they are read through the `tenant` connection, which
+entering a tenant points at that tenant's database. Companies, users and who
+belongs where stay on the application's own connection.
+
+```bash
+php artisan wire:tenants:create acme globex        # create and migrate
+php artisan wire:tenants:create --all --no-migrate
+php artisan wire:tenants:migrate                   # every tenant
+php artisan wire:tenants:migrate --tenant=acme --fresh --seed
+```
+
+The database is created through the admin connection's schema builder — a
+`CREATE DATABASE` on MySQL and PostgreSQL, an empty file on SQLite — so that
+connection's user needs the right to create one. With no tenant entered the
+`tenant` connection names no database and **the first query throws**: the same
+direction as the column scope's empty result, and louder. Everything else —
+`runAs()`, the tenant zone, queued jobs — works the same under either.
+
 ### The fail-safe
 
 **Tenancy on with no tenant resolved returns nothing, never everything.**

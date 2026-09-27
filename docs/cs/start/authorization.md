@@ -271,6 +271,46 @@ sloupec tenanta — je výchozí a nepotřebuje nic kromě tenanta samotného; t
 implementující `IsolatesTenants` (`enter(Model $tenant)`, `leave()`) je způsob, jak
 připojit jinou strategii, mezi nimi databázi pro každého tenanta (ADR 0040).
 
+### Databáze pro každého tenanta
+
+Když smlouva žádá oddělení tenantů něčím víc než klauzulí `WHERE`, nastavte
+`isolation` na `database`. Každý tenant má pak vlastní databázi a hranicí je
+připojení, ne sloupec:
+
+```php
+// config/wire-core.php
+'tenancy' => [
+    'enabled' => true,
+    'isolation' => 'database',                                   // [tl! focus:start]
+    'model' => App\Models\Company::class,
+    'database' => [
+        'connection' => 'tenant',                 // definované v config/database.php
+        'name' => 'tenant_{key}',                 // {key}, {slug}; u SQLite cesta k souboru
+        'admin_connection' => null,               // kdo spouští CREATE DATABASE
+        'migrations' => 'database/migrations/tenant',
+    ],                                                           // [tl! focus:end]
+],
+```
+
+Modely tenanta použijí `BelongsToTenantDatabase` místo `BelongsToTenant` — bez
+sloupce a bez scope; čtou se přes připojení `tenant`, které vstup do tenanta
+nasměruje na jeho databázi. Firmy, uživatelé a kdo kam patří zůstávají na
+vlastním připojení aplikace.
+
+```bash
+php artisan wire:tenants:create acme globex        # vytvořit a zmigrovat
+php artisan wire:tenants:create --all --no-migrate
+php artisan wire:tenants:migrate                   # každý tenant
+php artisan wire:tenants:migrate --tenant=acme --fresh --seed
+```
+
+Databáze se vytváří přes schema builder administrativního připojení — `CREATE
+DATABASE` na MySQL a PostgreSQL, prázdný soubor na SQLite —, takže uživatel toho
+připojení na to musí mít právo. Bez vstupu do tenanta připojení `tenant`
+nejmenuje žádnou databázi a **první dotaz vyhodí výjimku**: stejný směr jako
+prázdný výsledek scope u sloupce, jen hlasitěji. Všechno ostatní — `runAs()`,
+tenantová zóna, joby ve frontě — funguje pod oběma stejně.
+
 ### Fail-safe
 
 **Zapnutá tenancy bez resolvovaného tenanta vrací nic, nikdy vše.**

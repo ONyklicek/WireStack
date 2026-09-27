@@ -36,11 +36,14 @@ use NyonCode\WireCore\Core\Resources\ResourceRecordUrls;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Core\Resources\View\Breadcrumbs;
 use NyonCode\WireCore\Core\Resources\Workspace;
+use NyonCode\WireCore\Core\Tenancy\Console\CreateTenantDatabaseCommand;
+use NyonCode\WireCore\Core\Tenancy\Console\MigrateTenantsCommand;
 use NyonCode\WireCore\Core\Tenancy\Contracts\IsolatesTenants;
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
 use NyonCode\WireCore\Core\Tenancy\CurrentTenant;
 use NyonCode\WireCore\Core\Tenancy\CurrentTenantResolver;
 use NyonCode\WireCore\Core\Tenancy\Isolation\ColumnIsolation;
+use NyonCode\WireCore\Core\Tenancy\Isolation\DatabaseIsolation;
 use NyonCode\WireCore\Core\Tenancy\Queue\CarriesTenantThroughQueue;
 use NyonCode\WireCore\Core\Tenancy\Tenancy;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
@@ -138,6 +141,8 @@ class WireCoreServiceProvider extends PackageServiceProvider
             })
             ->hasConfig()
             ->hasCommand(PruneAuditEntriesCommand::class)
+            ->hasCommand(CreateTenantDatabaseCommand::class)
+            ->hasCommand(MigrateTenantsCommand::class)
             ->hasCommand(PruneNotificationsCommand::class)
             ->hasCommand(MakeDashboardCommand::class)
             ->hasCommand(MakeWidgetCommand::class)
@@ -651,6 +656,10 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
             if ($isolation === 'column' || $isolation === null) {
                 return new ColumnIsolation;
+            }
+
+            if ($isolation === 'database') {
+                return $app->make(DatabaseIsolation::class);
             }
 
             if (is_string($isolation) && is_a($isolation, IsolatesTenants::class, true)) {
