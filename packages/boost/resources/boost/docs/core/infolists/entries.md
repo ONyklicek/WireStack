@@ -296,6 +296,62 @@ public function infolist(Infolist $infolist): Infolist
 
 Everything else — `label()`, `hiddenLabel()`, `state()`, `placeholder()`, `columnSpan()`, `visible()` — is the shared entry surface documented above.
 
+## A Custom Entry
+
+For a value none of the entries above draws, write an entry class and its view:
+
+```bash
+php artisan make:wire-entry Money
+```
+
+writes `app/Infolists/Components/MoneyEntry.php` — an `Entry` whose only
+obligation is `viewName()` — and the view it names:
+
+```php
+namespace App\Infolists\Components;
+
+use NyonCode\WireCore\Infolists\Components\Entry;
+
+class MoneyEntry extends Entry
+{
+    protected function viewName(): string
+    {
+        return 'infolists.entries.money';
+    }
+}
+```
+
+```blade
+{{-- resources/views/infolists/entries/money.blade.php --}}
+@php
+    $value = $field->getFormattedState();
+@endphp
+
+<div class="{{ $field->getColumnSpanClass() }}" @wireExtraAttributes($field)>
+    @if($field->hasVisibleLabel()) {{-- [tl! focus:start] --}}
+        @include('wire-core::partials.entry-label', ['text' => $field->getLabel()])
+    @endif {{-- [tl! focus:end] --}}
+
+    <div class="text-sm text-gray-900 dark:text-white">
+        @if($value !== '-' && $value !== '')
+            {{ $value }}
+        @else
+            <span class="text-gray-400">{{ $field->getPlaceholder() ?? '-' }}</span>
+        @endif
+    </div>
+
+    @if($field->hasActions())@include('wire-core::infolists.entry-actions')@endif {{-- [tl! focus] --}}
+</div>
+```
+
+The view receives the entry as `$field` and draws the label, column span, extra
+attributes and entry actions through the same partials the built-in entries
+use, so it lines up with them. Read the state through
+`getFormattedState()`, which applies `formatStateUsing()` and the rest. An
+existing view is never overwritten, `--force` replaces the class only, and
+`php artisan vendor:publish --tag=wire-core::stubs` lets you change what it
+writes.
+
 ## Related
 
 - [Infolists](index.md) — the object these are composed into

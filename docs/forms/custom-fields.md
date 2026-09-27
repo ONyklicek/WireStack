@@ -112,6 +112,21 @@ The only abstract method you must implement is `viewName()`.
 We will build a `MoneyInput` field that stores an integer number of cents and
 renders a currency-aware text input.
 
+The class and its view can be written by hand, or started from the generator:
+
+```bash
+php artisan make:wire-field MoneyInput
+```
+
+It writes `app/Forms/Components/MoneyInput.php` — a `Field` with
+`getStateType()` and `viewName()` — and
+`resources/views/forms/components/money-input.blade.php`, an input bound with
+`wire:model` inside the two wrapper partials described in step 2. No suffix is
+added: a field is named for the control it is. An existing view is never
+overwritten, `--force` replaces the class only, and
+`php artisan vendor:publish --tag=wire-forms::stubs` lets you change what it
+writes.
+
 ### 1. The PHP class
 
 ```php

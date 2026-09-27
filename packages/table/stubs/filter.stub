@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireTable\Filters\Filter;
+
+class {{ class }} extends Filter
+{
+    /**
+     * Narrow the query by what the control submitted. `$value` is already
+     * unwrapped from the `{value: …}` state the view binds; an empty value
+     * means the filter is off.
+     *
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
+    public function apply(Builder $query, mixed $value): Builder
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return $query;
+        }
+
+        return $query->where($this->getColumn(), $value);
+    }
+
+    /**
+     * Route every value through apply() above. Without this a single scalar
+     * value goes to the table's query planner as a plain `column = value`, and
+     * apply() is never called.
+     */
+    public function bypassesPlanner(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Rendered directly rather than through filterView(), which looks in the
+     * package's `wire-table::` views first — a filter named like a built-in one
+     * would silently draw the built-in control.
+     */
+    public function render(mixed $value = null): string
+    {
+        if (! $this->canView()) {
+            return '';
+        }
+
+        return view('{{ view }}', ['filter' => $this, 'value' => $value])->render();
+    }
+}

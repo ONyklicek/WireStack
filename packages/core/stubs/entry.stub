@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use NyonCode\WireCore\Infolists\Components\Entry;
+
+class {{ class }} extends Entry
+{
+    /**
+     * The Blade view this entry renders; $field is always in scope. Resolve
+     * anything the view needs in a getter here — the view reads getters, never
+     * properties, and never the record directly.
+     */
+    protected function viewName(): string
+    {
+        return '{{ view }}';
+    }
+}

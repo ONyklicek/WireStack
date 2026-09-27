@@ -1,0 +1,18 @@
+{{-- Variables: $filter, $value (the filter's state — ['value' => …] once set). --}}
+@php
+    $name = $filter->getName();
+    $current = is_array($value) ? ($value['value'] ?? '') : ($value ?? '');
+@endphp
+
+<div class="flex flex-col gap-1">
+    <label for="filter-{{ $name }}" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+        {{ $filter->getLabel() }}
+    </label>
+    <input
+        type="text"
+        id="filter-{{ $name }}"
+        wire:model.live.debounce.500ms="{{ $filter->getStatePath() }}.value"
+        value="{{ is_scalar($current) ? $current : '' }}"
+        class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+    >
+</div>

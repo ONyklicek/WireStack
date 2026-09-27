@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Widgets\Console;
 
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Foundation\Console\Support\PublishedStubs;
 use NyonCode\WireCore\Widgets\Dashboard;
 use NyonCode\WireCore\Widgets\Widget;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -55,29 +56,13 @@ class MakeWidgetCommand extends GeneratorCommand
     }
 
     /**
-     * A published stub wins, so an application can change what this produces.
-     *
-     * `stubs/wire-core/` first, because that is where
-     * `vendor:publish --tag=wire-core::stubs` actually puts them — the toolkit
-     * namespaces published stubs by package so two packages shipping a
-     * `dashboard.stub` cannot overwrite each other. This looked in `stubs/`
-     * alone for as long as it existed, so publishing the stubs and editing them
-     * changed nothing at all: the generator kept reading the package's copy and
-     * said nothing about it.
-     *
-     * `stubs/` is still consulted second. That is Laravel's own `stub:publish`
-     * convention and where somebody who put the file there by hand would expect
-     * it to be read from.
+     * A published stub wins, so an application can change what this produces —
+     * {@see PublishedStubs} says where it is looked for, the same rule for every
+     * generator in every package.
      */
     protected function resolveStubPath(string $stub): string
     {
-        foreach ([base_path('stubs/wire-core/'.$stub), base_path('stubs/'.$stub)] as $published) {
-            if (file_exists($published)) {
-                return $published;
-            }
-        }
-
-        return __DIR__.'/../../../stubs/'.$stub;
+        return (new PublishedStubs('wire-core', __DIR__.'/../../../stubs'))->path($stub);
     }
 
     protected function getDefaultNamespace($rootNamespace): string

@@ -7,12 +7,12 @@ namespace NyonCode\WirePanels\Resources\Console;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Foundation\Console\Support\StubWriter;
 use NyonCode\WirePanels\Resources\Console\Concerns\InteractsWithPublishedStubs;
 use NyonCode\WirePanels\Resources\Console\Concerns\ReportsNextSteps;
 use NyonCode\WirePanels\Resources\Console\Support\PanelSetup;
 use NyonCode\WirePanels\Resources\Console\Support\ResourceScaffold;
 use NyonCode\WirePanels\Resources\Console\Support\SchemaFields;
-use NyonCode\WirePanels\Resources\Console\Support\StubWriter;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**

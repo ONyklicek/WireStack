@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireTable\Columns\Column;
+
+class {{ class }} extends Column
+{
+    /**
+     * The Blade view this column's cells render. Set here rather than passed to
+     * renderView(), so `->view('…')` on one instance still overrides it and the
+     * package's own `tables.columns.*` views never answer for it.
+     */
+    protected ?string $view = '{{ view }}';
+
+    /**
+     * One cell. Resolve every value here and hand the view plain data: the
+     * column is the source of truth, the template is presentation only.
+     */
+    public function renderCell(Model $record): string
+    {
+        if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
+            return '';
+        }
+
+        $state = $this->getState($record);
+
+        return trim($this->renderView('{{ view }}', [
+            'column' => $this,
+            'record' => $record,
+            'state' => $state,
+            'value' => $this->formatValue($state, $record),
+        ]));
+    }
+}

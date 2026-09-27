@@ -15,6 +15,7 @@ use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\LaravelPackageToolkit\Support\PackageAssets;
 use NyonCode\LaravelPackageToolkit\Support\PublishedAssets;
+use NyonCode\WireCore\Actions\Console\MakeActionCommand;
 use NyonCode\WireCore\Actions\Support\ActionCallbackInvoker;
 use NyonCode\WireCore\Actions\Support\ComponentActionRunner;
 use NyonCode\WireCore\Actions\View\BulkButtonComponent;
@@ -79,6 +80,7 @@ use NyonCode\WireCore\Foundation\View\FloatingAssets;
 use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireCore\Foundation\View\Primitives;
 use NyonCode\WireCore\GlobalSearch\GlobalSearchPalette;
+use NyonCode\WireCore\Infolists\Console\MakeEntryCommand;
 use NyonCode\WireCore\Modals\View\ConfirmationComponent;
 use NyonCode\WireCore\Modals\View\ModalComponent;
 use NyonCode\WireCore\Modals\View\SlideOverComponent;
@@ -146,15 +148,21 @@ class WireCoreServiceProvider extends PackageServiceProvider
             ->hasCommand(PruneNotificationsCommand::class)
             ->hasCommand(MakeDashboardCommand::class)
             ->hasCommand(MakeWidgetCommand::class)
+            ->hasCommand(MakeEntryCommand::class)
+            ->hasCommand(MakeActionCommand::class)
             // The generators' templates, publishable so an application can
             // change what they produce — Laravel's own `stub:publish`
             // convention, which the commands honour by preferring
-            // `base_path('stubs/…')` over these. The widget generator writes two
-            // files, so it has two: the class and the Blade view it names.
+            // `base_path('stubs/…')` over these. A generator that writes a view
+            // has two: the class and the Blade view it names.
             ->hasStubs([
                 '../stubs/dashboard.stub',
                 '../stubs/widget.stub',
                 '../stubs/widget-view.stub',
+                '../stubs/entry.stub',
+                '../stubs/entry-view.stub',
+                '../stubs/action.stub',
+                '../stubs/bulk-action.stub',
             ])
             // A provider the consumer owns, the way Cashier and Fortify ship
             // one: where an application registers its dashboards and declares

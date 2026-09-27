@@ -2,6 +2,39 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.4.0]
+
+### Added
+
+- **Generators for the parts of a table, a form and an infolist.** `make:wire-column Price` and
+  `make:wire-filter Region` (wire-table), `make:wire-field MoneyInput` (wire-forms), `make:wire-entry Money` and
+  `make:wire-action Archive [--bulk]` (wire-core) write a class under `app/Tables/Columns`, `app/Tables/Filters`,
+  `app/Forms/Components`, `app/Infolists/Components` or `app/Wire/Actions` and, for everything that renders,
+  the Blade view it names. Each lives in the package that owns its base class, so none needs a panel. A suffix
+  is added unless the name already ends with it (a field takes none); an existing view is never overwritten and
+  `--force` replaces the class only. The templates publish per package — `wire-table::stubs`,
+  `wire-forms::stubs`, `wire-core::stubs` — and a published copy wins.
+- The generated column overrides `renderCell()` and sets its view on `$view`, so `->view('…')` still overrides
+  it per table and a name like a shipped `tables.columns.*` view never draws the shipped one. The generated
+  filter renders its own view by name for the same reason.
+
+### Changed
+
+- **One rule for where a published stub is looked for.** `stubs/{package}/` first, then `stubs/`, then the
+  package's own — it was written three times (the widget and dashboard generators, and wire-panels'), and is
+  now `Foundation\Console\Support\PublishedStubs`, which every generator in every package uses. `StubWriter`
+  moved beside it, from `NyonCode\WirePanels\Resources\Console\Support` to
+  `NyonCode\WireCore\Foundation\Console\Support`.
+
+### Fixed
+
+- **A custom filter's `apply()` could be skipped without a word.** A single scalar value goes to the table's
+  query planner as `column = value` unless the filter's `bypassesPlanner()` returns `true`, so a subclass that
+  only overrode `apply()` — as the custom filter docs showed, including their `JsonContainsFilter`, which then
+  ignored its `jsonPath` — never ran it. The docs now explain the two paths and the examples return `true`; the
+  generated filter does too.
+- Boost's guidelines and skills for table, forms and core cover the generators and the `bypassesPlanner()` rule.
+
 ## [2.3.2]
 
 ### Fixed

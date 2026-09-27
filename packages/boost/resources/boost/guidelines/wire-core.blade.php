@@ -14,6 +14,7 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
         ->action(fn ($record) => $record->approve());
 
 - Presets: `DeleteAction`, `EditAction`, `ViewAction`, `RestoreAction`, `ForceDeleteAction`, plus bulk presets (`DeleteBulkAction`, `RestoreBulkAction`, `ForceDeleteBulkAction`). They confirm and label themselves; the host supplies `->action()`.
+- A chain repeated on a second surface becomes a preset class: `php artisan make:wire-action Archive [--bulk]` writes `app/Wire/Actions/ArchiveAction.php` (or `ArchiveBulkAction`) — defaults set in the constructor, `make(string $name = 'archive')`. Not `app/Actions` (business actions live there). Stubs: `wire-core::stubs`.
 - `->url()` takes a **static string or a per-record Closure**, and the two are not interchangeable on a
   record-less surface (a header action, the table's empty state): a string resolves with or without a
   record, a Closure needs one and stays unresolved — the action then renders as a plain button, not a
@@ -314,7 +315,9 @@ is shown at all: the event died with the document, the flash crossed.
 Read-only counterpart of forms. `Infolist::make()->schema([...])` with entries: `TextEntry`, `BadgeEntry`,
 `IconEntry`, `BooleanEntry`, `ListEntry`, `ImageEntry`, `ColorEntry`, `KeyValueEntry`, `RepeatableEntry`.
 Layouts: the shared vocabulary above (`Section`, `Grid`, `Fieldset`, `Flex`, `Tabs`, `Wizard`, `Callout`,
-`EmptyState`) — see the Layouts section. Integrates with `ViewAction->infolist()`.
+`EmptyState`) — see the Layouts section. Integrates with `ViewAction->infolist()`. A custom entry starts from
+`php artisan make:wire-entry Money` (`app/Infolists/Components/MoneyEntry.php` + `resources/views/infolists/entries/money.blade.php`,
+the view gets `$field` and reads `getFormattedState()`).
 
 Actions: `Section::headerActions([...])`, `Entry::actions([...])`, and `RepeatableEntry::actions([...])`
 (per-row, gets the row `$record`) — dispatch via the host's `callInfolistAction()` (works in an action modal /

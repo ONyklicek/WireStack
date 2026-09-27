@@ -129,7 +129,7 @@ samostatný balíček.
 | [Routování](routing.md) | `pages()`, `Route::wireResources()`, tvar URL, zóny, routy z configu |
 | [Tenancy](tenancy.md) | Tenant v URL — `wire.tenant`, `HasTenants`, `'tenant' => 'path'\|'domain'` u zóny |
 | [Moduly](modules.md) | Manifest jedné byznysové oblasti — její resource, dashboardy a nadpis v menu v jedné třídě |
-| [Příkazová řádka](cli.md) | `make:wire-resource`, `make:wire-page`, `make:wire-cluster`, `make:wire-relation-manager`, `wire:resources` |
+| [Příkazová řádka](cli.md) | `make:wire-resource`, `make:wire-page`, `make:wire-cluster`, `make:wire-relation-manager`, `wire:resources` a generátory komponent (`make:wire-column`, `-filter`, `-field`, `-entry`, `-action`) |
 
 ## Jak dosáhnout na stránku, kterou posílá modul
 

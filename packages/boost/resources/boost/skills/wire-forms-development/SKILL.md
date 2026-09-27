@@ -16,6 +16,10 @@ Use when creating or changing a Livewire form built with wire-forms (a component
    for a field's fluent methods (validation, options, reactivity).
 2. Inspect an existing form with `describe-form` to match conventions.
 3. Build the schema fluently under a `statePath`.
+4. Only when no shipped field (or `ViewField`) fits, generate one: `php artisan make:wire-field MoneyInput`
+   writes `app/Forms/Components/MoneyInput.php` (`getStateType()` + `viewName()`, no suffix) and
+   `resources/views/forms/components/money-input.blade.php` inside the `wire-forms::partials.field-wrapper-*`
+   partials. Then run `validate-wire-component`.
 
 ## Patterns
 

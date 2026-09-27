@@ -1,0 +1,19 @@
+{{-- Variables: $field. The wrapper partials draw the label, hint, required
+     marker, helper text and validation error, so the field looks like a built-in one. --}}
+@php
+    $wireModifier = $field->getWireModelModifier();
+    $wireAttr = 'wire:model' . ($wireModifier ? ".{$wireModifier}" : '') . $field->getDebounceModifier();
+@endphp
+
+@include('wire-forms::partials.field-wrapper-start')
+
+<input
+    type="text"
+    id="{{ $field->getId() }}"
+    {{ $wireAttr }}="{{ $field->getWireModelAttribute() }}"
+    @if($field->isReadOnly()) readonly @endif
+    @if($field->isRequired()) required @endif
+    class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+/>
+
+@include('wire-forms::partials.field-wrapper-end')

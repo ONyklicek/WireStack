@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use NyonCode\WireForms\Components\Field;
+
+class {{ class }} extends Field
+{
+    /**
+     * What the state is cast to on the way in: 'string', 'int', 'float',
+     * 'bool' or 'array'. Implement DehydratesState as well when the field
+     * should store something other than what the control holds.
+     */
+    public function getStateType(): string
+    {
+        return 'string';
+    }
+
+    /**
+     * The Blade view this field renders; $field is always in scope. Add fluent
+     * setters above and read them in the view through getters, never properties.
+     */
+    protected function viewName(): string
+    {
+        return '{{ view }}';
+    }
+}

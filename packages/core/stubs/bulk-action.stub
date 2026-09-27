@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
+use NyonCode\WireCore\Actions\BulkAction;
+
+/**
+ * One configured bulk action, for a table's `bulkActions()`. Anything set here
+ * can still be changed per use: `{{ class }}::make()->label('…')`.
+ *
+ * @phpstan-consistent-constructor
+ */
+class {{ class }} extends BulkAction
+{
+    public function __construct(string $name = '{{ name }}')
+    {
+        parent::__construct($name);
+
+        $this->label('{{ label }}')
+            ->icon('bolt')
+            ->requiresConfirmation()
+            ->action(function (Collection $records): void {
+                // The selected records, loaded — capped by the table's
+                // bulkMaxRecords(). Over a selection that may be larger, walk it
+                // with the table's eachSelectedRecord() instead.
+                $records->each(function (Model $record): void {
+                    //
+                });
+            });
+    }
+
+    public static function make(string $name = '{{ name }}'): static
+    {
+        return new static($name);
+    }
+}

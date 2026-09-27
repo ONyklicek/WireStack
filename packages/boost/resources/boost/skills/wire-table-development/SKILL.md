@@ -16,6 +16,10 @@ Use when creating or changing a Livewire data table built with wire-table (a com
    available types, then `describe-component-api` for a specific type's fluent methods.
 2. Inspect an existing table with `describe-table` (pass the component class) to match conventions.
 3. Build the table fluently inside `table()`.
+4. Only when no fluent method draws the cell or expresses the constraint, generate a class instead of
+   writing one from scratch: `php artisan make:wire-column Price` (`app/Tables/Columns/PriceColumn.php` +
+   `resources/views/tables/columns/price.blade.php`) or `php artisan make:wire-filter Region`
+   (`app/Tables/Filters/RegionFilter.php` + its control view). Then run `validate-wire-component`.
 
 ## Patterns
 
@@ -60,6 +64,8 @@ additive: each surface still includes its own asset partial as a fallback, and t
 ## Rules
 
 - A filter's query callback must return the query Builder.
+- A custom filter class that overrides `apply()` must return `true` from `bypassesPlanner()` — otherwise a single scalar value is answered by the query planner as `column = value` and `apply()` never runs. `make:wire-filter` writes it that way; keep it.
+- A custom column overrides `renderCell()` and sets its view on `protected ?string $view`, so `->view('…')` still overrides it per table. Never edit the generated view's name to one under `tables.columns.*` that wire-table ships.
 - Badge/icon color & icon: use `->color('success')` for one fixed color, `->colors([state => color])` for a static map, `->colorUsing(fn ($state) => …)` for a per-row value, or nothing when the state enum implements `HasColor`. `->color()` takes `string|Color|null` — never a Closure (that is `->colorUsing()`). Icons mirror this: `->icon()` / `->icons([...])` / `->iconUsing()` / enum `HasIcon`.
 - Prefer SQL-computed summaries over PHP aggregation for footer totals.
 - For inline editing use `TextInputColumn`, `ToggleColumn` or `SelectColumn`.

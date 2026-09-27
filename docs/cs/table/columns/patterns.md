@@ -115,3 +115,55 @@ $table->columns([
         ->textSize('sm'),
 ]);
 ```
+
+## Vlastní třída sloupce
+
+Když buňku, kterou potřebujete, nenakreslí žádná fluent metoda dodávaných
+sloupců, napište třídu sloupce a její pohled:
+
+```bash
+php artisan make:wire-column Price
+```
+
+zapíše `app/Tables/Columns/PriceColumn.php` a
+`resources/views/tables/columns/price.blade.php`. Třída přepisuje
+`renderCell()`, jedinou metodu, kterou tabulka pro buňku volá, a pohledu předává
+prostá data — rychlá vykreslovací cesta tabulky přepsání pozná a buňku vykreslí
+celou, místo aby ji vkládala do kostry textového sloupce:
+
+```php
+namespace App\Tables\Columns;
+
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireTable\Columns\Column;
+
+class PriceColumn extends Column
+{
+    protected ?string $view = 'tables.columns.price';
+
+    public function renderCell(Model $record): string // [tl! focus:start]
+    {
+        if (! $this->canView() || ! $this->isVisibleForRecord($record)) {
+            return '';
+        }
+
+        $state = $this->getState($record);
+
+        return trim($this->renderView('tables.columns.price', [
+            'column' => $this,
+            'record' => $record,
+            'state' => $state,
+            'value' => $this->formatValue($state, $record),
+        ]));
+    } // [tl! focus:end]
+}
+```
+
+Jméno pohledu je nastavené na `$view`, ne jen předané do `renderView()`, takže
+`PriceColumn::make('price')->view('…')` ho pro jednu tabulku stále přepíše a
+vlastní pohledy balíčku `tables.columns.*` se místo něj nikdy nehledají.
+`value` je naformátovaný stav — text prázdné buňky, když žádný není — takže
+`->placeholder()`, `->limit()` a ostatní dál fungují. Existující pohled se nikdy
+nepřepíše, `--force` nahradí jen třídu a
+`php artisan vendor:publish --tag=wire-table::stubs` vám dovolí změnit, co
+zapisuje.

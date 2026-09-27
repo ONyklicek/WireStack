@@ -111,6 +111,19 @@ Jediná abstraktní metoda, kterou musíte implementovat, je `viewName()`.
 Postavíme pole `MoneyInput`, které ukládá celočíselný počet centů a
 vykresluje textový input vědomý si měny.
 
+Třídu i její pohled můžete napsat ručně, nebo začít z generátoru:
+
+```bash
+php artisan make:wire-field MoneyInput
+```
+
+Zapíše `app/Forms/Components/MoneyInput.php` — `Field` s `getStateType()` a
+`viewName()` — a `resources/views/forms/components/money-input.blade.php`, input
+svázaný přes `wire:model` uvnitř dvou obalových partialů popsaných v kroku 2.
+Žádná přípona se nepřidává: pole se jmenuje podle ovládacího prvku, kterým je.
+Existující pohled se nikdy nepřepíše, `--force` nahradí jen třídu a
+`php artisan vendor:publish --tag=wire-forms::stubs` vám dovolí změnit, co zapisuje.
+
 ### 1. PHP třída
 
 ```php

@@ -130,7 +130,7 @@ separate package for exactly this reason.
 | [Routing](routing.md) | `pages()`, `Route::wireResources()`, the URL shape, zones, config-declared routes |
 | [Tenancy](tenancy.md) | A tenant in the URL — `wire.tenant`, `HasTenants`, `'tenant' => 'path'\|'domain'` on a zone |
 | [Modules](modules.md) | One business area's manifest — its resources, dashboards and menu heading in one class |
-| [Command Line](cli.md) | `make:wire-resource`, `make:wire-page`, `make:wire-cluster`, `make:wire-relation-manager`, `wire:resources` |
+| [Command Line](cli.md) | `make:wire-resource`, `make:wire-page`, `make:wire-cluster`, `make:wire-relation-manager`, `wire:resources` a generátory komponent (`make:wire-column`, `-filter`, `-field`, `-entry`, `-action`) |
 
 ## Reaching A Page A Module Ships
 

@@ -7,6 +7,42 @@ summary: "Rozšíření základní třídy filtru: vlastní ovládací prvek, vl
 
 Pro znovupoužitelné, složité filtry rozšiřte základní třídu `Filter`.
 
+## Jak to funguje
+
+Tabulka zužuje dotaz jednou ze dvou cest a to, kterou filtr půjde, rozhoduje,
+zda se vaše `apply()` vůbec zavolá:
+
+1. **Plánovač dotazu** — výchozí cesta pro jednu skalární hodnotu. Tabulka
+   přečte sloupec a hodnotu filtru a napíše `column = value` sama.
+   `apply()` se **nezavolá**.
+2. **`apply()`** — použije se, když má filtr callback `->query()`, když je jeho
+   hodnota pole a filtr není `->multiple()`, nebo když `bypassesPlanner()`
+   vrátí `true`.
+
+Filtr, který přepisuje `apply()` a odesílá jednu hodnotu, proto musí z
+`bypassesPlanner()` vracet `true`, jinak za něj potichu odpoví plánovač. Před
+oběma cestami platí, že hodnota `null`, `''` nebo `[]` znamená vypnutý filtr a
+přeskočí se.
+
+Ovládací prvek kreslí `render($value)`. Základní implementace vykreslí
+`filterView()` a hledá ho nejdřív pod `wire-table::`, takže pohled pojmenovaný
+jako dodávaný (`tables.filters.select`) nakreslí dodávaný prvek. Vykreslete svůj
+pohled přímo jménem, jako kostra níže, a jméno se nemůže srazit.
+
+## Vygenerování
+
+```bash
+php artisan make:wire-filter Region
+```
+
+zapíše `app/Tables/Filters/RegionFilter.php` a
+`resources/views/tables/filters/region.blade.php`: třída přepisuje `apply()`,
+`bypassesPlanner()` a `render()` a pohled váže textové pole na
+`tableState.filters.region.value`. Existující pohled se nikdy nepřepíše;
+`--force` nahradí jen třídu. `php artisan vendor:publish --tag=wire-table::stubs`
+zkopíruje `filter.stub` a `filter-view.stub` do `stubs/wire-table/` a příkaz je
+odtud čte přednostně.
+
 ## Kostra
 
 ```php
@@ -34,7 +70,7 @@ class MyFilter extends Filter
     }
 
     // Přepsat apply logiku
-    public function apply(Builder $query, mixed $value): Builder
+    public function apply(Builder $query, mixed $value): Builder // [tl! focus:start]
     {
         if (empty($value)) {
             return $query;
@@ -43,6 +79,12 @@ class MyFilter extends Filter
         // Vaše vlastní logika dotazu
         return $query->where(...);
     }
+
+    // Jedna hodnota jde přes apply(), ne přes plánovač dotazu
+    public function bypassesPlanner(): bool
+    {
+        return true;
+    } // [tl! focus:end]
 
     // Vlastní Blade pohled (volitelné) — přepište render() a nasměrujte na svůj pohled.
     // Pohled dostane 'filter' (tuto instanci) a 'value' (aktuální stav).
@@ -90,6 +132,12 @@ class JsonContainsFilter extends SelectFilter
 
         return $query->whereJsonContains($column, $value);
     }
+
+    // Jedna vybraná možnost je skalár, na který by odpověděl plánovač
+    public function bypassesPlanner(): bool // [tl! focus:start]
+    {
+        return true;
+    } // [tl! focus:end]
 }
 ```
 

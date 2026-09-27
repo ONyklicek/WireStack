@@ -1,0 +1,2 @@
+{{-- Variables: $column, $record, $state (raw), $value (formatted, or the empty-cell text). --}}
+<span class="text-sm text-gray-900 dark:text-white">{{ $value }}</span>

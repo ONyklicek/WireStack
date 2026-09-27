@@ -137,6 +137,25 @@ publikovanou šablonu dřív než svou: `resource.stub`, `resource-page.stub`,
 `page.stub`, `page-view.stub`, `relation-manager.stub` a
 `dashboard-page.stub`.
 
+## Vygenerování komponenty
+
+Části, ze kterých se skládá tabulka, formulář nebo infolist, mají vlastní
+generátory v balíčku, který každou z nich vlastní — existují tedy i bez panelu:
+
+| Příkaz | Zapíše | Balíček |
+|---|---|---|
+| `make:wire-column Price` | `app/Tables/Columns/PriceColumn.php` + pohled buňky | wire-table — [vlastní sloupec](../table/columns/patterns.md#vlastni-trida-sloupce) |
+| `make:wire-filter Region` | `app/Tables/Filters/RegionFilter.php` + pohled ovládacího prvku | wire-table — [vlastní filtr](../table/filters/custom.md#vygenerovani) |
+| `make:wire-field MoneyInput` | `app/Forms/Components/MoneyInput.php` + pohled inputu | wire-forms — [vlastní pole](../forms/custom-fields.md#stavba-vlastniho-pole) |
+| `make:wire-entry Money` | `app/Infolists/Components/MoneyEntry.php` + jeho pohled | wire-core — [vlastní entry](../core/infolists/entries.md#vlastni-entry) |
+| `make:wire-action Archive [--bulk]` | `app/Wire/Actions/ArchiveAction.php` | wire-core — [vlastní preset](../core/actions/index.md#vlastni-preset) |
+| `make:wire-widget Revenue` | `app/Widgets/RevenueWidget.php` + jeho pohled | wire-core — [widgety](../core/widgets/index.md) |
+
+Každý přidá svou příponu, pokud jméno už nekončí jí (pole žádnou nemá), nikdy
+nepřepíše existující pohled a třídu nahradí jen s `--force`. Každý balíček
+publikuje vlastní šablony — `--tag=wire-table::stubs`, `wire-forms::stubs`,
+`wire-core::stubs` — do `stubs/<balíček>/`.
+
 ## Související
 
 - [Resources](resources.md) — co vygenerovaný resource deklaruje

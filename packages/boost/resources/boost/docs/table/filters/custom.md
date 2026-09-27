@@ -7,6 +7,42 @@ summary: "Extending the base filter class: your own control, your own query, reu
 
 For reusable, complex filters, extend the base `Filter` class.
 
+## How It Works
+
+A table narrows its query in one of two ways, and which one a filter takes
+decides whether your `apply()` runs at all:
+
+1. **The query planner** — the default for a single scalar value. The table
+   reads the filter's column and value and writes `column = value` itself.
+   `apply()` is **not called**.
+2. **`apply()`** — taken when the filter has a `->query()` callback, when its
+   value is an array and it is not `->multiple()`, or when
+   `bypassesPlanner()` returns `true`.
+
+So a filter that overrides `apply()` and submits one value must also return
+`true` from `bypassesPlanner()`, or the planner quietly answers for it. Before
+either path, a value of `null`, `''` or `[]` means the filter is off and it is
+skipped.
+
+The control is drawn by `render($value)`. The base implementation renders
+`filterView()` and looks for it under `wire-table::` first, so a view named
+like a shipped one (`tables.filters.select`) draws the shipped control. Render
+your own view by name, as the skeleton below does, and the name cannot collide.
+
+## Generating One
+
+```bash
+php artisan make:wire-filter Region
+```
+
+writes `app/Tables/Filters/RegionFilter.php` and
+`resources/views/tables/filters/region.blade.php`: the class overrides
+`apply()`, `bypassesPlanner()` and `render()`, and the view binds a text input
+to `tableState.filters.region.value`. An existing view is never overwritten;
+`--force` replaces the class only. `php artisan vendor:publish --tag=wire-table::stubs`
+copies `filter.stub` and `filter-view.stub` to `stubs/wire-table/`, and the
+command reads them from there first.
+
 ## Skeleton
 
 ```php
@@ -34,7 +70,7 @@ class MyFilter extends Filter
     }
 
     // Override apply logic
-    public function apply(Builder $query, mixed $value): Builder
+    public function apply(Builder $query, mixed $value): Builder // [tl! focus:start]
     {
         if (empty($value)) {
             return $query;
@@ -43,6 +79,12 @@ class MyFilter extends Filter
         // Your custom query logic
         return $query->where(...);
     }
+
+    // Send a single value through apply() rather than the query planner
+    public function bypassesPlanner(): bool
+    {
+        return true;
+    } // [tl! focus:end]
 
     // Custom Blade view (optional) — override render() and point at your view.
     // The view receives 'filter' (this instance) and 'value' (current state).
@@ -90,6 +132,12 @@ class JsonContainsFilter extends SelectFilter
 
         return $query->whereJsonContains($column, $value);
     }
+
+    // One selected option is a scalar, which the planner would answer
+    public function bypassesPlanner(): bool // [tl! focus:start]
+    {
+        return true;
+    } // [tl! focus:end]
 }
 ```
 

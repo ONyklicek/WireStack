@@ -297,6 +297,61 @@ public function infolist(Infolist $infolist): Infolist
 
 Všechno ostatní — `label()`, `hiddenLabel()`, `state()`, `placeholder()`, `columnSpan()`, `visible()` — je sdílená plocha entry popsaná výše.
 
+## Vlastní entry
+
+Pro hodnotu, kterou žádná z entry výše nenakreslí, napište třídu entry a její pohled:
+
+```bash
+php artisan make:wire-entry Money
+```
+
+zapíše `app/Infolists/Components/MoneyEntry.php` — `Entry`, jehož jedinou
+povinností je `viewName()` — a pohled, který jmenuje:
+
+```php
+namespace App\Infolists\Components;
+
+use NyonCode\WireCore\Infolists\Components\Entry;
+
+class MoneyEntry extends Entry
+{
+    protected function viewName(): string
+    {
+        return 'infolists.entries.money';
+    }
+}
+```
+
+```blade
+{{-- resources/views/infolists/entries/money.blade.php --}}
+@php
+    $value = $field->getFormattedState();
+@endphp
+
+<div class="{{ $field->getColumnSpanClass() }}" @wireExtraAttributes($field)>
+    @if($field->hasVisibleLabel()) {{-- [tl! focus:start] --}}
+        @include('wire-core::partials.entry-label', ['text' => $field->getLabel()])
+    @endif {{-- [tl! focus:end] --}}
+
+    <div class="text-sm text-gray-900 dark:text-white">
+        @if($value !== '-' && $value !== '')
+            {{ $value }}
+        @else
+            <span class="text-gray-400">{{ $field->getPlaceholder() ?? '-' }}</span>
+        @endif
+    </div>
+
+    @if($field->hasActions())@include('wire-core::infolists.entry-actions')@endif {{-- [tl! focus] --}}
+</div>
+```
+
+Pohled dostane entry jako `$field` a label, šířku sloupce, extra atributy a
+akce entry kreslí stejnými partialy jako vestavěné entry, takže s nimi lícuje.
+Stav čtěte přes `getFormattedState()`, které uplatní `formatStateUsing()` a
+ostatní. Existující pohled se nikdy nepřepíše, `--force` nahradí jen třídu a
+`php artisan vendor:publish --tag=wire-core::stubs` vám dovolí změnit, co
+zapisuje.
+
 ## Související
 
 - [Infolisty](index.md) — objekt, do kterého se tyhle entries skládají

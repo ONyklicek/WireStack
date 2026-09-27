@@ -13,6 +13,7 @@ use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\Contracts\ModalFormFactory;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireForms\Components\Console\MakeFieldCommand;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\Runtime\FieldPartialHook;
 use NyonCode\WireForms\Forms\Support\FormModalFormFactory;
@@ -66,6 +67,14 @@ class WireFormsServiceProvider extends PackageServiceProvider
             })
             ->hasConfig()
             ->hasViews()
+            // The custom-component generators and their templates, publishable
+            // with `vendor:publish --tag=wire-forms::stubs`; a published copy wins
+            // (Foundation\Console\Support\PublishedStubs says where it is looked for).
+            ->hasCommand(MakeFieldCommand::class)
+            ->hasStubs([
+                '../stubs/field.stub',
+                '../stubs/field-view.stub',
+            ])
             ->hasAssets('dist', entries: [
                 Bundle::make('wire-forms-image.js'),
                 // The field controllers (date/time pickers, tags, rating, the

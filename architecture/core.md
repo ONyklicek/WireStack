@@ -336,7 +336,12 @@ resolving one" — bar chart, progress and list all delegate to it, and it throw
 `Widgets/Concerns/WithWidgets.php` (host trait). Contract:
 `Widgets/Contracts/HasWidgets.php`. Generators:
 `Widgets/Console/MakeDashboardCommand.php`, `Widgets/Console/MakeWidgetCommand.php`
-(class + Blade view, both from publishable stubs).
+(class + Blade view, both from publishable stubs). Where a published stub is
+looked for is `Foundation/Console/Support/PublishedStubs.php` — one rule for the
+generators of every package (wire-panels' included); the custom-component
+generators (`make:wire-column|filter|field|entry|action`, each in the package
+owning its base class) are a `ComponentBlueprint` handed to
+`Foundation/Console/Actions/ScaffoldComponent.php`.
 
 **Four triggers, one region.** A poll tick (`refreshWidget`), a filter change
 (`filterWidget`), a deferred first render (`loadWidget`) and a header action

@@ -57,6 +57,55 @@ $table->bulkActions([
 ]);
 ```
 
+## Vlastní preset
+
+Když se stejný řetězec `Action::make()` objeví na druhém místě, udělejte z něj
+třídu — tak, jak jsou postavené presety výše:
+
+```bash
+php artisan make:wire-action Archive
+php artisan make:wire-action Archive --bulk
+```
+
+První zapíše `app/Wire/Actions/ArchiveAction.php`, druhý
+`ArchiveBulkAction.php` rozšiřující `BulkAction`. Ne `app/Actions`, kde
+aplikace drží své byznysové akce — tlačítko, které jednu volá, samo akcí není.
+Jméno, popisek i výchozí argument `make()` vzniknou z toho, co jste napsali:
+
+```php
+namespace App\Wire\Actions;
+
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Actions\Action;
+
+class ArchiveAction extends Action
+{
+    public function __construct(string $name = 'archive')
+    {
+        parent::__construct($name);
+
+        $this->label('Archivovat') // [tl! focus:start]
+            ->icon('bolt')
+            ->requiresConfirmation()
+            ->action(function (Model $record): void {
+                $record->update(['archived_at' => now()]);
+            }); // [tl! focus:end]
+    }
+
+    public static function make(string $name = 'archive'): static
+    {
+        return new static($name);
+    }
+}
+```
+
+Výchozí hodnoty nastavuje konstruktor, takže cokoli jde změnit při použití —
+`ArchiveAction::make()->label('Odložit')`. Callback si o to, co potřebuje, řekne
+jménem: `$record`, `$data` (hodnoty formuláře v modalu), `$action`; hromadný
+dostane `$records`, načtený výběr. Akce nemá vlastní pohled, takže se žádný
+negeneruje. `php artisan vendor:publish --tag=wire-core::stubs` vám dovolí
+změnit, co zapisuje.
+
 ## Základní použití
 
 ```php

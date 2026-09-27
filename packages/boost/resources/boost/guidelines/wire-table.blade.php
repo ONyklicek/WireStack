@@ -66,6 +66,11 @@ Full page: `docs/table/data-sources.md`.
 `CheckboxColumn`, `PollColumn`, `SelectColumn`, `TextInputColumn`, `SplitColumn`, `StackedColumn`,
 `ColorColumn`, `RatingColumn`, `TagsColumn`.
 
+A cell no fluent method draws is a column class: `php artisan make:wire-column Price` writes
+`app/Tables/Columns/PriceColumn.php` (overrides `renderCell()`, view name set on `$view`) and
+`resources/views/tables/columns/price.blade.php` (receives `$column`, `$record`, `$state`, `$value`).
+The view is never overwritten; `--force` replaces the class. Stubs: `vendor:publish --tag=wire-table::stubs`.
+
 `BadgeColumn` (and `IconColumn`) color/icon resolution — pick by intent:
 - one fixed color for every row: `->color('success')` (takes `string|Color|null`, never a Closure);
 - a static state → color map: `->colors(['active' => 'success', 'draft' => 'gray'])`;
@@ -83,6 +88,11 @@ any relation type — including `hasMany`/`belongsToMany` — and honours the re
 constraints automatically.
 
 ### Filters
+
+A custom filter class that overrides `apply()` must also return `true` from `bypassesPlanner()`: a single scalar
+value otherwise goes to the `QueryPlanner` as `column = value` and `apply()` never runs. `php artisan make:wire-filter Region`
+writes both (`app/Tables/Filters/RegionFilter.php` + `resources/views/tables/filters/region.blade.php`, rendered by name so a
+built-in `wire-table::tables.filters.*` view never answers for it).
 
 `SelectFilter`, `DateFilter`, `NumberRangeFilter`, `TernaryFilter`, `TrashedFilter`. A filter query callback must return the
 Builder. It receives the value already normalized for its filter type — a `TernaryFilter` callback gets a real

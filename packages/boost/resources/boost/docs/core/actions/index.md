@@ -57,6 +57,55 @@ $table->bulkActions([
 ]);
 ```
 
+## A Preset Of Your Own
+
+When the same `Action::make()` chain turns up on a second surface, make it a
+class — the way the presets above are built:
+
+```bash
+php artisan make:wire-action Archive
+php artisan make:wire-action Archive --bulk
+```
+
+The first writes `app/Wire/Actions/ArchiveAction.php`, the second
+`ArchiveBulkAction.php` extending `BulkAction`. Not `app/Actions`, which is
+where an application keeps its business actions — a button that calls one is
+not one. The name, label and default `make()` argument come from what you typed:
+
+```php
+namespace App\Wire\Actions;
+
+use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Actions\Action;
+
+class ArchiveAction extends Action
+{
+    public function __construct(string $name = 'archive')
+    {
+        parent::__construct($name);
+
+        $this->label('Archive') // [tl! focus:start]
+            ->icon('bolt')
+            ->requiresConfirmation()
+            ->action(function (Model $record): void {
+                $record->update(['archived_at' => now()]);
+            }); // [tl! focus:end]
+    }
+
+    public static function make(string $name = 'archive'): static
+    {
+        return new static($name);
+    }
+}
+```
+
+The constructor sets the defaults, so anything is still changeable per use —
+`ArchiveAction::make()->label('Shelve')`. The callback asks for what it needs by
+name: `$record`, `$data` (the modal form's values), `$action`; the bulk one
+receives `$records`, the loaded selection. An action has no view of its own,
+so there is none to generate. `php artisan vendor:publish --tag=wire-core::stubs`
+lets you change what it writes.
+
 ## Basic Usage
 
 ```php

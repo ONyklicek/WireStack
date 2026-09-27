@@ -105,8 +105,6 @@ docs/table/columns/text.md#e2fffdd0
 docs/table/exports.md#90c7b94b
 docs/table/exports.md#e1dce952
 docs/table/filters/column-level.md#4ad644cb
-docs/table/filters/custom.md#913ef084
-docs/table/filters/custom.md#244f088d
 docs/table/filters/custom.md#5f04e317
 docs/table/filters/patterns.md#933335be
 docs/table/filters/patterns.md#036a059d

@@ -43,6 +43,7 @@ are addressed by name (`Wizard::make('signup')`).
 ### Conventions
 
 - Fields are `::make($name)` where `$name` is the state key under the form's `statePath`.
+- A custom field starts from `php artisan make:wire-field MoneyInput` — `app/Forms/Components/MoneyInput.php` (`getStateType()` + `viewName()`, no suffix added) and `resources/views/forms/components/money-input.blade.php` inside the `wire-forms::partials.field-wrapper-*` partials. Stubs: `wire-forms::stubs`.
 - Validation lives on the field: `->required()`, `->rules([...])`, `->minLength()` etc.
 - `->rules()` accepts a Closure (or Closure entries in the array), evaluated with `$get`/`$set` for rules that depend on live sibling state.
 - Options accept arrays or an enum class: `->options(Status::class)` (shared `HasOptions`).

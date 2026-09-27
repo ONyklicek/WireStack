@@ -16,6 +16,10 @@ the shared color/icon/size/visibility vocabulary.
    concerns (`HasColor`, `HasIcon`, `HasSize`, `HasVisibility`, `HasName`, `HasLabel`).
 2. Use `describe-component-api` to see an action/entry/widget fluent surface and `list-icons` for names.
 3. Compose objects fluently; render reusable markup from PHP via `Htmlable` helpers.
+4. A chain repeated on a second surface becomes a class, generated rather than hand-written:
+   `php artisan make:wire-action Archive [--bulk]` (`app/Wire/Actions/ArchiveAction.php`, defaults in the
+   constructor, `make(string $name = 'archive')`); a value no entry draws is `php artisan make:wire-entry Money`
+   (`app/Infolists/Components/MoneyEntry.php` + `resources/views/infolists/entries/money.blade.php`).
 
 ## Patterns
 

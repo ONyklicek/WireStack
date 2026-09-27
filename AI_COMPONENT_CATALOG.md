@@ -302,6 +302,8 @@ Widgets:
 - `Widgets\Concerns\HasWidgetItems`
 - `Widgets\Concerns\WithWidgets`
 - `Widgets\Console\MakeDashboardCommand`, `Widgets\Console\MakeWidgetCommand`
+- `Foundation\Console\Support\PublishedStubs` (the one published-stub lookup every generator in every package uses), `Foundation\Console\Support\StubWriter`
+- `Foundation\Console\Support\ComponentBlueprint` + `Foundation\Console\Actions\ScaffoldComponent` + `Foundation\Console\Concerns\InteractsWithComponentScaffold` — the custom-component generators: `Infolists\Console\MakeEntryCommand` (`make:wire-entry`), `Actions\Console\MakeActionCommand` (`make:wire-action [--bulk]`), and downstream wire-table `Columns\Console\MakeColumnCommand` / `Filters\Console\MakeFilterCommand`, wire-forms `Components\Console\MakeFieldCommand`
 - `Foundation\Contracts\RunsComponentActions` (the Widgets↔Actions seam)
 - `Actions\Support\ComponentActionRunner`, `Actions\Support\ActionCallbackInvoker`
 

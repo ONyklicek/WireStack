@@ -137,6 +137,25 @@ published template before its own: `resource.stub`, `resource-page.stub`,
 `page.stub`, `page-view.stub`, `relation-manager.stub` and
 `dashboard-page.stub`.
 
+## Generating A Component
+
+The parts a table, a form or an infolist is built from have generators of their
+own, in the package that owns each one — so they exist without a panel too:
+
+| Command | Writes | Package |
+|---|---|---|
+| `make:wire-column Price` | `app/Tables/Columns/PriceColumn.php` + its cell view | wire-table — [custom column](../table/columns/patterns.md#a-column-class-of-your-own) |
+| `make:wire-filter Region` | `app/Tables/Filters/RegionFilter.php` + its control view | wire-table — [custom filter](../table/filters/custom.md#generating-one) |
+| `make:wire-field MoneyInput` | `app/Forms/Components/MoneyInput.php` + its input view | wire-forms — [custom field](../forms/custom-fields.md#building-a-custom-field) |
+| `make:wire-entry Money` | `app/Infolists/Components/MoneyEntry.php` + its view | wire-core — [custom entry](../core/infolists/entries.md#a-custom-entry) |
+| `make:wire-action Archive [--bulk]` | `app/Wire/Actions/ArchiveAction.php` | wire-core — [preset action](../core/actions/index.md#a-preset-of-your-own) |
+| `make:wire-widget Revenue` | `app/Widgets/RevenueWidget.php` + its view | wire-core — [widgets](../core/widgets/index.md) |
+
+Each adds its suffix unless the name already ends with it (a field takes none),
+never overwrites a view that exists, and replaces the class only with `--force`.
+Each package publishes its own templates — `--tag=wire-table::stubs`,
+`wire-forms::stubs`, `wire-core::stubs` — into `stubs/<package>/`.
+
 ## Related
 
 - [Resources](resources.md) — what a generated resource declares

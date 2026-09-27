@@ -11,6 +11,8 @@ use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Foundation\Assets\Bundle;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
+use NyonCode\WireTable\Columns\Console\MakeColumnCommand;
+use NyonCode\WireTable\Filters\Console\MakeFilterCommand;
 use NyonCode\WireTable\Livewire\TableStateSynthesizer;
 use NyonCode\WireTable\Support\Icons\TableIconSet;
 use NyonCode\WireTable\Support\RecordAction;
@@ -54,6 +56,17 @@ class WireTableServiceProvider extends PackageServiceProvider
             })
             ->hasConfig()
             ->hasViews()
+            // The custom-component generators and their templates, publishable
+            // with `vendor:publish --tag=wire-table::stubs`; a published copy wins
+            // (Foundation\Console\Support\PublishedStubs says where it is looked for).
+            ->hasCommand(MakeColumnCommand::class)
+            ->hasCommand(MakeFilterCommand::class)
+            ->hasStubs([
+                '../stubs/column.stub',
+                '../stubs/column-view.stub',
+                '../stubs/filter.stub',
+                '../stubs/filter-view.stub',
+            ])
             ->hasAssets('dist', entries: [
                 Bundle::make('wire-table-records.js'),
                 Bundle::make('wire-table-selection.js'),
