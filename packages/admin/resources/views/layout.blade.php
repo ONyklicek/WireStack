@@ -125,6 +125,12 @@
                 openMobile() {
                     this.mobile = true;
                     document.body.classList.add('overflow-hidden', 'lg:overflow-auto');
+
+                    // Onto the first row of the menu, once the trap on the
+                    // drawer is active — it activates on a 15ms timer of its own,
+                    // and focusing earlier would be focusing outside a trap that
+                    // then pulls the caret back to the drawer's edge.
+                    setTimeout(() => document.querySelector('#wire-admin-nav a[href], #wire-admin-nav button')?.focus(), 30);
                 },
 
                 closeMobile() {
@@ -346,7 +352,7 @@
                 @wireRenderHook('admin.topbar.end')
             </header>
 
-            <main id="wire-admin-main" class="p-4" data-testid="admin-content" @wireEl('admin-content')>
+            <main id="wire-admin-main" tabindex="-1" class="p-4 focus:outline-none" data-testid="admin-content" @wireEl('admin-content')>
                 {{ $slot }}
             </main>
         </div>

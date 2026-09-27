@@ -35,6 +35,14 @@
     data-testid="admin-sidebar" @wireEl('admin-sidebar')
     x-data
     x-on:keydown.escape.window="$store.wireAdmin.closeMobile()"
+    {{-- An open drawer keeps the keyboard inside it: without this, Tab walked
+         on through the page *behind* the dimming layer, to controls nobody
+         could see. Alpine's focus trap (bundled with Livewire) also hands focus
+         back to whatever opened the drawer when it closes, however it closes —
+         Escape, the dimming layer, the close button or a link. `noautofocus`
+         because the first focusable element here is the brand link; the store
+         puts the caret on the first menu row instead. --}}
+    x-trap.noautofocus="$store.wireAdmin?.mobile"
     x-bind:class="$store.wireAdmin?.mobile ? 'translate-x-0 shadow-2xl' : '-translate-x-full'"
     {{-- The width is not bound. It was, and binding it is what made a collapsed
          menu open to 288 pixels on every page load and slide shut again: Alpine
