@@ -128,6 +128,7 @@ separate package for exactly this reason.
 | [Pages](pages.md) | `ListPage`, `CreatePage`, `EditPage`, `ViewPage`, header actions, `Page` for a page of your own, record resolution, embedded relation managers |
 | [Navigation](navigation.md) | `NavigationItem`, `NavigationGroup`, `Workspace`, the catalogue all three surfaces read |
 | [Routing](routing.md) | `pages()`, `Route::wireResources()`, the URL shape, zones, config-declared routes |
+| [Tenancy](tenancy.md) | A tenant in the URL — `wire.tenant`, `HasTenants`, `'tenant' => 'path'\|'domain'` on a zone |
 | [Modules](modules.md) | One business area's manifest — its resources, dashboards and menu heading in one class |
 | [Command Line](cli.md) | `make:wire-resource`, `make:wire-page`, `make:wire-cluster`, `make:wire-relation-manager`, `wire:resources` |
 

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WirePanels;
 
 use Illuminate\Routing\Route as RouteDefinition;
+use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Resources\ResourceRegistry;
@@ -15,6 +17,7 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
+use NyonCode\WirePanels\Http\Middleware\IdentifyTenant;
 use NyonCode\WirePanels\Install\RegisterResourceRoutes;
 use NyonCode\WirePanels\Pages\PageRegistry;
 use NyonCode\WirePanels\Resources\Console\ListResourcesCommand;
@@ -89,6 +92,13 @@ class WirePanelsServiceProvider extends PackageServiceProvider
                 SetupRegistry::instance()->register(RegisterResourceRoutes::class);
             })
             ->bootedPackage(function (): void {
+                // The tenant zone's middleware, by alias for route files and
+                // persistent for Livewire: a round trip is a request to
+                // `livewire/update`, and without this the tenant — and every
+                // link it fills in — would be gone on the second render.
+                $this->app->make(Router::class)->aliasMiddleware(IdentifyTenant::ALIAS, IdentifyTenant::class);
+                Livewire::addPersistentMiddleware(IdentifyTenant::class);
+
                 // Once every route is loaded: a route file registers its
                 // routes from a provider's booted callback, and the one that
                 // replaces a page may come after the page.

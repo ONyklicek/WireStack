@@ -165,7 +165,7 @@ use NyonCode\WirePanels\Contracts\HasTenants;
 
 class User extends Authenticatable implements HasTenants
 {
-    public function tenants(): iterable
+    public function getTenants(): iterable
     {
         return $this->companies;
     }
@@ -175,14 +175,16 @@ class User extends Authenticatable implements HasTenants
         return $this->companies()->whereKey($tenant->getKey())->exists();
     }
 
-    public function defaultTenant(): ?Model
+    public function getDefaultTenant(): ?Model
     {
         return $this->companies()->first();
     }
 }
 ```
 
-Beside `HasPreferredZone`, because it is a fact about the person.
+Beside `HasPreferredZone`, because it is a fact about the person. The methods
+are `get…` rather than `tenants()` so the relation of that name stays free — an
+Eloquent relation is not the `iterable` the contract returns.
 `Concerns\InteractsWithTenants` implements all three over a `tenants`
 belongs-to-many and a `tenant_user` pivot, which §8 migrates — the ordinary
 case written once. A user model without the contract inside a tenant zone is
@@ -231,7 +233,7 @@ left to the application until a case asks for it in the framework.
   does not have. The team switcher sits beside it and lists the current
   company's teams.
 - **Entry.** `/app` — the zone without a tenant — redirects to
-  `defaultTenant()`, then by the existing `PanelEntry` to the first page the
+  `getDefaultTenant()`, then by the existing `PanelEntry` to the first page the
   person may open. No tenant at all goes to the registration of §8 when it is
   allowed, and to a page that says so when it is not.
 - **Signing in** lands on `/app` when `fortify.home` says so, which `wire:install`

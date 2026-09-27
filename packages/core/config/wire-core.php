@@ -258,6 +258,12 @@ return [
         // How tenants are kept apart: 'column' — one database, the column
         // above — or the name of a class implementing IsolatesTenants.
         'isolation' => env('WIRE_TENANCY_ISOLATION', 'column'),
+
+        // The tenant model a tenant zone finds by its route key (a slug when
+        // the model says so), and the pivot table InteractsWithTenants reads
+        // membership from. Only a tenant zone needs them.
+        'model' => null,
+        'members_table' => 'tenant_user',
     ],
 
     'plugins' => [

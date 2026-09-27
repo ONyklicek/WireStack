@@ -7,6 +7,8 @@ namespace NyonCode\WirePanels\Routing;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Route as RouteFacade;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
+use NyonCode\WirePanels\Exceptions\TenancyConfigurationException;
+use NyonCode\WirePanels\Http\Middleware\IdentifyTenant;
 
 /**
  * The route groups an application declared in config instead of in a route file.
@@ -102,6 +104,7 @@ final readonly class ConfiguredRoutes implements RegistersPageRoutes
      */
     private function mount(?string $zone, array $config): void
     {
+        $config = $this->withTenant((string) $zone, $config);
         $registrar = RouteFacade::middleware($config['middleware'] ?? []);
 
         if ($zone !== null && $zone !== '') {
@@ -122,5 +125,40 @@ final readonly class ConfiguredRoutes implements RegistersPageRoutes
         $registrar->group(function () use ($config): void {
             ResourceRoutes::all($config['only'] ?? [], $config['except'] ?? []);
         });
+    }
+
+    /**
+     * A tenant zone: `{tenant}` in the prefix or in front of the domain, and the
+     * middleware that finds it (ADR 0040 §3). The parameter has one name
+     * wherever it sits, so one middleware reads both.
+     *
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    private function withTenant(string $zone, array $config): array
+    {
+        $mode = $config['tenant'] ?? null;
+
+        if ($mode === null || $mode === false) {
+            return $config;
+        }
+
+        $parameter = '{'.IdentifyTenant::PARAMETER.'}';
+
+        if ($mode === 'path') {
+            $config['prefix'] = trim(($config['prefix'] ?? '').'/'.$parameter, '/');
+        } elseif ($mode === 'domain') {
+            if (! is_string($config['domain'] ?? null) || $config['domain'] === '') {
+                throw TenancyConfigurationException::domainModeWithoutDomain($zone);
+            }
+
+            $config['domain'] = $parameter.'.'.$config['domain'];
+        } else {
+            throw TenancyConfigurationException::unknownMode($zone, is_string($mode) ? $mode : get_debug_type($mode));
+        }
+
+        $config['middleware'] = [...(array) ($config['middleware'] ?? []), IdentifyTenant::ALIAS];
+
+        return $config;
     }
 }
