@@ -18,6 +18,7 @@ use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
 use NyonCode\WirePanels\Install\RegisterResourceRoutes;
 use NyonCode\WirePanels\Pages\PageRegistry;
 use NyonCode\WirePanels\Resources\Console\ListResourcesCommand;
+use NyonCode\WirePanels\Resources\Console\MakeClusterCommand;
 use NyonCode\WirePanels\Resources\Console\MakeDashboardPageCommand;
 use NyonCode\WirePanels\Resources\Console\MakePageCommand;
 use NyonCode\WirePanels\Resources\Console\MakeRelationManagerCommand;
@@ -106,6 +107,7 @@ class WirePanelsServiceProvider extends PackageServiceProvider
             // dashboard page's, under one tag.
             ->hasCommand(MakeResourceCommand::class)
             ->hasCommand(MakePageCommand::class)
+            ->hasCommand(MakeClusterCommand::class)
             ->hasCommand(MakeRelationManagerCommand::class)
             ->hasCommand(ListResourcesCommand::class)
             ->hasStubs([
@@ -113,6 +115,7 @@ class WirePanelsServiceProvider extends PackageServiceProvider
                 '../stubs/resource.stub',
                 '../stubs/resource-page.stub',
                 '../stubs/page.stub',
+                '../stubs/cluster.stub',
                 '../stubs/page-view.stub',
                 '../stubs/relation-manager.stub',
             ])

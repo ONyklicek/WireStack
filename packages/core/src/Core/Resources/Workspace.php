@@ -81,7 +81,8 @@ final readonly class Workspace
      * resource and forgets. The dropping happens once, in `entries()`.
      *
      * An entry that named a `parent()` is not in a group of its own here: it is
-     * under its parent, by the rules {@see NestNavigationEntries} states.
+     * under its parent — and a cluster's member is not here at all, its cluster
+     * stands for it — by the rules {@see NestNavigationEntries} states.
      *
      * @return array<string, NavigationGroup> Keyed by group key; the ungrouped top level is `''`.
      */
@@ -89,7 +90,7 @@ final readonly class Workspace
     {
         $buckets = [];
 
-        $entries = ($this->nest)($this->entries($zone, $linkedOnly), array_keys($this->registered()));
+        $entries = ($this->nest)($this->entries($zone, $linkedOnly), $this->registered());
 
         // Registration order, deliberately: it decides which group came first,
         // and sorting the entries beforehand would make that depend on the

@@ -87,6 +87,19 @@ routuje z `pages()` svého resource:
 — a to z ní zároveň udělá jednu ze záložek záznamu. Routování je deklarace
 vlastníka, takže ho příkaz vypíše, místo aby upravoval resource.
 
+## Generování clusteru
+
+```bash
+php artisan make:wire-cluster Settings
+php artisan make:wire-page Taxes --cluster=Settings
+```
+
+První zapíše `app/Clusters/Settings.php`, [cluster](clusters.md) — jednu sekci
+s jednou položkou v menu a jedním prefixem URL — a řekne, jak ho zaregistrovat,
+což je stejně jako stránku. Druhý zapíše stránku, která je jeho členem: stránka
+jmenuje cluster vlastností `protected static ?string $cluster`. Resource se
+přidá implementací `BelongsToCluster`, jedné metody, napsané ručně.
+
 ## Generování tabulky relace
 
 ```bash

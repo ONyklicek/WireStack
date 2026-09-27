@@ -16,6 +16,7 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
 use NyonCode\WireCore\Foundation\Routing\Zone;
+use NyonCode\WirePanels\Clusters\Concerns\InteractsWithCluster;
 use NyonCode\WirePanels\Exceptions\ResourcePageException;
 
 /**
@@ -30,6 +31,7 @@ use NyonCode\WirePanels\Exceptions\ResourcePageException;
 trait BelongsToResource
 {
     use BelongsToParentRecord;
+    use InteractsWithCluster;
 
     /**
      * Optional heading. Each page decides what it falls back to, because a list
@@ -107,9 +109,13 @@ trait BelongsToResource
             return [];
         }
 
+        // A cluster's member starts at the cluster: Settings › Currencies.
+        $cluster = $this->clusterBreadcrumb();
+
         // A nested resource's list sits inside its parent record, so the trail
         // walks through that first: Orders › Order 17 › Order lines › Line 3.
         $crumbs = [
+            ...($cluster === null ? [] : [$cluster]),
             ...$this->parentBreadcrumbs(),
             NavigationItem::make($resource::pluralLabel())->url(
                 app(ResolvesPageUrls::class)->urlFor($resource::key(), 'index', $this->parentRouteParameters(), $this->breadcrumbZone),
@@ -217,6 +223,12 @@ trait BelongsToResource
         $declared = $resource::pages()[$page] ?? null;
 
         return $declared instanceof RoutePage ? $declared->getPermission() : null;
+    }
+
+    /** The resource is the cluster's member; its pages draw the cluster's tabs. */
+    protected function clusterMember(): ?string
+    {
+        return static::$resource;
     }
 
     /** Every page has one; the trail's last crumb is it. */

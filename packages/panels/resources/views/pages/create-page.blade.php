@@ -1,5 +1,5 @@
 {{-- Resource create page: optional heading over the resource's form. --}}
-<div class="wire-resource-page space-y-4 sm:space-y-6">
+<div class="wire-resource-page space-y-4 sm:space-y-6" @if(($clusterNavigation ?? null)?->frame()) data-cluster-frame="{{ $clusterNavigation->frame() }}" @endif>
     @include('wire-panels::pages.partials.header')
 
     @include('wire-panels::pages.partials.page-widgets', ['pageWidgets' => $headerWidgets])

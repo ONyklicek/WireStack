@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use NyonCode\WirePanels\Clusters\Cluster;
+use NyonCode\WirePanels\Enums\SubNavigationPosition;
+
+/**
+ * {{ title }} — one section of the admin: one menu entry, one URL prefix, and
+ * the way across between its screens on each of them.
+ *
+ * A member names it: `protected static ?string $cluster = {{ class }}::class;`
+ * on a page, `public static function cluster(): ?string` on a resource.
+ * Registered in config('wire-panels.pages') or discovered, its own address
+ * sends the viewer to the first member they may open.
+ */
+class {{ class }} extends Cluster
+{
+    protected static ?string $slug = '{{ slug }}';
+
+    protected static ?string $navigationIcon = 'outline:squares-2x2';
+
+    protected static SubNavigationPosition $subNavigationPosition = SubNavigationPosition::Start;
+}

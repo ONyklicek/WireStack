@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Core\Resources\Navigation;
 
 use NyonCode\WireCore\Core\Resources\Workspace;
 use NyonCode\WireCore\Exceptions\NavigationParentException;
+use NyonCode\WireCore\Foundation\Routing\Contracts\BelongsToCluster;
 
 /**
  * Moves every entry that named a parent under that parent.
@@ -14,7 +15,13 @@ use NyonCode\WireCore\Exceptions\NavigationParentException;
  * and should stay small enough to read; this is the one step of building it
  * that has rules of its own.
  *
- * The rules, in the order they are checked:
+ * First, an entry whose class belongs to a registered cluster leaves the menu
+ * altogether: the cluster's own entry stands for the whole section, and its
+ * members are drawn on the cluster's pages instead (ADR 0039). A cluster that
+ * is not registered takes nothing away — the router refuses that declaration,
+ * and a menu that hid the member meanwhile would hide the evidence.
+ *
+ * Then the parent rules, in the order they are checked:
  *
  * 1. A parent nothing registered, or the entry itself, is refused — see
  *    {@see NavigationParentException} for why neither is quietly skipped.
@@ -37,11 +44,13 @@ final class NestNavigationEntries
 {
     /**
      * @param  array<string, NavigationItem>  $items  The menu, keyed by registered key.
-     * @param  array<int, string>  $registered  Every key a parent may name, in the menu or not.
+     * @param  array<string, class-string>  $registered  Every registered class by key, in the menu or not.
      * @return array<string, NavigationItem>
      */
     public function __invoke(array $items, array $registered): array
     {
+        $items = array_diff_key($items, $this->clustered($registered));
+
         /** @var array<string, array<int, NavigationItem>> $adopted */
         $adopted = [];
 
@@ -62,7 +71,7 @@ final class NestNavigationEntries
             }
 
             if (! isset($menu[$parent])) {
-                if (! in_array($parent, $registered, true)) {
+                if (! isset($registered[$parent])) {
                     throw NavigationParentException::unknown($key, $parent);
                 }
 
@@ -87,6 +96,31 @@ final class NestNavigationEntries
         }
 
         return $items;
+    }
+
+    /**
+     * The keys whose class sits inside a registered cluster.
+     *
+     * @param  array<string, class-string>  $registered
+     * @return array<string, true>
+     */
+    private function clustered(array $registered): array
+    {
+        $clustered = [];
+
+        foreach ($registered as $key => $class) {
+            if (! is_a($class, BelongsToCluster::class, true)) {
+                continue;
+            }
+
+            $cluster = $class::cluster();
+
+            if ($cluster !== null && in_array($cluster, $registered, true)) {
+                $clustered[$key] = true;
+            }
+        }
+
+        return $clustered;
     }
 
     /**

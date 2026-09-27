@@ -517,7 +517,7 @@ Route::middleware(SignInDemoUser::class)->prefix('previews/routed')->group(funct
 // `previews/zoned/{zone}` itself rather than leaving the bare prefix a 404.
 $zoneMembership = [
     'business' => ['overview', 'invoices'],
-    'admin' => ['overview', 'invoices', 'tasks'],
+    'admin' => ['overview', 'invoices', 'tasks', 'setup', 'general', 'appearance'],
 ];
 
 foreach ($zoneMembership as $zone => $only) {

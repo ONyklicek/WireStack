@@ -1,7 +1,7 @@
 {{-- A page of the application's own: the shared heading over whatever view the
      page names. The content inherits this scope, so the component's public
      properties and `$this` reach it as they reach any Livewire view. --}}
-<div class="wire-resource-page space-y-4 sm:space-y-6">
+<div class="wire-resource-page space-y-4 sm:space-y-6" @if(($clusterNavigation ?? null)?->frame()) data-cluster-frame="{{ $clusterNavigation->frame() }}" @endif>
     @include('wire-panels::pages.partials.header')
 
     @include('wire-panels::pages.partials.page-widgets', ['pageWidgets' => $headerWidgets])

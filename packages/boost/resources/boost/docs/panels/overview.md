@@ -28,7 +28,8 @@ above it:
 | A **resource** | "this is the Order entity, this is how it lists, is edited, is shown" | [Resources](resources.md) |
 | A **page** | "this Livewire component renders that surface for one record or all of them" | [Pages](pages.md) |
 | The **menu** | "which of them appear where, under what heading, in what order" | [Navigation](navigation.md) |
-| The **router** | "which URL reaches which page, in which zone" | [Routing](routing.md) |
+| The **router** | "which URL reaches which page, in which zone" | [Clusters](clusters.md) | One section as one class — a single menu entry, one URL prefix, the way across between its screens |
+| [Routing](routing.md) |
 
 A resource with no pages is still registered and still introspectable. Pages work
 with no resource — write `table()` on the page and it is an ordinary `WithTable`
@@ -128,7 +129,7 @@ separate package for exactly this reason.
 | [Navigation](navigation.md) | `NavigationItem`, `NavigationGroup`, `Workspace`, the catalogue all three surfaces read |
 | [Routing](routing.md) | `pages()`, `Route::wireResources()`, the URL shape, zones, config-declared routes |
 | [Modules](modules.md) | One business area's manifest — its resources, dashboards and menu heading in one class |
-| [Command Line](cli.md) | `make:wire-resource`, `make:wire-page`, `make:wire-relation-manager`, `wire:resources` |
+| [Command Line](cli.md) | `make:wire-resource`, `make:wire-page`, `make:wire-cluster`, `make:wire-relation-manager`, `wire:resources` |
 
 ## Reaching A Page A Module Ships
 

@@ -87,6 +87,19 @@ is routed from its resource's `pages()`:
 — which is also what makes it one of the record's tabs. Routing is the owner's
 declaration, so the command prints it rather than editing the resource.
 
+## Generating A Cluster
+
+```bash
+php artisan make:wire-cluster Settings
+php artisan make:wire-page Taxes --cluster=Settings
+```
+
+The first writes `app/Clusters/Settings.php`, a [cluster](clusters.md) — one
+section with one menu entry and one URL prefix — and says how to register it,
+which is the way a page is registered. The second writes a page that is a member
+of it: the page names the cluster with `protected static ?string $cluster`. A
+resource joins by implementing `BelongsToCluster`, one method, written by hand.
+
 ## Generating A Relationship's Table
 
 ```bash

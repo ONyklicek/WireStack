@@ -24,7 +24,10 @@ use NyonCode\WireModuleSettings\Support\SettingsRegistry;
 use Throwable;
 use Workbench\App\Actions\Fortify\CreateNewUser;
 use Workbench\App\Actions\Fortify\ResetUserPassword;
+use Workbench\App\Clusters\Setup;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
+use Workbench\App\Livewire\Pages\Setup\Appearance;
+use Workbench\App\Livewire\Pages\Setup\General;
 use Workbench\App\Livewire\Previews\CorePreview;
 use Workbench\App\Livewire\Previews\FieldPreview;
 use Workbench\App\Livewire\Previews\FormPreview;
@@ -84,6 +87,10 @@ class WorkbenchServiceProvider extends ServiceProvider
         // default for a framework and the wrong one for showing what saving a
         // layout does. Session rather than database: no migration to run before
         // a preview works.
+        // A cluster and its two members, for verify-clusters. Registered like
+        // any page; the admin zone routes them, the business zone does not.
+        config()->set('wire-panels.pages', [Setup::class, General::class, Appearance::class]);
+
         config()->set('wire-core.preferences.default', 'session');
         config()->set('wire-core.preferences.guest', 'session');
 
@@ -310,6 +317,9 @@ class WorkbenchServiceProvider extends ServiceProvider
             EditInvoice::class,
             ViewInvoice::class,
             InvoiceItemsRelationManager::class,
+            Setup::class,
+            General::class,
+            Appearance::class,
         ] as $component) {
             $name = collect(explode('\\', $component))
                 ->map(fn (string $part): string => Str::kebab($part))

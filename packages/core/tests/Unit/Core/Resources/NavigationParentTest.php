@@ -16,6 +16,8 @@ use NyonCode\WireCore\Core\Resources\Workspace;
 use NyonCode\WireCore\Exceptions\NavigationParentException;
 use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Registration\Contracts\HasRegistryKey;
+use NyonCode\WireCore\Foundation\Routing\Contracts\BelongsToCluster;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 
 /*
@@ -122,7 +124,7 @@ it('adds no copy of a parent that is not a page', function () {
 
     $nested = (new NestNavigationEntries)(
         ['catalogue' => $item, 'np-brands' => NavigationItem::make('Brands')->url('/b')->parent('catalogue')],
-        ['catalogue', 'np-brands'],
+        ['catalogue' => 'Catalogue', 'np-brands' => 'Brands'],
     );
 
     expect(npChildLabels($nested['catalogue']))->toBe(['Brands']);
@@ -203,4 +205,35 @@ it('keeps an adopted entry lit on every page of its resource', function () {
 it('carries the registered key on every entry, without overriding one already set', function () {
     expect(npWorkspace()->items()['np-brands']->getKey())->toBe('np-brands')
         ->and(NavigationItem::make('x')->key('mine')->getKey())->toBe('mine');
+});
+
+class NpSectionPage implements HasRegistryKey
+{
+    public static function key(): string
+    {
+        return 'np-section';
+    }
+}
+
+it('leaves a registered cluster member out of the grouped menu and in the flat one', function () {
+    $member = new class implements BelongsToCluster
+    {
+        public static ?string $cluster = NpSectionPage::class;
+
+        public static function cluster(): ?string
+        {
+            return self::$cluster;
+        }
+    };
+
+    $nest = new NestNavigationEntries;
+    $items = ['np-member' => NavigationItem::make('Member'), 'np-other' => NavigationItem::make('Other')];
+
+    expect(array_keys($nest($items, ['np-member' => $member::class, 'np-section' => NpSectionPage::class])))->toBe(['np-other'])
+        // A cluster nobody registered takes nothing away; the router refuses it.
+        ->and(array_keys($nest($items, ['np-member' => $member::class])))->toBe(['np-member', 'np-other']);
+
+    $member::$cluster = null;
+
+    expect(array_keys($nest($items, ['np-member' => $member::class, 'np-section' => NpSectionPage::class])))->toBe(['np-member', 'np-other']);
 });

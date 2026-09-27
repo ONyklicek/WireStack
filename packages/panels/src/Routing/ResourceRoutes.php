@@ -12,6 +12,8 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\ConfiguresRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
 use NyonCode\WireCore\Foundation\Routing\Zone;
+use NyonCode\WirePanels\Clusters\Cluster;
+use NyonCode\WirePanels\Clusters\ClusterNavigation;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
 use NyonCode\WirePanels\Resources\Contracts\NestedResource;
 
@@ -355,7 +357,11 @@ final class ResourceRoutes
             : $key;
 
         if (! is_subclass_of($resource, NestedResource::class)) {
-            return $own;
+            // Inside a cluster: settings/currencies. The route *name* stays
+            // `wire.{key}.{page}`, so every link built by key follows the move.
+            $cluster = self::clusterOf($resource);
+
+            return $cluster === null ? $own : trim(self::prefixFor($cluster, $cluster::key()).'/'.$own, '/');
         }
 
         // Under one record of the parent: orders/{parent}/order-lines. One level,
@@ -382,9 +388,33 @@ final class ResourceRoutes
 
         // A nested resource sits inside its parent's pages, so whatever guards
         // those guards it too — a line of an order nobody may see stays unseen.
-        return is_subclass_of($resource, NestedResource::class)
-            ? [...self::middlewareFor($resource::parentResource()), ...$own]
-            : $own;
+        if (is_subclass_of($resource, NestedResource::class)) {
+            return [...self::middlewareFor($resource::parentResource()), ...$own];
+        }
+
+        // And a cluster's member inside the cluster, by the same rule: a section
+        // someone may not enter is not enterable through a bookmark either.
+        $cluster = self::clusterOf($resource);
+
+        if ($cluster === null) {
+            return $own;
+        }
+
+        return [...$cluster::pages()['index']->getMiddleware(), ...$own];
+    }
+
+    /**
+     * The cluster a class is routed inside, or null — refusing one it cannot be in.
+     *
+     * Asked of {@see ClusterNavigation}, the one owner of membership, so the
+     * prefix a member is routed under and the tabs its page draws agree.
+     *
+     * @param  class-string  $class
+     * @return class-string<Cluster>|null
+     */
+    private static function clusterOf(string $class): ?string
+    {
+        return app(ClusterNavigation::class)->clusterOf($class);
     }
 
     /**

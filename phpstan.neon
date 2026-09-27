@@ -40,6 +40,7 @@ parameters:
         - { identifier: trait.unused, path: packages/core/src/Audit/Concerns/HasAuditable.php }
         - { identifier: trait.unused, path: packages/core/src/Foundation/Concerns/HasLivewire.php }
         - { identifier: trait.unused, path: packages/core/src/Foundation/Routing/Concerns/InteractsWithPageUrls.php }
+        - { identifier: trait.unused, path: packages/panels/src/Clusters/Concerns/InteractsWithCluster.php }
         - { identifier: trait.unused, path: packages/core/src/Infolists/Concerns/WithInfolists.php }
         - { identifier: trait.unused, path: packages/core/src/Panels/Concerns/WithEditablePanel.php }
         - { identifier: trait.unused, path: packages/core/src/Notifications/Concerns/InteractsWithNotifications.php }

@@ -13,8 +13,10 @@ use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Foundation\Routing\Concerns\InteractsWithPageUrls;
+use NyonCode\WireCore\Foundation\Routing\Contracts\BelongsToCluster;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
+use NyonCode\WirePanels\Clusters\Concerns\InteractsWithCluster;
 use NyonCode\WirePanels\Exceptions\ResourcePageException;
 use NyonCode\WirePanels\Pages\Concerns\HostsPageActions;
 use NyonCode\WirePanels\Pages\Concerns\InteractsWithPageWidgets;
@@ -50,6 +52,7 @@ use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
  *   protected static ?string $navigationGroup = 'work';
  *   protected static int $navigationSort = 30;
  *   protected static ?string $navigationParent = BoardsResource::class;   // under another entry, by class or key
+ *   protected static ?string $cluster = Work::class;          // a member of a cluster — its prefix, tabs and trail
  *   protected static ?string $permission = 'tasks.view';     // the route's can:, and hides the entry
  *   protected static bool $shouldRegisterNavigation = false;  // routed, not in the menu
  *
@@ -64,9 +67,10 @@ use NyonCode\WirePanels\Pages\Contracts\HasHeaderActions;
  * ({@see HostsPageActions}); the class only saves an application from composing
  * them itself for the common case.
  */
-abstract class Page extends Component implements HasHeaderActions, ProvidesNavigation, ProvidesPages
+abstract class Page extends Component implements BelongsToCluster, HasHeaderActions, ProvidesNavigation, ProvidesPages
 {
     use HostsPageActions;
+    use InteractsWithCluster;
     use InteractsWithPageUrls;
     use InteractsWithPageWidgets;
 
@@ -95,6 +99,14 @@ abstract class Page extends Component implements HasHeaderActions, ProvidesNavig
 
     /** False keeps a registered page routed but out of the menu. */
     protected static bool $shouldRegisterNavigation = true;
+
+    /** The cluster this page is a member of, or null for none. */
+    protected static ?string $cluster = null;
+
+    public static function cluster(): ?string
+    {
+        return static::$cluster;
+    }
 
     /** The registered key: the URL segment, the menu entry's key, the catalogue's. */
     public static function key(): string
@@ -155,6 +167,24 @@ abstract class Page extends Component implements HasHeaderActions, ProvidesNavig
         return null;
     }
 
+    /** The page is a member of the cluster: it answers for its own. */
+    protected function clusterMember(): ?string
+    {
+        return static::class;
+    }
+
+    /**
+     * The trail a page gets without asking: back to its cluster, when it has one.
+     *
+     * @return array<int, NavigationItem>
+     */
+    protected function clusterTrail(): array
+    {
+        $crumb = $this->clusterBreadcrumb();
+
+        return $crumb === null ? [] : [$crumb, NavigationItem::make($this->getTitle() ?? static::label())];
+    }
+
     public function render(): View
     {
         if (static::$view === '') {
@@ -164,7 +194,7 @@ abstract class Page extends Component implements HasHeaderActions, ProvidesNavig
         return view('wire-panels::pages.page', [
             ...$this->getViewData(),
             'title' => $this->getTitle(),
-            'breadcrumbs' => $this instanceof ProvidesBreadcrumbs ? $this->breadcrumbs() : [],
+            'breadcrumbs' => $this instanceof ProvidesBreadcrumbs ? $this->breadcrumbs() : $this->clusterTrail(),
             'headerActions' => $this->renderedHeaderActions(),
             'headerWidgets' => $this->pageWidgetsForView('header'),
             'footerWidgets' => $this->pageWidgetsForView('footer'),

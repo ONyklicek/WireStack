@@ -27,7 +27,8 @@ dál — což je zkouška toho, jestli je vlastnická vrstva opravdu volitelná.
 | **Resource** | „tohle je entita Order, takhle se vypisuje, edituje a zobrazuje“ | [Resources](resources.md) |
 | **Stránka** | „tahle Livewire komponenta vykreslí ten povrch pro jeden záznam nebo pro všechny“ | [Stránky](pages.md) |
 | **Menu** | „které z nich se kde objeví, pod jakým nadpisem a v jakém pořadí“ | [Navigace](navigation.md) |
-| **Router** | „která URL vede na kterou stránku a v jaké zóně“ | [Routování](routing.md) |
+| **Router** | „která URL vede na kterou stránku a v jaké zóně“ | [Clustery](clusters.md) | Jedna sekce jako jedna třída — jediná položka v menu, jeden prefix URL, cesta mezi jejími obrazovkami |
+| [Routování](routing.md) |
 
 Resource bez stránek je pořád zaregistrovaný a pořád introspektovatelný. Stránky
 fungují i bez resourcu — napište na stránku `table()` a je to obyčejná komponenta s
@@ -127,7 +128,7 @@ samostatný balíček.
 | [Navigace](navigation.md) | `NavigationItem`, `NavigationGroup`, `Workspace`, katalog, který čtou všechny tři povrchy |
 | [Routování](routing.md) | `pages()`, `Route::wireResources()`, tvar URL, zóny, routy z configu |
 | [Moduly](modules.md) | Manifest jedné byznysové oblasti — její resource, dashboardy a nadpis v menu v jedné třídě |
-| [Příkazová řádka](cli.md) | `make:wire-resource`, `make:wire-page`, `make:wire-relation-manager`, `wire:resources` |
+| [Příkazová řádka](cli.md) | `make:wire-resource`, `make:wire-page`, `make:wire-cluster`, `make:wire-relation-manager`, `wire:resources` |
 
 ## Jak dosáhnout na stránku, kterou posílá modul
 

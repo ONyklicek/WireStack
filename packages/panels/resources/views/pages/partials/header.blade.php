@@ -18,6 +18,10 @@
     /** @var array<int, \Illuminate\Support\HtmlString> $headerActions  Drawn by the page, already authorized. */
 @endphp
 
+{{-- First, so that beside the content it is the grid's first column; below
+     `lg` it is a row of tabs above the heading. --}}
+@include('wire-panels::pages.partials.cluster-nav')
+
 @if(($breadcrumbs ?? []) !== [] || $title || ($headerActions ?? []) !== [])
     <div class="space-y-1">
         {{-- The object, not <x-wire::breadcrumbs>: rule 5 keeps the component

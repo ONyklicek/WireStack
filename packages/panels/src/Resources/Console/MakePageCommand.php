@@ -18,6 +18,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
  *
  *   php artisan make:wire-page TaskBoard                     app/Livewire/Pages/TaskBoard.php
  *   php artisan make:wire-page History --resource=Order      a record page of OrderResource
+ *   php artisan make:wire-page Taxes --cluster=Settings      a member of App\Clusters\Settings
  *
  * A record page composes `BelongsToResource`, `ResolvesOneRecord` and
  * `LinksToRecordPages`, so it takes the record's key, draws the record's tabs
@@ -35,6 +36,7 @@ final class MakePageCommand extends Command
     protected $signature = 'make:wire-page
         {name : The page, e.g. TaskBoard}
         {--resource= : Make it a page about one record of this resource — Order, or a class name}
+        {--cluster= : Make it a member of this cluster — Settings, or a class name}
         {--f|force : Overwrite files that already exist}';
 
     protected $description = 'Create a Wire page of your own, with its view';
@@ -66,7 +68,7 @@ final class MakePageCommand extends Command
             'implements' => $resource === null ? '' : ' implements ProvidesBreadcrumbs',
             'traits' => $resource === null ? '' : "    use BelongsToResource;\n    use LinksToRecordPages;\n    use ResolvesOneRecord;\n\n    protected static ?string \$resource = ".class_basename($resource)."::class;\n\n",
             'titleDeclaration' => $resource === null
-                ? "\n    protected ?string \$title = '{$title}';\n"
+                ? "\n    protected ?string \$title = '{$title}';\n".$this->clusterDeclaration($root)
                 : "\n    public function getTitle(): ?string\n    {\n        return '{$title}';\n    }\n",
             'body' => $resource === null ? '' : "\n    /** The record's other pages, as tabs above this one. */\n    protected function getViewData(): array\n    {\n        return ['subNavigation' => \$this->subNavigation(\$this->nativeRecord())];\n    }\n",
         ], $force);
@@ -119,6 +121,20 @@ final class MakePageCommand extends Command
         }
 
         return $root.'Resources\\'.Str::studly(Str::beforeLast($resource, 'Resource')).'Resource';
+    }
+
+    /** The member's one line, when `--cluster` names a cluster: `App\Clusters\{Name}`, or a class as given. */
+    private function clusterDeclaration(string $root): string
+    {
+        $cluster = $this->option('cluster');
+
+        if (! is_string($cluster) || $cluster === '') {
+            return '';
+        }
+
+        $class = str_contains($cluster, '\\') || class_exists($cluster) ? ltrim($cluster, '\\') : $root.'Clusters\\'.Str::studly($cluster);
+
+        return "\n    protected static ?string \$cluster = \\{$class}::class;\n";
     }
 
     private function imports(?string $resource): string

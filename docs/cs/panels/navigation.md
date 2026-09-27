@@ -534,6 +534,7 @@ rozšiřuje, protože stránce, kterou nelze adresovat, nejde dát URL.
 ## Související
 
 - [Resources](resources.md) — vlastník, kterého položka jmenuje
+- [Clustery](clusters.md) — celá sekce za jednou položkou, s obrazovkami nakreslenými na stránce
 - [Routování](routing.md) — odkud se bere URL položky a co na tom mění zóna
 - [Moduly](modules.md) — položky celé oblasti deklarované v jednom manifestu
 - [Sidebar](../admin/sidebar.md) — menu, které z tohohle všeho kreslí `wire-admin`

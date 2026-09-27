@@ -178,6 +178,8 @@
         "notification-view-all",
         "page-header-actions",
         "page-widgets",
+        "panels-cluster-nav",
+        "panels-cluster-nav-item",
         "panels-list-tabs",
         "panels-sub-nav",
         "panels-sub-nav-item",
