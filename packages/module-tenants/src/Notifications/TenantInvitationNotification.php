@@ -8,6 +8,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
 use NyonCode\WireModuleTenants\Models\TenantInvitation;
+use NyonCode\WireModuleTenants\Routing\TenantRoutes;
 
 /**
  * The e-mail an invitation sends: a signed link that works until the
@@ -29,7 +30,7 @@ final class TenantInvitationNotification extends Notification
     public function url(): string
     {
         return URL::temporarySignedRoute(
-            'wire-module-tenants.invitations.accept',
+            TenantRoutes::ACCEPT,
             $this->invitation->expires_at,
             ['invitation' => $this->invitation->getKey()],
         );

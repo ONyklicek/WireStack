@@ -427,52 +427,46 @@ Set `user_key_type` to `uuid` or `ulid` (before running the column-order migrati
 
 See [Sortable Installation](../sortable/installation.md).
 
-## Panels
+## Routes And Panels
 
-The `wire-panels` config decides whether the framework registers a resource's
-pages as routes for you.
-
-```php
-return [
-    'routes' => [
-        'enabled' => false,
-        'prefix' => 'admin',
-        'middleware' => ['web', 'auth'],
-        'domain' => null,
-        'only' => [],
-        'except' => [],
-    ],
-];
-```
-
-`enabled` is `false` because `Route::wireResources()` in your own route file is
-the reference path — these are the same group arguments, handed over once, for an
-application that would rather not keep a route file for them.
-
-Two things to know before turning it on. Package providers boot before your own,
-so these routes are matched **before** everything in `routes/web.php`; an
-application with a catch-all under the same prefix wins today and would stop
-winning. And enabling this *and* calling `Route::wireResources()` yourself is
-refused rather than resolved — it would register every page twice under one route
-name.
-
-`only` / `except` take registered keys: a resource key or a dashboard key, the
-same key the menu and `ResourceRoutes::urlFor()` use.
-
-For several mount points — `admin`, `business`, `production` — add a `zones` key,
-one entry per zone; each inherits the values above it and overrides what it
-names. The array key becomes the route-name prefix, so the same resource in two
-zones gets two route names instead of two routes fighting over one.
+Every package's routes are a group — `panel` (the resource pages), `zones`,
+`tenant-entry`, and what the installed modules bring (`tenants`, `auth-codes`) —
+and no provider registers any. The application places each one: with
+`Route::wire('panel')` in `routes/web.php`, inside a group of its own, or with an
+entry in `wire-core.routes`, which the framework's one route file registers.
 
 ```php
-'zones' => [
-    'admin' => ['prefix' => 'admin', 'middleware' => ['web', 'auth', 'can:admin']],
-    'business' => ['prefix' => 'business', 'only' => ['orders']],
+// config/wire-core.php
+'routes' => [
+    'defaults' => [],                  // under every entry
+    'groups' => [                      // [tl! focus:start]
+        'admin' => ['uses' => 'panel', 'prefix' => 'admin', 'middleware' => ['web', 'auth', 'can:admin']],
+        'business' => ['uses' => 'panel', 'prefix' => 'business', 'only' => ['orders']],
+    ],                                 // [tl! focus:end]
 ],
 ```
 
-See [Resources](../panels/routing.md#zones) for zones and
-[Routing](../panels/routing.md) for the rest.
+An entry takes Laravel's group attributes (`prefix`, `domain`, `middleware`,
+`without_middleware`, `as`, `where`, `namespace`, `scope_bindings`), `can`, the
+group's own options, and `routes` for single routes. An entry named otherwise
+than its group is that group's zone. Nothing is registered by default, the panel
+starts from `['web', 'auth']` so an entry naming no middleware is guarded, and
+groups from config are matched before `routes/web.php`.
+
+`wire-panels` keeps only where two addresses lead — `routes.zone_entry.primary`
+and `.view` for the address above the zones, `routes.tenant_entry.view` for a
+tenant zone's bare address:
+
+```php
+// config/wire-panels.php
+'routes' => [
+    'zone_entry' => ['primary' => null, 'view' => null],
+    'tenant_entry' => ['view' => null],
+],
+```
+
+See [Routing § Describing the groups in config](../panels/routing.md#describing-the-groups-in-config)
+for the whole table, and [Zones](../panels/routing.md#zones).
 
 ## Boost
 

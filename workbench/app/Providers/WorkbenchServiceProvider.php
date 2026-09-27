@@ -49,7 +49,6 @@ use Workbench\App\Livewire\Resources\ListInvoices;
 use Workbench\App\Livewire\Resources\ListProjects;
 use Workbench\App\Livewire\Resources\ListTasks;
 use Workbench\App\Livewire\Resources\ViewInvoice;
-use Workbench\App\Models\Company;
 use Workbench\App\Models\Team;
 use Workbench\App\Models\User;
 use Workbench\App\Modules\BillingModule;
@@ -95,11 +94,13 @@ class WorkbenchServiceProvider extends ServiceProvider
         // any page; the admin zone routes them, the business zone does not.
         config()->set('wire-panels.pages', [Setup::class, General::class, Appearance::class]);
 
-        // Companies as tenants, for verify-tenants. Only Project uses
-        // BelongsToTenant, so switching tenancy on scopes nothing else.
+        // Companies as tenants, for verify-tenants and verify-tenant-onboarding.
+        // The model, the membership pivot and the no-company page are
+        // wire-module-tenants' defaults, left unset here as an application
+        // would. Only Project uses BelongsToTenant, so switching tenancy on
+        // scopes nothing else.
         config()->set('wire-core.tenancy.enabled', true);
-        config()->set('wire-core.tenancy.model', Company::class);
-        config()->set('wire-core.tenancy.members_table', 'company_user');
+        config()->set('wire-module-tenants.home', 'previews/tenants/{tenant}');
         config()->set('wire-core.resources', [...(array) config('wire-core.resources', []), ProjectResource::class]);
 
         config()->set('wire-core.preferences.default', 'session');

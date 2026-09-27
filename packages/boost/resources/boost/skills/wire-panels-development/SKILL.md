@@ -8,7 +8,8 @@ description: Declare a resource and its pages with wire-panels — static identi
 ## When to use this skill
 
 Use when an entity should get its own screens — a list, a create/edit form, a read-only view — or when
-changing what the menu, the router or the search palette shows for one.
+changing what the menu, the router or the search palette shows for one. Also when those screens live
+under a company in the URL — a tenant zone.
 
 ## Workflow
 
@@ -77,6 +78,18 @@ class EditOrder extends EditPage
 }
 ```
 
+```php
+// A tenant zone: {tenant} after the prefix, wire.tenant, and the bare /app → your company.
+Route::middleware(['web', 'auth'])->prefix('app')
+    ->group(fn () => Route::wire('panel', zone: 'app', tenant: 'path'));
+
+// Or from config/wire-core.php: 'routes' => ['groups' => ['app' => ['uses' => 'panel', 'prefix' => 'app', 'tenant' => 'path']]].
+class User extends Authenticatable implements HasTenants
+{
+    use InteractsWithTenants;   // membership over wire-core.tenancy.members_table
+}
+```
+
 ## Rules
 
 - **A resource is several small contracts, not one class.** `DescribesResource` (wire-core) is identity —
@@ -103,7 +116,7 @@ class EditOrder extends EditPage
   list by default; *Delete* is opt-in with `$this->deleteHeaderAction()` (policy first, then the edit page's
   permission, then nobody). A page that is not a resource surface — a board, a report — extends `Pages\Page`
   and names its content view.
-- **Pages are composed capabilities (ADR 0038).** Header actions go in `headerActions()` (list: *New* by
+- **Pages are composed capabilities.** Header actions go in `headerActions()` (list: *New* by
   default; edit/view: `deleteHeaderAction()`, `restoreHeaderAction()`, `forceDeleteHeaderAction()` on
   request); widgets in `headerWidgets()` / `footerWidgets()` (drawn, not hosted — polling widgets stay on a
   `DashboardPage`); list tabs in `tabs()` of `ListTab`s (narrow the base query, `?tab=` in the URL). Create and
@@ -117,3 +130,8 @@ class EditOrder extends EditPage
 - **A standalone page registers itself**: list it in `config('wire-panels.pages')` or discover its folder with
   `config('wire-core.discover.pages')`; `$slug`, `$navigationLabel`, `$navigationIcon`, `$navigationGroup`,
   `$navigationSort`, `$permission` and `$shouldRegisterNavigation` place it. No wrapper resource needed.
+- **Inside a tenant zone, never pass `tenant` by hand.** `wire.tenant` sets `URL::defaults()`, so
+  `OrderResource::url()`, the menu, search and redirects already carry it; it forgets the parameter, so no
+  `mount()` gets it either. Read the company from `app(CurrentTenant::class)->get()`. A stranger, an unknown
+  slug and a guest are one **404**, never a 403. Tenant-owned models use `BelongsToTenant` (wire-core); the
+  company screens — registration, profile, members — are `nyoncode/wire-module-tenants`, not a page to write.

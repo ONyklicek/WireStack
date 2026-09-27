@@ -62,6 +62,34 @@ Confirm your app meets these before upgrading.
 
 ---
 
+## Every package's routes are a group you place (2.4)
+
+No provider registers a route any more. Each package's routes are a
+group — `panel`, `zones`, `tenant-entry`, `auth-codes`, `tenants` — placed by
+`Route::wire('…')` in your route file or by an entry of `wire-core.routes.groups`.
+`Route::wireResources()`, `Route::wireResource()` and `Route::wireZoneEntry()`
+keep working as they were.
+
+Two things need a line:
+
+```php
+// config/wire-panels.php — 2.3
+'routes' => ['enabled' => true, 'prefix' => 'admin', 'zones' => [/* … */]],   // [tl! --]
+
+// config/wire-core.php — 2.4: the same groups, one entry per zone
+'routes' => ['groups' => [                                                     // [tl! ++]
+    'admin' => ['uses' => 'panel', 'prefix' => 'admin'],                        // [tl! ++]
+]],                                                                            // [tl! ++]
+```
+
+```php
+// routes/web.php — the one-time code flows, if any switch under wire-module-auth.codes is on
+Route::wire('auth-codes');   // [tl! ++]
+```
+
+`php artisan wire:install` writes the second for you. Without it every code flow
+answers 404, whatever its switch says.
+
 ## Livewire 4 (2.0)
 
 **2.0 requires Livewire 4.** The 1.x line stays on Livewire 3 and keeps receiving
@@ -806,7 +834,7 @@ convention does not reach.
 
 **Routing is still opt-in**, and `Route::wireResources()` in your own route file
 is still the reference path. What is new beside it is
-[`wire-panels.routes`](configuration.md#panels) — the same group arguments handed
+[`wire-panels.routes`](configuration.md#routes-and-panels) — the same group arguments handed
 over once — and [zones](../panels/routing.md#zones), several mount points over one
 catalogue. Both are off until you turn them on.
 

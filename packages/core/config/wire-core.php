@@ -9,6 +9,42 @@ use NyonCode\WireCore\Foundation\Preferences\Drivers\NullPreferenceDriver;
 use NyonCode\WireCore\Foundation\Preferences\Drivers\SessionPreferenceDriver;
 
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Routes
+    |--------------------------------------------------------------------------
+    |
+    | Every package's routes are a group: `panel` (resource pages), `zones`
+    | (the address above them), `tenant-entry`, and whatever the installed
+    | modules bring (`tenants`, `auth-codes`). Two ways to place one (ADR 0041),
+    | both through the same code:
+    |
+    |   routes/web.php — Route::middleware([...])->prefix('admin')
+    |                        ->group(fn () => Route::wire('panel'));
+    |
+    |   here           — 'groups' => ['admin' => ['uses' => 'panel',
+    |                        'prefix' => 'admin', 'middleware' => ['web', 'auth']]],
+    |
+    | An entry takes Laravel's group attributes — prefix, domain, middleware,
+    | without_middleware, as, where, namespace, scope_bindings — plus `can`, the
+    | group's own options (`zone`, `tenant`, `only`, `except`, …) and `routes`,
+    | changes to single routes by key: ['register' => ['can' => 'tenants.create']].
+    | An entry's key is the group it registers unless `uses` names one; then the
+    | key is its zone. `false` or `'enabled' => false` skips it.
+    |
+    | Nothing here is registered by default. Groups registered here are matched
+    | BEFORE everything in routes/web.php, because the framework's route file is
+    | loaded first; place a group in routes/web.php to decide its order yourself.
+    | A route both ways register is refused, not replaced.
+    |
+    */
+    'routes' => [
+        // What every entry starts from, over what its group ships — the panel
+        // ships `['web', 'auth']`. Empty, so no group loses its own guard.
+        'defaults' => [],
+        'groups' => [],
+    ],
+
     'notifications' => [
         /*
         | Which driver delivers a notification.

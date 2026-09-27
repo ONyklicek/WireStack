@@ -11,6 +11,7 @@ use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\Contracts\RequiresTenant;
 use NyonCode\WireModuleTenants\Pages\ListMembers;
 use NyonCode\WireModuleTenants\Support\Membership;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
@@ -25,7 +26,7 @@ use NyonCode\WireTable\Table;
  * members — never a list of every account, which would be a way to find out
  * who else uses the application.
  */
-final class MemberResource implements DescribesResource, ProvidesNavigation, ProvidesPages, ProvidesResourceTable
+final class MemberResource implements DescribesResource, ProvidesNavigation, ProvidesPages, ProvidesResourceTable, RequiresTenant
 {
     use DescribesRecords;
 

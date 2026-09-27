@@ -36,6 +36,11 @@ use Workbench\App\Livewire\Resources\ViewInvoice;
 use Workbench\App\Models\User as WorkbenchUser;
 use Workbench\App\Providers\WorkbenchServiceProvider;
 
+// The one-time code flows, as an application routes them (ADR 0037, 0041): the
+// switches are on in WorkbenchServiceProvider, and this places the group, which
+// routes the flows that are on — no provider registers any.
+Route::wire('auth-codes');
+
 // One source of truth for the preview surface: every entry below registers its
 // own route *and* is listed on the /previews index. A new variant needs a line
 // here and nothing else — the index cannot fall behind the routes again.
@@ -527,13 +532,18 @@ foreach ($zoneMembership as $zone => $only) {
     });
 }
 
-// A tenant zone, for verify-tenants (ADR 0040): companies in the path, the
-// bare address sending the demo user to their first company, and the
-// projects of the company in the URL.
-Route::name('tenants.')->middleware(SignInDemoUser::class)->group(fn () => Route::wireTenantEntry('previews/tenants', 'previews/tenants/{tenant}'));
-Route::name('tenants.')->prefix('previews/tenants/{tenant}')->middleware([SignInDemoUser::class, 'wire.tenant'])->group(function (): void {
-    Route::wireResources(only: ['projects']);
-});
+// A tenant zone, for verify-tenants and verify-tenant-onboarding (ADR 0040):
+// companies in the path, the bare address sending the demo user to their first
+// company, the projects of the company in the URL, and wire-module-tenants'
+// profile and members screens beside them.
+// One call: `tenant: 'path'` puts `{tenant}` after the prefix, adds the
+// middleware that finds it and registers the bare address beside it.
+Route::prefix('previews/tenants')->middleware(SignInDemoUser::class)->group(
+    fn () => Route::wire('panel', zone: 'tenants', tenant: 'path', only: ['projects', 'company', 'members']),
+);
+// Registering a company and accepting an invitation: outside any company, and
+// in a group with no name, since the invitation e-mail links to them by theirs.
+Route::prefix('tenants')->middleware([SignInDemoUser::class, 'auth'])->group(fn () => Route::wire('tenants'));
 
 // The admin zone's menu drawn as a bar under the header, for verify-topnav. Not
 // in $zoneMembership: it is the same zone's pages in the other shape, not a

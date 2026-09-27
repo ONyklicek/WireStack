@@ -241,7 +241,7 @@ Start files:
 
 - `packages/panels/src/WirePanelsServiceProvider.php`
 - `packages/panels/src/Routing/ResourceRoutes.php`
-- `packages/panels/src/Routing/ConfiguredRoutes.php`
+- `packages/panels/src/Routing/PanelRoutes.php`
 - `packages/panels/src/Resources/Pages/ListPage.php`
 - `packages/panels/src/Resources/Concerns/BelongsToResource.php`
 

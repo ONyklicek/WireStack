@@ -137,7 +137,7 @@ business.wire.orders.index   →  business/orders
 
 Rozděluje je to volání `name()`. Vynech ho na druhé skupině a obě zóny
 zaregistrují `wire.orders.index`, kde pozdější tiše vyhraje každý lookup — proto
-je [cesta přes config](#registrace-z-configu-misto-route-souboru) níž bezpečnější
+je [cesta přes config](#popis-skupin-v-configu) níž bezpečnější
 způsob, jak zóny deklarovat: tam je zóna klíčem pole a zapomenout se nedá.
 
 Které resources zóna obsahuje, říká `only` / `except` a nic jiného — žádný druhý
@@ -283,59 +283,65 @@ vypadala bezvadně. Přečtěte to jednou, uložte do public property a nechte t
 přenášet. Command paleta to přesně tak dělá, takže paleta v zónovaném layoutu
 nepotřebuje žádnou konfiguraci.
 
-## Registrace z configu místo route souboru
+## Popis skupin v configu
 
-Macro výše zůstává referenční cestou. Aplikace, která chce konvenci a nechce si
-kvůli ní držet route soubor, předá tytéž argumenty skupiny jednou:
+Stránky panelu jsou jedna skupina rout, `panel`, a routy každého balíčku se
+umisťují stejně — z route souboru, nebo z configu, stejným kódem.
+
+V route souboru, uvnitř libovolné skupiny, kterou kolem umí postavit Laravel:
 
 ```php
-// config/wire-panels.php
+// routes/web.php
+Route::middleware(['web', 'auth', 'can:admin'])->prefix('admin')
+    ->group(fn () => Route::wire('panel', zone: 'admin'));    // [tl! focus]
+```
+
+`zone:` je prefix jména routy, kterým zóna je, napsaný za vás. `Route::wireResources()`
+je totéž volání bez něj — `Route::wire('panel', only: [...], except: [...])`.
+
+V configu tytéž skupiny popsané místo vypsané, které zaregistruje jediný route
+soubor frameworku:
+
+```php
+// config/wire-core.php
 'routes' => [
-    'enabled' => true,                    // [tl! focus]
-    'prefix' => 'admin',
-    'middleware' => ['web', 'auth'],
-    'domain' => null,
-    'only' => [],
-    'except' => [],
+    'defaults' => [],                                         // pod každým záznamem
+    'groups' => [                                             // [tl! focus:start]
+        'admin' => ['uses' => 'panel', 'prefix' => 'admin', 'middleware' => ['web', 'auth', 'can:admin']],
+        'business' => ['uses' => 'panel', 'prefix' => 'business', 'only' => ['orders', 'customers']],
+        'zones' => ['uri' => '/'],                            // adresa nad nimi
+    ],                                                        // [tl! focus:end]
 ],
 ```
 
-Zóny jsou klíč `zones` a klíč pole je ta zóna:
+Klíč záznamu je skupina, kterou umisťuje, pokud `uses` nejmenuje jinou; pak **je
+klíč zóna**, což je důvod dát tomuhle přednost před ručně psanými skupinami:
+v route souboru je `->name('business.')` řádek, který se dá vynechat, a vynechání
+znamená, že jedna zóna tiše převezme odkazy druhé. Klíč pole vynechat nejde
+a opakovat se nemůže.
 
-```php
-'routes' => [
-    'enabled' => true,
-    'middleware' => ['web', 'auth'],          // dědí každá zóna
-    'zones' => [                              // [tl! focus:start]
-        'admin' => [
-            'prefix' => 'admin',
-            'middleware' => ['web', 'auth', 'can:admin'],
-        ],
-        'business' => [
-            'prefix' => 'business',
-            'only' => ['orders', 'customers'],
-        ],
-    ],                                        // [tl! focus:end]
-],
-```
+| Klíč | Co to je |
+| --- | --- |
+| `prefix`, `domain`, `middleware`, `as`, `where`, `namespace`, `scope_bindings` | Atributy skupiny Laravelu, jak je bere `Route::group()` |
+| `without_middleware` | `excluded_middleware` Laravelu |
+| `can` | Přidá skupině `can:…` |
+| `zone`, `tenant`, `only`, `except` | Vlastní volby panelu — `tenant` je [Tenancy](tenancy.md) |
+| `routes` | Změny jednotlivých rout podle klíče: `['orders' => ['can' => 'orders.export']]` — `middleware`, `without_middleware`, `can`, `where` |
+| `uses`, `enabled` | Skupina, kterou záznam umisťuje; `false` ho přeskočí, stejně jako `'enabled' => false` |
 
-Každá zóna zdědí hodnoty mimo `zones` a přepíše to, co pojmenuje. **Klíč se stane
-prefixem jména routy**, což je důvod dát tomuhle přednost před ručně psanými
-skupinami, ne jen alternativa k nim: v route souboru je `->name('business.')`
-řádek, který se dá vynechat, a vynechání znamená, že jedna zóna tiše převezme
-odkazy druhé. Klíč pole vynechat nejde a opakovat se nemůže.
+**Záznam, který nejmenuje žádný middleware, je hlídaný.** Panel má jako vlastní
+výchozí bod `['web', 'auth']` — `defaults` jde přes něj, záznam přes obojí —,
+protože registruje obrazovky pro vytvoření, úpravu a smazání a skupina bez `auth`
+je naservíruje komukoli s URL, aniž by cokoli vypadalo špatně.
 
-Bez klíče `zones` je to jedna nepojmenovaná skupina, což je to, co chce
-jednozónová aplikace.
-
-Ve výchozím stavu vypnuté, a to záměrně: providery balíčků bootují dřív než vaše
-vlastní, takže tyhle routy se matchují **před** vším v `routes/web.php`. Aplikace
-s catch-all routou pod stejným prefixem dnes vyhraje a přestala by — to je
-rozhodnutí, které se dělá, ne default, který se zdědí.
-
-Zapnout tohle *a zároveň* volat `Route::wireResources()` by zaregistrovalo každou
-stránku dvakrát pod jedním jménem routy; je to odmítnuto, ne smířeno, se zprávou,
-která pojmenuje obě místa, kde stačí smazat řádek.
+**Pasti.** Skupiny z configu se registrují dřív, než se přečte `routes/web.php`,
+takže se matchují **před** vším v něm: aplikace s catch-all routou pod stejným
+prefixem tu skupinu umístí do svého route souboru a pořadí rozhodne sama. Tatáž
+stránka na dvou adresách pod jedním jménem routy — config i route soubor umisťují
+nepojmenovaný panel — se odmítne, ne smíří; umístit ji přes sebe samu nic nemění
+a je dovolené. A stránka, která existuje jen uvnitř firmy, se ve skupině bez
+`{tenant}` přeskočí, takže aplikace bez tenancy nikdy nedostane adresu, která by
+mohla odpovědět jen 404.
 
 ## Jak na ně odkazovat
 
@@ -405,6 +411,7 @@ ResourceRoutes::urls(string $page = 'index', ?string $zone = null): array
 ResourceRoutes::uriFor(string $name, string|RoutePage $page): string       // the segment it sits at
 ResourceRoutes::takesRecord(string $name, string|RoutePage $page): bool    // read off that URI, not off the kind
 ResourceRoutes::zoneEntry(string $uri = '/'): Route   // `wire.zones`; the macro is Route::wireZoneEntry()
+Route::wire(string $group, mixed ...$options): array   // any package's route group, keyed; `panel` takes zone:, tenant:, only:, except: [tl! focus]
 ZoneDirectory::all(): array                           // zone => its shortest route, in registration order
 ZoneDirectory::reachableBy(?Authenticatable $user): array   // zone => URL, only those its `can:` lets in
 ZoneDirectory::landingFor(?Authenticatable $user): ?string  // preference, primary, the only one — or null
@@ -427,10 +434,7 @@ potřebuje parametr, který tohle volání nedalo — třeba resource na domén�
 `{tenant}`. Obojí se vykreslí jako „bez odkazu“, místo aby to shodilo menu.
 
 Z `wire-core` na to sáhni přes `ResolvesPageUrls`, na které odpovídá `wire-panels`
-a které odpoví `null`, když routing nevlastní žádný balíček. `RegistersPageRoutes`
-je druhá půlka toho seamu: `wire-core` ho zavolá ve chvíli, kdy jsou registry plné,
-což je jediný okamžik, kdy [routy z configu](#registrace-z-configu-misto-route-souboru)
-můžou přečíst kompletní katalog.
+a které odpoví `null`, když routing nevlastní žádný balíček.
 
 `AuthorizesUrls` je otázka po „kde": smí tento člověk tu URL otevřít.
 `wire-panels` na ni odpovídá `RouteAccess`, který položí `can:` middlewaru routy

@@ -46,21 +46,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | The module's own routes
-    |--------------------------------------------------------------------------
-    |
-    | Registering a company and accepting an invitation happen outside any
-    | company, so they are routes of their own: `{prefix}/register` and a
-    | signed `{prefix}/invitations/{invitation}`.
-    |
-    */
-    'routes' => [
-        'prefix' => 'tenants',
-        'middleware' => ['web', 'auth'],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Invitations
     |--------------------------------------------------------------------------
     */

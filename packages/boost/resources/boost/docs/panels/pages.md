@@ -630,7 +630,7 @@ The zone the trail links into is read **once, at mount**, and kept in the public
 read at mount because that is the only moment it can be read: during a Livewire
 update `Route::currentRouteName()` is `livewire.update`, so a crumb that
 re-derived the zone would link correctly on the first paint and out of the zone on
-every one after ([ADR 0027](routing.md#zones)).
+every one after ([Zones](routing.md#zones)).
 
 A page that is not a resource page — a settings screen, a module's own list —
 implements the contract itself and returns whatever trail it has. A page inside
@@ -700,7 +700,7 @@ the route name — rather than by comparing the tab's URL with the current one,
 where a trailing slash or a query string decides whether a tab lights up. Like
 the zone beside it, it is read once at mount and kept in the public
 `$currentPage`, because during a Livewire update the route name is
-`livewire.update` ([ADR 0027](routing.md#zones)) and an edit page re-renders on
+`livewire.update` ([Zones](routing.md#zones)) and an edit page re-renders on
 every keystroke.
 
 The view and edit pages compose this already. A page of your own joins the row by

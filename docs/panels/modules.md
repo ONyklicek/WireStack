@@ -170,7 +170,24 @@ one, and reaches the menu, the router and the search palette through the same
 
 Everything else a module package carries — its config, views, translations,
 migrations and assets — is ordinary package work and belongs to its own service
-provider.
+provider. **Except its routes.** A provider registers none: a screen of its own
+— one that is not a resource page — ships as a route group, a class implementing
+`ProvidesRoutes` (its key, the group attributes it starts from, whether its names
+are linked to, and the routes), registered with `RouteGroups`. The application
+places it like every group — `Route::wire('tenants')` in `routes/web.php`, or an
+entry of `wire-core.routes.groups` — so the prefix, the domain and the middleware,
+`can:` included, are the application's, and a group whose names are linked to
+refuses a named group around it. The installer writes the call through
+`RoutesFile`:
+
+```php
+// In the package's provider: the group, and the step that places it.
+RouteGroups::instance()->register(TenantRoutes::class);   // [tl! focus]
+SetupRegistry::instance()->register(RouteTenantScreens::class);
+
+// In the application's routes/web.php:
+Route::middleware(['web', 'auth'])->prefix('tenants')->group(fn () => Route::wire('tenants'));
+```
 
 ### A Package Adds; It Does Not Overwrite
 

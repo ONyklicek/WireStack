@@ -4,6 +4,12 @@
 
 ACCEPTED — 2026-09-04. All four phases implemented the same day.
 
+§5 is **superseded in part by [ADR 0041](0041-routes-are-the-applications.md)**
+(2026-09-27): `RegistersPageRoutes` and the `enabled` switch are gone. The
+panel's pages are the `panel` route group, placed by `Route::wire('panel')` in the
+application's route file or by an entry of `wire-core.routes.groups`, which the
+framework's one route file registers; zones are entry keys there.
+
 Amends [ADR 0020](0020-application-owner-layer.md). Nothing in it is superseded:
 §5 ("Routing is opt-in", "No routing/panel lock-in") stands, and this ADR exists
 partly to keep it standing. What changes is *where the three surfaces above the

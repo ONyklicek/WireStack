@@ -6,9 +6,10 @@
 <div class="mx-auto max-w-xl space-y-4 py-16 text-center" data-testid="tenants-none" @wireEl('tenants-none')>
     <h1 class="text-xl font-semibold text-gray-900 dark:text-white">{{ __('wire-module-tenants::messages.no_company') }}</h1>
 
-    @if (\NyonCode\WireModuleTenants\Support\Registration::allows(auth()->user()))
+    @php($registerUrl = \NyonCode\WireModuleTenants\Support\Registration::urlFor(auth()->user()))
+    @if ($registerUrl !== null)
         <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-module-tenants::messages.no_company_register') }}</p>
-        <a href="{{ route('wire-module-tenants.register') }}" data-testid="tenants-none-register"
+        <a href="{{ $registerUrl }}" data-testid="tenants-none-register"
            class="inline-flex rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
             {{ __('wire-module-tenants::messages.register_heading') }}
         </a>

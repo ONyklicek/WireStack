@@ -45,28 +45,36 @@ read as "may enter every tenant".
 
 ## A Tenant Zone
 
-In a route file, the tenant is part of the group:
+One option on the panel's route group does all of it — the parameter, the
+middleware, and the zone's own address beside it. In a route file:
 
 ```php
-Route::name('app.')
-    ->prefix('app/{tenant}')                       // or ->domain('{tenant}.example.com')
-    ->middleware(['web', 'auth', 'wire.tenant'])   // [tl! focus]
+Route::middleware(['web', 'auth'])->prefix('app')                    // or ->domain('example.com')
+    ->group(fn () => Route::wire('panel', zone: 'app', tenant: 'path'));   // [tl! focus]
+```
+
+Or as an entry of `wire-core.routes.groups` ([Routing](routing.md#describing-the-groups-in-config)):
+
+```php
+// config/wire-core.php
+'routes' => ['groups' => [                                                     // [tl! focus:start]
+    'app' => ['uses' => 'panel', 'prefix' => 'app', 'tenant' => 'path'],          // app/{tenant}/…
+    'portal' => ['uses' => 'panel', 'domain' => 'example.com', 'tenant' => 'domain'],   // {tenant}.example.com
+]],                                                                            // [tl! focus:end]
+```
+
+Written out by hand it is the same group, with the parameter and the middleware
+in it yourself:
+
+```php
+Route::name('app.')->prefix('app/{tenant}')->middleware(['web', 'auth', 'wire.tenant'])
     ->group(fn () => Route::wireResources());
 ```
 
-From config, one key on the zone does both — the parameter and the middleware:
-
-```php
-// config/wire-panels.php
-'routes' => [
-    'enabled' => true,
-    'middleware' => ['web', 'auth'],
-    'zones' => [                                                                // [tl! focus:start]
-        'app' => ['prefix' => 'app', 'tenant' => 'path'],                        // app/{tenant}/…
-        'portal' => ['domain' => 'example.com', 'tenant' => 'domain'],           // {tenant}.example.com
-    ],                                                                          // [tl! focus:end]
-],
-```
+**Nothing here assumes tenancy.** A zone without `tenant` is an ordinary zone,
+and a page that only exists inside a company — the companies module's profile
+and members — is skipped in it, so an application that does not use tenancy
+never carries an address that could only answer 404.
 
 A path needs nothing from DNS and lets a person keep two tenants open in two
 tabs; a domain needs a wildcard DNS record and certificate, and a session
@@ -81,20 +89,23 @@ be a 404 — and it is the address a person types and the one signing in lands
 on. It answers instead: to the person's `getDefaultTenant()`, and from there to
 the first page of that company they may open.
 
+`tenant:` registers it by itself, at the prefix without the tenant or at the
+domain's root, named `{zone}.wire.tenants` — which is also what a zone picker
+offers for the zone. A tenant zone written out by hand places it as its own
+group, saying where a company's address is:
+
 ```php
 Route::name('app.')->middleware(['web', 'auth'])
-    ->group(fn () => Route::wireTenantEntry('app', 'app/{tenant}'));   // [tl! focus]
+    ->group(fn () => Route::wire('tenant-entry', uri: 'app', to: 'app/{tenant}'));   // [tl! focus]
 ```
 
-The second argument is where a company's address is, with `{tenant}` where its
-key goes — `//{tenant}.example.com` for a domain zone. A config zone with a
-`tenant` key registers this by itself, at the prefix without the tenant or at
-the domain's root, named `{zone}.wire.tenants` — which is also what a zone picker
-offers for the zone.
+`to` has `{tenant}` where the company's key goes — `//{tenant}.example.com` for a
+domain zone.
 
 Someone with no company at all gets `wire-panels.routes.tenant_entry.view` when
 the application names one — the place to offer registering a company — and a
-403 that says why when it does not.
+403 that says why when it does not. The [companies module](../modules/tenants.md)
+names its own when the application has not.
 
 ## The Company Switcher
 
@@ -159,3 +170,4 @@ implements the three methods itself:
 - [Authorization § Multi-tenancy](../start/authorization.md#multi-tenancy) — the scope, the fail-safe, `runAs()` for jobs and commands
 - [Routing](routing.md) — zones, route names and `url()`
 - [Navigation](navigation.md) — the menu whose links now carry the tenant
+- [Companies](../modules/tenants.md) — registering a company, and inviting and managing its members

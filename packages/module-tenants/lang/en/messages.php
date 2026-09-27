@@ -15,6 +15,8 @@ return [
     'company_slug' => 'Address',
     'company_slug_help' => 'The part of the address that is this company’s: letters, numbers and dashes.',
     'company_slug_change' => 'Changing it changes every link to this company.',
+    'slug_reserved' => 'This address belongs to the application itself. Choose another.',
+    'slug_taken' => 'Another company already has this address.',
     'register_heading' => 'Register a company',
     'register_description' => 'You become its owner, and can invite the people who work in it.',
     'register_submit' => 'Register',

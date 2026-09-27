@@ -7,6 +7,7 @@ namespace NyonCode\WireCore;
 use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Livewire\ComponentHookRegistry;
 use Livewire\Livewire;
@@ -63,11 +64,11 @@ use NyonCode\WireCore\Foundation\Mentions\MentionRenderer;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Registration\ClassDiscovery;
 use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
-use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\RenderedPage;
 use NyonCode\WireCore\Foundation\Routing\UnguardedUrls;
 use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
+use NyonCode\WireCore\Foundation\Routing\WireRoutes;
 use NyonCode\WireCore\Foundation\Setup\EnvFile;
 use NyonCode\WireCore\Foundation\Support\IslandViewScope;
 use NyonCode\WireCore\Foundation\Support\PartialRenderHook;
@@ -128,6 +129,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 $this->registerPlugins();
                 $this->registerResources();
                 $this->registerTenancy();
+                $this->registerRouting();
             })
             ->bootedPackage(function ($packager) {
                 $this->bootFoundation();
@@ -822,6 +824,19 @@ class WireCoreServiceProvider extends PackageServiceProvider
         return $found;
     }
 
+    /**
+     * `Route::wire('key', …options)` — every package's routes, placed by the
+     * application's own route file inside whatever group it builds (ADR 0041).
+     * Named arguments arrive as the group's options: `zone:`, `only:`,
+     * `routes:` for changes to single routes.
+     */
+    protected function registerRouting(): void
+    {
+        $this->app->singleton(WireRoutes::class);
+
+        Route::macro(WireRoutes::MACRO, fn (string $key, mixed ...$options): array => app(WireRoutes::class)->wire($key, $options));
+    }
+
     protected function bootResources(): void
     {
         $this->app->make(ResourceRegistry::class)->registerMany(config('wire-core.resources', []));
@@ -834,18 +849,14 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
         $this->bootModules();
 
-        // Last, and only if a package owns routing: this is the first moment the
-        // catalogue is complete, and an application that asked for its routes in
-        // config gets them from here rather than from a route file. Core does not
-        // learn how to route — it knows when, which is the half that cannot live
-        // in the routing package (ADR 0026 §5).
-        //
-        // In boot(), never in a booted() callback: Laravel installs a cached
-        // route collection from one of those, and a route registered after that
-        // either vanishes or is applied twice depending on callback order.
-        if ($this->app->bound(RegistersPageRoutes::class)) {
-            $this->app->make(RegistersPageRoutes::class)->register();
-        }
+        // The framework's one route file, last: the first moment every
+        // package's resources and route groups are registered, so the groups
+        // config describes can read a complete catalogue. In boot(), never in a
+        // booted() callback — Laravel installs a cached route collection from
+        // one of those, and a route registered after it vanishes or doubles
+        // depending on callback order. `loadRoutesFrom()` skips it when the
+        // routes are cached.
+        $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
     }
 
     /**

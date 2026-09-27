@@ -20,13 +20,13 @@ use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Core\Tenancy\Concerns\BelongsToTenant;
 use NyonCode\WireCore\Core\Tenancy\CurrentTenant;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\WireRoutes;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WirePanels\Concerns\InteractsWithTenants;
 use NyonCode\WirePanels\Contracts\HasTenants;
 use NyonCode\WirePanels\Exceptions\TenancyConfigurationException;
 use NyonCode\WirePanels\Http\Middleware\IdentifyTenant;
-use NyonCode\WirePanels\Routing\ConfiguredRoutes;
 use NyonCode\WirePanels\Routing\TenantEntry;
 use NyonCode\WirePanels\Routing\ZoneDirectory;
 use NyonCode\WirePanels\Tenancy\TenantSwitcher;
@@ -271,18 +271,29 @@ it('keeps the tenant, and every link, on a Livewire round trip', function () {
         ->toContain('zone=app. ');
 });
 
-it('puts the tenant in a config zone path or domain, with the middleware', function () {
-    config()->set('wire-panels.routes', [
-        'enabled' => true,
-        'middleware' => ['web'],
-        'zones' => [
-            'app' => ['prefix' => 'app', 'tenant' => 'path', 'only' => ['tr-invoices']],
-            'portal' => ['domain' => 'example.test', 'tenant' => 'domain', 'only' => ['tr-invoices']],
-        ],
-    ]);
+/**
+ * Panel zones placed from `wire-core.routes.groups`, registered the way the
+ * framework's route file does it (ADR 0041).
+ *
+ * @param  array<string, array<string, mixed>>  $zones
+ * @param  array<string, mixed>  $shared
+ */
+function trZones(array $zones, array $shared = []): void
+{
+    config()->set('wire-core.routes.groups', array_map(
+        fn (array $zone): array => ['uses' => 'panel', ...$shared, ...$zone],
+        $zones,
+    ));
 
-    app(ConfiguredRoutes::class)->register();
+    app(WireRoutes::class)->registerConfigured();
     Route::getRoutes()->refreshNameLookups();
+}
+
+it('puts the tenant in a config zone path or domain, with the middleware', function () {
+    trZones([
+        'app' => ['prefix' => 'app', 'tenant' => 'path', 'only' => ['tr-invoices']],
+        'portal' => ['domain' => 'example.test', 'tenant' => 'domain', 'only' => ['tr-invoices']],
+    ], ['middleware' => ['web']]);
 
     $path = Route::getRoutes()->getByName('app.wire.tr-invoices.index');
     $domain = Route::getRoutes()->getByName('portal.wire.tr-invoices.index');
@@ -294,9 +305,7 @@ it('puts the tenant in a config zone path or domain, with the middleware', funct
 });
 
 it('refuses a tenant mode it does not know, and a domain mode with no domain', function (array $zone, string $message) {
-    config()->set('wire-panels.routes', ['enabled' => true, 'zones' => ['app' => $zone]]);
-
-    app(ConfiguredRoutes::class)->register();
+    trZones(['app' => $zone]);
 })->throws(TenancyConfigurationException::class)->with([
     'unknown' => [['prefix' => 'app', 'tenant' => 'subdomain'], "takes 'path' or 'domain'"],
     'no domain' => [['prefix' => 'app', 'tenant' => 'domain'], 'names no `domain`'],
@@ -317,13 +326,7 @@ it('takes a tenant the application bound itself, and refuses a binding that is n
 });
 
 it('leaves a zone that says no tenant as it is', function () {
-    config()->set('wire-panels.routes', [
-        'enabled' => true,
-        'zones' => ['plain' => ['prefix' => 'plain', 'tenant' => false, 'only' => ['tr-invoices']]],
-    ]);
-
-    app(ConfiguredRoutes::class)->register();
-    Route::getRoutes()->refreshNameLookups();
+    trZones(['plain' => ['prefix' => 'plain', 'tenant' => false, 'only' => ['tr-invoices']]]);
 
     expect(Route::getRoutes()->getByName('plain.wire.tr-invoices.index')->uri())->toBe('plain/tr-invoices');
 });
@@ -343,7 +346,7 @@ function trJoin(TrUser $user, string $slug): void
 
 function trEntry(): void
 {
-    Route::middleware(['web'])->name('app.')->group(fn () => Route::wireTenantEntry('app', 'app/{tenant}'));
+    Route::middleware(['web'])->name('app.')->group(fn () => Route::wire('tenant-entry', uri: 'app', to: 'app/{tenant}'));
     trRoutes();
 }
 
@@ -381,17 +384,10 @@ it('asks a guest to sign in, and refuses a user model that knows no tenants', fu
 });
 
 it('registers the bare address for a config zone, in a path or at a domain root', function () {
-    config()->set('wire-panels.routes', [
-        'enabled' => true,
-        'middleware' => ['web'],
-        'zones' => [
-            'app' => ['prefix' => 'app', 'tenant' => 'path', 'only' => ['tr-invoices']],
-            'portal' => ['domain' => 'example.test', 'tenant' => 'domain', 'only' => ['tr-invoices']],
-        ],
-    ]);
-
-    app(ConfiguredRoutes::class)->register();
-    Route::getRoutes()->refreshNameLookups();
+    trZones([
+        'app' => ['prefix' => 'app', 'tenant' => 'path', 'only' => ['tr-invoices']],
+        'portal' => ['domain' => 'example.test', 'tenant' => 'domain', 'only' => ['tr-invoices']],
+    ], ['middleware' => ['web']]);
 
     $path = Route::getRoutes()->getByName('app.wire.tenants');
     $domain = Route::getRoutes()->getByName('portal.wire.tenants');
@@ -403,6 +399,21 @@ it('registers the bare address for a config zone, in a path or at a domain root'
         ->and($domain->defaults[TenantEntry::TARGET])->toBe('//{tenant}.example.test')
         // And that address is the zone's, so a zone picker offers it.
         ->and(app(ZoneDirectory::class)->all())->toHaveKey('app');
+});
+
+it('sends home to the company inside one, and to the zone s address outside any', function () {
+    trZones(['app' => ['prefix' => 'app', 'tenant' => 'path', 'only' => ['tr-invoices']]], ['middleware' => ['web']]);
+
+    $directory = app(ZoneDirectory::class);
+
+    // The page for somebody in no company: `app/{tenant}` cannot be built.
+    expect($directory->homeOf('app'))->toBe(url('/app'))
+        ->and($directory->homeOf('nowhere'))->toBeNull()
+        ->and($directory->homeOf(null))->toBeNull();
+
+    URL::defaults(['tenant' => 'acme']);
+
+    expect($directory->homeOf('app'))->toBe(url('/app/acme'));
 });
 
 it('offers every company, each on the same page, and marks the current one', function () {
@@ -468,7 +479,7 @@ it('falls back to coarser places on a record page when the list cannot be linked
     trJoin($this->user, 'globex');
     $probe = fn () => app(TenantSwitcher::class)->forRequest(request());
 
-    Route::middleware(['web'])->name('app.')->group(fn () => Route::wireTenantEntry('app', 'app/{tenant}'));
+    Route::middleware(['web'])->name('app.')->group(fn () => Route::wire('tenant-entry', uri: 'app', to: 'app/{tenant}'));
     Route::middleware(['web', 'wire.tenant'])->prefix('app/{tenant}')->name('app.')->group(function () use ($probe): void {
         // No list at all for `ghost`, and a list for `needy` that asks for a
         // parameter a switch cannot supply.
@@ -482,4 +493,17 @@ it('falls back to coarser places on a record page when the list cannot be linked
     // No `wire.home` in this group either, so both land on the zone's own address.
     expect(collect($this->get('/app/acme/ghost/7')->json('tenants'))->pluck('url')->all())->toBe([url('app'), url('app')])
         ->and(collect($this->get('/app/acme/needy/7')->json('tenants'))->pluck('url')->all())->toBe([url('app'), url('app')]);
+});
+
+it('places a hand-written zone s bare address from config too, guarded by default', function () {
+    config()->set('wire-core.routes.groups', ['tenant-entry' => ['uri' => 'app', 'to' => 'app/{tenant}']]);
+
+    app(WireRoutes::class)->registerConfigured();
+    Route::getRoutes()->refreshNameLookups();
+
+    $entry = Route::getRoutes()->getByName('wire.tenants');
+
+    expect($entry->uri())->toBe('app')
+        ->and($entry->middleware())->toBe(['web', 'auth'])
+        ->and($entry->defaults[TenantEntry::TARGET])->toBe('app/{tenant}');
 });

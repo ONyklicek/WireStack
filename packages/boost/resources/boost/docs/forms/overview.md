@@ -309,7 +309,6 @@ on would silently re-tick itself after a user cleared it.
 The mode is applied to the schema a form is **about** to render, after
 `form.configuring` has run — so a field a plugin added is switched with the rest,
 and one that cannot submit natively is refused whether it was declared or added.
-See [ADR 0036](https://github.com/nyoncode/wire/blob/main/architecture/decisions/0036-native-submit-forms.md).
 
 ### Factory
 

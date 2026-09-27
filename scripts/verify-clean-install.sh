@@ -17,7 +17,11 @@
 #      permissions is refused rather than shown an error;
 #   5. the same sign-in done in a real browser (scripts/clean-install/
 #      verify-browser.mjs): the form works, the admin renders styled, and the
-#      console stays clean.
+#      console stays clean;
+#   6. with --tenancy, a tenant zone added the way docs/panels/tenancy.md adds
+#      one — WIRE_TENANCY, HasTenants on the user model, a zone in
+#      routes/web.php — and walked: somebody in no company, registering one,
+#      its pages, a stranger's 404, and an invitation accepted (ADR 0040).
 #
 # Found on its first run: signing in went to Fortify's `/home`, which nothing
 # routes, and the panel's own prefix was a 404 as well.
@@ -25,6 +29,7 @@
 # Usage:
 #   bash scripts/verify-clean-install.sh              # build, check, remove the app
 #   bash scripts/verify-clean-install.sh --keep       # leave the app behind to poke at
+#   bash scripts/verify-clean-install.sh --tenancy    # and then a tenant zone over it
 #   APP_DIR=/tmp/wire-clean bash scripts/verify-clean-install.sh --keep
 #   PORT=8096 bash scripts/verify-clean-install.sh
 #
@@ -37,7 +42,14 @@ set -uo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 KEEP=0
-[[ "${1:-}" == "--keep" ]] && KEEP=1
+TENANCY=0
+for arg in "$@"; do
+    case "$arg" in
+        --keep) KEEP=1 ;;
+        --tenancy) TENANCY=1 ;;
+        *) printf 'unknown option: %s\n' "$arg" >&2; exit 2 ;;
+    esac
+done
 
 APP_DIR="${APP_DIR:-$(mktemp -d "${TMPDIR:-/tmp}/wire-clean-install.XXXXXX")/app}"
 PORT="${PORT:-8096}"
@@ -149,6 +161,17 @@ check 'the admin has an address of its own' $?
 ls public/build/manifest.json >/dev/null 2>&1
 check 'the frontend was built' $?
 
+# No provider routes anything (ADR 0041): the screens exist only because the
+# installer placed each group in the application's own route file.
+for group in panel auth-codes; do
+    grep -q "Route::wire('${group}')" routes/web.php
+    check "routes/web.php places Route::wire('${group}')" $?
+done
+# Company screens belong to an application that uses tenancy, and this one
+# does not (yet) — the installer must not have routed them.
+! grep -q "Route::wire('tenants')" routes/web.php
+check 'and no company routes in an application without tenancy' $?
+
 # ── 4. Over HTTP ────────────────────────────────────────────────────────────
 step "Serving on $ORIGIN"
 
@@ -256,6 +279,89 @@ if [[ "${SKIP_BROWSER:-0}" != 1 ]]; then
         node "$ROOT_DIR/scripts/clean-install/verify-browser.mjs"
     browser_code=$?
     check 'the browser pass' "$browser_code"
+fi
+
+# ── 6. A tenant zone ────────────────────────────────────────────────────────
+if [[ $TENANCY -eq 1 ]]; then
+    step 'A tenant zone, set up as docs/panels/tenancy.md sets one up'
+
+    # What the docs ask of an application, and nothing the workbench does for
+    # it: tenancy on, the user model answering HasTenants, a zone in the routes.
+    echo 'WIRE_TENANCY=true' >> .env
+    php -r '
+        $file = "app/Models/User.php";
+        $source = file_get_contents($file);
+        $contract = "\\NyonCode\\WirePanels\\Contracts\\HasTenants";
+        $source = preg_match("/class User extends \\S+\\s+implements\\s/", $source)
+            ? preg_replace("/(class User extends \\S+\\s+implements\\s+)/", "\\1".$contract.", ", $source, 1)
+            : preg_replace("/(class User extends \\S+)/", "\\1 implements ".$contract, $source, 1);
+        $source = preg_replace("/(class User[^{]*\\{)/", "\\1\n    use \\NyonCode\\WirePanels\\Concerns\\InteractsWithTenants;\n", $source, 1);
+        file_put_contents($file, $source);
+    ' || die 'could not give the user model HasTenants'
+    cat >> routes/web.php <<'PHP'
+
+// A tenant zone (docs/panels/tenancy.md): the company in the path, and the
+// company screens outside it.
+Route::middleware(['web', 'auth'])->prefix('app')
+    ->group(fn () => Route::wire('panel', zone: 'app', tenant: 'path', only: ['company', 'members']));
+Route::middleware(['web', 'auth'])->prefix('tenants')->group(fn () => Route::wire('tenants'));
+PHP
+
+    php artisan route:list --path=app 2>/dev/null | grep -q 'app/{tenant}/members'
+    check 'the zone routes the companies module s pages' $?
+
+    # The server read .env when it started.
+    kill "$SERVER_PID" 2>/dev/null; wait "$SERVER_PID" 2>/dev/null
+    lsof -ti "tcp:${PORT}" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null
+    php artisan serve --host=127.0.0.1 --port="$PORT" >>"$LOG" 2>&1 &
+    SERVER_PID=$!
+    for _ in $(seq 1 40); do
+        curl -fsS -o /dev/null "$ORIGIN/login" 2>/dev/null && break
+        sleep 0.5
+    done
+
+    tinker() { php artisan tinker --execute="$1" 2>>"$LOG" | tail -1; }
+
+    sign_in "$ADMIN_EMAIL" >/dev/null
+    code="$(status_of "$ORIGIN/app")"
+    page="$(curl -s -b "$JAR" "$ORIGIN/app")"
+    [[ "$code" == 200 ]] && grep -q 'data-wire="tenants-none"' <<<"$page"
+    check 'somebody in no company is shown where to start, not an error' $? "HTTP $code"
+    code="$(status_of "$ORIGIN/tenants/register")"
+    [[ "$code" == 200 ]]
+    check 'the registration screen answers' $? "HTTP $code"
+
+    # Registering itself is a Livewire form, which curl cannot submit; the
+    # browser drivers cover the form, this covers the application under it.
+    tinker '(new NyonCode\WireModuleTenants\Actions\RegisterTenant)("Acme", "acme", App\Models\User::where("email", "'"$ADMIN_EMAIL"'")->first()); echo "ok";' | grep -q ok
+    check 'a company registers' $?
+
+    target="$(location_of "$ORIGIN/app")"
+    [[ "$target" == "$ORIGIN/app/acme" ]]
+    check 'the zone s own address sends its owner into it' $? "went to $target"
+    target="$(location_of "$ORIGIN/app/acme")"
+    [[ "$target" == "$ORIGIN/app/acme/"* && "$(status_of "$target")" == 200 ]]
+    check 'and on to a page of the company that answers' $? "$target answered $(status_of "$target")"
+    page="$(curl -s -b "$JAR" "$ORIGIN/app/acme/members")"
+    grep -q "$ADMIN_EMAIL" <<<"$page" && ! grep -q "$PLAIN_EMAIL" <<<"$page"
+    check 'the members screen lists the company s members, and only those' $?
+    grep -Eq 'href="[^"]*/app/acme/company"' <<<"$page"
+    check 'and the menu links into the same company' $?
+
+    sign_in "$PLAIN_EMAIL" >/dev/null
+    code="$(status_of "$ORIGIN/app/acme/company")"
+    [[ "$code" == 404 ]]
+    check 'a company that is not yours is a 404' $? "HTTP $code"
+
+    invite="$(tinker 'URL::forceRootUrl("'"$ORIGIN"'"); $acme = NyonCode\WireModuleTenants\Models\Tenant::where("slug", "acme")->first(); $owner = App\Models\User::where("email", "'"$ADMIN_EMAIL"'")->first(); $invitation = (new NyonCode\WireModuleTenants\Actions\InviteMember)($acme, "'"$PLAIN_EMAIL"'", NyonCode\WireModuleTenants\Enums\MemberRole::Member, $owner); echo URL::temporarySignedRoute("wire-module-tenants.invitations.accept", $invitation->expires_at, ["invitation" => $invitation->getKey()]);')"
+    [[ "$invite" == "$ORIGIN/tenants/invitations/"* ]]
+    check 'an owner invites by address' $? "$invite"
+    target="$(location_of "$invite")"
+    [[ "$target" == "$ORIGIN/app/acme" ]]
+    check 'accepting the invitation lands in the company' $? "went to $target"
+    code="$(status_of "$ORIGIN/app/acme/company")"
+    [[ "$code" == 200 ]]
+    check 'and its pages open for the new member' $? "HTTP $code"
 fi
 
 echo

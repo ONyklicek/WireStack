@@ -9,6 +9,7 @@ use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\Contracts\RequiresTenant;
 use NyonCode\WireModuleTenants\Pages\CompanyProfile;
 use NyonCode\WireModuleTenants\Support\Membership;
 
@@ -17,7 +18,7 @@ use NyonCode\WireModuleTenants\Support\Membership;
  * slug, and — for an owner — deleting it. No model of its own: the record is
  * always the current tenant.
  */
-final class CompanyResource implements DescribesResource, ProvidesNavigation, ProvidesPages
+final class CompanyResource implements DescribesResource, ProvidesNavigation, ProvidesPages, RequiresTenant
 {
     use DescribesRecords;
 

@@ -45,7 +45,7 @@ user menu, or deciding where a new screen renders.
   shell only once the application's own layout view says so. Point that config at the *application's* view,
   never at `wire-admin::layout` directly — the component needs its props.
 - **Slots, never configuration.** There is no `Panel` object, no branding/colour/auth config, no URL scheme.
-  That is the panel-builder drift ADR 0020 named. Do not add one.
+  That is the panel-builder drift this design avoids. Do not add one.
 - **The user menu is filled by packages, not by your layout.** `PageChrome::USER_MENU` is a chrome region:
   `wire-module-users` contributes the profile link, `wire-module-auth` the sign-out, each with a `sort`
   because provider order is composer's discovery order. The `user` slot is for what the *application* owns.
@@ -58,7 +58,7 @@ user menu, or deciding where a new screen renders.
   component reaches the view as an `InvokableComponentVariable` of the same name and shadows the object.
 - **Zone and active key are read at page render, in the component constructor**, never re-derived per render.
   Inside a Livewire update `Route::currentRouteName()` is `livewire.update`, so a re-derived answer is right
-  once and null for ever after — while rendering perfectly (ADR 0027).
+  once and null for ever after — while rendering perfectly.
 - **`aria-current` is `page` for the page, `true` for the branch**, never both on one screen. A row with
   children renders as a disclosure `<button>` and never says `page`; the child that links there does.
 - **An unrouted entry keeps its row and loses its link** (`aria-disabled`) — the honest picture of a

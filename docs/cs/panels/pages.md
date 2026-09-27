@@ -622,7 +622,7 @@ Zóna, do které stopa odkazuje, se čte **jednou, při mountu**, a drží se ve
 mountu, protože jindy to nejde: během Livewire updatu je
 `Route::currentRouteName()` rovno `livewire.update`, takže drobek, který by si
 zónu odvodil znovu, by odkazoval správně při prvním vykreslení a mimo zónu při
-každém dalším ([ADR 0027](routing.md#zony)).
+každém dalším ([Zóny](routing.md#zony)).
 
 Stránka, která není resourcová — obrazovka nastavení, vlastní seznam modulu —
 implementuje kontrakt sama a vrátí, jakou stopu má. Stránka, která není uvnitř
@@ -689,7 +689,7 @@ Aktuální záložka se pozná podle **druhu stránky** — `Zone::currentPage()
 ze jména routy — ne porovnáním URL záložky s aktuální, kde o rozsvícení rozhoduje
 lomítko na konci nebo query string. Stejně jako zóna vedle něj se čte jednou při
 mountu a drží se ve veřejném `$currentPage`, protože během Livewire updatu je
-jméno routy `livewire.update` ([ADR 0027](routing.md#zony)) a editační stránka se
+jméno routy `livewire.update` ([Zóny](routing.md#zony)) a editační stránka se
 překresluje při každém stisku klávesy.
 
 Stránky detailu a editace to skládají samy. Vlastní stránka se do řady přidá tím,

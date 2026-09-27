@@ -129,7 +129,7 @@ form schema for validated flows.
 ### Workflow / state machine
 
 `WorkflowState::for(StatusEnum::class)->column('status')->allow($from, $to)->guard($to, fn)->after($to, fn)`.
-A **seam, not an engine** (ADR 0018): it owns states, edges, guards and side effects, and delegates every
+A **seam, not an engine**: it owns states, edges, guards and side effects, and delegates every
 meaning — no process definitions, no approval modelling, no scheduler. Transitions save through the ordinary
 path, so tenant scoping and audit come along without rewiring.
 
@@ -224,7 +224,7 @@ below.
 Off by default (`wire-core.tenancy.enabled`), **strict once on**. The shipped resolver answers the tenant held by
 `Core\Tenancy\CurrentTenant` (scoped: every request and job starts empty), null when nothing was entered; enter
 one with `app(Tenancy::class)->runAs($tenant, fn () => …)` in a job, command, seeder or test — it restores what was
-current, even on a throw. **Never keep "the current tenant" anywhere else** (ADR 0040). Isolation is
+current, even on a throw. **Never keep "the current tenant" anywhere else**. Isolation is
 `wire-core.tenancy.isolation`: `column` (default), `database` (a database per tenant: models use
 `BelongsToTenantDatabase` on the `tenancy.database.connection`, `wire:tenants:create` / `wire:tenants:migrate`,
 no tenant entered = the first query throws) or a class implementing `IsolatesTenants` (`enter`/`leave`, called only
@@ -273,7 +273,7 @@ surfaces weeks later as "the modal never closes". Report back with a notificatio
 driver is for, since the request that queued the job is gone by then. An action renamed or removed between
 dispatch and run throws too.
 
-`RunActionJob` reaches Notifications by class name, not import: both are L2 and ADR 0025 forbids L2→L2 — the
+`RunActionJob` reaches Notifications by class name, not import: both are L2 and the module-layer rule forbids L2→L2 — the
 same soft seam `HasLifecycle::resolveNotificationManagerClass()` uses.
 
 ### Notifications

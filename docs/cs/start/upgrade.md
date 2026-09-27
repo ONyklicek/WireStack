@@ -62,6 +62,34 @@ Před upgradem ověřte, že je vaše aplikace splňuje.
 
 ---
 
+## Routy každého balíčku jsou skupina, kterou umisťujete vy (2.4)
+
+Žádný provider už routy neregistruje. Routy každého balíčku jsou
+skupina — `panel`, `zones`, `tenant-entry`, `auth-codes`, `tenants` — umístěná
+voláním `Route::wire('…')` ve vašem route souboru, nebo záznamem
+`wire-core.routes.groups`. `Route::wireResources()`, `Route::wireResource()`
+a `Route::wireZoneEntry()` fungují dál tak jako dřív.
+
+Dvě věci potřebují řádek:
+
+```php
+// config/wire-panels.php — 2.3
+'routes' => ['enabled' => true, 'prefix' => 'admin', 'zones' => [/* … */]],   // [tl! --]
+
+// config/wire-core.php — 2.4: tytéž skupiny, jeden záznam na zónu
+'routes' => ['groups' => [                                                     // [tl! ++]
+    'admin' => ['uses' => 'panel', 'prefix' => 'admin'],                        // [tl! ++]
+]],                                                                            // [tl! ++]
+```
+
+```php
+// routes/web.php — toky jednorázových kódů, pokud je zapnutý některý přepínač ve wire-module-auth.codes
+Route::wire('auth-codes');   // [tl! ++]
+```
+
+To druhé za vás zapíše `php artisan wire:install`. Bez něj každý tok kódu
+odpoví 404, ať jeho přepínač říká cokoli.
+
 ## Livewire 4 (2.0)
 
 **Verze 2.0 vyžaduje Livewire 4.** Linie 1.x zůstává na Livewire 3 a dál dostává
@@ -796,7 +824,7 @@ konvence nedosáhne.
 
 **Routing je pořád opt-in** a `Route::wireResources()` ve vašem route souboru
 zůstává referenční cestou. Novinka vedle ní je
-[`wire-panels.routes`](configuration.md#panels) — tytéž argumenty skupiny předané
+[`wire-panels.routes`](configuration.md#routy-a-panely) — tytéž argumenty skupiny předané
 jednou — a [zóny](../panels/routing.md#zony), víc mount pointů nad jedním katalogem.
 Obojí je vypnuté, dokud to nezapnete.
 

@@ -184,10 +184,9 @@ it('reads the panel s root from the router when it is already routed', function 
     expect((include config_path('fortify.php'))['home'])->toBe('/backoffice');
 });
 
-it('takes the prefix from wire-panels.routes when the panel is routed from config', function () {
+it('takes the prefix from the config entry that places the panel', function () {
     sspFortifyConfig();
-    config()->set('wire-panels.routes.enabled', true);
-    config()->set('wire-panels.routes.prefix', 'staff/');
+    config()->set('wire-core.routes.groups', ['staff' => ['uses' => 'panel', 'prefix' => 'staff/']]);
 
     $said = [];
     $this->step->apply(sspConsole($said));

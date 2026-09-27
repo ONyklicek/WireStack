@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireModuleTenants\Support;
 
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use NyonCode\WireModuleTenants\Routing\TenantRoutes;
 
 /**
  * Who may register a company, and what a company may be called.
@@ -26,6 +28,16 @@ final class Registration
             'ability' => Gate::forUser($user)->allows((string) config('wire-module-tenants.registration_ability', 'tenants.create')),
             default => false,
         };
+    }
+
+    /**
+     * The registration screen's address for this person, or null when it is
+     * not theirs to open — or not routed, because the application has not
+     * placed the `tenants` route group.
+     */
+    public static function urlFor(mixed $user): ?string
+    {
+        return self::allows($user) && Route::has(TenantRoutes::REGISTER) ? route(TenantRoutes::REGISTER) : null;
     }
 
     /** A slug from a name: what the registration form proposes. */

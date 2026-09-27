@@ -6,6 +6,8 @@ namespace NyonCode\WirePanels\Resources\Console\Support;
 
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Foundation\Routing\WireRoutes;
+use NyonCode\WirePanels\Routing\PanelRoutes;
 
 /**
  * What stands between a class a generator just wrote and a page a person can
@@ -16,8 +18,9 @@ use Illuminate\Support\Str;
  *
  * - **Is it registered?** Listed in the config list for its kind, or inside a
  *   folder `config('wire-core.discover')` names for that kind.
- * - **Is anything routing it?** `config('wire-panels.routes.enabled')`, or a
- *   route file that calls `Route::wireResources()` / `Route::wireResource()`.
+ * - **Is anything routing it?** A route file that places the panel —
+ *   `Route::wire('panel')`, or `Route::wireResources()` / `Route::wireResource()`
+ *   as it always was — or an entry of `wire-core.routes.groups` that does.
  *   Read from the files rather than the router because a command runs before
  *   any request, and an application may register its routes only for HTTP.
  */
@@ -59,17 +62,17 @@ final class PanelSetup
     /** Whether the application routes registered classes at all. */
     public function isRouted(): bool
     {
-        return config('wire-panels.routes.enabled') === true || $this->routeFileCallsTheMacro();
+        return $this->configuredPanel() !== null || $this->routeFileCalls('/\bwire(Resources?\s*\(|\(\s*[\'"]panel[\'"])/');
     }
 
     /**
      * The path a key's list lands at, as far as it can be known here: the
-     * configured prefix when routes come from config, or the bare segment under
-     * whatever group a route file puts `Route::wireResources()` in.
+     * prefix of the config entry that places the panel, or the bare segment
+     * under whatever group a route file puts it in.
      */
     public function pathFor(string $key): string
     {
-        $prefix = config('wire-panels.routes.enabled') === true ? trim((string) config('wire-panels.routes.prefix'), '/') : '';
+        $prefix = trim((string) ($this->configuredPanel()['prefix'] ?? ''), '/');
 
         return '/'.ltrim(($prefix === '' ? '' : $prefix.'/').$key, '/');
     }
@@ -77,7 +80,19 @@ final class PanelSetup
     /** Whether the prefix in {@see pathFor()} is the whole path, or a route group may add to it. */
     public function knowsTheWholePath(): bool
     {
-        return config('wire-panels.routes.enabled') === true;
+        return $this->configuredPanel() !== null;
+    }
+
+    /**
+     * The first `wire-core.routes.groups` entry that places the panel.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function configuredPanel(): ?array
+    {
+        $entries = app(WireRoutes::class)->configured(PanelRoutes::key());
+
+        return $entries === [] ? null : reset($entries);
     }
 
     /** The key a resource over this model is registered under — `DescribesRecords`' rule. */
@@ -86,11 +101,11 @@ final class PanelSetup
         return Str::of(class_basename($model))->kebab()->plural()->value();
     }
 
-    /** Whether a route file — `routes/*.php` — calls `Route::wireResources()` or `Route::wireResource()`. */
-    private function routeFileCallsTheMacro(): bool
+    /** Whether a route file — `routes/*.php` — calls a macro this pattern names. */
+    private function routeFileCalls(string $pattern): bool
     {
         foreach (glob(base_path('routes/*.php')) ?: [] as $file) {
-            if (preg_match('/\bwireResources?\s*\(/', $this->files->get($file)) === 1) {
+            if (preg_match($pattern, $this->files->get($file)) === 1) {
                 return true;
             }
         }

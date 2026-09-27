@@ -50,13 +50,15 @@ it('keeps a slug someone typed, and refuses a taken or reserved one', function (
         ->set('data.name', 'Acme')
         ->set('data.slug', 'acme')
         ->call('save')
-        ->assertHasErrors('data.slug');
+        ->assertHasErrors('data.slug')
+        ->assertSee(__('wire-module-tenants::messages.slug_taken'));
 
     Livewire::test(RegisterTenant::class)
         ->set('data.name', 'Admin')
         ->set('data.slug', 'admin')
         ->call('save')
-        ->assertHasErrors('data.slug');
+        ->assertHasErrors('data.slug')
+        ->assertSee(__('wire-module-tenants::messages.slug_reserved'));
 });
 
 it('follows the registration setting', function () {

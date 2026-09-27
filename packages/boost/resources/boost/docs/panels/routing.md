@@ -139,7 +139,7 @@ business.wire.orders.index   →  business/orders
 
 The `name()` call is what keeps them apart. Omit it on the second group and both
 zones register `wire.orders.index`, where the later one silently wins every
-lookup — which is why the [config path](#registering-them-from-config-instead)
+lookup — which is why the [config path](#describing-the-groups-in-config)
 below is the safer way to declare zones: there the zone is an array key and
 cannot be forgotten.
 
@@ -287,61 +287,66 @@ fine. Read it once, keep it in a public property, and let Livewire carry it. The
 palette already does exactly this, so a palette in a zoned layout needs no
 configuration.
 
-## Registering them from config instead
+## Describing the groups in config
 
-The macro above stays the reference path. An application that wants the
-convention and would rather not keep a route file for it hands the same group
-arguments over once:
+The panel's pages are one route group, `panel`, and every package's routes are
+placed the same way — from the route file or from config, through the
+same code.
+
+In the route file, inside any group Laravel can build around it:
 
 ```php
-// config/wire-panels.php
+// routes/web.php
+Route::middleware(['web', 'auth', 'can:admin'])->prefix('admin')
+    ->group(fn () => Route::wire('panel', zone: 'admin'));    // [tl! focus]
+```
+
+`zone:` is the route-name prefix a zone is, written for you. `Route::wireResources()`
+is the same call without it — `Route::wire('panel', only: [...], except: [...])`.
+
+In config, the same groups described rather than written out, registered by the
+framework's one route file:
+
+```php
+// config/wire-core.php
 'routes' => [
-    'enabled' => true,                    // [tl! focus]
-    'prefix' => 'admin',
-    'middleware' => ['web', 'auth'],
-    'domain' => null,
-    'only' => [],
-    'except' => [],
+    'defaults' => [],                                         // under every entry
+    'groups' => [                                             // [tl! focus:start]
+        'admin' => ['uses' => 'panel', 'prefix' => 'admin', 'middleware' => ['web', 'auth', 'can:admin']],
+        'business' => ['uses' => 'panel', 'prefix' => 'business', 'only' => ['orders', 'customers']],
+        'zones' => ['uri' => '/'],                            // the address above them
+    ],                                                        // [tl! focus:end]
 ],
 ```
 
-Zones are a `zones` key, and the array key is the zone:
-
-```php
-'routes' => [
-    'enabled' => true,
-    'middleware' => ['web', 'auth'],          // inherited by every zone
-    'zones' => [                              // [tl! focus:start]
-        'admin' => [
-            'prefix' => 'admin',
-            'middleware' => ['web', 'auth', 'can:admin'],
-        ],
-        'business' => [
-            'prefix' => 'business',
-            'only' => ['orders', 'customers'],
-        ],
-    ],                                        // [tl! focus:end]
-],
-```
-
-Each zone inherits the values outside `zones` and overrides what it names. **The
-key becomes the route-name prefix**, which is the reason to prefer this over
-hand-written groups rather than merely an alternative to them: in a route file
-`->name('business.')` is a line someone omits, and omitting it makes one zone
+An entry's key is the group it places unless `uses` names one; then **the key is
+the zone**, which is the reason to prefer this over hand-written groups: in a route
+file `->name('business.')` is a line someone omits, and omitting it makes one zone
 take over the other's links silently. An array key cannot be omitted and cannot
 repeat.
 
-With no `zones` key it is one unnamed group, which is what a single-zone
-application wants.
+| Key | What it is |
+| --- | --- |
+| `prefix`, `domain`, `middleware`, `as`, `where`, `namespace`, `scope_bindings` | Laravel's group attributes, as `Route::group()` takes them |
+| `without_middleware` | Laravel's `excluded_middleware` |
+| `can` | Adds `can:…` to the group |
+| `zone`, `tenant`, `only`, `except` | The panel's own options — `tenant` is [Tenancy](tenancy.md) |
+| `routes` | Changes to single routes by key: `['orders' => ['can' => 'orders.export']]` — `middleware`, `without_middleware`, `can`, `where` |
+| `uses`, `enabled` | The group this entry places; `false` skips it, as does `'enabled' => false` |
 
-Off by default, and deliberately so: package providers boot before your own, so
-these routes are matched **before** everything in `routes/web.php`. An
-application with a catch-all under the same prefix wins today and would stop
-winning, which is a decision to make rather than a default to inherit.
+**An entry that names no middleware is guarded.** The panel ships `['web', 'auth']`
+as its own starting point — `defaults` goes over it, the entry over both — because
+what it registers are create, edit and delete screens, and a group without `auth`
+serves them to anybody with the URL while nothing looks wrong.
 
-Enabling this *and* calling `Route::wireResources()` yourself would register
-every page twice under one route name; that is refused rather than resolved, with
-a message naming both lines you could delete.
+**The traps.** Groups from config are registered before `routes/web.php` is read,
+so they are matched **before** everything in it: an application with a catch-all
+under the same prefix places that group in its route file instead, to decide the
+order. The same page at two addresses under one route name — config and a route
+file both placing the unnamed panel — is refused rather than resolved; placing it
+over itself changes nothing and is allowed. And a page that only exists inside a
+company is skipped in a group without `{tenant}`, so an application without
+tenancy never gets an address that could only answer 404.
 
 ## Linking to them
 
@@ -411,6 +416,7 @@ ResourceRoutes::urls(string $page = 'index', ?string $zone = null): array
 ResourceRoutes::uriFor(string $name, string|RoutePage $page): string       // the segment it sits at
 ResourceRoutes::takesRecord(string $name, string|RoutePage $page): bool    // read off that URI, not off the kind
 ResourceRoutes::zoneEntry(string $uri = '/'): Route   // `wire.zones`; the macro is Route::wireZoneEntry()
+Route::wire(string $group, mixed ...$options): array   // any package's route group, keyed; `panel` takes zone:, tenant:, only:, except: [tl! focus]
 ZoneDirectory::all(): array                           // zone => its shortest route, in registration order
 ZoneDirectory::reachableBy(?Authenticatable $user): array   // zone => URL, only those its `can:` lets in
 ZoneDirectory::landingFor(?Authenticatable $user): ?string  // preference, primary, the only one — or null
@@ -433,10 +439,7 @@ route needs a parameter this call did not give — a resource on a `{tenant}`
 domain, say. Both render as "no link" rather than taking a menu down.
 
 From `wire-core`, reach it through `ResolvesPageUrls` instead, which `wire-panels`
-answers and which answers `null` when no package owns routing. `RegistersPageRoutes`
-is the other half of that seam: `wire-core` calls it once the registries are full,
-which is the only moment [config-declared routes](#registering-them-from-config-instead)
-can read a complete catalogue.
+answers and which answers `null` when no package owns routing.
 
 `AuthorizesUrls` is the question after "where": may this person open that URL.
 `wire-panels` answers it with `RouteAccess`, which puts the route's `can:`

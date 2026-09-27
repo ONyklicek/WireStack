@@ -26,7 +26,7 @@ Dependency graph (each depends only on those to its right):
   `catch (WireException $e)` catches the whole stack. Each extends the SPL class the failure really is
   (`InvalidArgumentException` = bad argument, `RuntimeException` = bad state), which is also why catching
   the SPL class keeps working. Build them with named constructors
-  (`TableHasNoDataSourceException::make()`), not `new`. See ADR 0022.
+  (`TableHasNoDataSourceException::make()`), not `new`.
 
 ### Discover the API with the wire-boost MCP server
 

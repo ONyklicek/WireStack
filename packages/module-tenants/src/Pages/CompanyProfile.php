@@ -58,7 +58,11 @@ class CompanyProfile extends Component
                     ->helperText(__('wire-module-tenants::messages.company_slug_change'))
                     ->required()
                     ->maxLength(60)
-                    ->rules(['alpha_dash', Rule::unique($tenant->getTable(), 'slug')->ignore($tenant->getKey()), Rule::notIn(Registration::reserved())]),
+                    ->rules(['alpha_dash', Rule::unique($tenant->getTable(), 'slug')->ignore($tenant->getKey()), Rule::notIn(Registration::reserved())])
+                    ->validationMessages([
+                        'not_in' => __('wire-module-tenants::messages.slug_reserved'),
+                        'unique' => __('wire-module-tenants::messages.slug_taken'),
+                    ]),
             ])
             ->successMessage(__('wire-module-tenants::messages.saved'))
             ->using(function (array $data) use ($tenant): array {

@@ -53,8 +53,8 @@ místo aby selhala.
 jestli je resource zaregistrovaný — vyjmenovaný v `config('wire-core.resources')`,
 právě přidaný přes `--register`, nebo ve složce, kterou jmenuje
 `config('wire-core.discover.resources')` — a jestli zaregistrované třídy něco
-routuje — `'routes' => ['enabled' => true]` v `config/wire-panels.php`, nebo
-route soubor, který volá `Route::wireResources()`. Když je obojí na místě, vypíše
+routuje — route soubor, který volá `Route::wireResources()`, nebo
+panelový záznam `wire-core.routes.groups`. Když je obojí na místě, vypíše
 *Ready: registered and routed at /admin/order-lines*; jinak pojmenuje jen krok,
 který chybí, napsaný pro tento resource. `make:wire-page` dělá totéž pro vlastní
 stránku.

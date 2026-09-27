@@ -14,6 +14,8 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Modules\Module;
+use NyonCode\WireCore\Foundation\Routing\RouteGroups;
+use NyonCode\WireCore\Foundation\Routing\WireRoutes;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireModuleAuth\Actions\MailResetCode;
@@ -24,6 +26,8 @@ use NyonCode\WireModuleAuth\Http\Responses\RedirectToResetCodeScreen;
 use NyonCode\WireModuleAuth\Install\ConfigureFortify;
 use NyonCode\WireModuleAuth\Install\LayoutScaffold;
 use NyonCode\WireModuleAuth\Install\PrepareUserModel;
+use NyonCode\WireModuleAuth\Install\RouteOneTimeCodes;
+use NyonCode\WireModuleAuth\Routing\CodeRoutes;
 use NyonCode\WireModuleAuth\Services\DatabaseOneTimeCodes;
 use NyonCode\WireModuleAuth\Support\Codes;
 use NyonCode\WireModuleAuth\Support\Frame;
@@ -65,7 +69,6 @@ class WireModuleAuthServiceProvider extends PackageServiceProvider
             ->hasShortName('wire-module-auth')
             ->hasConfig()
             ->hasViews()
-            ->hasRoutes()
             ->hasMigrations()
             ->hasTranslations()
             // One registry for the whole signed-out surface, resolved before any
@@ -93,6 +96,12 @@ class WireModuleAuthServiceProvider extends PackageServiceProvider
                 // that 404s.
                 SetupRegistry::instance()->register(ConfigureFortify::class);
                 SetupRegistry::instance()->register(PrepareUserModel::class);
+                SetupRegistry::instance()->register(RouteOneTimeCodes::class);
+
+                // The code flows, as a route group the application places —
+                // `Route::wire('auth-codes')`, which the step above writes, or a
+                // config entry (ADR 0041) — never registered from here.
+                RouteGroups::instance()->register(CodeRoutes::class);
             })
             ->bootedPackage(function (): void {
                 Blade::component('wire-module-auth::screen', Screen::class);
@@ -310,20 +319,26 @@ class WireModuleAuthServiceProvider extends PackageServiceProvider
      */
     protected function routeGuardReport(): array
     {
-        if (! config('wire-panels.routes.enabled', false)) {
+        // The panel groups config places, by the group's key: the module
+        // cannot require wire-panels, and does not need to.
+        $entries = app(WireRoutes::class)->configured('panel');
+
+        if ($entries === []) {
             // The routes are the application's own, written in its route file
             // inside whatever group it chose. Nothing here can read that, and
             // guessing would be worse than the line below.
             return ['  ↩︎  Your pages are routed by hand — make sure the group they are in has the `auth` middleware'];
         }
 
-        $middleware = (array) config('wire-panels.routes.middleware', []);
+        $report = [];
 
-        return [
-            in_array('auth', $middleware, true)
-                ? '  ✅ The panel routes require a signed-in user'
-                : '  ⚠️  wire-panels.routes.middleware has no `auth` — your panel is reachable signed out',
-        ];
+        foreach ($entries as $name => $entry) {
+            $report[] = in_array('auth', (array) ($entry['middleware'] ?? []), true)
+                ? "  ✅ The panel routes of `{$name}` require a signed-in user"
+                : "  ⚠️  wire-core.routes.groups.{$name} has no `auth` middleware — that panel is reachable signed out";
+        }
+
+        return $report;
     }
 
     /**

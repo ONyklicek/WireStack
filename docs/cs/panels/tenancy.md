@@ -44,28 +44,35 @@ nečte jako „smí do každého tenanta“.
 
 ## Tenantová zóna
 
-V souboru s routami je tenant součástí skupiny:
+Jedna volba u skupiny rout panelu udělá všechno — parametr, middleware
+a vlastní adresu zóny vedle. V route souboru:
 
 ```php
-Route::name('app.')
-    ->prefix('app/{tenant}')                       // nebo ->domain('{tenant}.example.com')
-    ->middleware(['web', 'auth', 'wire.tenant'])   // [tl! focus]
+Route::middleware(['web', 'auth'])->prefix('app')                    // nebo ->domain('example.com')
+    ->group(fn () => Route::wire('panel', zone: 'app', tenant: 'path'));   // [tl! focus]
+```
+
+Nebo jako záznam `wire-core.routes.groups` ([Routování](routing.md#popis-skupin-v-configu)):
+
+```php
+// config/wire-core.php
+'routes' => ['groups' => [                                                     // [tl! focus:start]
+    'app' => ['uses' => 'panel', 'prefix' => 'app', 'tenant' => 'path'],          // app/{tenant}/…
+    'portal' => ['uses' => 'panel', 'domain' => 'example.com', 'tenant' => 'domain'],   // {tenant}.example.com
+]],                                                                            // [tl! focus:end]
+```
+
+Vypsaná ručně je to tatáž skupina, s parametrem a middlewarem v ní od vás:
+
+```php
+Route::name('app.')->prefix('app/{tenant}')->middleware(['web', 'auth', 'wire.tenant'])
     ->group(fn () => Route::wireResources());
 ```
 
-Z configu udělá obojí — parametr i middleware — jeden klíč u zóny:
-
-```php
-// config/wire-panels.php
-'routes' => [
-    'enabled' => true,
-    'middleware' => ['web', 'auth'],
-    'zones' => [                                                                // [tl! focus:start]
-        'app' => ['prefix' => 'app', 'tenant' => 'path'],                        // app/{tenant}/…
-        'portal' => ['domain' => 'example.com', 'tenant' => 'domain'],           // {tenant}.example.com
-    ],                                                                          // [tl! focus:end]
-],
-```
+**Nic tady s tenancy nepočítá.** Zóna bez `tenant` je obyčejná zóna a stránka,
+která existuje jen uvnitř firmy — profil a členové z modulu firem —, se v ní
+přeskočí, takže aplikace, která tenancy nepoužívá, nikdy nenese adresu, která by
+mohla odpovědět jen 404.
 
 Cesta nepotřebuje nic od DNS a dovolí mít dva tenanty otevřené ve dvou
 záložkách; doména potřebuje wildcard DNS záznam a certifikát a doménu session
@@ -80,19 +87,23 @@ a přitom je to adresa, kterou člověk napíše, a ta, kam vede přihlášení.
 toho odpoví: pošle na `getDefaultTenant()` přihlášeného a odtud na první stránku
 té firmy, kterou smí otevřít.
 
+`tenant:` ji zaregistruje sám, na prefixu bez tenanta nebo v kořeni domény, pod
+jménem `{zone}.wire.tenants` — a právě to nabídne výběr zón jako adresu zóny.
+Ručně vypsaná tenantová zóna ji umístí jako vlastní skupinu a řekne, kde je adresa
+firmy:
+
 ```php
 Route::name('app.')->middleware(['web', 'auth'])
-    ->group(fn () => Route::wireTenantEntry('app', 'app/{tenant}'));   // [tl! focus]
+    ->group(fn () => Route::wire('tenant-entry', uri: 'app', to: 'app/{tenant}'));   // [tl! focus]
 ```
 
-Druhý argument říká, kde je adresa firmy, s `{tenant}` tam, kam patří její klíč —
-`//{tenant}.example.com` pro doménovou zónu. Zóna z configu s klíčem `tenant`
-tohle zaregistruje sama, na prefixu bez tenanta nebo v kořeni domény, pod
-jménem `{zone}.wire.tenants` — a právě to nabídne výběr zón jako adresu zóny.
+`to` má `{tenant}` tam, kam patří klíč firmy — `//{tenant}.example.com` pro
+doménovou zónu.
 
 Kdo nepatří do žádné firmy, dostane `wire-panels.routes.tenant_entry.view`, pokud
 ho aplikace pojmenuje — místo, kde nabídnout registraci firmy — a jinak 403,
-které řekne proč.
+které řekne proč. [Modul firem](../modules/tenants.md) pojmenuje vlastní, když
+to aplikace neudělala.
 
 ## Přepínač firem
 
@@ -157,3 +168,4 @@ implementuje tři metody samo:
 - [Autorizace § Multi-tenancy](../start/authorization.md#multi-tenancy) — scope, fail-safe, `runAs()` pro joby a příkazy
 - [Routování](routing.md) — zóny, jména rout a `url()`
 - [Navigace](navigation.md) — menu, jehož odkazy teď nesou tenanta
+- [Firmy](../modules/tenants.md) — registrace firmy, pozvánky a správa jejích členů

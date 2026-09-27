@@ -210,8 +210,8 @@ it('writes without generated fields when the model table cannot be read', functi
 
 it('says ready, with the address, when discovery and routing are in place', function () {
     config()->set('wire-core.discover.resources', ['App\Resources' => app_path('Resources')]);
-    config()->set('wire-panels.routes.enabled', true);
-    config()->set('wire-panels.routes.prefix', 'admin');
+    // The panel placed from config (ADR 0041), so the whole path is known.
+    config()->set('wire-core.routes.groups', ['admin' => ['uses' => 'panel', 'prefix' => 'admin']]);
 
     $this->artisan('make:wire-resource', ['name' => 'OrderLine'])
         ->expectsOutputToContain('Ready: registered and routed at /admin/order-lines.')
@@ -242,7 +242,7 @@ it('reads a route file that calls the macro as routing in place', function () {
 });
 
 it('names only the registration step when routing is in place', function () {
-    config()->set('wire-panels.routes.enabled', true);
+    config()->set('wire-core.routes.groups', ['panel' => []]);
 
     $this->artisan('make:wire-resource', ['name' => 'Order'])
         ->expectsOutputToContain("'discover' => ['resources' => ['App\\\\Resources' => app_path('Resources')]]")

@@ -200,7 +200,7 @@ Každá full-page komponenta — včetně stránek, které registruje
 
 | Tohle ne | Protože |
 | --- | --- |
-| Objekt `Panel` s fluent API | Riziko, které pojmenovala ADR 0020. Třída držící konfiguraci shellu je přesně to, co by registry pod ním nakonec musely znát |
+| Objekt `Panel` s fluent API | Riziko, kterému se tenhle návrh vyhýbá. Třída držící konfiguraci shellu je přesně to, co by registry pod ním nakonec musely znát |
 | Vlastní URL schéma | Zóna je `name()` route skupiny; URL vlastní router |
 | Vlastní cestu registrace | Vykresluje to, co už `Catalog` drží, a neučí se, co která položka je za typ |
 | Konfiguraci auth, tenancy nebo brandingu | Sloty a vaše vlastní middleware |

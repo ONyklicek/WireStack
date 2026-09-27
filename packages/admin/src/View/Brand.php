@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace NyonCode\WireAdmin\View;
 
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Route;
 use Illuminate\View\Component;
 use NyonCode\WireCore\Foundation\Routing\Zone;
+use NyonCode\WirePanels\Routing\ZoneDirectory;
 
 /**
  * The mark at the top of the menu: `<x-wire-admin::brand />`.
@@ -106,9 +106,7 @@ class Brand extends Component
             return $url;
         }
 
-        $home = Zone::prefix(Zone::current()).'wire.home';
-
-        return Route::has($home) ? route($home) : '/';
+        return app(ZoneDirectory::class)->homeOf(Zone::current()) ?? '/';
     }
 
     /**

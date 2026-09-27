@@ -10,11 +10,13 @@ use Illuminate\Support\Facades\Route as RouteFacade;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ConfiguresRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesPages;
+use NyonCode\WireCore\Foundation\Routing\Contracts\RequiresTenant;
 use NyonCode\WireCore\Foundation\Routing\RoutePage;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WirePanels\Clusters\Cluster;
 use NyonCode\WirePanels\Clusters\ClusterNavigation;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
+use NyonCode\WirePanels\Http\Middleware\IdentifyTenant;
 use NyonCode\WirePanels\Http\Middleware\RememberPage;
 use NyonCode\WirePanels\Resources\Contracts\NestedResource;
 
@@ -99,6 +101,13 @@ final class ResourceRoutes
                 continue;
             }
 
+            // A page that only exists inside a company, in a group with no
+            // company in it, would be an address that only ever answers 404 —
+            // and an application without tenancy would carry it for nothing.
+            if (is_subclass_of($class, RequiresTenant::class) && ! self::groupHasTenant()) {
+                continue;
+            }
+
             $prefix = self::prefixFor($class, $key);
 
             // A landing page — `routePrefix()` of `ConfiguresRoutes::ROOT` — sits
@@ -177,6 +186,12 @@ final class ResourceRoutes
         return RouteFacade::get($uri, TenantEntry::class)
             ->defaults(TenantEntry::TARGET, $to)
             ->name('wire.tenants');
+    }
+
+    /** Whether the group this is registered inside carries `{tenant}`, in its prefix or its domain. */
+    private static function groupHasTenant(): bool
+    {
+        return str_contains(self::groupPrefix().' '.self::groupDomain(), '{'.IdentifyTenant::PARAMETER.'}');
     }
 
     private static function groupDomain(): ?string

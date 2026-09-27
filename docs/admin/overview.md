@@ -200,7 +200,7 @@ registers — now renders inside the shell, with the menu beside it.
 
 | Not this | Because |
 | --- | --- |
-| A `Panel` object with a fluent API | The risk ADR 0020 named. A class holding shell configuration is what the registries below would eventually have to know about |
+| A `Panel` object with a fluent API | The risk this design set out to avoid. A class holding shell configuration is what the registries below would eventually have to know about |
 | A URL scheme of its own | A zone is a route group's `name()`; the router owns URLs |
 | A registration path | It renders what `Catalog` already holds, and learns nothing about what kind of thing an entry is |
 | Auth, tenancy or branding config | Slots, and your own middleware |

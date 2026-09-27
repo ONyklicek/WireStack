@@ -33,9 +33,36 @@ Jeho obrazovky žijí na dvou místech, protože patří ke dvěma různým chv�
 | Uvnitř tenantové zóny | `company` | Profil firmy — název, adresa, smazání |
 | Uvnitř tenantové zóny | `members` | Její členové, jejich role, pozvánky |
 
+**Každou z nich umisťuje aplikace**, nikdy provider modulu
+([Routování](../panels/routing.md#popis-skupin-v-configu)). První dvojice je skupina
+rout `tenants` — v `routes/web.php`, který zapíše `wire:install`, když je tenancy
+zapnutá:
+
+```php
+// routes/web.php
+Route::middleware(['web', 'auth'])->prefix('tenants')->group(function () {
+    Route::wire('tenants');   // [tl! focus]
+});
+```
+
+nebo jako záznam `wire-core.routes.groups`, který začíná od `tenants/` za
+`['web', 'auth']`:
+
+```php
+'groups' => ['tenants' => ['routes' => ['register' => ['can' => 'tenants.create']]]],
+```
+
+Skupina je vaše: prefix, doména, middleware, `can:`. Routy se vrátí s klíči —
+`register` a `accept` — pro cokoli, co potřebuje jen jedna z nich,
+`Route::wire('tenants')['register']->middleware('can:tenants.create')`. Skupina
+s `name()` se odmítne, protože e-mail s pozvánkou na tyhle routy odkazuje jejich
+jmény. Bez té skupiny žádná obrazovka registrace není a stránka pro někoho bez
+firmy žádnou nenabídne.
+
 Druhá dvojice jsou dva resource modulu `tenants`, takže se objeví všude, kde je
-tenantová zóna aplikace routuje — `Route::wireResources()`, nebo seznam `only`
-zóny, který jmenuje `company` a `members`. Mimo firmu obě zůstávají mimo menu.
+tenantová zóna aplikace routuje — `Route::wire('panel', tenant: 'path')`, nebo
+seznam `only` zóny, který jmenuje `company` a `members` — a jen tam: v zóně bez
+firmy se neroutují vůbec. Mimo firmu obě zůstávají mimo menu.
 
 **Dívat se smí každý člen; měnit smí jen vlastník.** Každá akce se při spuštění
 znovu zeptá `Membership`, protože vykreslené tlačítko není oprávnění. A jedno

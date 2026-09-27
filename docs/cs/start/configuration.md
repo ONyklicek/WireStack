@@ -422,51 +422,46 @@ Nastavte `user_key_type` na `uuid` nebo `ulid` (před spuštěním migrace pořa
 
 Viz [Instalace Sortable](../sortable/installation.md).
 
-## Panels
+## Routy a panely
 
-Konfigurace `wire-panels` rozhoduje, jestli framework zaregistruje stránky
-resource jako routy za vás.
-
-```php
-return [
-    'routes' => [
-        'enabled' => false,
-        'prefix' => 'admin',
-        'middleware' => ['web', 'auth'],
-        'domain' => null,
-        'only' => [],
-        'except' => [],
-    ],
-];
-```
-
-`enabled` je `false`, protože referenční cestou zůstává `Route::wireResources()`
-ve vašem vlastním route souboru — tohle jsou tytéž argumenty skupiny, předané
-jednou, pro aplikaci, která si kvůli nim nechce držet route soubor.
-
-Dvě věci, které je dobré vědět, než to zapnete. Providery balíčků bootují dřív než
-vaše vlastní, takže tyhle routy se matchují **před** vším v `routes/web.php`;
-aplikace s catch-all routou pod stejným prefixem dnes vyhraje a přestala by.
-A zapnout tohle *a zároveň* volat `Route::wireResources()` je odmítnuto, ne
-smířeno — zaregistrovalo by to každou stránku dvakrát pod jedním jménem routy.
-
-`only` / `except` berou registrované klíče: klíč resource nebo klíč dashboardu,
-tentýž, kterým je adresuje menu a `ResourceRoutes::urlFor()`.
-
-Pro víc mount pointů — `admin`, `business`, `production` — přidejte klíč `zones`,
-jednu položku na zónu; každá zdědí hodnoty nad sebou a přepíše to, co pojmenuje.
-Klíč pole se stane prefixem jména routy, takže tentýž resource ve dvou zónách
-dostane dvě jména rout místo dvou rout, které se perou o jedno.
+Routy každého balíčku jsou skupina — `panel` (stránky resource), `zones`,
+`tenant-entry` a to, co přinesou nainstalované moduly (`tenants`, `auth-codes`) —
+a žádný provider žádnou neregistruje. Každou umisťuje aplikace:
+voláním `Route::wire('panel')` v `routes/web.php` uvnitř vlastní skupiny, nebo
+záznamem ve `wire-core.routes`, který zaregistruje jediný route soubor frameworku.
 
 ```php
-'zones' => [
-    'admin' => ['prefix' => 'admin', 'middleware' => ['web', 'auth', 'can:admin']],
-    'business' => ['prefix' => 'business', 'only' => ['orders']],
+// config/wire-core.php
+'routes' => [
+    'defaults' => [],                  // pod každým záznamem
+    'groups' => [                      // [tl! focus:start]
+        'admin' => ['uses' => 'panel', 'prefix' => 'admin', 'middleware' => ['web', 'auth', 'can:admin']],
+        'business' => ['uses' => 'panel', 'prefix' => 'business', 'only' => ['orders']],
+    ],                                 // [tl! focus:end]
 ],
 ```
 
-Zóny viz [Resources](../panels/routing.md#zony), zbytek
-[Routování](../panels/routing.md).
+Záznam bere atributy skupiny Laravelu (`prefix`, `domain`, `middleware`,
+`without_middleware`, `as`, `where`, `namespace`, `scope_bindings`), `can`, vlastní
+volby skupiny a `routes` pro jednotlivé routy. Záznam pojmenovaný jinak než jeho
+skupina je zóna té skupiny. Ve výchozím stavu se neregistruje nic, panel začíná
+od `['web', 'auth']`, takže záznam bez middlewaru je hlídaný, a skupiny z configu
+se matchují před `routes/web.php`.
+
+`wire-panels` si nechává jen to, kam vedou dvě adresy — `routes.zone_entry.primary`
+a `.view` pro adresu nad zónami, `routes.tenant_entry.view` pro holou adresu
+tenantové zóny:
+
+```php
+// config/wire-panels.php
+'routes' => [
+    'zone_entry' => ['primary' => null, 'view' => null],
+    'tenant_entry' => ['view' => null],
+],
+```
+
+Celou tabulku viz [Routování § Popis skupin v configu](../panels/routing.md#popis-skupin-v-configu),
+zóny [Zóny](../panels/routing.md#zony).
 
 ## Boost
 

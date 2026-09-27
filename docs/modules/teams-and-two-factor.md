@@ -397,7 +397,7 @@ class Team extends Model
 
 A role that should hold across all of one company's projects — "admin of
 company A" — is assigned in each of them for now; tenant-scoped roles are
-planned in `laravel-permission-extended` (ADR 0040 §6).
+planned in `laravel-permission-extended`.
 
 ## Passkeys On The Profile Page
 

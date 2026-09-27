@@ -99,8 +99,7 @@ hues stay first-class: `green` is literal green, distinct from a re-pointable
 
 When adding a color or surface, extend the palette that owns it once —
 downstream columns, badges, actions, and toggles pick it up automatically. Keep utility
-names compatible with the lowest supported Tailwind version (see
-[ADR 0005](https://github.com/ONyklicek/WireStack/blob/main/architecture/decisions/0005-tailwind-4-support.md)); use only
+names compatible with the lowest supported Tailwind version; use only
 standard hue names, never version-specific ones.
 
 ### Canonical sizing & typography resolvers

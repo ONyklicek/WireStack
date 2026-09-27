@@ -263,7 +263,7 @@ the six the toast container knows — `success`, `error`, `warning`, `info`,
 written once reads the same on both surfaces.
 
 **The bell carries its zone.** `Zone::current()` answers nothing on a Livewire
-round trip (ADR 0027 §3), so the bell reads it once while the page renders and
+round trip ([Zones](../../panels/routing.md#zones)), so the bell reads it once while the page renders and
 carries it from there — its links then point back into the zone they were opened
 in. Pass one explicitly for a bell in a shell that is not itself a wire route:
 `@livewire('wire-notification-bell', ['zone' => 'admin'])`.

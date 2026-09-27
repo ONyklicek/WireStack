@@ -58,7 +58,11 @@ class RegisterTenant extends Component
                     ->helperText(__('wire-module-tenants::messages.company_slug_help'))
                     ->required()
                     ->maxLength(60)
-                    ->rules(['alpha_dash', Rule::unique((new $model)->getTable(), 'slug'), Rule::notIn(Registration::reserved())]),
+                    ->rules(['alpha_dash', Rule::unique((new $model)->getTable(), 'slug'), Rule::notIn(Registration::reserved())])
+                    ->validationMessages([
+                        'not_in' => __('wire-module-tenants::messages.slug_reserved'),
+                        'unique' => __('wire-module-tenants::messages.slug_taken'),
+                    ]),
             ])
             ->using(function (array $data): array {
                 $user = auth()->user();

@@ -27,9 +27,17 @@ palette find the area without being told.
   `spatie/laravel-permission`. The wildcard matching, the super-admin gate and the permission-change events
   these screens assume live only in the extended package, so a user model carrying Spatie's `HasRoles`
   directly is deliberately not detected and the role and team surfaces stay off.
+- **A module's screens are a route group the application places, never routed by its provider**:
+  `Route::wire('auth-codes')` for the code flows, `Route::wire('tenants')` for company registration and
+  invitations, beside `Route::wire('panel')` — in `routes/web.php` inside the application's own group, or as an
+  entry of `wire-core.routes.groups`. Middleware, `can:`, prefix and domain come from that group or entry; the
+  call returns its routes keyed for one screen alone (`Route::wire('tenants')['register']->middleware('can:tenants.create')`,
+  or `'routes' => ['register' => ['can' => …]]` in config). Never put these in a `Route::name()` group — mails
+  link to their names and it throws. A screen that 404s: check that something places its group. A module
+  writing its own: implement `ProvidesRoutes`, register it with `RouteGroups::instance()->register(...)`.
 - **Fortify owns the security, `wire-module-auth` owns the screens.** Anything Fortify has an answer for
   stays Fortify's. One-time codes are the only authentication this stack owns: four switches under
-  `wire-module-auth.codes`, all off by default.
+  `wire-module-auth.codes`, all off by default, each routed by the `auth-codes` group only while on.
 - **An auth screen changes through its seams, never by forking the module or working around it.**
   Fields: `AuthForms::extend(AuthForm::Login, fn (array $fields) => …)` in the application's provider
   (it boots last and wins). The identity field is named after `fortify.username`, so an application
@@ -61,7 +69,7 @@ palette find the area without being told.
   and one that writes an answer into a file asks it through `Foundation\Setup\Answers`. A published
   migration whose tables already exist, or a quote written into PHP source, is an application that
   no longer migrates or no longer boots.
-- **With tenancy, a team is a project of one company** (ADR 0040 §6): make the team model `BelongsToTenant`, and
+- **With tenancy, a team is a project of one company**: make the team model `BelongsToTenant`, and
   the switcher lists the current company's projects only, the current team is kept per company
   (`wire.team.{tenant}`), and `Teams::followTenant()` re-points the permission registrar on `TenantEntered` —
   `SetCurrentTeam` runs before a tenant zone enters the company. Never keep a second "current team" beside it.

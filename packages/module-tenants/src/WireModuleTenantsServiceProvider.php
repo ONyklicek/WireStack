@@ -9,9 +9,13 @@ use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Foundation\Routing\RouteGroups;
+use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
+use NyonCode\WireModuleTenants\Install\RouteTenantScreens;
 use NyonCode\WireModuleTenants\Livewire\RegisterTenant;
 use NyonCode\WireModuleTenants\Pages\CompanyProfile;
 use NyonCode\WireModuleTenants\Pages\ListMembers;
+use NyonCode\WireModuleTenants\Routing\TenantRoutes;
 
 /**
  * Companies as a ready-made area (ADR 0040 §8): registering one, its profile,
@@ -35,6 +39,12 @@ class WireModuleTenantsServiceProvider extends PackageServiceProvider
             ->name('WireModuleTenants')
             ->hasShortName('wire-module-tenants')
             ->registeredPackage(function (): void {
+                // The two screens outside any company, as a route group the
+                // application places — `Route::wire('tenants')` or a config
+                // entry (ADR 0041) — never registered from here.
+                RouteGroups::instance()->register(TenantRoutes::class);
+                SetupRegistry::instance()->register(RouteTenantScreens::class);
+
                 $this->app->resolving(PluginManager::class, function (PluginManager $manager): void {
                     if (! $manager->has('tenants')) {
                         $manager->register(new TenantsModule);
@@ -64,7 +74,6 @@ class WireModuleTenantsServiceProvider extends PackageServiceProvider
             ->hasViews()
             ->hasMigrations()
             ->hasTranslations()
-            ->hasRoutes()
             ->hasInstallCommand(function (InstallCommand $command): void {
                 $command
                     ->publishConfig()

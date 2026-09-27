@@ -15,6 +15,8 @@ return [
     'company_slug' => 'Adresa',
     'company_slug_help' => 'Část adresy, která patří této firmě: písmena, čísla a pomlčky.',
     'company_slug_change' => 'Změna změní každý odkaz na tuto firmu.',
+    'slug_reserved' => 'Tahle adresa patří samotné aplikaci. Zvolte jinou.',
+    'slug_taken' => 'Tuto adresu už má jiná firma.',
     'register_heading' => 'Zaregistrovat firmu',
     'register_description' => 'Stanete se jejím vlastníkem a můžete pozvat lidi, kteří v ní pracují.',
     'register_submit' => 'Zaregistrovat',

@@ -44,6 +44,11 @@ abstract class TestCase extends BaseTestCase
         $app['config']->set('livewire.component_layout', 'tenants-layout');
     }
 
+    protected function defineRoutes($router): void
+    {
+        $router->middleware(['web', 'auth'])->prefix('tenants')->group(fn () => $router->wire('tenants'));
+    }
+
     protected function defineDatabaseMigrations(): void
     {
         Schema::create('users', function (Blueprint $table): void {

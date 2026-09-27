@@ -278,7 +278,7 @@ padded to width, which has no integer to overflow.
 
 ### Switching One On, Start To Finish
 
-Three steps, and the third is the one people forget.
+Four steps, and the last is the one people forget.
 
 **1. Turn the flow on.** Nothing else in the config has to change; the settings
 under the switches already have working defaults.
@@ -304,7 +304,27 @@ Every key takes an environment override — `WIRE_AUTH_CODE_LOGIN`,
 `WIRE_AUTH_CODE_SECOND_FACTOR`, `WIRE_AUTH_CODE_VERIFY_EMAIL`,
 `WIRE_AUTH_CODE_RESET_PASSWORD`, and one per setting below them.
 
-**2. Give the codes their table.** It is published rather than run from the
+**2. Route them.** The package registers no route of its own: the flows are the
+`auth-codes` route group, which routes the ones that are on and nothing for the
+ones that are off. `wire:install` places it in `routes/web.php` for you. Call it
+inside a group of your own for a domain, a prefix or more middleware — or place
+it from `wire-core.routes.groups` instead; the routes come back keyed by name
+without the `wire-auth.` prefix, for anything one of them needs on its own:
+
+```php
+// routes/web.php
+Route::wire('auth-codes');   // [tl! focus]
+
+// or, with a middleware of your own on one screen:
+Route::domain('auth.example.com')->group(function () {
+    Route::wire('auth-codes')['login-code']->middleware('can:sign-in-by-code');
+});
+```
+
+A group with a `name()` is refused: the screens and the mails link to these
+routes by their names.
+
+**3. Give the codes their table.** It is published rather than run from the
 package, because it lives in your schema:
 
 ```bash
@@ -312,7 +332,7 @@ php artisan vendor:publish --tag=wire-module-auth::migrations
 php artisan migrate
 ```
 
-**3. Make sure mail actually leaves.** Every flow is a mail; a code that is never
+**4. Make sure mail actually leaves.** Every flow is a mail; a code that is never
 delivered looks exactly like a wrong code, and nothing in the package can tell the
 difference. In development the log driver is enough — the code is then in
 `storage/logs/laravel.log`, which is also how you finish a flow without an inbox:
@@ -478,11 +498,10 @@ Confirming an address only *means* something where something is closed until it
 happens, which is a middleware rather than a setting here:
 
 ```php
-// config/wire-panels.php
-'routes' => [
-    'enabled' => true,
-    'middleware' => ['web', 'auth', 'verified'],   // [tl! focus]
-],
+// config/wire-core.php — or the same middleware on the group in routes/web.php
+'routes' => ['groups' => [
+    'admin' => ['uses' => 'panel', 'prefix' => 'admin', 'middleware' => ['web', 'auth', 'verified']],   // [tl! focus]
+]],
 ```
 
 ### A New Password From A Code
@@ -551,8 +570,9 @@ In the order worth checking, because each one fails silently:
 
 - **Is the flow routed at all?** `php artisan route:list --name=wire-auth` should
   list the screens for every switch that is on. Nothing there means the switch is
-  off — or, for the second factor and the verification flow, that Fortify's
-  matching feature is.
+  off, that nothing places the `auth-codes` group — or, for the
+  second factor and the verification flow, that Fortify's matching feature is
+  off.
 - **Does mail leave this application?** Anything else is guesswork until
   `Mail::raw('x', fn ($m) => $m->to('you@example.com')->subject('x'))` arrives.
 - **Is a queue involved?** The code mail is deliberately not queued, but a
@@ -631,8 +651,8 @@ class AppServiceProvider extends ServiceProvider
 }
 ```
 
-The rule every extension keeps is ADR 0036's: a field that cannot submit natively
-is refused at render, by name, rather than posting nothing.
+The rule every extension keeps is the native-submit one: a field that cannot
+submit natively is refused at render, by name, rather than posting nothing.
 
 ### Testing It In Your Application
 
@@ -1278,14 +1298,15 @@ draws it.
 
 ## Guarding The Panel
 
-The routes `wire-panels` registers require a signed-in user by default:
+The panel's route group placed from `wire-core.routes.groups` requires a
+signed-in user by default — an entry that names no middleware starts from the
+panel's own `['web', 'auth']`:
 
 ```php
-// config/wire-panels.php
-'routes' => [
-    'enabled' => true,
-    'middleware' => ['web', 'auth'],   // the default [tl! focus]
-],
+// config/wire-core.php
+'routes' => ['groups' => [
+    'admin' => ['uses' => 'panel', 'prefix' => 'admin'],   // web + auth [tl! focus]
+]],
 ```
 
 Routes you write yourself take the same group arguments — the macro registers

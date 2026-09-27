@@ -389,7 +389,7 @@ class Team extends Model
 
 Roli, která má platit napříč všemi projekty jedné firmy — „admin firmy A“ —, zatím
 přiřaďte v každém z nich; role vázané na tenanta jsou v plánu pro
-`laravel-permission-extended` (ADR 0040 §6).
+`laravel-permission-extended`.
 
 ## Passkeys na profilu
 

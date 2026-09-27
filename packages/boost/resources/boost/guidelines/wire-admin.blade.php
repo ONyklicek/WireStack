@@ -2,7 +2,7 @@
 
 The **optional** admin shell: a layout and a sidebar over what is already registered. It requires
 `wire-panels` and **nothing requires it** — a composer boundary is the opt-in, so an application that wants
-resource pages and its own chrome simply does not install this (ADR 0028).
+resource pages and its own chrome simply does not install this.
 
 - **Installing is not adopting.** No provider sets `livewire.component_layout`. A page renders inside the
   shell only once the application's own layout view says so, and the sidebar works alone inside any frame.
@@ -40,7 +40,7 @@ resource pages and its own chrome simply does not install this (ADR 0028).
   card with no navigation; the screens that render in it are `nyoncode/wire-module-auth`'s, over Fortify.
 @endverbatim
 - **Slots, never configuration.** There is no `Panel` object, no branding/colour/auth config and no URL scheme
-  — that is the panel-builder drift ADR 0020 named. `vendor:publish --tag=wire-admin::views` is how markup
+  — that is the panel-builder drift this design avoids. `vendor:publish --tag=wire-admin::views` is how markup
   changes.
 - **It reads seams, holds no state**: `Workspace::navigation($zone, $linkedOnly)` for the menu,
   `ResolvesPageUrls` for every link (null until a package owns routing), `Zone::current()` /
@@ -54,7 +54,7 @@ resource pages and its own chrome simply does not install this (ADR 0028).
   child that links there does.
 - **Zone and active key are read at page render, in the component constructor** — never re-derived per render.
   Inside a Livewire update `Route::currentRouteName()` is `livewire.update`, so a re-derived answer is right
-  once and null forever after, while rendering perfectly (ADR 0027).
+  once and null forever after, while rendering perfectly.
 - **The menu filter is `wire-admin.navigation.filter`** (`auto` from `filter_threshold` = 12 rows, `always`,
   `never`), driven by `wireNavFilter` in the package's own bundle (`dist/wire-admin-navigation.js`, delivered
   by `@wireStackScripts`). Rows carry `data-nav-row` / `data-nav-child` / `data-nav-label` (lower-cased) and

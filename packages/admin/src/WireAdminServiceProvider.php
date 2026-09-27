@@ -198,7 +198,7 @@ class WireAdminServiceProvider extends PackageServiceProvider
 
         $command->comment('');
         $command->comment('  Your pages render in the shell as soon as they are routed:');
-        $command->comment('  Route::wireResources() in routes/web.php, or wire-panels.routes.enabled in config.');
+        $command->comment("  Route::wire('panel') in routes/web.php, or a panel entry of wire-core.routes.groups.");
     }
 
     /**

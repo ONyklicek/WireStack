@@ -278,7 +278,7 @@ jedné místo jednoho čísla doplněného na šířku, takže není co přetéc
 
 ### Zapnutí od začátku do konce
 
-Tři kroky a na ten třetí se nejčastěji zapomíná.
+Čtyři kroky a na ten poslední se nejčastěji zapomíná.
 
 **1. Zapněte tok.** Nic dalšího v konfiguraci měnit nemusíte; nastavení pod
 přepínači mají použitelné výchozí hodnoty.
@@ -304,7 +304,27 @@ Každý klíč má i override přes prostředí — `WIRE_AUTH_CODE_LOGIN`,
 `WIRE_AUTH_CODE_SECOND_FACTOR`, `WIRE_AUTH_CODE_VERIFY_EMAIL`,
 `WIRE_AUTH_CODE_RESET_PASSWORD` a po jednom na každé nastavení pod nimi.
 
-**2. Dejte kódům jejich tabulku.** Publikuje se, nespouští se z balíčku, protože
+**2. Zaroutujte je.** Balíček sám žádnou routu neregistruje: toky jsou skupina
+rout `auth-codes`, která zaroutuje zapnuté toky a pro vypnuté nic. `wire:install`
+ji za vás umístí do `routes/web.php`. Pro doménu, prefix nebo další middleware ji
+zavolejte ve vlastní skupině — nebo ji umístěte z `wire-core.routes.groups`;
+routy se vrátí s klíči podle jména bez prefixu `wire-auth.`, pro cokoli, co
+potřebuje jen jedna z nich:
+
+```php
+// routes/web.php
+Route::wire('auth-codes');   // [tl! focus]
+
+// nebo s vlastním middlewarem na jedné obrazovce:
+Route::domain('auth.example.com')->group(function () {
+    Route::wire('auth-codes')['login-code']->middleware('can:sign-in-by-code');
+});
+```
+
+Skupina s `name()` se odmítne: obrazovky i e-maily na tyhle routy odkazují
+jejich jmény.
+
+**3. Dejte kódům jejich tabulku.** Publikuje se, nespouští se z balíčku, protože
 patří do vašeho schématu:
 
 ```bash
@@ -312,7 +332,7 @@ php artisan vendor:publish --tag=wire-module-auth::migrations
 php artisan migrate
 ```
 
-**3. Ověřte, že e-maily opravdu odcházejí.** Každý tok je e-mail; nedoručený kód
+**4. Ověřte, že e-maily opravdu odcházejí.** Každý tok je e-mail; nedoručený kód
 vypadá úplně stejně jako špatný kód a balíček ten rozdíl nepozná. Ve vývoji stačí
 log driver — kód je pak v `storage/logs/laravel.log`, což je zároveň způsob, jak
 celý tok projít bez schránky:
@@ -475,11 +495,10 @@ Potvrzení adresy *znamená* něco jen tam, kde je do té doby něco zavřené �
 tady middleware, ne nastavení:
 
 ```php
-// config/wire-panels.php
-'routes' => [
-    'enabled' => true,
-    'middleware' => ['web', 'auth', 'verified'],   // [tl! focus]
-],
+// config/wire-core.php — nebo tentýž middleware u skupiny v routes/web.php
+'routes' => ['groups' => [
+    'admin' => ['uses' => 'panel', 'prefix' => 'admin', 'middleware' => ['web', 'auth', 'verified']],   // [tl! focus]
+]],
 ```
 
 ### Nové heslo z kódu
@@ -545,8 +564,8 @@ potichu:
 
 - **Je tok vůbec zaroutovaný?** `php artisan route:list --name=wire-auth` má
   vypsat obrazovky ke každému zapnutému přepínači. Prázdno znamená vypnutý
-  přepínač — nebo, u druhého faktoru a ověření adresy, vypnutou odpovídající
-  funkci Fortify.
+  přepínač, že skupinu `auth-codes` nic neumisťuje — nebo, u
+  druhého faktoru a ověření adresy, vypnutou odpovídající funkci Fortify.
 - **Odcházejí z téhle aplikace e-maily?** Dokud nedorazí
   `Mail::raw('x', fn ($m) => $m->to('vy@example.com')->subject('x'))`, je všechno
   ostatní jen odhad.
@@ -626,8 +645,8 @@ class AppServiceProvider extends ServiceProvider
 }
 ```
 
-Pravidlo, které každé rozšíření dodržuje, je z ADR 0036: pole, které neumí odeslat
-nativně, je při renderu odmítnuté jménem — místo aby neposlalo nic.
+Pravidlo, které každé rozšíření dodržuje, je to o nativním odesílání: pole, které
+neumí odeslat nativně, je při renderu odmítnuté jménem — místo aby neposlalo nic.
 
 ### Testování ve vaší aplikaci
 
@@ -1266,15 +1285,15 @@ shellu, který ho kreslí.
 
 ## Hlídání panelu
 
-Routy, které registruje `wire-panels`, ve výchozím stavu vyžadují přihlášeného
-uživatele:
+Skupina rout panelu umístěná z `wire-core.routes.groups` ve výchozím stavu
+vyžaduje přihlášeného uživatele — záznam, který nejmenuje žádný middleware,
+začíná od panelového `['web', 'auth']`:
 
 ```php
-// config/wire-panels.php
-'routes' => [
-    'enabled' => true,
-    'middleware' => ['web', 'auth'],   // výchozí hodnota [tl! focus]
-],
+// config/wire-core.php
+'routes' => ['groups' => [
+    'admin' => ['uses' => 'panel', 'prefix' => 'admin'],   // web + auth [tl! focus]
+]],
 ```
 
 Routy psané ručně berou tytéž tři argumenty skupiny — makro registruje uvnitř té

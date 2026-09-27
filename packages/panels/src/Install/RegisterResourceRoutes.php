@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace NyonCode\WirePanels\Install;
 
+use NyonCode\WireCore\Foundation\Routing\WireRoutes;
 use NyonCode\WireCore\Foundation\Setup\Answers;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
+use NyonCode\WireCore\Foundation\Setup\RoutesFile;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
+use NyonCode\WirePanels\Routing\PanelRoutes;
 
 /**
  * The line that turns registered resources into pages you can open.
@@ -20,20 +23,20 @@ use NyonCode\WireCore\Foundation\Setup\SetupState;
  * and the middleware are genuinely the application's to choose. So this asks
  * for them instead of guessing.
  *
- * ## Into routes/web.php, not into config
+ * ## A group written out, not a config entry
  *
- * `wire-panels.routes.enabled` can register the same pages, and writing a
- * config key would have been the tidier edit. It does not work here: this
- * package ships no install command, so its config is never published, and a key
- * written into `vendor/` is a key the next `composer update` throws away.
- * `routes/web.php` is the application's own file, it is where the documentation
- * has always pointed, and `wire-admin`'s installer already edits `app.css` and
- * `bootstrap/providers.php` the same way.
+ * An entry of `wire-core.routes.groups` places the same group (ADR 0041), and
+ * writing one would have been a tidier edit. It does not work here: a key
+ * written into a config that was never published is a key in `vendor/`, which
+ * the next `composer update` throws away. A group in `routes/web.php` carries
+ * the answers itself, where the next person reading the file can see and change
+ * them. An application whose config already places the panel is left alone.
  *
  * Never twice, and never over anything: the file is appended to only when it
- * does not already mention the macro.
+ * does not already mention the macro ({@see RoutesFile}, which every step that
+ * routes a package's pages goes through).
  */
-final class RegisterResourceRoutes implements SetupStep
+final readonly class RegisterResourceRoutes implements SetupStep
 {
     /** What we look for to decide the application has already done this. */
     private const MACRO = 'wireResources';
@@ -44,6 +47,13 @@ final class RegisterResourceRoutes implements SetupStep
     /** A middleware alias, group or class, with its parameters. */
     private const MIDDLEWARE = '/^[A-Za-z0-9_.:|\\\\-]+$/';
 
+    private RoutesFile $routes;
+
+    public function __construct(?RoutesFile $routes = null)
+    {
+        $this->routes = $routes ?? RoutesFile::forApplication();
+    }
+
     public function label(): string
     {
         return 'Routes';
@@ -51,30 +61,26 @@ final class RegisterResourceRoutes implements SetupStep
 
     public function state(): SetupState
     {
-        if (config('wire-panels.routes.enabled') === true) {
-            return SetupState::Done;
-        }
-
-        if (! is_file($this->path())) {
+        if (! $this->routes->exists()) {
             return SetupState::Blocked;
         }
 
-        return $this->alreadyRouted() ? SetupState::Done : SetupState::Pending;
+        return $this->placed() ? SetupState::Done : SetupState::Pending;
     }
 
     public function summary(): string
     {
-        if (config('wire-panels.routes.enabled') === true) {
-            return 'registered from wire-panels.routes';
-        }
-
-        if (! is_file($this->path())) {
+        if (! $this->routes->exists()) {
             return 'no routes/web.php to add them to';
         }
 
-        return $this->alreadyRouted()
-            ? 'routes/web.php already calls Route::wireResources()'
-            : 'add Route::wireResources() to routes/web.php';
+        if (app(WireRoutes::class)->configured(PanelRoutes::key()) !== []) {
+            return 'wire-core.routes.groups places the panel';
+        }
+
+        return $this->placed()
+            ? 'routes/web.php already places the panel'
+            : "add Route::wire('panel') to routes/web.php";
     }
 
     public function apply(SetupConsole $console): SetupOutcome
@@ -102,11 +108,7 @@ final class RegisterResourceRoutes implements SetupStep
 
         $group = $this->group($prefix, $middleware);
 
-        // Asked first, and the write suppressed: an unwritable `routes/web.php`
-        // is a permissions problem, and PHP answers one with a warning rather
-        // than a return value — which under a test runner is an exception out
-        // of a step that has a perfectly good way to report it.
-        if (! is_writable($this->path()) || @file_put_contents($this->path(), $group, FILE_APPEND) === false) {
+        if (! $this->routes->append($group)) {
             $console->warn('Could not write routes/web.php — add this yourself:'.$group);
 
             return SetupOutcome::Failed;
@@ -151,9 +153,9 @@ final class RegisterResourceRoutes implements SetupStep
 
 
         // Added by php artisan wire:install. Every resource and dashboard that
-        // declares pages is routed here — see Route::wireResource() to name one.
+        // declares pages is routed here — Route::wire('panel', only: [...]) names some.
         Route::middleware([{$list}]){$prefixCall}->group(function () {
-            Route::wireResources();
+            Route::wire('panel');
         });
 
         PHP;
@@ -162,6 +164,18 @@ final class RegisterResourceRoutes implements SetupStep
     /**
      * What is wrong with a middleware list, or null when nothing is.
      */
+    /**
+     * Whether something already places the panel: `Route::wire('panel')` or the
+     * `Route::wireResources()` it always was in the route file, or an entry of
+     * `wire-core.routes.groups`.
+     */
+    private function placed(): bool
+    {
+        return $this->routes->wires(PanelRoutes::key())
+            || $this->routes->calls(self::MACRO)
+            || app(WireRoutes::class)->configured(PanelRoutes::key()) !== [];
+    }
+
     private function middlewareProblem(string $list): ?string
     {
         foreach ($this->middlewareNames($list) as $name) {
@@ -182,15 +196,5 @@ final class RegisterResourceRoutes implements SetupStep
             array_map(trim(...), explode(',', $list)),
             static fn (string $name): bool => $name !== '',
         ));
-    }
-
-    private function alreadyRouted(): bool
-    {
-        return str_contains((string) file_get_contents($this->path()), self::MACRO);
-    }
-
-    private function path(): string
-    {
-        return base_path('routes/web.php');
     }
 }

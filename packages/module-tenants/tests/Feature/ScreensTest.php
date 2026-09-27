@@ -25,7 +25,7 @@ beforeEach(function () {
     $this->tenant->members()->attach($this->member->getKey(), ['role' => 'member']);
     $this->company('globex', $this->stranger);
 
-    Route::middleware(['web'])->name('app.')->group(fn () => Route::wireTenantEntry('app', 'app/{tenant}'));
+    Route::middleware(['web'])->name('app.')->group(fn () => Route::wire('tenant-entry', uri: 'app', to: 'app/{tenant}'));
     Route::middleware(['web', 'wire.tenant'])->prefix('app/{tenant}')->name('app.')->group(fn () => Route::wireResources());
     Route::getRoutes()->refreshNameLookups();
 });

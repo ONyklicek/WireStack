@@ -91,24 +91,6 @@ final class ResourceRoutingException extends RuntimeException implements WireExc
         );
     }
 
-    /**
-     * Both registration paths were used at once (ADR 0026 §5).
-     *
-     * Refused rather than resolved, for the reason a duplicate registry key is:
-     * every page would be registered twice under one route name, the second
-     * quietly winning the name lookup, and the fix is deleting one line — which
-     * nobody can do while nothing says so.
-     */
-    public static function alreadyRegisteredFromConfig(): self
-    {
-        return new self(
-            'Resource pages were already registered from `wire-panels.routes`, so calling '.
-            'Route::wireResources() registers every one of them a second time under the same '.
-            'route name. Use one or the other: set `wire-panels.routes.enabled` to false to '.
-            'keep the call in your route file, or delete the call to keep the config.'
-        );
-    }
-
     private static function describe(?string $route): string
     {
         return $route === null ? 'an unnamed route' : "the route [{$route}]";

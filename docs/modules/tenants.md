@@ -34,9 +34,36 @@ Its screens live in two places, because they are about two different moments:
 | Inside the tenant zone | `company` | The company's profile — name, address, deleting it |
 | Inside the tenant zone | `members` | Its members, their roles, invitations |
 
+**The application places every one of them**, never the module's provider
+([Routing](../panels/routing.md#describing-the-groups-in-config)). The first pair
+is the `tenants` route group — in `routes/web.php`, which `wire:install` writes
+when tenancy is on:
+
+```php
+// routes/web.php
+Route::middleware(['web', 'auth'])->prefix('tenants')->group(function () {
+    Route::wire('tenants');   // [tl! focus]
+});
+```
+
+or as an entry of `wire-core.routes.groups`, which starts from `tenants/` behind
+`['web', 'auth']`:
+
+```php
+'groups' => ['tenants' => ['routes' => ['register' => ['can' => 'tenants.create']]]],
+```
+
+The group is yours: a prefix, a domain, middleware, `can:`. The routes come back
+keyed — `register` and `accept` — for anything one of them needs on its own,
+`Route::wire('tenants')['register']->middleware('can:tenants.create')`. A group
+with a `name()` is refused, because the invitation e-mail links to these routes
+by their names. Without the group there is no registration screen, and the page
+for somebody in no company offers none.
+
 The second pair are two resources of the `tenants` module, so they appear wherever
-the application's tenant zone routes them — `Route::wireResources()`, or a zone's
-`only` list naming `company` and `members`. Outside a company both stay out of the
+the application's tenant zone routes them — `Route::wire('panel', tenant: 'path')`,
+or a zone's `only` list naming `company` and `members` — and only there: in a zone
+with no company in it they are not routed at all. Outside a company both stay out of the
 menu.
 
 **Every member may look; only an owner changes anything.** Each action asks

@@ -194,6 +194,17 @@ Hooky životního cyklu viz [Sortable řazení řádků](../sortable/row-sorting
 Ve výchozím stavu vypnutá — většina aplikací má jednoho tenanta a scopovat je by
 byla `WHERE` klauzule koupená za nic. Jakmile je zapnutá, je **striktní**.
 
+Multi-tenant aplikace jsou tři kusy a každý má vlastní stránku:
+
+| Kus | Co dělá | Kde |
+| --- | --- | --- |
+| Tenantová zóna | Dá firmu do URL, ověří proti ní člověka, vstoupí do ní a přenese ji do každého odkazu | [Tenancy](../panels/tenancy.md) |
+| Data | Omezí každý model vlastněný tenantem na firmu, do které se vstoupilo — řádky, nebo vlastní databáze | tato sekce |
+| Firmy | Registrace firmy, její profil, pozvánky a správa členů | [Firmy](../modules/tenants.md) |
+
+Zóna a data stačí; modul firem jsou obrazovky, které by si aplikace jinak psala
+sama.
+
 ```php
 // config/wire-core.php
 'tenancy' => [
@@ -205,8 +216,9 @@ byla `WHERE` klauzule koupená za nic. Jakmile je zapnutá, je **striktní**.
 
 **Aktuální tenant je ten, do kterého se vstoupilo** (viz
 [níže](#vstup-do-tenanta)), a když se nevstoupilo nikam, žádný tenant není — se
-zapnutou tenancy to znamená prázdnou stránku. Chcete-li tu otázku zodpovědět
-jinak, navažte vlastní resolver; výchozí úplně nahradí:
+zapnutou tenancy to znamená prázdnou stránku. Aplikace bez tenanta v URL —
+třeba každý člověk v právě jedné firmě — odpoví jinak: naváže vlastní resolver,
+který výchozí úplně nahradí:
 
 ```php
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
@@ -269,7 +281,7 @@ v tenantovi a volání vrátí null.
 Jak se tenanti od sebe oddělují, říká `isolation`. `column` — jedna databáze,
 sloupec tenanta — je výchozí a nepotřebuje nic kromě tenanta samotného; třída
 implementující `IsolatesTenants` (`enter(Model $tenant)`, `leave()`) je způsob, jak
-připojit jinou strategii, mezi nimi databázi pro každého tenanta (ADR 0040).
+připojit jinou strategii, mezi nimi databázi pro každého tenanta.
 
 ### Databáze pro každého tenanta
 

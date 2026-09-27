@@ -99,10 +99,6 @@ function rrrRestoringRoutes(Closure $body): void
     }
 }
 
-beforeEach(function () {
-    config()->set('wire-panels.routes.enabled', false);
-});
-
 it('is contributed by this package', function () {
     expect(SetupRegistry::instance()->all())->toContain(RegisterResourceRoutes::class);
 });
@@ -114,7 +110,7 @@ it('is pending while nothing routes the resources', function () {
         $step = new RegisterResourceRoutes;
 
         expect($step->state())->toBe(SetupState::Pending)
-            ->and($step->summary())->toContain('Route::wireResources()')
+            ->and($step->summary())->toContain("Route::wire('panel')")
             ->and($step->label())->toBe('Routes')
             ->and($step->sort())->toBe(200);
     });
@@ -127,17 +123,28 @@ it('is done when the application already calls the macro', function () {
         $step = new RegisterResourceRoutes;
 
         expect($step->state())->toBe(SetupState::Done)
-            ->and($step->summary())->toContain('already calls');
+            ->and($step->summary())->toContain('already places the panel');
     });
 });
 
-it('is done when the config registers them instead', function () {
-    config()->set('wire-panels.routes.enabled', true);
+it('is done when config places the panel instead', function () {
+    rrrRestoringRoutes(function () {
+        file_put_contents(base_path('routes/web.php'), "<?php\n");
+        config()->set('wire-core.routes.groups', ['admin' => ['uses' => 'panel', 'prefix' => 'admin']]);
 
-    $step = new RegisterResourceRoutes;
+        $step = new RegisterResourceRoutes;
 
-    expect($step->state())->toBe(SetupState::Done)
-        ->and($step->summary())->toBe('registered from wire-panels.routes');
+        expect($step->state())->toBe(SetupState::Done)
+            ->and($step->summary())->toBe('wire-core.routes.groups places the panel');
+    });
+});
+
+it('is done when the route file places it with Route::wire()', function () {
+    rrrRestoringRoutes(function () {
+        file_put_contents(base_path('routes/web.php'), "<?php\nRoute::prefix('x')->group(fn () => Route::wire('panel', zone: 'x'));\n");
+
+        expect((new RegisterResourceRoutes)->state())->toBe(SetupState::Done);
+    });
 });
 
 it('writes a group carrying the prefix and middleware that were chosen', function () {
@@ -152,7 +159,7 @@ it('writes a group carrying the prefix and middleware that were chosen', functio
 
         expect($written)->toContain("Route::middleware(['web', 'auth', 'verified'])")
             ->and($written)->toContain("->prefix('panel')")
-            ->and($written)->toContain('Route::wireResources();')
+            ->and($written)->toContain("Route::wire('panel');")
             ->and(implode("\n", $said))->toContain('/panel');
 
         // And now it knows it has been done.
@@ -193,7 +200,7 @@ it('fails rather than pretending, and hands over the group it could not write', 
         try {
             expect((new RegisterResourceRoutes)->apply(rrrConsole(['admin', 'web'], $said)))
                 ->toBe(SetupOutcome::Failed)
-                ->and(implode("\n", $said))->toContain('Route::wireResources();');
+                ->and(implode("\n", $said))->toContain("Route::wire('panel');");
         } finally {
             chmod($path, 0644);
         }

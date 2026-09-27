@@ -96,8 +96,18 @@ search palette; **never inject a registry into a new surface**):
 - `Foundation\Routing\RoutePage` — one page's permission, middleware or URI
 - `Foundation\Routing\Contracts\ResolvesPageUrls` — where a key's page is;
   `UnroutedPageUrls` answers null, `wire-panels` answers for real
-- `Foundation\Routing\Contracts\RegistersPageRoutes` — called by core once the
-  registries are full, so config-driven routing cannot read an empty catalogue
+- `Foundation\Routing\Contracts\ProvidesRoutes` + `RouteGroups` — a package's
+  routes as a group (key, starting attributes, fixed names, the routes); no
+  provider registers a route (ADR 0041)
+- `Foundation\Routing\WireRoutes` — places a group: `Route::wire('key', …)` in a
+  route file, or `wire-core.routes.groups` via `packages/core/routes/web.php`;
+  per-route changes, the twice-at-two-addresses refusal, `configured($key)`
+- `Foundation\Routing\Contracts\RequiresTenant` — a page routed only in a group
+  carrying `{tenant}`
+- `Foundation\Routing\FixedRouteNames` — a group whose route names are linked
+  to refuses a named group around it
+- `Foundation\Setup\RoutesFile` — whether `routes/web.php` calls a macro, and
+  appending the call once; every installer step that routes a package goes through it
 - `Foundation\Routing\Zone` — which mount point a page is in, as a route-name
   prefix (ADR 0027). `current()` is a **full-page-render** call: it answers
   nothing during a Livewire update, so read it in `mount()` and keep it in a

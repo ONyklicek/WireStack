@@ -6,60 +6,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Self-Registering Routes
+    | Where The Zone Addresses Lead
     |--------------------------------------------------------------------------
     |
-    | `Route::wireResources()` in your own route file stays the reference path:
-    | prefix, middleware and domain are arguments to the group you call it in,
-    | and nothing here changes that. This is the same three arguments, handed
-    | over once, for the application that wants the convention and would rather
-    | never open `routes/web.php` for it.
+    | Nothing here registers a route. The panel's pages are the `panel` route
+    | group, placed like every group (ADR 0041): `Route::wire('panel', zone:
+    | 'admin')` — or the `Route::wireResources()` it always was — in your route
+    | file, or an entry of `wire-core.routes.groups`, where every Laravel group
+    | attribute and the panel's own options (`zone`, `tenant`, `only`,
+    | `except`) are described. What stays here is where two addresses lead.
     |
-    | Off by default, and that is deliberate rather than cautious. Package
-    | providers boot before your own, so these routes are matched BEFORE
-    | everything in `routes/web.php` — an application with a catch-all under the
-    | same prefix wins today and would stop winning. Opting in has to be a
-    | decision someone made.
-    |
-    | Enabling this AND calling `Route::wireResources()` yourself registers every
-    | page twice under one route name, and is refused rather than resolved.
-    |
-    | `only` / `except` take registered keys — a resource key or a dashboard key,
-    | the same key the menu and `ResourceRoutes::urlFor()` address it by.
-    |
-    | ZONES. Several mount points over one set of resources — `admin`,
-    | `business`, `production` — each its own group, and a resource may be in
-    | one, several or all of them. Add a `zones` key and each entry becomes a
-    | group of its own:
-    |
-    |   'zones' => [
-    |       'admin' => [
-    |           'prefix' => 'admin',
-    |           'middleware' => ['web', 'auth', 'can:admin'],
-    |           'only' => ['invoices', 'users'],
-    |       ],
-    |       'business' => [
-    |           'prefix' => 'business',
-    |           'middleware' => ['web', 'auth', 'can:business'],
-    |           'except' => ['users'],
-    |       ],
-    |   ],
-    |
-    | The array key IS the zone: it becomes the route-name prefix, so the same
-    | resource in two zones gets `admin.wire.invoices.index` and
-    | `business.wire.invoices.index` rather than colliding. That is the reason to
-    | prefer this over hand-written groups — in a route file the `->name()` call
-    | is a line someone forgets, and forgetting it makes the second zone silently
-    | take over the first's links. Here it cannot be forgotten or repeated.
-    |
-    | Keys outside a zone (`prefix`, `middleware`, `domain`, `only`, `except`)
-    | are the defaults every zone inherits and overrides. With no `zones` key at
-    | all they are one unnamed group, which is what a single-zone application
-    | wants and what these values already do.
-    |
-    | ZONE ENTRY. With several zones, the address above them — `/` — is where
-    | signing in should end. `zone_entry.uri` routes it (as `wire.zones`; a
-    | route file calls `Route::wireZoneEntry('/')` instead), and point
+    | ZONE ENTRY. With several zones, the address above them — the `zones`
+    | group, named `wire.zones` — is where signing in should end; point
     | `fortify.home` at it. It sends each person straight into a zone: their
     | own `HasPreferredZone::preferredZone()`, else `zone_entry.primary`, else
     | the only zone they may enter. Only a real choice shows `zone_entry.view`
@@ -67,39 +25,23 @@ return [
     | first zone they may enter. `?choose` always shows the picker — the link
     | a zone switcher's "all zones" entry wants.
     |
-    | MIDDLEWARE. `auth` is in the default, and it is the one default here that
-    | is a safety decision rather than a convenience. The pages this registers
-    | are a resource's create, edit and delete screens; a group without `auth`
-    | serves every one of them to anybody who knows the URL, and nothing about
-    | the panel looks wrong while it does — which is why it is the default rather
-    | than a line in the docs. An application whose panel is deliberately public,
-    | or which guards it some other way, takes it out.
+    | TENANT ENTRY. A tenant zone's bare address (`app`, without a company)
+    | sends a person to their default company. One with no company at all gets
+    | `tenant_entry.view` — the place to offer registering one — or a 403
+    | saying why when it is null. ADR 0040.
     |
-    | Without `nyoncode/wire-module-auth` or another package answering Laravel's
-    | `login` route, `auth` redirects to a route that does not exist. That is a
-    | loud failure and the right one: the alternative is a quiet open door.
+    | MIDDLEWARE belongs to the group that places the panel, and `auth` in it is
+    | a safety decision rather than a convenience: the pages are a resource's
+    | create, edit and delete screens, and a group without `auth` serves them to
+    | anybody who knows the URL while nothing about the panel looks wrong.
     |
     */
     'routes' => [
-        'enabled' => false,
-        'prefix' => null,
-        'middleware' => ['web', 'auth'],
-        'domain' => null,
-        'only' => [],
-        'except' => [],
-        'zones' => [],
         'zone_entry' => [
-            'uri' => null,
             'primary' => null,
             'view' => null,
         ],
 
-        /*
-        | A tenant zone's bare address (`app`, without a company) sends a person
-        | to their default company. One with no company at all gets this view
-        | — the place to offer registering one — or a 403 saying why when it
-        | is null. ADR 0040.
-        */
         'tenant_entry' => [
             'view' => null,
         ],

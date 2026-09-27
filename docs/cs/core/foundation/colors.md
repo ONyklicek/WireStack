@@ -100,8 +100,7 @@ samy na sebe.
 
 Při přidávání barvy nebo povrchu rozšiřte jednou paletu, která ji vlastní — navazující
 sloupce, badge, akce a toggly ho vyzvednou automaticky. Udržujte utility
-názvy kompatibilní s nejnižší podporovanou verzí Tailwindu (viz
-[ADR 0005](https://github.com/ONyklicek/WireStack/blob/main/architecture/decisions/0005-tailwind-4-support.md)); používejte jen
+názvy kompatibilní s nejnižší podporovanou verzí Tailwindu; používejte jen
 standardní názvy odstínů, nikdy verzí-specifické.
 
 ### Kanonické resolvery velikosti a typografie

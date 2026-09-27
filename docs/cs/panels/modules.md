@@ -170,6 +170,23 @@ menu, routeru i vyhledávací palety se dostane přes stejný
 
 Všechno ostatní, co balíček s modulem nese — config, views, překlady, migrace
 a assety — je běžná práce balíčku a patří jeho vlastnímu service provideru.
+**Kromě rout.** Provider žádnou neregistruje: vlastní obrazovka — taková, která
+není stránkou resource — se dodává jako skupina rout, třída implementující
+`ProvidesRoutes` (klíč, atributy skupiny, od kterých začíná, jestli se na její
+jména odkazuje, a routy), zaregistrovaná do `RouteGroups`. Aplikace ji umístí
+jako každou skupinu — `Route::wire('tenants')` v `routes/web.php`, nebo záznam
+`wire-core.routes.groups` —, takže prefix, doména i middleware, včetně `can:`,
+jsou aplikace a skupina, na jejíž jména se odkazuje, odmítne pojmenovanou
+skupinu kolem sebe. Instalátor to volání zapíše přes `RoutesFile`:
+
+```php
+// V provideru balíčku: skupina a krok, který ji umístí.
+RouteGroups::instance()->register(TenantRoutes::class);   // [tl! focus]
+SetupRegistry::instance()->register(RouteTenantScreens::class);
+
+// V routes/web.php aplikace:
+Route::middleware(['web', 'auth'])->prefix('tenants')->group(fn () => Route::wire('tenants'));
+```
 
 ### Balíček přidává, nepřepisuje
 

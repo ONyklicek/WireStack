@@ -59,11 +59,14 @@ jobs:
       # Nothing is installed in the monorepo itself: the fresh application
       # requires the packages straight from packages/* as path repositories,
       # and the browser half uses only Node built-ins and the runner's Chrome.
-      - name: Install, sign in, walk the admin
+      # --tenancy then adds a tenant zone to the same application and walks it
+      # (ADR 0040): seconds more, and the only place a company is set up the
+      # way the docs tell an application to.
+      - name: Install, sign in, walk the admin and a tenant zone
         env:
           CHROME_BIN: /usr/bin/google-chrome
           APP_DIR: ${{ runner.temp }}/wire-clean/app
-        run: bash scripts/verify-clean-install.sh --keep
+        run: bash scripts/verify-clean-install.sh --keep --tenancy
 
       - name: Keep the install log and the screenshots
         if: failure()

@@ -6,15 +6,22 @@ PROPOSED — 2026-09-27. Requested by the repo owner after the Filament
 comparison ("a podpora Multi-Tenant?"); the five open choices were settled with
 the owner the same day (§ Decisions confirmed). Builds on ADR 0027 (zones),
 0028 (no panel object), 0039 (clusters) and the V2.4 tenant scope. §11 is the
-order it lands in; **steps 1–6 and 8 are implemented** (2026-09-27), driven by
-`verify-tenants` on the workbench's `tenants` zone. Step 7 belongs to
-`nyoncode/laravel-permission-extended` and waits there; step 9 is open. Landed
-beside them: a page's zone now survives a Livewire round trip too
-(`RememberPage` → `RenderedPage`), by the same persistent-middleware mechanism
-as the tenant. Step 8 (`wire-module-tenants`) leaves out, for now: a redirect
-from a company's old slug, assigning teams on the members screen (it would need
-the users module, and no module requires another), and a waiting screen while a
-new company's database is provisioned.
+order it lands in; **steps 1–6, 8 and 9 are implemented** (2026-09-27), driven
+by `verify-tenants` and `verify-tenant-onboarding` on the workbench's `tenants`
+zone — which now runs on wire-module-tenants' own tables — and by
+`verify-clean-install.sh --tenancy`, which adds a tenant zone to a clean install
+the way the docs say to. Step 7 belongs to `nyoncode/laravel-permission-extended`
+and waits there. Landed beside them: a page's zone now survives a Livewire round
+trip too (`RememberPage` → `RenderedPage`), by the same persistent-middleware
+mechanism as the tenant; and the admin's brand links to the zone's own address
+where the zone's home cannot be built (`ZoneDirectory::homeOf()`), which the
+clean install found as a 500 on the page for somebody in no company.
+
+Left out, for now: a redirect from a company's old slug; assigning teams on the
+members screen (it would need the users module, and no module requires
+another); and a waiting screen while a new company's database is provisioned.
+A page that belongs in a tenant zone only says so with `RequiresTenant` and is
+not routed anywhere else (ADR 0041).
 
 ## Decisions confirmed
 

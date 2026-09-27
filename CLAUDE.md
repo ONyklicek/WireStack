@@ -92,6 +92,20 @@ Prefer APIs that feel closer to Laravel Nova / Filament:
 - New abstractions must stay modular and portable: minimal package assumptions, stable contracts, testable in isolation, and usable from other contexts besides the original caller.
 - Copy Nova/Filament ergonomics, not their internals verbatim. The target is the same quality of composition and reuse, adapted to this repository's package graph.
 
+### Routes Are The Application's
+
+**No service provider registers a route.** Every package's routes are a route
+group — a `Foundation\Routing\Contracts\ProvidesRoutes` registered in
+`RouteGroups` (`panel`, `zones`, `tenant-entry`, `auth-codes`, `tenants`) — and
+the application places it one of two ways, through the same `WireRoutes`:
+`Route::wire('key', …options)` inside any Laravel group in `routes/web.php`, or
+an entry of `wire-core.routes.groups` that core's one route file
+(`packages/core/routes/web.php`) registers. Every Laravel group attribute is
+supported, the routes come back keyed for single-route changes, a group whose
+names are linked to refuses a named group (`FixedRouteNames`), the same route at
+two addresses throws, and a `RequiresTenant` page is not routed outside a tenant
+zone. Installers write the call through `Foundation\Setup\RoutesFile`. ADR 0041.
+
 ### Module Layers Inside `wire-core`
 
 `wire-core`'s eleven modules are layered, and the layering is enforced by
@@ -163,7 +177,7 @@ Before changing shared behavior, ask:
 - A **one-time code** — signing in without a password, a second factor by mail,
   confirming an address or resetting a password by code: the same package's
   `Contracts/OneTimeCodes.php`, `Services/`, `Http/Controllers/` and
-  `routes/codes.php`, then `docs/modules/auth.md` § One-Time Codes and ADR
+  `Routing/CodeRoutes.php` (the `auth-codes` route group), then `docs/modules/auth.md` § One-Time Codes and ADR
   `architecture/decisions/0037-one-time-codes.md`. Four switches under
   `wire-module-auth.codes`, all off by default; everything Fortify has an answer
   for is still Fortify's, and the codes are the only authentication this
@@ -318,6 +332,7 @@ composer workbench:clean -- --no-build   # clean only, rebuild yourself
 # CI: .github/workflows/clean-install.yml
 composer verify:install
 bash scripts/verify-clean-install.sh --keep   # leave the app behind to poke at
+bash scripts/verify-clean-install.sh --tenancy   # then a tenant zone over it (CI runs this)
 
 # Browser gate. The CDP drivers in workbench/scripts are the only check over
 # Alpine/Livewire behaviour — Pest sees the markup, not what the browser does

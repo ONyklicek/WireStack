@@ -309,7 +309,6 @@ ve výchozím stavu by se po odškrtnutí tiše zaškrtlo znovu.
 Režim se aplikuje na schéma, které se **chystá** vykreslit, až po doběhnutí
 `form.configuring` — takže pole přidané pluginem se přepne se zbytkem a to, které
 nativně odeslat nejde, je odmítnuté, ať bylo deklarované, nebo přidané.
-Viz [ADR 0036](https://github.com/nyoncode/wire/blob/main/architecture/decisions/0036-native-submit-forms.md).
 
 ### Factory
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\View;
+use NyonCode\WireCore\Foundation\Routing\Contracts\ProvidesRoutes;
+use NyonCode\WireCore\Foundation\Routing\RouteGroups;
 use NyonCode\WireModuleAuth\Install\LayoutScaffold;
 
 /*
@@ -81,21 +83,48 @@ it('says the screens are answered and names the line a missing shell needs', fun
         ->assertSuccessful());
 });
 
+/**
+ * The panel's route group, as wire-panels registers it — this package cannot
+ * require wire-panels, and reads the group only by its key.
+ */
+final class AmPanelRoutes implements ProvidesRoutes
+{
+    public static function key(): string
+    {
+        return 'panel';
+    }
+
+    public function defaults(): array
+    {
+        return ['middleware' => ['web', 'auth']];
+    }
+
+    public function fixesNames(): bool
+    {
+        return false;
+    }
+
+    public function register(array $options): array
+    {
+        return [];
+    }
+}
+
 it('warns when the panel routes let anyone in', function () {
     // The finding this package exists beside: a login screen in front of an
     // unguarded panel is decoration, and every diagnostic short of visiting the
     // URL signed out reports success.
-    config()->set('wire-panels.routes.enabled', true);
-    config()->set('wire-panels.routes.middleware', ['web']);
+    RouteGroups::instance()->register(AmPanelRoutes::class);
+    config()->set('wire-core.routes.groups', ['admin' => ['uses' => 'panel', 'middleware' => ['web']]]);
 
     amInstall(fn ($command) => $command
         ->expectsOutputToContain('reachable signed out')
         ->assertSuccessful());
 });
 
-it('confirms the guard when the routes have one', function () {
-    config()->set('wire-panels.routes.enabled', true);
-    config()->set('wire-panels.routes.middleware', ['web', 'auth']);
+it('confirms the guard when the routes have one, by default', function () {
+    RouteGroups::instance()->register(AmPanelRoutes::class);
+    config()->set('wire-core.routes.groups', ['admin' => ['uses' => 'panel', 'prefix' => 'admin']]);
 
     amInstall(fn ($command) => $command
         ->expectsOutputToContain('require a signed-in user')
@@ -106,8 +135,6 @@ it('says what it cannot see when the routes are written by hand', function () {
     // `Route::wireResources()` inside the application's own group is the
     // reference path, and nothing here can read which middleware that group
     // has. Guessing would be worse than saying so.
-    config()->set('wire-panels.routes.enabled', false);
-
     amInstall(fn ($command) => $command
         ->expectsOutputToContain('routed by hand')
         ->assertSuccessful());

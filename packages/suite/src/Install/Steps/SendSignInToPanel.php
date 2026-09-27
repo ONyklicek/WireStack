@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace NyonCode\Wire\Install\Steps;
 
 use Illuminate\Routing\Router;
+use NyonCode\WireCore\Foundation\Routing\WireRoutes;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupConsole;
 use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
+use NyonCode\WirePanels\Routing\PanelRoutes;
 
 /**
  * Point Fortify's `home` at the admin, so signing in lands somewhere.
@@ -49,7 +51,7 @@ final readonly class SendSignInToPanel implements SetupStep
      * file because the step that wrote it ran in this same process, after the
      * routes were loaded — the router has not heard of it yet.
      */
-    private const INSTALLER_GROUP = '/Route::middleware\(\[[^\]]*\]\)(?:->prefix\(([\'"])([^\'"]*)\1\))?->group\(function\s*\(\)\s*\{\s*Route::wireResources\(\);/';
+    private const INSTALLER_GROUP = '/Route::middleware\(\[[^\]]*\]\)(?:->prefix\(([\'"])([^\'"]*)\1\))?->group\(function\s*\(\)\s*\{\s*Route::(?:wireResources\(|wire\([\'"]panel[\'"])/';
 
     public function __construct(private Router $router) {}
 
@@ -144,8 +146,9 @@ final readonly class SendSignInToPanel implements SetupStep
             }
         }
 
-        if (config('wire-panels.routes.enabled') === true) {
-            return '/'.trim((string) config('wire-panels.routes.prefix', ''), '/');
+        // A panel placed from `wire-core.routes.groups`: its first entry's prefix.
+        foreach (app(WireRoutes::class)->configured(PanelRoutes::key()) as $entry) {
+            return '/'.trim((string) ($entry['prefix'] ?? ''), '/');
         }
 
         $routes = base_path('routes/web.php');

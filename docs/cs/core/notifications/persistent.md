@@ -260,7 +260,7 @@ zálohou na typ notifikace, takže akce napsaná jednou čte stejně na obou
 plochách.
 
 **Zvoneček si nese svou zónu.** `Zone::current()` na Livewire round tripu
-neodpoví nic (ADR 0027 §3), takže ji zvoneček přečte jednou při renderu stránky
+neodpoví nic ([Zóny](../../panels/routing.md#zony)), takže ji zvoneček přečte jednou při renderu stránky
 a odtud ji nese — jeho odkazy pak míří zpátky do zóny, ve které se otevřel. Pro
 zvoneček v shellu, který sám není wire route, ji předejte:
 `@livewire('wire-notification-bell', ['zone' => 'admin'])`.

@@ -8,6 +8,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use NyonCode\WireModuleAuth\Contracts\OneTimeCodes;
@@ -20,12 +21,13 @@ use NyonCode\WireModuleAuth\WireModuleAuthServiceProvider;
  * Three things every one of those tests needs, in one place because getting any
  * of them subtly wrong makes a passing test that proves nothing:
  *
- *  - **the flows are switched on *and the provider re-registered*.** Every flow
- *    is off by default, and its routes are registered while the package boots —
- *    so config set from inside a test is set after the router has already been
- *    told there is nothing to register. `register(force: true)` runs the route
- *    file again with the switch on, which is the only way a test can meet the
- *    URLs an application meets;
+ *  - **the flows are switched on, the provider re-registered, *and routed*.**
+ *    Every flow is off by default. The provider wires Fortify's side of a flow
+ *    — the reset mail, the second-factor redirect — as it boots, so it boots
+ *    again with the switch on; and `Route::wire('auth-codes')` routes only the
+ *    flows that are on when it is called, so it is called after, as an
+ *    application's routes/web.php is. That is the only way a test meets the
+ *    URLs and the mails an application meets;
  *  - **the real migration**, run from the package's own directory rather than a
  *    `Schema::create()` written here, so the table these tests pass against is
  *    the table an application publishes;
@@ -49,6 +51,10 @@ final class CodeWorld
         }
 
         app()->register(WireModuleAuthServiceProvider::class, force: true);
+
+        Route::wire('auth-codes');
+        Route::getRoutes()->refreshNameLookups();
+        Route::getRoutes()->refreshActionLookups();
     }
 
     /**

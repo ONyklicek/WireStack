@@ -53,8 +53,8 @@ and says so, rather than failing.
 application as it is: whether the resource is registered — listed in
 `config('wire-core.resources')`, just added with `--register`, or inside a
 folder `config('wire-core.discover.resources')` names — and whether anything
-routes registered classes — `'routes' => ['enabled' => true]` in
-`config/wire-panels.php`, or a route file calling `Route::wireResources()`. With
+routes registered classes — a route file calling `Route::wireResources()`, or
+a panel entry of `wire-core.routes.groups`. With
 both in place it prints *Ready: registered and routed at /admin/order-lines*;
 otherwise it names only the step that is missing, written out for this
 resource. `make:wire-page` does the same for a page of your own.

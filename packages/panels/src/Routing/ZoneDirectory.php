@@ -8,6 +8,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
+use Illuminate\Routing\UrlGenerator;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WirePanels\Contracts\HasPreferredZone;
 
@@ -15,8 +16,9 @@ use NyonCode\WirePanels\Contracts\HasPreferredZone;
  * The zones this application routes, and which of them a person lands in.
  *
  * **Read off the routes, not off the config.** A zone is a route-name prefix
- * (ADR 0027): `routes.zones` in config makes one, and so does a hand-written
- * `Route::name('obchod.')->group(…)` around `Route::wireResources()`. Both end up
+ * (ADR 0027): `Route::wire('panel', zone: 'obchod')` makes one, so does a
+ * panel entry of `wire-core.routes.groups`, and so does a hand-written
+ * `Route::name('obchod.')->group(…)` around `Route::wireResources()`. All end up
  * as `{zone}.wire.*` names, so the router is the one list that knows every zone
  * however it was declared.
  *
@@ -37,6 +39,7 @@ final readonly class ZoneDirectory
         private Router $router,
         private RouteAccess $access,
         private Repository $config,
+        private UrlGenerator $url,
     ) {}
 
     /**
@@ -101,6 +104,39 @@ final readonly class ZoneDirectory
         }
 
         return count($reachable) === 1 ? (string) array_key_first($reachable) : null;
+    }
+
+    /**
+     * Where "home" is for a page of this zone: the panel's entry, and when this
+     * request cannot build that — a tenant zone's `app/{tenant}` on the page
+     * for somebody in no company, where no tenant has been entered — the
+     * zone's own address instead. Null when the zone routes neither.
+     */
+    public function homeOf(?string $zone): ?string
+    {
+        $home = $this->router->getRoutes()->getByName(Zone::prefix($zone).'wire.home');
+
+        if ($home !== null && $this->canBuild($home)) {
+            return route((string) $home->getName());
+        }
+
+        $address = $zone === null ? null : ($this->all()[rtrim($zone, '.')] ?? null);
+
+        return $address === null ? null : route((string) $address->getName());
+    }
+
+    /** Whether every parameter the route requires has a URL default this request set. */
+    private function canBuild(Route $route): bool
+    {
+        $defaults = $this->url->getDefaultParameters();
+
+        foreach ($route->parameterNames() as $name) {
+            if (! str_contains($route->uri(), '{'.$name.'?}') && ! array_key_exists($name, $defaults)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function takesParameters(Route $route): bool

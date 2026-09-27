@@ -7,11 +7,11 @@ namespace Workbench\Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use NyonCode\WireModuleTenants\Models\Tenant;
 use NyonCode\WireModuleUsers\Support\Permissions;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
-use Workbench\App\Models\Company;
 use Workbench\App\Models\Document;
 use Workbench\App\Models\GestureRow;
 use Workbench\App\Models\Invoice;
@@ -184,31 +184,33 @@ class DatabaseSeeder extends Seeder
         // was left in the database from the last time somebody remembered.
         $this->call(ModuleDemoSeeder::class);
 
-        $this->seedCompanies($amelia);
+        $this->seedCompanies($amelia, $mason, $sofia, $ethan);
     }
 
     /**
-     * Three companies for the `tenants` zone (ADR 0040): the demo user belongs
-     * to two of them, so the switcher has something to switch between and the
-     * third is a URL she must be refused at.
+     * Three companies for the `tenants` zone (ADR 0040), as wire-module-tenants
+     * keeps them. The demo user owns Acme and is a plain member of Globex, so
+     * the switcher has something to switch between and the members screen shows
+     * both an owner's and a member's view; Initech is not hers, and is a URL she
+     * must be refused at.
      */
-    private function seedCompanies(User $member): void
+    private function seedCompanies(User $demo, User $mason, User $sofia, User $ethan): void
     {
-        $projects = [
-            'acme' => ['Acme', ['Rocket skates', 'Portable hole', 'Giant magnet']],
-            'globex' => ['Globex', ['Hammock district', 'Monorail']],
-            'initech' => ['Initech', ['TPS reports']],
+        $companies = [
+            'acme' => ['Acme', ['Rocket skates', 'Portable hole', 'Giant magnet'], [[$demo, 'owner'], [$mason, 'member']]],
+            'globex' => ['Globex', ['Hammock district', 'Monorail'], [[$sofia, 'owner'], [$demo, 'member']]],
+            'initech' => ['Initech', ['TPS reports'], [[$ethan, 'owner']]],
         ];
 
-        foreach ($projects as $slug => [$name, $names]) {
-            $company = Company::query()->create(['slug' => $slug, 'name' => $name]);
+        foreach ($companies as $slug => [$name, $projects, $members]) {
+            $company = Tenant::query()->create(['slug' => $slug, 'name' => $name]);
 
-            foreach ($names as $project) {
-                Project::query()->create(['name' => $project, 'tenant_id' => $company->id]);
+            foreach ($projects as $project) {
+                Project::query()->create(['name' => $project, 'tenant_id' => $company->getKey()]);
             }
 
-            if ($slug !== 'initech') {
-                $member->tenants()->attach($company);
+            foreach ($members as [$user, $role]) {
+                $company->members()->attach($user->getKey(), ['role' => $role]);
             }
         }
     }

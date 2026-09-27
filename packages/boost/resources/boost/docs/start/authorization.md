@@ -194,6 +194,17 @@ See [Sortable Row Reordering](../sortable/row-sorting.md) for lifecycle hooks.
 Off by default — most applications have one tenant, and scoping them would be a
 `WHERE` clause bought for nothing. Once on it is **strict**.
 
+A multi-tenant application is three pieces, and each has a page of its own:
+
+| Piece | What it does | Where |
+| --- | --- | --- |
+| The tenant zone | Puts the company in the URL, checks the person against it, enters it, carries it into every link | [Tenancy](../panels/tenancy.md) |
+| The data | Scopes every tenant-owned model to the company entered — rows or a database of its own | this section |
+| The companies | Registering one, its profile, inviting and managing its members | [Companies](../modules/tenants.md) |
+
+The zone and the data are enough; the companies module is the screens an
+application would otherwise write itself.
+
 ```php
 // config/wire-core.php
 'tenancy' => [
@@ -205,8 +216,9 @@ Off by default — most applications have one tenant, and scoping them would be 
 
 **The current tenant is whatever was entered** (see
 [below](#entering-a-tenant)), and nothing entered means no tenant — with tenancy
-on, an empty page. To answer the question another way, bind a resolver of your
-own; it replaces the default entirely:
+on, an empty page. An application with no tenant in the URL — every person in
+exactly one company, say — answers the question another way: it binds a
+resolver of its own, which replaces the default entirely:
 
 ```php
 use NyonCode\WireCore\Core\Tenancy\Contracts\TenantResolver;
@@ -271,7 +283,7 @@ returns null.
 How tenants are kept apart is `isolation`. `column` — one database, the tenant
 column — is the default and needs nothing entered beyond the tenant itself; a
 class implementing `IsolatesTenants` (`enter(Model $tenant)`, `leave()`) is how
-another strategy plugs in, a database per tenant among them (ADR 0040).
+another strategy plugs in, a database per tenant among them.
 
 ### A database per tenant
 
