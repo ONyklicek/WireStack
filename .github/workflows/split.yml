@@ -23,6 +23,7 @@ jobs:
           - { local_path: 'packages/module-auth', split_repository: 'wire-module-auth' }
           - { local_path: 'packages/module-users', split_repository: 'wire-module-users' }
           - { local_path: 'packages/module-settings', split_repository: 'wire-module-settings' }
+          - { local_path: 'packages/module-tenants', split_repository: 'wire-module-tenants' }
           - { local_path: 'packages/module-audit', split_repository: 'wire-module-audit' }
           - { local_path: 'packages/module-notifications', split_repository: 'wire-module-notifications' }
           - { local_path: 'packages/module-media', split_repository: 'wire-module-media' }

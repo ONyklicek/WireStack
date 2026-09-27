@@ -48,6 +48,7 @@ final class WirePackages
         'wire-module-auth',
         'wire-module-users',
         'wire-module-settings',
+        'wire-module-tenants',
         'wire-module-audit',
         'wire-module-notifications',
         'wire-module-media',
@@ -73,7 +74,7 @@ final class WirePackages
     ];
 
     /**
-     * The name the docs corpus, the guidelines and the skills use for the six
+     * The name the docs corpus, the guidelines and the skills use for the seven
      * modules at once. It is a grouping, not a composer package.
      */
     public const MODULES_GROUP = 'wire-modules';
@@ -165,9 +166,9 @@ final class WirePackages
     }
 
     /**
-     * Is this package present? {@see MODULES_GROUP} asks about the six modules
+     * Is this package present? {@see MODULES_GROUP} asks about the seven modules
      * at once and is true as soon as any one of them is installed — the name
-     * stands for a grouping, so requiring all six would hide the guideline from
+     * stands for a grouping, so requiring all seven would hide the guideline from
      * every application that installed exactly the area it needed.
      */
     public function isInstalled(string $name): bool

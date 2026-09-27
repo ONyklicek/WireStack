@@ -144,6 +144,7 @@ jiného, nemá proč tahat knihovnu médií:
 | [Audit log](../modules/audit.md) | `nyoncode/wire-module-audit` |
 | [Notifikace](../modules/notifications.md) | `nyoncode/wire-module-notifications` |
 | [Média](../modules/media.md) | `nyoncode/wire-module-media` |
+| [Firmy](../modules/tenants.md) | `nyoncode/wire-module-tenants` |
 
 Nainstalujte modul a spusťte `php artisan wire:install` znovu; zaregistruje se
 sám, takže do configu se nic dopisovat nemusí, a části, které už byly nastavené,

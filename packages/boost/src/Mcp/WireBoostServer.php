@@ -43,8 +43,8 @@ class WireBoostServer extends Server
 
     The stack is wire-core -> wire-forms -> wire-table -> wire-sortable, with two optional
     layers above it: wire-panels (resources, pages, navigation) and wire-admin (the layout
-    and sidebar). Six ready-made areas ship as their own packages — wire-module-auth, -users,
-    -settings, -audit, -notifications and -media — and wire-suite installs the lot with
+    and sidebar). Seven ready-made areas ship as their own packages — wire-module-auth, -users,
+    -settings, -audit, -notifications, -media and -tenants — and wire-suite installs the lot with
     `php artisan wire:install`. Call `application-info` first: it reports which of these the
     application actually has, and an API from a package that is not installed does not exist.
 

@@ -13,6 +13,7 @@ use NyonCode\WireModuleAuth\Tests\TestCase as ModuleAuthTestCase;
 use NyonCode\WireModuleMedia\Tests\TestCase as ModuleMediaTestCase;
 use NyonCode\WireModuleNotifications\Tests\TestCase as ModuleNotificationsTestCase;
 use NyonCode\WireModuleSettings\Tests\TestCase as ModuleSettingsTestCase;
+use NyonCode\WireModuleTenants\Tests\TestCase as ModuleTenantsTestCase;
 use NyonCode\WireModuleUsers\Tests\TestCase as ModuleUsersTestCase;
 use NyonCode\WirePanels\Tests\TestCase as PanelsTestCase;
 use NyonCode\WireSortable\Tests\TestCase as SortableTestCase;
@@ -102,6 +103,11 @@ uses(ModuleMediaTestCase::class)->in(
 uses(ModuleSettingsTestCase::class)->in(
     __DIR__.'/../packages/module-settings/tests/Unit',
     __DIR__.'/../packages/module-settings/tests/Feature',
+);
+
+uses(ModuleTenantsTestCase::class)->in(
+    __DIR__.'/../packages/module-tenants/tests/Unit',
+    __DIR__.'/../packages/module-tenants/tests/Feature',
 );
 
 uses(ModuleNotificationsTestCase::class)->in(

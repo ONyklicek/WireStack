@@ -25,6 +25,7 @@ php artisan vendor:publish --tag=wire-module-settings::config
 php artisan vendor:publish --tag=wire-module-notifications::config
 php artisan vendor:publish --tag=wire-module-audit::config
 php artisan vendor:publish --tag=wire-module-media::config
+php artisan vendor:publish --tag=wire-module-tenants::config
 ```
 
 Potřebujete jen tagy balíčků, které jste nainstalovali.
@@ -572,6 +573,7 @@ které mění:
 | `wire-module-notifications.php` | Zvoneček, jeho panel a tabulka uložených notifikací | [Notifikace](../modules/notifications.md) |
 | `wire-module-audit.php` | Auditní obrazovka nad stopou, kterou zapisuje `wire-core` | [Audit](../modules/audit.md) |
 | `wire-module-media.php` | Disky, konverze, povolené typy a picker | [Média](../modules/media.md) |
+| `wire-module-tenants.php` | Model firmy, kdo ji smí zaregistrovat, pozvánky, rezervované slugy | [Firmy](../modules/tenants.md) |
 
 ## Zbytek `wire-core`
 

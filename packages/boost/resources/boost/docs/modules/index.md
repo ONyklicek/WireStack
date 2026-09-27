@@ -1,12 +1,12 @@
 ---
 order: 10
-summary: Six whole areas shipped as composer packages — what each one installs, what it needs from the application, and how to take one back out.
+summary: Seven whole areas shipped as composer packages — what each one installs, what it needs from the application, and how to take one back out.
 ---
 
 # Ready-Made Modules
 
 A [module](../panels/modules.md) is one business area's manifest: the resources,
-dashboards and menu heading it consists of. These six ship that manifest **as a
+dashboards and menu heading it consists of. These seven ship that manifest **as a
 composer package**, so an area arrives with `composer require` rather than with a
 class to write and a config line to remember.
 
@@ -51,8 +51,9 @@ application's own declaration wins over the contributed one.
 | [Notifications](notifications.md) | `wire-module-notifications` | The history behind the notification bell, as a table | Laravel's `notifications` table |
 | [Audit](audit.md) | `wire-module-audit` | A screen for the trail `wire-core` already records | `HasAuditable` on the models you want followed |
 | [Media](media.md) | `wire-module-media` | A media library — uploads, folders, previews, and a picker for forms | A filesystem disk |
+| [Companies](tenants.md) | `wire-module-tenants` | Registering a company, its profile, and inviting and managing its members | A [tenant zone](../panels/tenancy.md) and a user model with `HasTenants` |
 
-[Teams and Two-Factor](teams-and-two-factor.md) is not a seventh package: it is
+[Teams and Two-Factor](teams-and-two-factor.md) is not an eighth package: it is
 the guide to switching on the two surfaces the users module keeps behind an
 `auto` switch, which look for the thing itself — Fortify for two-factor, the
 permission package for teams — and stay off when it is absent.
@@ -73,7 +74,7 @@ for what the installer does and what it refuses to do.
 
 ## Writing Your Own
 
-The six are ordinary modules with a provider around them, and
+The seven are ordinary modules with a provider around them, and
 [`packages/module-users`](users.md) is the reference implementation. What a module
 declares, how it depends on another, and how a package ships one are covered in
 [Modules](../panels/modules.md).

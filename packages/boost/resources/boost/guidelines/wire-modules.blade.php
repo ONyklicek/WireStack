@@ -1,6 +1,6 @@
 ## wire-modules
 
-Six ready-made areas, each its own composer package. A module is **not a new kind of thing** — it is a
+Seven ready-made areas, each its own composer package. A module is **not a new kind of thing** — it is a
 plugin that names resources, dashboards and one menu heading, and everything downstream reads it through
 the catalogue. `composer require` is the whole installation: the package's provider registers the module
 with `PluginManager`, `WireCoreServiceProvider` spreads what it declares into the resource registry, the
@@ -15,6 +15,7 @@ palette find the area without being told.
 | Notifications | `wire-module-notifications` | The history behind the notification bell, as a table | Laravel's `notifications` table |
 | Audit | `wire-module-audit` | A screen for the trail `wire-core` already records | `HasAuditable` on the followed models |
 | Media | `wire-module-media` | Uploads, folders, previews, and a picker for forms | A filesystem disk |
+| Companies | `wire-module-tenants` | Registering a company, its profile, inviting and managing members | A tenant zone; `HasTenants` on the user model |
 
 - **No module requires another**, and none of them requires the admin shell. Write code that works when
   only one of them is installed — `describe-module` reports which are actually registered here.

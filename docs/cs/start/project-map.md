@@ -26,6 +26,7 @@ dotáhnou samy a nic nad ním se vám neinstaluje.
 | Notifications | `nyoncode/wire-module-notifications` | Uložená historie za zvonečkem | Panels |
 | Audit | `nyoncode/wire-module-audit` | Obrazovka pro stopu, kterou core už zapisuje | Panels |
 | Media | `nyoncode/wire-module-media` | Knihovna médií: uploady, složky, náhledy, picker do formulářů | Panels |
+| Companies | `nyoncode/wire-module-tenants` | Registrace firmy, profil a členové nad tenantovou zónou | Panels |
 | Boost | `nyoncode/wire-boost` | AI nástroje: MCP server, guidelines a skills pro agenty | Core |
 
 Graf má jeden směr. `wire-panels` smí jmenovat každý komponentový balíček a žádný
@@ -114,6 +115,7 @@ composer test:module-settings
 composer test:module-notifications
 composer test:module-audit
 composer test:module-media
+composer test:module-tenants
 
 composer lint
 composer analyse

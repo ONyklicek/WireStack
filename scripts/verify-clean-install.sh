@@ -113,6 +113,7 @@ COMPOSER_ROOT_VERSION=dev-main composer require --no-interaction -W \
     'nyoncode/wire-module-auth:*@dev' \
     'nyoncode/wire-module-users:*@dev' \
     'nyoncode/wire-module-settings:*@dev' \
+    'nyoncode/wire-module-tenants:*@dev' \
     'nyoncode/wire-module-audit:*@dev' \
     'nyoncode/wire-module-notifications:*@dev' \
     'nyoncode/wire-module-media:*@dev' \

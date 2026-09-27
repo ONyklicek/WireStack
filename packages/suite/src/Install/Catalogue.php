@@ -117,6 +117,14 @@ class Catalogue
                 group: ComponentGroup::Module,
             ),
             new Component(
+                package: 'nyoncode/wire-module-tenants',
+                label: 'Companies',
+                description: 'Companies over tenant zones: registration, profile, members and invitations.',
+                marker: 'NyonCode\\WireModuleTenants\\WireModuleTenantsServiceProvider',
+                command: 'wire-module-tenants:install',
+                group: ComponentGroup::Module,
+            ),
+            new Component(
                 package: 'nyoncode/wire-module-audit',
                 label: 'Audit log',
                 description: 'A screen for the trail wire-core already records.',

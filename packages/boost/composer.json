@@ -50,6 +50,7 @@
         "nyoncode/wire-module-users": "Enables module guidelines and skills; describe-module reports what it registers.",
         "nyoncode/wire-module-auth": "Enables module guidelines and skills; describe-module reports what it registers.",
         "nyoncode/wire-module-settings": "Enables module guidelines and skills; describe-module reports what it registers.",
+        "nyoncode/wire-module-tenants": "Enables module guidelines and skills; describe-module reports what it registers.",
         "nyoncode/wire-module-audit": "Enables module guidelines and skills; describe-module reports what it registers.",
         "nyoncode/wire-module-notifications": "Enables module guidelines and skills; describe-module reports what it registers.",
         "nyoncode/wire-module-media": "Enables module guidelines and skills; describe-module reports what it registers."

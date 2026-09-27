@@ -7,7 +7,7 @@ description: Install, adapt or write a ready-made module — users, auth, settin
 
 ## When to use this skill
 
-Use when installing one of the six shipped areas, changing what one of them contributes, or writing a module
+Use when installing one of the seven shipped areas, changing what one of them contributes, or writing a module
 of your own.
 
 ## Workflow

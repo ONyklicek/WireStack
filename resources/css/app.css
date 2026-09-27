@@ -18,6 +18,8 @@
 @source "../../packages/module-users/src";
 @source "../../packages/module-settings/src";
 @source "../../packages/module-settings/resources/views";
+@source "../../packages/module-tenants/src";
+@source "../../packages/module-tenants/resources/views";
 @source "../../packages/module-audit/src";
 @source "../../packages/module-notifications/src";
 @source "../../packages/module-notifications/resources/views";

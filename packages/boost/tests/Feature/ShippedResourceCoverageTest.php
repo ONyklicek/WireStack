@@ -29,6 +29,7 @@ const GUIDELINE_EXCEPTIONS = [
     'wire-module-auth' => 'Covered by the wire-modules guideline.',
     'wire-module-users' => 'Covered by the wire-modules guideline.',
     'wire-module-settings' => 'Covered by the wire-modules guideline.',
+    'wire-module-tenants' => 'Covered by the wire-modules guideline.',
     'wire-module-audit' => 'Covered by the wire-modules guideline.',
     'wire-module-notifications' => 'Covered by the wire-modules guideline.',
     'wire-module-media' => 'Covered by the wire-modules guideline.',
@@ -117,7 +118,7 @@ it('ships a skill for every package that has a workflow', function () {
 });
 
 it('covers the modules with the grouped guideline and skill', function () {
-    // The six modules are excepted individually because one pair speaks for all
+    // The seven modules are excepted individually because one pair speaks for all
     // of them. If that pair ever went missing the exceptions would hide it.
     expect(guidelineNames())->toContain(WirePackages::MODULES_GROUP)
         ->and(skillNames())->toContain(WirePackages::MODULES_GROUP.'-development');

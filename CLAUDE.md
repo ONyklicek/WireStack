@@ -271,6 +271,7 @@ composer test:module-settings
 composer test:module-audit
 composer test:module-notifications
 composer test:module-media
+composer test:module-tenants
 composer test:suite
 composer test:sortable
 

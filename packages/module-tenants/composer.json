@@ -1,0 +1,62 @@
+{
+    "name": "nyoncode/wire-module-tenants",
+    "description": "Companies for wire: register a company, keep its profile, and invite and manage its members.",
+    "keywords": ["laravel", "livewire", "wire", "wirestack", "nyoncode", "tenancy", "multi-tenant", "companies", "invitations"],
+    "homepage": "https://wirestack.nyoncode.cz",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ondrej Nyklicek",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/ONyklicek/WireStack/issues",
+        "source": "https://github.com/NyonCode/wire-module-tenants",
+        "docs": "https://wirestack.nyoncode.cz"
+    },
+    "require": {
+        "php": "^8.2",
+        "nyoncode/wire-core": "self.version",
+        "nyoncode/wire-forms": "self.version",
+        "nyoncode/wire-table": "self.version",
+        "nyoncode/wire-panels": "self.version",
+        "illuminate/support": "^12.0|^13.0",
+        "illuminate/database": "^12.0|^13.0",
+        "livewire/livewire": "^4.0",
+        "nyoncode/laravel-package-toolkit": "^2.5.2"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.0|^11.0",
+        "laravel/pint": "^1.29",
+        "pestphp/pest": "^4.0|^5.0"
+    },
+    "suggest": {
+        "nyoncode/wire-module-users": "Projects (teams) inside each company, and roles over them"
+    },
+    "autoload": {
+        "psr-4": {
+            "NyonCode\\WireModuleTenants\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "NyonCode\\WireModuleTenants\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "NyonCode\\WireModuleTenants\\WireModuleTenantsServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}

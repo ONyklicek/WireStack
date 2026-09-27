@@ -487,6 +487,7 @@ php artisan vendor:publish --tag=wire-module-auth::views
 php artisan vendor:publish --tag=wire-module-settings::views
 php artisan vendor:publish --tag=wire-module-notifications::views
 php artisan vendor:publish --tag=wire-module-media::views
+php artisan vendor:publish --tag=wire-module-tenants::views
 ```
 
 > **Publikujte jen to, co měníte.** Každý přepsaný pohled je soubor, který nyní
@@ -531,6 +532,7 @@ php artisan vendor:publish --tag=wire-module-settings::translations
 php artisan vendor:publish --tag=wire-module-notifications::translations
 php artisan vendor:publish --tag=wire-module-audit::translations
 php artisan vendor:publish --tag=wire-module-media::translations
+php artisan vendor:publish --tag=wire-module-tenants::translations
 ```
 
 Soubor aplikace se slučuje **přes** soubor balíčku, klíč po klíči, takže úplným

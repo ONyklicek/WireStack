@@ -68,6 +68,12 @@
         <testsuite name="Module Settings Feature">
             <directory>packages/module-settings/tests/Feature</directory>
         </testsuite>
+        <testsuite name="Module Tenants Unit">
+            <directory>packages/module-tenants/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Module Tenants Feature">
+            <directory>packages/module-tenants/tests/Feature</directory>
+        </testsuite>
         <testsuite name="Module Media Unit">
             <directory>packages/module-media/tests/Unit</directory>
         </testsuite>
@@ -110,6 +116,7 @@
             <directory>packages/module-users/src</directory>
             <directory>packages/module-media/src</directory>
             <directory>packages/module-settings/src</directory>
+            <directory>packages/module-tenants/src</directory>
             <directory>packages/module-notifications/src</directory>
             <directory>packages/module-audit/src</directory>
             <directory>packages/module-auth/src</directory>

@@ -482,6 +482,7 @@ php artisan vendor:publish --tag=wire-module-auth::views
 php artisan vendor:publish --tag=wire-module-settings::views
 php artisan vendor:publish --tag=wire-module-notifications::views
 php artisan vendor:publish --tag=wire-module-media::views
+php artisan vendor:publish --tag=wire-module-tenants::views
 ```
 
 > **Publish only what you change.** Every overridden view is a file you now
@@ -527,6 +528,7 @@ php artisan vendor:publish --tag=wire-module-settings::translations
 php artisan vendor:publish --tag=wire-module-notifications::translations
 php artisan vendor:publish --tag=wire-module-audit::translations
 php artisan vendor:publish --tag=wire-module-media::translations
+php artisan vendor:publish --tag=wire-module-tenants::translations
 ```
 
 An application's file is merged **over** the package's, key by key, so a file

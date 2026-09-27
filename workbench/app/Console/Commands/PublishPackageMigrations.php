@@ -47,6 +47,7 @@ class PublishPackageMigrations extends Command
         'wire-core::migrations',
         'wire-sortable::migrations',
         'wire-module-settings::migrations',
+        'wire-module-tenants::migrations',
         'wire-module-media::migrations',
         'wire-module-auth::migrations',
     ];

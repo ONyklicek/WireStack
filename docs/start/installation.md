@@ -145,6 +145,7 @@ and nothing else should not carry a media library:
 | [Audit log](../modules/audit.md) | `nyoncode/wire-module-audit` |
 | [Notifications](../modules/notifications.md) | `nyoncode/wire-module-notifications` |
 | [Media](../modules/media.md) | `nyoncode/wire-module-media` |
+| [Companies](../modules/tenants.md) | `nyoncode/wire-module-tenants` |
 
 Install one and run `php artisan wire:install` again; it registers itself, so
 there is nothing to add to a config file, and the parts that were already set up

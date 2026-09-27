@@ -23,8 +23,8 @@ it('names the whole stack, the optional layers and every module', function () {
         ->toContain('wire-core', 'wire-forms', 'wire-table', 'wire-sortable')
         ->toContain('wire-panels', 'wire-admin', 'wire-suite', 'wire-boost')
         ->toContain('wire-module-auth', 'wire-module-users', 'wire-module-settings')
-        ->toContain('wire-module-audit', 'wire-module-notifications', 'wire-module-media')
-        ->and(WirePackages::modules())->toHaveCount(6);
+        ->toContain('wire-module-audit', 'wire-module-notifications', 'wire-module-media', 'wire-module-tenants')
+        ->and(WirePackages::modules())->toHaveCount(7);
 });
 
 it('prefixes a short name with the vendor', function () {
@@ -53,7 +53,7 @@ it('reports a package as installed only when it has a version', function () {
 });
 
 it('treats the modules group as installed as soon as one module is', function () {
-    // Requiring all six would hide the guideline from every application that
+    // Requiring all seven would hide the guideline from every application that
     // installed exactly the area it needed.
     expect(packagesWith(['wire-module-media'])->isInstalled(WirePackages::MODULES_GROUP))->toBeTrue()
         ->and(packagesWith(['wire-core'])->isInstalled(WirePackages::MODULES_GROUP))->toBeFalse();

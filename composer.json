@@ -38,6 +38,7 @@
         "nyoncode/wire-module-users": "@dev",
         "nyoncode/wire-module-media": "@dev",
         "nyoncode/wire-module-settings": "@dev",
+        "nyoncode/wire-module-tenants": "@dev",
         "nyoncode/wire-module-notifications": "@dev",
         "nyoncode/wire-module-audit": "@dev",
         "nyoncode/wire-sortable": "@dev",
@@ -118,6 +119,13 @@
         },
         {
             "type": "path",
+            "url": "packages/module-tenants",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
             "url": "packages/module-media",
             "options": {
                 "symlink": true
@@ -175,6 +183,7 @@
             "NyonCode\\WireModuleUsers\\Tests\\": "packages/module-users/tests/",
             "NyonCode\\WireModuleMedia\\Tests\\": "packages/module-media/tests/",
             "NyonCode\\WireModuleSettings\\Tests\\": "packages/module-settings/tests/",
+            "NyonCode\\WireModuleTenants\\Tests\\": "packages/module-tenants/tests/",
             "NyonCode\\WireModuleNotifications\\Tests\\": "packages/module-notifications/tests/",
             "NyonCode\\WireModuleAudit\\Tests\\": "packages/module-audit/tests/",
             "NyonCode\\WireSortable\\Tests\\": "packages/sortable/tests/",
@@ -204,6 +213,7 @@
         "test:module-users": "vendor/bin/pest --configuration packages/module-users/phpunit.xml",
         "test:module-media": "vendor/bin/pest --configuration packages/module-media/phpunit.xml",
         "test:module-settings": "vendor/bin/pest --configuration packages/module-settings/phpunit.xml",
+        "test:module-tenants": "vendor/bin/pest --configuration packages/module-tenants/phpunit.xml",
         "test:module-notifications": "vendor/bin/pest --configuration packages/module-notifications/phpunit.xml",
         "test:module-audit": "vendor/bin/pest --configuration packages/module-audit/phpunit.xml",
         "test:sortable": "vendor/bin/pest --configuration packages/sortable/phpunit.xml",

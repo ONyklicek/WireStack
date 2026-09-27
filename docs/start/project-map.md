@@ -26,6 +26,7 @@ pulled in automatically, and nothing above it is installed for you.
 | Notifications | `nyoncode/wire-module-notifications` | The stored history behind the notification bell | Panels |
 | Audit | `nyoncode/wire-module-audit` | A screen for the trail core already records | Panels |
 | Media | `nyoncode/wire-module-media` | A media library: uploads, folders, previews, a form picker | Panels |
+| Companies | `nyoncode/wire-module-tenants` | Company registration, profile and members over a tenant zone | Panels |
 | Boost | `nyoncode/wire-boost` | AI tooling: MCP server, guidelines, and agent skills | Core |
 
 The graph has one direction. `wire-panels` may name every component package and
@@ -114,6 +115,7 @@ composer test:module-settings
 composer test:module-notifications
 composer test:module-audit
 composer test:module-media
+composer test:module-tenants
 
 composer lint
 composer analyse

@@ -46,7 +46,7 @@ class SearchDocs extends BoostTool
                 ->description('Free-text query, e.g. "badge column color" or "validate a repeater".')
                 ->required(),
             'package' => $schema->string()
-                ->description('Optional package filter: '.$this->packageFilterValues().' (the "wire-" prefix is optional). "wire-modules" covers all six ready-made modules at once.'),
+                ->description('Optional package filter: '.$this->packageFilterValues().' (the "wire-" prefix is optional). "wire-modules" covers all seven ready-made modules at once.'),
             'limit' => $schema->integer()
                 ->description('Maximum number of sections to return (default 5).'),
         ];

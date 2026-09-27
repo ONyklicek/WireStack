@@ -25,6 +25,7 @@ php artisan vendor:publish --tag=wire-module-settings::config
 php artisan vendor:publish --tag=wire-module-notifications::config
 php artisan vendor:publish --tag=wire-module-audit::config
 php artisan vendor:publish --tag=wire-module-media::config
+php artisan vendor:publish --tag=wire-module-tenants::config
 ```
 
 You only need the tags for packages you installed. Every module's own installer
@@ -578,6 +579,7 @@ its options only make sense beside the screens they change:
 | `wire-module-notifications.php` | The bell, its panel, and the stored-notification table | [Notifications](../modules/notifications.md) |
 | `wire-module-audit.php` | The audit screen over the trail `wire-core` records | [Audit](../modules/audit.md) |
 | `wire-module-media.php` | Disks, conversions, accepted types, and the picker | [Media](../modules/media.md) |
+| `wire-module-tenants.php` | The company model, who may register one, invitations, reserved slugs | [Companies](../modules/tenants.md) |
 
 ## The Rest Of `wire-core`
 

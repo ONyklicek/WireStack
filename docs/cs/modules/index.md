@@ -1,12 +1,12 @@
 ---
 order: 10
-summary: Šest celých oblastí dodaných jako composer balíčky — co která nainstaluje, co potřebuje od aplikace a jak ji zase odebrat.
+summary: Sedm celých oblastí dodaných jako composer balíčky — co která nainstaluje, co potřebuje od aplikace a jak ji zase odebrat.
 ---
 
 # Hotové moduly
 
 [Modul](../panels/modules.md) je manifest jedné byznysové oblasti: resource,
-dashboardy a nadpis v menu, ze kterých se skládá. Těchhle šest ten manifest veze
+dashboardy a nadpis v menu, ze kterých se skládá. Těchhle sedm ten manifest veze
 **jako composer balíček**, takže oblast dorazí přes `composer require` místo
 třídy, kterou je potřeba napsat, a řádku v configu, na který je potřeba si
 vzpomenout.
@@ -50,6 +50,7 @@ deklarace aplikace nad tou dodanou.
 | [Notifikace](notifications.md) | `wire-module-notifications` | Historie za zvonečkem, jako tabulka | Laravelí tabulka `notifications` |
 | [Audit](audit.md) | `wire-module-audit` | Obrazovka pro stopu, kterou `wire-core` už zapisuje | `HasAuditable` na modelech, které chcete sledovat |
 | [Média](media.md) | `wire-module-media` | Knihovna médií — uploady, složky, náhledy a picker do formulářů | Filesystem disk |
+| [Firmy](tenants.md) | `wire-module-tenants` | Registrace firmy, její profil a pozvánky a správa členů | [Tenantová zóna](../panels/tenancy.md) a uživatelský model s `HasTenants` |
 
 [Týmy a dvoufaktor](teams-and-two-factor.md) není sedmý balíček: je to návod, jak
 zapnout dva povrchy, které users modul drží za `auto` přepínačem — ten hledá věc
@@ -72,7 +73,7 @@ Composer za vás nikdy nespustí. Co instalátor dělá a co odmítá dělat, po
 
 ## Vlastní modul
 
-Těch šest jsou obyčejné moduly s providerem kolem sebe a
+Těch sedm jsou obyčejné moduly s providerem kolem sebe a
 [`packages/module-users`](users.md) je referenční implementace. Co modul deklaruje,
 jak závisí na jiném a jak ho balíček veze, pokrývají [Moduly](../panels/modules.md).
 
