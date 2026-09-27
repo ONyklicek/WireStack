@@ -8,6 +8,7 @@ return [
     'search' => 'Search…',
     'skip_to_content' => 'Skip to content',
     'empty' => 'Nothing is registered yet.',
+    'more' => 'More',
     'filter' => 'Filter the menu',
     'filter_matches' => '{0} Nothing matches|{1} One entry matches|[2,*] :count entries match',
     'filter_none' => 'Nothing in the menu matches.',

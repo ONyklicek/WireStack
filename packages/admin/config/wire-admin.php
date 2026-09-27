@@ -47,6 +47,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Layout
+    |--------------------------------------------------------------------------
+    |
+    | `navigation` is the menu's shape from `lg` up: 'sidebar' — a column
+    | beside the page — or 'top', a bar under the header. Below `lg` it is the
+    | drawer either way. One layout can differ from the rest with
+    | `<x-wire-admin::layout navigation="top">`.
+    |
+    */
+    'layout' => [
+        'navigation' => env('WIRE_ADMIN_NAVIGATION', 'sidebar'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Navigation
     |--------------------------------------------------------------------------
     |

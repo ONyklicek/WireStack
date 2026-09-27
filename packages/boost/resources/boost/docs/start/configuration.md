@@ -555,6 +555,9 @@ is not a second search: [The Sidebar](../admin/sidebar.md#filtering-the-menu).
 
 ```php
 // config/wire-admin.php
+'layout' => [
+    'navigation' => 'sidebar', // 'sidebar' | 'top' — see The Layout § The Menu As A Bar
+],
 'navigation' => [
     'filter' => 'auto',        // 'auto' | 'always' | 'never'
     'filter_threshold' => 12,  // 'auto' shows it from this many rows up

@@ -8,6 +8,7 @@ return [
     'search' => 'Hledat…',
     'skip_to_content' => 'Přejít na obsah',
     'empty' => 'Zatím není nic zaregistrované.',
+    'more' => 'Další',
     'filter' => 'Filtrovat menu',
     'filter_matches' => '{0} Nic neodpovídá|{1} Odpovídá jedna položka|[2,4] Odpovídají :count položky|[5,*] Odpovídá :count položek',
     'filter_none' => 'V menu nic neodpovídá.',

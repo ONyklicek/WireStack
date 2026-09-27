@@ -52,7 +52,7 @@
          body is parsed — which is also why `lg:w-64` can finally sit here as an
          ordinary class. The rail's rule is an attribute selector and outranks
          it, so the two no longer compete on sheet order. --}}
-    class="wire-admin-sidebar fixed inset-y-0 start-0 z-50 flex w-72 flex-col border-e border-gray-200 bg-white transition-transform duration-200 motion-reduce:transition-none lg:sticky lg:top-0 lg:z-auto lg:h-dvh lg:w-64 lg:shrink-0 lg:translate-x-0 lg:shadow-none lg:transition-[width] dark:border-gray-800 dark:bg-gray-900"
+    class="wire-admin-sidebar fixed inset-y-0 start-0 z-50 flex w-72 flex-col border-e border-gray-200 bg-white transition-transform duration-200 motion-reduce:transition-none lg:sticky lg:top-0 lg:z-auto lg:h-dvh lg:w-64 lg:shrink-0 lg:translate-x-0 lg:shadow-none lg:transition-[width] dark:border-gray-800 dark:bg-gray-900 {{ $drawerOnly ? 'lg:hidden' : '' }}"
 >
     {{-- A `<header>`, not a `<div>`, and that is the whole of how the logo row
          stays level with the top bar beside it. Both are the shell's top band;

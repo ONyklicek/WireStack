@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 use NyonCode\WireCore\Core\Resources\Workspace;
 use NyonCode\WireCore\Tours\TourLedger;
 use Workbench\App\Http\Middleware\SignInDemoUser;
+use Workbench\App\Http\Middleware\UseBarNavigation;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
 use Workbench\App\Livewire\Pages\TaskBoard;
 use Workbench\App\Livewire\Previews\CorePreview;
@@ -525,6 +526,13 @@ foreach ($zoneMembership as $zone => $only) {
         Route::wireResources(only: $only);
     });
 }
+
+// The admin zone's menu drawn as a bar under the header, for verify-topnav. Not
+// in $zoneMembership: it is the same zone's pages in the other shape, not a
+// third set of pages, and the zones preview below is about membership.
+Route::name('bar.')->prefix('previews/zoned/bar')->middleware(UseBarNavigation::class)->group(function () use ($zoneMembership): void {
+    Route::wireResources(only: $zoneMembership['admin']);
+});
 
 // The demo, from the top: the dashboard in the admin shell, with its tour.
 //

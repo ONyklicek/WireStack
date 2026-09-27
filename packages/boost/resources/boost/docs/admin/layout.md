@@ -23,6 +23,46 @@ Slots rather than configuration is deliberate: a class holding brand, colours an
 auth is what pulls a panel builder into being, and everything one would carry is
 markup you can already write.
 
+## The Menu As A Bar
+
+From `lg` up the menu is a column beside the page by default. It can be a bar
+under the header instead — for an application with few top-level sections and
+wide tables that want the width:
+
+```php
+// config/wire-admin.php
+'layout' => [
+    'navigation' => 'top',   // 'sidebar' (default) | 'top'
+],
+```
+
+or for one layout only, `<x-wire-admin::layout navigation="top">`. A value that
+names neither is refused with a `NavigationShapeException`, rather than quietly
+drawing the column.
+
+The bar draws the same menu the column draws — the same `Workspace`, the same
+active entry — in its own shape:
+
+| In the column | In the bar |
+| --- | --- |
+| a group is a heading over its rows | a group is a **button** opening a panel of its rows |
+| an entry without a group is a row | it is a link in the bar |
+| a group of one entry is a heading and a row | it is a link — a panel of one row is a click for nothing |
+| children are a list under their parent | they are indented under it inside the same panel |
+| what does not fit scrolls | what does not fit goes under **More** at the end of the bar |
+
+**Below `lg` it is the drawer, whatever the shape.** A bar is a shape for a wide
+screen; on a phone the column is still the menu, opened from the header. So the
+document carries both, and the bar's rows are named apart (`admin-topnav-*`) from
+the drawer's (`admin-nav-*`) — shared names would have every test counting each
+row twice.
+
+**The bar never wraps.** It is clipped from the first paint, and once the
+browser has measured it, the entries that do not fit — the first one that does
+not, and every one after it, so the order holds — are shown under *More*
+instead. There is nothing to collapse in a bar, so the rail toggle and its
+shortcut are not drawn.
+
 ## Signing In
 
 The shell has an auth frame and **no authentication**: `<x-wire-admin::auth-layout>` is a centered card with the same head — the theme decision, the assets, the interaction layer — and no menu, no palette and no bell, because none of them mean anything before a user exists.

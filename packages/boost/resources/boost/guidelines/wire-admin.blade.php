@@ -60,6 +60,14 @@ resource pages and its own chrome simply does not install this (ADR 0028).
   by `@wireStackScripts`). Rows carry `data-nav-row` / `data-nav-child` / `data-nav-label` (lower-cased) and
   groups `data-nav-group`; `$store.wireAdmin.filtering` opens folded groups and submenus while a term is typed.
   It is not a second search — ⌘K is. Never add another filter or a second copy of the menu for it.
+@verbatim
+- **The menu can be a bar: `wire-admin.layout.navigation` = `'top'`** (or `<x-wire-admin::layout navigation="top">`;
+  anything else throws `NavigationShapeException`). `<x-wire-admin::top-nav>` reads the same `Workspace` and
+  `ActiveNavigation`; a group — and a lone entry with children — is a `wireDropdown` panel, a group of one is a
+  link, and what does not fit goes under *More* (`wireTopNav`, hidden in the bar exactly when shown in the
+  panel). Below `lg` the drawer is still the menu (`<x-wire-admin::sidebar :drawer-only="true">`), so the bar's
+  names are `admin-topnav-*`, never `admin-nav-*`. No rail toggle or ⌘B in that shape.
+@endverbatim
 - **Focus is the shell's**: the phone drawer is `x-trap`ped while open (first row focused, focus returned to
   the opener), and `<main>` has `tabindex="-1"` for the skip link. A custom drawer must keep both.
 - **An unrouted entry keeps its row and loses its link** (`aria-disabled`), which is the honest picture of a

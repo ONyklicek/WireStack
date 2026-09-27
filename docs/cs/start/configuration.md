@@ -549,6 +549,9 @@ hledání: [Sidebar](../admin/sidebar.md#filtrovani-menu).
 
 ```php
 // config/wire-admin.php
+'layout' => [
+    'navigation' => 'sidebar', // 'sidebar' | 'top' — viz Layout § Menu jako pruh
+],
 'navigation' => [
     'filter' => 'auto',        // 'auto' | 'always' | 'never'
     'filter_threshold' => 12,  // 'auto' ho ukáže od tolika řádků výš

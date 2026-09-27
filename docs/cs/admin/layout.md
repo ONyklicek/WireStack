@@ -23,6 +23,44 @@ Sloty místo konfigurace jsou záměr: třída, která drží brand, barvy a aut
 přesně to, co z shellu udělá panel builder — a všechno, co by nesla, je markup,
 který umíte napsat sami.
 
+## Menu jako pruh
+
+Od `lg` výš je menu ve výchozím stavu sloupec vedle stránky. Může to být i pruh
+pod hlavičkou — pro aplikaci s malým počtem hlavních sekcí a širokými tabulkami,
+které tu šířku chtějí:
+
+```php
+// config/wire-admin.php
+'layout' => [
+    'navigation' => 'top',   // 'sidebar' (výchozí) | 'top'
+],
+```
+
+nebo jen pro jeden layout, `<x-wire-admin::layout navigation="top">`. Hodnota,
+která nejmenuje ani jedno, se odmítne výjimkou `NavigationShapeException`, místo
+aby se potichu vykreslil sloupec.
+
+Pruh kreslí totéž menu jako sloupec — stejný `Workspace`, stejnou aktivní
+položku —, jen ve vlastním tvaru:
+
+| Ve sloupci | V pruhu |
+| --- | --- |
+| skupina je nadpis nad svými řádky | skupina je **tlačítko**, které otevře panel s jejími řádky |
+| položka bez skupiny je řádek | je to odkaz přímo v pruhu |
+| skupina s jedinou položkou je nadpis a řádek | je to odkaz — panel s jedním řádkem je kliknutí pro nic |
+| děti jsou seznam pod rodičem | jsou odsazené pod ním v tomtéž panelu |
+| co se nevejde, se roluje | co se nevejde, jde pod **Další** na konci pruhu |
+
+**Pod `lg` je to šuplík, ať je tvar jakýkoli.** Pruh je tvar pro širokou
+obrazovku; na telefonu je menu pořád sloupec otevíraný z hlavičky. Dokument tedy
+nese obojí a řádky pruhu mají vlastní jména (`admin-topnav-*`), oddělená od jmen
+šuplíku (`admin-nav-*`) — sdílená jména by každý test počítal dvakrát.
+
+**Pruh se nikdy nezalomí.** Je oříznutý od prvního vykreslení, a jakmile ho
+prohlížeč změří, položky, které se nevejdou — první, která ne, a každá za ní, aby
+pořadí drželo —, se ukážou pod *Další*. V pruhu není co sbalovat, takže přepínač
+lišty ani jeho zkratka se nevykreslí.
+
 ## Přihlašování
 
 Shell má rám pro přihlášení a **žádnou autentizaci**: `<x-wire-admin::auth-layout>` je vycentrovaná karta se stejnou hlavou — rozhodnutí o motivu, assety, interakční vrstva — a bez menu, palety i zvonku, protože nic z toho před existencí uživatele nic neznamená.

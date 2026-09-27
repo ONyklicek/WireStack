@@ -38,9 +38,12 @@ class Sidebar extends Component
      * @param  bool  $linkedOnly  Drop entries this zone cannot reach, instead of
      *                            drawing them unlinked. An application that routes only part of
      *                            its catalogue wants one or the other, and which one is taste.
+     * @param  bool  $drawerOnly  Only the phone drawer: from `lg` up the menu is drawn
+     *                            elsewhere — the bar a `top` layout puts under the header.
      */
     public function __construct(
         public bool $linkedOnly = false,
+        public bool $drawerOnly = false,
         ?string $zone = null,
         ?string $activeKey = null,
     ) {

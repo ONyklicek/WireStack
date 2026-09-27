@@ -6,6 +6,7 @@ namespace NyonCode\WireAdmin\View;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
+use NyonCode\WireAdmin\Enums\NavigationShape;
 
 /**
  * The page frame: `<x-wire-admin::layout>`.
@@ -43,7 +44,20 @@ class Layout extends Component
         public ?string $title = null,
         public bool $linkedOnly = false,
         public ?bool $notifications = null,
+        public ?string $navigation = null,
     ) {}
+
+    /**
+     * The menu's shape from `lg` up — a column, or a bar under the header.
+     *
+     * The attribute wins over `wire-admin.layout.navigation`, so one layout of
+     * an application can differ from the rest. A value that names no shape is
+     * refused, not read as the default.
+     */
+    public function navigationShape(): NavigationShape
+    {
+        return NavigationShape::resolve($this->navigation ?? config('wire-admin.layout.navigation', NavigationShape::Sidebar->value));
+    }
 
     /**
      * Whether this page shows the notification bell.

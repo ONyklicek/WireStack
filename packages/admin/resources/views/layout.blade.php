@@ -171,7 +171,10 @@
     >{{ __('wire-admin::messages.skip_to_content') }}</a>
 
     <div class="lg:flex">
-        <x-wire-admin::sidebar :linked-only="$linkedOnly" />
+        {{-- In the bar shape the column is only the phone's drawer; from `lg` up
+             the menu is the bar under the header, below. --}}
+        @php($barShape = $navigationShape() === \NyonCode\WireAdmin\Enums\NavigationShape::Top)
+        <x-wire-admin::sidebar :linked-only="$linkedOnly" :drawer-only="$barShape" />
 
         <div class="min-w-0 flex-1">
             <header class="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-gray-200 bg-white/90 px-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/90" @wireEl('admin-topbar')>
@@ -192,7 +195,18 @@
                     {!! icon('outline:bars-3', 'h-5 w-5') !!}
                 </button>
 
-                {{-- Says which way it goes, rather than naming one direction for
+                {{-- The brand, where the column would have carried it: in the bar
+                     shape there is no column from `lg` up to put it in. --}}
+                @if ($barShape)
+                    <div class="hidden shrink-0 items-center pe-2 lg:flex" data-testid="admin-topbar-brand" @wireEl('admin-topbar-brand')>
+                        <x-wire-admin::brand />
+                    </div>
+                @endif
+
+                {{-- Not drawn in the bar shape: there is no column to collapse, and
+                     a shortcut that toggles nothing is a key that seems broken.
+
+                     Says which way it goes, rather than naming one direction for
                      both states: a handle labelled "collapse the menu" while the
                      menu is already collapsed is the control people press twice
                      to find out what it does.
@@ -203,6 +217,7 @@
                      focus the control to use is not a shortcut — and declined
                      while the caret is in a field, because in a rich-text editor
                      the same chord is bold. --}}
+                @unless ($barShape)
                 <button
                     type="button"
                     x-data
@@ -228,6 +243,7 @@
                     <span x-show="! $store.wireAdmin.rail">{!! icon('outline:bars-3', 'h-5 w-5') !!}</span>
                     <span x-show="$store.wireAdmin.rail" x-cloak>{!! icon('outline:chevron-double-right', 'h-5 w-5 rtl:rotate-180') !!}</span>
                 </button>
+                @endunless
 
                 {{-- The brand moved into the sidebar header, where a logo belongs
                      and where the rail can shrink it to a square. What stays here
@@ -357,6 +373,10 @@
                 @endif
                 @wireRenderHook('admin.topbar.end')
             </header>
+
+            @if ($barShape)
+                <x-wire-admin::top-nav :linked-only="$linkedOnly" />
+            @endif
 
             <main id="wire-admin-main" tabindex="-1" class="p-4 focus:outline-none" data-testid="admin-content" @wireEl('admin-content')>
                 {{ $slot }}

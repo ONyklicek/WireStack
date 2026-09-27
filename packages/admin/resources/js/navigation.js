@@ -101,6 +101,51 @@ const wireNavFilter = () => ({
     },
 });
 
+/**
+ * The horizontal menu's overflow: what does not fit the bar is hidden in it and
+ * shown under "More" instead.
+ *
+ * Hidden, not moved. Moving a row's element into the panel would carry its
+ * Alpine state and its teleported dropdown with it; the panel instead holds its
+ * own rendering of every entry, shown for the ones listed in `overflow`, and
+ * named apart (`admin-topnav-more-item`) so nothing counts a row twice.
+ *
+ * Once one entry overflows, every entry after it does too — the bar keeps the
+ * menu's order rather than filling a gap with whatever happens to be narrow.
+ */
+const wireTopNav = () => ({
+    overflow: [],
+
+    init() {
+        this.observer = new ResizeObserver(() => this.measure());
+        this.observer.observe(this.$refs.bar);
+        this.$nextTick(() => this.measure());
+    },
+
+    destroy() {
+        this.observer?.disconnect();
+    },
+
+    measure() {
+        const bar = this.$refs.bar;
+        const entries = [...bar.querySelectorAll(':scope > [data-topnav-entry]')];
+
+        entries.forEach((entry) => { entry.hidden = false; });
+
+        const edge = bar.getBoundingClientRect().right + 0.5;
+        const cut = entries.findIndex((entry) => entry.getBoundingClientRect().right > edge);
+        const hidden = cut === -1 ? [] : entries.slice(cut);
+
+        hidden.forEach((entry) => { entry.hidden = true; });
+
+        const ids = hidden.map((entry) => entry.dataset.topnavEntry);
+
+        // Only when it changed: a new array every measurement re-renders the
+        // panel's rows on every pixel of a window resize.
+        if (ids.join('|') !== this.overflow.join('|')) this.overflow = ids;
+    },
+});
+
 let registered = false;
 
 const register = () => {
@@ -108,6 +153,7 @@ const register = () => {
 
     registered = true;
     window.Alpine.data('wireNavFilter', wireNavFilter);
+    window.Alpine.data('wireTopNav', wireTopNav);
 };
 
 if (window.Alpine) register();
