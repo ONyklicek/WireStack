@@ -36,10 +36,10 @@ as Livewire *persistent* middleware, so Livewire rebuilds the page's original
 request and runs it again. The second render is scoped and linked exactly as the
 first was.
 
-**The traps.** A zone is still read from the route name, and on a round trip it
-is not there — the same rule as everywhere else: a component that builds links
-on every render keeps the zone it read on mount and passes it
-([Routing](routing.md#linking-to-them)). And a user model that does not
+**The traps.** The zone survives a round trip the same way, on every page
+`Route::wireResources()` registered; a component on a route of your own keeps
+the zone it read on mount and passes it ([Routing](routing.md#linking-to-them)).
+And a user model that does not
 implement `HasTenants` is refused with an exception on the first request, never
 read as "may enter every tenant".
 

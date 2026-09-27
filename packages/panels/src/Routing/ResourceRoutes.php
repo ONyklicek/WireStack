@@ -15,6 +15,7 @@ use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WirePanels\Clusters\Cluster;
 use NyonCode\WirePanels\Clusters\ClusterNavigation;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
+use NyonCode\WirePanels\Http\Middleware\RememberPage;
 use NyonCode\WirePanels\Resources\Contracts\NestedResource;
 
 /**
@@ -232,7 +233,9 @@ final class ResourceRoutes
             // it was given, so setting the resource's and then the page's left
             // only the page's — and a resource-wide `auth` silently disappeared
             // from every page that added one of its own.
-            $registrar = RouteFacade::middleware([...$shared, ...$page->getMiddleware()]);
+            // RememberPage on every page, so a Livewire round trip knows which
+            // page — and so which zone — it is working on (ADR 0027's trap).
+            $registrar = RouteFacade::middleware([RememberPage::class, ...$shared, ...$page->getMiddleware()]);
 
             if ($domain !== null) {
                 $registrar = $registrar->domain($domain);

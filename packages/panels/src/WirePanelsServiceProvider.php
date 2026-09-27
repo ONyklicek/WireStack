@@ -18,6 +18,7 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
 use NyonCode\WirePanels\Http\Middleware\IdentifyTenant;
+use NyonCode\WirePanels\Http\Middleware\RememberPage;
 use NyonCode\WirePanels\Install\RegisterResourceRoutes;
 use NyonCode\WirePanels\Pages\PageRegistry;
 use NyonCode\WirePanels\Resources\Console\ListResourcesCommand;
@@ -97,7 +98,7 @@ class WirePanelsServiceProvider extends PackageServiceProvider
                 // `livewire/update`, and without this the tenant — and every
                 // link it fills in — would be gone on the second render.
                 $this->app->make(Router::class)->aliasMiddleware(IdentifyTenant::ALIAS, IdentifyTenant::class);
-                Livewire::addPersistentMiddleware(IdentifyTenant::class);
+                Livewire::addPersistentMiddleware([IdentifyTenant::class, RememberPage::class]);
 
                 // Once every route is loaded: a route file registers its
                 // routes from a provider's booted callback, and the one that

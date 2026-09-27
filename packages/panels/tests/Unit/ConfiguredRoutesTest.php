@@ -8,6 +8,7 @@ use NyonCode\WireCore\Core\Resources\ResourceRegistry;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\WireCoreServiceProvider;
 use NyonCode\WirePanels\Exceptions\ResourceRoutingException;
+use NyonCode\WirePanels\Http\Middleware\RememberPage;
 use NyonCode\WirePanels\Routing\ConfiguredRoutes;
 use NyonCode\WirePanels\Routing\ResourceRoutes;
 
@@ -140,8 +141,10 @@ it('lets an application that guards its panel some other way take it out', funct
     crBoot(['enabled' => true, 'middleware' => ['web']]);
     Route::getRoutes()->refreshNameLookups();
 
+    // Only what the application named, plus the page's own bookkeeping —
+    // no guard it did not ask for.
     expect(Route::getRoutes()->getByName('wire.rt-orders.index')->gatherMiddleware())
-        ->toBe(['web']);
+        ->toBe(['web', RememberPage::class]);
 });
 
 it('puts the guard on the routes it registers, not only in the config', function () {

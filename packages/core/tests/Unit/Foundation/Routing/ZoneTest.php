@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireCore\Foundation\Routing\RenderedPage;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 
 /*
@@ -126,4 +127,22 @@ it('is a full-page-render call, and says null rather than something wrong later'
         // a sub-navigation that re-derived it per render would mark the current
         // tab on the first paint and nothing afterwards.
         ->and($component->get('askedPage'))->toBe('NULL');
+});
+
+it('answers for the page a round trip is working on, and leaves a page route alone', function () {
+    // A Livewire update's route is livewire.update; the routing package
+    // remembers the page's route so the second render has a zone too.
+    app(RenderedPage::class)->remember('business.wire.orders.edit');
+
+    Route::post('/livewire-probe', fn () => [
+        Zone::current(),
+        Zone::currentKey(),
+        Zone::currentPage(),
+    ])->name('livewire.update');
+    Route::get('/page-probe', fn () => [Zone::current()])->name('admin.wire.orders.index');
+    Route::getRoutes()->refreshNameLookups();
+
+    expect($this->post('/livewire-probe')->json())->toBe(['business.', 'orders', 'edit'])
+        // A request that *is* a page answers for itself, whatever was remembered.
+        ->and($this->get('/page-probe')->json())->toBe(['admin.']);
 });

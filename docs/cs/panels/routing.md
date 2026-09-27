@@ -259,7 +259,13 @@ ne z configu, takže zóny deklarované v route souboru se počítají stejně j
 přepínač.
 
 **Odkud se zóna bere.** `Zone::current()` ji přečte z routy, která se právě
-vykresluje, a je to volání **pro plný render stránky**:
+vykresluje. Na stránce, kterou zaregistrovalo `Route::wireResources()`, to platí
+i při Livewire round tripu: každá taková routa nese `RememberPage`, který Livewire
+spustí znovu jako persistent middleware nad původním requestem stránky, takže
+`Zone::current()`, `currentKey()` a `currentPage()` odpovídají za stránku při
+druhém vykreslení stejně jako při prvním. Kdekoli jinde — komponenta na vaší
+vlastní routě, partial layoutu na ručně psané routě — je to volání **pro plný
+render stránky**:
 
 ```php
 public ?string $zone = null;      // [tl! focus:start]
@@ -270,7 +276,7 @@ public function mount(): void
 }                                 // [tl! focus:end]
 ```
 
-`Route::currentRouteName()` během Livewire round tripu odpoví `livewire.update`,
+Tam `Route::currentRouteName()` během Livewire round tripu odpoví `livewire.update`,
 takže komponenta, která se zeptá znovu uprostřed updatu, nedostane nic — a paleta,
 která hledá při každém stisku klávesy, by odkazovala mimo svoji zónu a přitom
 vypadala bezvadně. Přečtěte to jednou, uložte do public property a nechte to Livewire
@@ -356,12 +362,11 @@ O tom, co sestaví, rozhodují tři věci:
   key je slug, by jinak dal URL, na kterém stránka nic nenajde.
 - **Parametr, který routa nejmenuje, se stane query stringem** — takhle si
   vlastní stránka bere své volby.
-- **Zóna je ve výchozím stavu ta vykreslovaná**, přečtená ze jména routy. Při
-  vykreslení celé stránky je to správně. Uvnitř Livewire updatu je routa
-  `livewire.update` a výchozí hodnota spadne na nezónovaný mount, takže komponenta,
-  která staví odkazy při každém round tripu, si zónu přečtenou v mountu nechá
-  a předá ji — `url(zone: $this->zone)`. Ani `parent` vnořeného resource se
-  nehádá: předejte ho.
+- **Zóna je ve výchozím stavu ta vykreslovaná**, přečtená ze jména routy — i při
+  Livewire round tripu, pro každou stránku zaregistrovanou přes
+  `Route::wireResources()` (viz [odkud se zóna bere](#zony)). Komponenta na vaší
+  vlastní routě si zónu přečtenou v mountu nechá a předá ji —
+  `url(zone: $this->zone)`. `parent` vnořeného resource se nehádá: předejte ho.
 
 Položka menu už nese URL stránky svého klíče a výsledek hledání nese URL svého
 záznamu:
@@ -410,7 +415,7 @@ ukotveného vzoru — `livewire.update` obsahuje `wire.`, takže hledání podř
 hlásí zónu přesně na tom požadavku, který žádnou nemá:
 
 ```php
-Zone::current(): ?string          // zóna právě vykreslované stránky — jen při plném renderu
+Zone::current(): ?string          // zóna právě vykreslované stránky — i při jejích round tripech, u stránky z wireResources
 Zone::of(?string $routeName): ?string
 Zone::currentPage(): ?string      // druh té stránky — `index`, `view`, `edit`, nebo vlastní druh resource
 Zone::pageOf(?string $routeName): ?string

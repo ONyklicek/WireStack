@@ -60,6 +60,7 @@ use NyonCode\WireCore\Foundation\Registration\ClassDiscovery;
 use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
 use NyonCode\WireCore\Foundation\Routing\Contracts\RegistersPageRoutes;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
+use NyonCode\WireCore\Foundation\Routing\RenderedPage;
 use NyonCode\WireCore\Foundation\Routing\UnguardedUrls;
 use NyonCode\WireCore\Foundation\Routing\UnroutedPageUrls;
 use NyonCode\WireCore\Foundation\Setup\EnvFile;
@@ -683,6 +684,10 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // `wire-panels` — so core declares the question and answers it with
         // "nothing is routed" until a package that routes says otherwise.
         $this->app->bindIf(ResolvesPageUrls::class, UnroutedPageUrls::class);
+
+        // The page a Livewire round trip is working on, so Zone can answer
+        // on the second render too; the routing package fills it.
+        $this->app->scoped(RenderedPage::class);
 
         // Its other half: whether somebody may open a URL. Yes until the same
         // package says which routes carry `can:` middleware.

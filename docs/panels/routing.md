@@ -264,7 +264,12 @@ router, not off config, so zones declared in a route file count the same as
 draws.
 
 **Where the zone comes from.** `Zone::current()` reads it off the route being
-rendered, and that is a **full-page-render** call:
+rendered. On a page `Route::wireResources()` registered that holds on a Livewire
+round trip too: every such route carries `RememberPage`, which Livewire re-runs as
+persistent middleware against the page's original request, so `Zone::current()`,
+`currentKey()` and `currentPage()` answer for the page on the second render as on
+the first. Anywhere else — a component on a route of your own, a layout partial
+on a hand-written route — it is a **full-page-render** call:
 
 ```php
 public ?string $zone = null;      // [tl! focus:start]
@@ -275,10 +280,10 @@ public function mount(): void
 }                                 // [tl! focus:end]
 ```
 
-`Route::currentRouteName()` answers `livewire.update` during a round trip, so a
-component that asks again mid-update gets nothing — and a palette that searches
-on every keystroke would link out of its zone while looking perfectly fine. Read
-it once, keep it in a public property, and let Livewire carry it. The command
+There `Route::currentRouteName()` answers `livewire.update` during a round trip,
+so a component that asks again mid-update gets nothing — and a palette that
+searches on every keystroke would link out of its zone while looking perfectly
+fine. Read it once, keep it in a public property, and let Livewire carry it. The command
 palette already does exactly this, so a palette in a zoned layout needs no
 configuration.
 
@@ -364,12 +369,11 @@ Three things decide what it builds:
   at.
 - **A parameter the route does not name becomes the query string**, which is how
   a page of your own takes its options.
-- **The zone defaults to the one being rendered**, read off the route name. On a
-  full page render that is right. Inside a Livewire update the route is
-  `livewire.update` and the default falls back to the unzoned mount, so a
-  component that builds links on every round trip keeps the zone it read on
-  mount and passes it — `url(zone: $this->zone)`. A nested resource's `parent`
-  is not guessed either: pass it.
+- **The zone defaults to the one being rendered**, read off the route name — on
+  a Livewire round trip too, for any page `Route::wireResources()` registered
+  (see [where the zone comes from](#zones)). A component on a route of your own
+  keeps the zone it read on mount and passes it — `url(zone: $this->zone)`. A
+  nested resource's `parent` is not guessed: pass it.
 
 A menu entry carries the URL of its key's page already, and a search result
 carries the URL of its record's:
@@ -417,7 +421,7 @@ from one anchored pattern — `livewire.update` contains `wire.`, so a substring
 search reports a zone on exactly the request that has none:
 
 ```php
-Zone::current(): ?string          // the zone of the page being rendered — full page renders only
+Zone::current(): ?string          // the zone of the page being rendered — on its round trips too, for a wireResources page
 Zone::of(?string $routeName): ?string
 Zone::currentPage(): ?string      // its page kind — `index`, `view`, `edit`, or the resource's own
 Zone::pageOf(?string $routeName): ?string

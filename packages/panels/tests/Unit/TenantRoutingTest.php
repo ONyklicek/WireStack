@@ -81,10 +81,11 @@ class TrInvoiceList extends Component
     public function render(): string
     {
         $numbers = TrInvoice::query()->pluck('number')->implode(',');
+        $zone = NyonCode\WireCore\Foundation\Routing\Zone::current() ?? '-';
         $url = TrInvoiceResource::url('edit', 7);
         $parameters = implode(',', array_keys(request()->route()?->parameters() ?? []));
 
-        return "<div>numbers={$numbers} url={$url} params=[{$parameters}]</div>";
+        return "<div>numbers={$numbers} url={$url} zone={$zone} params=[{$parameters}]</div>";
     }
 }
 
@@ -232,18 +233,16 @@ it('keeps the tenant, and every link, on a Livewire round trip', function () {
 
     Livewire::component('tr-invoice-list', TrInvoiceList::class);
 
-    // No zone name here, on purpose: a zone is *not* carried across a round
-    // trip (ADR 0027 — pass `zone:` from a kept property), and this test is
-    // about the tenant alone.
-    Route::middleware(['web', 'wire.tenant'])->prefix('app/{tenant}')->group(fn () => Route::wireResources());
-    Route::getRoutes()->refreshNameLookups();
+    // A named zone, on purpose: the round trip has to keep the zone as well as
+    // the tenant, or `X::url()` answers null on the second render.
+    trRoutes();
     $this->actingAs($this->user);
 
     $page = $this->get('/app/acme/tr-invoices')->assertOk()->getContent();
     preg_match('/wire:snapshot="([^"]+)"/', $page, $match);
 
     // A fresh request cycle for the round trip, as a browser's would be.
-    app(CurrentTenant::class)->leave();
+    app()->forgetScopedInstances();
     URL::defaults(['tenant' => null]);
 
     $response = $this->withHeaders(['X-Livewire' => 'true'])->postJson(app('livewire')->getUpdateUri(), [
@@ -256,7 +255,8 @@ it('keeps the tenant, and every link, on a Livewire round trip', function () {
 
     expect($response->json('components.0.effects.html'))
         ->toContain('numbers=A-1 ')
-        ->toContain('url='.url('app/acme/tr-invoices/7/edit'));
+        ->toContain('url='.url('app/acme/tr-invoices/7/edit'))
+        ->toContain('zone=app. ');
 });
 
 it('puts the tenant in a config zone path or domain, with the middleware', function () {

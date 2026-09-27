@@ -35,10 +35,10 @@ uvnitř zóny udělá čtyři věci, v tomto pořadí:
 middleware, takže Livewire sestaví původní request stránky a spustí ho znovu.
 Druhé vykreslení je scopované a prolinkované stejně jako první.
 
-**Pasti.** Zóna se pořád čte ze jména routy a při round tripu tam není — stejné
-pravidlo jako všude jinde: komponenta, která staví odkazy při každém vykreslení,
-si zónu přečtenou v mountu nechá a předá ji
-([Routování](routing.md#jak-na-ne-odkazovat)). A uživatelský model, který
+**Pasti.** Zóna round trip přežije stejně, na každé stránce zaregistrované přes
+`Route::wireResources()`; komponenta na vaší vlastní routě si zónu přečtenou
+v mountu nechá a předá ji ([Routování](routing.md#jak-na-ne-odkazovat)).
+A uživatelský model, který
 neimplementuje `HasTenants`, se při prvním requestu odmítne výjimkou — nikdy se
 nečte jako „smí do každého tenanta“.
 
