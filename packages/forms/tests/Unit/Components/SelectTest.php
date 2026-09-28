@@ -719,7 +719,7 @@ test('disabled options reach the combobox, not only the native select', function
 
     expect($html)
         ->toContain('disabledValues: ')
-        ->toContain(':disabled="isOptionDisabled(value)"');
+        ->toContain(':disabled="$data.isOptionDisabled?.(value)"');
 });
 
 test('rendered options resolve a label only for a selection the list does not carry', function () {

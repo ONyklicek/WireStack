@@ -154,6 +154,13 @@
     @select-option-created.window="upsertOption($event.detail)"
     @select-option-updated.window="upsertOption($event.detail)"
 >
+    {{-- Every binding that re-renders reads through `$data` (`$data.open`, not
+         `open`). wire:navigate can run an effect Alpine had already queued after
+         this component's scope is gone — worst in the teleported panel, which
+         lives outside it — and a bare name then throws "is not defined", or,
+         for `open`, finds `window.open` and calls it ("Illegal invocation").
+         Through `$data` it is only undefined. Handlers (@click) run on events
+         and keep the short form. --}}
     <button
         type="button"
         id="{{ $selectId }}"
@@ -166,8 +173,8 @@
         @keydown.enter.prevent="onEnter()"
         @keydown.escape="open = false; activeIndex = -1"
         aria-haspopup="listbox"
-        :aria-expanded="open"
-        :aria-activedescendant="activeDescendant"
+        :aria-expanded="$data.open"
+        :aria-activedescendant="$data.activeDescendant"
         @if($disabled) disabled @endif
         @class([
             'flex items-center justify-between w-full rounded-md border border-gray-300 shadow-sm px-3 py-2 text-left text-sm',
@@ -179,8 +186,8 @@
             \NyonCode\WireCore\Foundation\Support\MobileSheet::touchTrigger($mobileBreakpoint) => $touch,
         ])
     >
-        <span x-text="selectedLabel || placeholder" :class="{ 'text-gray-500 dark:text-gray-400': !selectedLabel }"></span>
-        {!! icon('chevron-down', 'w-4 h-4', 'w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0 transition-transform duration-150', '', [':class' => "{ 'rotate-180': open }"]) !!}
+        <span x-text="$data.selectedLabel || $data.placeholder" :class="{ 'text-gray-500 dark:text-gray-400': ! $data.selectedLabel }"></span>
+        {!! icon('chevron-down', 'w-4 h-4', 'w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0 transition-transform duration-150', '', [':class' => "{ 'rotate-180': \$data.open }"]) !!}
     </button>
 
     {{-- Floating listbox from sm up; bottom sheet on a phone (max-sm: classes,
@@ -190,7 +197,7 @@
             @if($sheetOnMobile)
                 {{-- Backdrop: mobile-only, taps to close. --}}
                 <div
-                    x-show="open"
+                    x-show="$data.open"
                     x-cloak
                     x-transition:enter="transition ease-out duration-150"
                     x-transition:enter-start="opacity-0"
@@ -205,11 +212,11 @@
 
             <div
                 x-ref="panel"
-                x-show="open"
+                x-show="$data.open"
                 {{-- On a phone in touch mode this panel is hidden and the touch
                      sheet is open instead; a tap in that sheet is not "outside". --}}
                 @click.outside="if (! touchNow && ! $clickedInside($event)) { open = false; activeIndex = -1 }"
-                @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
+                @if($sheetOnMobile) x-focus-trap="$data.open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0 -translate-y-1 {{ $sheetOnMobile ? $sheetMotion : '' }}"
                 x-transition:enter-end="opacity-100 translate-y-0"
@@ -245,7 +252,7 @@
             </div>
             @endif
 
-            <ul class="py-1" role="listbox" :aria-activedescendant="activeDescendant" @if($multiple) aria-multiselectable="true" @endif>
+            <ul class="py-1" role="listbox" :aria-activedescendant="$data.activeDescendant" @if($multiple) aria-multiselectable="true" @endif>
                 @if($placeholder !== null && $placeholder !== '')
                     <li role="option" aria-selected="false">
                         <button
@@ -259,34 +266,34 @@
                     </li>
                 @endif
 
-                <template x-for="([value, label], index) in filteredOptions" :key="value">
-                    <li role="option" :aria-selected="isSelected(value)" :aria-disabled="isOptionDisabled(value)" :id="'{{ $selectId }}-option-' + value">
+                <template x-for="([value, label], index) in ($data.filteredOptions ?? [])" :key="value">
+                    <li role="option" :aria-selected="$data.isSelected?.(value)" :aria-disabled="$data.isOptionDisabled?.(value)" :id="'{{ $selectId }}-option-' + value">
                         <button
                             type="button"
                             @click="select(value)"
-                            :disabled="isOptionDisabled(value)"
+                            :disabled="$data.isOptionDisabled?.(value)"
                             :data-testid="'select-option-' + value"
                             @mouseenter="activeIndex = index"
                             class="flex items-center justify-between gap-2 w-full px-3 py-2 text-left text-sm dark:text-white transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
                             :class="{
-                                'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400': isSelected(value),
-                                'bg-gray-100 dark:bg-gray-700': activeIndex === index && !isSelected(value),
-                                'hover:bg-gray-100 dark:hover:bg-gray-700': activeIndex !== index && !isSelected(value) && !isOptionDisabled(value),
+                                'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400': $data.isSelected?.(value),
+                                'bg-gray-100 dark:bg-gray-700': $data.activeIndex === index && ! $data.isSelected?.(value),
+                                'hover:bg-gray-100 dark:hover:bg-gray-700': $data.activeIndex !== index && ! $data.isSelected?.(value) && ! $data.isOptionDisabled?.(value),
                             }"
                         >
                             <span x-text="label"></span>
-                            {!! icon('check', 'w-4 h-4', 'w-4 h-4 shrink-0', '', ['x-show' => 'isSelected(value)', 'x-cloak' => '']) !!}
+                            {!! icon('check', 'w-4 h-4', 'w-4 h-4 shrink-0', '', ['x-show' => '$data.isSelected?.(value)', 'x-cloak' => '']) !!}
                         </button>
                     </li>
                 </template>
 
                 @if($remoteSearch)
-                    <li x-show="loading" class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400" role="option" aria-disabled="true">
+                    <li x-show="$data.loading" class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400" role="option" aria-disabled="true">
                         {{ $loadingMessage ?? __('Loading...') }}
                     </li>
                 @endif
 
-                <li x-show="!loading && filteredOptions.length === 0" class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400" role="option" aria-disabled="true">
+                <li x-show="! $data.loading && ($data.filteredOptions ?? []).length === 0" class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400" role="option" aria-disabled="true">
                     {{ $noResultsMessage }}
                 </li>
             </ul>
