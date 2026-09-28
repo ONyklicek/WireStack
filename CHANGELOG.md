@@ -108,6 +108,13 @@ All notable changes to the Wire ecosystem will be documented in this file.
   ignored its `jsonPath` — never ran it. The docs now explain the two paths and the examples return `true`; the
   generated filter does too.
 - Boost's guidelines and skills for table, forms and core cover the generators and the `bypassesPlanner()` rule.
+- **A row kept out of the selection could still be selected from the keyboard.** With
+  `rowInactive(..., fn (InactiveRow $row) => $row->selectable(false))` only the checkbox cell was inert: Space on
+  the active row, a Shift range, mod+click and the checkbox sweep reach the row through the row controller and
+  ticked it anyway, and the entangled `selection.records` write they send was never checked, so a bulk action
+  received the locked record. The client now selects only keys from `data-page-keys` (the list "select page"
+  already used), and the server takes a locked key back out of an entangled write the same way
+  `toggleRecordSelection()` refuses it. Deselecting stays allowed.
 - **The open phone drawer let Tab walk on through the page behind it**, and closing it left focus where it
   was. It now keeps focus while open, starts on the first menu row, and hands focus back to the button that
   opened it. `<main>` takes `tabindex="-1"`, so the skip link moves focus instead of only scrolling.

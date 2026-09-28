@@ -238,6 +238,8 @@ trait WithTable
      */
     public function updatingTableState(mixed $value, string $path): void
     {
+        $this->rememberSelectionBeforeUpdate($path);
+
         if ($this->isModalFormDataPath($path)) {
             $this->modalStateBeforeUpdate[$path] = $this->tableState->get($path);
         }
@@ -250,6 +252,11 @@ trait WithTable
         if ($path === 'selection.mode') {
             $this->normalizeSelectionMode();
         }
+
+        // Space, a range and the sweep write the list straight through the
+        // entangle; a record the table keeps out of the selection is taken
+        // back out here (InactiveRow::selectable(false)).
+        $this->refuseLockedSelectionWrite();
 
         // What the write invalidates is a decision about the path; doing the
         // resetting is this host's job. See StateInvalidation for the rules,

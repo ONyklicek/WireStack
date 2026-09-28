@@ -663,6 +663,10 @@ class TablePreview extends Component
      *
      * Editable columns on purpose, and all three kinds: each renders its own
      * editor, and each has to refuse for the same reason.
+     *
+     * `gestures()` on purpose too: Space, a Shift range and the sweep reach a
+     * row through the row controller and never touch its inert checkbox, so a
+     * fixture without the keyboard layer cannot show whether they respect it.
      */
     private function inactiveRowsTable(Table $table): Table
     {
@@ -698,6 +702,7 @@ class TablePreview extends Component
             ->searchable(false)
             ->defaultSort('id', 'asc')
             ->stackedOnMobile()
+            ->gestures()
             ->paginated(false);
     }
 

@@ -357,6 +357,39 @@ it('still lets a locked record be unticked once it is in the selection', functio
     expect($component->isRecordSelected('2'))->toBeFalse();
 });
 
+/*
+| Space, a Shift range, the checkbox sweep and mod+click write the list through
+| the entangle and never call toggleRecordSelection() — the server has to hold
+| the same line on that path, or a locked row reaches a bulk action.
+*/
+it('takes a locked record back out of an entangled write', function (string $mode, array $before, array $written, array $expected) {
+    Livewire::test(InvComponent::class, ['lockSelection' => true])
+        ->set('tableState.selection.mode', $mode)
+        ->set('tableState.selection.records', $before)
+        ->set('tableState.selection.records', $written)
+        ->assertSet('tableState.selection.records', $expected);
+})->with([
+    'keys: Space on the locked row' => ['keys', [], ['2'], []],
+    'keys: a range across it' => ['keys', [], ['1', '2'], ['1']],
+    'all: re-including an excluded locked row' => ['all', ['2'], [], ['2']],
+    'all: excluding it stays allowed' => ['all', [], ['2'], ['2']],
+]);
+
+it('lets an entangled write drop a locked record that is already selected', function () {
+    $component = Livewire::test(InvComponent::class)
+        ->set('tableState.selection.records', ['1', '2'])
+        ->set('lockSelection', true)
+        ->set('tableState.selection.records', ['1']);
+
+    $component->assertSet('tableState.selection.records', ['1']);
+});
+
+it('leaves an entangled write alone on a table whose inactive rows stay selectable', function () {
+    Livewire::test(InvComponent::class)
+        ->set('tableState.selection.records', ['1', '2'])
+        ->assertSet('tableState.selection.records', ['1', '2']);
+});
+
 it('runs a row action on an inactive record by default', function () {
     invComponent()->executeTableAction('2', 'archive');
 

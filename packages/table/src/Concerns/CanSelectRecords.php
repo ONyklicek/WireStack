@@ -46,6 +46,14 @@ trait CanSelectRecords
     protected ?int $cachedMatchingCount = null;
 
     /**
+     * `selection.records` as it stood before an entangled write, held between
+     * Livewire's updating and updated hooks. Null when no such write is pending.
+     *
+     * @var list<string>|null
+     */
+    protected ?array $selectionBeforeUpdate = null;
+
+    /**
      * Toggle record selection.
      *
      * In "all" mode the list holds exclusions, so the same toggle reads as
@@ -380,6 +388,65 @@ trait CanSelectRecords
         $record = $table->getDataSource()->resolveRecord($key)?->unwrap();
 
         return $record !== null && $table->isRecordSelectionLocked($record);
+    }
+
+    /**
+     * Snapshot the selection before the browser writes it through the entangle.
+     * Called from `updatingTableState()` for any path under `selection.records`
+     * (Livewire may send the whole list or a single index).
+     */
+    protected function rememberSelectionBeforeUpdate(string $path): void
+    {
+        if ($this->selectionBeforeUpdate !== null || ! $this->isSelectionRecordsPath($path)) {
+            return;
+        }
+
+        $this->selectionBeforeUpdate = array_map('strval', array_values($this->tableState->get('selection.records', [])));
+    }
+
+    /**
+     * The entangled half of the rule {@see toggleRecordSelection()} enforces.
+     *
+     * The client selection component writes `selection.records` directly —
+     * Space, a Shift range, the checkbox sweep and mod+click never call the
+     * toggle endpoint — so a record locked by {@see InactiveRow::selectable()}
+     * reached the selection that way, and a bulk action with it. Only the keys
+     * this write would SELECT are checked: in `keys` mode those are the added
+     * keys, in `all` mode (where the list holds exclusions) the removed ones.
+     * Deselecting stays allowed, as it does for the toggle.
+     */
+    protected function refuseLockedSelectionWrite(): void
+    {
+        $before = $this->selectionBeforeUpdate;
+        $this->selectionBeforeUpdate = null;
+
+        if ($before === null) {
+            return;
+        }
+
+        $after = array_map('strval', array_values($this->tableState->get('selection.records', [])));
+
+        if ($this->selectsAllMatching()) {
+            $reselected = array_diff($before, $after);
+            $locked = array_values(array_filter($reselected, fn (string $key): bool => $this->isSelectionLockedFor($key)));
+            $guarded = $locked === [] ? $after : [...$after, ...$locked];
+        } else {
+            $added = array_diff($after, $before);
+            $locked = array_filter($added, fn (string $key): bool => $this->isSelectionLockedFor($key));
+            $guarded = array_values(array_diff($after, $locked));
+        }
+
+        if ($locked === []) {
+            return;
+        }
+
+        $this->tableState->set('selection.records', $guarded);
+        $this->cachedSelectedRecords = null;
+    }
+
+    private function isSelectionRecordsPath(string $path): bool
+    {
+        return $path === 'selection.records' || str_starts_with($path, 'selection.records.');
     }
 
     /**

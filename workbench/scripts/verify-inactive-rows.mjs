@@ -154,6 +154,52 @@ try {
 
   await shot('02-selection');
 
+  // ── the keyboard cannot select it either ────────────────────────────────
+  // Space and a Shift range reach the row through the row controller, never
+  // through the inert cell — the path the lock used to miss.
+  await eval_(`
+    window.fireKey = (el, key, opts) => el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...(opts||{}) }));
+    window.deadIdx = () => rows().indexOf(dead());
+    sel().selected = [];
+    true;
+  `);
+  await sleep(300);
+  await eval_(`dead().focus()`);
+  await sleep(200);
+  await eval_(`fireKey(dead(), ' ')`);
+  await sleep(400);
+  check('Space on the locked row selects nothing',
+    await eval_('sel().isSelected(dead().dataset.rowKey)') === false,
+    `selected=${await eval_('JSON.stringify(sel().selected)')}`);
+
+  // A range grown across it takes the live row and leaves the locked one out.
+  await eval_(`rows()[deadIdx() - 1].focus()`);
+  await sleep(200);
+  await eval_(`fireKey(rows()[deadIdx() - 1], ' ')`);
+  await sleep(300);
+  await eval_(`fireKey(rows()[deadIdx() - 1], 'ArrowDown', { shiftKey: true })`);
+  await sleep(400);
+  const ranged = JSON.parse(await eval_(`JSON.stringify({
+    above: sel().isSelected(rows()[deadIdx() - 1].dataset.rowKey),
+    dead: sel().isSelected(dead().dataset.rowKey),
+    selected: sel().selected,
+  })`));
+  check('a Shift range across the locked row selects the live row and skips the locked one',
+    ranged.above === true && ranged.dead === false, JSON.stringify(ranged));
+
+  // The server holds the same line for a write the client did not guard: the
+  // entangled list comes back without the locked key after the round trip.
+  await eval_(`sel().selected = [...sel().selected, dead().dataset.rowKey]`);
+  await eval_(`window.Livewire.first().$commit()`);
+  await waitFor(`! sel().selected.includes(dead().dataset.rowKey)`, { timeout: 5000 }).catch(() => {});
+  check('the server takes a locked key back out of the entangled selection',
+    await eval_('sel().selected.includes(dead().dataset.rowKey)') === false,
+    `selected=${await eval_('JSON.stringify(sel().selected)')}`);
+
+  await eval_(`sel().selected = []`);
+  await eval_(`document.activeElement?.blur?.()`);
+  await sleep(400);
+
   // ── the way out is still there ──────────────────────────────────────────
   const actionButton = `dead().querySelector('td:last-child button')`;
   const actionState = JSON.parse(await eval_(`(() => {

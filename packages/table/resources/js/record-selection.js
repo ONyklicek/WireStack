@@ -87,6 +87,17 @@ function wireRecordSelection(config = {}) {
             return this.selectsAll ? ! this.selected.includes(key) : this.selected.includes(key);
         },
 
+        /* Whether a gesture may SELECT this row. `data-page-keys` is the page's
+           keys a selection may take — a row whose inactive state withholds the
+           selection (InactiveRow::selectable(false)) is left out of it — so it
+           is the one list every gesture checks. Its checkbox cell is `inert`,
+           but Space, a Shift range, mod+click and the sweep reach the row
+           through the row controller and never touch the cell. Deselecting is
+           always allowed: a row locked after it was ticked must come back out. */
+        canSelect(key) {
+            return this.pageKeys.includes(key);
+        },
+
         /* Stays false until the selection first changes. A live region
            announces CHANGES to its content, so filling it during boot
            would have a screen reader read out a selection the user has
@@ -113,6 +124,8 @@ function wireRecordSelection(config = {}) {
         },
 
         toggle(key) {
+            if (! this.isSelected(key) && ! this.canSelect(key)) return;
+
             this.selected = this.selected.includes(key)
                 ? this.selected.filter((k) => k !== key)
                 : [...this.selected, key];
@@ -275,7 +288,11 @@ function wireRecordSelection(config = {}) {
 
             const from = Math.min(anchorIdx, activeIdx);
             const to = Math.max(anchorIdx, activeIdx);
-            const range = rows.slice(from, to + 1).map((row) => row.dataset.rowKey);
+            // In keys mode the range selects, so a locked row stays out of it.
+            // In all mode it writes exclusions — deselecting — which a lock allows.
+            const range = rows.slice(from, to + 1)
+                .map((row) => row.dataset.rowKey)
+                .filter((key) => this.selectsAll || this.canSelect(key));
 
             this.selected = [...new Set([...this.baseSelection, ...range])];
             this.queueCommit();
