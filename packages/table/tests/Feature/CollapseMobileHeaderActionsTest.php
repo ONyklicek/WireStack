@@ -32,6 +32,10 @@ class CollapseHeaderActionsHost extends Component
 
     public bool $collapse = false;
 
+    public string|false|null $triggerLabel = null;
+
+    public ?string $triggerIcon = null;
+
     public function table(Table $table): Table
     {
         return $table
@@ -41,7 +45,7 @@ class CollapseHeaderActionsHost extends Component
                 HeaderAction::make('create')->label('New user')->keyboardShortcut('c'),
                 HeaderAction::make('import')->label('Import')->requiresConfirmation(),
             ])
-            ->collapseHeaderActionsOnMobile($this->collapse)
+            ->collapseHeaderActionsOnMobile($this->collapse, label: $this->triggerLabel, icon: $this->triggerIcon)
             ->paginated(false);
     }
 
@@ -132,3 +136,46 @@ it('binds the header action keyboard shortcut once, on the button half only', fu
     // one keypress.
     expect(substr_count($html, 'keydown.c.window'))->toBe(1);
 });
+
+/**
+ * The HTML of the collapsed half alone — the desktop buttons carry labels of
+ * their own, and asserting over the whole page would pass on those.
+ */
+function collapsedHeaderTrigger(string $html): string
+{
+    preg_match('/data-testid="table-header-actions-mobile".*?data-testid="action-group-trigger".*?<\/button>/s', $html, $match);
+
+    return $match[0] ?? '';
+}
+
+it('names the collapsed trigger, so a phone can tell where the actions are', function () {
+    $trigger = collapsedHeaderTrigger(
+        Livewire::test(CollapseHeaderActionsHost::class)->set('collapse', true)->html(),
+    );
+
+    expect($trigger)
+        ->toContain('<span>'.__('wire-table::messages.actions_label').'</span>')
+        // Named, it is the toolbar's primary control rather than a faint gray "⋮".
+        ->toContain('text-primary-600');
+});
+
+it('takes its own label and icon', function (string|false|null $label, ?string $icon, ?string $text, int $svgs) {
+    $trigger = collapsedHeaderTrigger(
+        Livewire::test(CollapseHeaderActionsHost::class)
+            ->set('collapse', true)
+            ->set('triggerLabel', $label)
+            ->set('triggerIcon', $icon)
+            ->html(),
+    );
+
+    $text === null
+        ? expect($trigger)->not->toContain('<span>')
+        : expect($trigger)->toContain("<span>{$text}</span>");
+
+    // A named trigger draws its chevron; the icon, when there is one, sits before it.
+    expect(substr_count($trigger, '<svg'))->toBe($svgs);
+})->with([
+    'custom label' => ['New report', null, 'New report', 1],
+    'label beside an icon' => ['New report', 'plus', 'New report', 2],
+    'icon only, as before' => [false, null, null, 1],
+]);

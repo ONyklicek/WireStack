@@ -642,7 +642,7 @@ Celý stav včetně obou volitelných zámků je v
 ->collapseActionsOnMobile(bool $collapse = true, int $threshold = 3)
 
 // Totéž pro akce hlavičky v toolbaru, pod mobileBreakpoint() tabulky
-->collapseHeaderActionsOnMobile(bool $collapse = true, int $threshold = 2)
+->collapseHeaderActionsOnMobile(bool $collapse = true, int $threshold = 2, string|false|null $label = null, string|Icon|null $icon = null)
 ```
 
 ### Prázdný stav

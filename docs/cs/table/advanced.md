@@ -943,7 +943,7 @@ faktura“, „Import CSV“) celý řádek na šířce telefonu zalomí.
 `collapseHeaderActionsOnMobile()` je sbalí do jednoho menu:
 
 ```php
-$table->collapseHeaderActionsOnMobile()   // jeden spouštěč "⋮" místo tlačítek
+$table->collapseHeaderActionsOnMobile()   // jeden spouštěč "Akce ▾" místo tlačítek
 ```
 
 Na rozdíl od `collapseActionsOnMobile()` k tomu není potřeba `stackedOnMobile()`
@@ -964,6 +964,17 @@ s vyhledávacím polem. Práh nastavíte stejně:
 ```php
 ->collapseHeaderActionsOnMobile(threshold: 3)   // dvě tlačítka nechat vedle sebe, sbalit od tří
 ->collapseHeaderActionsOnMobile(threshold: 1)   // sbalit vždy
+```
+
+Spouštěč je **pojmenovaný** — „Akce“ (`wire-table::messages.actions_label`)
+v barvě značky. Akce hlavičky bývají vstupem do stránky („Nová faktura“) a holé
+„⋮“ se čte jako „něco navíc“, ne jako místo, kde začít — na telefonu ho nikdo
+nenajde. Napište, co za ním je, nebo si nechte původní spouštěč jen s ikonou tam,
+kde akce opravdu vedlejší jsou:
+
+```php
+->collapseHeaderActionsOnMobile(label: 'Nový výkaz', icon: 'plus')   // "+ Nový výkaz ▾"
+->collapseHeaderActionsOnMobile(label: false)                        // jen ikona "⋮", jako dřív
 ```
 
 Počítají se jen akce, které smí uživatel spustit, takže tabulka, jejíž druhá akce

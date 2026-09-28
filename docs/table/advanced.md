@@ -942,7 +942,7 @@ buttons ("New invoice", "Import CSV") push the row into a wrap at phone width.
 `collapseHeaderActionsOnMobile()` folds them into one dropdown:
 
 ```php
-$table->collapseHeaderActionsOnMobile()   // one "⋮" trigger instead of the buttons
+$table->collapseHeaderActionsOnMobile()   // one "Actions ▾" trigger instead of the buttons
 ```
 
 Unlike `collapseActionsOnMobile()` this needs no `stackedOnMobile()` — the
@@ -963,6 +963,17 @@ with the search field. Tune it the same way:
 ```php
 ->collapseHeaderActionsOnMobile(threshold: 3)   // keep two buttons inline, fold from three
 ->collapseHeaderActionsOnMobile(threshold: 1)   // always fold
+```
+
+The trigger is **named** — "Actions" (`wire-table::messages.actions_label`) in the
+brand colour. A toolbar's header actions are usually the page's way in ("New
+invoice"), and a bare "⋮" reads as "more of the same" rather than as the place to
+start, so on a phone nobody finds it. Say what is behind it, or keep the old
+icon-only trigger where the actions really are secondary:
+
+```php
+->collapseHeaderActionsOnMobile(label: 'New report', icon: 'plus')   // "+ New report ▾"
+->collapseHeaderActionsOnMobile(label: false)                        // icon-only "⋮", as before
 ```
 
 Only actions the viewer may run are counted, so a table whose second action is

@@ -9,6 +9,7 @@ use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
+use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireTable\Table;
 
 /**
@@ -59,6 +60,15 @@ trait CollapsesActionsOnMobile
 
     /** Minimum number of header actions before the toolbar collapses them into a dropdown. */
     protected int $collapseHeaderActionsOnMobileThreshold = 2;
+
+    /**
+     * Label of the collapsed toolbar trigger: `null` is the translated "Actions",
+     * `false` an icon-only "⋮".
+     */
+    protected string|false|null $collapseHeaderActionsOnMobileLabel = null;
+
+    /** Icon of the collapsed toolbar trigger; `null` is none beside a label, "⋮" without one. */
+    protected ?string $collapseHeaderActionsOnMobileIcon = null;
 
     /** Behaviour-only record actions also render as buttons in the mobile stacked cards. */
     protected bool $recordActionButtonsOnMobile = true;
@@ -261,8 +271,10 @@ trait CollapsesActionsOnMobile
 
     /**
      * Collapse the toolbar's header actions into one dropdown group on a phone,
-     * so a narrow toolbar shows a single "⋮" trigger instead of several labelled
-     * buttons competing with the search field, the filters and the view menu.
+     * so a narrow toolbar shows a single "Actions" trigger instead of several
+     * labelled buttons competing with the search field, the filters and the view
+     * menu. `$label` renames the trigger (`false` leaves the icon-only "⋮"),
+     * `$icon` puts an icon beside it.
      *
      * Unlike {@see collapseActionsOnMobile()} this needs no `stackedOnMobile()`:
      * the toolbar is the same toolbar at every width, so the collapse is purely a
@@ -275,12 +287,33 @@ trait CollapsesActionsOnMobile
      * the toolbar folds sooner than a card's row actions because it also holds the
      * search field and the view menu). The threshold is clamped to at least 1.
      */
-    public function collapseHeaderActionsOnMobile(bool $collapse = true, int $threshold = 2): static
-    {
+    public function collapseHeaderActionsOnMobile(
+        bool $collapse = true,
+        int $threshold = 2,
+        string|false|null $label = null,
+        string|Icon|null $icon = null,
+    ): static {
         $this->collapseHeaderActionsOnMobile = $collapse;
         $this->collapseHeaderActionsOnMobileThreshold = max(1, $threshold);
+        $this->collapseHeaderActionsOnMobileLabel = $label;
+        $this->collapseHeaderActionsOnMobileIcon = $icon instanceof Icon ? $icon->value() : $icon;
 
         return $this;
+    }
+
+    /**
+     * What the collapsed toolbar trigger says. A toolbar's header actions are
+     * usually the page's way in ("New invoice"), and a bare "⋮" reads as "more
+     * of the same" rather than as the place to start — so the trigger is named
+     * unless the table asks for the icon alone with `label: false`.
+     */
+    public function getMobileHeaderActionsLabel(): ?string
+    {
+        if ($this->collapseHeaderActionsOnMobileLabel === false) {
+            return null;
+        }
+
+        return $this->collapseHeaderActionsOnMobileLabel ?? __('wire-table::messages.actions_label');
     }
 
     public function getCollapseHeaderActionsOnMobileThreshold(): int
@@ -330,10 +363,24 @@ trait CollapsesActionsOnMobile
      */
     public function getMobileHeaderActionGroup(): ActionGroup
     {
-        return $this->buildMobileActionGroup(array_map(
+        $label = $this->getMobileHeaderActionsLabel();
+
+        $group = $this->buildMobileActionGroup(array_map(
             fn (BaseAction $action): BaseAction => (clone $action)->withoutKeyboardShortcut(),
             $this->executableHeaderActions(),
         ));
+
+        if ($label === null) {
+            return $group->icon($this->collapseHeaderActionsOnMobileIcon ?? 'dots-vertical');
+        }
+
+        // A named trigger is the toolbar's primary control, so it takes the
+        // brand colour: the neutral gray an icon-only "⋮" rests in is too faint
+        // for a word somebody has to find.
+        return $group
+            ->label($label)
+            ->icon($this->collapseHeaderActionsOnMobileIcon)
+            ->color('primary');
     }
 
     /**

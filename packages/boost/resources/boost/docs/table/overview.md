@@ -647,7 +647,7 @@ The whole state, including the two optional locks, is in
 ->collapseActionsOnMobile(bool $collapse = true, int $threshold = 3)
 
 // The same for the toolbar's header actions, below the table's mobileBreakpoint()
-->collapseHeaderActionsOnMobile(bool $collapse = true, int $threshold = 2)
+->collapseHeaderActionsOnMobile(bool $collapse = true, int $threshold = 2, string|false|null $label = null, string|Icon|null $icon = null)
 ```
 
 ### Empty State
