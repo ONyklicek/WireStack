@@ -113,7 +113,7 @@
                         data-testid="admin-nav-filter" @wireEl('admin-nav-filter')
                         class="w-full rounded-lg border border-gray-200 bg-gray-50 py-1.5 ps-8 pe-7 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:bg-white focus:ring-1 focus:ring-primary-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:bg-gray-900"
                     >
-                    <kbd x-show="query === ''" class="pointer-events-none absolute inset-y-0 end-2 my-auto h-5 rounded border border-gray-200 px-1.5 text-[11px] leading-5 text-gray-400 dark:border-gray-700">/</kbd>
+                    <kbd x-show="query === ''" class="pointer-events-none absolute inset-y-0 end-2 my-auto h-5 rounded-sm border border-gray-200 px-1.5 text-[11px] leading-5 text-gray-400 dark:border-gray-700">/</kbd>
                 </div>
 
                 {{-- Read by a screen reader as the list changes, in the
