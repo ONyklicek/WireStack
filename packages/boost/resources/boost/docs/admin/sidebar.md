@@ -136,9 +136,12 @@ leaves it looking like itself.
 
 ## Pinned And Recent
 
-Every top-level row carries a pin, shown on hover — a bookmark to pin, a
-struck-out bookmark to unpin, in a slot at the end of the row so it never lies
-over the badge. Pinning puts a copy of the entry in a *Pinned* section above the
+Every top-level row carries a pin, shown while the row is pointed at or
+focused — a bookmark to pin, a struck-out bookmark to unpin. It takes the
+badge's place at the end of the row, the badge giving way meanwhile, so a row
+at rest shows nothing extra: what is pinned is what the section above says. An
+entry in that section offers to unpin it the same way, and one in *Recent* to
+pin it. Pinning puts a copy of the entry in a *Pinned* section above the
 groups — the row itself stays in its group — and the section beside it,
 *Recent*, lists the last pages opened, most recent first, five at most.
 

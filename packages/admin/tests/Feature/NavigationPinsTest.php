@@ -150,7 +150,7 @@ it('shows the icon of what pressing the pin does', function (bool $pinned, strin
     'pinned: bookmark-slash' => [true, 'unpin', 'pin'],
 ]);
 
-it('keeps a slot for the pin so it never lies over the badge', function () {
+it('lets the badge give way to the pin instead of lying under it', function () {
     npStoring();
 
     app(PluginManager::class)->hook(Hook::NavigationBuilding, function (NavigationBuildingPayload $payload) {
@@ -161,8 +161,34 @@ it('keeps a slot for the pin so it never lies over the badge', function () {
 
     $html = Blade::render('<x-wire-admin::sidebar />');
 
+    // No slot kept free: the row is as wide as one without a pin.
     preg_match('/<a[^>]*data-testid="admin-nav-item"[^>]*data-resource="orders"[^>]*>/', $html, $row);
+    expect($row[0])->not->toMatch('/class="[^"]*\\bpe-9\\b/');
 
-    expect($row[0])->toMatch('/class="[^"]*\bpe-9\b/')
-        ->and($html)->toMatch('/data-testid="admin-nav-pin"[^>]*data-resource="orders"[^>]*class="[^"]*\bend-1\.5\b/');
+    // The badge fades while the row is pointed at, and the pin shows then only.
+    expect($html)->toMatch('/<span[^>]*class="[^"]*group-hover\/row:opacity-0[^"]*"[^>]*>\s*<[^>]*data-testid="admin-nav-badge"/')
+        ->toMatch('/data-testid="admin-nav-pin"[^>]*data-resource="orders"[^>]*class="[^"]*opacity-0[^"]*group-hover\/row:opacity-100/');
+});
+
+it('shows a pinned row no differently at rest', function () {
+    npStoring();
+    app(NavigationMemory::class)->pin('orders');
+
+    $html = Blade::render('<x-wire-admin::sidebar />');
+
+    expect($html)->not->toContain("pinned ? 'opacity-100");
+});
+
+it('unpins from the Pinned section and pins from Recent', function () {
+    npStoring();
+    app(NavigationMemory::class)->pin('orders');
+    app(NavigationMemory::class)->remember('invoices');
+
+    Livewire::test(NavigationPins::class)
+        ->assertSeeHtml('data-testid="admin-nav-pinned-toggle"')
+        ->assertSeeHtml('data-testid="admin-nav-recent-toggle"')
+        ->call('toggle', 'orders')
+        ->assertDispatched('wire-admin-pinned', keys: [])
+        ->call('toggle', 'invoices')
+        ->assertDispatched('wire-admin-pinned', keys: ['invoices']);
 });

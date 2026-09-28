@@ -129,9 +129,11 @@ zužuje seznam, na který už se díváte, a nechává ho vypadat jako on sám.
 
 ## Připnuté a nedávné
 
-Každý řádek nejvyšší úrovně nese špendlík, vidět při najetí myší — záložka pro
-připnutí, přeškrtnutá záložka pro odepnutí, ve vlastním místě na konci řádku,
-takže nikdy neleží přes badge. Připnutí dá kopii položky do sekce *Připnuté* nad
+Každý řádek nejvyšší úrovně nese špendlík, vidět při najetí myší nebo fokusu —
+záložka pro připnutí, přeškrtnutá záložka pro odepnutí. Zaujme místo badge na
+konci řádku, badge mezitím ustoupí, takže řádek v klidu neukazuje nic navíc: co
+je připnuté, říká sekce nahoře. Položka v té sekci stejně nabídne odepnutí a
+položka v *Nedávných* připnutí. Připnutí dá kopii položky do sekce *Připnuté* nad
 skupinami — řádek sám zůstane ve své skupině — a sekce vedle, *Nedávné*,
 vypisuje naposledy otevřené stránky, od nejnovější, nejvýš pět.
 

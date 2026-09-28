@@ -2,6 +2,16 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.4.2]
+
+### Changed
+
+- **The pin takes turns with the badge.** Instead of a slot kept free at the end of every row, the pin shows only
+  while the row is pointed at or focused, in the badge's place, and the badge gives way meanwhile. A pinned row no
+  longer shows its bookmark at rest — the *Pinned* section says what is pinned.
+- **Unpin from the Pinned section, pin from Recent.** Each entry there offers its toggle on hover
+  (`admin-nav-pinned-toggle`, `admin-nav-recent-toggle`).
+
 ## [2.4.1]
 
 ### Fixed

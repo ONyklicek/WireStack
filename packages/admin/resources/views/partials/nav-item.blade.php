@@ -46,11 +46,11 @@
      So its own match counts as the branch, and the tint stays with the child. --}}
 @php($hasActiveChild = $hasActiveChild || ($children && $isActive))
 @php($isActive = $isActive && ! $children)
-{{-- Whether this row carries a pin, decided before the row is drawn: the row
-     keeps a slot free at its end for it. The pin is laid over the row, and
-     without the slot it sat on the badge — a pinned row showed its bookmark
-     over its count for good. The rail zeroes the padding (`data-rail-row`),
-     where the pin is hidden anyway. --}}
+{{-- Whether this row carries a pin, decided before the row is drawn: the pin
+     and the badge share the end of the row. At rest the badge is there; while
+     the row is pointed at or holds the focus, the badge gives way and the pin
+     takes its place. Laid over the badge it hid the count, and a slot kept free
+     for it was an empty gap on every row — so the two take turns instead. --}}
 @php($pinKey = $itemKey ?? $item->getKey())
 @php($pinnable = ($pins ?? false) && $pinKey !== null && ! ($inFlyout ?? false))
 @php($ariaCurrent = $active->ariaCurrent($item, $itemKey ?? null))
@@ -172,7 +172,6 @@
             'font-medium text-gray-900 dark:text-gray-100' => $hasActiveChild && ! $isActive,
             'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white' => ! $isActive,
             'cursor-default opacity-60 hover:bg-transparent' => ! $url && ! $children,
-            'pe-9' => $pinnable,
         ])
     >
         {{-- "You are here", against the column's own edge rather than inside the
@@ -229,12 +228,22 @@
 
         <span
             @if (! $isChild) data-rail-hide @endif
-            class="flex-1 truncate text-start"
+            @class([
+                'flex-1 truncate text-start',
+                // With no badge to give way, the label does: a long one is cut
+                // short of the pin rather than running under it.
+                'group-hover/row:pe-7 group-focus-within/row:pe-7' => $pinnable && ! $item->getBadge(),
+            ])
             data-testid="admin-nav-label" @wireEl('admin-nav-label')
         >{{ $item->getLabel() }}</span>
 
         @if ($item->getBadge())
-            <span @if (! $isChild) data-rail-hide @endif>
+            <span
+                @if (! $isChild) data-rail-hide @endif
+                @class([
+                    'transition-opacity group-hover/row:opacity-0 group-focus-within/row:opacity-0' => $pinnable,
+                ])
+            >
                 <x-wire::badge
                     :color="$badgeColor"
                     data-testid="admin-nav-badge"
@@ -280,12 +289,14 @@
             aria-label="{{ __('wire-admin::messages.pin') }}: {{ $item->getLabel() }}"
             data-testid="admin-nav-pin" @wireEl('admin-nav-pin')
             data-resource="{{ $pinKey }}"
-            x-bind:class="pinned ? 'opacity-100 text-primary-600 dark:text-primary-400' : 'opacity-0 text-gray-500'"
             @class([
-                // In the slot the row keeps free (`pe-9`), clear of the badge
-                // and the disclosure arrow. No background of its own: it covers
-                // nothing, and a white square on a tinted row was a patch.
-                'absolute end-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 opacity-0 transition group-hover/row:opacity-100 hover:bg-gray-200/70 hover:text-gray-700 focus:opacity-100 dark:hover:bg-gray-700/70 dark:hover:text-gray-200',
+                // Where the badge is, which gives way to it; left of the
+                // disclosure arrow on a row that has one. Shown only while the
+                // row is pointed at or focused — whether a row is pinned is what
+                // the Pinned section above says, not an icon on every row.
+                'absolute top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 opacity-0 transition group-hover/row:opacity-100 group-focus-within/row:opacity-100 hover:bg-gray-900/5 hover:text-gray-700 focus-visible:opacity-100 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-gray-200',
+                'end-8' => $children,
+                'end-1.5' => ! $children,
             ])
         >
             <span data-pin-icon="pin" x-show="! pinned" @if ($isPinned) style="display: none;" @endif>{!! icon('outline:bookmark', 'h-4 w-4') !!}</span>
