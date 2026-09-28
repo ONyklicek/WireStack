@@ -66,7 +66,7 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        View::addLocation(__DIR__.'/fixtures/views');
+        View::addLocation(__DIR__.'/Fixtures/views');
     }
 
     protected function company(string $slug, ?User $owner = null): Tenant
