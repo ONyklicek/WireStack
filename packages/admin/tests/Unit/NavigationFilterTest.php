@@ -73,7 +73,9 @@ it('announces each count in the translation own plural', function () {
     config()->set('wire-admin.navigation.filter', 'always');
     app()->setLocale('cs');
 
-    $html = html_entity_decode(nfMenu(5));
+    // Laravel 12's @js escapes non-ASCII as \uXXXX and 13's does not; the
+    // browser's JSON.parse reads both the same, so the test does too.
+    $html = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', fn (array $m) => mb_chr((int) hexdec($m[1])), html_entity_decode(nfMenu(5)));
 
     expect($html)->toContain('Odpovídá jedna položka')
         ->toContain('Odpovídají 3 položky')
