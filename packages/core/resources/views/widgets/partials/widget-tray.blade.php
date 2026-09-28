@@ -39,7 +39,7 @@
     @else
         @foreach($available as $trayGroupName => $trayWidgets)
             @if($trayGroupName !== '')
-                <p class="mb-2 mt-3 text-xs font-medium text-gray-400 first:mt-0 dark:text-gray-500">{{ $trayGroupName }}</p>
+                <p class="mb-2 mt-3 text-xs font-medium text-gray-500 dark:text-gray-400 first:mt-0">{{ $trayGroupName }}</p>
             @endif
 
             <div class="flex flex-wrap gap-2">
@@ -55,7 +55,7 @@
                          x-sort:item="@js($trayWidget->getKey())"
                          data-testid="widget-tray-{{ $trayWidget->getKey() }}"
                          class="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-700 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                        <span x-sort:handle class="cursor-grab text-gray-400">
+                        <span x-sort:handle class="cursor-grab text-gray-500 dark:text-gray-400">
                             {!! icon('outline:bars-3', 'w-4 h-4', 'h-4 w-4') !!}
                         </span>
 
@@ -66,21 +66,21 @@
                         <span class="flex flex-col">
                             <span>{{ $trayWidget->getHeading() ?? $trayWidget->getKey() }}</span>
                             @if($trayWidget->getDescription())
-                                <span class="text-xs text-gray-400 dark:text-gray-500" data-testid="widget-tray-description-{{ $trayWidget->getKey() }}">{{ $trayWidget->getDescription() }}</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400" data-testid="widget-tray-description-{{ $trayWidget->getKey() }}">{{ $trayWidget->getDescription() }}</span>
                             @endif
                         </span>
 
                         {{-- The size it will arrive at, said out loud: a widget
                              that only looks right at 2×2 should not be a
                              surprise once it is on the grid. --}}
-                        <span class="text-xs text-gray-400 dark:text-gray-500">{{ $trayWidth }}×{{ $trayHeight }}</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ $trayWidth }}×{{ $trayHeight }}</span>
 
                         @unless($atWidgetLimit)
                         <button type="button"
                                 wire:click="{{ $trayWidget->getPlaceExpression() }}"
                                 data-testid="widget-add-{{ $trayWidget->getKey() }}"
                                 aria-label="{{ __('wire-core::messages.widget_add') }}"
-                                class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                class="rounded-sm p-0.5 text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
                             {!! icon('outline:plus', 'w-4 h-4', 'h-4 w-4') !!}
                         </button>
                         @endunless

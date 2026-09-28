@@ -98,7 +98,7 @@
                         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors duration-150"
                         :class="step === {{ $index }}
                             ? 'bg-primary-600 text-white'
-                            : (step > {{ $index }} ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400')"
+                            : (step > {{ $index }} ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300')"
                     >
                         {{ $index + 1 }}
                     </span>

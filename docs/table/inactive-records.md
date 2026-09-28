@@ -101,13 +101,21 @@ deliberate and it is the point of the feature: a browser does not inherit
 `text-decoration` into an `<input>`, and an untouched input is exactly the thing
 a reader would otherwise take for editable.
 
-**`color()` tints the whole row** through the same resolver `rowColor()` uses —
+The row's actions are left unstruck, on the table and on the phone card alike.
+They are what stays live on an inactive row, and a struck "Reactivate" reads as
+the one thing you cannot do.
+
+**`color()` tints the whole row, gray by default.** Gray sets the row apart
+without claiming anything a hue would, so it stays quiet on a table where most
+rows are cancelled. The tint goes through the same resolver `rowColor()` uses —
 the canonical row-tint owner — so an inactive row and a coloured row cannot
-drift apart. Any semantic role or raw hue works, and the tinted row gets its
-own same-hue hover and drops the neutral striping:
+drift apart. Any semantic role or raw hue works, `null` leaves the row
+untinted, and the tinted row gets its own same-hue hover and drops the neutral
+striping:
 
 ```php
 ->rowInactive($when, fn (InactiveRow $row) => $row->color('danger'))
+->rowInactive($when, fn (InactiveRow $row) => $row->color(null))       // no tint
 ```
 
 An explicit `rowColor()` on the table always wins over it, which is what lets a
@@ -266,7 +274,7 @@ class ListOrders extends Component
 ```php
 ->strikethrough(bool $condition = true)  // strike the row's text and its inputs — default false
 ->dim(bool $condition = true)            // mute the row's text — default true
-->color(?string $color)                  // 'danger'|'warning'|… or any hue; null = no tint — default null
+->color(?string $color)                  // 'danger'|'warning'|… or any hue; null = no tint — default 'gray'
 ->editing(bool $allowed = true)          // may an inactive row still be edited — default false
 ->selectable(bool $allowed = true)       // may it be ticked — default true
 ->actions(bool $allowed = true)          // are its row actions operable — default true

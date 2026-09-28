@@ -192,7 +192,7 @@ it('still emits the primitive markup it now resolves as a cached string', functi
 
     $editable = Livewire::test(PrimEditableComponent::class)->html();
     expect($editable)->toContain('animate-spin')       // saving spinner
-        ->and($editable)->toContain('text-green-500');  // success check
+        ->and($editable)->toContain('text-green-600');  // success check
 });
 
 it('routes the row-action spinner through the cached primitive, gated per record', function () {

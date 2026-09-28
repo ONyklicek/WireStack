@@ -93,7 +93,7 @@
                         @if($field->isReorderable())
                             <td class="px-2 py-2 align-top">
                                 <div class="flex items-center gap-1">
-                                    <button type="button" data-sortable-handle data-testid="form-repeater-{{ $statePath }}-reorder-{{ $index }}" aria-label="{{ __('Reorder') }}" class="cursor-grab text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                    <button type="button" data-sortable-handle data-testid="form-repeater-{{ $statePath }}-reorder-{{ $index }}" aria-label="{{ __('Reorder') }}" class="cursor-grab text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
                                         {!! icon('outline:bars-3', 'w-4 h-4', 'w-4 h-4') !!}
                                     </button>
 
@@ -105,7 +105,7 @@
                                             data-testid="form-repeater-{{ $statePath }}-move-up-{{ $index }}"
                                             aria-label="{{ __('Move up') }}"
                                             @disabled($index === 0)
-                                            class="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:hover:text-gray-400 dark:hover:text-gray-300"
+                                            class="text-gray-500 hover:text-gray-600 disabled:opacity-30 disabled:hover:text-gray-400 dark:hover:text-gray-300"
                                         >{!! icon('outline:chevron-up', 'w-3 h-3') !!}</button>
                                         <button
                                             type="button"
@@ -113,7 +113,7 @@
                                             data-testid="form-repeater-{{ $statePath }}-move-down-{{ $index }}"
                                             aria-label="{{ __('Move down') }}"
                                             @disabled($index === $itemCount - 1)
-                                            class="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:hover:text-gray-400 dark:hover:text-gray-300"
+                                            class="text-gray-500 hover:text-gray-600 disabled:opacity-30 disabled:hover:text-gray-400 dark:hover:text-gray-300"
                                         >{!! icon('outline:chevron-down', 'w-3 h-3') !!}</button>
                                     </span>
                                 </div>
@@ -150,7 +150,7 @@
                                     wire:click="cloneRepeaterItem('{{ $statePath }}', {{ $index }}, '{{ $field->getItemKeyName() }}')"
                                     data-testid="form-repeater-{{ $statePath }}-clone-{{ $index }}"
                                     aria-label="{{ __('Duplicate') }}"
-                                    class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                    class="p-1 text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                                 >
                                     {!! icon('duplicate', 'w-4 h-4', 'w-4 h-4') !!}
                                 </button>
@@ -165,7 +165,7 @@
                                         wire:click="removeRepeaterItem('{{ $statePath }}', {{ $index }})"
                                         data-testid="form-repeater-{{ $statePath }}-remove-{{ $index }}"
                                         aria-label="{{ __('Remove') }}"
-                                        class="p-1 text-red-400 hover:text-red-600"
+                                        class="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                     >
                                         {!! icon('trash', 'w-4 h-4', 'w-4 h-4') !!}
                                     </button>

@@ -19,7 +19,7 @@
                     <button type="button"
                             x-ref="trigger"
                             x-on:click="toggle()"
-                            class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
+                            class="rounded-lg p-1.5 text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
                             aria-label="{{ __('Options') }}">
                         {!! icon('ellipsis-horizontal', 'w-4 h-4', 'h-5 w-5') !!}
                     </button>

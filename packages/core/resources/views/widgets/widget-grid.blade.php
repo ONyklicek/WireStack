@@ -115,7 +115,7 @@
                          and a reader comparing it with its filtered neighbours
                          needs to know it is not one of them. --}}
                     @if($filtersNarrowed && $widget->isIgnoringDashboardFilters())
-                        <p class="mb-1 text-[11px] font-medium text-gray-400 dark:text-gray-500"
+                        <p class="mb-1 text-[11px] font-medium text-gray-500 dark:text-gray-400"
                            data-testid="widget-unfiltered-{{ $widget->getKey() }}" @wireEl('widget-unfiltered')>
                             {{ __('wire-core::messages.widget_ignores_filters') }}
                         </p>

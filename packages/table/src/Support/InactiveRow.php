@@ -61,11 +61,20 @@ final class InactiveRow
         'actions' => 'actions',
     ];
 
+    /**
+     * The strike's weight and colour on a form control. A 1px line in the text's
+     * own colour disappears into dimmed glyphs, so the line is 2px and one step
+     * darker than the text it crosses. A control draws its own decoration
+     * rather than inheriting the cell's, so it is named here as well.
+     */
+    private const CONTROL_STRIKE = '[&_:is(input,select,textarea)]:decoration-2 '
+        .'[&_:is(input,select,textarea)]:decoration-gray-800 dark:[&_:is(input,select,textarea)]:decoration-gray-200';
+
     private bool $strikethrough = false;
 
     private bool $dim = true;
 
-    private ?string $color = null;
+    private ?string $color = 'gray';
 
     private bool $editing = false;
 
@@ -73,7 +82,7 @@ final class InactiveRow
 
     private bool $actions = true;
 
-    /** The shipped look: dimmed, not struck through, no tint, editing locked. */
+    /** The shipped look: dimmed, tinted gray, not struck through, editing locked. */
     public static function make(): self
     {
         return new self;
@@ -148,9 +157,9 @@ final class InactiveRow
 
     /**
      * Tint an inactive row with a semantic role or raw hue (`'danger'`,
-     * `'gray'`, …), resolved by the canonical row-tint owner. Null for no tint,
-     * which is the default — a colour on every cancelled row is loud on a table
-     * where most rows are cancelled.
+     * `'gray'`, …), resolved by the canonical row-tint owner. Gray is the
+     * default: it sets the row apart without the claim a hue makes, and stays
+     * quiet on a table where most rows are cancelled. Null for no tint.
      */
     public function color(?string $color): static
     {
@@ -242,36 +251,49 @@ final class InactiveRow
      * the strike has to be applied to the inputs themselves — which is precisely
      * where an inactive row has to show it, since those are the values a reader
      * would otherwise take for editable.
+     *
+     * The strike skips the actions cell (`data-row-actions`). A struck button
+     * reads as cancelled, and the actions are exactly what stays live on an
+     * inactive row, "Reactivate" first among them.
      */
     public function rowClasses(): string
     {
         $classes = [];
 
         if ($this->strikethrough) {
-            $classes[] = '[&>td]:line-through [&_input]:line-through [&_select]:line-through [&_textarea]:line-through';
+            $classes[] = '[&>td:not([data-row-actions])]:line-through [&_input]:line-through [&_select]:line-through [&_textarea]:line-through '
+                .'[&>td:not([data-row-actions])]:decoration-2 [&>td:not([data-row-actions])]:decoration-gray-800 '
+                .'dark:[&>td:not([data-row-actions])]:decoration-gray-200 '
+                .self::CONTROL_STRIKE;
         }
 
         if ($this->dim) {
-            $classes[] = '[&>td]:text-gray-400 dark:[&>td]:text-gray-500';
+            $classes[] = '[&>td]:text-gray-600 dark:[&>td]:text-gray-400';
         }
 
         return implode(' ', $classes);
     }
 
     /**
-     * The same look for the stacked card, where the text is the card's own and
-     * inherits normally — only the form controls still need naming.
+     * The same look for the stacked card. Text dims by inheriting from the card,
+     * but the strike cannot sit on the card itself: a decoration carries into
+     * every block inside it and no descendant can take it off, the action
+     * buttons included. It goes on the regions marked `data-card-content`
+     * instead, which hold the record's values and none of its actions.
      */
     public function cardClasses(): string
     {
         $classes = [];
 
         if ($this->strikethrough) {
-            $classes[] = 'line-through [&_input]:line-through [&_select]:line-through [&_textarea]:line-through';
+            $classes[] = '[&_[data-card-content]]:line-through [&_input]:line-through [&_select]:line-through [&_textarea]:line-through '
+                .'[&_[data-card-content]]:decoration-2 [&_[data-card-content]]:decoration-gray-800 '
+                .'dark:[&_[data-card-content]]:decoration-gray-200 '
+                .self::CONTROL_STRIKE;
         }
 
         if ($this->dim) {
-            $classes[] = 'text-gray-400 dark:text-gray-500';
+            $classes[] = 'text-gray-600 dark:text-gray-400';
         }
 
         return implode(' ', $classes);

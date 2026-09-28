@@ -41,7 +41,7 @@
           role="button"
           tabindex="0"
           aria-label="{{ __('wire-core::messages.widget_reorder') }}"
-          class="cursor-grab p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          class="cursor-grab p-0.5 text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
         {!! icon('outline:bars-3', 'w-4 h-4', 'h-4 w-4') !!}
     </span>
 
@@ -70,7 +70,7 @@
                 @disabled($narrower === null)
                 data-testid="widget-narrower-{{ $editKey }}"
                 aria-label="{{ __('wire-core::messages.widget_narrower') }}"
-                class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
+                class="rounded-sm p-0.5 text-gray-500 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
             {!! icon('outline:chevron-left', 'w-4 h-4', 'h-4 w-4') !!}
         </button>
         <button type="button"
@@ -78,7 +78,7 @@
                 @disabled($wider === null)
                 data-testid="widget-wider-{{ $editKey }}"
                 aria-label="{{ __('wire-core::messages.widget_wider') }}"
-                class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
+                class="rounded-sm p-0.5 text-gray-500 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
             {!! icon('outline:chevron-right', 'w-4 h-4', 'h-4 w-4') !!}
         </button>
         <button type="button"
@@ -86,7 +86,7 @@
                 @disabled($shorter === null)
                 data-testid="widget-shorter-{{ $editKey }}"
                 aria-label="{{ __('wire-core::messages.widget_shorter') }}"
-                class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
+                class="rounded-sm p-0.5 text-gray-500 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
             {!! icon('outline:chevron-up', 'w-4 h-4', 'h-4 w-4') !!}
         </button>
         <button type="button"
@@ -94,7 +94,7 @@
                 @disabled($taller === null)
                 data-testid="widget-taller-{{ $editKey }}"
                 aria-label="{{ __('wire-core::messages.widget_taller') }}"
-                class="rounded-sm p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
+                class="rounded-sm p-0.5 text-gray-500 hover:text-gray-600 disabled:opacity-30 dark:hover:text-gray-300">
             {!! icon('outline:chevron-down', 'w-4 h-4', 'h-4 w-4') !!}
         </button>
     @endif
@@ -103,7 +103,7 @@
             wire:click="{{ $widget->getRemoveExpression() }}"
             data-testid="widget-remove-{{ $editKey }}"
             aria-label="{{ __('wire-core::messages.widget_remove') }}"
-            class="ml-0.5 rounded-sm p-0.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+            class="ml-0.5 rounded-sm p-0.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400">
         {!! icon('outline:x-mark', 'w-4 h-4', 'h-4 w-4') !!}
     </button>
 </div>

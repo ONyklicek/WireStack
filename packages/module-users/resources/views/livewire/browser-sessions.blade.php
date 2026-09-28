@@ -37,7 +37,7 @@
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
                                     {{ $session->ipAddress }},
                                     @if ($session->current)
-                                        <span class="font-semibold text-green-600 dark:text-green-400" data-testid="browser-session-current">
+                                        <span class="font-semibold text-green-700 dark:text-green-400" data-testid="browser-session-current">
                                             {{ __('wire-module-users::messages.browser_sessions_this_device') }}
                                         </span>
                                     @else

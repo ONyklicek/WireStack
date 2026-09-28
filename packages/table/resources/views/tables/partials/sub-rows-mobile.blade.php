@@ -97,7 +97,7 @@
                 @endif
             </div>
         @empty
-            <div class="px-4 py-4 text-center text-xs italic text-gray-400 dark:text-gray-500">
+            <div class="px-4 py-4 text-center text-xs italic text-gray-500 dark:text-gray-400">
                 {{ __('wire-table::messages.no_sub_rows') }}
             </div>
         @endforelse

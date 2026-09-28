@@ -36,11 +36,11 @@
     <a href="{{ $url }}" @if($action->shouldOpenUrlInNewTab()) target="_blank" @endif class="{{ $classes }}"
        role="menuitem" data-testid="menu-action-{{ $action->getName() }}">
         @if($icon)
-            {!! $action->renderIconSvg($icon, 'mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300') !!}
+            {!! $action->renderIconSvg($icon, 'mr-3 h-4 w-4 text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-300') !!}
         @endif
         <span class="flex-1">{{ $label }}</span>
         @if($shortcutLabel)
-            <kbd class="ml-auto pl-2 text-[10px] font-mono text-gray-400">{{ $shortcutLabel }}</kbd>
+            <kbd class="ml-auto pl-2 text-[10px] font-mono text-gray-500 dark:text-gray-400">{{ $shortcutLabel }}</kbd>
         @endif
     </a>
 @elseif($disabled)
@@ -69,11 +69,11 @@
             data-testid="menu-action-{{ $actionName }}"
     >
         @if($icon)
-            {!! $action->renderIconSvg($icon, 'mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300') !!}
+            {!! $action->renderIconSvg($icon, 'mr-3 h-4 w-4 text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-300') !!}
         @endif
         <span class="flex-1">{{ $label }}</span>
         @if($shortcutLabel)
-            <kbd class="ml-auto pl-2 text-[10px] font-mono text-gray-400">{{ $shortcutLabel }}</kbd>
+            <kbd class="ml-auto pl-2 text-[10px] font-mono text-gray-500 dark:text-gray-400">{{ $shortcutLabel }}</kbd>
         @endif
     </button>
 @endif

@@ -193,7 +193,7 @@
                     <span @class([
                         'flex h-5 w-5 items-center justify-center rounded-sm text-[10px] font-semibold',
                         'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200' => $isActive,
-                        'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' => ! $isActive,
+                        'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' => ! $isActive,
                     ])>{{ mb_strtoupper(mb_substr((string) $item->getLabel(), 0, 1)) }}</span>
                 @endif
 
@@ -231,7 +231,7 @@
             <span
                 data-rail-hide
                 x-bind:class="expanded || '-rotate-90'"
-                class="text-gray-400 transition"
+                class="text-gray-500 dark:text-gray-400 transition"
             >{!! icon('outline:chevron-down', 'h-4 w-4 rtl:-scale-x-100') !!}</span>
         @endif
     </{{ $children ? 'button' : 'a' }}>
@@ -254,7 +254,7 @@
             aria-label="{{ __('wire-admin::messages.pin') }}: {{ $item->getLabel() }}"
             data-testid="admin-nav-pin" @wireEl('admin-nav-pin')
             data-resource="{{ $itemKey }}"
-            x-bind:class="pinned ? 'opacity-100 text-primary-600 dark:text-primary-400' : 'opacity-0 text-gray-400'"
+            x-bind:class="pinned ? 'opacity-100 text-primary-600 dark:text-primary-400' : 'opacity-0 text-gray-500'"
             @class([
                 'absolute top-1/2 -translate-y-1/2 rounded-md bg-white p-1 opacity-0 transition group-hover/row:opacity-100 hover:text-gray-700 focus:opacity-100 dark:bg-gray-900 dark:hover:text-gray-200',
                 // Clear of the disclosure arrow on a row that has one.
@@ -326,7 +326,7 @@
                                 data-testid="admin-nav-flyout-label" @wireEl('admin-nav-flyout-label')
                                 @class([
                                     'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold tracking-wider uppercase',
-                                    'text-gray-400 dark:text-gray-500' => ! $isActive,
+                                    'text-gray-500 dark:text-gray-400' => ! $isActive,
                                     'text-primary-600 dark:text-primary-400' => $isActive,
                                     'transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700/70 dark:hover:text-gray-300' => (bool) $url,
                                 ])

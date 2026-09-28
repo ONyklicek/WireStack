@@ -119,7 +119,7 @@
                                             <span class="contents" x-html="item.iconHtml"></span>
                                             <span class="flex-1" x-text="item.label"></span>
                                             <template x-if="item.shortcut">
-                                                <kbd class="ml-auto pl-2 text-[10px] font-mono text-gray-400" x-text="item.shortcut"></kbd>
+                                                <kbd class="ml-auto pl-2 text-[10px] font-mono text-gray-500 dark:text-gray-400" x-text="item.shortcut"></kbd>
                                             </template>
                                         </a>
                                     </template>
@@ -135,7 +135,7 @@
                                             <span class="contents" x-html="item.iconHtml"></span>
                                             <span class="flex-1" x-text="item.label"></span>
                                             <template x-if="item.shortcut">
-                                                <kbd class="ml-auto pl-2 text-[10px] font-mono text-gray-400" x-text="item.shortcut"></kbd>
+                                                <kbd class="ml-auto pl-2 text-[10px] font-mono text-gray-500 dark:text-gray-400" x-text="item.shortcut"></kbd>
                                             </template>
                                         </button>
                                     </template>

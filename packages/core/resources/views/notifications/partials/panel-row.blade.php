@@ -76,7 +76,7 @@
                 type="button"
                 wire:click="markAsUnread('{{ $item['id'] }}')"
                 data-testid="notification-mark-unread" @wireEl('notification-mark-unread')
-                class="rounded-sm p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 sm:p-1 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                class="rounded-sm p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-600 sm:p-1 dark:hover:bg-gray-700 dark:hover:text-gray-300"
                 aria-label="{{ __('wire-core::messages.mark_unread') }}"
             >{!! icon('outline:arrow-uturn-left', 'w-4 h-4') !!}</button>
         @else
@@ -84,7 +84,7 @@
                 type="button"
                 wire:click="markAsRead('{{ $item['id'] }}')"
                 data-testid="notification-mark-read" @wireEl('notification-mark-read')
-                class="rounded-sm p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 sm:p-1 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                class="rounded-sm p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-600 sm:p-1 dark:hover:bg-gray-700 dark:hover:text-gray-300"
                 aria-label="{{ __('wire-core::messages.mark_read') }}"
             >{!! icon('outline:check', 'w-4 h-4') !!}</button>
         @endif
@@ -93,7 +93,7 @@
             type="button"
             wire:click="delete('{{ $item['id'] }}')"
             data-testid="notification-delete" @wireEl('notification-delete')
-            class="rounded-sm p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 sm:p-1 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+            class="rounded-sm p-2 text-gray-500 hover:bg-red-50 hover:text-red-700 sm:p-1 dark:hover:bg-red-900/30 dark:hover:text-red-400"
             aria-label="{{ __('wire-core::messages.delete_notification') }}"
         >{!! icon('outline:trash', 'w-4 h-4') !!}</button>
     </div>

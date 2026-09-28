@@ -49,7 +49,7 @@
                     type="button"
                     x-on:click="toggle({{ $node->id }})"
                     data-testid="media-folder-twisty" @wireEl('media-folder-twisty')
-                    class="shrink-0 rounded-sm p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                    class="shrink-0 rounded-sm p-0.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
                     :aria-expanded="isOpen({{ $node->id }}) ? 'true' : 'false'"
                 >
                     <span class="sr-only">{{ $node->name }}</span>
@@ -77,7 +77,7 @@
                  you cannot read the names in, and a tree with no numbers is one
                  you have to open every branch of to find anything. --}}
             <span @class([
-                'shrink-0 font-mono text-[10px] text-gray-400 tabular-nums',
+                'shrink-0 font-mono text-[10px] text-gray-600 dark:text-gray-400 tabular-nums',
                 // The count steps aside for the two buttons on hover — but only
                 // where there are two buttons to step aside for.
                 'group-hover:hidden' => ! $picking,
@@ -100,7 +100,7 @@
                             if (name) $wire.renameFolder({{ $node->id }}, name);
                         "
                         data-testid="media-folder-rename" @wireEl('media-folder-rename')
-                        class="rounded-sm p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                        class="rounded-sm p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
                         title="{{ __('wire-module-media::messages.rename') }}"
                     >{!! icon('outline:pencil-square', 'h-3.5 w-3.5') !!}</button>
 
@@ -108,7 +108,7 @@
                         type="button"
                         wire:click="deleteFolder({{ $node->id }})"
                         data-testid="media-folder-delete" @wireEl('media-folder-delete')
-                        class="rounded-sm p-1 text-gray-400 hover:text-red-600"
+                        class="rounded-sm p-1 text-gray-500 dark:text-gray-400 hover:text-red-600"
                         title="{{ __('wire-module-media::messages.delete') }}"
                     >{!! icon('outline:trash', 'h-3.5 w-3.5') !!}</button>
                 </span>

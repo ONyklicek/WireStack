@@ -64,7 +64,7 @@
                     @endforeach
 
                     @if($isCollapsible)
-                        <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <button type="button" class="text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
                             {!! icon('outline:chevron-down', 'w-4 h-4', 'w-5 h-5 transition-transform', '', ['x-bind:class' => "{ 'rotate-180': open }"]) !!}
                         </button>
                     @endif

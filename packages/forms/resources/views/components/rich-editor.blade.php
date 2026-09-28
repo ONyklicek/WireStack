@@ -211,7 +211,7 @@
                 'min-h-[10rem] px-4 py-3 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800',
                 'focus:outline-none',
                 'prose prose-sm dark:prose-invert max-w-none',
-                '[&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-gray-400 [&:empty]:before:dark:text-gray-500',
+                '[&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-gray-500 dark:[&:empty]:before:text-gray-400',
                 'disabled:opacity-50' => $field->isDisabled(),
             ])
     ></div>

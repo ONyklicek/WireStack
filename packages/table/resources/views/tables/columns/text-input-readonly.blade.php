@@ -12,5 +12,5 @@
         @if($prefix){{ $prefix }}@endif{{ $value }}@if($suffix){{ $suffix }}@endif
     </span>
 @else
-    <span class="text-sm text-gray-400 dark:text-gray-500 italic">{{ $placeholder }}</span>
+    <span class="text-sm text-gray-500 dark:text-gray-400 italic">{{ $placeholder }}</span>
 @endif

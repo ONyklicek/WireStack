@@ -126,7 +126,7 @@
                     aria-label="{{ __('Open clock') }}"
                     @click="open = ! open"
                     @if($field->isDisabled() || $field->isReadOnly()) disabled @endif
-                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 disabled:pointer-events-none transition-colors duration-150"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-600 dark:hover:text-gray-200 disabled:pointer-events-none transition-colors duration-150"
             >
                 {!! icon('outline:clock', 'h-4 w-4') !!}
             </button>
@@ -202,7 +202,7 @@
                             :data-active="isSelected(slot.value)"
                             :data-testid="'form-time-{{ $field->getStatePath() }}-slot-' + slot.value"
                             :class="{
-                                'bg-primary-500 text-white hover:bg-primary-600': isSelected(slot.value),
+                                'bg-primary-600 text-white hover:bg-primary-700': isSelected(slot.value),
                                 'opacity-40 cursor-not-allowed': slot.disabled,
                                 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700': ! slot.disabled && ! isSelected(slot.value),
                             }"

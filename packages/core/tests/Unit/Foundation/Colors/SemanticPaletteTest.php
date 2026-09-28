@@ -31,7 +31,7 @@ it('re-points a role, and the classes follow on every surface', function () {
 
     expect(SemanticPalette::hue('success'))->toBe('teal')
         ->and(PaletteProbe::getBadgeColorClasses('success'))->toContain('bg-teal-100')
-        ->and(PaletteProbe::getTextColorClasses('success'))->toContain('text-teal-600')
+        ->and(PaletteProbe::getTextColorClasses('success'))->toContain('text-teal-700')
         ->and(PaletteProbe::getSolidBgClass('success'))->toBe('bg-teal-600');
 });
 
@@ -66,7 +66,7 @@ it('moves every surface when info is re-pointed, the modal icon included', funct
 
     expect(SemanticPalette::hue('info'))->toBe('teal')
         ->and(PaletteProbe::getModalIconBgClass('info'))->toContain('bg-teal-100')
-        ->and(PaletteProbe::getModalIconTextClass('info'))->toContain('text-teal-600')
+        ->and(PaletteProbe::getModalIconTextClass('info'))->toContain('text-teal-700')
         ->and(PaletteProbe::getAlertColorClasses('info'))->toContain('bg-teal-50');
 });
 

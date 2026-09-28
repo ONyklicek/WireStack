@@ -519,7 +519,7 @@ class PollColumn extends Column
         }
 
         $color = $this->getStateColor($record, $state);
-        $colorClass = $color ? $this->getColorClass($color) : 'text-gray-400';
+        $colorClass = $color ? $this->getColorClass($color) : 'text-gray-500 dark:text-gray-400';
 
         return app(IconManager::class)->render($icon, 'w-4 h-4 inline-block', $colorClass);
     }

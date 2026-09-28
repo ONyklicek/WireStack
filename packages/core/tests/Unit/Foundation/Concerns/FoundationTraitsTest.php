@@ -305,9 +305,9 @@ it('resolves canonical choice-surface color bundles per sub-surface', function (
         ->and($primary['solid'])->toContain('peer-checked:bg-primary-600')
         ->and($primary['input'])->toContain('text-primary-600');
 
-    expect(Concerns\HasColor::getChoiceColorClasses('success')['solid'])->toContain('peer-checked:bg-emerald-600')
+    expect(Concerns\HasColor::getChoiceColorClasses('success')['solid'])->toContain('peer-checked:bg-emerald-700')
         ->and(Concerns\HasColor::getChoiceColorClasses('danger')['card'])->toContain('peer-checked:border-red-500')
-        ->and(Concerns\HasColor::getChoiceColorClasses('info')['text'])->toContain('peer-checked:text-cyan-600')
+        ->and(Concerns\HasColor::getChoiceColorClasses('info')['text'])->toContain('peer-checked:text-cyan-700')
         ->and(Concerns\HasColor::getChoiceColorClasses('unknown')['solid'])->toContain('peer-checked:bg-primary-600');
 });
 

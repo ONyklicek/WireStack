@@ -21,7 +21,7 @@
                 <label for="{{ $field->getId() }}" class="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {{ $field->getLabel() }}
                     @if($field->isRequired())
-                        <span class="text-red-500">*</span>
+                        <span class="text-red-600 dark:text-red-400">*</span>
                     @endif
                 </label>
             @endif

@@ -16,4 +16,4 @@
     ])>{{ $item['message'] }}</p>
 @endif
 
-<p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{{ $item['when'] }}</p>
+<p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $item['when'] }}</p>

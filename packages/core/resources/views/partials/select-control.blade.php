@@ -179,8 +179,8 @@
             \NyonCode\WireCore\Foundation\Support\MobileSheet::touchTrigger($mobileBreakpoint) => $touch,
         ])
     >
-        <span x-text="selectedLabel || placeholder" :class="{ 'text-gray-400': !selectedLabel }"></span>
-        {!! icon('chevron-down', 'w-4 h-4', 'w-4 h-4 text-gray-400 shrink-0 transition-transform duration-150', '', [':class' => "{ 'rotate-180': open }"]) !!}
+        <span x-text="selectedLabel || placeholder" :class="{ 'text-gray-500 dark:text-gray-400': !selectedLabel }"></span>
+        {!! icon('chevron-down', 'w-4 h-4', 'w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0 transition-transform duration-150', '', [':class' => "{ 'rotate-180': open }"]) !!}
     </button>
 
     {{-- Floating listbox from sm up; bottom sheet on a phone (max-sm: classes,
@@ -239,7 +239,7 @@
                     placeholder="{{ $searchPrompt }}"
                     aria-label="{{ $searchPrompt }}"
                     data-testid="select-search" @wireEl('select-search')
-                    class="w-full rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:border-primary-500 focus:ring-primary-500 transition-colors duration-150"
+                    class="w-full rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:border-primary-500 focus:ring-primary-500 transition-colors duration-150 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     x-ref="searchInput"
                 />
             </div>
@@ -252,7 +252,7 @@
                             type="button"
                             @click="clear()"
                             data-testid="select-clear" @wireEl('select-clear')
-                            class="w-full px-3 py-2 text-left text-sm text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
+                            class="w-full px-3 py-2 text-left text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 transition-colors duration-150"
                         >
                             {{ $placeholder }}
                         </button>

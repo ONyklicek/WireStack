@@ -77,7 +77,7 @@ it('seats the icon in a tile tinted by the same role', function () {
     // Ground and ink are one decision: the tile carries the colour and the glyph
     // inherits it, so the two cannot drift apart.
     expect($ada)->toContain('bg-emerald-100')
-        ->and($ada)->toContain('text-emerald-600')
+        ->and($ada)->toContain('text-emerald-700')
         ->and($grace)->toContain('bg-red-100')
         ->and($grace)->toContain('rounded-[10px]');
 });

@@ -24,7 +24,7 @@
                     @if ($group->hasVisibleLabel())
                         <p
                             data-testid="workspace-group-heading"
-                            class="flex items-center gap-2 px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-400"
+                            class="flex items-center gap-2 px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-500"
                         >
                             @if ($group->getIcon())
                                 {!! icon($group->getIcon(), 'h-4 w-4') !!}

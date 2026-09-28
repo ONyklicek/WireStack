@@ -761,7 +761,7 @@ it('combines a row color tint with an additional custom row class', function () 
 it('falls back to a gray tint for an unknown row color', function () {
     $table = Table::make()->rowColor('not-a-color');
 
-    expect($table->getRowClasses(rowRecord([]), 0))->toContain('bg-gray-50');
+    expect($table->getRowClasses(rowRecord([]), 0))->toContain('bg-gray-100');
 });
 
 it('tints the mobile card the same as the desktop row', function () {

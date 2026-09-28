@@ -175,7 +175,7 @@ it('renders base text cell with styling classes through the text partial', funct
     $html = TextColumn::make('name')->textColor('danger')->renderCell(partialRecord(['name' => 'Alice']));
 
     expect($html)->toContain('<span')
-        ->and($html)->toContain('text-red-600')
+        ->and($html)->toContain('text-red-700')
         ->and($html)->toContain('Alice');
 });
 
@@ -334,7 +334,7 @@ it('honours max, color and the numeric value on a rating column', function () {
         ->renderCell(partialRecord(['score' => 2]));
 
     expect(substr_count($html, '<svg'))->toBe(3)
-        ->and($html)->toContain('text-red-600')
+        ->and($html)->toContain('text-red-700')
         ->and($html)->toContain('>2<');
 });
 

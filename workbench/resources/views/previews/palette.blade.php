@@ -24,8 +24,8 @@
     <header class="mb-6">
         <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Full Tailwind palette</h1>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Every hue rendered through the canonical <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">HasColor</code>
-            resolvers — the same <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">-&gt;color('…')</code> value now
+            Every hue rendered through the canonical <code class="rounded bg-gray-100 px-1 dark:bg-gray-700 dark:text-gray-200">HasColor</code>
+            resolvers — the same <code class="rounded bg-gray-100 px-1 dark:bg-gray-700 dark:text-gray-200">-&gt;color('…')</code> value now
             resolves on every surface, not just badges.
         </p>
     </header>
@@ -33,7 +33,7 @@
     <div class="overflow-x-auto">
         <table class="w-full border-collapse text-sm">
             <thead>
-                <tr class="text-left text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                <tr class="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     <th class="py-2 pr-4 font-medium">color</th>
                     <th class="px-3 py-2 font-medium">solid</th>
                     <th class="px-3 py-2 font-medium">soft</th>

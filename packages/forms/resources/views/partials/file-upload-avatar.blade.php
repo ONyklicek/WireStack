@@ -41,7 +41,7 @@
             />
         @else
             <span class="flex h-full w-full items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
-                {!! icon('outline:user', 'w-4 h-4', 'h-8 w-8 text-gray-400') !!}
+                {!! icon('outline:user', 'w-4 h-4', 'h-8 w-8 text-gray-500 dark:text-gray-400') !!}
             </span>
         @endif
 

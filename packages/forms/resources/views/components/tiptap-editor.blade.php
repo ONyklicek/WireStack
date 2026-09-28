@@ -109,7 +109,11 @@
     .tiptap-content .ProseMirror td, .tiptap-content .ProseMirror th { border: 1px solid #d1d5db; padding: .375rem .5rem; vertical-align: top; min-width: 1.5rem; }
     .tiptap-content .ProseMirror th { background: #f9fafb; font-weight: 600; }
     .tiptap-content .ProseMirror .selectedCell { background: #eff6ff; }
-    .dark .tiptap-content .ProseMirror code { background: #374151; color: #f87171; }
+    .dark .tiptap-content .ProseMirror code { background: #374151; color: #fca5a5; }
+    .dark .tiptap-content .ProseMirror pre code { background: none; color: inherit; }
+    .dark .tiptap-content .ProseMirror blockquote { border-left-color: #4b5563; color: #9ca3af; }
+    .dark .tiptap-content .ProseMirror a { color: #60a5fa; }
+    .dark .tiptap-content .ProseMirror mark { color: #111827; }
     .dark .tiptap-content .ProseMirror td, .dark .tiptap-content .ProseMirror th { border-color: #4b5563; }
     .dark .tiptap-content .ProseMirror th { background: #374151; }
     .dark .tiptap-content .ProseMirror .selectedCell { background: #1e3a5f; }
@@ -222,7 +226,7 @@
 
     {{-- ─── Character count footer ──────────────────────────────────── --}}
     @if($field->getMaxLength())
-        <div class="flex justify-end px-3 py-1 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-300 dark:border-gray-600 text-xs text-gray-400 dark:text-gray-500">
+        <div class="flex justify-end px-3 py-1 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-300 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-400">
             <span x-text="characterCount + ' / {{ $field->getMaxLength() }}'"></span>
         </div>
     @endif

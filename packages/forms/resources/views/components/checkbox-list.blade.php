@@ -84,11 +84,11 @@
 
         @if($field->isBulkToggleable())
             <div class="flex gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <button type="button" @click="selectAll()" data-testid="form-checklist-{{ $field->getStatePath() }}-select-all" class="text-xs text-primary-600 hover:text-primary-700 font-medium">
+                <button type="button" @click="selectAll()" data-testid="form-checklist-{{ $field->getStatePath() }}-select-all" class="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium">
                     {{ $field->getSelectAllLabel() }}
                 </button>
                 <span class="text-gray-300 dark:text-gray-600">|</span>
-                <button type="button" @click="deselectAll()" data-testid="form-checklist-{{ $field->getStatePath() }}-deselect-all" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 font-medium">
+                <button type="button" @click="deselectAll()" data-testid="form-checklist-{{ $field->getStatePath() }}-deselect-all" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-medium">
                     {{ $field->getDeselectAllLabel() }}
                 </button>
             </div>

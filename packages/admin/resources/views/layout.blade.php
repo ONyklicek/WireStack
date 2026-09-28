@@ -342,7 +342,7 @@
                                 <span class="hidden max-w-32 truncate text-sm text-gray-700 sm:block dark:text-gray-200">
                                     {{ auth()->user()->name ?? auth()->user()->email ?? '' }}
                                 </span>
-                                {!! icon('outline:chevron-down', 'h-4 w-4 text-gray-400') !!}
+                                {!! icon('outline:chevron-down', 'h-4 w-4 text-gray-500 dark:text-gray-400') !!}
                             </button>
                         </x-slot:trigger>
 

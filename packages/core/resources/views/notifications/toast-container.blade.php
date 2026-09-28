@@ -258,7 +258,7 @@
                             @click="remove(toast.id)"
                             data-testid="toast-dismiss" @wireEl('toast-dismiss')
                             aria-label="{{ __('Close') }}"
-                            class="flex-shrink-0 rounded-lg p-1 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
+                            class="flex-shrink-0 rounded-lg p-1 text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
                         >
                             {!! icon('outline:x-mark', 'h-4 w-4') !!}
                             <span class="sr-only">{{ __('Close') }}</span>

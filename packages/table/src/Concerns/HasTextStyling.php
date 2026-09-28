@@ -104,7 +104,7 @@ trait HasTextStyling
             // it keeps its dedicated shade; every real color goes through the
             // canonical Foundation palette so hues stay consistent everywhere.
             $classes[] = $this->textColor === 'muted'
-                ? 'text-gray-400 dark:text-gray-500'
+                ? 'text-gray-500 dark:text-gray-400'
                 : self::getTextColorClasses($this->textColor);
         }
 

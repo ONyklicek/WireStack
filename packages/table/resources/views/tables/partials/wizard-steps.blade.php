@@ -12,7 +12,7 @@
                     'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors',
                     'bg-gray-900 text-white dark:bg-white dark:text-gray-900' => $isCurrent,
                     'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-200' => $isDone,
-                    'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500' => ! $isCurrent && ! $isDone,
+                    'bg-gray-100 text-gray-600 dark:text-gray-400 dark:bg-gray-800' => ! $isCurrent && ! $isDone,
                 ])>
                     @if($isDone)
                         {!! icon('check', 'w-4 h-4', 'h-4 w-4') !!}
@@ -25,7 +25,7 @@
                     <span @class([
                         'truncate text-sm font-medium',
                         'text-gray-900 dark:text-gray-100' => $isCurrent || $isDone,
-                        'text-gray-400 dark:text-gray-500' => ! $isCurrent && ! $isDone,
+                        'text-gray-500 dark:text-gray-400' => ! $isCurrent && ! $isDone,
                     ])>{{ $step['label'] ?? '' }}</span>
                     @if(! empty($step['description']))
                         <span class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $step['description'] }}</span>

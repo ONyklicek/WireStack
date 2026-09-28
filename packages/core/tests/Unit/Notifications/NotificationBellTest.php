@@ -220,7 +220,7 @@ it('tints each row by what kind of notification it is', function () {
     // Resolved in PHP, because the view may not branch on domain state — see
     // NotificationStyle for the mapping itself.
     expect($html)->toContain('text-red-500')
-        ->and($html)->toContain('text-emerald-500');
+        ->and($html)->toContain('text-emerald-600');
 });
 
 /*

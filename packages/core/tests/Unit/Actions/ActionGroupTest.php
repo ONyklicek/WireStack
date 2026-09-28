@@ -88,7 +88,7 @@ it('uses canonical icon button colors in trigger classes', function () {
     $group = ActionGroup::make([])->color('success');
 
     expect($group->getTriggerClasses())
-        ->toContain('text-emerald-600 hover:bg-emerald-50 focus:ring-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-900/20')
+        ->toContain('text-emerald-700 hover:bg-emerald-50 focus:ring-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-900/20')
         ->and($group->getTriggerClasses())->toContain('p-1.5');
 });
 

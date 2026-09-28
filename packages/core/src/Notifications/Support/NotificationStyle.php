@@ -44,10 +44,10 @@ final class NotificationStyle
     public static function for(?string $type): self
     {
         return match ($type) {
-            'success' => new self('success', 'success', 'outline:check-circle', 'text-emerald-500 dark:text-emerald-400'),
+            'success' => new self('success', 'success', 'outline:check-circle', 'text-emerald-600 dark:text-emerald-400'),
             'error' => new self('error', 'danger', 'outline:x-circle', 'text-red-500 dark:text-red-400'),
-            'warning' => new self('warning', 'warning', 'outline:exclamation-triangle', 'text-amber-500 dark:text-amber-400'),
-            default => new self('info', 'info', 'outline:information-circle', 'text-cyan-500 dark:text-cyan-400'),
+            'warning' => new self('warning', 'warning', 'outline:exclamation-triangle', 'text-amber-600 dark:text-amber-400'),
+            default => new self('info', 'info', 'outline:information-circle', 'text-cyan-600 dark:text-cyan-400'),
         };
     }
 

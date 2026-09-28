@@ -140,12 +140,12 @@
                                  get wrong, so it is spelled out rather than
                                  hidden behind one badge. --}}
                             @if(! $active && $allowed !== false)
-                                <span class="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                                <span class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400"
                                       data-testid="lab-gesture-{{ $key }}-note">allowed</span>
                             @endif
                             <span class="rounded px-1.5 py-0.5 font-mono text-xs {{ $active
                                     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
-                                    : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' }}"
+                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' }}"
                                   data-testid="lab-gesture-{{ $key }}">{{ $active ? 'on' : 'off' }}</span>
                         </dd>
                     </div>

@@ -527,7 +527,7 @@
             <span
                 @wireEl('tour-progress')
                 x-text="progress"
-                class="text-xs tabular-nums text-gray-400 dark:text-gray-500"
+                class="text-xs tabular-nums text-gray-500 dark:text-gray-400"
             ></span>
 
             <div class="flex items-center gap-2">

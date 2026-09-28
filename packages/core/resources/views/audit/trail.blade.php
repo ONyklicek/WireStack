@@ -73,7 +73,7 @@
 
                 {{-- Metadata (IP) --}}
                 @if(!empty($entry->metadata['ip']))
-                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         IP: {{ $entry->metadata['ip'] }}
                     </p>
                 @endif

@@ -12,7 +12,7 @@
     @foreach (['pinned' => $pinned, 'recent' => $recent] as $section => $entries)
         @if ($entries !== [])
             <div class="mb-5" data-testid="admin-nav-{{ $section }}">
-                <p data-rail-hide class="px-3 py-1.5 text-[11px] font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+                <p data-rail-hide class="px-3 py-1.5 text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {{ __('wire-admin::messages.'.$section) }}
                 </p>
                 <ul class="mt-1 space-y-0.5">

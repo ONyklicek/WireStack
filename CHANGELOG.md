@@ -99,6 +99,17 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **Upgrading: the one-time code flows need their group placed** — `Route::wire('auth-codes')` in
   `routes/web.php`, or an `auth-codes` entry. wire-module-auth no longer loads `routes/codes.php` itself.
   `wire:install` adds the line; without it every code flow is a 404, whatever its switch says.
+- **An inactive row is gray by default.** `InactiveRow::color()` now defaults to `'gray'` instead of `null`,
+  so a cancelled or archived record reads as set apart even with nothing configured. `->color(null)` (or
+  `'color' => null` under `wire-table.inactive_rows`) restores the untinted row, and an explicit `rowColor()`
+  still wins. The canonical gray tint is stronger too: `bg-gray-100 dark:bg-gray-700/40`, where
+  `bg-gray-50 dark:bg-gray-900/20` was nearly invisible on white and darker than the card in dark mode. That
+  also changes `rowColor('gray')` and any unknown hue, which falls back to gray. The dimmed text on an
+  inactive row is `gray-600`, so it keeps 4.5:1 on the tint. A strikethrough is 2px and one step darker
+  than the text it crosses (`gray-800`, `gray-200` in dark mode), because a 1px line in the text's own
+  colour disappeared into dimmed glyphs.
+  The strike also leaves the row's actions alone (the table's actions cell and the phone card's buttons),
+  so an action that stays live, such as "Reactivate", no longer reads as cancelled.
 
 ### Fixed
 
@@ -118,6 +129,25 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **The open phone drawer let Tab walk on through the page behind it**, and closing it left focus where it
   was. It now keeps focus while open, starts on the first menu row, and hands focus back to the button that
   opened it. `<main>` takes `tabindex="-1"`, so the skip link moves focus instead of only scrolling.
+- **Text that was hard to read in dark mode.** A solid button switched to a lighter shade in dark mode and kept
+  its white label, which left most colours below WCAG's 4.5:1 (primary 3.8:1, success 2.5:1, warning 1.7:1).
+  Deep hues now keep their `-600` background. Bright ones (emerald, green, teal, cyan, sky, lime, amber, yellow,
+  orange) draw a `-400` background with a `gray-950` label, and a modal's submit button does the same. The
+  muted `dark:text-gray-500` (3.0–3.7:1) is now `gray-400` everywhere it is text: sidebar group headings,
+  "5 days ago" in list widgets and notifications, dropdown section headings, counters, empty states and
+  placeholders. Separators, icons and disabled items keep their dimmer shade. Also fixed: the notification
+  badge on the bell, the required-field asterisk, "Select all" in a checkbox list, input prefixes and suffixes,
+  wizard step numbers, the notification row menu (it now uses the same `gray-800` surface as every other
+  dropdown) and the media manager's secondary text.
+- **Text that was hard to read in light mode.** The same audit in light mode found the mirror image. A bright
+  hue's white label fell below 4.5:1 at `-600` (success 3.7:1, warning 2.2:1). Emerald, green, teal, cyan and
+  sky buttons now use `-700`, and amber, yellow, orange and lime use `-400` with a `gray-950` label. This covers
+  solid buttons, modal submits and choice buttons. Coloured text, outlined, ghost and icon buttons follow:
+  bright hues and red, rose, pink and fuchsia (which failed on their own `-50` tint) are `-700`, and
+  `ChartPalette::fillText()` and its safelist match. The muted `text-gray-400` (2.6:1 on white) is now
+  `text-gray-500 dark:text-gray-400` wherever it is text or an icon-only control: placeholders, timestamps,
+  headings, empty states, drag handles, move/remove buttons, picker toggles and the sortable handle. The
+  required-field asterisk is `red-600`, and toast icons are `-600`.
 
 ## [2.3.2]
 

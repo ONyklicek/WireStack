@@ -78,7 +78,7 @@
         >
             <div class="pointer-events-none text-center" wire:loading.remove
                  wire:target="{{ $field->getWireModelAttribute() }}">
-                {!! icon('outline:arrow-up-tray', 'w-4 h-4', 'mx-auto h-10 w-10 text-gray-400', '', [':class' => "{ 'text-primary-500': isDragging }"]) !!}
+                {!! icon('outline:arrow-up-tray', 'w-4 h-4', 'mx-auto h-10 w-10 text-gray-500 dark:text-gray-400', '', [':class' => "{ 'text-primary-500': isDragging }"]) !!}
                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
                     <span class="font-medium text-primary-600 dark:text-primary-400">{{ __('Click to upload') }}</span>
                     {{ __('or drag and drop') }}
@@ -137,7 +137,7 @@
                                 <p class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{{ $preview['name'] }}</p>
                             @endif
                             @unless ($preview['stored'])
-                                <p class="text-xs text-gray-400 dark:text-gray-500">{{ __('Pending upload') }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Pending upload') }}</p>
                             @endunless
                         </div>
 
@@ -145,7 +145,7 @@
                             <button
                                     type="button"
                                     wire:click="removeUploadedFile('{{ $field->getStatePath() }}', {{ (int) $preview['index'] }})" data-testid="form-file-{{ $field->getStatePath() }}-remove-{{ (int) $preview['index'] }}"
-                                    class="shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors duration-150"
+                                    class="shrink-0 p-1 text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors duration-150"
                             >
                                 {!! icon('x-mark', 'w-4 h-4', 'h-4 w-4') !!}
                                 <span class="sr-only">{{ __('Remove') }}</span>

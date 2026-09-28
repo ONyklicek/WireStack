@@ -103,7 +103,7 @@ it('resolves the text color class through the canonical palette', function () {
     $coloured = TextEntry::make('status')->color(Color::Success)->record(['status' => 'x']);
     $plain = TextEntry::make('status')->record(['status' => 'x']);
 
-    expect($coloured->getTextColorClass())->toBe('text-emerald-600 dark:text-emerald-400')
+    expect($coloured->getTextColorClass())->toBe('text-emerald-700 dark:text-emerald-400')
         ->and($plain->getTextColorClass())->toBe('text-gray-900 dark:text-white');
 });
 

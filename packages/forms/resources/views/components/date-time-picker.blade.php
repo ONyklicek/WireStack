@@ -156,7 +156,7 @@
                     aria-label="{{ $hasDate ? __('Open calendar') : __('Open clock') }}"
                     @click="open = ! open"
                     @if($field->isDisabled() || $field->isReadOnly()) disabled @endif
-                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 disabled:pointer-events-none transition-colors duration-150"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-600 dark:hover:text-gray-200 disabled:pointer-events-none transition-colors duration-150"
             >
                 {!! icon($hasDate ? 'outline:calendar' : 'outline:clock', 'h-4 w-4') !!}
             </button>
@@ -246,7 +246,7 @@
                                 'text-gray-900 dark:text-white': cell.current && !isDisabled(cell.date),
                                 'text-gray-300 dark:text-gray-600': !cell.current,
                                 'opacity-40 cursor-not-allowed': cell.current && isDisabled(cell.date),
-                                'bg-primary-500 text-white hover:bg-primary-600': isSelected(cell.date),
+                                'bg-primary-600 text-white hover:bg-primary-700': isSelected(cell.date),
                                 'ring-1 ring-primary-500': isToday(cell.date) && !isSelected(cell.date),
                                 'hover:bg-gray-100 dark:hover:bg-gray-700': cell.current && !isDisabled(cell.date) && !isSelected(cell.date),
                             }"
@@ -274,7 +274,7 @@
                         </button>
                     </div>
 
-                    <span class="text-gray-400 text-sm font-medium">:</span>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm font-medium">:</span>
 
                     {{-- Minutes --}}
                     <div class="flex flex-col items-center">
@@ -291,7 +291,7 @@
                     </div>
 
                     @if($hasSeconds)
-                        <span class="text-gray-400 text-sm font-medium">:</span>
+                        <span class="text-gray-500 dark:text-gray-400 text-sm font-medium">:</span>
 
                         {{-- Seconds --}}
                         <div class="flex flex-col items-center">

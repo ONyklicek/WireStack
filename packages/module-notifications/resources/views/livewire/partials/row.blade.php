@@ -69,7 +69,7 @@
             :aria-expanded="open ? 'true' : 'false'"
             data-testid="notification-menu" @wireEl('notification-menu')
             aria-haspopup="true"
-            class="rounded-md p-2.5 text-gray-400 opacity-100 transition hover:bg-gray-100 hover:text-gray-600 focus-visible:opacity-100 sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            class="rounded-md p-2.5 text-gray-500 opacity-100 transition hover:bg-gray-100 hover:text-gray-600 focus-visible:opacity-100 sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 dark:hover:bg-gray-700 dark:hover:text-gray-200"
             aria-label="{{ __('wire-module-notifications::messages.more_actions') }}"
         >{!! icon('outline:ellipsis-horizontal', 'w-4 h-4') !!}</button>
 
@@ -77,22 +77,22 @@
             x-show="open"
             x-cloak
             x-transition.opacity.duration.120ms
-            class="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-600 dark:bg-gray-700"
+            class="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
             role="menu"
         >
             @if($item['read'])
-                <button type="button" role="menuitem" wire:click="markAsUnread('{{ $item['id'] }}')" x-on:click="open = false" data-testid="notification-mark-unread" @wireEl('notification-mark-unread') class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
+                <button type="button" role="menuitem" wire:click="markAsUnread('{{ $item['id'] }}')" x-on:click="open = false" data-testid="notification-mark-unread" @wireEl('notification-mark-unread') class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
                     {!! icon('outline:arrow-uturn-left', 'w-4 h-4') !!}{{ __('wire-module-notifications::messages.mark_unread') }}
                 </button>
             @else
-                <button type="button" role="menuitem" wire:click="markAsRead('{{ $item['id'] }}')" x-on:click="open = false" data-testid="notification-mark-read" @wireEl('notification-mark-read') class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
+                <button type="button" role="menuitem" wire:click="markAsRead('{{ $item['id'] }}')" x-on:click="open = false" data-testid="notification-mark-read" @wireEl('notification-mark-read') class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
                     {!! icon('outline:check', 'w-4 h-4') !!}{{ __('wire-core::messages.mark_read') }}
                 </button>
             @endif
 
-            <hr class="my-1 border-gray-100 dark:border-gray-600">
+            <hr class="my-1 border-gray-100 dark:border-gray-700">
 
-            <button type="button" role="menuitem" wire:click="delete('{{ $item['id'] }}')" x-on:click="open = false" data-testid="notification-delete" @wireEl('notification-delete') class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">
+            <button type="button" role="menuitem" wire:click="delete('{{ $item['id'] }}')" x-on:click="open = false" data-testid="notification-delete" @wireEl('notification-delete') class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">
                 {!! icon('outline:trash', 'w-4 h-4') !!}{{ __('wire-core::messages.delete_notification') }}
             </button>
         </div>

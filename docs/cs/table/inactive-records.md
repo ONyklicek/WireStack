@@ -100,13 +100,21 @@ Přeškrtnutí dosáhne i na formulářové prvky řádku, nejen na texty. Je to
 je to smysl celé věci: prohlížeč nedědí `text-decoration` do `<input>` a
 nedotčený input je přesně to, co by čtenář jinak považoval za editovatelné.
 
-**`color()` obarví celý řádek** stejným resolverem, jaký používá `rowColor()` —
+Akce řádku přeškrtnuté nejsou, v tabulce ani na kartě v telefonu. Právě ony na
+neaktivním řádku zůstávají funkční a přeškrtnuté „Reactivate“ by se četlo jako
+jediná věc, kterou udělat nejde.
+
+**`color()` obarví celý řádek, výchozí je šedá.** Šedá řádek odliší, aniž by
+tvrdila cokoli, co tvrdí barevný odstín, takže zůstává tichá i v tabulce, kde je
+stornovaná většina řádků. Tón jde stejným resolverem, jaký používá `rowColor()` —
 kanonickým vlastníkem tónování řádků — takže se neaktivní a obarvený řádek
-nemohou rozejít. Funguje libovolná sémantická role i syrový odstín a tónovaný
-řádek dostane vlastní hover ve stejném odstínu a ztratí neutrální pruhování:
+nemohou rozejít. Funguje libovolná sémantická role i syrový odstín, `null`
+nechá řádek bez tónu a tónovaný řádek dostane vlastní hover ve stejném odstínu
+a ztratí neutrální pruhování:
 
 ```php
 ->rowInactive($when, fn (InactiveRow $row) => $row->color('danger'))
+->rowInactive($when, fn (InactiveRow $row) => $row->color(null))       // bez tónu
 ```
 
 Explicitní `rowColor()` na tabulce nad ním vždy vyhraje, což je právě to, co
@@ -264,7 +272,7 @@ class ListOrders extends Component
 ```php
 ->strikethrough(bool $condition = true)  // přeškrtnout texty řádku i jeho inputy — výchozí false
 ->dim(bool $condition = true)            // ztlumit texty řádku — výchozí true
-->color(?string $color)                  // 'danger'|'warning'|… nebo libovolný odstín; null = bez tónu — výchozí null
+->color(?string $color)                  // 'danger'|'warning'|… nebo libovolný odstín; null = bez tónu — výchozí 'gray'
 ->editing(bool $allowed = true)          // smí se neaktivní řádek dál editovat — výchozí false
 ->selectable(bool $allowed = true)       // smí se zaškrtnout — výchozí true
 ->actions(bool $allowed = true)          // jsou jeho akce ovladatelné — výchozí true

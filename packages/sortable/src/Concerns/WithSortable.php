@@ -73,7 +73,7 @@ trait WithSortable
                 'title' => $title,
                 'activeClass' => $this->isReordering
                     ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
-                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700',
+                    : 'text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700',
                 // Reordering is finished by the same control that started it, so
                 // the toggle says which of the two it is about to do.
                 'icon' => $this->isReordering ? 'outline:check' : 'outline:bars-3',

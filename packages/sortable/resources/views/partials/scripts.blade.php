@@ -51,14 +51,14 @@
         height: 1.75rem;
         border-radius: 0.375rem;
         cursor: grab;
-        color: rgb(156 163 175);
+        color: rgb(107 114 128);
         transition: color 150ms ease, background-color 150ms ease;
         user-select: none;
         -webkit-user-select: none;
     }
 
     .wire-sortable-handle:hover {
-        color: rgb(107 114 128);
+        color: rgb(55 65 81);
         background-color: rgb(243 244 246);
     }
 

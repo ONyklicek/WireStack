@@ -22,7 +22,7 @@
         @if($showGrid)
             @foreach([100, 75, 50, 25, 0] as $line)
                 <div class="absolute inset-x-0 flex items-center" style="bottom: {{ $line }}%">
-                    <span class="-ml-1 w-9 shrink-0 pr-2 text-right text-[10px] leading-none text-slate-300 dark:text-slate-600">{{ $line }}%</span>
+                    <span class="-ml-1 w-9 shrink-0 pr-2 text-right text-[10px] leading-none text-slate-500 dark:text-slate-400">{{ $line }}%</span>
                     <span class="h-px flex-1 border-t border-dashed border-slate-100 dark:border-slate-700"></span>
                 </div>
             @endforeach

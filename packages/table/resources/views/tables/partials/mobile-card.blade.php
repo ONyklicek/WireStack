@@ -48,7 +48,7 @@
         aria-label="{{ __('wire-table::messages.select_row') }}"
         class="h-5 w-5 rounded-sm border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-gray-800 touch-manipulation"
 ><span class="sr-only">{{ __('wire-table::messages.select_row') }}</span></label>@endif<div
-        class="flex-1 min-w-0"
+        class="flex-1 min-w-0" data-card-content
 ><div class="flex items-baseline gap-3">@if($cardTitle)<div
         class="min-w-0 font-medium text-gray-900 dark:text-white truncate text-base"
 >{!! $title !!}</div>@endif@if($cardMetric)<div
@@ -61,7 +61,7 @@
 >{!! $meta !!}</div>@endif</div>@if($hasMobileActions && $collapseMobileActions)<div
         class="flex items-center justify-end flex-shrink-0 -mr-1{{ $inertActions ? ' opacity-40' : '' }}"@if($inertActions) inert=""@endif
 >{!! $groupActions !!}</div>@endif</div>@if($hasDetails)<dl
-        class="{{ $detailsClass }}"
+        class="{{ $detailsClass }}" data-card-content
 >{!! $details !!}</dl>@endif@if($hasMobileActions && ! $collapseMobileActions)<div
         class="{{ $actionsClass }}{{ $inertActions ? ' opacity-40' : '' }}"@if($inertActions) inert=""@endif
         data-testid="table-card-actions" @wireEl('table-card-actions')

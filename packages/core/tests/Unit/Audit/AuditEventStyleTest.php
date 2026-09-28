@@ -27,16 +27,16 @@ it('degrades to the neutral treatment for an event nobody mapped', function () {
 
 it('renders the timeline chrome through the palette', function () {
     expect(AuditEventStyle::iconBgClass('created'))->toContain('bg-emerald-100')
-        ->and(AuditEventStyle::iconTextClass('created'))->toContain('text-emerald-600')
+        ->and(AuditEventStyle::iconTextClass('created'))->toContain('text-emerald-700')
         ->and(AuditEventStyle::iconBgClass('deleted'))->toContain('bg-red-100')
-        ->and(AuditEventStyle::iconTextClass('bulk_action'))->toContain('text-amber-600');
+        ->and(AuditEventStyle::iconTextClass('bulk_action'))->toContain('text-amber-700');
 });
 
 it('draws an update in the info role, not a hue of its own', function () {
     // The timeline drew this blue before the map existed, which was `info`
     // rendering as one colour here and cyan everywhere else. One role, one hue.
     expect(AuditEventStyle::iconBgClass('updated'))->toContain('bg-cyan-100')
-        ->and(AuditEventStyle::iconTextClass('updated'))->toContain('text-cyan-600');
+        ->and(AuditEventStyle::iconTextClass('updated'))->toContain('text-cyan-700');
 });
 
 it('moves the timeline when an application re-points a role', function () {
@@ -45,7 +45,7 @@ it('moves the timeline when an application re-points a role', function () {
     config()->set('wire-core.colors.success', 'teal');
 
     expect(AuditEventStyle::iconBgClass('created'))->toContain('bg-teal-100')
-        ->and(AuditEventStyle::iconTextClass('created'))->toContain('text-teal-600');
+        ->and(AuditEventStyle::iconTextClass('created'))->toContain('text-teal-700');
 });
 
 it('lists every mapped type and its role', function () {

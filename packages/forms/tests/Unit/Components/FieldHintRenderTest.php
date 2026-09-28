@@ -40,12 +40,12 @@ it('renders the hint icon it was given', function () {
 it('colors the hint through the canonical palette', function () {
     $html = renderField(TextInput::make('price')->hint('Excluding VAT')->hintColor('danger'));
 
-    expect($html)->toContain('text-red-600');
+    expect($html)->toContain('text-red-700');
 });
 
 it('accepts a Color enum for the hint color', function () {
     expect(renderField(TextInput::make('price')->hint('x')->hintColor(Color::Red)))
-        ->toContain('text-red-600');
+        ->toContain('text-red-700');
 });
 
 it('resolves a closure hint icon and color', function () {
@@ -56,14 +56,14 @@ it('resolves a closure hint icon and color', function () {
             ->hintColor(fn () => 'warning')
     );
 
-    expect($html)->toContain('<svg')->toContain('text-amber-600');
+    expect($html)->toContain('<svg')->toContain('text-amber-700');
 });
 
 it('falls back to the muted hint color when none is set', function () {
     $html = renderField(TextInput::make('price')->hint('Excluding VAT'));
 
     expect($html)->toContain('text-gray-500')
-        ->and($html)->not->toContain('text-red-600');
+        ->and($html)->not->toContain('text-red-700');
 });
 
 it('renders no hint row at all when there is no hint', function () {
@@ -77,7 +77,7 @@ it('reaches a different field type through the same wrapper', function () {
         Select::make('role')->options(['a' => 'A'])->hint('Pick one')->hintColor('danger')
     );
 
-    expect($html)->toContain('Pick one')->toContain('text-red-600');
+    expect($html)->toContain('Pick one')->toContain('text-red-700');
 });
 
 // ─── Outer extra attributes ──────────────────────────────────────────────────

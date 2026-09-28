@@ -33,7 +33,7 @@
                     @input="updateKey(index, $event.target.value)"
                     @if(!$field->isKeyEditable()) readonly @endif
                     placeholder="{{ $field->getKeyPlaceholder() }}"
-                    class="border-0 border-r border-gray-200 dark:border-gray-700 ring-0 shadow-none focus:ring-inset focus:ring-1 focus:ring-primary-500 bg-transparent px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none @if(!$field->isKeyEditable()) bg-gray-50 dark:bg-gray-700/30 text-gray-500 @endif"
+                    class="border-0 border-r border-gray-200 dark:border-gray-700 ring-0 shadow-none focus:ring-inset focus:ring-1 focus:ring-primary-500 bg-transparent px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none @if(!$field->isKeyEditable()) bg-gray-50 dark:bg-gray-700/30 text-gray-500 @endif"
                 />
                 <input
                     type="text"
@@ -42,11 +42,11 @@
                     @if($field->isDisabled()) disabled @endif
                     @if($field->isReadOnly()) readonly @endif
                     placeholder="{{ $field->getValuePlaceholder() }}"
-                    class="border-0 border-r border-gray-200 dark:border-gray-700 ring-0 shadow-none focus:ring-inset focus:ring-1 focus:ring-primary-500 bg-transparent px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none disabled:opacity-50"
+                    class="border-0 border-r border-gray-200 dark:border-gray-700 ring-0 shadow-none focus:ring-inset focus:ring-1 focus:ring-primary-500 bg-transparent px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none disabled:opacity-50"
                 />
                 @if($field->isDeletable())
                     <button type="button" @click="removePair(index)" :data-testid="'form-keyvalue-{{ $field->getStatePath() }}-remove-' + index"
-                        class="flex items-center justify-center w-9 h-full text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+                        class="flex items-center justify-center w-9 h-full text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors">
                         {!! icon('x-mark', 'w-4 h-4', 'w-4 h-4') !!}
                     </button>
                 @else
@@ -56,7 +56,7 @@
         </template>
 
         <template x-if="pairs.length === 0">
-            <div class="px-3 py-4 text-center text-sm text-gray-400 dark:text-gray-500">
+            <div class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                 {{ __('No entries') }}
             </div>
         </template>

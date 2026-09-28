@@ -55,7 +55,7 @@
     <span
         x-show="empty"
         x-cloak
-        class="pointer-events-none absolute inset-x-0 bottom-8 text-center text-sm text-gray-400 dark:text-gray-500"
+        class="pointer-events-none absolute inset-x-0 bottom-8 text-center text-sm text-gray-500 dark:text-gray-400"
     >{{ $field->getPlaceholder() ?? __('wire-forms::fields.signature.hint') }}</span>
 
     @unless($locked)

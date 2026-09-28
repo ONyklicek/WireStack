@@ -216,7 +216,7 @@ test('buttons fill uses the configured color', function () {
         Radio::make('plan')->options(['a' => 'A'])->buttons()->color('success')
     );
 
-    expect($html)->toContain('peer-checked:bg-emerald-600')
+    expect($html)->toContain('peer-checked:bg-emerald-700')
         ->and($html)->not->toContain('peer-checked:bg-primary-600');
 });
 
@@ -234,7 +234,7 @@ test('segmented label uses the configured color', function () {
         Radio::make('plan')->options(['a' => 'A'])->segmented()->color(Color::Info)
     );
 
-    expect($html)->toContain('peer-checked:text-cyan-600');
+    expect($html)->toContain('peer-checked:text-cyan-700');
 });
 
 test('default radio accent uses the configured color', function () {

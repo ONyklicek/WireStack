@@ -37,7 +37,7 @@
                 type="button"
                 wire:click="closeEditor"
                 data-testid="media-editor-close" @wireEl('media-editor-close')
-                class="rounded-sm p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                class="rounded-sm p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
             >
                 <span class="sr-only">{{ __('wire-module-media::messages.close') }}</span>
                 {!! icon('outline:x-mark', 'h-4 w-4') !!}
@@ -48,7 +48,7 @@
             {{-- The tools ─────────────────────────────────────────────── --}}
             <div class="flex w-full shrink-0 flex-col gap-4 border-b border-gray-200 p-4 md:w-56 md:border-r md:border-b-0 dark:border-gray-800">
                 <div>
-                    <p class="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">{{ __('wire-module-media::messages.crop') }}</p>
+                    <p class="text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{{ __('wire-module-media::messages.crop') }}</p>
 
                     <div class="mt-1.5 flex flex-wrap gap-1">
                         <button
@@ -72,20 +72,20 @@
                 </div>
 
                 <div>
-                    <p class="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">{{ __('wire-module-media::messages.orientation') }}</p>
+                    <p class="text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{{ __('wire-module-media::messages.orientation') }}</p>
 
                     <div class="mt-1.5 flex gap-1">
-                        <button type="button" x-on:click="turn(-90)" data-testid="media-editor-rotate-left" @wireEl('media-editor-rotate-left') title="{{ __('wire-module-media::messages.rotate_left') }}" class="rounded-lg border border-gray-200 p-1.5 text-gray-500 hover:text-gray-800 dark:border-gray-700">
+                        <button type="button" x-on:click="turn(-90)" data-testid="media-editor-rotate-left" @wireEl('media-editor-rotate-left') title="{{ __('wire-module-media::messages.rotate_left') }}" class="rounded-lg border border-gray-200 p-1.5 text-gray-500 hover:text-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                             <span class="sr-only">{{ __('wire-module-media::messages.rotate_left') }}</span>
                             {!! icon('outline:arrow-uturn-left', 'h-4 w-4') !!}
                         </button>
 
-                        <button type="button" x-on:click="turn(90)" data-testid="media-editor-rotate-right" @wireEl('media-editor-rotate-right') title="{{ __('wire-module-media::messages.rotate_right') }}" class="rounded-lg border border-gray-200 p-1.5 text-gray-500 hover:text-gray-800 dark:border-gray-700">
+                        <button type="button" x-on:click="turn(90)" data-testid="media-editor-rotate-right" @wireEl('media-editor-rotate-right') title="{{ __('wire-module-media::messages.rotate_right') }}" class="rounded-lg border border-gray-200 p-1.5 text-gray-500 hover:text-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                             <span class="sr-only">{{ __('wire-module-media::messages.rotate_right') }}</span>
                             {!! icon('outline:arrow-uturn-right', 'h-4 w-4') !!}
                         </button>
 
-                        <button type="button" x-on:click="flip = ! flip" data-testid="media-editor-flip" @wireEl('media-editor-flip') title="{{ __('wire-module-media::messages.flip') }}" :class="flip ? 'border-primary-400 text-primary-700' : 'border-gray-200 text-gray-500'" class="rounded-lg border p-1.5 hover:text-gray-800 dark:border-gray-700">
+                        <button type="button" x-on:click="flip = ! flip" data-testid="media-editor-flip" @wireEl('media-editor-flip') title="{{ __('wire-module-media::messages.flip') }}" :class="flip ? 'border-primary-400 text-primary-700 dark:text-primary-300' : 'border-gray-200 text-gray-500 dark:border-gray-700 dark:text-gray-400'" class="rounded-lg border p-1.5 hover:text-gray-800 dark:hover:text-gray-200">
                             <span class="sr-only">{{ __('wire-module-media::messages.flip') }}</span>
                             {!! icon('outline:arrows-right-left', 'h-4 w-4') !!}
                         </button>
@@ -93,7 +93,7 @@
                 </div>
 
                 <div>
-                    <p class="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">{{ __('wire-module-media::messages.output') }}</p>
+                    <p class="text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{{ __('wire-module-media::messages.output') }}</p>
 
                     <div class="mt-1.5 flex items-center gap-2">
                         <input
@@ -103,7 +103,7 @@
                             data-testid="media-editor-width" @wireEl('media-editor-width')
                             class="w-20 rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
                         >
-                        <span class="text-xs text-gray-400">{{ __('wire-module-media::messages.output_width') }}</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ __('wire-module-media::messages.output_width') }}</span>
                     </div>
 
                     <select
@@ -117,10 +117,10 @@
                 </div>
 
                 <div class="mt-auto">
-                    <p class="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">{{ __('wire-module-media::messages.result') }}</p>
+                    <p class="text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{{ __('wire-module-media::messages.result') }}</p>
                     <p class="mt-1 font-mono text-xs text-gray-600 dark:text-gray-300" data-testid="media-editor-result" @wireEl('media-editor-result') x-text="outputSize[0] + ' × ' + outputSize[1]"></p>
 
-                    <button type="button" x-on:click="reset()" class="mt-2 text-xs text-gray-400 underline hover:text-gray-600">{{ __('wire-module-media::messages.reset') }}</button>
+                    <button type="button" x-on:click="reset()" class="mt-2 text-xs text-gray-500 dark:text-gray-400 underline hover:text-gray-600">{{ __('wire-module-media::messages.reset') }}</button>
                 </div>
             </div>
 

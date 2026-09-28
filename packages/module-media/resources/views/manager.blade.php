@@ -134,7 +134,7 @@
             {!! icon('outline:folder', 'h-4 w-4 shrink-0 text-gray-400') !!}
             <span class="min-w-0 flex-1 truncate text-start">{{ $folder?->name ?? __('wire-module-media::messages.library') }}</span>
             <span class="shrink-0 transition-transform" :class="folders ? '' : '-rotate-90'">
-                {!! icon('outline:chevron-down', 'h-4 w-4 text-gray-400') !!}
+                {!! icon('outline:chevron-down', 'h-4 w-4 text-gray-500 dark:text-gray-400') !!}
             </span>
         </button>
 
@@ -151,7 +151,7 @@
             'lg:h-full' => $picking,
         ])>
             <div class="mb-2 flex items-center justify-between">
-                <p class="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">
+                <p class="text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {{ __('wire-module-media::messages.folders') }}
                 </p>
 
@@ -159,7 +159,7 @@
                     type="button"
                     wire:click="$toggle('creatingFolder')"
                     data-testid="media-new-folder" @wireEl('media-new-folder')
-                    class="focus-visible:ring-primary-500 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 focus-visible:ring-2 focus-visible:outline-none dark:hover:bg-gray-800"
+                    class="focus-visible:ring-primary-500 rounded-lg p-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 hover:text-gray-700 focus-visible:ring-2 focus-visible:outline-none dark:hover:bg-gray-800"
                     title="{{ __('wire-module-media::messages.new_folder') }}"
                 >
                     <span class="sr-only">{{ __('wire-module-media::messages.new_folder') }}</span>
@@ -175,7 +175,7 @@
                         data-testid="media-new-folder-name" @wireEl('media-new-folder-name')
                         placeholder="{{ __('wire-module-media::messages.folder_name') }}"
                         autofocus
-                        class="min-w-0 flex-1 rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
+                        class="min-w-0 flex-1 rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     >
                     <button type="submit" class="bg-primary-600 rounded-lg px-2 py-1 text-sm text-white">
                         {{ __('wire-module-media::messages.create') }}
@@ -242,7 +242,7 @@
                     >
                         {!! icon('outline:home', 'h-4 w-4 shrink-0 text-gray-400') !!}
                         <span class="flex-1 truncate">{{ __('wire-module-media::messages.library') }}</span>
-                        <span class="font-mono text-[10px] text-gray-400 tabular-nums">{{ $folderCounts['root'] ?? 0 }}</span>
+                        <span class="font-mono text-[10px] text-gray-600 dark:text-gray-400 tabular-nums">{{ $folderCounts['root'] ?? 0 }}</span>
                     </button>
                 </li>
 
@@ -324,7 +324,7 @@
                             @class([
                                 'truncate px-1 py-0.5',
                                 'font-medium text-gray-900 dark:text-gray-100' => $loop->last && ! $loop->first,
-                                'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200' => ! $loop->last || $loop->first,
+                                'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200' => ! $loop->last || $loop->first,
                             ])
                         >{{ $crumb?->name ?? __('wire-module-media::messages.library') }}</button>
                     @endforeach
@@ -335,7 +335,7 @@
                     wire:model.live.debounce.300ms="search"
                     data-testid="media-search" @wireEl('media-search')
                     placeholder="{{ __('wire-module-media::messages.search') }}"
-                    class="w-40 rounded-lg border border-gray-200 px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                    class="w-40 rounded-lg border border-gray-200 px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                 >
 
                 <select
@@ -377,7 +377,7 @@
                     wire:click="toggleView"
                     data-testid="media-view-toggle" @wireEl('media-view-toggle')
                     @class([
-                        'focus-visible:ring-primary-500 rounded-lg p-2 text-gray-500 hover:bg-gray-100 focus-visible:ring-2 focus-visible:outline-none dark:hover:bg-gray-800',
+                        'focus-visible:ring-primary-500 rounded-lg p-2 text-gray-500 hover:bg-gray-100 focus-visible:ring-2 focus-visible:outline-none dark:text-gray-400 dark:hover:bg-gray-800',
                         'hidden lg:block' => $picking,
                     ])
                     title="{{ __('wire-module-media::messages.view') }}"
@@ -459,7 +459,7 @@
                      a bar that moves is the difference between a slow upload and
                      a page somebody reloads because they think it hung. --}}
                 <div x-show="pending.length" x-cloak class="mb-3">
-                    <div class="mb-1 flex items-center justify-between text-xs text-gray-500">
+                    <div class="mb-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                         <span>{{ __('wire-module-media::messages.uploading') }}</span>
                         <span x-text="progress + '%'"></span>
                     </div>
@@ -471,8 +471,8 @@
                 @if ($files->isEmpty())
                     <div class="p-8 text-center" data-testid="media-empty" @wireEl('media-empty')>
                         {!! icon('outline:photo', 'mx-auto mb-3 h-10 w-10 text-gray-300') !!}
-                        <p class="text-sm text-gray-500">{{ __('wire-module-media::messages.empty') }}</p>
-                        <p class="mt-1 text-xs text-gray-400">{{ __('wire-module-media::messages.drop_hint') }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-module-media::messages.empty') }}</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('wire-module-media::messages.drop_hint') }}</p>
                     </div>
                 @elseif ($view === 'grid')
                     @php($pageIds = $files->pluck('id')->all())
@@ -482,7 +482,7 @@
                          button is the oldest way a bulk action becomes an
                          accident. --}}
                     @unless ($choosingOne)
-                        <label class="mb-2 inline-flex cursor-pointer items-center gap-2 text-xs text-gray-500">
+                        <label class="mb-2 inline-flex cursor-pointer items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                             <input
                                 type="checkbox"
                                 wire:click="toggleAll({{ Js::from($pageIds) }})"
@@ -547,8 +547,8 @@
                                     <span x-show="! item.url">{!! icon('outline:document', 'h-10 w-10 text-gray-300') !!}</span>
                                 </div>
                                 <div class="p-2">
-                                    <p class="truncate text-xs font-medium text-gray-500" x-text="item.name"></p>
-                                    <p class="text-[11px] text-gray-400">{{ __('wire-module-media::messages.uploading') }}</p>
+                                    <p class="truncate text-xs font-medium text-gray-500 dark:text-gray-400" x-text="item.name"></p>
+                                    <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ __('wire-module-media::messages.uploading') }}</p>
                                 </div>
                             </li>
                         </template>
@@ -628,7 +628,7 @@
                                         </form>
                                     @else
                                         <p class="truncate text-xs font-medium text-gray-700 dark:text-gray-200" title="{{ $file->name }}">{{ $file->name }}</p>
-                                        <p class="text-[11px] text-gray-400">{{ $file->dimensions() ?? $file->humanSize() }}</p>
+                                        <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ $file->dimensions() ?? $file->humanSize() }}</p>
                                     @endif
                                 </div>
 
@@ -638,7 +638,7 @@
                                             type="button"
                                             wire:click="startRenaming({{ $file->id }})"
                                             data-testid="media-rename" @wireEl('media-rename')
-                                            class="rounded-sm p-1 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                                            class="rounded-sm p-1 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                                             title="{{ __('wire-module-media::messages.rename') }}"
                                         >
                                             <span class="sr-only">{{ __('wire-module-media::messages.rename') }} {{ $file->name }}</span>
@@ -655,7 +655,7 @@
                                                  is read (ADR 0034). --}}
                                             wire:confirm="{{ $this->deleteWarning($usageCounts[$file->id] ?? 0) }}"
                                             data-testid="media-delete" @wireEl('media-delete')
-                                            class="rounded-sm p-1 text-gray-500 hover:text-red-600"
+                                            class="rounded-sm p-1 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
                                             title="{{ __('wire-module-media::messages.delete') }}"
                                         >
                                             <span class="sr-only">{{ __('wire-module-media::messages.delete') }} {{ $file->name }}</span>
@@ -689,7 +689,7 @@
                                     @php($active = $this->sortColumn() === $column)
                                     <th
                                         scope="col"
-                                        class="py-2 pe-2 text-[11px] font-semibold tracking-wider text-gray-400 uppercase"
+                                        class="py-2 pe-2 text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase"
                                         @if ($active) aria-sort="{{ $this->sortDirection() === 'asc' ? 'ascending' : 'descending' }}" @endif
                                     >
                                         <button
@@ -762,8 +762,8 @@
                                     <td class="py-2 pe-2 font-mono text-xs text-gray-500 tabular-nums dark:text-gray-400">{{ $file->created_at?->isoFormat('L') }}</td>
                                     @unless ($picking)
                                         <td class="w-20 py-2 pe-2 text-end">
-                                            <button type="button" wire:click="startRenaming({{ $file->id }})" data-testid="media-rename" @wireEl('media-rename') class="rounded-sm p-1 text-gray-400 hover:text-gray-700">{!! icon('outline:pencil-square', 'h-4 w-4') !!}</button>
-                                            <button type="button" wire:click="deleteOne({{ $file->id }})" wire:confirm="{{ $this->deleteWarning($usageCounts[$file->id] ?? 0) }}" data-testid="media-delete" @wireEl('media-delete') class="rounded-sm p-1 text-gray-400 hover:text-red-600">{!! icon('outline:trash', 'h-4 w-4') !!}</button>
+                                            <button type="button" wire:click="startRenaming({{ $file->id }})" data-testid="media-rename" @wireEl('media-rename') class="rounded-sm p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700">{!! icon('outline:pencil-square', 'h-4 w-4') !!}</button>
+                                            <button type="button" wire:click="deleteOne({{ $file->id }})" wire:confirm="{{ $this->deleteWarning($usageCounts[$file->id] ?? 0) }}" data-testid="media-delete" @wireEl('media-delete') class="rounded-sm p-1 text-gray-500 dark:text-gray-400 hover:text-red-600">{!! icon('outline:trash', 'h-4 w-4') !!}</button>
                                         </td>
                                     @endunless
                                 </tr>
@@ -833,13 +833,13 @@
                         {{ trans_choice('wire-module-media::messages.tray_title', count($tray), ['count' => count($tray)]) }}
                     </span>
 
-                    <button type="button" x-on:click="open = ! open" class="rounded-sm p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                    <button type="button" x-on:click="open = ! open" class="rounded-sm p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200">
                         <span class="sr-only">{{ __('wire-module-media::messages.tray_collapse') }}</span>
                         <span x-show="open">{!! icon('outline:minus', 'h-3.5 w-3.5') !!}</span>
                         <span x-show="! open" x-cloak>{!! icon('outline:plus', 'h-3.5 w-3.5') !!}</span>
                     </button>
 
-                    <button type="button" wire:click="dismissTray" data-testid="media-tray-dismiss" @wireEl('media-tray-dismiss') class="rounded-sm p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                    <button type="button" wire:click="dismissTray" data-testid="media-tray-dismiss" @wireEl('media-tray-dismiss') class="rounded-sm p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200">
                         <span class="sr-only">{{ __('wire-module-media::messages.close') }}</span>
                         {!! icon('outline:x-mark', 'h-3.5 w-3.5') !!}
                     </button>
@@ -860,7 +860,7 @@
                             </div>
 
                             @if ($entry['state'] === 'duplicate' && $entry['media'])
-                                <p class="mt-0.5 text-[11px] text-gray-400">
+                                <p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
                                     {{ __('wire-module-media::messages.tray_duplicate_reason') }}
                                     <button type="button" wire:click="showDetail({{ $entry['media'] }})" class="text-primary-600 dark:text-primary-400 underline">{{ __('wire-module-media::messages.tray_open_existing') }}</button>
                                 </p>
@@ -868,7 +868,7 @@
                                 {{-- The reason, not just the fact: a file the disk
                                      refused and a file over the size limit are two
                                      different things to do something about. --}}
-                                <p class="mt-0.5 text-[11px] text-gray-400">
+                                <p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
                                     {{ __('wire-module-media::messages.tray_failed_reason', ['size' => config('wire-module-media.max_size', 10240)]) }}
 
                                     {{-- A real retry: the browser still holds the
@@ -890,7 +890,7 @@
                 </ul>
 
                 @if ($totals['failed'] > 0 || $totals['duplicate'] > 0)
-                    <p class="border-t border-gray-200 px-3 py-1.5 text-[11px] text-gray-400 dark:border-gray-800">
+                    <p class="border-t border-gray-200 px-3 py-1.5 text-[11px] text-gray-500 dark:text-gray-400 dark:border-gray-800">
                         {{ __('wire-module-media::messages.tray_summary', $totals) }}
                     </p>
                 @endif
@@ -933,7 +933,7 @@
                         type="button"
                         wire:click="closeDetail"
                         data-testid="media-detail-close" @wireEl('media-detail-close')
-                        class="rounded-sm p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                        class="rounded-sm p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
                     >
                         <span class="sr-only">{{ __('wire-module-media::messages.close') }}</span>
                         {!! icon('outline:x-mark', 'h-4 w-4') !!}
@@ -969,7 +969,7 @@
                          copies end up empty. --}}
                     <form wire:submit="saveDetail" class="space-y-2">
                         <label class="block">
-                            <span class="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">{{ __('wire-module-media::messages.alt') }}</span>
+                            <span class="text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{{ __('wire-module-media::messages.alt') }}</span>
                             <input
                                 type="text"
                                 wire:model="detailAlt"
@@ -979,7 +979,7 @@
                         </label>
 
                         <label class="block">
-                            <span class="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">{{ __('wire-module-media::messages.title') }}</span>
+                            <span class="text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{{ __('wire-module-media::messages.title') }}</span>
                             <input
                                 type="text"
                                 wire:model="detailTitle"
@@ -997,21 +997,21 @@
 
                     <dl class="mt-4 space-y-1 text-xs">
                         <div class="flex justify-between gap-2">
-                            <dt class="text-gray-400">{{ __('wire-module-media::messages.type') }}</dt>
+                            <dt class="text-gray-500 dark:text-gray-400">{{ __('wire-module-media::messages.type') }}</dt>
                             <dd class="truncate text-gray-600 dark:text-gray-300">{{ $detail->mime_type }}</dd>
                         </div>
                         <div class="flex justify-between gap-2">
-                            <dt class="text-gray-400">{{ __('wire-module-media::messages.size') }}</dt>
+                            <dt class="text-gray-500 dark:text-gray-400">{{ __('wire-module-media::messages.size') }}</dt>
                             <dd class="text-gray-600 dark:text-gray-300">{{ $detail->humanSize() }}</dd>
                         </div>
                         @if ($detail->dimensions())
                             <div class="flex justify-between gap-2">
-                                <dt class="text-gray-400">{{ __('wire-module-media::messages.dimensions') }}</dt>
+                                <dt class="text-gray-500 dark:text-gray-400">{{ __('wire-module-media::messages.dimensions') }}</dt>
                                 <dd class="text-gray-600 dark:text-gray-300">{{ $detail->dimensions() }}</dd>
                             </div>
                         @endif
                         <div class="flex justify-between gap-2">
-                            <dt class="text-gray-400">{{ __('wire-module-media::messages.uploaded') }}</dt>
+                            <dt class="text-gray-500 dark:text-gray-400">{{ __('wire-module-media::messages.uploaded') }}</dt>
                             <dd class="text-gray-600 dark:text-gray-300">{{ $detail->created_at?->isoFormat('L') }}</dd>
                         </div>
                     </dl>
@@ -1023,17 +1023,17 @@
                          always will be, which is why the count is presented as a
                          floor rather than as an answer (ADR 0034). --}}
                     <div class="mt-4" data-testid="media-usage" @wireEl('media-usage')>
-                        <p class="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">
+                        <p class="text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                             {{ trans_choice('wire-module-media::messages.known_uses', count($detailUsages), ['count' => count($detailUsages)]) }}
                         </p>
 
                         @if ($detailUsages === [])
-                            <p class="mt-1 text-xs text-gray-400">{{ __('wire-module-media::messages.no_known_uses') }}</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('wire-module-media::messages.no_known_uses') }}</p>
                         @else
                             <ul class="mt-1 space-y-1 text-xs">
                                 @foreach ($detailUsages as $use)
                                     <li class="flex items-center gap-2">
-                                        <span class="rounded-sm bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">{{ $use['collection'] }}</span>
+                                        <span class="rounded-sm bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-600 dark:bg-gray-800 dark:text-gray-400">{{ $use['collection'] }}</span>
 
                                         @if ($use['url'])
                                             <a href="{{ $use['url'] }}" class="text-primary-600 dark:text-primary-400 truncate hover:underline">{{ $use['label'] }}</a>
@@ -1044,7 +1044,7 @@
                                 @endforeach
                             </ul>
 
-                            <p class="mt-1 text-[11px] text-gray-400">{{ __('wire-module-media::messages.uses_are_a_floor') }}</p>
+                            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ __('wire-module-media::messages.uses_are_a_floor') }}</p>
                         @endif
                     </div>
 
@@ -1066,12 +1066,12 @@
                              crop can be traced back to its original. --}}
                         <div class="mt-4" data-testid="media-derivatives" @wireEl('media-derivatives')>
                             @if ($detail->derivedFrom)
-                                <p class="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">{{ __('wire-module-media::messages.derived_from') }}</p>
+                                <p class="text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{{ __('wire-module-media::messages.derived_from') }}</p>
                                 <button type="button" wire:click="showDetail({{ $detail->derivedFrom->id }})" class="text-primary-600 dark:text-primary-400 mt-1 block max-w-full truncate text-xs hover:underline">{{ $detail->derivedFrom->name }}</button>
                             @endif
 
                             @if ($detail->derivatives()->exists())
-                                <p class="mt-2 text-[11px] font-semibold tracking-wider text-gray-400 uppercase">{{ __('wire-module-media::messages.derivatives') }}</p>
+                                <p class="mt-2 text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{{ __('wire-module-media::messages.derivatives') }}</p>
                                 <ul class="mt-1 space-y-0.5">
                                     @foreach ($detail->derivatives as $derivative)
                                         <li>

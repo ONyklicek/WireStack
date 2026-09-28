@@ -13,7 +13,7 @@
                     'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold',
                     'bg-primary-600 text-white' => $isCurrent,
                     'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200' => $isDone,
-                    'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' => ! $isCurrent && ! $isDone,
+                    'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' => ! $isCurrent && ! $isDone,
                 ])>{{ $index + 1 }}</span>
                 <span class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ $step['label'] ?? '' }}</span>
                 @unless($loop->last)

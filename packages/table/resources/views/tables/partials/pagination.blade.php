@@ -22,7 +22,7 @@
             @foreach ($elements as $element)
                 {{-- "Three Dots" Separator --}}
                 @if (is_string($element))
-                    <span class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-400 dark:text-gray-500">
+                    <span class="relative inline-flex items-center px-2 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400">
                         {{ $element }}
                     </span>
                 @endif

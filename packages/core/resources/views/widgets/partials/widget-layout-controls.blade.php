@@ -59,7 +59,7 @@
                             x-on:click="$wire.deleteWidgetLayout(layout); layout = ''"
                             data-testid="widget-layout-delete" @wireEl('widget-layout-delete')
                             aria-label="{{ __('wire-core::messages.widget_delete_layout') }}"
-                            class="rounded-sm p-1 text-gray-400 transition hover:text-red-600 dark:hover:text-red-400">
+                            class="rounded-sm p-1 text-gray-500 transition hover:text-red-600 dark:hover:text-red-400">
                         {!! icon('outline:trash', 'w-4 h-4', 'h-4 w-4') !!}
                     </button>
                 </div>

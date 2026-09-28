@@ -7,7 +7,7 @@
             <li class="flex items-center gap-2">
                 <span
                     x-text="i + 1"
-                    :class="current >= i ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'"
+                    :class="current >= i ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'"
                     class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold"
                 ></span>
                 <span

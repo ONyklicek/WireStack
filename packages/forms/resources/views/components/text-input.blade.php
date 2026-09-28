@@ -28,11 +28,11 @@
                 'position' => 'left',
             ])
         @elseif($field->getPrefixIcon())
-            <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm">
+            <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-sm">
                     {!! icon($field->getPrefixIcon(), 'w-4 h-4', 'w-4 h-4') !!}
                 </span>
         @elseif($field->getPrefix())
-            <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm">
+            <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-sm">
                     {{ $field->getPrefix() }}
                 </span>
         @endif
@@ -109,7 +109,7 @@
                     :aria-label="revealed ? @js(__('Hide')) : @js(__('Show'))"
                     :aria-pressed="revealed"
                     tabindex="-1"
-                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
             >
                 <span x-show="!revealed">{!! icon('outline:eye', 'w-4 h-4', 'w-5 h-5') !!}</span>
                 <span x-show="revealed" x-cloak>{!! icon('outline:eye-slash', 'w-4 h-4', 'w-5 h-5') !!}</span>
@@ -124,11 +124,11 @@
                     'position' => 'right',
                 ])
             @elseif($field->getSuffixIcon())
-                <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm">
+                <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-sm">
                     {!! icon($field->getSuffixIcon(), 'w-4 h-4', 'w-4 h-4') !!}
                 </span>
             @elseif($field->getSuffix())
-                <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm">
+                <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-sm">
                     {{ $field->getSuffix() }}
                 </span>
             @endif

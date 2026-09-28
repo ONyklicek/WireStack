@@ -33,7 +33,7 @@
                 </table>
             </div>
         @else
-            <span class="text-gray-400">{{ $field->getPlaceholder() ?? '-' }}</span>
+            <span class="text-gray-500 dark:text-gray-400">{{ $field->getPlaceholder() ?? '-' }}</span>
         @endif
     </div>
 

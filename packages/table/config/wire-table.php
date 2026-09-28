@@ -39,7 +39,7 @@ return [
         /*
         | What a record marked inactive with Table::rowInactive() looks like and
         | what it still permits, project-wide. null keeps the shipped defaults:
-        | the row is dimmed but not struck through, carries no tint, and inline
+        | the row is dimmed and tinted gray but not struck through, and inline
         | editing is locked (refused server-side too) while its actions, its
         | checkbox and a record click stay live.
         |

@@ -77,7 +77,7 @@
             type="button"
             x-on:click="$store.wireAdmin.closeMobile()"
             data-testid="admin-sidebar-close" @wireEl('admin-sidebar-close')
-            class="me-3 shrink-0 rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 lg:hidden dark:hover:bg-gray-800 dark:hover:text-gray-300"
+            class="me-3 shrink-0 rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-600 lg:hidden dark:hover:bg-gray-800 dark:hover:text-gray-300"
         >
             <span class="sr-only">{{ __('wire-admin::messages.close_menu') }}</span>
             {!! icon('outline:x-mark', 'h-5 w-5') !!}
@@ -111,9 +111,9 @@
                         placeholder="{{ __('wire-admin::messages.filter') }}"
                         autocomplete="off"
                         data-testid="admin-nav-filter" @wireEl('admin-nav-filter')
-                        class="w-full rounded-lg border border-gray-200 bg-gray-50 py-1.5 ps-8 pe-7 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:bg-white focus:ring-1 focus:ring-primary-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:bg-gray-900"
+                        class="w-full rounded-lg border border-gray-200 bg-gray-50 py-1.5 ps-8 pe-7 text-sm text-gray-900 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500 focus:bg-white focus:ring-1 focus:ring-primary-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:bg-gray-900"
                     >
-                    <kbd x-show="query === ''" class="pointer-events-none absolute inset-y-0 end-2 my-auto h-5 rounded-sm border border-gray-200 px-1.5 text-[11px] leading-5 text-gray-400 dark:border-gray-700">/</kbd>
+                    <kbd x-show="query === ''" class="pointer-events-none absolute inset-y-0 end-2 my-auto h-5 rounded-sm border border-gray-200 px-1.5 text-[11px] leading-5 text-gray-500 dark:text-gray-400 dark:border-gray-700">/</kbd>
                 </div>
 
                 {{-- Read by a screen reader as the list changes, in the
@@ -124,7 +124,7 @@
                     x-show="matches === 0"
                     x-cloak
                     data-testid="admin-nav-filter-empty" @wireEl('admin-nav-filter-empty')
-                    class="px-3 pt-3 text-sm text-gray-400 dark:text-gray-500"
+                    class="px-3 pt-3 text-sm text-gray-500 dark:text-gray-400"
                 >{{ __('wire-admin::messages.filter_none') }}</p>
             </div>
         @endif
@@ -187,7 +187,7 @@
                             aria-controls="wire-admin-group-{{ $group->getKey() }}"
                             data-testid="admin-nav-heading" @wireEl('admin-nav-heading')
                             data-collapsible="true"
-                            class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-semibold tracking-wider text-gray-400 uppercase transition hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                            class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-semibold tracking-wider text-gray-500 uppercase transition hover:text-gray-600 dark:hover:text-gray-300"
                         >
                             @if ($group->getIcon())
                                 {!! icon($group->getIcon(), 'h-3.5 w-3.5') !!}
@@ -198,7 +198,7 @@
                     @else
                         <p
                             data-testid="admin-nav-heading" @wireEl('admin-nav-heading')
-                            class="flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500"
+                            class="flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase"
                         >
                             @if ($group->getIcon())
                                 {!! icon($group->getIcon(), 'h-3.5 w-3.5') !!}
@@ -231,7 +231,7 @@
         @empty
             {{-- Nothing registered. An empty column reads as a broken menu, so it
                  says which of the two it is. --}}
-            <p data-testid="admin-nav-empty" @wireEl('admin-nav-empty') class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">
+            <p data-testid="admin-nav-empty" @wireEl('admin-nav-empty') class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
                 {{ __('wire-admin::messages.empty') }}
             </p>
         @endforelse

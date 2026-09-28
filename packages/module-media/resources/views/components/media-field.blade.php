@@ -82,7 +82,7 @@
                                 $wire.set(@js($field->getWireModelAttribute()), null)
                             @endif
                         "
-                        class="absolute -end-1.5 -top-1.5 hidden rounded-full bg-white p-0.5 text-gray-400 shadow ring-1 ring-gray-200 group-hover:block hover:text-red-600 dark:bg-gray-900 dark:ring-gray-700"
+                        class="absolute -end-1.5 -top-1.5 hidden rounded-full bg-white p-0.5 text-gray-500 dark:text-gray-400 shadow ring-1 ring-gray-200 group-hover:block hover:text-red-600 dark:bg-gray-900 dark:ring-gray-700"
                         title="{{ __('wire-module-media::messages.remove') }}"
                     >{!! icon('outline:x-mark', 'h-3.5 w-3.5') !!}</button>
                 </li>

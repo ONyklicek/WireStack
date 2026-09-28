@@ -36,7 +36,7 @@
             <tr>
                 <td colspan="{{ $colSpan }}" class="{{ $cellPadding }} py-2">
                     <div class="flex items-center justify-end gap-2">
-                        <span class="text-xs text-gray-400 dark:text-gray-500">{{ __('wire-table::messages.summary_scope_label') }}</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.summary_scope_label') }}</span>
                         <div class="inline-flex rounded-md border border-gray-200 dark:border-gray-600 overflow-hidden text-xs">
                             @foreach($summaryScopeOptions as $option)
                                 <button type="button"

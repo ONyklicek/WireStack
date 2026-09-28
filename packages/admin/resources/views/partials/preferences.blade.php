@@ -58,7 +58,7 @@
                 x-bind:aria-checked="$store.wireAdmin.theme === '{{ $themeOption->value }}' ? 'true' : 'false'"
                 x-bind:class="$store.wireAdmin.theme === '{{ $themeOption->value }}'
                     ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-50'
-                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
+                    : 'text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'"
                 data-testid="admin-theme{{ $suffix }}-{{ $themeOption->value }}"
                 title="{{ $themeOption->label() }}"
                 class="inline-flex items-center rounded-full {{ $switch }} transition"
@@ -88,7 +88,7 @@
                 x-bind:aria-checked="$store.wireAdmin.density === '{{ $densityOption->value }}' ? 'true' : 'false'"
                 x-bind:class="$store.wireAdmin.density === '{{ $densityOption->value }}'
                     ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-50'
-                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
+                    : 'text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'"
                 data-testid="admin-density{{ $suffix }}-{{ $densityOption->value }}"
                 title="{{ $densityOption->label() }}"
                 class="inline-flex items-center rounded-full {{ $switch }} transition"

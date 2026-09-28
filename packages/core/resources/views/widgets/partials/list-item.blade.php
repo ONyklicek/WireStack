@@ -16,5 +16,5 @@
 </span>
 
 @if($item->getMeta())
-    <span class="shrink-0 whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">{{ $item->getMeta() }}</span>
+    <span class="shrink-0 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">{{ $item->getMeta() }}</span>
 @endif

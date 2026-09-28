@@ -32,11 +32,11 @@
                 data-mode="{{ str_contains($zone, 'linkedOnly') ? 'linked-only' : 'as-registered' }}"
                 class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
             >
-                <p class="mb-1 font-mono text-xs uppercase tracking-widest text-slate-400">zone</p>
+                <p class="mb-1 font-mono text-xs uppercase tracking-widest text-slate-500">zone</p>
                 <h2 class="mb-4 text-sm font-semibold text-slate-900">{{ $zone }}</h2>
 
                 @if (! $groups)
-                    <p class="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-400" data-testid="zone-empty">
+                    <p class="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500" data-testid="zone-empty">
                         nothing this zone can reach
                     </p>
                 @endif
@@ -44,7 +44,7 @@
                 @foreach ($groups as $group)
                     <div class="mb-4 last:mb-0" data-zone-group="{{ $group->getKey() }}">
                         @if ($group->hasVisibleLabel())
-                            <p class="flex items-center gap-2 px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                            <p class="flex items-center gap-2 px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
                                 @if ($group->getIcon())
                                     {!! icon($group->getIcon(), 'h-4 w-4') !!}
                                 @endif
@@ -67,7 +67,7 @@
                                         @class([
                                             'flex items-center gap-3 rounded-xl px-3 py-2 text-sm',
                                             'text-slate-700 hover:bg-slate-50' => (bool) $url,
-                                            'text-slate-400' => ! $url,
+                                            'text-slate-500' => ! $url,
                                         ])
                                     >
                                         @if ($item->getIcon())
@@ -81,7 +81,7 @@
                                         @endif
                                         <span
                                             data-testid="zone-nav-url"
-                                            class="font-mono text-[10px] text-slate-400"
+                                            class="font-mono text-[10px] text-slate-500"
                                         >{{ $url ? parse_url($url, PHP_URL_PATH) : '— not in this zone' }}</span>
                                     </a>
                                 </li>

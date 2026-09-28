@@ -25,7 +25,7 @@
                     aria-label="{{ __('wire-module-tenants::messages.delete_confirm_label') }}"
                     placeholder="{{ $companyName }}"
                     data-testid="tenants-delete-confirmation"
-                    class="w-full max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                    class="w-full max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                 >
                 <x-wire::button color="danger" wire:click="deleteCompany" data-testid="tenants-delete-submit">
                     {{ __('wire-module-tenants::messages.delete_submit') }}

@@ -38,7 +38,7 @@
         @if($field->hasLineNumbers())
             {{-- Line numbers --}}
             <div
-                class="select-none text-right text-gray-600 px-3 py-3 text-xs leading-5 bg-gray-900 dark:bg-gray-950 border-r border-gray-700 shrink-0 min-w-[2.5rem]"
+                class="select-none text-right text-gray-400 px-3 py-3 text-xs leading-5 bg-gray-900 dark:bg-gray-950 border-r border-gray-700 shrink-0 min-w-[2.5rem]"
                 aria-hidden="true"
             >
                 <template x-for="(line, i) in lines" :key="i">
@@ -65,7 +65,7 @@
 
     @if($field->getMaxLength())
         <div class="flex justify-end px-3 py-1 bg-gray-800 dark:bg-gray-900 border-t border-gray-700">
-            <span class="text-xs text-gray-500" x-text="(content || '').length + ' / {{ $field->getMaxLength() }}'"></span>
+            <span class="text-xs text-gray-500 dark:text-gray-400" x-text="(content || '').length + ' / {{ $field->getMaxLength() }}'"></span>
         </div>
     @endif
 </div>

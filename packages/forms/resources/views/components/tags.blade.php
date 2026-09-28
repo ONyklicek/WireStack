@@ -64,7 +64,7 @@
                     Inline style má nejvyšší specificitu a spolehlivě vše přebije.
                 --}}
                 style="border: none; outline: none; box-shadow: none; background: transparent; font-size: 16px;"
-                class="block w-full px-4 py-3 text-gray-900 placeholder-gray-400 dark:text-white dark:placeholder-gray-500"
+                class="block w-full px-4 py-3 text-gray-900 placeholder:text-gray-500 dark:placeholder:text-gray-400 dark:text-white"
                 @if($field->isReadOnly()) readonly @endif
             />
 

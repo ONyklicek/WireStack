@@ -130,7 +130,7 @@
                 @foreach ($entries as $entry)
                     <div x-show="overflow.includes(@js($entry['id']))" data-topnav-more-for="{{ $entry['id'] }}">
                         @if ($entry['group'])
-                            <p class="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">{{ $entry['group']->getLabel() }}</p>
+                            <p class="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{{ $entry['group']->getLabel() }}</p>
                             @include('wire-admin::partials.top-nav-items', ['items' => $entry['group']->getItems(), 'testid' => 'admin-topnav-more-item'])
                         @else
                             @include('wire-admin::partials.top-nav-items', ['items' => [$entry['key'] => $entry['item']], 'testid' => 'admin-topnav-more-item'])

@@ -60,7 +60,7 @@
             'border-red-500' => $errors->has($field->getStatePath()),
         ])
     >
-        <span x-text="display || @js($field->getPlaceholder() ?? '')" :class="{ 'text-gray-400': ! display }" class="tabular-nums"></span>
+        <span x-text="display || @js($field->getPlaceholder() ?? '')" :class="{ 'text-gray-500 dark:text-gray-400': ! display }" class="tabular-nums"></span>
         {!! icon($mode === 'time' ? 'outline:clock' : 'outline:calendar', 'h-5 w-5', 'text-gray-400') !!}
     </button>
 

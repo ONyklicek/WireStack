@@ -13,7 +13,7 @@
 <div class="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
 
     @if($breadcrumbs)
-        <nav class="mb-1 flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500" aria-label="{{ __('wire-core::messages.breadcrumbs') }}">
+        <nav class="mb-1 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400" aria-label="{{ __('wire-core::messages.breadcrumbs') }}">
             @foreach($breadcrumbs as $crumb)
                 @if(! $loop->last)
                     <span>{{ $crumb['label'] }}</span><span aria-hidden="true">/</span>
@@ -57,7 +57,7 @@
                     @class([
                         'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold transition',
                         'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white' => $tab === $key,
-                        'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200' => $tab !== $key,
+                        'text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200' => $tab !== $key,
                     ])
                 >
                     {{ $label }}
@@ -68,7 +68,7 @@
             @endforeach
         </div>
 
-        <label class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-400 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 sm:ml-auto sm:w-auto sm:min-w-[13rem] dark:border-gray-700 dark:bg-gray-800">
+        <label class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 sm:ml-auto sm:w-auto sm:min-w-[13rem] dark:border-gray-700 dark:bg-gray-800">
             {!! icon('outline:magnifying-glass', 'w-4 h-4') !!}
             <span class="sr-only">{{ __('wire-table::messages.search') }}</span>
             <input
@@ -76,7 +76,7 @@
                 wire:model.live.debounce.300ms="search"
                 data-testid="notification-search" @wireEl('notification-search')
                 placeholder="{{ __('wire-table::messages.search') }}"
-                class="w-full border-0 bg-transparent p-0 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-0 dark:text-white"
+                class="w-full border-0 bg-transparent p-0 text-sm text-gray-900 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-0 dark:text-white"
             >
         </label>
     </div>

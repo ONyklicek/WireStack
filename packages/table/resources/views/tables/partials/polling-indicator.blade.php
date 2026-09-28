@@ -26,7 +26,7 @@
         <button
             type="button"
             wire:click="toggleTablePolling" data-testid="polling-toggle" @wireEl('polling-toggle')
-            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline decoration-dotted underline-offset-2"
+            class="text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 underline decoration-dotted underline-offset-2"
         >
             {{ ($pollingConfig['active'] ?? false) ? __('wire-table::messages.stop') : __('wire-table::messages.start') }}
         </button>

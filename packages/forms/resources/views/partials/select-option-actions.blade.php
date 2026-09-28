@@ -28,7 +28,7 @@
             type="button"
             wire:click="mountCreateOption('{{ $statePath }}')" data-testid="form-select-{{ $statePath }}-create-option"
             @click="open = false"
-            class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
+            class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-primary-300 transition-colors duration-150"
         >
             {!! icon('plus', 'w-4 h-4', 'w-4 h-4 shrink-0') !!}
             <span>{{ $createLabel }}</span>

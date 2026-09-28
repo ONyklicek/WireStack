@@ -29,7 +29,7 @@
         >
             {!! icon('outline:building-office-2', 'h-4 w-4 text-gray-400') !!}
             <span class="max-w-[12rem] truncate">{{ $switcher['current'] }}</span>
-            {!! icon('outline:chevron-up-down', 'h-4 w-4 text-gray-400') !!}
+            {!! icon('outline:chevron-up-down', 'h-4 w-4 text-gray-500 dark:text-gray-400') !!}
         </button>
 
         <template x-teleport="body">

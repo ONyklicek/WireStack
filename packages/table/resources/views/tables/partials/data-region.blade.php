@@ -374,7 +374,7 @@
                                                     <button
                                                             type="button"
                                                             wire:click="resetColumnFilters"
-                                                            class="relative inline-flex items-center justify-center p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                            class="relative inline-flex items-center justify-center p-1 text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                                                             title="{{ __('wire-table::messages.filter_reset_column') }}"
                                                     >
                                                         {!! icon('outline:x-mark', 'w-4 h-4') !!}

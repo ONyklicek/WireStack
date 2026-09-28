@@ -27,7 +27,7 @@
                 x-ref="trigger"
                 @click="toggle()"
                 type="button"
-                class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-2 text-sm text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 title="{{ __('wire-table::messages.sort_by') }}"
                 data-testid="table-mobile-sort" @wireEl('table-mobile-sort')
         >
@@ -82,7 +82,7 @@
                     @endif
 
                     <div class="p-2">
-                        <div class="mb-1 border-b border-gray-100 dark:border-gray-700 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                        <div class="mb-1 border-b border-gray-100 dark:border-gray-700 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                             {{ __('wire-table::messages.sort_by') }}
                         </div>
 
@@ -101,7 +101,7 @@
                                 <span class="flex-1 truncate">{{ $column->getLabel() }}</span>
                                 @if($isActive)
                                     {!! icon($isDesc ? 'outline:arrow-down' : 'outline:arrow-up', 'h-4 w-4 shrink-0') !!}
-                                    <span class="text-xs text-gray-400 dark:text-gray-500">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">
                                         {{ $isDesc ? __('wire-table::messages.sort_desc') : __('wire-table::messages.sort_asc') }}
                                     </span>
                                 @endif

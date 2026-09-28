@@ -55,7 +55,7 @@
                 <span class="min-w-0 truncate text-sm text-gray-600 dark:text-gray-300">
                     {{ $row['label'] }}
                     @if($row['column'])
-                        <span class="text-xs text-gray-400 dark:text-gray-500">· {{ $row['column'] }}</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">· {{ $row['column'] }}</span>
                     @endif
                 </span>
                 <span class="shrink-0 text-sm font-semibold tabular-nums text-gray-900 dark:text-white">

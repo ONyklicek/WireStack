@@ -55,7 +55,7 @@ class CopyButton
         $icon ??= app(IconManager::class)->render(
             'clipboard-document',
             'w-4 h-4',
-            'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
+            'text-gray-500 hover:text-gray-600 dark:hover:text-gray-300',
         );
 
         $shape = md5($label."\0".$title."\0".$class."\0".$testId."\0".$icon);

@@ -155,12 +155,12 @@ it('takes a plain bool for a table that is inactive as a whole', function () {
         ->and(Table::make()->rowInactive(false)->isRecordInactive(invRecord()))->toBeFalse();
 });
 
-it('ships dimmed, unstruck, untinted, and locked for editing', function () {
+it('ships dimmed, tinted gray, unstruck, and locked for editing', function () {
     $row = InactiveRow::make();
 
     expect($row->isDimmed())->toBeTrue()
         ->and($row->isStrikethrough())->toBeFalse()
-        ->and($row->getColor())->toBeNull()
+        ->and($row->getColor())->toBe('gray')
         ->and($row->allowsEditing())->toBeFalse()
         ->and($row->allowsSelection())->toBeTrue()
         ->and($row->allowsActions())->toBeTrue();
@@ -180,12 +180,12 @@ it('dims the row and strikes its text, inputs included', function () {
 
     $classes = $table->getRowClasses(invRecord(), 0);
 
-    expect($classes)->toContain('[&>td]:line-through')
+    expect($classes)->toContain('[&>td:not([data-row-actions])]:line-through')
         // A form control does not inherit text-decoration, so it is named.
         ->toContain('[&_input]:line-through')
         ->toContain('[&_select]:line-through')
-        ->toContain('[&>td]:text-gray-400')
-        ->toContain('dark:[&>td]:text-gray-500');
+        ->toContain('[&>td]:text-gray-600')
+        ->toContain('dark:[&>td]:text-gray-400');
 });
 
 it('leaves an active row of the same table untouched', function () {
@@ -196,7 +196,24 @@ it('leaves an active row of the same table untouched', function () {
 
     expect($table->getRowClasses(invRecord(['status' => 'open']), 0))
         ->not->toContain('line-through')
-        ->not->toContain('text-gray-400');
+        ->not->toContain('text-gray-600')
+        ->not->toContain('bg-gray-100');
+});
+
+it('tints an inactive row gray unless told otherwise', function () {
+    $table = Table::make()->rowInactive(fn (Model $record) => $record->status === 'cancelled');
+
+    expect($table->getRowColor(invRecord(['status' => 'cancelled'])))->toBe('gray')
+        ->and($table->getRowClasses(invRecord(['status' => 'cancelled']), 0))
+        ->toContain('bg-gray-100')
+        ->toContain('dark:bg-gray-700/40');
+});
+
+it('leaves an inactive row untinted when its color is null', function () {
+    $table = Table::make()->rowInactive(true, fn (InactiveRow $row) => $row->color(null));
+
+    expect($table->getRowColor(invRecord()))->toBeNull()
+        ->and($table->getRowClasses(invRecord(), 0))->not->toContain('bg-gray-100');
 });
 
 it('tints an inactive row through the canonical row-tint owner', function () {
@@ -223,7 +240,10 @@ it('carries the same look onto the stacked card', function () {
 
     $card = $table->getRowCardClasses(invRecord());
 
-    expect($card)->toContain('line-through')
+    // On the regions holding values, not on the card: a strike set on the card
+    // would carry into its action buttons and nothing inside could lift it.
+    expect($card)->toContain('[&_[data-card-content]]:line-through')
+        ->not->toMatch('/(^|\s)line-through(\s|$)/')
         ->toContain('text-gray-400')
         ->toContain('bg-red-50')
         ->toContain('border-b');
@@ -416,7 +436,9 @@ it('marks only the inactive row in the rendered table', function () {
         ->and($html)->toContain('aria-disabled="true"')
         // The class attribute is escaped on the way out, as every row class is;
         // the parser hands the browser back the `[&>td]:` variant it was written as.
-        ->toContain('[&amp;&gt;td]:line-through');
+        ->toContain('[&amp;&gt;td:not([data-row-actions])]:line-through')
+        // The actions cell is the one the strike skips, so it has to say so.
+        ->toContain('<td data-row-actions');
 });
 
 it('emits no state attribute at all for a table that never declared one', function () {

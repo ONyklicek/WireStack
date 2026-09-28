@@ -19,7 +19,7 @@
             {!! $html !!}
         </div>
     @else
-        <div class="text-sm text-gray-400">{{ $field->getPlaceholder() ?? '-' }}</div>
+        <div class="text-sm text-gray-500 dark:text-gray-400">{{ $field->getPlaceholder() ?? '-' }}</div>
     @endif
 
     @if($field->hasActions())@include('wire-core::infolists.entry-actions')@endif

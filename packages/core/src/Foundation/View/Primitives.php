@@ -48,7 +48,7 @@ final class Primitives
      * A success check icon as a ready-to-echo string. Delegates to the canonical
      * icon owner, so it is themeable and its SVG is memoised there.
      */
-    public function successCheck(string $class = 'h-4 w-4', string $color = 'text-green-500'): string
+    public function successCheck(string $class = 'h-4 w-4', string $color = 'text-green-600'): string
     {
         return $this->icons->render('check-circle', $class, $color);
     }

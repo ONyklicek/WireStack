@@ -51,8 +51,8 @@ it('renders the success check by delegating to the icon owner', function () {
     // so it is themeable and memoised there.
     expect($svg)
         ->toContain('<svg')
-        ->toContain('text-green-500')
-        ->toBe(app(IconManager::class)->render('check-circle', 'h-4 w-4', 'text-green-500'));
+        ->toContain('text-green-600')
+        ->toBe(app(IconManager::class)->render('check-circle', 'h-4 w-4', 'text-green-600'));
 });
 
 it('is bound as a singleton so its memo spans the whole request', function () {

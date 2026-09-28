@@ -284,7 +284,7 @@
                                                 placeholder="{{ __('wire-table::messages.search') }}..."
                                                 aria-label="{{ __('wire-table::messages.search') }}"
                                                 data-testid="table-search" @wireEl('table-search')
-                                                class="block w-full rounded-lg border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 pl-9 pr-3 py-2 text-sm placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 dark:text-white dark:placeholder-gray-500"
+                                                class="block w-full rounded-lg border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 pl-9 pr-3 py-2 text-sm placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500 focus:ring-primary-500 dark:text-white"
                                         >
                                     </div>
                                 @endif
@@ -446,7 +446,7 @@
                                                 x-ref="trigger"
                                                 @click="toggle()"
                                                 type="button"
-                                                class="inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                class="inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
                                                 title="{{ $viewMenuLabel }}"
                                                 aria-label="{{ $viewMenuLabel }}"
                                                 data-testid="table-column-toggle" @wireEl('table-column-toggle')
@@ -502,7 +502,7 @@
                                                      column checkboxes below it before choosing a view would be
                                                      reading a layout that is about to be replaced. --}}
                                                 @if($hasSavedViews)
-                                                    <div class="px-3 py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 mb-1">
+                                                    <div class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 mb-1">
                                                         {{ __('wire-table::messages.views_section') }}
                                                     </div>
                                                     @foreach($savedViews as $savedView)
@@ -523,7 +523,7 @@
                                                                     data-testid="table-view-delete-{{ $savedView }}"
                                                                     title="{{ __('wire-table::messages.delete_view') }}"
                                                                     aria-label="{{ __('wire-table::messages.delete_view') }}"
-                                                                    class="shrink-0 rounded-md p-1.5 mr-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                                                                    class="shrink-0 rounded-md p-1.5 mr-1 text-gray-500 hover:text-red-600 dark:hover:text-red-400"
                                                             >{!! icon('outline:trash', 'h-4 w-4') !!}</button>
                                                         </div>
                                                     @endforeach
@@ -546,7 +546,7 @@
                                                 @endif
                                                 @if($hasColumnToggles)
                                                 <div
-                                                        class="px-3 py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 mb-1 {{ $hasSavedViews ? 'border-t mt-1' : '' }}">
+                                                        class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 mb-1 {{ $hasSavedViews ? 'border-t mt-1' : '' }}">
                                                     {{ __('wire-table::messages.columns_section') }}
                                                 </div>
                                                 @endif
@@ -576,7 +576,7 @@
                                                      and the only bulk expand/collapse a phone gets. --}}
                                                 @if($isSubRowsExpandable)
                                                     <div
-                                                            class="px-3 py-2 mt-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider {{ $hasColumnToggles ? 'border-t border-gray-100 dark:border-gray-700' : 'border-b border-gray-100 dark:border-gray-700 mb-1' }}">
+                                                            class="px-3 py-2 mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider {{ $hasColumnToggles ? 'border-t border-gray-100 dark:border-gray-700' : 'border-b border-gray-100 dark:border-gray-700 mb-1' }}">
                                                         {{ __('wire-table::messages.details_section') }}
                                                     </div>
                                                     <label

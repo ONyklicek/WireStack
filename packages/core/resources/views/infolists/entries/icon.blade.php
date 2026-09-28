@@ -18,7 +18,7 @@
         @if($icon)
             {!! icon($icon, 'w-4 h-4', $iconClass, $tooltip) !!}
         @else
-            <span class="text-gray-400">{{ $field->getPlaceholder() ?? '-' }}</span>
+            <span class="text-gray-500 dark:text-gray-400">{{ $field->getPlaceholder() ?? '-' }}</span>
         @endif
     </div>
 

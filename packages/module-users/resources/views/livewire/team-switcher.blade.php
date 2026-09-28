@@ -13,11 +13,11 @@
             >
                 {!! icon('outline:user-group', 'h-4 w-4 shrink-0') !!}
                 <span class="hidden max-w-32 truncate sm:block">{{ $currentLabel ?? __('wire-module-users::messages.switch_team') }}</span>
-                {!! icon('outline:chevron-down', 'h-4 w-4 text-gray-400') !!}
+                {!! icon('outline:chevron-down', 'h-4 w-4 text-gray-500 dark:text-gray-400') !!}
             </button>
         </x-slot:trigger>
 
-        <div class="px-4 py-2 text-xs font-medium tracking-wide text-gray-400 uppercase">
+        <div class="px-4 py-2 text-xs font-medium tracking-wide text-gray-500 dark:text-gray-400 uppercase">
             {{ __('wire-module-users::messages.switch_team') }}
         </div>
 

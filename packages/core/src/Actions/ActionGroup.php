@@ -501,7 +501,7 @@ class ActionGroup implements Htmlable
 
             $base = [
                 'label' => (string) $item->getLabel($record),
-                'iconHtml' => $icon ? $item->renderIconSvg($icon, 'mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300') : '',
+                'iconHtml' => $icon ? $item->renderIconSvg($icon, 'mr-3 h-4 w-4 text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-300') : '',
                 'testId' => 'menu-action-'.$item->getName(),
                 'shortcut' => $item->getKeyboardShortcutLabel(),
                 'shortcutKeydown' => $item->getAlpineKeydownExpression(),

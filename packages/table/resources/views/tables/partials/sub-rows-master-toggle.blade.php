@@ -18,6 +18,6 @@
     {!! icon(
         $allRowsExpanded ? 'outline:chevron-double-down' : 'outline:chevron-double-right',
         'w-4 h-4',
-        'text-gray-400 dark:text-gray-500 transition-transform duration-200',
+        'text-gray-500 dark:text-gray-500 transition-transform duration-200',
     ) !!}
 </button>

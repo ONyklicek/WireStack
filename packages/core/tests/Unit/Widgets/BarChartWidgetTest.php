@@ -144,7 +144,7 @@ it('maps item colors to matching literal accent text classes', function () {
     expect($widget->textClassesFor(ChartItem::make('A')->color('blue')))
         ->toBe('text-blue-600 dark:text-blue-400')
         ->and($widget->textClassesFor(ChartItem::make('B')->color('green')))
-        ->toBe('text-green-600 dark:text-green-400');
+        ->toBe('text-green-700 dark:text-green-400');
 });
 
 it('falls back to the default gradient for an unknown color', function () {

@@ -31,7 +31,7 @@
                     wire:model.live.debounce.500ms="tableState.filters.{{ $name }}.{{ $fieldName }}"
                     value="{{ $currentValue }}"
                     placeholder="{{ $placeholder }}"
-                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                 >
             </div>
         @endforeach

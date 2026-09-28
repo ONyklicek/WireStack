@@ -11,7 +11,7 @@
             <div class="flex items-center justify-end border-t border-slate-200 pt-4">
                 <button
                     type="button"
-                    class="inline-flex items-center rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-primary-500/25"
+                    class="inline-flex items-center rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-primary-500/25"
                 >
                     {{ $variant === 'repeater' ? 'Save contacts' : 'Save profile' }}
                 </button>

@@ -37,7 +37,7 @@
                         @if ($row['before'] !== null)
                             <span class="rounded-sm px-1 {{ Palette::getSoftTintClasses('danger') }}">{{ $row['before'] }}</span>
                         @else
-                            <span class="text-gray-400 italic">{{ __('wire-core::audit.empty') }}</span>
+                            <span class="text-gray-500 dark:text-gray-400 italic">{{ __('wire-core::audit.empty') }}</span>
                         @endif
                     </td>
 
@@ -45,7 +45,7 @@
                         @if ($row['after'] !== null)
                             <span class="rounded-sm px-1 {{ Palette::getSoftTintClasses('success') }}">{{ $row['after'] }}</span>
                         @else
-                            <span class="text-gray-400 italic">{{ __('wire-core::audit.empty') }}</span>
+                            <span class="text-gray-500 dark:text-gray-400 italic">{{ __('wire-core::audit.empty') }}</span>
                         @endif
                     </td>
                 </tr>

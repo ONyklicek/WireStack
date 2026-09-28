@@ -100,7 +100,7 @@ it('builds solid button render data from canonical size and color resolvers', fu
         ->getRenderData($record);
 
     expect($data['classes'])->toContain('px-3 py-2 text-sm gap-2')
-        ->and($data['classes'])->toContain('bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-600');
+        ->and($data['classes'])->toContain('bg-emerald-700 text-white hover:bg-emerald-800 focus:ring-emerald-500 dark:bg-emerald-400 dark:text-gray-950 dark:hover:bg-emerald-300');
 });
 
 it('does not pre-escape the button label (the view escapes it once)', function () {
@@ -143,7 +143,7 @@ it('builds icon button render data from canonical icon button resolver', functio
         ->getRenderData($record);
 
     expect($data['classes'])->toContain('p-2.5')
-        ->and($data['classes'])->toContain('text-red-600 hover:bg-red-50 focus:ring-red-500 dark:text-red-400 dark:hover:bg-red-900/20')
+        ->and($data['classes'])->toContain('text-red-700 hover:bg-red-50 focus:ring-red-500 dark:text-red-400 dark:hover:bg-red-900/20')
         ->and($data['iconHtml'])->toContain('w-5 h-5');
 });
 
@@ -172,7 +172,7 @@ it('honors ->solid() as an escape hatch under a quiet table', function () {
     $data = Action::make('approve')->quiet()->solid()->color('success')->getRenderData($record);
 
     // solid() wins: the filled button returns, quiet is ignored.
-    expect($data['classes'])->toContain('bg-emerald-600 text-white');
+    expect($data['classes'])->toContain('bg-emerald-700 text-white');
 });
 
 it('leaves outlined and icon buttons unaffected by quiet', function () {
@@ -186,7 +186,7 @@ it('leaves outlined and icon buttons unaffected by quiet', function () {
     $icon = Action::make('delete')->quiet()->icon('trash')->iconButton()->color('danger')->getRenderData($record);
 
     expect($outlined['classes'])->toContain('border border-primary-600')
-        ->and($icon['classes'])->toContain('text-red-600 hover:bg-red-50');
+        ->and($icon['classes'])->toContain('text-red-700 hover:bg-red-50');
 });
 
 // ─── Full render() with record-aware visibility ──────────────────────────────

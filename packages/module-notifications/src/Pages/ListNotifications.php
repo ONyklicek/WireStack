@@ -266,10 +266,10 @@ class ListNotifications extends Component implements IdentifiesHookTarget, Provi
     protected function tile(string $role): string
     {
         return match ($role) {
-            'success' => 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400',
+            'success' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
             'danger' => 'bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-400',
-            'warning' => 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400',
-            'info' => 'bg-cyan-100 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-400',
+            'warning' => 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
+            'info' => 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-400',
             default => 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
         };
     }

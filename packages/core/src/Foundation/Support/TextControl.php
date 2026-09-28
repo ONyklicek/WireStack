@@ -49,7 +49,7 @@ final class TextControl
      * oversight rather than by decision — a textarea with grey placeholder text
      * is what the rest of the field layer already does.
      */
-    private const PLACEHOLDER = 'placeholder:text-gray-400 dark:placeholder:text-gray-500';
+    private const PLACEHOLDER = 'placeholder:text-gray-500 dark:placeholder:text-gray-400';
 
     /** Hover feedback, and the transition that keeps it from snapping. */
     private const HOVER = 'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150';

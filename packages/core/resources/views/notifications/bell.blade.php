@@ -63,7 +63,7 @@
             <span
                 aria-hidden="true"
                 data-testid="notification-bell-count" @wireEl('notification-bell-count')
-                class="absolute -top-0.5 -right-0.5 inline-flex min-w-[1.125rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-[1.125rem] text-white ring-2 ring-white dark:bg-red-500 dark:ring-gray-800"
+                class="absolute -top-0.5 -right-0.5 inline-flex min-w-[1.125rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-[1.125rem] text-white ring-2 ring-white dark:ring-gray-800"
             >{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
         @elseif($hasAny)
             {{-- Read, but not empty. A dot rather than a zero: the bell's job is

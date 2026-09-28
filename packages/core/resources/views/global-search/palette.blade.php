@@ -84,7 +84,7 @@
                                 @keydown.left.prevent="$wire.drillUp()"
                                 data-testid="global-search-input" @wireEl('global-search-input')
                                 placeholder="{{ __('wire-core::global-search.placeholder') }}"
-                                class="w-full border-0 bg-transparent py-4 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-0 focus:outline-none"
+                                class="w-full border-0 bg-transparent py-4 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-0 focus:outline-none"
                         >
                     </div>
 
@@ -108,7 +108,7 @@
                             data-testid="global-search-results" @wireEl('global-search-results')
                     >
                         @forelse($results as $resourceKey => $rows)
-                            <div role="presentation" class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                            <div role="presentation" class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                 {{ $groupLabels[$resourceKey] ?? $resourceKey }}
                             </div>
                             @foreach($rows as $row)

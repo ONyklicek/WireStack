@@ -161,7 +161,7 @@ it('keeps the destructive hue legible at rest on the quiet surface', function ()
 
     // Touch has no hover, so danger must read as danger without interaction.
     expect($obj->quietButton('danger'))
-        ->toContain('text-red-600')
+        ->toContain('text-red-700')
         ->and($obj->quietButton('danger'))->toBe($obj->quietButton('red'));
 });
 
@@ -254,9 +254,9 @@ it('returns correct modal icon bg classes', function () {
 
 it('returns correct modal icon text classes', function () {
     expect(TestColorClass::getModalIconTextClass('danger'))->toContain('text-red-600')
-        ->and(TestColorClass::getModalIconTextClass('warning'))->toContain('text-amber-600')
-        ->and(TestColorClass::getModalIconTextClass('success'))->toContain('text-emerald-600')
-        ->and(TestColorClass::getModalIconTextClass('info'))->toContain('text-cyan-600');
+        ->and(TestColorClass::getModalIconTextClass('warning'))->toContain('text-amber-700')
+        ->and(TestColorClass::getModalIconTextClass('success'))->toContain('text-emerald-700')
+        ->and(TestColorClass::getModalIconTextClass('info'))->toContain('text-cyan-700');
 });
 
 it('returns correct alert color classes per semantic hue', function () {
@@ -284,8 +284,8 @@ it('renders literal alert hues distinct from the semantic role', function () {
 it('returns correct modal submit button classes per semantic hue', function () {
     expect(TestColorClass::getModalSubmitButtonClasses('primary'))->toContain('bg-primary-600')
         ->and(TestColorClass::getModalSubmitButtonClasses('danger'))->toContain('bg-red-600')
-        ->and(TestColorClass::getModalSubmitButtonClasses('success'))->toContain('bg-emerald-600')
-        ->and(TestColorClass::getModalSubmitButtonClasses('warning'))->toContain('bg-amber-500')
+        ->and(TestColorClass::getModalSubmitButtonClasses('success'))->toContain('bg-emerald-700')
+        ->and(TestColorClass::getModalSubmitButtonClasses('warning'))->toContain('bg-amber-400')
         ->and(TestColorClass::getModalSubmitButtonClasses('nonexistent'))->toContain('bg-primary-600');
 });
 
@@ -502,8 +502,8 @@ it('owns the bright accent step no other resolver had', function () {
 
 it('exposes the outlined vocabulary to a caller that is not a component', function () {
     // The instance resolver reads `$this`, so a Blade file could never ask it.
-    expect(TestColorClass::getOutlinedClasses('warning'))->toContain('border-amber-600')
-        ->and(TestColorClass::getOutlinedClasses('success'))->toContain('border-emerald-600');
+    expect(TestColorClass::getOutlinedClasses('warning'))->toContain('border-amber-700')
+        ->and(TestColorClass::getOutlinedClasses('success'))->toContain('border-emerald-700');
 });
 
 it('follows a re-pointed role on every one of the new surfaces', function () {
@@ -511,5 +511,5 @@ it('follows a re-pointed role on every one of the new surfaces', function () {
 
     expect(TestColorClass::getSoftTintClasses('success'))->toBe('bg-teal-50 dark:bg-teal-900/20')
         ->and(TestColorClass::getAccentBgClass('success'))->toBe('bg-teal-500')
-        ->and(TestColorClass::getOutlinedClasses('success'))->toContain('border-teal-600');
+        ->and(TestColorClass::getOutlinedClasses('success'))->toContain('border-teal-700');
 });

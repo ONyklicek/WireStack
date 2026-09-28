@@ -80,7 +80,7 @@
                 @if($field->getMaxLength()) maxlength="{{ $field->getMaxLength() }}" @endif
                 @if($field->isDisabled()) disabled @endif
                 @if($field->isReadOnly()) readonly @endif
-                class="block w-full border-0 ring-0 shadow-none focus:ring-0 focus:border-0 focus:outline-none px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none placeholder-gray-400 disabled:opacity-50"
+                class="block w-full border-0 ring-0 shadow-none focus:ring-0 focus:border-0 focus:outline-none px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none placeholder:text-gray-500 dark:placeholder:text-gray-400 disabled:opacity-50"
             ></textarea>
             <div
                 class="px-4 py-3 text-sm text-gray-800 dark:text-gray-200 prose prose-sm dark:prose-invert max-w-none overflow-auto bg-gray-50 dark:bg-gray-800/50"
@@ -101,7 +101,7 @@
                 @if($field->getMaxLength()) maxlength="{{ $field->getMaxLength() }}" @endif
                 @if($field->isDisabled()) disabled @endif
                 @if($field->isReadOnly()) readonly @endif
-                class="block w-full border-0 ring-0 shadow-none focus:ring-0 focus:border-0 focus:outline-none px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-y placeholder-gray-400 disabled:opacity-50"
+                class="block w-full border-0 ring-0 shadow-none focus:ring-0 focus:border-0 focus:outline-none px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-y placeholder:text-gray-500 dark:placeholder:text-gray-400 disabled:opacity-50"
             ></textarea>
         </div>
 
@@ -117,7 +117,7 @@
 
     @if($field->getMaxLength())
         <div class="flex justify-end px-3 py-1 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-200 dark:border-gray-700">
-            <span class="text-xs text-gray-400 dark:text-gray-500" x-text="(content || '').length + ' / {{ $field->getMaxLength() }}'"></span>
+            <span class="text-xs text-gray-500 dark:text-gray-400" x-text="(content || '').length + ' / {{ $field->getMaxLength() }}'"></span>
         </div>
     @endif
 </div>
