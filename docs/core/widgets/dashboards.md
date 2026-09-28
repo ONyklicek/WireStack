@@ -346,7 +346,8 @@ reads its defaults. A hand-written `WithWidgets` host declares
 **A widget that cannot be narrowed says so.** `ignoresDashboardFilters()` puts a
 "Not filtered" mark on it while any filter differs from its default — the state
 of an external server has no customer, and a reader comparing it with its
-filtered neighbours needs to know.
+filtered neighbours needs to know. The mark sits over the bottom edge of the card and
+takes no room, so it never moves that card out of line with the cards beside it.
 
 **Where it is drawn.** `DashboardPage` puts the filter bar beside the layout
 controls. A host of your own includes it where its layout wants it:

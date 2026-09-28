@@ -113,6 +113,20 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Fixed
 
+- **The "Not filtered" mark no longer pushes its card below its neighbours.** The mark a widget declaring
+  `ignoresDashboardFilters()` wears while a dashboard filter narrows was a paragraph in the grid cell's flow,
+  above the card, so the moment a filter narrowed that card started a line lower than every card beside it —
+  exactly when a reader compares them. It is now a small pill laid over the cell's bottom edge (`absolute`,
+  half in the gap below), and takes no room; `data-testid="widget-unfiltered-{key}"` is unchanged.
+- **The layout-edit toolbar sits above the card instead of on its corner.** The handle, size steppers and
+  remove button were an `absolute -top-3 right-2` pill over the card's top-right corner, which is where a
+  widget's own header actions live, so it crowded them — a "View all →" link sat right against its edge. The
+  toolbar is now a strip in the flow above the card: every tile in the mode gets the same strip, so the cards
+  stay level with each other and the header keeps its room. On a grid with a tall (`row-span`) tile the cell
+  became a flex column in which only the widget fills and scrolls — the old `[&>*>*]:h-full` stretched every
+  child of the cell, so the chrome would have been given the whole row height.
+  `workbench/scripts/verify-dashboard-edit-chrome.mjs` drives both on the new
+  `/previews/widgets-editable-filtered` page and fails without this change.
 - **A custom filter's `apply()` could be skipped without a word.** A single scalar value goes to the table's
   query planner as `column = value` unless the filter's `bypassesPlanner()` returns `true`, so a subclass that
   only overrode `apply()` — as the custom filter docs showed, including their `JsonContainsFilter`, which then

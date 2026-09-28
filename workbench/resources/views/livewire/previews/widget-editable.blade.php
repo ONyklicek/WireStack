@@ -37,6 +37,10 @@
         </div>
     </div>
 
+    <div class="mb-4">
+        @include('wire-core::widgets.partials.widget-filters')
+    </div>
+
     <div data-preview-focus>
         @include('wire-core::widgets.widget-grid')
     </div>
