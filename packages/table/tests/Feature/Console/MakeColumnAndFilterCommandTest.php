@@ -6,6 +6,7 @@ use App\Tables\Columns\PriceColumn;
 use App\Tables\Filters\RegionFilter;
 use App\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 
@@ -71,6 +72,7 @@ it('writes a filter that renders its own control and always narrows through appl
     require_once app_path('Tables/Filters/RegionFilter.php');
 
     Schema::create('regions_filtered', fn ($table) => $table->string('region'));
+    DB::table('regions_filtered')->insert([['region' => 'EU'], ['region' => 'US']]);
 
     $model = new class extends Model
     {
@@ -83,8 +85,8 @@ it('writes a filter that renders its own control and always narrows through appl
         ->and($filter->render(['value' => 'EU']))
         ->toContain('wire:model.live.debounce.500ms="tableState.filters.region.value"')
         ->toContain('value="EU"')
-        ->and($filter->apply($model->newQuery(), 'EU')->toRawSql())->toContain("where \"region\" = 'EU'")
-        ->and($filter->apply($model->newQuery(), '')->toRawSql())->not->toContain('where');
+        ->and($filter->apply($model->newQuery(), 'EU')->pluck('region')->all())->toBe(['EU'])
+        ->and($filter->apply($model->newQuery(), '')->pluck('region')->sort()->values()->all())->toBe(['EU', 'US']);
 });
 
 it('draws the package control for no filter, whatever it is called', function () {
