@@ -2,6 +2,19 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.4.1]
+
+### Fixed
+
+- **The admin menu marks the page, not the branch as well.** A row with children matched its own key on every
+  page of its resource and was tinted like the page — "System" and "PHP Info" both lit on PHP Info. The branch
+  is now marked as the branch (the edge mark, bold label, coloured icon) and only the child is tinted.
+- **A child row can be pinned.** A child with a key — adopted through `parent()`, or a hand-written one given
+  `key()` — carries a pin, and the *Pinned* section draws it. A child without one gets no pin.
+- **The pin shows what pressing it does**: `bookmark` to pin, `bookmark-slash` to unpin, painted by the server
+  in the right state so a pinned row does not flash the wrong one.
+- **The pin no longer covers the badge.** A row with a pin keeps a slot free at its end for it.
+
 ## [2.4.0]
 
 ### Added

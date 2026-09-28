@@ -136,10 +136,25 @@ leaves it looking like itself.
 
 ## Pinned And Recent
 
-Every top-level row carries a pin, shown on hover. Pinning puts a copy of the
-entry in a *Pinned* section above the groups — the row itself stays in its
-group — and the section beside it, *Recent*, lists the last pages opened, most
-recent first, five at most.
+Every top-level row carries a pin, shown on hover — a bookmark to pin, a
+struck-out bookmark to unpin, in a slot at the end of the row so it never lies
+over the badge. Pinning puts a copy of the entry in a *Pinned* section above the
+groups — the row itself stays in its group — and the section beside it,
+*Recent*, lists the last pages opened, most recent first, five at most.
+
+A child row carries one too when it has a key: an entry placed under another
+with `parent()` is registered and has one already, and a hand-written child
+names one with `key()`. Pick a key no resource is registered under — a
+resource's page as `settings.server` — because a key equal to a registered one
+lights the child on every page of that resource:
+
+```php
+NavigationItem::make('System')->children([
+    NavigationItem::make('Server')->url(SettingsResource::url('server'))->key('settings.server'),
+]);
+```
+
+A child without a key has nothing to be kept by and gets no pin.
 
 **Only where something keeps them.** Pins and recent pages are stored through
 the same preference driver a table's columns use, one bag per person per

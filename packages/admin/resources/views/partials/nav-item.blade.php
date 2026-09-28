@@ -39,6 +39,20 @@
      the entry that knows better says so with `activeWhen()`. --}}
 @php($isActive = $active->isActive($item, $itemKey ?? null))
 @php($hasActiveChild = ! $isChild && $active->hasActiveChild($item))
+{{-- A row with children is never the page itself, only the branch it sits
+     in — even when its own key matches, which is every page of a resource whose
+     pages are its children. Tinted like the page it read as a second current
+     row above the one that is: "System" and "PHP Info" both lit on PHP Info.
+     So its own match counts as the branch, and the tint stays with the child. --}}
+@php($hasActiveChild = $hasActiveChild || ($children && $isActive))
+@php($isActive = $isActive && ! $children)
+{{-- Whether this row carries a pin, decided before the row is drawn: the row
+     keeps a slot free at its end for it. The pin is laid over the row, and
+     without the slot it sat on the badge — a pinned row showed its bookmark
+     over its count for good. The rail zeroes the padding (`data-rail-row`),
+     where the pin is hidden anyway. --}}
+@php($pinKey = $itemKey ?? $item->getKey())
+@php($pinnable = ($pins ?? false) && $pinKey !== null && ! ($inFlyout ?? false))
 @php($ariaCurrent = $active->ariaCurrent($item, $itemKey ?? null))
 {{-- A row with children is a disclosure button, not a link. `page` on it would
      be a claim that pressing it takes you where you already are — and the row
@@ -158,6 +172,7 @@
             'font-medium text-gray-900 dark:text-gray-100' => $hasActiveChild && ! $isActive,
             'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white' => ! $isActive,
             'cursor-default opacity-60 hover:bg-transparent' => ! $url && ! $children,
+            'pe-9' => $pinnable,
         ])
     >
         {{-- "You are here", against the column's own edge rather than inside the
@@ -188,12 +203,12 @@
                  wrong for before anyone can say why. --}}
             <span class="relative shrink-0">
                 @if ($item->getIcon())
-                    {!! icon($item->getIcon(), 'h-5 w-5 '.($isActive ? 'text-primary-600 dark:text-primary-300' : 'text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300')) !!}
+                    {!! icon($item->getIcon(), 'h-5 w-5 '.($isActive || $hasActiveChild ? 'text-primary-600 dark:text-primary-300' : 'text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300')) !!}
                 @else
                     <span @class([
                         'flex h-5 w-5 items-center justify-center rounded-sm text-[10px] font-semibold',
-                        'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200' => $isActive,
-                        'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' => ! $isActive,
+                        'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200' => $isActive || $hasActiveChild,
+                        'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' => ! $isActive && ! $hasActiveChild,
                     ])>{{ mb_strtoupper(mb_substr((string) $item->getLabel(), 0, 1)) }}</span>
                 @endif
 
@@ -237,31 +252,45 @@
     </{{ $children ? 'button' : 'a' }}>
 
     {{-- The pin, beside the row rather than inside it: a button inside a link
-         is not a thing HTML allows. Only on a registered top-level row, only
-         where something keeps pins ($pins, asked once by the sidebar), and not
-         in the rail. It asks the Livewire section above the menu to pin, and
-         learns its own state back from the event that section answers with —
-         the row itself is Blade and does not redraw. --}}
-    @if (($pins ?? false) && isset($itemKey) && ! $isChild)
+         is not a thing HTML allows. Only on a row with a key to keep — a
+         registered row, or a child that names one — only where something keeps
+         pins ($pins, asked once by the sidebar), and not in the rail. A child
+         is pinned by its own key, never its parent's: pinning "Server" under
+         "System" must not bring back "System". It asks the Livewire section
+         above the menu to pin, and learns its own state back from the event
+         that section answers with — the row itself is Blade and does not
+         redraw. Not in the rail's popover either: the pin is hidden in the rail,
+         and the same child drawn in both lists would carry two.
+
+         The icon says what pressing does: a bookmark to pin, the struck-out
+         one to unpin. Both are in the markup and the state picks one, so the
+         swap costs no round trip; the server paints the right one first, so
+         a pinned row does not flash the wrong icon before Alpine starts. --}}
+    @if ($pinnable)
+        @php($isPinned = in_array($pinKey, $pinnedKeys ?? [], true))
         <button
             type="button"
             data-rail-hide
-            x-data="{ pinned: @js(in_array($itemKey, $pinnedKeys ?? [], true)) }"
-            x-on:wire-admin-pinned.window="pinned = $event.detail.keys.includes(@js($itemKey))"
-            x-on:click="$dispatch('wire-admin-pin', { key: @js($itemKey) })"
+            x-data="{ pinned: @js($isPinned) }"
+            x-on:wire-admin-pinned.window="pinned = $event.detail.keys.includes(@js($pinKey))"
+            x-on:click="$dispatch('wire-admin-pin', { key: @js($pinKey) })"
+            aria-pressed="{{ $isPinned ? 'true' : 'false' }}"
             x-bind:aria-pressed="pinned ? 'true' : 'false'"
             x-bind:title="pinned ? @js(__('wire-admin::messages.unpin')) : @js(__('wire-admin::messages.pin'))"
             aria-label="{{ __('wire-admin::messages.pin') }}: {{ $item->getLabel() }}"
             data-testid="admin-nav-pin" @wireEl('admin-nav-pin')
-            data-resource="{{ $itemKey }}"
+            data-resource="{{ $pinKey }}"
             x-bind:class="pinned ? 'opacity-100 text-primary-600 dark:text-primary-400' : 'opacity-0 text-gray-500'"
             @class([
-                'absolute top-1/2 -translate-y-1/2 rounded-md bg-white p-1 opacity-0 transition group-hover/row:opacity-100 hover:text-gray-700 focus:opacity-100 dark:bg-gray-900 dark:hover:text-gray-200',
-                // Clear of the disclosure arrow on a row that has one.
-                'end-8' => $children,
-                'end-1' => ! $children,
+                // In the slot the row keeps free (`pe-9`), clear of the badge
+                // and the disclosure arrow. No background of its own: it covers
+                // nothing, and a white square on a tinted row was a patch.
+                'absolute end-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 opacity-0 transition group-hover/row:opacity-100 hover:bg-gray-200/70 hover:text-gray-700 focus:opacity-100 dark:hover:bg-gray-700/70 dark:hover:text-gray-200',
             ])
-        >{!! icon('outline:bookmark', 'h-4 w-4') !!}</button>
+        >
+            <span data-pin-icon="pin" x-show="! pinned" @if ($isPinned) style="display: none;" @endif>{!! icon('outline:bookmark', 'h-4 w-4') !!}</span>
+            <span data-pin-icon="unpin" x-show="pinned" @unless ($isPinned) style="display: none;" @endunless>{!! icon('outline:bookmark-slash', 'h-4 w-4') !!}</span>
+        </button>
     @endif
 
         @if (! $isChild)
@@ -326,8 +355,8 @@
                                 data-testid="admin-nav-flyout-label" @wireEl('admin-nav-flyout-label')
                                 @class([
                                     'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold tracking-wider uppercase',
-                                    'text-gray-500 dark:text-gray-400' => ! $isActive,
-                                    'text-primary-600 dark:text-primary-400' => $isActive,
+                                    'text-gray-500 dark:text-gray-400' => ! $isActive && ! $hasActiveChild,
+                                    'text-primary-600 dark:text-primary-400' => $isActive || $hasActiveChild,
                                     'transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700/70 dark:hover:text-gray-300' => (bool) $url,
                                 ])
                             >
@@ -345,6 +374,7 @@
                                         'itemKey' => null,
                                         'active' => $active,
                                         'child' => true,
+                                        'inFlyout' => true,
                                     ])
                                 @endforeach
                             </ul>
