@@ -103,7 +103,7 @@ beforeEach(function () {
         'connection' => 'tenant',
         'name' => sys_get_temp_dir().'/wire-di-{slug}.sqlite',
         'admin_connection' => null,
-        'migrations' => realpath(__DIR__.'/../../../fixtures/tenant-migrations'),
+        'migrations' => realpath(__DIR__.'/../../../Fixtures/tenant-migrations'),
     ]);
     config()->set('queue.connections.database', ['driver' => 'database', 'table' => 'jobs', 'queue' => 'default', 'retry_after' => 90]);
     config()->set('queue.failed.driver', 'null');
