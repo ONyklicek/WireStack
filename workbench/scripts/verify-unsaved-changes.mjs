@@ -92,6 +92,9 @@ try {
   // A full load rather than wire:navigate: the routed pages sit in the admin
   // shell and the previews above do not, and crossing into a layout by
   // navigate is not what this driver is about.
+  // Whatever an interrupted earlier run left, gone before this one adds its own.
+  const clearFixture = () => eval_(`fetch('${base}/fixtures/unsaved-invoices', { method: 'DELETE' }).then(r => r.status)`);
+  await clearFixture();
   await page('Page.navigate', { url: `${base}/routed/invoices/create` });
   // The controller itself, initialised — not the markup it sits on: the form is
   // in the HTML before Alpine starts, and typing into a page still starting up
@@ -107,9 +110,14 @@ try {
   })()`);
   check('a filled create form is a change', await beforeUnloadCancelled());
   await eval_(`document.querySelector('form[x-data^="wireUnsavedChanges"]').requestSubmit()`);
-  await waitFor(`! location.pathname.endsWith('/create')`);
-  check('the save redirects without asking', (await eval_('window.__confirms.length')) === confirmsBeforeCreate, await eval_('location.pathname'));
+  // Asserted, not only awaited: a save that failed stays on /create, asks
+  // nothing either, and used to pass this check for the wrong reason.
+  const redirected = await waitFor(`! location.pathname.endsWith('/create')`);
+  check('the save redirects without asking', !! redirected && (await eval_('window.__confirms.length')) === confirmsBeforeCreate, await eval_('location.pathname'));
   await shot('03-created');
+
+  // Put the invoices back the way the other drivers expect them.
+  check('the created invoice is cleaned up again', (await clearFixture()) === 200);
 } finally {
   await close();
 }

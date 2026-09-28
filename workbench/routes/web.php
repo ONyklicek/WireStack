@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,6 +34,7 @@ use Workbench\App\Livewire\Resources\ListInvoices;
 use Workbench\App\Livewire\Resources\ListTasks;
 use Workbench\App\Livewire\Resources\ManageTeams;
 use Workbench\App\Livewire\Resources\ViewInvoice;
+use Workbench\App\Models\Invoice;
 use Workbench\App\Models\User as WorkbenchUser;
 use Workbench\App\Providers\WorkbenchServiceProvider;
 
@@ -544,6 +546,14 @@ Route::prefix('previews/tenants')->middleware(SignInDemoUser::class)->group(
 // Registering a company and accepting an invitation: outside any company, and
 // in a group with no name, since the invitation e-mail links to them by theirs.
 Route::prefix('tenants')->middleware([SignInDemoUser::class, 'auth'])->group(fn () => Route::wire('tenants'));
+
+// The invoices verify-unsaved-changes creates to prove a create page's save
+// redirects, removed again so every other driver finds the seeded rows as they
+// were. A fixture endpoint, not an application route: DELETE, no CSRF — the
+// drivers call it with fetch() before and after the step.
+Route::delete('previews/fixtures/unsaved-invoices', fn () => response()->json([
+    'deleted' => Invoice::query()->where('number', 'like', 'UNSAVED-%')->delete(),
+]))->withoutMiddleware(ValidateCsrfToken::class);
 
 // The admin zone's menu drawn as a bar under the header, for verify-topnav. Not
 // in $zoneMembership: it is the same zone's pages in the other shape, not a

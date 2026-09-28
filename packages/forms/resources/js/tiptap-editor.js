@@ -24,6 +24,12 @@ const tiptapEditor = (config = {}) => {
     // Last value pushed to Livewire — lets the $watch ignore the echo and avoid a
     // feedback loop that would re-enter ProseMirror mid-transaction.
     let lastEmitted = null
+    // Set first thing in destroy(). `editor.destroy()` fires the editor's own
+    // callbacks on the way out (blur, selection), and a callback that still
+    // bumped `updatedAt` then would re-run every toolbar button's `isActive()`
+    // against an Alpine scope that is already being taken apart — "isActive is
+    // not defined" in the console of a page left by wire:navigate.
+    let destroyed = false
 
     const read = () => config.outputFormat === 'json'
         ? JSON.stringify(editor.getJSON())
@@ -57,11 +63,13 @@ const tiptapEditor = (config = {}) => {
                 content: initialContent,
                 editable: !config.disabled && !config.readOnly,
                 onCreate: ({ editor: ed }) => {
+                    if (destroyed) return
                     if (config.maxLength) {
                         this.characterCount = ed.storage.characterCount?.characters() ?? 0
                     }
                 },
                 onUpdate: ({ editor: ed }) => {
+                    if (destroyed) return
                     this.updatedAt = Date.now()
 
                     this.syncValue(config.outputFormat === 'json'
@@ -72,9 +80,9 @@ const tiptapEditor = (config = {}) => {
                         this.characterCount = ed.storage.characterCount?.characters() ?? 0
                     }
                 },
-                onSelectionUpdate: () => { this.updatedAt = Date.now() },
-                onFocus: () => { this.updatedAt = Date.now() },
-                onBlur: () => { this.updatedAt = Date.now() },
+                onSelectionUpdate: () => { if (! destroyed) this.updatedAt = Date.now() },
+                onFocus: () => { if (! destroyed) this.updatedAt = Date.now() },
+                onBlur: () => { if (! destroyed) this.updatedAt = Date.now() },
             })
 
             // A default we seeded ourselves is only on screen — push it into
@@ -88,7 +96,7 @@ const tiptapEditor = (config = {}) => {
             // Reflect server-driven value changes (form reset / fill) only — never
             // our own edits, and never while the user is editing.
             this.$wire.$watch(config.wireAttribute, (val) => {
-                if (!editor || editor.isFocused) return
+                if (destroyed || !editor || editor.isFocused) return
                 if (val === lastEmitted) return
                 if (val === read()) return
 
@@ -111,6 +119,7 @@ const tiptapEditor = (config = {}) => {
         },
 
         destroy() {
+            destroyed = true
             editor?.destroy()
             editor = null
         },

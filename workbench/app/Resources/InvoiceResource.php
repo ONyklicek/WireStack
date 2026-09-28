@@ -263,12 +263,14 @@ final class InvoiceResource implements ConfiguresRoutes, DescribesResource, Glob
         return $form->schema([
             TextInput::make('number')->required(),
             TextInput::make('customer')->required(),
+            // Required with a default, as the column is: an empty status used to
+            // reach the database as NULL and fail every create with a 500.
             Select::make('status')->options([
                 'draft' => 'Draft',
                 'sent' => 'Sent',
                 'paid' => 'Paid',
                 'overdue' => 'Overdue',
-            ]),
+            ])->required()->default('draft'),
             DateTimePicker::make('issued_at'),
 
             // The two seams the media module adds to the rest of the system,
