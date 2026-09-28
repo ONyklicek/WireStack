@@ -346,7 +346,8 @@ stejně.
 **Widget, který zúžit nejde, to řekne.** `ignoresDashboardFilters()` na něj dá
 značku „Bez filtru“, dokud se kterýkoli filtr liší od výchozího — stav externího
 serveru nemá zákazníka a čtenář, který ho porovnává s filtrovanými sousedy,
-to potřebuje vědět.
+to potřebuje vědět. Značka leží přes spodní okraj karty a nezabírá místo, takže
+kartu nikdy neposune mimo řadu s kartami vedle ní.
 
 **Kde se kreslí.** `DashboardPage` dá lištu filtrů vedle ovládání rozložení.
 Vlastní hostitel ji vloží tam, kam ji chce jeho layout:
