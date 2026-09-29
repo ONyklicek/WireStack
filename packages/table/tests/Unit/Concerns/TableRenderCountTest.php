@@ -364,9 +364,10 @@ it('renders the context-menu panel partial once per table, never once per row', 
     // render is O(1) — the Table compiles the partial into a Skeleton once and each row
     // splices its key and its (genuinely per-record) items into it.
     //
-    // The items themselves still render per row, and must: an action can be hidden for
-    // one record and visible for the next. So this compares the SLOPE against a table
-    // whose menu is switched off, which nets out everything but the panel scaffolding.
+    // The items are per-record in what they SHOW — an action can be hidden for one
+    // record and visible for the next — but each is compiled once per shape
+    // (Action::renderForDropdown()) and spliced per row. So this compares the SLOPE
+    // against a table whose menu is switched off, which nets out the fixed chrome.
     rcSeed(4);
     $menuSmall = rcRenderCount(rcRender(2, contextMenu: true));
     $plainSmall = rcRenderCount(rcRender(2));
@@ -377,9 +378,10 @@ it('renders the context-menu panel partial once per table, never once per row', 
 
     $panelSlope = ($menuLarge - $menuSmall) - ($plainLarge - $plainSmall);
 
-    // The items are one dropdown-item render per row; the scaffolding around them is
-    // zero. Putting the panel back in the row loop would make this 2 per row.
-    expect($panelSlope / 8)->toEqual(1)
+    // Neither the items nor the scaffolding around them grow with the rows. The
+    // items used to be one dropdown-item render per row — 30–45% of a whole table
+    // render with an eleven-item menu; the panel in the row loop would add one more.
+    expect($panelSlope)->toBe(0)
         ->and($plainLarge - $plainSmall)->toBe(0);
 });
 

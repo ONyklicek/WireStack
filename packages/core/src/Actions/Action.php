@@ -204,6 +204,14 @@ class Action extends BaseAction implements RendersAsButton, RendersAsMenuItem
     private array $buttonSkeletons = [];
 
     /**
+     * One compiled menu item per shape, keyed by {@see dropdownShapeKey()} —
+     * the dropdown twin of {@see $buttonSkeletons}, with the same lifetime.
+     *
+     * @var array<string, Skeleton>
+     */
+    private array $dropdownSkeletons = [];
+
+    /**
      * Render this action's button through the canonical core view.
      *
      * The host supplies a {@see ResolvesActionClick} so core never hardcodes a
@@ -298,11 +306,47 @@ class Action extends BaseAction implements RendersAsButton, RendersAsMenuItem
             return '';
         }
 
-        return view('wire-core::actions.dropdown-item', [
-            'action' => $this,
-            'record' => $record,
-            'click' => $click ?? new MountActionClickResolver,
-        ])->render();
+        $click ??= new MountActionClickResolver;
+
+        // Once per SHAPE, then spliced — the same move as {@see render()}, for the
+        // same reason: a table's row context menu renders every item for every
+        // row, and was measured at 30–45% of a whole table render (11 items on 25
+        // rows: 91 of 283 ms). The click expression is again the one per-record
+        // value in the output, a Blade `{{ }}` inside `wire:click`; everything
+        // else the view reads is folded into the shape key, so an item that
+        // differs in any other way lands on a skeleton of its own.
+        $skeleton = $this->dropdownSkeletons[$this->dropdownShapeKey($record)] ??= Skeleton::compile(
+            view('wire-core::actions.dropdown-item', [
+                'action' => $this,
+                'record' => $record,
+                'click' => new FixedClickResolver(Skeleton::slot('click')),
+            ])->render(),
+            'click',
+        );
+
+        return $skeleton->fill(['click' => e($click->clickHandler($this, $record))]);
+    }
+
+    /**
+     * Everything `dropdown-item.blade.php` reads EXCEPT the click expression.
+     *
+     * The view calls these on the action directly — keep the list in step with
+     * it. A value missing here would let two rows share markup they should not.
+     */
+    private function dropdownShapeKey(?Model $record): string
+    {
+        return md5(serialize([
+            $this->getUrl($record),
+            $this->getLabel($record),
+            $this->isDisabled($record),
+            $this->getIcon($record),
+            $this->getColor($record),
+            $this->shouldOpenUrlInNewTab(),
+            $this->getKeyboardShortcutLabel(),
+            $this->getAlpineKeydownExpression(),
+            $this->getWireClickModifiers(),
+            $this->getName(),
+        ]));
     }
 
     /**

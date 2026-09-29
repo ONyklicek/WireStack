@@ -2,6 +2,16 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.4.3]
+
+### Changed
+
+- **A menu item renders once per shape, not once per row.** `Action::renderForDropdown()` compiles its item into a
+  `Skeleton` and splices the click expression, the same way `Action::render()` already did for the button. A table's
+  row context menu rendered every item for every row — 30–45% of a whole table render, 91 of 283 ms for an
+  eleven-item menu on 25 rows — and now costs no view render per row. The markup is unchanged apart from the
+  view file's own surrounding whitespace, which a compiled skeleton trims.
+
 ## [2.4.2]
 
 ### Changed
