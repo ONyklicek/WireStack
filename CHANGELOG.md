@@ -11,6 +11,11 @@ All notable changes to the Wire ecosystem will be documented in this file.
   row context menu rendered every item for every row — 30–45% of a whole table render, 91 of 283 ms for an
   eleven-item menu on 25 rows — and now costs no view render per row. The markup is unchanged apart from the
   view file's own surrounding whitespace, which a compiled skeleton trims.
+- **A request about one widget asks only that widget whether it is visible.** A poll tick, a lazy load, a filter
+  change and a widget's own action used to walk `getVisibleWidgets()` for the key, which asked every widget first —
+  and `isVisible()` can cost as much as building the widget. Measured on a 12-widget dashboard, a tick went from
+  10–18 queries and 40–60 ms to one query and under 10 ms. Same answer: found in the same layout, and it must
+  still be visible.
 
 ## [2.4.2]
 
