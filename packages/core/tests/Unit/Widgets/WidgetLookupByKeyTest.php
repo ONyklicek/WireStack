@@ -64,4 +64,3 @@ it('asks only the addressed widget whether it is visible', function (Closure $re
 
     expect(array_keys(WlkDashboard::$asked))->toBe([2]);
 })->with('požadavky na jeden widget');
-
