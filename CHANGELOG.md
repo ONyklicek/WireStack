@@ -2,6 +2,16 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.5.1]
+
+### Fixed
+
+- **A desktop no longer shows the phone's sort control.** With the `wire_viewport` cookie saying the window is wide,
+  a stacked table sends only the `<table>` — but the card sort control lives in the toolbar, outside the data
+  region, and took its class from a rule that read "one half sent" as "show the cards". So a desktop drew the
+  sort dropdown meant for the cards beside the header row that already sorts. `getStackedCardsVisibleClass()`
+  now answers `hidden` when the table is the half sent, and `''` only when the cards are.
+
 ## [2.5.0]
 
 ### Changed

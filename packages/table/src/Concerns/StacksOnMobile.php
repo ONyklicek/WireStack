@@ -358,9 +358,14 @@ trait StacksOnMobile
             return 'hidden';
         }
 
-        // The only half in this response: shown, for the reason above.
-        if ($this->getClientLayout() !== null) {
-            return '';
+        // One half in this response. The cards' own container only renders when
+        // they are that half, so for it this is "shown" — but the card chrome
+        // outside the data region (the toolbar's sort control) renders either
+        // way, and with the table sent it must not appear on a desktop.
+        $layout = $this->getClientLayout();
+
+        if ($layout !== null) {
+            return $layout === 'cards' ? '' : 'hidden';
         }
 
         return Breakpoint::resolve($this->stackedBreakpoint)->hiddenAtClass();
