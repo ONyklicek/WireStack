@@ -676,6 +676,74 @@ Editace množství pošle zpět ten řádek a totál v patičce. Kolegova editac
 ->usesRowPartials(): bool
 ```
 
+### Jen viditelná polovina
+
+Tabulka naskládaná na mobilu je dvojí vykreslení každého záznamu — `<table>` a
+karta ke každému — a jedno z nich skryje CSS. Na stránce s 50 řádky, šesti
+sloupci a dvěma akcemi řádku je to 891 kB markupu, z nichž prohlížeč na desktopu
+ukáže 478 kB a na telefonu 450 kB.
+
+Skript tabulky (`wire-table-viewport.js`, pod 1 kB, přichází s tabulkou) zapíše
+největší breakpoint, na který okno dosáhne, do cookie `wire_viewport`, a nese ji
+každý další request — načtení stránky i Livewire update. Naskládaná tabulka pak
+vykreslí jen polovinu, kterou ten prohlížeč ukazuje:
+
+| request | vykreslí se |
+|---|---|
+| bez cookie — první návštěva, bot, test, vypnuté cookies | obě poloviny, rozhodne CSS — přesně jako dřív |
+| okno na stohovacím breakpointu nebo nad ním | jen tabulka |
+| pod ním | jen karty |
+
+Nic se nenastavuje a obrazovka se nemění: posílá se ta polovina, která byla
+vidět. Přechod přes breakpoint — změna velikosti okna, otočený tablet —
+tabulku jednou překreslí na druhou polovinu. Stránka vykreslená podle zastaralé
+cookie se opraví stejně, jakmile Livewire naběhne.
+
+Stejnou odpověď sleduje každý zápis. Se zapnutými
+[řádkovými partials](#radkove-partials) pošle uložení buňky `row-{key}` a desktopové
+součty tam, kde je vidět tabulka, `card-{key}` a součty karet tam, kde jsou vidět
+karty — nikdy polovinu, která v tom prohlížeči nemá kotvu.
+
+Šetří se **markup a DOM**: polovina uzlů k parsování, morphování a držení
+v paměti. Přenos se skoro nehne, protože druhá polovina byla tytéž řádky znovu
+a komprimovala se téměř na nic — stránka výše má gzipem zhruba 13 kB tak i tak.
+
+Cookie si balíček sám vyjme z šifrování (zapisuje ji prohlížeč) a rozhoduje jen
+o tom, kterou polovinu vykreslit. Podvržená nebo neznámá hodnota se čte jako
+žádná cookie.
+
+Vypněte to tam, kde skrytou polovinu stejně něco čte — vlastní skript, který
+dekoruje karty, zatímco je vidět tabulka:
+
+```php
+$table->stackedOnMobile()->renderVisibleLayoutOnly(false)
+```
+
+nebo pro všechny tabulky v `config/wire-table.php`:
+
+```php
+'defaults' => [
+    'visible_layout_only' => false,
+],
+```
+
+#### API jen viditelné poloviny
+
+```php
+// Posílat jen polovinu, kterou prohlížeč ukazuje (výchozí: wire-table.defaults.visible_layout_only)
+->renderVisibleLayoutOnly(bool $only = true): static   // [tl! focus]
+
+// Zda tabulka vůbec ořezává — naskládaná, ne list layout, a zapnuto
+->rendersVisibleLayoutOnly(): bool
+
+// 'table', 'cards', nebo null, když odpověď nese obě
+->getClientLayout(): ?string
+
+// Zda je každá polovina v této odpovědi
+->emitsTable(): bool
+->emitsCards(): bool
+```
+
 ### Cachování dotazů
 
 Cachovat výsledky dotazu na nakonfigurovaný TTL:
@@ -910,6 +978,9 @@ V naskládaném režimu:
 - Každý řádek se stane kartou
 - Každý sloupec se vykreslí jako `Label: Value`
 - `visibleFrom()`/`hiddenFrom()` sloupce stále platí
+- Odpověď nese jen tu polovinu, kterou prohlížeč ukazuje — tabulku, nebo karty —
+  jakmile prohlížeč řekl, jak je široký. Viz
+  [Jen viditelná polovina](#jen-viditelna-polovina).
 
 Akce řádku se v hlavičce každé karty vykreslují vedle sebe. Když má řádek více
 akcí, sbal je do jednoho rozbalovacího menu, aby hlavička zůstala přehledná:
