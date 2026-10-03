@@ -889,7 +889,7 @@ class TablePreview extends Component
         // The toolbar's own fold — no stacking involved, the switch is the
         // table's mobileBreakpoint(). Three header actions below 640px would
         // otherwise wrap under the search field.
-        if ($this->variant === 'header-actions-collapse') {
+        if (in_array($this->variant, ['header-actions-collapse', 'header-actions-many'], true)) {
             $table->collapseHeaderActionsOnMobile();
         }
 
@@ -907,7 +907,8 @@ class TablePreview extends Component
                         'viewer' => 'gray',
                     ]),
                 BooleanColumn::make('is_active')->label('Active')->sortable(),
-                TextColumn::make('created_at')->label('Created')->date('M j')->sortable(),
+                TextColumn::make('created_at')->label('Created')->date('M j')->sortable()
+                    ->toggleable($this->variant === 'header-actions-many'),
             ])
             ->filters([
                 SelectFilter::make('role')
@@ -984,6 +985,25 @@ class TablePreview extends Component
                         ->icon('outline:arrow-down-tray')
                         ->color('gray')
                         ->action(fn () => null),
+                ],
+                // Six labelled buttons beside search, filters and the column
+                // menu — more than a tablet-width toolbar holds on one line.
+                'header-actions-many' => [
+                    $this->inviteHeaderAction(),
+                    ...array_map(
+                        fn (array $spec): HeaderAction => HeaderAction::make($spec[0])
+                            ->label($spec[1])
+                            ->icon($spec[2])
+                            ->color($spec[3])
+                            ->action(fn () => null),
+                        [
+                            ['timeReport', 'Time report', 'outline:clock', 'primary'],
+                            ['pieceReport', 'Piecework report', 'outline:wrench-screwdriver', 'primary'],
+                            ['doctor', 'Doctor', 'outline:heart', 'danger'],
+                            ['vacation', 'Vacation', 'outline:sun', 'success'],
+                            ['sick', 'Sick leave', 'outline:face-frown', 'purple'],
+                        ],
+                    ),
                 ],
                 default => [$this->inviteHeaderAction()],
             })

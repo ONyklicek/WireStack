@@ -271,12 +271,18 @@
 
                     {{-- Header --}}
                     <div class="px-4 lg:px-6 py-4 border-b border-gray-200 dark:border-gray-700" @wireEl('table-toolbar')>
-                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        {{-- The two sides share a line while they fit and wrap when they do
+                             not: the right side drops whole onto the next line, and then its
+                             buttons wrap among themselves. Neither side is squeezed below its
+                             content — before, the search box shrank to its icon and the last
+                             buttons were clipped at the card's edge. --}}
+                        <div class="flex flex-wrap items-center justify-between gap-4">
                             {{-- Left side: Search & Filters --}}
-                            <div class="flex flex-1 items-center gap-3">
-                                {{-- Global Search --}}
+                            <div class="flex w-full sm:w-auto sm:grow sm:basis-[min-content] items-center gap-3">
+                                {{-- Global Search: from `sm` up never narrower than something you can
+                                     type into — the right side wraps before it gets squeezed. --}}
                                 @if($table->isSearchable())
-                                    <div class="relative flex-1 max-w-xs">
+                                    <div class="relative flex-1 sm:min-w-[12rem] max-w-xs">
                                         <div
                                                 class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                                             {!! icon('outline:magnifying-glass', 'h-4 w-4', 'text-gray-400') !!}
@@ -383,7 +389,7 @@
                             </div>
 
                             {{-- Right side: Polling, Header Actions, Column Toggle --}}
-                            <div class="flex items-center gap-2">
+                            <div class="flex flex-wrap items-center gap-2">
                                 {{-- Polling Indicator --}}
                                 @include('wire-table::tables.partials.polling-indicator')
 
@@ -414,22 +420,19 @@
                                     @endforeach
                                 @endif
 
-                                {{-- Header Actions. With collapseHeaderActionsOnMobile() the
-                                     buttons move into a wrapper that hides below the mobile
-                                     breakpoint and one dropdown trigger takes their place;
-                                     without it they sit in the toolbar flex unwrapped, as
-                                     they always did. --}}
+                                {{-- Header Actions, as one group that wraps button by button with
+                                     every label kept on one line. With
+                                     collapseHeaderActionsOnMobile() the group hides below the mobile
+                                     breakpoint and one dropdown trigger takes its place. --}}
                                 @if($hasHeaderActions)
-                                    @if($collapseHeaderActions)
-                                        <div class="{{ $table->getInlineHeaderActionsClass() }} items-center gap-2">
-                                            @include('wire-table::tables.partials.header-actions', ['headerActions' => $headerActions])
-                                        </div>
+                                    <div class="{{ $collapseHeaderActions ? $table->getInlineHeaderActionsClass() : 'flex' }} flex-1 flex-wrap items-center gap-2 whitespace-nowrap" data-testid="table-header-actions" @wireEl('table-header-actions')>
+                                        @include('wire-table::tables.partials.header-actions', ['headerActions' => $headerActions])
+                                    </div>
 
+                                    @if($collapseHeaderActions)
                                         <div class="{{ $table->getMobileHeaderActionsVisibleClass() }}" data-testid="table-header-actions-mobile" @wireEl('table-header-actions-mobile')>
                                             {!! $mobileHeaderActionGroup->render(null, $headerActionClick) !!}
                                         </div>
-                                    @else
-                                        @include('wire-table::tables.partials.header-actions', ['headerActions' => $headerActions])
                                     @endif
                                 @endif
 
