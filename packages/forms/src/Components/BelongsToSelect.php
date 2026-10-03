@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
+use NyonCode\WireCore\Core\Query\Search\WordSearch;
 use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireForms\Forms\Runtime\RelationshipSaveHandler;
@@ -181,9 +182,11 @@ class BelongsToSelect extends Select
             return [];
         }
 
-        $query = $relatedModel::query()
-            ->where($titleAttribute, 'like', "%{$search}%")
-            ->limit(50);
+        // Word by word, like every other search box: `novak jan` finds
+        // "Jan Novák", and a `%` typed into the box is a percent sign.
+        $query = $relatedModel::query();
+        app(WordSearch::class)->apply($query, [$titleAttribute], $search);
+        $query->limit(50);
 
         if ($this->modifyOptionsQueryUsing) {
             $query = ($this->modifyOptionsQueryUsing)($query) ?? $query;

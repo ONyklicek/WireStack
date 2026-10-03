@@ -1,3 +1,5 @@
+import { searchMatcher } from '../support/search'
+
 /**
  * The canonical searchable-select combobox (Teleport + Floating UI).
  *
@@ -106,8 +108,8 @@ const wireSearchableSelect = (config = {}) => ({
     get filteredOptions() {
         // The server already narrowed remote results; never re-filter locally.
         if (this.remote || ! this.search) return this.orderedOptions
-        const s = this.search.toLowerCase()
-        return this.orderedOptions.filter(([, label]) => String(label).toLowerCase().includes(s))
+        const matches = searchMatcher(this.search)
+        return this.orderedOptions.filter(([, label]) => matches(label))
     },
 
     get filteredKeys() {

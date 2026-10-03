@@ -117,6 +117,10 @@ TextColumn::make('full_name')
     })
 ```
 
+Callback se volá jednou pro každé slovo výrazu — `jan novak` ho zavolá s `jan`
+a pak s `novak` a řádek musí najít obě — protože hledání ve výchozím stavu dělí
+podle mezer. Pod `->search(fn ($s) => $s->literal())` dostane celý výraz jednou.
+
 `searchAs()` má smysl teprve tehdy, když tabulka zapne
 [hledání rozsahů](../overview.md#syntaxe-hledani). Typ hodnoty se obvykle odvodí
 z castů modelu — cast `decimal:2` nebo `datetime` stačí — deklarujte ho tedy jen

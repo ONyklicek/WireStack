@@ -11,6 +11,8 @@ use NyonCode\WireCore\Core\Query\AggregateClause;
 use NyonCode\WireCore\Core\Query\FilterClause;
 use NyonCode\WireCore\Core\Query\JoinClause;
 use NyonCode\WireCore\Core\Query\QueryPlan;
+use NyonCode\WireCore\Core\Query\Search\SearchConfig;
+use NyonCode\WireCore\Core\Query\Search\SearchTermParser;
 use NyonCode\WireCore\Core\Query\SearchClause;
 use NyonCode\WireCore\Core\Query\SortClause;
 use NyonCode\WireCore\Exceptions\UnsupportedQueryAspectException;
@@ -254,6 +256,34 @@ it('searches the columns a plan names for the term it carries', function () {
         // No term, or no columns to look in, is no search at all.
         ->and(cds()->count($plan(null, ['name'])))->toBe(3)
         ->and(cds()->count($plan('Ada', [])))->toBe(3);
+});
+
+it('needs every word of the term, each in any named column, ignoring accents', function () {
+    $rows = new CollectionDataSource([
+        ['id' => 1, 'name' => 'Jan Novák', 'city' => 'Praha'],
+        ['id' => 2, 'name' => 'Eva Nováková', 'city' => 'Brno'],
+    ]);
+    $plan = fn (string $term): QueryPlan => new QueryPlan(
+        searchClauses: [new SearchClause('name'), new SearchClause('city')],
+        searchTerm: $term,
+    );
+
+    expect($rows->get($plan('praha novak'))->pluck('name')->all())->toBe(['Jan Novák'])
+        ->and($rows->count($plan('novak')))->toBe(2)
+        ->and($rows->count($plan('novak ostrava')))->toBe(0);
+});
+
+it('reads the term the way the table s search configuration parsed it', function () {
+    // `Al an` is two words that both sit in "Alan", and one substring that
+    // sits nowhere — so the answer tells which reading the source used.
+    $plan = fn (?SearchConfig $config): QueryPlan => new QueryPlan(
+        searchClauses: [new SearchClause('name')],
+        searchTerm: 'Al an',
+        parsedSearch: $config === null ? null : (new SearchTermParser)->parse('Al an', $config),
+    );
+
+    expect(cds()->count($plan(null)))->toBe(1)
+        ->and(cds()->count($plan(SearchConfig::make()->literal())))->toBe(0);
 });
 
 it('compares a backed enum by the value it is stored as', function () {

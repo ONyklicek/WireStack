@@ -21,6 +21,9 @@ final class SearchTermParser
     /** Operators recognised at the head of a token, longest first. */
     private const COMPARISON_PATTERN = '/^(>=|<=|>|<|=)\s*(.+)$/u';
 
+    /** Every operator a comparison may start with. */
+    private const OPERATORS = ['>=', '<=', '>', '<', '='];
+
     /** A range: `10..20`, `10..` (from), `..20` (up to). */
     private const RANGE_PATTERN = '/^(.*?)\.\.(.*)$/u';
 
@@ -116,7 +119,39 @@ final class SearchTermParser
             $chunks[] = [$value, $isPhrase];
         }
 
-        return $chunks;
+        return $config->parsesRanges() ? $this->joinDetachedOperators($chunks) : $chunks;
+    }
+
+    /**
+     * Put an operator typed apart from its value back on it: `> 100` is one
+     * comparison, not the word `>` followed by the word `100`.
+     *
+     * Only a bare operator directly followed by a bare word is joined; a quoted
+     * `">"` is literal by definition and stays a word of its own.
+     *
+     * @param  array<int, array{0: string, 1: bool}>  $chunks
+     * @return array<int, array{0: string, 1: bool}>
+     */
+    private function joinDetachedOperators(array $chunks): array
+    {
+        $joined = [];
+        $count = count($chunks);
+
+        for ($i = 0; $i < $count; $i++) {
+            [$value, $isPhrase] = $chunks[$i];
+            $next = $chunks[$i + 1] ?? null;
+
+            if (! $isPhrase && $next !== null && ! $next[1] && in_array($value, self::OPERATORS, true)) {
+                $joined[] = [$value.$next[0], false];
+                $i++;
+
+                continue;
+            }
+
+            $joined[] = [$value, $isPhrase];
+        }
+
+        return $joined;
     }
 
     /**

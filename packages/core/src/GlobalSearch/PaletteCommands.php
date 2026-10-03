@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\GlobalSearch;
 
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Query\Search\SearchTermParser;
+use NyonCode\WireCore\Core\Query\Search\SearchText;
 use NyonCode\WireCore\Foundation\Contracts\ActionContract;
 use NyonCode\WireCore\Foundation\Contracts\ClassifiesComponentActions;
 use NyonCode\WireCore\Foundation\Contracts\ProvidesCommands;
@@ -60,13 +62,15 @@ class PaletteCommands
             return [];
         }
 
+        // Word by word and ignoring case and accents, as every search box does.
+        $parsed = app(SearchTermParser::class)->parse($term);
         $rows = [];
 
         foreach ($this->catalog->implementing(ProvidesCommands::class) as $key => $owner) {
             foreach ($owner::commands() as $action) {
                 $label = $this->label($action);
 
-                if (mb_stripos($label, $term) === false || ! $this->classifier->isRunnable($action)) {
+                if (! SearchText::matches([$label], $parsed) || ! $this->classifier->isRunnable($action)) {
                     continue;
                 }
 

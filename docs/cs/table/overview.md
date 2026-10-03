@@ -301,21 +301,30 @@ Kompletní API akcí viz [Akce](../core/actions/index.md).
 ->search(Closure|SearchConfig $config)
 ```
 
-Ve výchozím stavu se celý výraz hledá jako jeden podřetězec napříč všemi
-searchable sloupci, spojený přes OR: `LIKE '%výraz%'` na MySQL/MariaDB a SQLite,
-`ILIKE` na PostgreSQL. Znaky `%` a `_`, které uživatel napíše, se escapují —
-hledá se tedy po nich, místo aby fungovaly jako zástupné znaky.
+Ve výchozím stavu se výraz rozdělí na slova a **každé slovo musí sedět**, každé
+v libovolném searchable sloupci: `novak praha` ponechá řádek, jehož jméno obsahuje
+`novak` a město `praha`, v jakémkoli pořadí. Každé slovo je `LIKE '%slovo%'` na
+MySQL/MariaDB a SQLite a `ILIKE` na PostgreSQL. Znaky `%` a `_`, které uživatel
+napíše, se escapují — hledá se tedy po nich, místo aby fungovaly jako zástupné
+znaky.
+
+Velikost písmen a diakritika se řídí collation spojení: pod MySQL
+`utf8mb4_unicode_ci` najde `novak` i `Novák`. Tabulka nad
+[`CollectionDataSource`](data-sources.md), která žádnou collation nemá, obě strany
+převede sama a hledá stejně. Paleta (⌘K), select nad relací a každý seznam
+filtrovaný v prohlížeči — volby selectu, checkbox list, menu adminu — čtou výraz
+podle stejného pravidla.
 
 ### Syntaxe hledání
 
-Každou schopnost zapínáte pro danou tabulku zvlášť — bez toho se nic
-neinterpretuje, takže se stávajícímu hledání pod rukama nezmění chování.
+Dělení podle mezer je zapnuté, pokud tabulka neřekne jinak; rozsahy a zástupné
+znaky se zapínají pro danou tabulku zvlášť, protože obojí čte význam do znaků,
+které běžné hledání může obsahovat.
 
 ```php
 use NyonCode\WireCore\Core\Query\Search\SearchConfig;
 
 $table->search(fn (SearchConfig $s) => $s
-    ->tokenize()    // mezery znamenají AND, uvozovky drží frázi pohromadě
     ->ranges()      // >100, <=20, 10..20, 2026-01-01..2026-03-31
     ->wildcards()   // nov* najde novak
 );
@@ -323,14 +332,14 @@ $table->search(fn (SearchConfig $s) => $s
 
 | Schopnost | Co uživatel napíše | Co to udělá |
 | --- | --- | --- |
-| `tokenize()` | `Ada Lovelace` | Každé slovo musí sedět, každé napříč všemi sloupci — takže se trefí i křestní jméno v jednom sloupci a příjmení v druhém. |
-| `tokenize()` | `"Ada Lovelace"` | Fráze v uvozovkách zůstane jedním slovem a nikdy se nečte jako operátor. |
+| `tokenize()` (výchozí) | `Ada Lovelace` | Každé slovo musí sedět, každé napříč všemi sloupci — takže se trefí i křestní jméno v jednom sloupci a příjmení v druhém. |
+| `tokenize()` (výchozí) | `"Ada Lovelace"` | Fráze v uvozovkách zůstane jedním slovem a nikdy se nečte jako operátor. |
 | `ranges()` | `>100`, `>=100`, `<10`, `<=10`, `=42` | Porovnává proti sloupcům, které drží číslo nebo datum. |
 | `ranges()` | `10..20`, `10..`, `..20` | Uzavřený nebo jednostranně otevřený rozsah. |
 | `ranges()` | `2026-01-01..2026-03-31`, `31.01.2026` | Totéž nad daty. |
 | `ranges()` | `8866 01..08` | Rozsah uvnitř jedné řady strukturovaného kódu — viz níže. |
 | `wildcards()` | `nov*`, `a?b` | `*` zastoupí libovolný počet znaků, `?` právě jeden. |
-| `literal()` | — | Vypne všechno zpět (výchozí stav). |
+| `literal()` | `Ada Lovelace` | Vypne všechno: celý výraz je jeden podřetězec, tak jak byl napsán. |
 
 Zadané datum se čte v té podrobnosti, v jaké bylo napsáno: `2026-01-31` znamená
 celý ten den, `2026-01` celý měsíc a `2026` celý rok — takže `<=2026-01-31`

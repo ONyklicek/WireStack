@@ -12,6 +12,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use NyonCode\WireCore\Core\Query\Search\WordSearch;
 use NyonCode\WireCore\Notifications\Concerns\InteractsWithNotifications;
 use NyonCode\WireModuleMedia\Actions\ReplaceOriginal;
 use NyonCode\WireModuleMedia\Actions\StoreUpload;
@@ -915,7 +916,7 @@ class MediaManager extends Component
             // A search looks through the whole library on purpose. Searching
             // inside the folder you happen to be standing in is how a file
             // nobody can remember filing stays lost.
-            ->when($this->search !== '', fn ($q) => $q->where('name', 'like', '%'.$this->search.'%'))
+            ->when($this->search !== '', fn ($q) => app(WordSearch::class)->apply($q, ['name'], $this->search))
             // Only what the caller can use. A picker asked for an image that
             // offers a PDF is a picker that produces a broken page later, and
             // "later" is after somebody published it.

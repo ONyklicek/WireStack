@@ -124,16 +124,17 @@ chips), and **query-string persistence** (`Table::queryString()`, under a `col_<
 
 ### Search syntax
 
-`Table::searchable()` matches the whole term as one substring across every searchable column
-(`LIKE`/`ILIKE`), and a `%` or `_` the user types is escaped rather than acting as a wildcard.
-Richer syntax is **opt-in per table** through `Table::search()` — nothing is interpreted unless
-asked for, so an unconfigured table behaves exactly as before:
+`Table::searchable()` splits the term into words **by default** (`tokenize()` is on): every word must
+match, each in any searchable column (`LIKE`/`ILIKE`), a "quoted phrase" stays one word, and a `%` or
+`_` the user types is escaped rather than acting as a wildcard. Case and accents follow the DB
+collation (`utf8mb4_unicode_ci`: `novak` finds `Novák`); a `CollectionDataSource` folds both sides
+itself (`Core\Query\Search\SearchText`). `->search(fn ($s) => $s->literal())` restores one substring
+of the whole term. Ranges and wildcards stay **opt-in per table** through `Table::search()`:
 
 ```php
 use NyonCode\WireCore\Core\Query\Search\SearchConfig;
 
 $table->search(fn (SearchConfig $s) => $s
-    ->tokenize()    // spaces = AND; each word ORs across all columns; "quoted phrase" stays whole
     ->ranges()      // >100, >=100, <10, <=10, =42, 10..20, 10.., ..20, 2026-01-01..2026-03-31
     ->wildcards()   // nov* / a?b
 );
@@ -149,6 +150,13 @@ crossing a width boundary is completed — `8866 50..100` reads as `050..100`. `
 nothing on by itself: a searchable column declaring a type while the table's search does not read
 ranges is refused when the table renders, naming the missing `->search(...)` call.
 
+**Every other search box reads a term the same way — never hand-write `where($col, 'like', "%{$term}%")`.**
+A search over a builder and a few columns goes through `Core\Query\Search\WordSearch`
+(`app(WordSearch::class)->apply($query, ['name', 'city'], $term)` — the palette, `BelongsToSelect`,
+the media and notification screens use it); a list filtered in PHP through `SearchText::matches()`;
+a list filtered in the browser through `searchMatcher(term)` from `core/resources/js/support/search.js`
+(select options, `CheckboxList`, tag suggestions, the admin menu filter).
+
 `tokenize()` is what makes a first name in one column and a surname in another match together.
 `ranges()` only asks a column that can answer — the value type comes from the model's casts, or
 from `Column::searchAs('numeric'|'date')` where a cast cannot speak for the column; a comparison
@@ -156,7 +164,7 @@ no column can answer is searched as the literal text typed, never as an empty gr
 everything. A typed date means its whole span (`2026-01-31` the day, `2026-01` the month, `2026`
 the year). `Column::searchable(['first_name', 'last_name'])` searches exactly the columns listed;
 `Column::searchUsing(fn (Builder $q, string $term) => ...)` OR-combines with the planned columns
-and receives one token at a time when tokenizing.
+and receives one word at a time (the whole term only under `literal()`).
 
 ### Relation managers
 
