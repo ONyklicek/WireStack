@@ -11,29 +11,7 @@ use NyonCode\WireBoost\Install\Agents\Vscode;
 use NyonCode\WireBoost\Install\GuidelineComposer;
 use NyonCode\WireBoost\Install\McpInstaller;
 use NyonCode\WireBoost\Install\SkillInstaller;
-use NyonCode\WireBoost\Support\WirePackages;
-
-/**
- * A WirePackages reporting exactly the named packages as installed.
- */
-function installedPackages(string ...$names): WirePackages
-{
-    $versions = [];
-
-    foreach ($names as $name) {
-        $versions[WirePackages::composerName($name)] = '2.0.0';
-    }
-
-    return new WirePackages($versions);
-}
-
-/**
- * Everything the stack has — the shape the monorepo itself is in.
- */
-function everyPackage(): WirePackages
-{
-    return installedPackages(...WirePackages::all());
-}
+use NyonCode\WireBoost\Tests\Support\Packages;
 
 beforeEach(function () {
     $this->base = sys_get_temp_dir().'/wire-boost-install-'.uniqid();
@@ -163,7 +141,7 @@ it('emits example component tags literally instead of rendering them (blade guid
 });
 
 it('returns an empty string when no guideline directory exists', function () {
-    expect((new GuidelineComposer(['/no/such/dir'], everyPackage()))->compose())->toBe('');
+    expect((new GuidelineComposer(['/no/such/dir'], Packages::every()))->compose())->toBe('');
 });
 
 it('renders markdown and blade guideline files', function () {
@@ -172,7 +150,7 @@ it('renders markdown and blade guideline files', function () {
     file_put_contents($dir.'/a.md', '# Plain markdown');
     file_put_contents($dir.'/b.blade.php', 'Rendered blade');
 
-    $composed = (new GuidelineComposer([$dir], everyPackage()))->compose();
+    $composed = (new GuidelineComposer([$dir], Packages::every()))->compose();
 
     expect($composed)->toContain('Plain markdown')->toContain('Rendered blade');
 });
@@ -188,7 +166,7 @@ it('skips a guideline whose package this application does not have', function ()
     file_put_contents($dir.'/wire-panels.blade.php', 'Panel conventions');
     file_put_contents($dir.'/wire-modules.blade.php', 'Module conventions');
 
-    $composed = (new GuidelineComposer([$dir], installedPackages('wire-table', 'wire-module-media')))->compose();
+    $composed = (new GuidelineComposer([$dir], Packages::installed('wire-table', 'wire-module-media')))->compose();
 
     expect($composed)->toContain('Always shipped')
         ->toContain('Table conventions')
@@ -203,14 +181,14 @@ it('matches a guideline package through either extension', function () {
     mkdir($dir, 0755, true);
     file_put_contents($dir.'/wire-admin.md', 'Shell conventions');
 
-    expect((new GuidelineComposer([$dir], installedPackages('wire-core')))->compose())->toBe('');
+    expect((new GuidelineComposer([$dir], Packages::installed('wire-core')))->compose())->toBe('');
 });
 
 it('installs guidelines into a fresh file, then replaces between markers', function () {
     $dir = $this->base.'/guidelines';
     mkdir($dir, 0755, true);
     file_put_contents($dir.'/a.md', 'First content');
-    $composer = new GuidelineComposer([$dir], everyPackage());
+    $composer = new GuidelineComposer([$dir], Packages::every());
 
     $target = $this->base.'/CLAUDE.md';
     $composer->installInto($target);
@@ -234,7 +212,7 @@ it('appends guidelines to an existing file without markers', function () {
     $target = $this->base.'/AGENTS.md';
     file_put_contents($target, "# Existing project notes\n");
 
-    (new GuidelineComposer([$dir], everyPackage()))->installInto($target);
+    (new GuidelineComposer([$dir], Packages::every()))->installInto($target);
 
     $result = (string) file_get_contents($target);
     expect($result)->toContain('Existing project notes')->toContain('Block content');
@@ -260,7 +238,7 @@ it('skips a skill whose package this application does not have', function () {
         ->and(is_dir($target.'/wire-table-development'))->toBeTrue();
 
     $lean = $this->base.'/lean-skills';
-    $onlyCore = (new SkillInstaller([realpath(__DIR__.'/../../resources/boost/skills')], installedPackages('wire-core')))
+    $onlyCore = (new SkillInstaller([realpath(__DIR__.'/../../resources/boost/skills')], Packages::installed('wire-core')))
         ->install($lean);
 
     expect($onlyCore)->toContain('wire-core-development', 'wire-v2-upgrade')
@@ -281,7 +259,7 @@ it('lets a project override one file of a shipped skill', function () {
     file_put_contents($project.'/wire-core-development/reference/extra.md', 'Project extra');
 
     $target = $this->base.'/merged';
-    $installed = (new SkillInstaller([$shipped, $project], installedPackages('wire-core')))->install($target);
+    $installed = (new SkillInstaller([$shipped, $project], Packages::installed('wire-core')))->install($target);
 
     expect($installed)->toBe(['wire-core-development'])
         ->and(file_get_contents($target.'/wire-core-development/SKILL.md'))->toBe('Project skill')
@@ -290,7 +268,7 @@ it('lets a project override one file of a shipped skill', function () {
 });
 
 it('returns no skills when the source is missing', function () {
-    expect((new SkillInstaller(['/no/such/source'], everyPackage()))->install($this->base.'/skills'))->toBe([]);
+    expect((new SkillInstaller(['/no/such/source'], Packages::every()))->install($this->base.'/skills'))->toBe([]);
 });
 
 it('refuses a config file it cannot open, rather than replacing it', function () {
