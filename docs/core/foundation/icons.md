@@ -289,6 +289,63 @@ style — point `default_set` at its key:
 
 At runtime: `app(IconManager::class)->setDefaultIconSet(new LucideIconSet)`.
 
+### Drawing a repeated icon once
+
+A table draws the same few icons in every row — each action button, a boolean
+column, the selection mark — and every one of them carries its whole path data.
+Switch the sprite on and a repeated icon travels once:
+
+```php
+// config/wire-core.php
+'icons' => [
+    'sprite' => env('WIRE_ICONS_SPRITE', true), // [tl! focus]
+],
+```
+
+Inside a Livewire render, each icon is the same `<svg>` it always was — the same
+classes, viewBox, fill/stroke, `aria-*` and forwarded Alpine attributes — holding
+`<use href="#wi-…"/>` instead of its body. The body goes out as a `<symbol>` once
+per piece of markup Livewire sends whole:
+
+| piece | carries the symbols it references |
+|---|---|
+| a component render | yes |
+| an island render | yes |
+| a partial a write answers with (`rowPartials()`, form field partials) | yes |
+| anything outside a Livewire render — a PDF, a mail, plain Blade in a layout | not sprited at all; inline as before |
+
+So whichever of them the browser morphs in, its icons resolve on their own,
+before any script has run. The symbols ride **inside the first sprited `<svg>`**
+of that piece rather than in a hidden element beside it: a new last child would
+move every `:last-child`, `last:` and Tailwind 4 `space-y-*` in your markup.
+
+A small script, `wire-core-icons.js` (under 1 kB), copies every symbol it sees
+into one sprite at the end of `<body>`, which `<use>` falls back to when the
+icon that carried a symbol has been morphed away — an island re-rendered around
+it, say. It is handed to Livewire as an asset by the first component that draws
+a sprited icon, so there is nothing to add to a layout.
+
+Measured on a 50-row table with four icon columns, three row actions and a
+three-item group (605 icons, 17 distinct): **851 965 → 705 288 bytes raw
+(−17 %), 22 315 → 17 297 bytes gzipped (−22 %)**, render time unchanged.
+
+**What you trade.** A `<use>` draws its symbol in a shadow tree, and selectors
+do not cross into it. Inherited properties still reach the paths — `color`,
+`fill`, `stroke`, `opacity`, `stroke-dashoffset` — which is everything the stack's
+own markup relies on. A stylesheet of your own that reaches *into* an icon
+(`.toolbar svg path { stroke-width: 1 }`) stops matching, which is why the switch
+is off by default. Check your CSS for `svg path`-shaped selectors before turning
+it on.
+
+A few bodies are never sprited, whatever the switch says: one with ids or
+`url(#…)` references (gradients, masks, clip paths), because every copy of the
+symbol would carry the same id. Icons in a lazy action menu's spec stay inline
+too — that JSON becomes markup only when the menu opens.
+
+Rendering a sprited icon yourself needs nothing new: `icon()`, `<x-wire::icon>`
+and `IconManager::render()` all decide per call. Code that builds the `<svg>`
+itself asks `IconManager::body($icon)` for what goes inside it.
+
 ### Catching typos
 
 Set `icons.warn_missing` (or `WIRE_ICONS_WARN_MISSING=true`) to log a warning
