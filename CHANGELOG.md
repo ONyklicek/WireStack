@@ -2,6 +2,24 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **Every search box reads a term word by word.** `SearchConfig::tokenize()` is now on by default, so a table's
+  search keeps a row when every word is found in some searchable column, in any order — `novak praha` finds the
+  name in one column and the city in another. A "quoted phrase" stays one word. `->search(fn ($s) => $s->literal())`
+  restores the old single-substring match. A column's `searchUsing()` callback is now called once per word.
+- **The rest of the stack follows the same rule.** The palette (records, menu entries and commands),
+  `BelongsToSelect`'s server search, the media library and the notification history search word by word through
+  the new `Core\Query\Search\WordSearch`; a `CollectionDataSource` through `SearchText`, honouring the table's
+  search configuration; and every list filtered in the browser — select options, `CheckboxList`, tag
+  suggestions, the admin menu filter — through `searchMatcher()` in `core/resources/js/support/search.js`.
+- **Accents and case are ignored wherever the stack compares text itself** (`novak` finds `Novák`): in PHP for a
+  `CollectionDataSource` and the palette's menu and commands, in the browser for every filtered list. SQL keeps
+  following the connection's collation, as before.
+- **`> 100` with a space is one comparison** when ranges are on, rather than the word `>` and the word `100`.
+
 ## [2.4.0]
 
 ### Added

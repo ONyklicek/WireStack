@@ -303,21 +303,30 @@ See [Actions](../core/actions/index.md) for the full Actions API.
 ->search(Closure|SearchConfig $config)
 ```
 
-By default the whole term is matched as one substring against every searchable
-column, OR-ed together: `LIKE '%term%'` on MySQL/MariaDB and SQLite, `ILIKE` on
-PostgreSQL. The `%` and `_` a user types are escaped, so they are searched for
-rather than acting as wildcards.
+By default the term is split into words and **every word must match**, each in
+any searchable column: `novak praha` keeps the row whose name holds `novak` and
+whose city holds `praha`, in whichever order they were typed. Each word is a
+`LIKE '%word%'` on MySQL/MariaDB and SQLite and an `ILIKE` on PostgreSQL. The `%`
+and `_` a user types are escaped, so they are searched for rather than acting as
+wildcards.
+
+Case and accents follow the connection's collation: under MySQL's
+`utf8mb4_unicode_ci` `novak` finds `Novák`. A table over a
+[`CollectionDataSource`](data-sources.md), which has no collation, folds both
+sides itself and matches the same way. The palette (⌘K), a relationship select
+and every list filtered in the browser — select options, a checkbox list, the
+admin menu — read a term by the same rule.
 
 ### Search syntax
 
-Each capability is opted into per table — nothing is interpreted unless you ask
-for it, so an existing search never changes shape underneath you.
+Splitting on spaces is on unless a table says otherwise; ranges and wildcards
+are opted into per table, because both read meaning into characters an ordinary
+search may contain.
 
 ```php
 use NyonCode\WireCore\Core\Query\Search\SearchConfig;
 
 $table->search(fn (SearchConfig $s) => $s
-    ->tokenize()    // spaces mean AND, quotes keep a phrase together
     ->ranges()      // >100, <=20, 10..20, 2026-01-01..2026-03-31
     ->wildcards()   // nov* matches novak
 );
@@ -325,14 +334,14 @@ $table->search(fn (SearchConfig $s) => $s
 
 | Capability | What the user can type | What it does |
 | --- | --- | --- |
-| `tokenize()` | `Ada Lovelace` | Every word must match, each across all columns — so a first name in one column and a surname in another match together. |
-| `tokenize()` | `"Ada Lovelace"` | A quoted phrase stays one word and is never read as an operator. |
+| `tokenize()` (default) | `Ada Lovelace` | Every word must match, each across all columns — so a first name in one column and a surname in another match together. |
+| `tokenize()` (default) | `"Ada Lovelace"` | A quoted phrase stays one word and is never read as an operator. |
 | `ranges()` | `>100`, `>=100`, `<10`, `<=10`, `=42` | Compares against columns that hold a number or a date. |
 | `ranges()` | `10..20`, `10..`, `..20` | A closed or open-ended range. |
 | `ranges()` | `2026-01-01..2026-03-31`, `31.01.2026` | The same over dates. |
 | `ranges()` | `8866 01..08` | A range inside one series of a structured code — see below. |
 | `wildcards()` | `nov*`, `a?b` | `*` stands for any run of characters, `?` for exactly one. |
-| `literal()` | — | Switches everything back off (the default). |
+| `literal()` | `Ada Lovelace` | Switches everything off: the whole term is one substring, as typed. |
 
 A typed date is read at the granularity it was written: `2026-01-31` means that
 whole day, `2026-01` that month and `2026` that year — so `<=2026-01-31` still

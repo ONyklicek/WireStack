@@ -1,3 +1,5 @@
+import { searchMatcher } from '../../../../core/resources/js/support/search'
+
 /**
  * Tags input: a chip list over an array state, with a filtered suggestions panel.
  *
@@ -43,9 +45,9 @@ const wireTagsInput = (config = {}) => ({
 
     get filteredSuggestions() {
         if (! this.input.trim() || ! this.suggestions.length) return []
+        const matches = searchMatcher(this.input)
         return this.suggestions.filter((s) =>
-            s.toLowerCase().includes(this.input.toLowerCase())
-            && (this.allowDuplicates || ! this.tags.includes(s)),
+            matches(s) && (this.allowDuplicates || ! this.tags.includes(s)),
         )
     },
 

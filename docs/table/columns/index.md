@@ -117,6 +117,11 @@ TextColumn::make('full_name')
     })
 ```
 
+The callback is called once per word of the term — `jan novak` calls it with
+`jan` and then with `novak`, and both must find the row — because the search
+splits on spaces by default. Under `->search(fn ($s) => $s->literal())` it
+receives the whole term once.
+
 `searchAs()` matters only once the table opts into
 [range search](../overview.md#search-syntax). The value type is normally
 inferred from the model's casts — a `decimal:2` or `datetime` cast is enough —

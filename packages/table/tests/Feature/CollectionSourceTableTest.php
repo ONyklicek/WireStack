@@ -127,6 +127,12 @@ it('searches the searchable columns, whatever the case', function () {
     expect(cstNames($component))->toBe(['Grace Hopper']);
 });
 
+it('searches word by word, in any order', function () {
+    $component = Livewire::test(CollectionSourceTable::class)->set('tableState.search', 'hopper grace');
+
+    expect(cstNames($component))->toBe(['Grace Hopper']);
+});
+
 it('filters through the filters a source can evaluate', function () {
     $select = Livewire::test(CollectionSourceTable::class)->set('tableState.filters.team', ['value' => 'math']);
     expect(cstNames($select))->toBe(['Ada Lovelace', 'Alan Turing']);
