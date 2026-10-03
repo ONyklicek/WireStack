@@ -156,6 +156,20 @@ return [
         // When true, an unknown icon name logs a warning (and still renders the
         // fallback placeholder). Handy in development to catch typos.
         'warn_missing' => env('WIRE_ICONS_WARN_MISSING', false),
+
+        // Draw a repeated icon once. Inside a Livewire render (a component, an
+        // island, a partial) every icon becomes the same <svg> holding a
+        // <use href="#wi-…">, and the path data travels once per render as a
+        // <symbol> — a table no longer repeats every action's icon in every row.
+        // Outside a Livewire render (PDF, mail, plain Blade) nothing changes.
+        //
+        // Off by default, for one reason: a stylesheet of the application's own
+        // that reaches INTO an icon (`.toolbar svg path { … }`) stops matching,
+        // because a <use> draws its symbol in a shadow tree that selectors do
+        // not cross. Inherited properties — color, fill, stroke, opacity,
+        // stroke-dashoffset — still reach it, which is all the stack's own
+        // markup relies on.
+        'sprite' => env('WIRE_ICONS_SPRITE', false),
     ],
 
     /*

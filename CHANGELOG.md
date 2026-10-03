@@ -27,6 +27,21 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - `Breakpoint::minWidth()` and `Breakpoint::mediaQuery()` — the width each breakpoint starts at, as Tailwind v4
   declares it, for anything that has to agree with the `{breakpoint}:` utilities from JavaScript.
 
+- **A repeated icon can travel once: `wire-core.icons.sprite`.** Inside a Livewire render — a component, an island,
+  a partial a write answers with — every icon becomes the same `<svg>` (same classes, viewBox, fill/stroke, `aria-*`,
+  forwarded attributes) holding `<use href="#wi-…"/>`, and its body goes out once per piece as a `<symbol>` inside
+  the first sprited `<svg>` of that piece. Each piece defines what it references, so it paints correctly on its own
+  whichever of them the browser morphs in; `wire-core-icons.js` (under 1 kB, pushed as a Livewire asset by the first
+  component that draws one — no layout change) keeps every symbol it has seen in one sprite at the end of `<body>`
+  for when the icon that carried one is morphed away. Outside a Livewire render — a PDF, a mail, plain Blade —
+  nothing changes. A 50-row table with four icon columns and seven actions per row: **−17 % raw HTML, −22 % gzipped**
+  (851 965 → 705 288 B, 22 315 → 17 297 B), render time unchanged.
+
+  **Off by default**, for one reason: a `<use>` draws in a shadow tree that selectors do not cross, so an
+  application stylesheet reaching *into* an icon (`.toolbar svg path { … }`) stops matching. Inherited properties
+  (`color`, `fill`, `stroke`, `opacity`, `stroke-dashoffset`) still reach it — all the stack's own markup relies on.
+  Bodies carrying ids or `url(#…)` are never sprited, and icons in a lazy menu's JSON spec stay inline.
+
 ## [2.4.3]
 
 ### Changed

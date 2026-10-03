@@ -20,6 +20,7 @@ use NyonCode\WireCore\Foundation\Concerns\InteractsWithColor;
 use NyonCode\WireCore\Foundation\Enums\Placement;
 use NyonCode\WireCore\Foundation\Enums\Size;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Icons\IconSprite;
 use NyonCode\WireCore\Foundation\Support\MobileSheet;
 
 /**
@@ -462,9 +463,22 @@ class ActionGroup implements Htmlable
      * N Blade views. A nested group is not expanded lazily — its rendered fragment is
      * shipped as-is.
      *
+     * Icons in it are drawn inline even inside a sprite scope ({@see IconSprite}):
+     * the spec reaches the page as JSON and becomes markup only when the menu
+     * opens, so a `<use>` in it would point at a symbol only if something else on
+     * the row happened to carry it.
+     *
      * @return array<int, array<string, mixed>>
      */
     public function getDropdownItemSpecs(?Model $record = null, ?ResolvesActionClick $click = null): array
+    {
+        return app(IconSprite::class)->inline(fn (): array => $this->buildDropdownItemSpecs($record, $click));
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildDropdownItemSpecs(?Model $record, ?ResolvesActionClick $click): array
     {
         $click ??= new MountActionClickResolver;
         $specs = [];
