@@ -209,6 +209,27 @@ trait WithWidgets
     }
 
     /**
+     * The visible widget under this key, or null.
+     *
+     * Found by key BEFORE asking about visibility, where walking
+     * {@see getVisibleWidgets()} asks every widget first. That order matters because
+     * `isVisible()` may cost as much as building the widget — a dashboard that hides
+     * a widget with nothing to say has to build it to know — and a tick for one
+     * widget must not pay that for every other widget on the page. The answer is the
+     * same: the layout is applied the same way, and the widget must still be visible.
+     */
+    private function visibleWidget(string $key): ?Widget
+    {
+        foreach ($this->widgetLayout()->apply($this->stampedWidgets()) as $widget) {
+            if ($widget->getKey() === $key) {
+                return $widget->isVisible() ? $widget : null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Every declared widget, with a key stamped on the ones that had none.
      *
      * One owner, because three things now need the same list at the same moment
@@ -915,14 +936,10 @@ trait WithWidgets
      */
     public function refreshWidget(string $key): void
     {
-        foreach ($this->getVisibleWidgets() as $widget) {
-            if ($widget->getKey() !== $key || ! $widget->isPolling()) {
-                continue;
-            }
+        $widget = $this->visibleWidget($key);
 
+        if ($widget?->isPolling()) {
             $this->renderWidgetPartial($widget);
-
-            return;
         }
     }
 
@@ -970,14 +987,10 @@ trait WithWidgets
         // still correct after this write — and clearing it would re-run the
         // `WidgetConfiguring` hook, which appends. That is the bug the memo in
         // `configuredWidgets()` exists to prevent.
-        foreach ($this->getVisibleWidgets() as $widget) {
-            if ($widget->getKey() !== $key || ! $widget->hasFilter()) {
-                continue;
-            }
+        $widget = $this->visibleWidget($key);
 
+        if ($widget?->hasFilter()) {
             $this->renderWidgetPartial($widget);
-
-            return;
         }
     }
 
@@ -990,21 +1003,19 @@ trait WithWidgets
      */
     public function loadWidget(string $key): void
     {
-        foreach ($this->getVisibleWidgets() as $widget) {
-            if ($widget->getKey() !== $key) {
-                continue;
-            }
+        $widget = $this->visibleWidget($key);
 
-            if (! in_array($key, $this->loadedWidgets, true)) {
-                $this->loadedWidgets[] = $key;
-            }
-
-            $widget->lazy(false);
-
-            $this->renderWidgetPartial($widget);
-
+        if ($widget === null) {
             return;
         }
+
+        if (! in_array($key, $this->loadedWidgets, true)) {
+            $this->loadedWidgets[] = $key;
+        }
+
+        $widget->lazy(false);
+
+        $this->renderWidgetPartial($widget);
     }
 
     /**
@@ -1030,39 +1041,32 @@ trait WithWidgets
      */
     public function callWidgetAction(string $key, string $name): void
     {
-        foreach ($this->getVisibleWidgets() as $widget) {
-            if ($widget->getKey() !== $key) {
-                continue;
-            }
+        $widget = $this->visibleWidget($key);
+        $action = $widget?->getFieldAction($name);
 
-            $action = $widget->getFieldAction($name);
-
-            if ($action === null || $action->isHidden()) {
-                return;
-            }
-
-            app(RunsComponentActions::class)->runComponentAction($action, [
-                'widget' => $widget,
-                'component' => $widget,
-                'livewire' => $this,
-            ]);
-
-            $redeclared = $this->redeclaredWidget($key);
-
-            // Gone after its own action — hidden by what the callback changed, or
-            // removed outright. Queue nothing and let the full render happen: a
-            // partial can replace an element but not delete one, so re-rendering
-            // the stale object would leave a widget on screen that the
-            // declaration no longer has. Same answer every other trigger here
-            // gives a key that names nothing.
-            if ($redeclared === null) {
-                return;
-            }
-
-            $this->renderWidgetPartial($redeclared);
-
+        if ($action === null || $action->isHidden()) {
             return;
         }
+
+        app(RunsComponentActions::class)->runComponentAction($action, [
+            'widget' => $widget,
+            'component' => $widget,
+            'livewire' => $this,
+        ]);
+
+        $redeclared = $this->redeclaredWidget($key);
+
+        // Gone after its own action — hidden by what the callback changed, or
+        // removed outright. Queue nothing and let the full render happen: a
+        // partial can replace an element but not delete one, so re-rendering
+        // the stale object would leave a widget on screen that the
+        // declaration no longer has. Same answer every other trigger here
+        // gives a key that names nothing.
+        if ($redeclared === null) {
+            return;
+        }
+
+        $this->renderWidgetPartial($redeclared);
     }
 
     /**
@@ -1095,13 +1099,7 @@ trait WithWidgets
     {
         $this->configuredWidgets = null;
 
-        foreach ($this->getVisibleWidgets() as $widget) {
-            if ($widget->getKey() === $key) {
-                return $widget;
-            }
-        }
-
-        return null;
+        return $this->visibleWidget($key);
     }
 
     /**

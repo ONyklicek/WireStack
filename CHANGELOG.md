@@ -2,23 +2,43 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
-## [Unreleased]
+## [2.4.3]
 
 ### Changed
 
-- **Every search box reads a term word by word.** `SearchConfig::tokenize()` is now on by default, so a table's
-  search keeps a row when every word is found in some searchable column, in any order — `novak praha` finds the
-  name in one column and the city in another. A "quoted phrase" stays one word. `->search(fn ($s) => $s->literal())`
-  restores the old single-substring match. A column's `searchUsing()` callback is now called once per word.
-- **The rest of the stack follows the same rule.** The palette (records, menu entries and commands),
-  `BelongsToSelect`'s server search, the media library and the notification history search word by word through
-  the new `Core\Query\Search\WordSearch`; a `CollectionDataSource` through `SearchText`, honouring the table's
-  search configuration; and every list filtered in the browser — select options, `CheckboxList`, tag
-  suggestions, the admin menu filter — through `searchMatcher()` in `core/resources/js/support/search.js`.
-- **Accents and case are ignored wherever the stack compares text itself** (`novak` finds `Novák`): in PHP for a
-  `CollectionDataSource` and the palette's menu and commands, in the browser for every filtered list. SQL keeps
-  following the connection's collation, as before.
-- **`> 100` with a space is one comparison** when ranges are on, rather than the word `>` and the word `100`.
+- **A menu item renders once per shape, not once per row.** `Action::renderForDropdown()` compiles its item into a
+  `Skeleton` and splices the click expression, the same way `Action::render()` already did for the button. A table's
+  row context menu rendered every item for every row — 30–45% of a whole table render, 91 of 283 ms for an
+  eleven-item menu on 25 rows — and now costs no view render per row. The markup is unchanged apart from the
+  view file's own surrounding whitespace, which a compiled skeleton trims.
+- **A request about one widget asks only that widget whether it is visible.** A poll tick, a lazy load, a filter
+  change and a widget's own action used to walk `getVisibleWidgets()` for the key, which asked every widget first —
+  and `isVisible()` can cost as much as building the widget. Measured on a 12-widget dashboard, a tick went from
+  10–18 queries and 40–60 ms to one query and under 10 ms. Same answer: found in the same layout, and it must
+  still be visible.
+
+## [2.4.2]
+
+### Changed
+
+- **The pin takes turns with the badge.** Instead of a slot kept free at the end of every row, the pin shows only
+  while the row is pointed at or focused, in the badge's place, and the badge gives way meanwhile. A pinned row no
+  longer shows its bookmark at rest — the *Pinned* section says what is pinned.
+- **Unpin from the Pinned section, pin from Recent.** Each entry there offers its toggle on hover
+  (`admin-nav-pinned-toggle`, `admin-nav-recent-toggle`).
+
+## [2.4.1]
+
+### Fixed
+
+- **The admin menu marks the page, not the branch as well.** A row with children matched its own key on every
+  page of its resource and was tinted like the page — "System" and "PHP Info" both lit on PHP Info. The branch
+  is now marked as the branch (the edge mark, bold label, coloured icon) and only the child is tinted.
+- **A child row can be pinned.** A child with a key — adopted through `parent()`, or a hand-written one given
+  `key()` — carries a pin, and the *Pinned* section draws it. A child without one gets no pin.
+- **The pin shows what pressing it does**: `bookmark` to pin, `bookmark-slash` to unpin, painted by the server
+  in the right state so a pinned row does not flash the wrong one.
+- **The pin no longer covers the badge.** A row with a pin keeps a slot free at its end for it.
 
 ## [2.4.0]
 

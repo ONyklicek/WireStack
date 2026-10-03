@@ -220,6 +220,27 @@ it('does not call a disclosure button the current page', function () {
         ->not->toContain('aria-current="page"');
 });
 
+it('tints the page under a branch, not the branch as well', function () {
+    // A resource whose pages are its children matches its own key on every one
+    // of them. Tinted like a page, the branch read as a second current row
+    // above the child that is — both "System" and "PHP Info" lit on PHP Info.
+    // It is the branch you are in: marked, bold, never tinted.
+    app(ResourceRegistry::class)->register(SbCatalogueResource::class);
+
+    Route::get('/admin/sb-catalogues', fn () => sbRender())->name('wire.sb-catalogues.index');
+
+    $html = $this->get('/admin/sb-catalogues')->getContent();
+
+    // Up to the row's class list; the tag's own `=>` in Alpine rules out `[^>]*`.
+    preg_match('/data-testid="admin-nav-item"[^<]*?data-resource="sb-catalogues".*?class="[^"]*"/s', $html, $branch);
+
+    expect($branch)->not->toBeEmpty()
+        ->and($branch[0])->toContain('data-active="true"')
+        ->toContain('font-medium text-gray-900')
+        ->not->toContain('bg-primary-50')
+        ->and($html)->toContain('data-testid="admin-nav-active-mark"');
+});
+
 it('lets an entry say for itself which pages it belongs to', function () {
     // The one thing the conventions cannot answer: a hand-written entry points
     // at a page, and its section has pages underneath it that the entry has no
