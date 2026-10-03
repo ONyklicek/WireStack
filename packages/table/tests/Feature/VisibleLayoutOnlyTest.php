@@ -107,6 +107,21 @@ it('keeps the CSS swap only while both halves are in the document', function () 
         ->and(vloTest('sm')->html())->not->toContain('md:hidden');
 });
 
+it('shows the card sort control only where the cards are the half sent', function (?string $viewport, string $class) {
+    // The sort control for the cards sits in the toolbar, outside the data
+    // region, so it renders whichever half was sent. With the table sent it was
+    // drawn on a desktop beside the header row that already sorts.
+    VloHost::$configure = fn (Table $table) => $table->columns([
+        TextColumn::make('name')->sortable(),
+    ]);
+
+    expect(vloTest($viewport)->html())->toMatch('/<div class="'.$class.'">\s*<div\s+x-data="wireDropdown[^"]*"[^>]*>\s*<button[^>]*data-testid="table-mobile-sort"/');
+})->with([
+    'no cookie — swapped by CSS' => [null, 'md:hidden'],
+    'the table sent — hidden' => ['lg', 'hidden'],
+    'the cards sent — shown' => ['sm', ''],
+]);
+
 it('reads the cookie against the table’s own breakpoint', function () {
     VloHost::$configure = fn (Table $table) => $table->stackedOnMobile(breakpoint: Breakpoint::Lg);
 
