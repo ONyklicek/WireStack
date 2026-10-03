@@ -237,6 +237,7 @@
         "table-fill-overlay",
         "table-filter-reset",
         "table-filters-trigger",
+        "table-header-actions",
         "table-header-actions-mobile",
         "table-mobile-sort",
         "table-page-current",

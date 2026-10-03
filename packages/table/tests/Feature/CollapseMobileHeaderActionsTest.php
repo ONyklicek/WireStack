@@ -119,6 +119,22 @@ it('collapses the header actions into one dropdown below the mobile breakpoint',
         ->assertSee("openHeaderActionModal('import')");
 });
 
+it('keeps the header actions in one group that wraps, labels on one line', function (bool $collapse, string $visibility) {
+    // A toolbar with more buttons than a tablet line holds used to squeeze the
+    // search box to its icon, break each label over two lines and clip the last
+    // button at the card's edge. The group now wraps button by button instead.
+    $html = Livewire::test(CollapseHeaderActionsHost::class)->set('collapse', $collapse)->html();
+
+    expect($html)->toContain('class="'.$visibility.' flex-1 flex-wrap items-center gap-2 whitespace-nowrap" data-testid="table-header-actions"')
+        // The two sides of the toolbar share a line only while they fit.
+        ->toContain('<div class="flex flex-wrap items-center justify-between gap-4">')
+        // From `sm` up the search box keeps a width you can type into.
+        ->toContain('relative flex-1 sm:min-w-[12rem] max-w-xs');
+})->with([
+    'buttons' => [false, 'flex'],
+    'collapsed below the breakpoint' => [true, 'hidden sm:flex'],
+]);
+
 it('renders a lone surviving action as a button instead of a one-item menu', function () {
     Livewire::test(CollapseHeaderActionsSingleHost::class)
         // Collapse is on (threshold 1) but the viewer may run only one action,
