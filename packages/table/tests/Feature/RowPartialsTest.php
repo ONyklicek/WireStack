@@ -157,6 +157,36 @@ it('sends nothing partial when the write fails', function () {
     expect($test->effects['wirePartials'] ?? null)->toBeNull();
 });
 
+it('renders nothing at all when the write is refused', function (bool $partials, string $key, string $column) {
+    // Nothing was written, so nothing on the page is stale — the cell rolls back
+    // from the answer. With partials on, the cell calls the component rather
+    // than the island, so a render here would be the whole component.
+    $test = Livewire::test(RpHost::class, ['partials' => $partials]);
+
+    $test->call('updateTableCell', $key, $column, 'Edited', null);
+
+    expect($test->effects['returns'][0]['success'])->toBeFalse()
+        ->and($test->effects['html'] ?? null)->toBeNull()
+        ->and($test->effects['wirePartials'] ?? null)->toBeNull();
+})->with([
+    'row partials' => true,
+    'whole table' => false,
+])->with([
+    'record gone' => ['999', 'name'],
+    'column not on the table' => ['1', 'nope'],
+    'column not editable' => ['1', 'amount'],
+]);
+
+it('renders nothing for a fill the table refuses', function () {
+    // RpHost never asked for the fill handle, so the endpoint refuses outright.
+    $test = Livewire::test(RpHost::class);
+
+    $test->call('fillTableCells', [['column' => 'name', 'value' => 'Filled', 'records' => ['1' => null]]]);
+
+    expect($test->effects['returns'][0]['success'])->toBeFalse()
+        ->and($test->effects['html'] ?? null)->toBeNull();
+});
+
 it('answers with the totals too, where the table shows them', function () {
     // A total is computed over the whole filtered set, so any write moves it, and
     // it sits outside every row — which is why a summarised table refused row
