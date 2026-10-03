@@ -300,11 +300,17 @@ final class NavigationItem
     }
 
     /**
-     * The key this entry was registered under — set by `Workspace`, not by you.
+     * The key this entry was registered under — set by `Workspace` on a
+     * registered entry.
      *
      * The menu has always keyed its entries by it; the entry carries it as well
      * so a row that ends up *under* another one — where the array key is gone —
      * is still recognised as its resource's row on that resource's edit page.
+     *
+     * A hand-written child may name one so it can be pinned: pins are kept by
+     * key. Use a key no resource is registered under — `settings.server` for a
+     * resource's page — because a key equal to a registered one lights the
+     * child on every page of that resource.
      */
     public function key(?string $key): self
     {
@@ -313,7 +319,7 @@ final class NavigationItem
         return $this;
     }
 
-    /** The key this entry was registered under, or null for a hand-written child. */
+    /** The key this entry was registered under, or null for a hand-written child that named none. */
     public function getKey(): ?string
     {
         return $this->key;

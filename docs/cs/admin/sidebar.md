@@ -129,10 +129,27 @@ zužuje seznam, na který už se díváte, a nechává ho vypadat jako on sám.
 
 ## Připnuté a nedávné
 
-Každý řádek nejvyšší úrovně nese špendlík, vidět při najetí myší. Připnutí dá
-kopii položky do sekce *Připnuté* nad skupinami — řádek sám zůstane ve své
-skupině — a sekce vedle, *Nedávné*, vypisuje naposledy otevřené stránky, od
-nejnovější, nejvýš pět.
+Každý řádek nejvyšší úrovně nese špendlík, vidět při najetí myší nebo fokusu —
+záložka pro připnutí, přeškrtnutá záložka pro odepnutí. Zaujme místo badge na
+konci řádku, badge mezitím ustoupí, takže řádek v klidu neukazuje nic navíc: co
+je připnuté, říká sekce nahoře. Položka v té sekci stejně nabídne odepnutí a
+položka v *Nedávných* připnutí. Připnutí dá kopii položky do sekce *Připnuté* nad
+skupinami — řádek sám zůstane ve své skupině — a sekce vedle, *Nedávné*,
+vypisuje naposledy otevřené stránky, od nejnovější, nejvýš pět.
+
+Podřádek ho nese taky, pokud má klíč: položka umístěná pod jinou přes `parent()`
+je registrovaná a klíč už má, ručně psaný podřádek si ho pojmenuje přes `key()`.
+Zvolte klíč, pod kterým není registrovaný žádný resource — stránku resource
+jako `settings.server` — protože klíč shodný s registrovaným rozsvítí podřádek na
+každé stránce toho resource:
+
+```php
+NavigationItem::make('System')->children([
+    NavigationItem::make('Server')->url(SettingsResource::url('server'))->key('settings.server'),
+]);
+```
+
+Podřádek bez klíče nemá podle čeho být uchován a špendlík nedostane.
 
 **Jen tam, kde je něco uchová.** Připnuté a nedávné se ukládají přes stejný
 driver preferencí jako sloupce tabulky, jeden pytlík na člověka a

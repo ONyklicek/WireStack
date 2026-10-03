@@ -7,6 +7,7 @@ namespace NyonCode\WireAdmin\Livewire;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use NyonCode\WireCore\Core\Resources\Navigation\ActiveNavigation;
+use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationMemory;
 use NyonCode\WireCore\Core\Resources\Workspace;
 
@@ -48,7 +49,7 @@ class NavigationPins extends Component
     public function render(): View
     {
         $memory = app(NavigationMemory::class);
-        $items = app(Workspace::class)->items($this->zone, $this->linkedOnly);
+        $items = $this->pinnable(app(Workspace::class)->items($this->zone, $this->linkedOnly));
 
         return view('wire-admin::livewire.navigation-pins', [
             'pinned' => $memory->pinnedEntries($items, $this->zone),
@@ -57,5 +58,31 @@ class NavigationPins extends Component
             // trip the route is `livewire.update`, so only the key is carried.
             'active' => new ActiveNavigation(key: $this->current),
         ]);
+    }
+
+    /**
+     * The menu's entries and every child that names a key of its own.
+     *
+     * `Workspace::items()` is the flat list of registered entries, so a child
+     * the sidebar offers a pin on — a hand-written one given a `key()` — is
+     * not in it, and its pin would be stored and never drawn. An adopted child
+     * is registered and already there; the first entry under a key wins.
+     *
+     * @param  array<string, NavigationItem>  $items
+     * @return array<string, NavigationItem>
+     */
+    private function pinnable(array $items): array
+    {
+        foreach ($items as $item) {
+            foreach ($item->getChildren() as $child) {
+                $key = $child->getKey();
+
+                if ($key !== null && ! isset($items[$key])) {
+                    $items[$key] = $child;
+                }
+            }
+        }
+
+        return $items;
     }
 }
