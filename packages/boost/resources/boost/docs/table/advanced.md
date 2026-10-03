@@ -675,6 +675,76 @@ on another line arrives on the next tick as that line alone.
 ->usesRowPartials(): bool
 ```
 
+### Only the Visible Half
+
+A table stacked on mobile is two renderings of every record — the `<table>` and
+a card each — and CSS hides one of them. On a 50-row page with six columns and
+two row actions that is 891 kB of markup, of which the browser shows 478 kB on a
+desktop and 450 kB on a phone.
+
+The table's viewport script (`wire-table-viewport.js`, under 1 kB, delivered with
+the table) writes the largest breakpoint the window reaches into the
+`wire_viewport` cookie, and every later request carries it — a page load and a
+Livewire update alike. A stacked table then emits only the half that browser
+shows:
+
+| request | emitted |
+|---|---|
+| no cookie — first visit, a bot, a test, cookies off | both halves, CSS chooses — exactly as before |
+| window at or above the stacking breakpoint | the table alone |
+| below it | the cards alone |
+
+Nothing is configured to get it, and the screen does not change: the half that
+is sent is the half that was shown. Crossing the breakpoint — a window resized, a
+tablet turned — re-renders the table once, for the other half. A page rendered
+from a stale cookie is corrected the same way as soon as Livewire starts.
+
+Every write follows the same answer. With [row partials](#row-partials) on, an
+inline save sends `row-{key}` and the desktop totals where the table is shown,
+`card-{key}` and the card totals where the cards are, never the half that has no
+anchor in that browser.
+
+What it saves is **markup and DOM**: half the nodes to parse, morph and keep in
+memory. The transfer barely moves, because the second half was the same rows
+again and compressed to almost nothing — the 891 kB page above is about 13 kB
+gzipped either way.
+
+The cookie is excluded from encryption by the package (the browser writes it)
+and decides nothing but which half to render. A forged or unknown value is read
+as no cookie.
+
+Turn it off where something reads the hidden half anyway — a script of your own
+that decorates the cards while the table is shown:
+
+```php
+$table->stackedOnMobile()->renderVisibleLayoutOnly(false)
+```
+
+or for every table in `config/wire-table.php`:
+
+```php
+'defaults' => [
+    'visible_layout_only' => false,
+],
+```
+
+#### Only the Visible Half API
+
+```php
+// Send only the half the browser shows (default: wire-table.defaults.visible_layout_only)
+->renderVisibleLayoutOnly(bool $only = true): static   // [tl! focus]
+
+// Whether this table trims at all — stacked, not the list layout, and on
+->rendersVisibleLayoutOnly(): bool
+
+// 'table', 'cards', or null when this response carries both
+->getClientLayout(): ?string
+
+// Whether each half is in this response
+->emitsTable(): bool
+->emitsCards(): bool
+```
+
 ### Query Caching
 
 Cache query results for a configured TTL:
@@ -909,6 +979,9 @@ In stacked mode:
 - Each row becomes a card
 - Each column renders as `Label: Value`
 - Column `visibleFrom()`/`hiddenFrom()` still applies
+- A response carries only the half the browser shows — the table or the cards —
+  once the browser has said how wide it is. See
+  [Only the Visible Half](#only-the-visible-half).
 
 Row actions render inline in each card header. When a row has several actions,
 collapse them into a single dropdown group so the header stays tidy:
@@ -1393,6 +1466,10 @@ $table
 
 - The menu lists exactly the **visible** menu actions (hidden/unauthorized
   actions are skipped); a row with no visible action shows no menu.
+- Group the items with `Action::divider()->onContextMenu()` between them. The
+  dividers are settled **per row**, like an action-group dropdown's: where every
+  item on one side of a divider is hidden for that record, the divider goes too,
+  so a menu never opens or closes on a line and never shows two in a row.
 - Only **one** context menu is open at a time — right-clicking another row closes
   the previous.
 - It is pinned at the pointer and clamped inside the viewport; it closes on

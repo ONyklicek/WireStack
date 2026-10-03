@@ -128,6 +128,50 @@ it('renders every bound action as its own menu item', function () {
     expect($html)->toContain('Edit')->toContain('Archive');
 });
 
+// ─── Dividers ────────────────────────────────────────────────────
+
+it('keeps a divider only between two visible groups', function (array $hidden, array $expected, int $dividers) {
+    $item = fn (string $name) => Action::make($name)->label(ucfirst($name))
+        ->visible(fn () => ! in_array($name, $hidden, true))
+        ->onContextMenu();
+
+    $table = Table::make()->recordActions([
+        $item('open'),
+        Action::divider()->onContextMenu(),
+        $item('print'),
+        Action::divider()->onContextMenu(),
+        $item('photo'),
+        Action::divider()->onContextMenu(),
+        $item('archive'),
+    ]);
+
+    $html = $table->getRowContextMenuHtml(ctxRecord())->toHtml();
+
+    expect(substr_count($html, 'role="separator"'))->toBe($dividers);
+
+    // The order of what is left, dividers included: a separator never opens
+    // or closes the menu and never follows another.
+    preg_match_all('/role="separator"|>(Open|Print|Photo|Archive)</', $html, $m);
+    expect(array_map(fn (string $hit, string $label) => $label === '' ? '|' : $label, $m[0], $m[1]))->toBe($expected);
+})->with([
+    'nothing hidden' => [[], ['Open', '|', 'Print', '|', 'Photo', '|', 'Archive'], 3],
+    'first group hidden' => [['open'], ['Print', '|', 'Photo', '|', 'Archive'], 2],
+    'last group hidden' => [['archive'], ['Open', '|', 'Print', '|', 'Photo'], 2],
+    'two middle groups hidden' => [['print', 'photo'], ['Open', '|', 'Archive'], 1],
+    'one item left' => [['open', 'print', 'photo'], ['Archive'], 0],
+]);
+
+it('renders no menu when only dividers would be left', function () {
+    $table = Table::make()->recordActions([
+        Action::make('secret')->visible(fn () => false)->onContextMenu(),
+        Action::divider()->onContextMenu(),
+        Action::make('hidden')->visible(fn () => false)->onContextMenu(),
+    ]);
+
+    expect($table->getRowContextMenuHtml(ctxRecord())->toHtml())->toBe('')
+        ->and($table->getRowContextMenuPanel(ctxRecord()))->toBe('');
+});
+
 it('returns empty html when no menu actions are configured', function () {
     expect(Table::make()->getRowContextMenuHtml(ctxRecord())->toHtml())->toBe('');
 });

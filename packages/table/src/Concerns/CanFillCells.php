@@ -74,6 +74,9 @@ trait CanFillCells
      */
     private function fillRefused(string $message): array
     {
+        // Nothing was written, so nothing the table shows moved.
+        $this->skipTableRender();
+
         return ['success' => false, 'results' => [], 'message' => $message];
     }
 }

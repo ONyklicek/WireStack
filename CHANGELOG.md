@@ -2,6 +2,54 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.5.0]
+
+### Changed
+
+- **A refused cell write renders nothing.** A write turned away by a guard, a rule, a permission, a missing record
+  or a failed transaction changed nothing, and the cell rolls itself back from the answer — yet it rendered the
+  whole data region, and on a `rowPartials()` table, where the cell calls the component rather than the island and
+  no row is queued, the whole component: 1.6 s and 7 MB on a 104-row order page for a click on a locked cell. It
+  now skips the render through `skipTableRender()`, so a view change in the same commit still takes the skip
+  back. A conflict still renders — the record moved under the user, so the rest of its row is stale too. A fill
+  the table refuses outright is skipped the same way.
+
+- **A stacked table sends only the half the browser shows.** `stackedOnMobile()` rendered every record twice — the
+  `<table>` and a card — and let CSS hide one. A new viewport script (`wire-table-viewport.js`) writes the
+  breakpoint the window reaches into the `wire_viewport` cookie, and a request carrying it gets the table alone or
+  the cards alone; a request without it still gets both. Crossing the breakpoint re-renders the table once. On a
+  50-row page: 891 kB → 478 kB (table) / 450 kB (cards) of markup, half the DOM; the gzipped transfer is about the
+  same. Row partials, poll partials and totals follow the same half. Off per table with
+  `renderVisibleLayoutOnly(false)`, or for all with `wire-table.defaults.visible_layout_only`.
+
+### Added
+
+- `Breakpoint::minWidth()` and `Breakpoint::mediaQuery()` — the width each breakpoint starts at, as Tailwind v4
+  declares it, for anything that has to agree with the `{breakpoint}:` utilities from JavaScript.
+
+- **A repeated icon can travel once: `wire-core.icons.sprite`.** Inside a Livewire render — a component, an island,
+  a partial a write answers with — every icon becomes the same `<svg>` (same classes, viewBox, fill/stroke, `aria-*`,
+  forwarded attributes) holding `<use href="#wi-…"/>`, and its body goes out once per piece as a `<symbol>` inside
+  the first sprited `<svg>` of that piece. Each piece defines what it references, so it paints correctly on its own
+  whichever of them the browser morphs in; `wire-core-icons.js` (under 1 kB, pushed as a Livewire asset by the first
+  component that draws one — no layout change) keeps every symbol it has seen in one sprite at the end of `<body>`
+  for when the icon that carried one is morphed away. Outside a Livewire render — a PDF, a mail, plain Blade —
+  nothing changes. A 50-row table with four icon columns and seven actions per row: **−17 % raw HTML, −22 % gzipped**
+  (851 965 → 705 288 B, 22 315 → 17 297 B), render time unchanged.
+
+  **Off by default**, for one reason: a `<use>` draws in a shadow tree that selectors do not cross, so an
+  application stylesheet reaching *into* an icon (`.toolbar svg path { … }`) stops matching. Inherited properties
+  (`color`, `fill`, `stroke`, `opacity`, `stroke-dashoffset`) still reach it — all the stack's own markup relies on.
+  Bodies carrying ids or `url(#…)` are never sprited, and icons in a lazy menu's JSON spec stay inline.
+
+### Fixed
+
+- **A row context menu no longer opens, closes or stacks on a divider.** `Action::divider()->onContextMenu()`
+  groups the menu, but the dividers were drawn whatever the record hid, so a row where one group's items were all
+  hidden showed a line first, last or two in a row. They are now settled per row by the rule the action-group
+  dropdown already followed, which moved to one owner both share (`Actions\Support\MenuDividers`). A menu left
+  with dividers only is no menu.
+
 ## [2.4.3]
 
 ### Changed

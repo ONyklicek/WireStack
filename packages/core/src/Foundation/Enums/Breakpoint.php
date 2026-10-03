@@ -67,6 +67,31 @@ enum Breakpoint: string
      * Interpolation-safe only where the consuming surface separately guarantees
      * the resulting utility is scannable (see {@see ResponsiveGrid}).
      */
+    /**
+     * The width this breakpoint starts at, as Tailwind v4 declares it
+     * (`--breakpoint-md: 48rem`). A literal per case rather than arithmetic, so
+     * it reads as the theme does — and in `rem`, because that is what the
+     * `md:` utilities compare against: a reader whose browser default font is
+     * not 16px reaches `md` at a different pixel width, and a pixel threshold
+     * here would disagree with the CSS exactly there.
+     */
+    public function minWidth(): string
+    {
+        return match ($this) {
+            self::Sm => '40rem',
+            self::Md => '48rem',
+            self::Lg => '64rem',
+            self::Xl => '80rem',
+            self::TwoXl => '96rem',
+        };
+    }
+
+    /** The media query the `{breakpoint}:` utilities answer to — for `matchMedia()`. */
+    public function mediaQuery(): string
+    {
+        return '(min-width: '.$this->minWidth().')';
+    }
+
     public function prefix(): string
     {
         return $this->value.':';

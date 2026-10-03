@@ -43,6 +43,15 @@ use Workbench\App\Providers\WorkbenchServiceProvider;
 // routes the flows that are on — no provider registers any.
 Route::wire('auth-codes');
 
+// The icon sprite (`wire-core.icons.sprite`) for one browser at a time: a driver
+// sets a raw `wire_sprite=1` cookie over CDP and gets every page — and every
+// Livewire update it sends — with the sprite on, so it can compare the same page
+// both ways. Read raw because EncryptCookies would refuse a cookie it did not
+// encrypt, and here, because this file runs on every request.
+if (($_COOKIE['wire_sprite'] ?? null) === '1') {
+    config()->set('wire-core.icons.sprite', true);
+}
+
 // One source of truth for the preview surface: every entry below registers its
 // own route *and* is listed on the /previews index. A new variant needs a line
 // here and nothing else — the index cannot fall behind the routes again.

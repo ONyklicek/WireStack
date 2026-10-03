@@ -12,6 +12,7 @@ use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Enums\TableLayout;
 use NyonCode\WireTable\Support\CardRenderer;
+use NyonCode\WireTable\Support\ClientViewport;
 use NyonCode\WireTable\Support\MobileCard;
 use NyonCode\WireTable\Support\MobileCardConfig;
 use NyonCode\WireTable\Table;
@@ -59,6 +60,12 @@ trait StacksOnMobile
     protected ?Closure $listHeading = null;
 
     protected string $stackedBreakpoint = 'md';
+
+    /**
+     * Emit only the half the browser shows. Null defers to
+     * `wire-table.defaults.visible_layout_only`. See {@see renderVisibleLayoutOnly()}.
+     */
+    protected ?bool $visibleLayoutOnly = null;
 
     /** Explicit stacked-card slot assignment; null derives from the columns. */
     protected ?Closure $mobileCardCallback = null;
@@ -245,6 +252,70 @@ trait StacksOnMobile
         return ! $this->rendersTable() || $this->stackedOnMobile;
     }
 
+    /**
+     * Send only the half of a stacked table the browser is showing.
+     *
+     * `stackedOnMobile()` puts the `<table>` AND a card per record in every
+     * response and lets CSS hide one — half of the markup is never seen. With
+     * this on (the default, from `wire-table.defaults.visible_layout_only`), a
+     * request whose `wire_viewport` cookie says which side of the stacking
+     * breakpoint the window is on gets that half alone; a request without the
+     * cookie still gets both. Crossing the breakpoint re-renders the table once,
+     * from `wire-table-viewport.js`.
+     *
+     * Turn it off for a table whose hidden half something reads anyway — a
+     * script of your own that decorates the cards while the table is shown.
+     */
+    public function renderVisibleLayoutOnly(bool $only = true): static
+    {
+        $this->visibleLayoutOnly = $only;
+
+        return $this;
+    }
+
+    /** Whether this table trims to the visible half when the browser says which. */
+    public function rendersVisibleLayoutOnly(): bool
+    {
+        return $this->stackedOnMobile
+            && $this->rendersTable()
+            && ($this->visibleLayoutOnly ?? (bool) config('wire-table.defaults.visible_layout_only', true));
+    }
+
+    /**
+     * Which half this response carries: `'table'`, `'cards'`, or null for both
+     * (not stacked, the list layout, the feature off, or no cookie to go by).
+     */
+    public function getClientLayout(): ?string
+    {
+        if (! $this->rendersVisibleLayoutOnly()) {
+            return null;
+        }
+
+        return match (ClientViewport::reaches(Breakpoint::resolve($this->stackedBreakpoint))) {
+            true => 'table',
+            false => 'cards',
+            null => null,
+        };
+    }
+
+    /** Whether the `<table>` is in THIS response — {@see rendersTable()} minus the viewport. */
+    public function emitsTable(): bool
+    {
+        return $this->rendersTable() && $this->getClientLayout() !== 'cards';
+    }
+
+    /** Whether the cards are in THIS response — {@see rendersCards()} minus the viewport. */
+    public function emitsCards(): bool
+    {
+        return $this->rendersCards() && $this->getClientLayout() !== 'table';
+    }
+
+    /** The media query the stacking breakpoint answers to, for the viewport script. */
+    public function getStackedMediaQuery(): string
+    {
+        return Breakpoint::resolve($this->stackedBreakpoint)->mediaQuery();
+    }
+
     public function getStackedBreakpoint(): string
     {
         return $this->stackedBreakpoint;
@@ -259,8 +330,11 @@ trait StacksOnMobile
      */
     public function getStackedTableHiddenClass(): string
     {
-        // Nothing to hide under the list layout — the table is not rendered.
-        if (! $this->stackedOnMobile || ! $this->rendersTable()) {
+        // Nothing to hide under the list layout — the table is not rendered —
+        // nor when it is the only half this response carries: with nothing to
+        // swap it for, a stale cookie should leave a table on the screen rather
+        // than a blank until the viewport script re-renders.
+        if (! $this->stackedOnMobile || ! $this->rendersTable() || $this->getClientLayout() !== null) {
             return '';
         }
 
@@ -282,6 +356,11 @@ trait StacksOnMobile
 
         if (! $this->stackedOnMobile) {
             return 'hidden';
+        }
+
+        // The only half in this response: shown, for the reason above.
+        if ($this->getClientLayout() !== null) {
+            return '';
         }
 
         return Breakpoint::resolve($this->stackedBreakpoint)->hiddenAtClass();

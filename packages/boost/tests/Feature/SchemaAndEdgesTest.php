@@ -11,6 +11,7 @@ use NyonCode\WireBoost\Install\SkillInstaller;
 use NyonCode\WireBoost\Mcp\Tools\BrowserLogs;
 use NyonCode\WireBoost\Mcp\WireBoostServer;
 use NyonCode\WireBoost\Support\ComponentScanner;
+use NyonCode\WireBoost\Tests\Support\Packages;
 
 beforeEach(function () {
     $this->base = sys_get_temp_dir().'/wire-boost-edges-'.uniqid();
@@ -56,7 +57,7 @@ it('creates missing directories when installing guidelines', function () {
     file_put_contents($dir.'/a.md', 'Nested guideline body');
 
     $target = $this->base.'/deeply/nested/CLAUDE.md';
-    (new GuidelineComposer([$dir], everyPackage()))->installInto($target);
+    (new GuidelineComposer([$dir], Packages::every()))->installInto($target);
 
     expect(is_file($target))->toBeTrue();
 });
@@ -67,7 +68,7 @@ it('copies skill modules that contain nested files', function () {
     file_put_contents($source.'/demo-skill/SKILL.md', "---\nname: demo-skill\n---\nBody");
     file_put_contents($source.'/demo-skill/reference/notes.md', 'Extra reference');
 
-    $installed = (new SkillInstaller([$source], everyPackage()))->install($this->base.'/skills');
+    $installed = (new SkillInstaller([$source], Packages::every()))->install($this->base.'/skills');
 
     expect($installed)->toBe(['demo-skill'])
         ->and(is_file($this->base.'/skills/demo-skill/reference/notes.md'))->toBeTrue();

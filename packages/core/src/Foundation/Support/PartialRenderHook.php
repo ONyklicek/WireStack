@@ -9,6 +9,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Livewire\ComponentHook;
 use Livewire\Mechanisms\HandleComponents\ComponentContext;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithPartials;
+use NyonCode\WireCore\Foundation\Icons\IconSprite;
 
 use function Livewire\store;
 
@@ -129,13 +130,16 @@ final class PartialRenderHook extends ComponentHook
             // markup has to carry them (wire-forms, whose field views compile
             // `@if`s the full render marks up) opens the wider scope around its
             // own render, where it is the one region that needs it.
+            //
+            // A partial is also a sprite scope of its own: the browser morphs it in
+            // alone, so the symbols its icons reference travel inside it.
             $rendered[$name] = IslandViewScope::within(
                 $this->component,
-                function () use ($render): string {
+                fn (): string => app(IconSprite::class)->scope(function () use ($render): string {
                     $html = $render();
 
                     return $html instanceof Htmlable ? $html->toHtml() : (string) $html;
-                },
+                }),
             );
         }
 

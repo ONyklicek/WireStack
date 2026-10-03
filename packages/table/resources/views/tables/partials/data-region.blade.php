@@ -149,6 +149,10 @@
     // record instead of two chosen by CSS.
     $rendersTable = $plan->layout()->rendersTable;
     $rendersCards = $plan->layout()->rendersCards;
+    // With a `wire_viewport` cookie only one of the two halves above is emitted;
+    // the marker below tells `wire-table-viewport.js` which, so crossing the
+    // breakpoint can ask for the other one.
+    $tracksClientLayout = $plan->layout()->tracksClientLayout;
 
     // Where this page sits in the whole result set — read by the footer's
     // "from - to of total" line and, before it, by aria-rowindex, since an ARIA
@@ -161,6 +165,9 @@
     $rangeTo = $plan->paging()->rangeTo;
     $headerRowCount = $plan->paging()->headerRowCount;
 @endphp
+                    @if($tracksClientLayout)
+                        <span hidden data-wire-layout="{{ $plan->layout()->clientLayout ?? 'both' }}" data-wire-layout-query="{{ $plan->layout()->stackedMediaQuery }}"></span>
+                    @endif
                     {{-- Delivered here rather than beside the handle's own markup,
                          because THIS is the element that names `wireFillHandle` —
                          and it does so whether or not any column is visible, while

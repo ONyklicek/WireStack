@@ -31,6 +31,9 @@ final class ResolvedIcon
         'stroke-dasharray',
     ];
 
+    /** Memo for {@see spriteId()}; `false` = computed, not shareable. */
+    private string|false|null $spriteId = null;
+
     /**
      * @param  string  $body  Inner SVG markup (paths, groups, …) without the `<svg>` wrapper.
      * @param  string  $viewBox  The SVG viewBox, e.g. `0 0 20 20` or `0 0 24 24`.
@@ -92,6 +95,28 @@ final class ResolvedIcon
     }
 
     /**
+     * The id this icon's body is shared under in a sprite ({@see IconSprite}),
+     * or null when the body cannot be shared.
+     *
+     * A hash of the viewBox and the body — what a `<symbol>` holds. The fill and
+     * stroke stay on each `<svg>` that references it and reach the symbol by
+     * inheritance, so two icons drawn from one body share one symbol whatever
+     * their styling. A body with ids or `url(#…)` references is not shared: a
+     * symbol instance resolves those against the document, where every copy of
+     * the icon would carry the same id.
+     */
+    public function spriteId(): ?string
+    {
+        if ($this->spriteId === null) {
+            $this->spriteId = preg_match('/\sid\s*=|url\(|<style|<use|href\s*=/i', $this->body) === 1
+                ? false
+                : IconSprite::ID_PREFIX.hash('xxh3', $this->viewBox."\0".$this->body);
+        }
+
+        return $this->spriteId === false ? null : $this->spriteId;
+    }
+
+    /**
      * Render the complete `<svg>` element.
      *
      * @param  string  $classes  CSS classes for the root element.
@@ -102,8 +127,10 @@ final class ResolvedIcon
      *                                             opening tag (Alpine bindings, `data-*`).
      *                                             Lets an Alpine-bound icon be produced in
      *                                             PHP without the `<x-wire::icon>` component.
+     * @param  string|null  $body  What goes inside instead of the icon's own body —
+     *                             a `<use>` from {@see IconSprite::body()}.
      */
-    public function toSvg(string $classes = '', string $label = '', array $attributes = []): string
+    public function toSvg(string $classes = '', string $label = '', array $attributes = [], ?string $body = null): string
     {
         $classes = trim($classes);
         $classAttribute = $classes !== ''
@@ -126,6 +153,8 @@ final class ResolvedIcon
             ? ' role="img" aria-label="'.htmlspecialchars($label, ENT_QUOTES).'"'
             : ' aria-hidden="true"';
 
-        return "<svg{$classAttribute}{$styleAttributes} viewBox=\"{$viewBox}\"{$accessibility}{$extraAttributes}>{$this->body}</svg>";
+        $body ??= $this->body;
+
+        return "<svg{$classAttribute}{$styleAttributes} viewBox=\"{$viewBox}\"{$accessibility}{$extraAttributes}>{$body}</svg>";
     }
 }

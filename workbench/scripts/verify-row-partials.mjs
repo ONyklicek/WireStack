@@ -144,13 +144,20 @@ try {
       && save.wire.some((r) => r.partials[0].startsWith('row-')),
     JSON.stringify(save.wire));
 
-  // Everything one write moves, and nothing else. The card is the same record
-  // rendered again for the width where the table is hidden; the totals are
-  // computed over the whole set, so any write moves them. Refresh the row alone
-  // and a phone keeps the old value while the footer keeps the old total.
-  check('…the card and the totals with it, because one write moves all three',
-    save.wire.some((r) => ['card-', 'summary', 'summary-mobile']
-      .every((n) => r.partials.some((p) => p.startsWith(n)))),
+  // Everything one write moves, and nothing else. The totals are computed over
+  // the whole set, so any write moves them. The card is the same record rendered
+  // again for the width where the table is hidden — and this browser is wide and
+  // has said so (the wire_viewport cookie), so the write sends neither the card
+  // nor the card footer. This page was its first visit and still holds both
+  // halves; the hidden cards it keeps are re-rendered the moment the window
+  // crosses the breakpoint (verify-visible-layout drives that). VisibleLayoutOnlyTest
+  // pins the narrow side and the no-cookie side.
+  check('…the totals with it, because one write moves both',
+    save.wire.some((r) => r.partials.some((p) => p.startsWith('summary'))),
+    JSON.stringify(save.wire));
+
+  check('…and no card, which this wide window does not have',
+    save.wire.every((r) => ! r.partials.some((p) => p.startsWith('card-') || p === 'summary-mobile')),
     JSON.stringify(save.wire));
 
   check('the row was really re-rendered into the page',

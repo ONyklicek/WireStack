@@ -12,6 +12,7 @@ use NyonCode\WireCore\Actions\Concerns\HasColor;
 use NyonCode\WireCore\Actions\Concerns\HasIcons;
 use NyonCode\WireCore\Actions\Contracts\RendersAsMenuItem;
 use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
+use NyonCode\WireCore\Actions\Support\MenuDividers;
 use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
@@ -20,6 +21,7 @@ use NyonCode\WireCore\Foundation\Concerns\InteractsWithColor;
 use NyonCode\WireCore\Foundation\Enums\Placement;
 use NyonCode\WireCore\Foundation\Enums\Size;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Icons\IconSprite;
 use NyonCode\WireCore\Foundation\Support\MobileSheet;
 
 /**
@@ -295,32 +297,7 @@ class ActionGroup implements Htmlable
      */
     protected function cleanDividers(array $actions): array
     {
-        // Remove leading dividers
-        while (! empty($actions) && ($first = reset($actions)) instanceof Action && $first->isDivider()) {
-            array_shift($actions);
-        }
-
-        // Remove trailing dividers
-        while (! empty($actions) && ($last = end($actions)) instanceof Action && $last->isDivider()) {
-            array_pop($actions);
-        }
-
-        // Remove consecutive dividers
-        $cleaned = [];
-        $lastWasDivider = false;
-
-        foreach ($actions as $action) {
-            $isDivider = $action instanceof Action && $action->isDivider();
-
-            if ($isDivider && $lastWasDivider) {
-                continue;
-            }
-
-            $cleaned[] = $action;
-            $lastWasDivider = $isDivider;
-        }
-
-        return $cleaned;
+        return MenuDividers::clean($actions);
     }
 
     // ─── Rendering helpers ──────────────────────────────────────
@@ -462,9 +439,22 @@ class ActionGroup implements Htmlable
      * N Blade views. A nested group is not expanded lazily — its rendered fragment is
      * shipped as-is.
      *
+     * Icons in it are drawn inline even inside a sprite scope ({@see IconSprite}):
+     * the spec reaches the page as JSON and becomes markup only when the menu
+     * opens, so a `<use>` in it would point at a symbol only if something else on
+     * the row happened to carry it.
+     *
      * @return array<int, array<string, mixed>>
      */
     public function getDropdownItemSpecs(?Model $record = null, ?ResolvesActionClick $click = null): array
+    {
+        return app(IconSprite::class)->inline(fn (): array => $this->buildDropdownItemSpecs($record, $click));
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildDropdownItemSpecs(?Model $record, ?ResolvesActionClick $click): array
     {
         $click ??= new MountActionClickResolver;
         $specs = [];

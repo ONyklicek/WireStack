@@ -46,6 +46,7 @@ function markupExceptions(): array
         // per icon would be a view render per icon.
         'packages/core/src/Foundation/Icons/ResolvedIcon.php' => 'builds the one <svg> wrapper every icon is drawn in',
         'packages/core/src/Foundation/Icons/IconManager.php' => 'the fallback icon body, for a name no set answers',
+        'packages/core/src/Foundation/Icons/IconSprite.php' => 'swaps an icon body for a <use> and moves the body into a <symbol>',
 
         // Not markup being authored: string surgery over markup a partial
         // already rendered, to address each subtotal row on its own.

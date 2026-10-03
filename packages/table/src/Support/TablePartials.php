@@ -22,6 +22,12 @@ use NyonCode\WireTable\Table;
  *
  * The markup is closures, so a partial the host decides not to send costs
  * nothing to have been offered.
+ *
+ * A stacked table whose response carried only one half
+ * ({@see Table::getClientLayout()}) is answered for that half alone: the rows,
+ * group subtotals and desktop totals only where the table is in the document,
+ * the cards and the card totals only where the cards are. The other half has no
+ * anchor in that browser, so rendering it would be work the client discards.
  */
 final class TablePartials
 {
@@ -49,6 +55,10 @@ final class TablePartials
      */
     public function rows(array $page, array $changed): array
     {
+        if ($this->table->getClientLayout() === 'cards') {
+            return [];
+        }
+
         $rows = RowRenderer::for($this->table, $this->host, $this->plan);
         $partials = [];
         $position = 0;
@@ -80,13 +90,15 @@ final class TablePartials
         }
 
         $partials = [];
-        $stacked = $this->table->isStackedOnMobile();
+        $layout = $this->table->getClientLayout();
+        $cards = $this->table->isStackedOnMobile() && $layout !== 'table';
+        $desktop = $layout !== 'cards';
 
-        if ($stacked) {
-            $cards = CardRenderer::for($this->table, $this->host, $this->plan);
+        if ($cards) {
+            $renderer = CardRenderer::for($this->table, $this->host, $this->plan);
 
             foreach ($records as $recordKey => $record) {
-                $partials['card-'.$recordKey] = fn (): string => $cards->render($record);
+                $partials['card-'.$recordKey] = fn (): string => $renderer->render($record);
             }
         }
 
@@ -95,7 +107,7 @@ final class TablePartials
         // A group's subtotal is moved by a write to any of its members, and it
         // is a sibling row rather than part of one — so each changed record's
         // group is re-rendered, once however many of its rows moved.
-        if ($this->host->tableHasGroupSummaries()) {
+        if ($desktop && $this->host->tableHasGroupSummaries()) {
             foreach ($this->changedGroups($records) as $groupValue) {
                 foreach ($summaries->group($groupValue) as $name => $html) {
                     $partials[$name] = fn (): string => $html;
@@ -107,9 +119,11 @@ final class TablePartials
             return $partials;
         }
 
-        $partials['summary'] = fn (): string => $summaries->desktop();
+        if ($desktop) {
+            $partials['summary'] = fn (): string => $summaries->desktop();
+        }
 
-        if ($stacked) {
+        if ($cards) {
             $partials['summary-mobile'] = fn (): string => $summaries->mobile();
         }
 

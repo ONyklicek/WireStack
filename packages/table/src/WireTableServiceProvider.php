@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable;
 
+use Illuminate\Cookie\Middleware\EncryptCookies;
 use Livewire\LivewireManager;
 use NyonCode\LaravelPackageToolkit\Commands\InstallCommand;
 use NyonCode\LaravelPackageToolkit\Packager;
@@ -14,6 +15,7 @@ use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireTable\Columns\Console\MakeColumnCommand;
 use NyonCode\WireTable\Filters\Console\MakeFilterCommand;
 use NyonCode\WireTable\Livewire\TableStateSynthesizer;
+use NyonCode\WireTable\Support\ClientViewport;
 use NyonCode\WireTable\Support\Icons\TableIconSet;
 use NyonCode\WireTable\Support\RecordAction;
 
@@ -44,6 +46,11 @@ class WireTableServiceProvider extends PackageServiceProvider
                 app(LivewireManager::class)->propertySynthesizer(TableStateSynthesizer::class);
 
                 $this->registerRecordActionMacros();
+
+                // The browser writes this one (wire-table-viewport.js), so it
+                // carries no signature to decrypt — encrypted, Laravel would
+                // read every value as null and no table would ever trim.
+                EncryptCookies::except(ClientViewport::COOKIE);
                 Bundle::serve('wire-table', self::ASSETS_PATH);
 
                 // The marks inside the hand-drawn selection checkbox, as
@@ -78,6 +85,8 @@ class WireTableServiceProvider extends PackageServiceProvider
                 // registrar late, and `x-data="wireFillHandle()"` is in the rendered
                 // row region, not behind a click.
                 Bundle::make('wire-table-fill.js'),
+                // Writes the `wire_viewport` cookie a stacked table trims to.
+                Bundle::make('wire-table-viewport.js'),
             ])
             ->hasAssetFallback(Bundle::servedByRoute('wire-table'))
             // No `hasMigrations()`: this package has no tables of its own any

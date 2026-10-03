@@ -24,8 +24,10 @@ use NyonCode\WireTable\Table;
  *    scrollport the size of its content never scrolls, so an uncapped one leaves
  *    the header nothing to stay behind;
  *  - **stacking** — below the breakpoint each row becomes a card, and the two
- *    class strings are what swap the `<table>` for the card list. Both halves are
- *    always in the document; only CSS decides which is shown;
+ *    class strings are what swap the `<table>` for the card list. Without a
+ *    `wire_viewport` cookie both halves are in the document and CSS decides;
+ *    with one, only the half that browser shows is emitted
+ *    ({@see Table::getClientLayout()}) and the swap classes go empty;
  *  - **the mobile sheet** — floating filter and column-toggle panels present as a
  *    bottom sheet on a phone unless `Table::sheetOnMobile(false)` turns it off.
  *
@@ -46,8 +48,11 @@ final class LayoutRenderPlan
      * @param  string  $headerPadding  The same for a header cell.
      * @param  string  $stickyHeaderClass  Pins the `<thead>`; empty when it does not pin.
      * @param  string  $scrollRegionStyle  Inline `max-height` for the scroll region; empty when uncapped.
-     * @param  bool  $rendersTable  Whether a `<table>` is emitted at all.
-     * @param  bool  $rendersCards  Whether the card rendering is emitted at all.
+     * @param  bool  $rendersTable  Whether a `<table>` is emitted in this response.
+     * @param  bool  $rendersCards  Whether the card rendering is emitted in this response.
+     * @param  ?string  $clientLayout  `'table'`, `'cards'`, or null when both are emitted.
+     * @param  bool  $tracksClientLayout  Whether the viewport script watches this table.
+     * @param  string  $stackedMediaQuery  The query the stacking breakpoint answers to.
      * @param  string  $tableHiddenClass  Hides the `<table>` below the breakpoint.
      * @param  string  $cardsVisibleClass  Shows the stacked cards there.
      * @param  string  $sheetBreakpoint  The breakpoint the sheet switches at.
@@ -62,6 +67,9 @@ final class LayoutRenderPlan
         public readonly bool $isStackedOnMobile,
         public readonly bool $rendersTable,
         public readonly bool $rendersCards,
+        public readonly ?string $clientLayout,
+        public readonly bool $tracksClientLayout,
+        public readonly string $stackedMediaQuery,
         public readonly string $tableHiddenClass,
         public readonly string $cardsVisibleClass,
         public readonly bool $sheetOnMobile,
@@ -92,9 +100,13 @@ final class LayoutRenderPlan
             isStackedOnMobile: $table->isStackedOnMobile(),
             // Which halves exist, as opposed to which is visible: the list
             // layout emits one rendering per record rather than two chosen by
-            // CSS, so this is a payload decision and not a display one.
-            rendersTable: $table->rendersTable(),
-            rendersCards: $table->rendersCards(),
+            // CSS, and a stacked table whose browser said how wide it is emits
+            // only the half it shows — a payload decision, not a display one.
+            rendersTable: $table->emitsTable(),
+            rendersCards: $table->emitsCards(),
+            clientLayout: $table->getClientLayout(),
+            tracksClientLayout: $table->rendersVisibleLayoutOnly(),
+            stackedMediaQuery: $table->getStackedMediaQuery(),
             tableHiddenClass: $table->getStackedTableHiddenClass(),
             cardsVisibleClass: $table->getStackedCardsVisibleClass(),
             sheetOnMobile: $table->usesSheetOnMobile(),
