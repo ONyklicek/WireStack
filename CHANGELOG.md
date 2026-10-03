@@ -42,6 +42,14 @@ All notable changes to the Wire ecosystem will be documented in this file.
   (`color`, `fill`, `stroke`, `opacity`, `stroke-dashoffset`) still reach it — all the stack's own markup relies on.
   Bodies carrying ids or `url(#…)` are never sprited, and icons in a lazy menu's JSON spec stay inline.
 
+### Fixed
+
+- **A row context menu no longer opens, closes or stacks on a divider.** `Action::divider()->onContextMenu()`
+  groups the menu, but the dividers were drawn whatever the record hid, so a row where one group's items were all
+  hidden showed a line first, last or two in a row. They are now settled per row by the rule the action-group
+  dropdown already followed, which moved to one owner both share (`Actions\Support\MenuDividers`). A menu left
+  with dividers only is no menu.
+
 ## [2.4.3]
 
 ### Changed

@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
+use NyonCode\WireCore\Actions\Support\MenuDividers;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Query\Search\SearchConfig;
 use NyonCode\WireCore\Core\Support\Trans;
@@ -1504,16 +1505,34 @@ class Table implements Htmlable
      * Render a record's context-menu items (same markup as the ActionGroup
      * dropdown). Returns empty HTML when the row has no visible action, so the
      * view can skip the menu entirely.
+     *
+     * Visibility is per record, so the dividers are settled per record too: an
+     * `Action::divider()` between two groups is dropped where every item on one
+     * side of it is hidden, exactly as an action-group dropdown drops it
+     * ({@see MenuDividers}). A divider alone is never a menu.
      */
     public function getRowContextMenuHtml(Model $record): Htmlable
     {
         $html = '';
         $click = new TableActionClickResolver;
 
+        // Rendered first, then settled: an item that renders nothing is hidden
+        // for this record, and asking `canExecute()` up front as well would run
+        // every `hidden()` closure twice per row.
+        $rendered = [];
+
         foreach ($this->getContextMenuActions() as $action) {
-            $html .= $action instanceof ActionGroup
+            $item = $action instanceof ActionGroup
                 ? $action->getDropdownItemsHtml($record, $click)->toHtml()
                 : $action->renderForDropdown($record, $click);
+
+            if ($item !== '') {
+                $rendered[spl_object_id($action)] = [$action, $item];
+            }
+        }
+
+        foreach (MenuDividers::clean(array_column($rendered, 0)) as $action) {
+            $html .= $rendered[spl_object_id($action)][1];
         }
 
         return new HtmlString($html);

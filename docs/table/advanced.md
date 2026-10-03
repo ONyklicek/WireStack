@@ -1466,6 +1466,10 @@ $table
 
 - The menu lists exactly the **visible** menu actions (hidden/unauthorized
   actions are skipped); a row with no visible action shows no menu.
+- Group the items with `Action::divider()->onContextMenu()` between them. The
+  dividers are settled **per row**, like an action-group dropdown's: where every
+  item on one side of a divider is hidden for that record, the divider goes too,
+  so a menu never opens or closes on a line and never shows two in a row.
 - Only **one** context menu is open at a time — right-clicking another row closes
   the previous.
 - It is pinned at the pointer and clamped inside the viewport; it closes on
