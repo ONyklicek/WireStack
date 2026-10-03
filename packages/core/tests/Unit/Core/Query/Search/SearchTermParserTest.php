@@ -10,10 +10,19 @@ beforeEach(function () {
     $this->parser = new SearchTermParser;
 });
 
-// ── The default: nothing is interpreted ─────────────────────
+// ── The default: words, and nothing else interpreted ────────
 
-it('keeps an unconfigured term whole', function () {
+it('splits an unconfigured term into words', function () {
     $term = $this->parser->parse('Ada Lovelace');
+
+    expect($term->tokens)->toHaveCount(2)
+        ->and($term->tokens[0]->value)->toBe('Ada')
+        ->and($term->tokens[1]->value)->toBe('Lovelace')
+        ->and($term->tokens[1]->operator)->toBe(SearchOperator::Contains);
+});
+
+it('keeps the term whole when the search is literal', function () {
+    $term = $this->parser->parse('Ada Lovelace', SearchConfig::make()->literal());
 
     expect($term->tokens)->toHaveCount(1)
         ->and($term->tokens[0]->value)->toBe('Ada Lovelace')
@@ -96,6 +105,30 @@ it('reads a comparison operator', function (string $raw, SearchOperator $operato
     ['>-5', SearchOperator::GreaterThan, '-5'],
     ['>=2026-01-31', SearchOperator::GreaterThanOrEqual, '2026-01-31'],
 ]);
+
+it('joins an operator typed apart from its value', function () {
+    $term = $this->parser->parse('novak >= 100', SearchConfig::make()->ranges());
+
+    expect($term->tokens)->toHaveCount(2)
+        ->and($term->tokens[0]->value)->toBe('novak')
+        ->and($term->tokens[1]->operator)->toBe(SearchOperator::GreaterThanOrEqual)
+        ->and($term->tokens[1]->value)->toBe('100');
+});
+
+it('does not join an operator around a quoted phrase', function (string $raw, int $tokens) {
+    expect($this->parser->parse($raw, SearchConfig::make()->ranges())->tokens)->toHaveCount($tokens);
+})->with([
+    'quoted operator' => ['">" 100', 2],
+    'quoted value' => ['> "100"', 2],
+    'operator last' => ['novak >', 2],
+]);
+
+it('leaves a detached operator alone when ranges are off', function () {
+    $term = $this->parser->parse('> 100');
+
+    expect($term->tokens)->toHaveCount(2)
+        ->and($term->tokens[0]->value)->toBe('>');
+});
 
 it('leaves a comparison against text as literal text', function (string $raw) {
     // `>foo` would compare lexically, which is never what was meant.

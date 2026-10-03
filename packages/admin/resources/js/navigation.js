@@ -9,6 +9,8 @@
  * on `alpine:init` — see AI_CODING_STANDARD.md § JavaScript & Alpine.
  */
 
+import { searchMatcher } from '../../../core/resources/js/support/search';
+
 /** Whether a key press belongs to a field rather than to the page. */
 const typingInField = (event) => {
     const target = event.target;
@@ -47,17 +49,20 @@ const wireNavFilter = () => ({
     },
 
     apply() {
-        const term = this.query.trim().toLocaleLowerCase();
+        const term = this.query.trim();
+        // Word by word, ignoring case and accents — `fakt vyd` finds "Vydané
+        // faktury" — by the rule every list in the stack filters with.
+        const matches = searchMatcher(term);
         let shown = 0;
 
         this.setFiltering(term !== '');
 
         this.$root.querySelectorAll('[data-nav-row]:not([data-nav-child])').forEach((row) => {
-            const own = term === '' || (row.dataset.navLabel ?? '').includes(term);
+            const own = matches(row.dataset.navLabel ?? '');
             let childMatched = false;
 
             row.querySelectorAll('[data-nav-child]').forEach((child) => {
-                const match = own || (child.dataset.navLabel ?? '').includes(term);
+                const match = own || matches(child.dataset.navLabel ?? '');
 
                 child.hidden = ! match;
                 childMatched ||= match;

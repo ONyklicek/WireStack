@@ -114,13 +114,14 @@
                          option row on its own, so without this a search left
                          every group's heading standing over nothing — visible
                          only once something combined grouping with search, which
-                         is what a permission list does. The labels are lowercased
-                         in PHP: the comparison runs on every keystroke. --}}
+                         is what a permission list does. Matched by the same
+                         rule as the rows (`matches()`), so a heading never
+                         stands over options that all disappeared. --}}
                     <div
                         class="mb-3 last:mb-0"
                         data-testid="form-checklist-{{ $field->getStatePath() }}-group"
                         @if($field->isSearchable())
-                            x-show="!search || @js(array_values(array_map('mb_strtolower', $groupOptions))).some(label => label.includes(search.toLowerCase()))"
+                            x-show="matchesAny(@js(array_values($groupOptions)))"
                         @endif
                     >
                         <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">

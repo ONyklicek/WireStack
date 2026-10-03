@@ -512,6 +512,9 @@ final class TableQueryService
             searchClauses: $searchClauses,
             sortClauses: $sorts,
             searchTerm: $term,
+            parsedSearch: $term !== null
+                ? app(SearchTermParser::class)->parse($term, $table->getSearchConfig())
+                : null,
         );
     }
 

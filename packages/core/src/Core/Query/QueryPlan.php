@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Query;
 
+use NyonCode\WireCore\Core\Query\Search\SearchConfig;
+use NyonCode\WireCore\Core\Query\Search\SearchTerm;
 use NyonCode\WireCore\Core\Relations\RelationGraph;
 use NyonCode\WireCore\Core\Tenancy\TenantScopedDataSource;
 
@@ -30,6 +32,10 @@ final readonly class QueryPlan
      *                                   nothing but the plan, so the term rides
      *                                   here — without it the search clauses name
      *                                   the columns and never say what to find.
+     * @param  SearchTerm|null  $parsedSearch  The same term already read by the
+     *                                         table's {@see SearchConfig}, so a
+     *                                         source splits it into words exactly
+     *                                         as the Eloquent path does.
      */
     public function __construct(
         public array $joins = [],
@@ -42,6 +48,7 @@ final readonly class QueryPlan
         public ?RelationGraph $relationGraph = null,
         public bool $withSoftDeletes = false,
         public ?string $searchTerm = null,
+        public ?SearchTerm $parsedSearch = null,
     ) {}
 
     public function hasJoins(): bool
@@ -108,6 +115,7 @@ final readonly class QueryPlan
             relationGraph: $this->relationGraph,
             withSoftDeletes: $this->withSoftDeletes,
             searchTerm: $this->searchTerm,
+            parsedSearch: $this->parsedSearch,
         );
     }
 
@@ -135,6 +143,7 @@ final readonly class QueryPlan
             relationGraph: $this->relationGraph,
             withSoftDeletes: $this->withSoftDeletes,
             searchTerm: $this->searchTerm,
+            parsedSearch: $this->parsedSearch,
         );
     }
 
@@ -156,6 +165,7 @@ final readonly class QueryPlan
             relationGraph: $this->relationGraph,
             withSoftDeletes: $this->withSoftDeletes,
             searchTerm: $this->searchTerm,
+            parsedSearch: $this->parsedSearch,
         );
     }
 
@@ -177,6 +187,7 @@ final readonly class QueryPlan
             relationGraph: $this->relationGraph,
             withSoftDeletes: $this->withSoftDeletes,
             searchTerm: $this->searchTerm,
+            parsedSearch: $this->parsedSearch,
         );
     }
 }

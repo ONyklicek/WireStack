@@ -95,10 +95,11 @@ it('keeps the per-option wrapper and its grid intact', function () {
 
 it('emits the search filter on each option only when searchable', function () {
     // x-show tests that option's own label, so it is genuinely per-option and has
-    // to stay inside the loop wherever the loop lives.
-    expect(substr_count(chkFlat('searchable'), 'x-show="!search ||'))->toBe(3)
-        ->and(chkFlat('searchable'))->toContain("x-show=\"!search || 'pear'.includes(search.toLowerCase())\"")
-        ->and(chkFlat('flat'))->not->toContain('x-show="!search ||');
+    // to stay inside the loop wherever the loop lives. The label goes over as it
+    // is shown — `matches()` folds case and accents itself, word by word.
+    expect(substr_count(chkFlat('searchable'), 'x-show="matches('))->toBe(3)
+        ->and(chkFlat('searchable'))->toContain("x-show=\"matches('Pear')\"")
+        ->and(chkFlat('flat'))->not->toContain('x-show="matches(');
 });
 
 it('disables every option when the field is disabled', function () {
