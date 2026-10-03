@@ -1470,6 +1470,10 @@ $table
 
 - Menu ukáže přesně **viditelné** akce menu (skryté/neautorizované se vynechají);
   řádek bez viditelné akce menu neukáže.
+- Položky seskupíte `Action::divider()->onContextMenu()` mezi nimi. O oddělovačích
+  se rozhoduje **pro každý řádek** stejně jako v rozbalovací action-group: kde jsou
+  u záznamu skryté všechny položky na jedné straně oddělovače, zmizí i oddělovač,
+  takže menu nikdy nezačíná ani nekončí čárou a dvě čáry za sebou neukáže.
 - V jeden okamžik je otevřené **jen jedno** menu — kliknutí pravým na jiný řádek
   předchozí zavře.
 - Je připnuté ke kurzoru a udrží se ve viewportu; zavře se kliknutím mimo,

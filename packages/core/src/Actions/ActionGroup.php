@@ -12,6 +12,7 @@ use NyonCode\WireCore\Actions\Concerns\HasColor;
 use NyonCode\WireCore\Actions\Concerns\HasIcons;
 use NyonCode\WireCore\Actions\Contracts\RendersAsMenuItem;
 use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
+use NyonCode\WireCore\Actions\Support\MenuDividers;
 use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
@@ -296,32 +297,7 @@ class ActionGroup implements Htmlable
      */
     protected function cleanDividers(array $actions): array
     {
-        // Remove leading dividers
-        while (! empty($actions) && ($first = reset($actions)) instanceof Action && $first->isDivider()) {
-            array_shift($actions);
-        }
-
-        // Remove trailing dividers
-        while (! empty($actions) && ($last = end($actions)) instanceof Action && $last->isDivider()) {
-            array_pop($actions);
-        }
-
-        // Remove consecutive dividers
-        $cleaned = [];
-        $lastWasDivider = false;
-
-        foreach ($actions as $action) {
-            $isDivider = $action instanceof Action && $action->isDivider();
-
-            if ($isDivider && $lastWasDivider) {
-                continue;
-            }
-
-            $cleaned[] = $action;
-            $lastWasDivider = $isDivider;
-        }
-
-        return $cleaned;
+        return MenuDividers::clean($actions);
     }
 
     // ─── Rendering helpers ──────────────────────────────────────
