@@ -32,7 +32,7 @@ class Icon extends Component
         $icon = $this->manager->resolved($this->name);
 
         return view('wire-core::foundation.icon', [
-            'body' => $icon->body,
+            'body' => $this->manager->body($icon),
             'viewBox' => $icon->viewBox,
             'styleAttributes' => $icon->attributes,
             'classes' => trim($this->size.' '.$this->class),

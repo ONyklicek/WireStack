@@ -59,6 +59,8 @@ use NyonCode\WireCore\Foundation\Contracts\ResolvesRecordUrls;
 use NyonCode\WireCore\Foundation\Contracts\RunsComponentActions;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Icons\IconSet;
+use NyonCode\WireCore\Foundation\Icons\IconSprite;
+use NyonCode\WireCore\Foundation\Icons\IconSpriteHook;
 use NyonCode\WireCore\Foundation\Mentions\MentionRegistry;
 use NyonCode\WireCore\Foundation\Mentions\MentionRenderer;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
@@ -278,6 +280,12 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // hook and later ones do — which is exactly how it presented.
         ComponentHookRegistry::register(PartialRenderHook::class);
 
+        // Per request: a sprite scope opened by a render that then threw must not
+        // keep the next request's PDFs and mails sprited.
+        $this->app->scoped(IconSprite::class, static fn (): IconSprite => new IconSprite(
+            (bool) config('wire-core.icons.sprite', false),
+        ));
+
         $this->app->singleton(IconManager::class, function ($app) {
             $manager = new IconManager;
 
@@ -370,6 +378,11 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // An island renders without the shared `$__livewire` a full render has, and
         // every modal here is an Htmlable that only shared data reaches. See the class.
         IslandViewScope::register();
+
+        // A component's and an island's render each become a sprite scope when
+        // `wire-core.icons.sprite` is on; inert otherwise (the listener returns
+        // no finisher).
+        IconSpriteHook::register();
 
         // Register <x-wire::icon />, <x-wire::badge />, etc. `<x-wire::icon>` stays
         // the consumer-facing Blade API. The framework's OWN partials never render

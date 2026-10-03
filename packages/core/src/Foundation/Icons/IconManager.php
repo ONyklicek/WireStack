@@ -218,12 +218,46 @@ final class IconManager
             $cacheKey .= "\0".serialize($attributes);
         }
 
+        // A sprited icon is the same <svg> holding a <use>, so it is cached under
+        // its own key — the inline one is what a PDF or a mail still gets.
+        $sprite = $this->sprite();
+        if ($sprite?->active()) {
+            $cacheKey .= "\0sprite";
+        }
+
         if (! isset($this->renderCache[$cacheKey])) {
             $classes = trim($size.' '.$class);
-            $this->renderCache[$cacheKey] = $this->resolveOrFallback($name)->toSvg($classes, $label, $attributes);
+            $icon = $this->resolveOrFallback($name);
+            $this->renderCache[$cacheKey] = $icon->toSvg($classes, $label, $attributes, $sprite?->body($icon));
         }
 
         return $this->renderCache[$cacheKey];
+    }
+
+    /**
+     * What goes inside an icon's `<svg>` here and now: its body, or a `<use>` of
+     * it when this render is a sprite scope ({@see IconSprite}). For callers that
+     * build the `<svg>` themselves, like the `<x-wire::icon>` component.
+     */
+    public function body(ResolvedIcon $icon): string
+    {
+        return $this->sprite()?->body($icon) ?? $icon->body;
+    }
+
+    /**
+     * The request's sprite, when the application switched sprites on.
+     *
+     * Asked per render rather than held: this manager lives as long as the
+     * worker, the sprite only as long as one request — a held one would answer
+     * for whichever request touched it first.
+     */
+    private function sprite(): ?IconSprite
+    {
+        if (! config('wire-core.icons.sprite', false)) {
+            return null;
+        }
+
+        return app(IconSprite::class);
     }
 
     /**
