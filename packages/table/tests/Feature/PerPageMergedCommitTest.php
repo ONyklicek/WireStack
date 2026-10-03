@@ -259,6 +259,20 @@ it('renders the per-page change even when the table opted out of refreshing afte
     expect(mergedCommitRows($result['html']))->toBe(10);
 });
 
+it('renders the per-page change even when the write beside it was refused', function () {
+    // A refused write skips the render; the view change in the same commit
+    // takes that skip back.
+    $c = Livewire::test(MergedCommitHost::class);
+
+    $result = mergedCommit(
+        $c->snapshot,
+        ['tableState.pagination.perPage' => '10'],
+        [['method' => 'updateTableCell', 'params' => [999, 'title', 'Edited', null]]],
+    );
+
+    expect(mergedCommitRows($result['html']))->toBe(10);
+});
+
 /*
  * A page change is not a property update, and that difference is the whole test.
  *

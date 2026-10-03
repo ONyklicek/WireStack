@@ -2273,6 +2273,30 @@ trait WithTable
      */
     public function updateTableCell(mixed $recordKey, string $columnName, mixed $value, ?string $recordVersion = null): array
     {
+        $result = $this->writeTableCell($recordKey, $columnName, $value, $recordVersion);
+
+        // A refused write changed nothing — a guard, a rule, a permission, a
+        // record gone, a failed transaction — so nothing on the page is stale
+        // and the cell rolls itself back from this answer. Rendering anyway cost
+        // the whole data region, and on a `rowPartials()` table, where the cell
+        // calls the component rather than the island and no row was queued,
+        // the whole component. A conflict is the exception: the record moved
+        // under the user, so the rest of its row is stale too.
+        if (! $result['success'] && ! ($result['conflict'] ?? false)) {
+            $this->skipTableRender();
+        }
+
+        return $result;
+    }
+
+    /**
+     * The write behind {@see updateTableCell()}; the public method decides what
+     * the answer renders.
+     *
+     * @return array{success: bool, message?: string, errors?: array, conflict?: bool, currentValue?: mixed, currentVersion?: string, version?: string}
+     */
+    private function writeTableCell(mixed $recordKey, string $columnName, mixed $value, ?string $recordVersion): array
+    {
         // Render unless the table opted out: everything derived from this value
         // — summaries, rollups, a badge two columns over — is stale the instant
         // the write lands. The cell's own optimistic state survives the morph on

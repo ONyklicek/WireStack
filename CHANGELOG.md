@@ -2,6 +2,18 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **A refused cell write renders nothing.** A write turned away by a guard, a rule, a permission, a missing record
+  or a failed transaction changed nothing, and the cell rolls itself back from the answer — yet it rendered the
+  whole data region, and on a `rowPartials()` table, where the cell calls the component rather than the island and
+  no row is queued, the whole component: 1.6 s and 7 MB on a 104-row order page for a click on a locked cell. It
+  now skips the render through `skipTableRender()`, so a view change in the same commit still takes the skip
+  back. A conflict still renders — the record moved under the user, so the rest of its row is stale too. A fill
+  the table refuses outright is skipped the same way.
+
 ## [2.4.3]
 
 ### Changed
