@@ -14,6 +14,19 @@ All notable changes to the Wire ecosystem will be documented in this file.
   back. A conflict still renders — the record moved under the user, so the rest of its row is stale too. A fill
   the table refuses outright is skipped the same way.
 
+- **A stacked table sends only the half the browser shows.** `stackedOnMobile()` rendered every record twice — the
+  `<table>` and a card — and let CSS hide one. A new viewport script (`wire-table-viewport.js`) writes the
+  breakpoint the window reaches into the `wire_viewport` cookie, and a request carrying it gets the table alone or
+  the cards alone; a request without it still gets both. Crossing the breakpoint re-renders the table once. On a
+  50-row page: 891 kB → 478 kB (table) / 450 kB (cards) of markup, half the DOM; the gzipped transfer is about the
+  same. Row partials, poll partials and totals follow the same half. Off per table with
+  `renderVisibleLayoutOnly(false)`, or for all with `wire-table.defaults.visible_layout_only`.
+
+### Added
+
+- `Breakpoint::minWidth()` and `Breakpoint::mediaQuery()` — the width each breakpoint starts at, as Tailwind v4
+  declares it, for anything that has to agree with the `{breakpoint}:` utilities from JavaScript.
+
 ## [2.4.3]
 
 ### Changed

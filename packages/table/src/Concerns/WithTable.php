@@ -2425,10 +2425,13 @@ trait WithTable
             // the loss is real but is not this method's to pay — the island a
             // cell targets is chosen in the cell's own view, which is where the
             // table already knows whether partials will answer instead.
-            $this->renderPartial(
-                'row-'.$recordKey,
-                fn (): string => $renderer->render($record, (int) $index),
-            );
+            // A response that carried only the cards has no row to morph into.
+            if ($table->getClientLayout() !== 'cards') {
+                $this->renderPartial(
+                    'row-'.$recordKey,
+                    fn (): string => $renderer->render($record, (int) $index),
+                );
+            }
 
             // The one row is rendered here rather than through TablePartials
             // because its position is known already; everything the write moves

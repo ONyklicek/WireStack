@@ -189,6 +189,9 @@
     @if($liveChannel)
         @include('wire-table::tables.partials.live-assets')
     @endif
+    @if($plan->layout()->tracksClientLayout)
+        @include('wire-table::tables.partials.viewport-assets')
+    @endif
     @if($pollingAttribute)
         <div {!! $pollingAttribute !!}
              @if($liveChannel) x-data="wireTableLive(@js(['channel' => $liveChannel]))" @endif
