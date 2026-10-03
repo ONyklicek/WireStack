@@ -1,3 +1,5 @@
+import { searchMatcher } from '../../../../core/resources/js/support/search'
+
 /**
  * CheckboxList's controller: the search box, the two bulk toggles, and the chips
  * that say what is currently chosen.
@@ -36,6 +38,8 @@ const wireCheckboxList = (config = {}) => ({
     state: config.state ?? null,
 
     search: '',
+    _matcherTerm: null,
+    _matcher: null,
 
     /**
      * The chosen options, in the order the list offers them.
@@ -66,13 +70,32 @@ const wireCheckboxList = (config = {}) => ({
      * one nobody can test. With nothing typed this is every option.
      */
     get matching() {
-        const term = this.search.trim().toLowerCase()
+        if (this.search.trim() === '') return this.values
 
-        if (term === '') return this.values
+        return this.values.filter((value) => this.matches(this.labels[value] ?? value))
+    },
 
-        return this.values.filter(
-            (value) => String(this.labels[value] ?? value).toLowerCase().includes(term)
-        )
+    /**
+     * Whether a label survives the search — every word typed, in any order,
+     * ignoring case and accents (`support/search.js`, the rule every list in
+     * the stack filters by).
+     *
+     * The rows and the group headings ask this from Blade, once per option per
+     * keystroke, so the term is folded once and the matcher kept until it
+     * changes.
+     */
+    matches(label) {
+        if (this._matcherTerm !== this.search) {
+            this._matcherTerm = this.search
+            this._matcher = searchMatcher(this.search)
+        }
+
+        return this._matcher(label)
+    },
+
+    /** Whether any of a group's labels survives the search. */
+    matchesAny(labels) {
+        return labels.some((label) => this.matches(label))
     },
 
     /** What is selected right now, whether or not the chips entangled it. */

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Gate;
 use NyonCode\WireCore\Core\Plugin\HookDispatch;
 use NyonCode\WireCore\Core\Plugin\Hooks\SearchQueryingPayload;
 use NyonCode\WireCore\Core\Plugin\HookTarget;
+use NyonCode\WireCore\Core\Query\Search\WordSearch;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
@@ -207,7 +208,13 @@ class GlobalSearch
     }
 
     /**
-     * `WHERE (a LIKE %term% OR b LIKE %term%)`, nested so it cannot leak out of
+     * Every word of the term in at least one attribute — `novak praha` finds the
+     * person whose surname is in one column and city in another.
+     *
+     * Delegated to {@see WordSearch}, which the table's search shares: the words
+     * are split by the same parser, `%` and `_` are escaped rather than acting as
+     * wildcards, and PostgreSQL is asked with `ILIKE`, so the palette and a table
+     * cannot disagree about what a term matches. Nested, so it cannot leak out of
      * whatever the caller has already constrained.
      *
      * @param  Builder<Model>  $query
@@ -215,28 +222,7 @@ class GlobalSearch
      */
     protected function matchAny(Builder $query, array $attributes, string $term): void
     {
-        // `%` and `_` are wildcards in LIKE, so without escaping a search for
-        // "100%" matches every row starting with "100" and "a_b" matches "axb".
-        //
-        // The escape character is `!` and it is declared, rather than relying on
-        // a backslash: MySQL treats `\` as the default LIKE escape and SQLite
-        // does not, so the same query would mean two different things on two
-        // supported databases — which is how the test for this failed the first
-        // time it ran.
-        $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $term);
-
-        // Raw, because Laravel's `like` operator has nowhere to put the ESCAPE
-        // clause. The column is wrapped by the grammar rather than interpolated:
-        // it comes from the resource and not from a user, but a raw fragment
-        // that would be an injection if that ever changed is not worth leaving.
-        $grammar = $query->getQuery()->getGrammar();
-
-        foreach ($attributes as $attribute) {
-            $query->orWhereRaw(
-                $grammar->wrap($attribute)." like ? escape '!'",
-                ["%{$escaped}%"],
-            );
-        }
+        app(WordSearch::class)->apply($query, $attributes, $term);
     }
 
     /**

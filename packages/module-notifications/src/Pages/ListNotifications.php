@@ -11,6 +11,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
+use NyonCode\WireCore\Core\Query\Search\WordSearch;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\Zone;
@@ -174,14 +175,8 @@ class ListNotifications extends Component implements IdentifiesHookTarget, Provi
             default => null,
         };
 
-        $term = trim($this->search);
-
-        if ($term !== '') {
-            $query->where(function (Builder $q) use ($term): void {
-                $q->where('data->title', 'like', "%{$term}%")
-                    ->orWhere('data->message', 'like', "%{$term}%");
-            });
-        }
+        // Every word in the title or the message, as in every search box.
+        app(WordSearch::class)->apply($query, ['data->title', 'data->message'], $this->search);
 
         return $query
             ->orderByDesc('created_at')

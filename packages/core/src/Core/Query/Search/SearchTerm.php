@@ -21,9 +21,8 @@ final readonly class SearchTerm
     ) {}
 
     /**
-     * The whole term as one substring match — the behaviour of a table that has
-     * not opted into any search parsing, and the shape a bare string argument
-     * is promoted to.
+     * The whole term as one substring match — what a search configured with
+     * `literal()` reads, and the shape a bare string argument is promoted to.
      */
     public static function literal(string $term): self
     {

@@ -62,6 +62,14 @@ class LiteralSearchHost extends SearchSyntaxHost
 {
     protected function configure(Table $table): Table
     {
+        return $table->search(fn (SearchConfig $s) => $s->literal());
+    }
+}
+
+class DefaultSearchHost extends SearchSyntaxHost
+{
+    protected function configure(Table $table): Table
+    {
         return $table;
     }
 }
@@ -139,16 +147,32 @@ beforeEach(function () {
 
 afterEach(fn () => Schema::dropIfExists('search_syntax_orders'));
 
-// ── The default is unchanged ────────────────────────────────
+// ── The default splits on spaces ────────────────────────────
 
-it('matches an unconfigured term as one whole substring', function () {
+it('splits an unconfigured term into words, in any order', function () {
+    Livewire::test(DefaultSearchHost::class)
+        ->set('tableState.search', 'Lovelace Ada')
+        ->assertSee('INV-001')
+        ->assertDontSee('INV-002');
+});
+
+it('reads no operator out of an unconfigured term', function () {
+    Livewire::test(DefaultSearchHost::class)
+        ->set('tableState.search', '>100')
+        ->assertDontSee('INV-001')
+        ->assertDontSee('INV-003');
+});
+
+// ── literal() keeps the term whole ──────────────────────────
+
+it('matches a literal term as one whole substring', function () {
     Livewire::test(LiteralSearchHost::class)
         ->set('tableState.search', 'Ada Lovelace')
         ->assertSee('INV-001')
         ->assertDontSee('INV-002');
 });
 
-it('does not split an unconfigured term on spaces', function () {
+it('does not split a literal term on spaces', function () {
     // "Lovelace Ada" is not a substring of anything, so nothing matches.
     Livewire::test(LiteralSearchHost::class)
         ->set('tableState.search', 'Lovelace Ada')
@@ -156,7 +180,7 @@ it('does not split an unconfigured term on spaces', function () {
         ->assertDontSee('INV-002');
 });
 
-it('does not read an operator out of an unconfigured term', function () {
+it('does not read an operator out of a literal term', function () {
     Livewire::test(LiteralSearchHost::class)
         ->set('tableState.search', '>100')
         ->assertDontSee('INV-001')

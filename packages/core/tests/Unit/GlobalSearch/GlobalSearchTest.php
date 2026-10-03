@@ -179,6 +179,19 @@ it('leaves out a resource that matched nothing instead of mapping it to an empty
     expect(gsSearch()->search('nothing-matches-this'))->toBe([]);
 });
 
+it('finds a record whose words sit in different attributes, in any order', function () {
+    // `paid` is the status and `INV` the reference: one substring of the whole
+    // term would match neither column.
+    $results = gsSearch()->search('paid INV');
+
+    expect($results['gs-orders'])->toHaveCount(1)
+        ->and($results['gs-orders'][0]->title)->toBe('INV-1001');
+});
+
+it('needs every word to match somewhere', function () {
+    expect(gsSearch()->search('INV refunded'))->toBe([]);
+});
+
 it('escapes LIKE wildcards in the term', function () {
     // Without escaping, "INV-100%" is "starts with INV-100" and matches two
     // rows; a user who typed a literal percent gets results they did not ask
@@ -766,6 +779,16 @@ it('offers menu entries whose label matches, as their own group', function () {
         ->assertSee(__('wire-core::global-search.navigation'));
 });
 
+it('matches a menu entry word by word, ignoring case and accents', function (string $term) {
+    gsRegister([GsCommandResource::class]);
+    gsRouted();
+
+    $rows = app(PaletteNavigation::class)->search($term);
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]->title)->toBe('Sales Orders');
+})->with(['orders sales', 'SALES ord', 'sáles']);
+
 it('matches a menu entry on its label and never on its registry key', function () {
     // The key is an identifier the user has never been shown. Matching it would
     // surface a row for a string that appears nowhere on screen.
@@ -821,6 +844,15 @@ it('offers commands that match, and hides the ones the user may not run', functi
         ->and($rows[0]->title)->toBe('Recount stock')
         ->and($rows[0]->kind)->toBe(PaletteRowKind::Command)
         ->and($rows[0]->actionName)->toBe('recount');
+});
+
+it('matches a command word by word, in any order', function () {
+    gsRegister([GsCommandResource::class]);
+
+    $rows = app(PaletteCommands::class)->search('stock recount');
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]->title)->toBe('Recount stock');
 });
 
 it('still offers a command that has to ask, because someone else can ask', function () {

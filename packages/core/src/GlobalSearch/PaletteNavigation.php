@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\GlobalSearch;
 
+use NyonCode\WireCore\Core\Query\Search\SearchTermParser;
+use NyonCode\WireCore\Core\Query\Search\SearchText;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\Workspace;
 
@@ -41,7 +43,7 @@ class PaletteNavigation
     /**
      * Menu entries whose label matches the term.
      *
-     * Matched on the label alone, and case-insensitively: the label is the only
+     * Matched on the label alone, word by word and ignoring case and accents: the label is the only
      * thing a user sees in a menu, so it is the only thing they can be typing
      * at. The registry key is deliberately not searched — it is an identifier,
      * and matching `gs-orders` for "gs" would surface rows for a string the user
@@ -76,13 +78,14 @@ class PaletteNavigation
     }
 
     /**
-     * Case-insensitive substring, the same shape the record search asks the
-     * database for — so a term that finds "Invoices" in the menu is the term
-     * that would have found it in a column.
+     * Every word of the term in the label, ignoring case and accents — the rule
+     * the record search asks the database for, so a term that finds "Vydané
+     * faktury" in the menu (`fakt vyd`) is the term that would have found it in
+     * a column.
      */
     protected function matches(string $label, string $term): bool
     {
-        return mb_stripos($label, $term) !== false;
+        return SearchText::matches([$label], app(SearchTermParser::class)->parse($term));
     }
 
     /**

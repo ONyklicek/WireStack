@@ -7,17 +7,20 @@ namespace NyonCode\WireCore\Core\Query\Search;
 /**
  * How a search box interprets what is typed into it.
  *
- * Everything here is off by default: an unconfigured search behaves exactly as
- * it always has — one substring match of the whole term across every searchable
- * column — so opting in is a deliberate act and no existing table changes shape
- * underneath its owner.
+ * Splitting on spaces is on by default: `novak praha` finds the row whose name
+ * is in one column and city in another, in any order, which is what every
+ * search box in the stack is expected to do — the palette, a select, a table.
+ * A box that must match the whole term as one substring says `literal()`.
+ *
+ * Ranges and wildcards stay opt-in, because both read meaning into characters
+ * an ordinary search may contain.
  *
  * Escaping is not on this object. A `%` typed by a user being a wildcard was a
  * bug, not a feature, and is fixed unconditionally.
  */
 final class SearchConfig
 {
-    protected bool $tokenize = false;
+    protected bool $tokenize = true;
 
     protected bool $ranges = false;
 

@@ -79,6 +79,15 @@ it('searches relationship options and applies query modifier', function () {
     ]);
 });
 
+it('searches relationship options word by word, in any order', function () {
+    $field = BelongsToSelect::make('company_id')
+        ->relationship('company', 'name')
+        ->record(new BelongsToSelectRelationshipUser);
+
+    expect($field->searchOptions('labs act'))->toBe([3 => 'Active Labs'])
+        ->and($field->searchOptions('labs acme'))->toBe([]);
+});
+
 it('creates related options using the resolved related model', function () {
     $record = new BelongsToSelectRelationshipUser;
 

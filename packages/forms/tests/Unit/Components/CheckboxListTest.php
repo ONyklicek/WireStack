@@ -102,8 +102,8 @@ it('takes a filtered-out group heading with it', function () {
     // Two conditions on one option: the row hides itself, and the group hides
     // with it. `@js` escapes the labels, so the group's list is matched on the
     // shape it is actually emitted in.
-    expect(substr_count($html, 'x-show="!search ||'))->toBe(2)
-        ->and($html)->toContain('.some(label => label.includes(search.toLowerCase()))')
+    expect(substr_count($html, 'x-show="matches('))->toBe(1)
+        ->and(substr_count($html, 'x-show="matchesAny('))->toBe(1)
         ->and($html)->toContain('invoices.view');
 });
 

@@ -20,6 +20,8 @@ use NyonCode\WireCore\Core\Data\PagingRequest;
 use NyonCode\WireCore\Core\Data\RecordContract;
 use NyonCode\WireCore\Core\Query\FilterClause;
 use NyonCode\WireCore\Core\Query\QueryPlan;
+use NyonCode\WireCore\Core\Query\Search\SearchTermParser;
+use NyonCode\WireCore\Core\Query\Search\SearchText;
 use NyonCode\WireCore\Exceptions\UnsupportedQueryAspectException;
 
 /**
@@ -176,22 +178,16 @@ final class CollectionDataSource implements DataSource
 
         // The term rides on the plan (QueryPlan::$searchTerm) because a source
         // has nothing else to go on; the clauses say which columns to look in.
-        // Any column containing it keeps the row, case-insensitively — what the
-        // Eloquent path's LIKE does for a plain term.
-        $term = trim((string) $plan->searchTerm);
+        // Every word must be found in some column, ignoring case and accents —
+        // what the Eloquent path's LIKE does under a `_ci` collation.
+        $term = $plan->parsedSearch
+            ?? app(SearchTermParser::class)->parse((string) $plan->searchTerm);
 
-        if ($term !== '' && $plan->searchClauses !== []) {
-            $needle = mb_strtolower($term);
-
-            $rows = $rows->filter(function (array $row) use ($plan, $needle): bool {
-                foreach ($plan->searchClauses as $clause) {
-                    if (str_contains(mb_strtolower(self::text($row[$clause->column] ?? null)), $needle)) {
-                        return true;
-                    }
-                }
-
-                return false;
-            });
+        if (! $term->isEmpty() && $plan->searchClauses !== []) {
+            $rows = $rows->filter(fn (array $row): bool => SearchText::matches(
+                array_map(fn ($clause): string => self::text($row[$clause->column] ?? null), $plan->searchClauses),
+                $term,
+            ));
         }
 
         if ($plan->sortClauses === []) {
