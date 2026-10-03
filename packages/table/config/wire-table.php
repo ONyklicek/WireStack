@@ -37,6 +37,16 @@ return [
         'gestures' => null,
 
         /*
+        | A table stacked on mobile is two renderings of every record — the table
+        | and a card each — of which CSS shows one. With this on, a request that
+        | carries the `wire_viewport` cookie (written by the table's viewport
+        | script) gets only the half that browser shows; one without it still
+        | gets both. Crossing the breakpoint re-renders the table once. Turn it
+        | off per table with Table::renderVisibleLayoutOnly(false).
+        */
+        'visible_layout_only' => true,
+
+        /*
         | What a record marked inactive with Table::rowInactive() looks like and
         | what it still permits, project-wide. null keeps the shipped defaults:
         | the row is dimmed and tinted gray but not struck through, and inline

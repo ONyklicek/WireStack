@@ -57,7 +57,7 @@ it('emits each bundle exactly once', function () {
     //
     //   core    dropdown (every shared Alpine controller), copy, chart, notifications
     //   forms   image, fields (the date/time pickers, tags, rating, the editors)
-    //   table   records, selection, live, fill
+    //   table   records, selection, live, fill, viewport
     //
     // Chart and notifications are the two that look like optional heavy bodies
     // and are not: 671 bytes and 1.2 kB of Alpine registrar around `window.Chart`
@@ -70,6 +70,10 @@ it('emits each bundle exactly once', function () {
     // `wire-core-dropdown.js`, which shrank by the same 9 KB (ADR 0025 § step
     // 10). What changed is who pays — an application with no table now ships
     // nine bundles here and none of them carries the fill handle.
+    //
+    // `wire-table-viewport.js` (under 1 kB) is in the head on purpose: it writes
+    // the cookie a stacked table trims to, and the earlier it runs the sooner the
+    // first request carries it.
     preg_match_all('/src="[^"]*\/vendor\/[^"\/]+\/([^"\/?]+\.js)/', Blade::render('@wireStackScripts'), $matches);
 
     $emitted = $matches[1];
@@ -86,5 +90,6 @@ it('emits each bundle exactly once', function () {
         'wire-table-live.js',
         'wire-table-records.js',
         'wire-table-selection.js',
+        'wire-table-viewport.js',
     ]);
 });
