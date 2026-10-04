@@ -121,7 +121,9 @@ it('hides its menu entry from somebody the configured ability refuses', function
 
 it('fails closed when the ability cannot be asked', function () {
     config()->set('wire-module-audit.permission', 'audit.view');
-    Gate::before(static fn () => throw new RuntimeException('no guard'));
+    // `?object $user`, or the Gate skips the callback for a guest and the
+    // ability is simply undefined — false for the wrong reason, catch untouched.
+    Gate::before(static fn (?object $user = null) => throw new RuntimeException('no guard'));
 
     expect(AuditResource::authorized())->toBeFalse();
 });
