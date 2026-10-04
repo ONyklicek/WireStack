@@ -54,6 +54,8 @@ Committed IIFE bundles under each package's `dist/`, built with esbuild:
 | table | `wire-table-selection.js` | `resources/js/record-selection.js` |
 | table | `wire-table-live.js` | `resources/js/record-live.js` |
 | table | `wire-table-fill.js` | `resources/js/record-fill.js` (+ `fill/`) |
+| table | `wire-table-viewport.js` | `resources/js/record-viewport.js` |
+| table | `wire-table-sticky.js` | `resources/js/record-sticky.js` (the range a page-pinned header's scroll timeline runs over; a listener fallback) |
 | sortable | `wire-sortable.js` | `resources/js/sortable.js` (SortableJS bundled in) |
 
 The copy affordance is core's, not table's (`2137b46`) — it is the one bundle that
@@ -187,7 +189,7 @@ a package's `resources/js/`, run its build script:
 ```bash
 npm run build:core-assets       # dropdown + chart + copy + sortable-list + notifications
 npm run build:forms-assets      # tiptap (ESM, split) + image processor + field controllers
-npm run build:table-assets      # records, selection, live
+npm run build:table-assets      # records, selection, live, fill, viewport, sticky
 npm run build:sortable-assets   # sortable, SortableJS compiled in
 ```
 

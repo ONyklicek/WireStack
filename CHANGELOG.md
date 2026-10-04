@@ -6,6 +6,15 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Fixed
 
+- **`stickyHeader()` pins the header to the page.** It used to cap the table at `70vh` and pin the header inside
+  that box — the only place CSS `sticky` could reach, because the table's wrapper scrolls sideways and so becomes
+  the scroll container a sticky header pins to. A long list became a short box with a scrollbar of its own. Now
+  the header follows the page: it stays at the top of the window while the rows scroll under it, stops below a
+  sticky top bar that declares `--wire-sticky-top` (the admin layout does), and leaves with the last row. The page's
+  scroll drives it through a scroll-driven animation, so it moves in step with the rows; a browser without scroll
+  timelines gets a script fallback. `stickyHeader(maxHeight: '32rem')` keeps the old boxed behaviour, and
+  `Table::DEFAULT_STICKY_MAX_HEIGHT` is gone.
+
 - **A `lazy()` table always arrives.** Livewire sends every call made in one tick as one request, and one
   `skipRender()` in it skips the render for all of them. A listener that skips its own render — a status ping a page
   dispatches on load, for example — could land in the same request as the placeholder's `loadTable()`: the table

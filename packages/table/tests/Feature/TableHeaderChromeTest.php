@@ -98,24 +98,26 @@ it('leaves the header unpinned and the scroll region uncapped by default', funct
         ->assertDontSee('max-height:', escape: false);
 });
 
-it('pins the header and caps the region it pins against', function () {
+it('pins the header to the page by default, leaving the region uncapped', function () {
     Livewire::test(HeaderChromeHost::class)
         ->set('sticky', true)
-        // Both halves of the one decision: an uncapped scrollport never scrolls,
-        // and a header pinned inside one never moves.
-        ->assertSee('sticky top-0 z-10', escape: false)
-        ->assertSee('max-height: '.Table::DEFAULT_STICKY_MAX_HEIGHT, escape: false)
+        // CSS `sticky` would pin to the wrapper, which never scrolls vertically;
+        // the script moves the header instead, and the region keeps its height.
+        ->assertSee('data-wire-sticky-head', escape: false)
+        ->assertDontSee('sticky top-0', escape: false)
+        ->assertDontSee('max-height:', escape: false)
         // Opaque, unlike the resting `dark:bg-gray-800/50`: a translucent header
         // shows the rows travelling underneath it.
-        ->assertSee('sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 ', escape: false);
+        ->assertSee('relative z-10 bg-gray-50 dark:bg-gray-800 ', escape: false);
 });
 
-it('honours a named cap', function () {
+it('pins the header to a capped region when a height is named', function () {
     Livewire::test(HeaderChromeHost::class)
         ->set('sticky', true)
         ->set('stickyMaxHeight', '32rem')
         ->assertSee('max-height: 32rem', escape: false)
-        ->assertDontSee('max-height: '.Table::DEFAULT_STICKY_MAX_HEIGHT, escape: false);
+        ->assertSee('sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 ', escape: false)
+        ->assertDontSee('data-wire-sticky-head', escape: false);
 });
 
 it('marks a clipped region with its own scrollbar, not with an overlay', function () {

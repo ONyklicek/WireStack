@@ -87,6 +87,8 @@ class WireTableServiceProvider extends PackageServiceProvider
                 Bundle::make('wire-table-fill.js'),
                 // Writes the `wire_viewport` cookie a stacked table trims to.
                 Bundle::make('wire-table-viewport.js'),
+                // Moves a page-pinned `<thead>` with the page scroll.
+                Bundle::make('wire-table-sticky.js'),
             ])
             ->hasAssetFallback(Bundle::servedByRoute('wire-table'))
             // No `hasMigrations()`: this package has no tables of its own any

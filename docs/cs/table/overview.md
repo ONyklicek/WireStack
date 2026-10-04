@@ -501,7 +501,7 @@ v rozsahu výběru zůstaly živé.
 ->bordered(bool $bordered = true)
 
 // Hlavička zůstane v obraze, zatímco řádky pod ní scrollují // [tl! focus:1]
-->stickyHeader(bool $sticky = true, string $maxHeight = '70vh')
+->stickyHeader(bool $sticky = true, ?string $maxHeight = null)
 
 // Vlastní CSS třída na elementu <table>
 ->tableClass(string $class)
@@ -519,22 +519,32 @@ v rozsahu výběru zůstaly živé.
 ->rowInactive(bool|Closure $when = true, Closure|InactiveRow|null $configure = null)
 ```
 
-**Přišpendlená hlavička.** `stickyHeader()` připne `<thead>`, takže názvy sloupců
-zůstanou čitelné i uprostřed dlouhého seznamu. Zároveň omezí výšku oblasti, ve
-které řádky scrollují — a to není druhá, oddělitelná volba, ale právě to, co
-dělá tu první funkční. Sticky element se přišpendlí ke svému nejbližšímu
-scrollujícímu předkovi a tabulka už jednoho má: wrapper nese `overflow-x: auto`
-kvůli vodorovnému scrollu a CSS dopočítá druhou osu na `auto` s ním. Scrollport
-velký přesně jako jeho obsah nikdy nescrolluje, takže hlavička přišpendlená
-uvnitř neomezeného scrollportu nemá za čím zůstat a nikdy se nepohne. Když
-`70vh` stránce nesedí, pojmenujte vlastní strop:
+**Přišpendlená hlavička.** `stickyHeader()` udrží názvy sloupců čitelné i
+uprostřed dlouhého seznamu. Ve výchozím stavu se hlavička připne ke stránce:
+scrollujete stránkou a hlavička zůstává nahoře v okně, jede s řádky, dokud
+neodjede poslední z nich. Samotné CSS `position: sticky` to tady nezvládne —
+sticky element se přišpendlí ke svému nejbližšímu scrollujícímu předkovi a
+wrapper tabulky jím je: nese `overflow-x: auto` kvůli vodorovnému scrollu a CSS
+dopočítá druhou osu na `auto` s ním. Ten wrapper svisle nikdy nescrolluje, takže
+se `<thead>` posouvá jinak — scroll-driven animací, kterou pohání scroll samotné
+stránky. Pohne se tak ve stejném snímku jako řádky, bez scroll listeneru, který
+by se o snímek opožďoval (prohlížeč bez scroll timelines dostane právě ten
+listener jako fallback). Zůstává přitom uvnitř wrapperu, takže tabulka širší než
+stránka se dál posouvá do stran i s hlavičkou.
+
+Sticky prvek přes horní okraj stránky — horní lišta — by jinak připnutou hlavičku
+zakryl. Deklarujte jeho výšku jako `--wire-sticky-top` na kterémkoli předkovi a
+hlavička se zastaví pod ním; admin layout to pro svou horní lištu dělá sám.
+
+Pojmenujte místo toho výšku a tabulka se stane vlastní scroll oblastí: řádky
+scrollují v boxu té výšky a hlavička se připne k jeho hornímu okraji.
 
 ```php
-->stickyHeader()                    // 70vh řádků pod připnutou hlavičkou
-->stickyHeader(maxHeight: '32rem')  // libovolná CSS délka
+->stickyHeader()                    // připnutá ke stránce
+->stickyHeader(maxHeight: '32rem')  // řádky scrollují v boxu 32rem
 ```
 
-Strop se zapisuje jako inline `max-height`, ne jako třída, takže libovolná délka
+Výška se zapisuje jako inline `max-height`, ne jako třída, takže libovolná délka
 nepotřebuje nic od Tailwind extraktoru. Vypnutí přes `stickyHeader(false)` zvedne
 i strop, ať už byla zadaná jakákoli výška.
 

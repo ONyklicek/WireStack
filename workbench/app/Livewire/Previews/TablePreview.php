@@ -65,7 +65,7 @@ class TablePreview extends Component
     private const MODAL_VARIANTS = ['modal-form', 'modal-slideover-mobile', 'modal-slideover-compose', 'modal-fullscreen-mobile', 'modal-wizard', 'modal-nested'];
 
     /** Variants backed by the GestureRow selection-gesture fixtures. */
-    private const GESTURE_VARIANTS = ['selection-gestures', 'selection-gestures-paged', 'selection-only', 'gestures-poll', 'gestures-live', 'gestures-live-broadcast', 'gestures-poll-url', 'sticky-header', 'sticky-actions'];
+    private const GESTURE_VARIANTS = ['selection-gestures', 'selection-gestures-paged', 'selection-only', 'gestures-poll', 'gestures-live', 'gestures-live-broadcast', 'gestures-poll-url', 'sticky-header', 'sticky-header-page', 'sticky-actions'];
 
     /**
      * Variants of the users table that exist to show whole-row interaction, and
@@ -787,6 +787,13 @@ class TablePreview extends Component
         // preview that fits on screen would prove nothing.
         if ($this->variant === 'sticky-header') {
             return $table->stickyHeader(maxHeight: '20rem');
+        }
+
+        // The default: the same 40 rows, uncapped, with the header following the
+        // page scroll — the case CSS `sticky` cannot reach from inside the
+        // wrapper, and the one the script exists for.
+        if ($this->variant === 'sticky-header-page') {
+            return $table->stickyHeader();
         }
 
         // The same argument on the other axis, and the reason the widths are

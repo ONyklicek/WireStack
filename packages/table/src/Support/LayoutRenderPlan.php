@@ -47,6 +47,7 @@ final class LayoutRenderPlan
      * @param  string  $cellPadding  Density-mapped padding for a body cell.
      * @param  string  $headerPadding  The same for a header cell.
      * @param  string  $stickyHeaderClass  Pins the `<thead>`; empty when it does not pin.
+     * @param  bool  $stickyHeaderFollowsPage  Whether `wire-table-sticky.js` moves the `<thead>` with the page scroll.
      * @param  string  $scrollRegionStyle  Inline `max-height` for the scroll region; empty when uncapped.
      * @param  bool  $rendersTable  Whether a `<table>` is emitted in this response.
      * @param  bool  $rendersCards  Whether the card rendering is emitted in this response.
@@ -63,6 +64,7 @@ final class LayoutRenderPlan
         public readonly string $cellPadding,
         public readonly string $headerPadding,
         public readonly string $stickyHeaderClass,
+        public readonly bool $stickyHeaderFollowsPage,
         public readonly string $scrollRegionStyle,
         public readonly bool $isStackedOnMobile,
         public readonly bool $rendersTable,
@@ -84,6 +86,7 @@ final class LayoutRenderPlan
     {
         $breakpoint = $table->getMobileBreakpoint();
         $stickyMaxHeight = $table->getStickyHeaderMaxHeight();
+        $followsPage = $table->hasPageStickyHeader();
 
         return new self(
             isBordered: $table->isBordered(),
@@ -91,9 +94,19 @@ final class LayoutRenderPlan
             headerPadding: $table->getHeaderPadding(),
             // Opaque on both themes, unlike the resting `dark:bg-gray-800/50`:
             // a translucent header shows the rows travelling underneath it.
-            stickyHeaderClass: $stickyMaxHeight === null
-                ? ''
-                : 'sticky top-0 z-10 bg-gray-50 dark:bg-gray-800',
+            //
+            // Two mechanisms for one promise. Inside a capped region the region
+            // is the scrollport, and CSS `sticky` pins to it. Against the page it
+            // cannot: the wrapper's `overflow-x: auto` makes the wrapper the
+            // scrollport, and it never scrolls vertically. There the script
+            // translates the `<thead>` instead, and `relative` is what lets its
+            // `z-10` lift it over the rows it slides across.
+            stickyHeaderClass: match (true) {
+                $followsPage => 'relative z-10 bg-gray-50 dark:bg-gray-800',
+                $stickyMaxHeight !== null => 'sticky top-0 z-10 bg-gray-50 dark:bg-gray-800',
+                default => '',
+            },
+            stickyHeaderFollowsPage: $followsPage,
             scrollRegionStyle: $stickyMaxHeight === null
                 ? ''
                 : 'max-height: '.$stickyMaxHeight,

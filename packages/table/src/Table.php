@@ -59,15 +59,6 @@ class Table implements Htmlable
     use HasSqlDebug;
     use Macroable;
 
-    /**
-     * How tall the scroll region gets when {@see stickyHeader()} is on and no
-     * height was named. A sticky `<thead>` pins against the nearest scrolling
-     * ancestor, and the table's own wrapper is already one — `overflow-x: auto`
-     * computes `overflow-y: auto` — so without a cap the region never scrolls
-     * vertically and the header has nothing to pin to.
-     */
-    public const DEFAULT_STICKY_MAX_HEIGHT = '70vh';
-
     protected ?ColumnSet $columns = null;
 
     /** @var array<int, Filter> */
@@ -174,8 +165,8 @@ class Table implements Htmlable
 
     protected bool $stickyHeader = false;
 
-    /** @var string A CSS length capping the scroll region {@see stickyHeader()} pins against. */
-    protected string $stickyHeaderMaxHeight = self::DEFAULT_STICKY_MAX_HEIGHT;
+    /** @var ?string A CSS length capping the scroll region the header pins in; null pins it to the page. */
+    protected ?string $stickyHeaderMaxHeight = null;
 
     protected ?string $tableClass = null;
 
@@ -1091,22 +1082,27 @@ class Table implements Htmlable
     /**
      * Keep the column headers in view while the rows scroll under them.
      *
-     * The header pins to the top of the table's own scroll region, not the page,
-     * because that region is already a scrolling ancestor: the wrapper carries
-     * `overflow-x: auto`, and CSS computes the other axis to `auto` alongside it.
-     * That is why turning this on also caps the region's height — a scrollport
-     * the size of its content never scrolls, and a header pinned inside one never
-     * moves. Name your own cap when the default does not suit the page:
+     * By default the header pins to the page: scroll the page, and the header
+     * stays at the top of the window — below any sticky chrome that declares
+     * `--wire-sticky-top`, as the admin top bar does — until the last row goes
+     * past. CSS `position: sticky` cannot do that here, because a sticky element
+     * pins to its nearest scrolling ancestor and the table's own wrapper is one
+     * (`overflow-x: auto` computes the other axis to `auto` too), so the header
+     * follows the scroll from `wire-table-sticky.js` instead.
+     *
+     * Name a height and the table becomes its own scroll region instead: the
+     * rows scroll inside a box of that height and the header pins to its top,
+     * with plain CSS.
      *
      * ```php
-     * ->stickyHeader()                 // 70vh of rows under a pinned header
-     * ->stickyHeader(maxHeight: '32rem')
+     * ->stickyHeader()                    // pinned to the page
+     * ->stickyHeader(maxHeight: '32rem')  // the rows scroll in a 32rem box
      * ```
      *
      * Any CSS length works; it is written as an inline style, not a class, so it
      * needs nothing from Tailwind's extractor.
      */
-    public function stickyHeader(bool $sticky = true, string $maxHeight = self::DEFAULT_STICKY_MAX_HEIGHT): static
+    public function stickyHeader(bool $sticky = true, ?string $maxHeight = null): static
     {
         $this->stickyHeader = $sticky;
         $this->stickyHeaderMaxHeight = $maxHeight;
@@ -1119,10 +1115,16 @@ class Table implements Htmlable
         return $this->stickyHeader;
     }
 
-    /** The cap on the scroll region, or null when the header is not sticky. */
+    /** The cap on the scroll region, or null when the header pins to the page or does not pin. */
     public function getStickyHeaderMaxHeight(): ?string
     {
         return $this->stickyHeader ? $this->stickyHeaderMaxHeight : null;
+    }
+
+    /** Whether the header follows the page scroll rather than a capped region's. */
+    public function hasPageStickyHeader(): bool
+    {
+        return $this->stickyHeader && $this->stickyHeaderMaxHeight === null;
     }
 
     /**

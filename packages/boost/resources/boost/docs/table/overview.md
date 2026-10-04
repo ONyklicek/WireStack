@@ -505,7 +505,7 @@ selection-scope totals stay live.
 ->bordered(bool $bordered = true)
 
 // Keep the column headers in view while the rows scroll under them // [tl! focus:1]
-->stickyHeader(bool $sticky = true, string $maxHeight = '70vh')
+->stickyHeader(bool $sticky = true, ?string $maxHeight = null)
 
 // Custom CSS class on <table> element
 ->tableClass(string $class)
@@ -523,22 +523,32 @@ selection-scope totals stay live.
 ->rowInactive(bool|Closure $when = true, Closure|InactiveRow|null $configure = null)
 ```
 
-**Sticky header.** `stickyHeader()` pins the `<thead>` so the column labels stay
-readable through a long list. It also caps the height of the region the rows
-scroll in, and that is not a second, separable option — it is what makes the
-first one work. A sticky element pins to its nearest scrolling ancestor, and the
-table already has one: the wrapper carries `overflow-x: auto` for the horizontal
-case, and CSS computes the other axis to `auto` alongside it. A scrollport the
-size of its content never scrolls, so a header pinned inside an uncapped one has
-nothing to stay behind and never moves. Name your own cap when `70vh` does not
-suit the page:
+**Sticky header.** `stickyHeader()` keeps the column labels readable through a
+long list. By default the header pins to the page: scroll the page and it stays
+at the top of the window, sliding along with the rows, until the last row goes
+past. CSS `position: sticky` cannot do that on its own here — a sticky element
+pins to its nearest scrolling ancestor, and the table's wrapper is one: it
+carries `overflow-x: auto` for the horizontal case, and CSS computes the other
+axis to `auto` alongside it. That wrapper never scrolls vertically, so the
+`<thead>` is moved instead, by a scroll-driven animation the page's own scroll
+runs — in the same frame as the rows, without a scroll listener trailing a frame
+behind them (a browser without scroll timelines gets that listener as a
+fallback). It stays inside the wrapper, so a table wider than the page still
+scrolls sideways with its header.
+
+Sticky chrome over the top of the page — a top bar — would otherwise cover the
+pinned header. Declare its height as `--wire-sticky-top` on any ancestor and the
+header stops below it; the admin layout does that for its own top bar.
+
+Name a height instead, and the table becomes its own scroll region: the rows
+scroll inside a box of that height and the header pins to the top of the box.
 
 ```php
-->stickyHeader()                    // 70vh of rows under a pinned header
-->stickyHeader(maxHeight: '32rem')  // any CSS length
+->stickyHeader()                    // pinned to the page
+->stickyHeader(maxHeight: '32rem')  // the rows scroll in a 32rem box
 ```
 
-The cap is written as an inline `max-height`, not a class, so an arbitrary
+The height is written as an inline `max-height`, not a class, so an arbitrary
 length needs nothing from Tailwind's extractor. Turning the header off with
 `stickyHeader(false)` lifts the cap with it, whatever height was named.
 
