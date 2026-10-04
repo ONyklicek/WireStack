@@ -82,6 +82,8 @@ final class TableQueryService
         string $sortDirection = 'asc',
         array $columnFilterValues = [],
     ): Builder {
+        [$search, $sortColumn, $sortDirection] = $this->honourTableSwitches($table, $search, $sortColumn, $sortDirection);
+
         $modelClass = get_class($baseQuery->getModel());
         $this->currentModelClass = $modelClass;
         $this->registry = $this->buildMetadataRegistry($baseQuery, $modelClass, $table);
@@ -433,6 +435,8 @@ final class TableQueryService
         string $sortDirection = 'asc',
         array $columnFilterValues = [],
     ): QueryPlan {
+        [$search, $sortColumn, $sortDirection] = $this->honourTableSwitches($table, $search, $sortColumn, $sortDirection);
+
         $source = $table->getDataSource()::class;
         $columns = $table->getColumns();
 
@@ -786,6 +790,30 @@ final class TableQueryService
 
             $filter->options($options);
         }
+    }
+
+    /**
+     * A table that is not searchable or not sortable refuses the term and the
+     * sort it was handed, not only the controls that would have set them: a
+     * shared `?sort=` URL, a saved view from before the switch, or a client
+     * writing the entangled state would otherwise still filter or re-order the
+     * rows with nothing on screen to show it. An unsortable table keeps its own
+     * `defaultSort()` — that is the developer's order, not the user's.
+     *
+     * @return array{0: string|null, 1: string|null, 2: string}
+     */
+    private function honourTableSwitches(Table $table, ?string $search, ?string $sortColumn, string $sortDirection): array
+    {
+        if (! $table->isSearchable()) {
+            $search = null;
+        }
+
+        if (! $table->isSortable()) {
+            $sortColumn = $table->getDefaultSort();
+            $sortDirection = $table->getDefaultSortDirection();
+        }
+
+        return [$search, $sortColumn, $sortDirection];
     }
 
     /**

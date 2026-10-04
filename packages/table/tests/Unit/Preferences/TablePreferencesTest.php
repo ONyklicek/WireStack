@@ -677,6 +677,24 @@ it('drops a column a saved view names that no longer exists', function () {
     expect($component->tableState->get('columns.hidden'))->toBe(['email']);
 });
 
+it('falls back to the table\'s page size when a view stores one it no longer offers', function () {
+    // The -1 a removed "all" option left in stored views, and a size dropped
+    // from the options since: neither may reach the paginator.
+    $driver = new ArrayPreferenceDriver;
+    $driver->store['guest|orders-index|All'] = ['pagination.perPage' => -1];
+    $driver->store['guest|orders-index|Dropped'] = ['pagination.perPage' => 77];
+    TablePreferenceManager::swap($driver);
+
+    $component = savedViewComponent();
+    $expected = $component->getTable()->getPerPage();
+
+    $component->applyTableView('All');
+    expect($component->tableState->get('pagination.perPage'))->toBe($expected);
+
+    $component->applyTableView('Dropped');
+    expect($component->tableState->get('pagination.perPage'))->toBe($expected);
+});
+
 it('ignores a path a stored view carries that this version does not know', function () {
     $driver = new ArrayPreferenceDriver;
     $driver->store['guest|orders-index|Future'] = ['search' => 'ada', 'not.a.real.path' => 'x'];

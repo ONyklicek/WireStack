@@ -60,14 +60,6 @@ class Table implements Htmlable
     use Macroable;
 
     /**
-     * The page size that means "no page size" — every matching record on one
-     * page. Negative so it can never collide with a real count, and an int so
-     * it survives the round trip through the select, the query string and the
-     * cache key unchanged.
-     */
-    public const PER_PAGE_ALL = -1;
-
-    /**
      * How tall the scroll region gets when {@see stickyHeader()} is on and no
      * height was named. A sticky `<thead>` pins against the nearest scrolling
      * ancestor, and the table's own wrapper is already one — `overflow-x: auto`
@@ -81,15 +73,21 @@ class Table implements Htmlable
     /** @var array<int, Filter> */
     protected array $filters = [];
 
-    protected int $perPage = 10;
+    /** Resolved lazily from `config('wire-table.defaults.per_page')`. */
+    protected ?int $perPage = null;
 
-    /** @var array<int, int> */
-    protected array $perPageOptions = [10, 25, 50, 100];
+    /**
+     * Resolved lazily from `config('wire-table.defaults.per_page_options')`.
+     *
+     * @var array<int, int>|null
+     */
+    protected ?array $perPageOptions = null;
 
     /** Whether the footer draws the page-size control. See {@see perPageSelector()}. */
     protected bool $showPerPageSelector = true;
 
-    protected bool $searchable = true;
+    /** Resolved lazily from `config('wire-table.defaults.searchable')`. */
+    protected ?bool $searchable = null;
 
     protected ?SearchConfig $searchConfig = null;
 
@@ -97,7 +95,8 @@ class Table implements Htmlable
 
     protected string $queryStringPrefix = '';
 
-    protected bool $sortable = true;
+    /** Resolved lazily from `config('wire-table.defaults.sortable')`. */
+    protected ?bool $sortable = null;
 
     protected bool $paginated = true;
 
@@ -154,9 +153,11 @@ class Table implements Htmlable
 
     protected ?string $emptyStateIcon = null;
 
-    protected bool $striped = false;
+    /** Resolved lazily from `config('wire-table.defaults.striped')`. */
+    protected ?bool $striped = null;
 
-    protected bool $hoverable = true;
+    /** Resolved lazily from `config('wire-table.defaults.hoverable')`. */
+    protected ?bool $hoverable = null;
 
     protected ?string $recordUrl = null;
 
@@ -335,12 +336,12 @@ class Table implements Htmlable
 
     public function isSortable(): bool
     {
-        return $this->sortable;
+        return $this->sortable ?? (bool) config('wire-table.defaults.sortable', true);
     }
 
     public function isSearchable(): bool
     {
-        return $this->searchable;
+        return $this->searchable ?? (bool) config('wire-table.defaults.searchable', true);
     }
 
     /**
@@ -486,11 +487,11 @@ class Table implements Htmlable
     }
 
     /**
-     * How many rows a page holds. `'all'` (or {@see Table::PER_PAGE_ALL}) puts
-     * every matching record on one page — see {@see perPageOptions()} for what
-     * that costs.
+     * How many rows a page holds.
+     *
+     * @throws TableConfigurationException on a size that is not a positive whole number
      */
-    public function perPage(int|string $perPage): static
+    public function perPage(int $perPage): static
     {
         $this->perPage = $this->normalizePerPageOption($perPage);
 
@@ -499,32 +500,23 @@ class Table implements Htmlable
 
     public function getPerPage(): int
     {
-        return $this->perPage;
+        return $this->perPage ??= $this->normalizePerPageOption(
+            config('wire-table.defaults.per_page') ?? 10,
+        );
     }
 
     /**
      * The page sizes the per-page select offers.
      *
-     * A size may be the word `'all'`, which offers "show everything on one
-     * page". It is deliberately not among the defaults: a page size is the one
-     * thing standing between a table and reading its whole source into memory,
-     * and `normalizePerPage()` on the host exists precisely to stop a crafted
-     * request asking for that. Writing `'all'` is how a table says the trade is
-     * acceptable for its data — so put it on a table whose row count you know,
-     * not on one backed by a table that grows without limit.
+     *   ->perPageOptions([10, 25, 50])
      *
-     *   ->perPageOptions([10, 25, 50, 'all'])
+     * @param  array<int, int>  $options
      *
-     * @param  array<int, int|string>  $options
-     *
-     * @throws TableConfigurationException on a size that is neither a number nor 'all'
+     * @throws TableConfigurationException on a size that is not a positive whole number
      */
     public function perPageOptions(array $options): static
     {
-        $this->perPageOptions = array_map(
-            fn (int|string $option) => $this->normalizePerPageOption($option),
-            array_values($options),
-        );
+        $this->perPageOptions = array_map($this->normalizePerPageOption(...), array_values($options));
 
         return $this;
     }
@@ -560,50 +552,45 @@ class Table implements Htmlable
      * whose "10" option cannot be chosen because the control already claims to
      * be on it.
      *
-     * "All" sorts last however it was declared — it is not a size that belongs
-     * in the middle of an ascending list, and its sentinel is negative, so
-     * leaving it to sort() would put it first.
-     *
      * @return array<int, int>
      */
     public function getPerPageOptions(): array
     {
-        $options = $this->perPageOptions;
+        $options = $this->perPageOptions ??= array_map(
+            $this->normalizePerPageOption(...),
+            array_values((array) config('wire-table.defaults.per_page_options', [10, 25, 50, 100])),
+        );
+        $perPage = $this->getPerPage();
 
-        if (! in_array($this->perPage, $options, true)) {
-            $options[] = $this->perPage;
+        if (! in_array($perPage, $options, true)) {
+            $options[] = $perPage;
         }
 
-        $sizes = array_values(array_filter($options, fn (int $option) => $option !== self::PER_PAGE_ALL));
-        sort($sizes);
+        sort($options);
 
-        return in_array(self::PER_PAGE_ALL, $options, true)
-            ? [...$sizes, self::PER_PAGE_ALL]
-            : $sizes;
+        return $options;
     }
 
     /**
-     * A page size as it is stored: a positive count, or the "all" sentinel.
+     * A page size as it is stored: a positive integer.
      *
      * The value travels to the client and back through a `wire:model` select, a
      * query-string parameter and the query cache key, all of which compare it
-     * strictly as an integer — so the word never survives past this point.
+     * strictly as an integer. A numeric string is accepted because a config
+     * value read from the environment is one; anything else — zero, a negative
+     * count, a word — is refused rather than handed to the paginator.
      */
-    protected function normalizePerPageOption(int|string $option): int
+    protected function normalizePerPageOption(mixed $option): int
     {
-        if (is_int($option)) {
-            return $option;
+        if (is_string($option) && ctype_digit(trim($option))) {
+            $option = (int) trim($option);
         }
 
-        if (strtolower(trim($option)) === 'all') {
-            return self::PER_PAGE_ALL;
+        if (! is_int($option) || $option < 1) {
+            throw TableConfigurationException::invalidPerPageOption($option);
         }
 
-        if (is_numeric($option)) {
-            return (int) $option;
-        }
-
-        throw TableConfigurationException::invalidPerPageOption($option);
+        return $option;
     }
 
     public function searchable(bool $searchable = true): static
@@ -998,7 +985,7 @@ class Table implements Htmlable
 
     public function isStriped(): bool
     {
-        return $this->striped;
+        return $this->striped ?? (bool) config('wire-table.defaults.striped', false);
     }
 
     public function hoverable(bool $hoverable = true): static
@@ -1010,7 +997,7 @@ class Table implements Htmlable
 
     public function isHoverable(): bool
     {
-        return $this->hoverable;
+        return $this->hoverable ?? (bool) config('wire-table.defaults.hoverable', true);
     }
 
     public function recordUrl(string|Closure $url): static
@@ -1942,11 +1929,29 @@ class Table implements Htmlable
     }
 
     /**
-     * Get the per-table notification driver (null = use global default).
+     * Get the per-table notification driver: this table's own, else the class
+     * `config('wire-table.notification_driver')` names, else null — which means
+     * the global default (`wire-core.notifications.default`).
      */
     public function getNotificationDriver(): ?NotificationDriver
     {
-        return $this->notificationDriver;
+        if ($this->notificationDriver !== null) {
+            return $this->notificationDriver;
+        }
+
+        $configured = config('wire-table.notification_driver');
+
+        if ($configured === null || $configured === '') {
+            return null;
+        }
+
+        $driver = is_string($configured) ? app($configured) : $configured;
+
+        if (! $driver instanceof NotificationDriver) {
+            throw TableConfigurationException::invalidNotificationDriver($configured);
+        }
+
+        return $driver;
     }
 
     /**

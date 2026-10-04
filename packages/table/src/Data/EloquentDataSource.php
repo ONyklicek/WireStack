@@ -56,7 +56,7 @@ final class EloquentDataSource implements DataSource
 
     public function paginate(QueryPlan $plan, PagingRequest $paging): LengthAwarePaginator|PaginatorContract|CursorPaginator
     {
-        $perPage = $this->resolvePerPage($paging->perPage);
+        $perPage = $paging->perPage;
 
         return match ($paging->mode) {
             PagingMode::Simple => $this->query->simplePaginate($perPage, ['*'], $paging->pageName, $paging->page),
@@ -223,23 +223,5 @@ final class EloquentDataSource implements DataSource
         // @codeCoverageIgnoreEnd
 
         return ($row->wt_count ?? 0).'|'.($row->wt_max ?? '');
-    }
-
-    /**
-     * Resolve the "all rows" sentinel into a real page size.
-     *
-     * The sentinel cannot reach the paginator: a negative limit is silently
-     * dropped by the query builder, so the rows would be right, while the
-     * paginator still divides the total by it, so the page count would be
-     * negative. Counting first makes "all" one honest page, and max(1) keeps an
-     * empty table from dividing by zero.
-     */
-    private function resolvePerPage(int $perPage): int
-    {
-        if ($perPage > 0) {
-            return $perPage;
-        }
-
-        return max(1, $this->query->toBase()->getCountForPagination());
     }
 }

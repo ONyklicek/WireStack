@@ -70,7 +70,7 @@ final class CollectionDataSource implements DataSource
 
         $matched = $this->apply($plan);
         $total = $matched->count();
-        $perPage = $paging->perPage > 0 ? $paging->perPage : max(1, $total);
+        $perPage = $paging->perPage;
         $page = $paging->page ?? Paginator::resolveCurrentPage($paging->pageName);
 
         $slice = $matched->forPage($page, $perPage)->values();

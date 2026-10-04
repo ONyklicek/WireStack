@@ -98,25 +98,6 @@ it('honours a custom page name, so two tables page independently', function () {
         ->and($page->url(1))->toContain('rowsPage=1');
 });
 
-it('turns the all-rows sentinel into one honest page', function () {
-    // A negative limit is dropped by the query builder but still divides the
-    // total in the paginator, so the sentinel must never reach it.
-    $page = edsSource()->paginate(new QueryPlan, PagingRequest::lengthAware(-1));
-
-    expect($page->lastPage())->toBe(1)
-        ->and($page->total())->toBe(7)
-        ->and($page->count())->toBe(7);
-});
-
-it('does not divide by zero when the sentinel meets an empty table', function () {
-    EdsRow::query()->delete();
-
-    $page = edsSource()->paginate(new QueryPlan, PagingRequest::lengthAware(-1));
-
-    expect($page->total())->toBe(0)
-        ->and($page->lastPage())->toBe(1);
-});
-
 // ─── get / count ─────────────────────────────────────────────────────────────
 
 it('returns every row unpaginated', function () {

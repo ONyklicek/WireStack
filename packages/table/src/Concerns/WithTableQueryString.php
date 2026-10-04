@@ -71,7 +71,7 @@ trait WithTableQueryString
             ];
         }
 
-        if ($table->getSortableColumns() !== []) {
+        if ($table->isSortable() && $table->getSortableColumns() !== []) {
             $entries[] = [
                 'path' => 'sort.column',
                 'param' => $prefix.'sort',
@@ -131,7 +131,7 @@ trait WithTableQueryString
 
         $sort = $this->tableQueryStringParam($prefix.'sort');
         $sortableNames = array_map(fn ($column) => $column->getName(), $table->getSortableColumns());
-        if (is_string($sort) && in_array($sort, $sortableNames, true)) {
+        if ($table->isSortable() && is_string($sort) && in_array($sort, $sortableNames, true)) {
             $this->tableState->set('sort.column', $sort);
             $direction = $this->tableQueryStringParam($prefix.'direction');
             $this->tableState->set('sort.direction', $direction === 'desc' ? 'desc' : 'asc');
