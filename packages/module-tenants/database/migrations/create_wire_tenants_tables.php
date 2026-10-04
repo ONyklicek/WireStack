@@ -5,12 +5,15 @@ declare(strict_types=1);
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use NyonCode\WireModuleTenants\Support\Membership;
 
 /**
  * Companies, who belongs to which and in what role, and invitations to join.
  *
- * `tenant_user` is the pivot `InteractsWithTenants` reads membership from
- * (`wire-core.tenancy.members_table`), with the role beside it.
+ * The pivot is `wire-core.tenancy.members_table` (`tenant_user`), the one
+ * `InteractsWithTenants` reads membership from, with the role beside it. Its two
+ * columns follow Laravel's convention for the configured models — `tenant_id`
+ * and `user_id` for the defaults — which is the convention that trait reads.
  */
 return new class extends Migration
 {
@@ -26,13 +29,15 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('tenant_user')) {
-            Schema::create('tenant_user', function (Blueprint $table): void {
-                $table->foreignId('tenant_id');
-                $table->foreignId('user_id');
+        $members = Membership::table();
+
+        if (! Schema::hasTable($members)) {
+            Schema::create($members, function (Blueprint $table): void {
+                $table->foreignId(Membership::tenantKey());
+                $table->foreignId(Membership::userKey());
                 $table->string('role')->default('member');
                 $table->timestamps();
-                $table->primary(['tenant_id', 'user_id']);
+                $table->primary([Membership::tenantKey(), Membership::userKey()]);
             });
         }
 
@@ -53,7 +58,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('tenant_invitations');
-        Schema::dropIfExists('tenant_user');
+        Schema::dropIfExists(Membership::table());
         Schema::dropIfExists('tenants');
     }
 };

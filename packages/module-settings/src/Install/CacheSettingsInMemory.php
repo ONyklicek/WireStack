@@ -10,6 +10,7 @@ use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
 use NyonCode\WireCore\Foundation\Setup\EnvFile;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
+use NyonCode\WireModuleSettings\Support\Settings;
 use Throwable;
 
 /**
@@ -103,7 +104,7 @@ final readonly class CacheSettingsInMemory implements SetupStep
 
     private function store(): string
     {
-        return (string) (config('wire-module-settings.cache.store') ?? config('cache.default', 'file'));
+        return Settings::effectiveCacheStore();
     }
 
     private function onTheDatabase(): bool

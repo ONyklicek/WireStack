@@ -6,7 +6,6 @@ namespace NyonCode\WireModuleNotifications\Resources;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Auth;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
@@ -16,6 +15,9 @@ use NyonCode\WireCore\Infolists\Components\KeyValueEntry;
 use NyonCode\WireCore\Infolists\Components\TextEntry;
 use NyonCode\WireCore\Infolists\Contracts\ProvidesResourceInfolist;
 use NyonCode\WireCore\Infolists\Infolist;
+use NyonCode\WireCore\Notifications\Contracts\ResolvesNotifiable;
+use NyonCode\WireCore\Notifications\DatabaseNotification;
+use NyonCode\WireModuleNotifications\Exceptions\NotificationsModuleException;
 use NyonCode\WireModuleNotifications\Pages\ListNotifications;
 use NyonCode\WireModuleNotifications\Pages\ViewNotification;
 
@@ -45,6 +47,27 @@ class NotificationResource implements DescribesResource, ProvidesNavigation, Pro
         $model = config('wire-module-notifications.model');
 
         return is_string($model) && $model !== '' ? $model : null;
+    }
+
+    /**
+     * The model every screen of this module reads stored notifications through.
+     *
+     * One answer for the list and the detail page alike — the list used to read
+     * core's model whatever the setting said.
+     *
+     * @return class-string<DatabaseNotification>
+     *
+     * @throws NotificationsModuleException when the setting names something that is not one
+     */
+    public static function notificationModel(): string
+    {
+        $model = self::modelClass() ?? DatabaseNotification::class;
+
+        if (! is_a($model, DatabaseNotification::class, true)) {
+            throw NotificationsModuleException::modelIsNotADatabaseNotification($model);
+        }
+
+        return $model;
     }
 
     public static function label(): string
@@ -109,16 +132,19 @@ class NotificationResource implements DescribesResource, ProvidesNavigation, Pro
             return $query;
         }
 
-        $user = Auth::user();
+        // The bound recipient, not `Auth::user()`: the bell and the writer ask
+        // the same binding, so an application that answers it with a tenant or
+        // an impersonated user gets one inbox everywhere instead of two.
+        $recipient = app(ResolvesNotifiable::class)->resolve();
 
-        if ($user === null) {
-            // Signed out, scoped to "own": nobody's, which is the honest answer
+        if (! $recipient instanceof Model) {
+            // Nobody to scope to, "own": nobody's, which is the honest answer
             // and not everybody's.
             return $query->whereRaw('1 = 0');
         }
 
         return $query
-            ->where('notifiable_type', $user->getMorphClass())
-            ->where('notifiable_id', (string) $user->getAuthIdentifier());
+            ->where('notifiable_type', $recipient->getMorphClass())
+            ->where('notifiable_id', (string) $recipient->getKey());
     }
 }

@@ -25,6 +25,14 @@ the application has not set them: `wire-core.tenancy.model` becomes its `Tenant`
 and `wire-panels.routes.tenant_entry.view` becomes its page for somebody in no
 company. Anything the application already named, it keeps.
 
+An application with a company model of its own names it in
+`wire-core.tenancy.model`, and the module registers into it: every screen and
+action asks the same resolver, core's setting first and the module's `model` only
+when core names none. The pivot is `wire-core.tenancy.members_table`, migrated
+under that name, and its two columns follow Laravel's convention for the two
+models — `company_id` and `user_id` for a `Company` — which is what
+`InteractsWithTenants` reads.
+
 Its screens live in two places, because they are about two different moments:
 
 | Where | Route | What it is |

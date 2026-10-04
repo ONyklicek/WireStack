@@ -142,7 +142,7 @@ for.
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `model` | `AuditEntry::class` | The entry model; it must extend core's, and one that does not is refused rather than shown as an empty log |
+| `model` | `null` | The entry model the screens read through; `null` follows `wire-core.audit.model`, the one core writes with. It must extend core's, and one that does not is refused rather than shown as an empty log |
 | `actor.attributes` | `['name', 'email']` | Which attribute of a user reads as their name; the first they have wins |
 | `permission` | `null` | Ability required to read the log — `null` leaves it open |
 | `navigation.group` | `system` | Menu group |

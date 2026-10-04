@@ -12,6 +12,7 @@ use Illuminate\Validation\Rules\Password;
 use NyonCode\WireModuleUsers\Console\WireUserCommand;
 use NyonCode\WireModuleUsers\Exceptions\AccountException;
 use NyonCode\WireModuleUsers\Install\CreateFirstAdministrator;
+use NyonCode\WireModuleUsers\Resources\UserResource;
 use Throwable;
 
 /**
@@ -48,13 +49,12 @@ final class Accounts
      */
     public function fields(): array
     {
-        /** @var array<string, string> $fields */
-        $fields = (array) config('wire-module-users.fields', []);
-
+        // Through the resource's reading, so a blank entry means the default here
+        // as it does on the screens — not a column literally named "".
         return [
-            'name' => $fields['name'] ?? 'name',
-            'email' => $fields['email'] ?? 'email',
-            'password' => $fields['password'] ?? 'password',
+            'name' => UserResource::field('name'),
+            'email' => UserResource::field('email'),
+            'password' => UserResource::field('password'),
         ];
     }
 

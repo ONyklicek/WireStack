@@ -145,3 +145,11 @@ it('belongs to its own package, so unticking that package skips it', function ()
     // What the first half of the installer was told, the second half obeys.
     expect((new RecordAuditTrail(ratEnv()))->package())->toBe('nyoncode/wire-module-audit');
 });
+
+it('is done when the environment switched recording on with a 1', function () {
+    // The logger records on "1"; the step used to compare with `=== true`, call
+    // it pending and write the .env again.
+    config()->set('wire-core.audit.enabled', '1');
+
+    expect((new RecordAuditTrail(ratEnv()))->state())->toBe(SetupState::Done);
+});

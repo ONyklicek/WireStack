@@ -12,6 +12,7 @@ use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireForms\Forms\WithForms;
 use NyonCode\WireModuleTenants\Actions\RegisterTenant as Register;
+use NyonCode\WireModuleTenants\Support\Membership;
 use NyonCode\WireModuleTenants\Support\Registration;
 
 /**
@@ -36,8 +37,7 @@ class RegisterTenant extends Component
 
     public function form(Form $form): Form
     {
-        /** @var class-string<Model> $model */
-        $model = config('wire-module-tenants.model');
+        $model = Membership::tenantModel();
 
         return $form
             ->statePath('data')

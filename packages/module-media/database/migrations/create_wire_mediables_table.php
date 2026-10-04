@@ -10,14 +10,22 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('wire_mediables', function (Blueprint $table) {
+        $media = (string) config('wire-module-media.table', 'wire_media');
+
+        // Guarded like the two tables it points at, so a database that already
+        // has the library can be handed the set again.
+        if (Schema::hasTable('wire_mediables')) {
+            return;
+        }
+
+        Schema::create('wire_mediables', function (Blueprint $table) use ($media) {
             $table->id();
 
             // Cascades, unlike everything else in this module: this row is the
             // *link*, not the file. Deleting a media row should take its links
             // with it, because a link to a file that no longer exists is a
             // broken image on a page nobody remembers publishing.
-            $table->foreignId('media_id')->constrained('wire_media')->cascadeOnDelete();
+            $table->foreignId('media_id')->constrained($media)->cascadeOnDelete();
 
             $table->morphs('mediable');
 

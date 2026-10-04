@@ -7,17 +7,20 @@ namespace NyonCode\WireModuleMedia\Actions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use League\Flysystem\FilesystemException;
-use NyonCode\WireModuleMedia\Jobs\GenerateThumbnail;
 use NyonCode\WireModuleMedia\Models\Media;
 use NyonCode\WireModuleMedia\Models\MediaFolder;
 use NyonCode\WireModuleMedia\Support\StoredFileFacts;
+use NyonCode\WireModuleMedia\Support\Thumbnails;
+use NyonCode\WireModuleMedia\Support\UploadLimits;
 
 /**
  * An upload becomes a row — the one place that decides what that means.
  *
  * Three surfaces put files into the library: the manager's drop zone, the picker
- * modal, and the resource's own create page. They were about to grow three
+ * modal, and the resource's own create page — the last through {@see record()},
+ * since its file is already stored by the time it arrives. They were about to grow three
  * versions of the same eight lines, and the version that drifts first is always
  * the one nobody is looking at.
  *
@@ -43,14 +46,18 @@ final readonly class StoreUpload
      *
      * The `$duplicate` flag says which of the two successes happened, because
      * "already in the library" is worth telling a person and is not an error.
+     *
+     * @throws ValidationException when the file is not one the library takes
+     *                             ({@see UploadLimits}) — refused before a byte is written
      */
     public function __invoke(UploadedFile $upload, ?MediaFolder $folder = null, ?bool &$duplicate = null): ?Media
     {
         $duplicate = false;
 
+        UploadLimits::check($upload);
+
         $disk = (string) config('wire-module-media.disk', 'public');
         $directory = (string) config('wire-module-media.directory', 'media');
-        $storage = Storage::disk($disk);
 
         try {
             $path = $upload->store($directory, $disk);
@@ -61,6 +68,22 @@ final readonly class StoreUpload
         if (! is_string($path) || $path === '') {
             return null;
         }
+
+        return $this->record($disk, $path, $upload->getClientOriginalName(), $folder, $duplicate);
+    }
+
+    /**
+     * Turn a file already on the disk into a row.
+     *
+     * The half of an upload that does not care how the bytes arrived — the
+     * resource's create page has its file stored by `FileUpload` and comes in
+     * here, so its rows are hashed, measured, de-duplicated and thumbnailed
+     * exactly like the drop zone's.
+     */
+    public function record(string $disk, string $path, string $name, ?MediaFolder $folder = null, ?bool &$duplicate = null): Media
+    {
+        $duplicate = false;
+        $storage = Storage::disk($disk);
 
         $checksum = StoredFileFacts::checksum($storage->path($path));
 
@@ -81,38 +104,28 @@ final readonly class StoreUpload
 
         [$width, $height] = StoredFileFacts::dimensions($storage->path($path));
 
+        // Asked rather than assumed: the create page hands in whatever path its
+        // field dehydrated to, and a disk that lost the file must not throw here.
+        $exists = $path !== '' && $storage->exists($path);
+
         $media = Media::create([
             'folder_id' => $folder?->id,
             'disk' => $disk,
             'path' => $path,
-            'name' => $upload->getClientOriginalName(),
-            'mime_type' => $storage->mimeType($path) ?: null,
-            'size' => $storage->size($path),
+            'name' => $name !== '' ? $name : basename($path),
+            'mime_type' => $exists ? ($storage->mimeType($path) ?: null) : null,
+            'size' => $exists ? $storage->size($path) : 0,
             'width' => $width,
             'height' => $height,
             'checksum' => $checksum,
             'uploaded_by' => Auth::id() === null ? null : (string) Auth::id(),
         ]);
 
-        // After the row exists, and allowed to do nothing: a file with no pixels,
-        // a server without GD or a remote disk all leave `thumb_path` null, and
-        // every view falls back to the original.
-        //
-        // On a queue where one is being worked, because resizing a large
-        // photograph is seconds the person who dropped it spends watching a
-        // spinner — and inline otherwise, because a queue nobody works would
-        // mean thumbnails that never appear.
-        $queue = config('wire-module-media.thumbnails.queue', false);
-
-        if ($queue === false || $queue === null) {
-            app(MakeThumbnail::class)($media);
-        } else {
-            $job = GenerateThumbnail::dispatch($media);
-
-            if (is_string($queue) && $queue !== '') {
-                $job->onQueue($queue);
-            }
-        }
+        // After the row exists. On a queue where one is being worked, because
+        // resizing a large photograph is seconds the person who dropped it spends
+        // watching a spinner — and inline otherwise, because a queue nobody works
+        // would mean thumbnails that never appear.
+        Thumbnails::make($media);
 
         return $media;
     }

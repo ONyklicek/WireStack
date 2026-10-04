@@ -234,9 +234,27 @@ final class Settings
      */
     private static function cache(): Repository
     {
+        return Cache::store(self::cacheStore());
+    }
+
+    /**
+     * The store `wire-module-settings.cache.store` names, or null for the
+     * application's default.
+     *
+     * Blank is null: `WIRE_SETTINGS_CACHE_STORE=` arrives as an empty string, and
+     * the installer and `about` used to read that as a store literally named "".
+     */
+    public static function cacheStore(): ?string
+    {
         $store = config('wire-module-settings.cache.store');
 
-        return Cache::store(is_string($store) && $store !== '' ? $store : null);
+        return is_string($store) && trim($store) !== '' ? trim($store) : null;
+    }
+
+    /** The store settings are actually cached in, default included. */
+    public static function effectiveCacheStore(): string
+    {
+        return self::cacheStore() ?? (string) config('cache.default', 'file');
     }
 
     private static function caching(): bool

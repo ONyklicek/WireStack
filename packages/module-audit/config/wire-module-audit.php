@@ -1,7 +1,6 @@
 <?php
 
 declare(strict_types=1);
-use NyonCode\WireCore\Audit\AuditEntry;
 
 return [
 
@@ -11,10 +10,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | wire-core writes the trail and owns the table; this module only shows it.
-    | Point this at your own model if you extended the entry — it has to extend
-    | core's, because these screens read the trail through it: its casts, its
-    | `user()` relation and its change diff. A class that is not one is refused
-    | rather than rendered as an empty log.
+    | `null` reads the trail through the model core writes it with,
+    | `wire-core.audit.model` — set that one when you extend the entry, and the
+    | screens follow. Set this only to read through a different class. It has to
+    | extend core's, because these screens read the trail through it: its casts,
+    | its `user()` relation and its change diff. A class that is not one is
+    | refused rather than rendered as an empty log; `''` turns the screens off.
     |
     | The table itself is core's migration, and core publishes it on demand:
     |
@@ -22,7 +23,7 @@ return [
     |   php artisan migrate
     |
     */
-    'model' => AuditEntry::class,
+    'model' => null,
 
     /*
     |--------------------------------------------------------------------------

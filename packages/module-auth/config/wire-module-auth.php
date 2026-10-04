@@ -15,8 +15,9 @@ return [
     | already owns a frame for exactly this — `wire-admin::auth-layout`, the head
     | and the card with none of the navigation.
     |
-    | `auto` uses the shell's frame when the shell is installed. An application
-    | with a frame of its own names it here instead:
+    | `auto` uses the application's own auth layout when there is one — the
+    | component the installer writes — and the shell's frame otherwise, when the
+    | shell is installed. An application with a frame elsewhere names it here:
     |
     |     'layout' => 'components.layouts.guest',
     |
@@ -86,8 +87,10 @@ return [
     |   verify_email    confirm an address by typing a code. The signed link
     |                   Fortify mails keeps working beside it.
     |   reset_password  the reset mail carries a code instead of a link. The
-    |                   broker's token is untouched underneath — the code's row
-    |                   carries it — so expiry and single use stay Laravel's.
+    |                   code is what expires — `expires` below, not the broker's
+    |                   `auth.passwords.*.expire` — and is used once; a correct
+    |                   one asks the broker for a fresh token on the spot, which
+    |                   replaces any reset link mailed before it.
     |
     | Everything is off until it is switched on: an installation that says
     | nothing here gets no new routes and no new mail.

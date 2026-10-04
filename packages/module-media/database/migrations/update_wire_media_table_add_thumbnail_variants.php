@@ -12,11 +12,13 @@ return new class extends Migration
     {
         // Guarded for the same reason as the migration beside it: this may be
         // applied twice against one database.
-        if (Schema::hasColumn('wire_media', 'thumb_variants')) {
+        $media = (string) config('wire-module-media.table', 'wire_media');
+
+        if (Schema::hasColumn($media, 'thumb_variants')) {
             return;
         }
 
-        Schema::table('wire_media', function (Blueprint $table) {
+        Schema::table($media, function (Blueprint $table) {
             // The other scaled copies, by name. `thumb_path` stays and stays the
             // tile, so a library that upgrades renders exactly as it did before
             // this ran — the variants are a gain, never a requirement.
@@ -35,7 +37,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('wire_media', function (Blueprint $table) {
+        Schema::table((string) config('wire-module-media.table', 'wire_media'), function (Blueprint $table) {
             $table->dropColumn(['thumb_variants', 'placeholder']);
         });
     }

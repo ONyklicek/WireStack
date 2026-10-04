@@ -121,3 +121,19 @@ it('registers itself as a module and fills what a tenant zone reads', function (
 
     Artisan::call('about', ['--only' => 'wire_module_tenants']);
 });
+
+it('reads the registration switch the way the environment writes it', function (mixed $value, string|false $mode) {
+    config()->set('wire-module-tenants.registration', $value);
+
+    expect(Registration::mode())->toBe($mode);
+})->with([
+    'anyone' => ['anyone', 'anyone'],
+    'ability' => ['ability', 'ability'],
+    'Ability, spaced' => [' Ability ', 'ability'],
+    'env true' => [true, 'anyone'],
+    'env 1' => ['1', 'anyone'],
+    'false' => [false, false],
+    'env 0' => ['0', false],
+    'nonsense' => ['sometimes', false],
+    'a list' => [['x'], false],
+]);

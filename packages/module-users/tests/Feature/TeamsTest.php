@@ -201,3 +201,26 @@ it('has no current team for somebody who belongs to none', function () {
     expect(Teams::optionsFor($me))->toBe([])
         ->and(Teams::currentId($me))->toBeNull();
 });
+
+it('lists a person\'s teams when the application switched teams on, whatever detection finds', function () {
+    $me = signedInWithTeams(['Ops', 'Billing']);
+
+    // `true` answers the question; a team model detection cannot find does not
+    // make the relation on the user any less there.
+    config()->set('wire-module-users.teams.enabled', true);
+    config()->set('wire-module-users.teams.model', 'App\\Models\\NoSuchTeam');
+
+    expect(Teams::available())->toBeFalse()
+        ->and(array_values(Teams::optionsFor($me)))->toBe(['Ops', 'Billing'])
+        ->and(Teams::currentId($me))->not->toBeNull();
+});
+
+it('reads the switch the way the environment writes it', function () {
+    config()->set('permission.teams', false);
+
+    config()->set('wire-module-users.teams.enabled', '1');
+    expect(Teams::enabled())->toBeTrue();
+
+    config()->set('wire-module-users.teams.enabled', '0');
+    expect(Teams::enabled())->toBeFalse();
+});

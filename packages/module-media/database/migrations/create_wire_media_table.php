@@ -10,7 +10,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('wire_media', function (Blueprint $table) {
+        // The models read their table names from config, so the migrations must
+        // too. Guarded, because a name read from config is one the installer
+        // cannot see in the source, and this may be handed to a database that
+        // already has the table.
+        $media = (string) config('wire-module-media.table', 'wire_media');
+        $folders = (string) config('wire-module-media.folders_table', 'wire_media_folders');
+
+        if (Schema::hasTable($media)) {
+            return;
+        }
+
+        Schema::create($media, function (Blueprint $table) use ($folders) {
             $table->id();
             // The disk is stored beside the path because it is part of the
             // address: the same path means different files on `public` and `s3`,
@@ -20,7 +31,7 @@ return new class extends Migration
             // moving a file between folders never touches the disk. Moving the
             // bytes would change the URL of a file a published page already
             // links to, which is a broken image in exchange for a tidier bucket.
-            $table->foreignId('folder_id')->nullable()->constrained('wire_media_folders')->nullOnDelete();
+            $table->foreignId('folder_id')->nullable()->constrained($folders)->nullOnDelete();
 
             $table->string('disk');
             $table->string('path');
@@ -65,6 +76,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('wire_media');
+        Schema::dropIfExists((string) config('wire-module-media.table', 'wire_media'));
     }
 };

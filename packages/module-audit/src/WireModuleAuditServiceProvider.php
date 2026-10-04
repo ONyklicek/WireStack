@@ -62,7 +62,7 @@ class WireModuleAuditServiceProvider extends PackageServiceProvider
                         }
 
                         // And the recording itself is core's switch.
-                        if (! config('wire-core.audit.enabled', false)) {
+                        if (! AuditLog::recording()) {
                             $installer->comment('  ⚠️  wire-core.audit.enabled is off — nothing is being recorded yet');
                         }
                     });
@@ -76,7 +76,7 @@ class WireModuleAuditServiceProvider extends PackageServiceProvider
     public function aboutData(): array
     {
         return [
-            'Recording' => config('wire-core.audit.enabled', false) ? 'on' : 'off',
+            'Recording' => AuditLog::recording() ? 'on' : 'off',
             'Log table' => AuditLog::available() ? 'ready' : 'missing',
         ];
     }

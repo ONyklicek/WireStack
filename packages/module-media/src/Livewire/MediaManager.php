@@ -8,6 +8,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -21,6 +22,7 @@ use NyonCode\WireModuleMedia\Models\Media;
 use NyonCode\WireModuleMedia\Models\MediaFolder;
 use NyonCode\WireModuleMedia\Support\MediaAccess;
 use NyonCode\WireModuleMedia\Support\MediaUsage;
+use NyonCode\WireModuleMedia\Support\Thumbnails;
 
 /**
  * The library, as something you can actually work in.
@@ -121,7 +123,7 @@ class MediaManager extends Component
      * Component state, so it survives opening another folder — which is exactly
      * what somebody does while a long batch is still going.
      *
-     * @var array<int, array{name: string, state: string, media: int|null}>
+     * @var array<int, array{name: string, state: string, media: int|null, reason?: string|null}>
      */
     public array $tray = [];
 
@@ -324,7 +326,15 @@ class MediaManager extends Component
             return;
         }
 
-        app(ReplaceOriginal::class)($original, $this->editorUpload)
+        try {
+            $replaced = app(ReplaceOriginal::class)($original, $this->editorUpload);
+        } catch (ValidationException $refused) {
+            $this->notifyError($refused->validator->errors()->first());
+
+            return;
+        }
+
+        $replaced
             ? $this->notifySuccess(__('wire-module-media::messages.replaced'))
             // The old file is still there and the row still describes it: a
             // failed replacement must not read as a lost original.
@@ -337,7 +347,13 @@ class MediaManager extends Component
             return;
         }
 
-        $media = (new StoreUpload)($this->editorUpload, $original->folder, $duplicate);
+        try {
+            $media = (new StoreUpload)($this->editorUpload, $original->folder, $duplicate);
+        } catch (ValidationException $refused) {
+            $this->notifyError($refused->validator->errors()->first());
+
+            return;
+        }
 
         if ($media === null) {
             $this->notifyError(trans_choice('wire-module-media::messages.upload_failed', 1, ['count' => 1]));
@@ -578,7 +594,16 @@ class MediaManager extends Component
         $stored = 0;
 
         foreach ($this->uploads as $upload) {
-            $media = $store($upload, $folder, $duplicate);
+            // A file over `max_size` or outside `accepts` is refused here, with
+            // the rule's own words — not reported as a disk that would not take it.
+            $reason = null;
+
+            try {
+                $media = $store($upload, $folder, $duplicate);
+            } catch (ValidationException $refused) {
+                $media = null;
+                $reason = $refused->validator->errors()->first();
+            }
 
             $this->tray[] = [
                 'name' => $upload->getClientOriginalName(),
@@ -591,6 +616,7 @@ class MediaManager extends Component
                 // person who dropped a file and saw no new tile wants to be
                 // shown the one the library already had.
                 'media' => $media?->getKey(),
+                'reason' => $reason,
             ];
 
             if ($media !== null && ! $duplicate) {
@@ -867,9 +893,7 @@ class MediaManager extends Component
      */
     public function awaitingThumbnails(LengthAwarePaginator $files): bool
     {
-        $queued = config('wire-module-media.thumbnails.queue', false);
-
-        if (! config('wire-module-media.thumbnails.enabled', true) || $queued === false || $queued === null) {
+        if (! config('wire-module-media.thumbnails.enabled', true) || ! Thumbnails::queued()) {
             return false;
         }
 

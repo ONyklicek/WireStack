@@ -21,6 +21,6 @@ final class RemoveMember
             throw TenantMembershipException::lastOwner();
         }
 
-        $tenant->members()->detach($member->getKey());
+        Membership::remove($tenant, $member);
     }
 }

@@ -9,6 +9,7 @@ use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
 use NyonCode\WireCore\Foundation\Setup\EnvFile;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
+use NyonCode\WireCore\Notifications\Support\ConfiguredDrivers;
 
 /**
  * The driver that writes a notification down, without which the bell is empty.
@@ -95,12 +96,6 @@ final readonly class StoreNotifications implements SetupStep
      */
     private function drivers(): array
     {
-        $configured = config('wire-core.notifications.default', 'session');
-
-        if (is_array($configured)) {
-            return array_values(array_map(strval(...), $configured));
-        }
-
-        return array_values(array_filter(array_map(trim(...), explode(',', (string) $configured))));
+        return ConfiguredDrivers::names();
     }
 }

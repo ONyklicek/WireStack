@@ -41,13 +41,7 @@ final class Avatars
     /** Whether the avatar upload should be part of this installation. */
     public static function enabled(): bool
     {
-        $setting = config('wire-module-users.avatar.enabled', 'auto');
-
-        if (is_bool($setting)) {
-            return $setting;
-        }
-
-        return $setting === 'auto' && self::available();
+        return AutoSwitch::on('wire-module-users.avatar.enabled', self::available(...));
     }
 
     /** Whether the configured column is really on the users table. */

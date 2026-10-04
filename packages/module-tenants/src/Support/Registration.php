@@ -23,11 +23,31 @@ final class Registration
             return false;
         }
 
-        return match (config('wire-module-tenants.registration', 'anyone')) {
+        return match (self::mode()) {
             'anyone' => true,
             'ability' => Gate::forUser($user)->allows((string) config('wire-module-tenants.registration_ability', 'tenants.create')),
             default => false,
         };
+    }
+
+    /**
+     * The setting as one of its three answers: `'anyone'`, `'ability'` or false.
+     *
+     * Read the way the environment writes it. `WIRE_TENANTS_REGISTRATION=true`
+     * arrives as the boolean `true`, which is none of the three words and used to
+     * mean nobody; on/off words and `1`/`0` read as "anyone" and "nobody".
+     */
+    public static function mode(): string|false
+    {
+        $setting = config('wire-module-tenants.registration', 'anyone');
+
+        if (is_string($setting) && in_array(strtolower(trim($setting)), ['anyone', 'ability'], true)) {
+            return strtolower(trim($setting));
+        }
+
+        $flag = is_bool($setting) ? $setting : filter_var($setting, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+
+        return $flag === true ? 'anyone' : false;
     }
 
     /**

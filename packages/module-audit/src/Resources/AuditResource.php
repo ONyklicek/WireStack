@@ -6,6 +6,7 @@ namespace NyonCode\WireModuleAudit\Resources;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
@@ -32,6 +33,7 @@ use NyonCode\WireTable\Filters\DateFilter;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Table;
+use Throwable;
 
 /**
  * The trail wire-core already records, as something you can read.
@@ -101,7 +103,28 @@ class AuditResource implements DescribesResource, ProvidesNavigation, ProvidesPa
     {
         return NavigationItem::make(fn (): string => __('wire-module-audit::messages.entries'))
             ->group((string) config('wire-module-audit.navigation.group', 'system'))
-            ->icon((string) config('wire-module-audit.navigation.icon', 'outline:clipboard-document-list'));
+            ->icon((string) config('wire-module-audit.navigation.icon', 'outline:clipboard-document-list'))
+            // Hidden rather than shown and then refused: the permission guards the
+            // routes, and an entry whose route answers 403 tells someone a screen
+            // exists for them and then that it does not.
+            ->visible(static fn (): bool => self::authorized());
+    }
+
+    /** Whether the viewer may read the log — always, when no ability is named. */
+    public static function authorized(): bool
+    {
+        $permission = self::permission();
+
+        if ($permission === null) {
+            return true;
+        }
+
+        try {
+            return Gate::allows($permission);
+        } catch (Throwable) {
+            // Fail closed — a context with no resolvable guard authorizes nothing.
+            return false;
+        }
     }
 
     public function table(Table $table): Table

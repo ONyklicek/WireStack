@@ -13,6 +13,7 @@ use Livewire\WithPagination;
 use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Query\Search\WordSearch;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
+use NyonCode\WireCore\Foundation\Colors\NoticePalette;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WireCore\Notifications\DatabaseNotification;
@@ -189,14 +190,16 @@ class ListNotifications extends Component implements IdentifiesHookTarget, Provi
      * The viewer's own rows, and nobody else's.
      *
      * Through the resource, which is the one owner of that question — the bell,
-     * the detail page and this all ask it there.
+     * the detail page and this all ask it there. Read from the configured model,
+     * the one the detail page finds a row through: a list read from core's while
+     * the page reads the application's would list rows that page cannot open.
      *
      * @return Builder<DatabaseNotification>
      */
     protected function scoped(): Builder
     {
         /** @var Builder<DatabaseNotification> $query */
-        $query = NotificationResource::scopeToViewer(DatabaseNotification::query())->reorder();
+        $query = NotificationResource::scopeToViewer(NotificationResource::notificationModel()::query())->reorder();
 
         return $query;
     }
@@ -255,18 +258,14 @@ class ListNotifications extends Component implements IdentifiesHookTarget, Provi
     /**
      * The tinted tile a row is anchored by.
      *
-     * Literal class strings so Tailwind's scanner sees them, and the match arms
-     * double as the allow-list for a role read out of a stored payload.
+     * The canonical icon chip rather than a map of its own: a role resolves
+     * through `wire-core.colors` there, so `'success' => 'green'` turns these
+     * tiles green with every other surface. An unknown value read out of a stored
+     * payload falls to the palette's neutral gray.
      */
     protected function tile(string $role): string
     {
-        return match ($role) {
-            'success' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
-            'danger' => 'bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-400',
-            'warning' => 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
-            'info' => 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-400',
-            default => 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
-        };
+        return NoticePalette::iconBg($role).' '.NoticePalette::iconText($role);
     }
 
     /** Today, yesterday, or everything before them. */

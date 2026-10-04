@@ -14,11 +14,13 @@ return new class extends Migration
         // own copies of these migrations *and* `workbench:build` publishes the
         // package's, so both run against one database. A column addition that
         // cannot be applied twice turns that into a build that cannot finish.
-        if (Schema::hasColumn('wire_media', 'derived_from_id')) {
+        $media = (string) config('wire-module-media.table', 'wire_media');
+
+        if (Schema::hasColumn($media, 'derived_from_id')) {
             return;
         }
 
-        Schema::table('wire_media', function (Blueprint $table) {
+        Schema::table($media, function (Blueprint $table) use ($media) {
             // Where a crop came from.
             //
             // `nullOnDelete`, not `cascadeOnDelete`: deleting an original must
@@ -30,7 +32,7 @@ return new class extends Migration
             $table->foreignId('derived_from_id')
                 ->nullable()
                 ->after('folder_id')
-                ->constrained('wire_media')
+                ->constrained($media)
                 ->nullOnDelete();
 
             $table->index('derived_from_id');
@@ -39,7 +41,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('wire_media', function (Blueprint $table) {
+        Schema::table((string) config('wire-module-media.table', 'wire_media'), function (Blueprint $table) {
             $table->dropConstrainedForeignId('derived_from_id');
         });
     }

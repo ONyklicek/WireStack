@@ -8,6 +8,7 @@ use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
 use NyonCode\WireModuleSettings\Install\CacheSettingsInMemory;
+use NyonCode\WireModuleSettings\Support\Settings;
 
 /*
  * Somewhere to cache settings that is not the table they came from.
@@ -210,4 +211,21 @@ it('fails rather than pretending, when .env cannot be written', function () {
 it('belongs to its own package, so unticking that package skips it', function () {
     // What the first half of the installer was told, the second half obeys.
     expect((new CacheSettingsInMemory(csEnv()))->package())->toBe('nyoncode/wire-module-settings');
+});
+
+it('reads a blank store from the environment as the application cache', function () {
+    // `WIRE_SETTINGS_CACHE_STORE=` is an empty string, not a store named "".
+    config()->set('wire-module-settings.cache.store', '');
+    config()->set('cache.default', 'database');
+
+    expect((new CacheSettingsInMemory(csEnv()))->state())->toBe(SetupState::Pending)
+        ->and(Settings::cacheStore())->toBeNull()
+        ->and(Settings::effectiveCacheStore())->toBe('database');
+});
+
+it('names the store it caches in, trimmed', function () {
+    config()->set('wire-module-settings.cache.store', ' redis ');
+
+    expect(Settings::cacheStore())->toBe('redis')
+        ->and(Settings::effectiveCacheStore())->toBe('redis');
 });

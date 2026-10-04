@@ -34,7 +34,12 @@ final class AuditLog
 {
     /**
      * The configured model, or null when an application deliberately points at
-     * nothing.
+     * nothing (`''`).
+     *
+     * Unset follows `wire-core.audit.model`, the model core writes the trail
+     * with. Two settings for one table used to be two answers: an application
+     * that extended the entry where core's docs say to had its trail written
+     * through its own model and read on this screen through core's.
      *
      * @return class-string<AuditEntry>|null
      *
@@ -43,7 +48,7 @@ final class AuditLog
      */
     public static function model(): ?string
     {
-        $model = config('wire-module-audit.model');
+        $model = config('wire-module-audit.model') ?? config('wire-core.audit.model', AuditEntry::class);
 
         if (! is_string($model) || $model === '') {
             return null;
@@ -54,6 +59,17 @@ final class AuditLog
         }
 
         return $model;
+    }
+
+    /**
+     * Whether core is recording the trail at all.
+     *
+     * Cast the way core's logger casts it, so `WIRE_AUDIT_ENABLED=1` reads as on
+     * here too — and defaulting the way core's config does.
+     */
+    public static function recording(): bool
+    {
+        return (bool) config('wire-core.audit.enabled', true);
     }
 
     /** Whether there is a model *and* a table under it to read. */

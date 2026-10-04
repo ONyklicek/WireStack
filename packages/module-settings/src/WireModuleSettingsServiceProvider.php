@@ -12,6 +12,7 @@ use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
 use NyonCode\WireModuleSettings\Install\CacheSettingsInMemory;
 use NyonCode\WireModuleSettings\Models\Setting;
 use NyonCode\WireModuleSettings\Resources\SettingsResource;
+use NyonCode\WireModuleSettings\Support\Settings;
 use NyonCode\WireModuleSettings\Support\SettingsGroups;
 use NyonCode\WireModuleSettings\Support\SettingsRegistry;
 
@@ -68,7 +69,7 @@ class WireModuleSettingsServiceProvider extends PackageServiceProvider
                             $installer->comment('  ↩︎  Nothing guards the screen — name an ability in wire-module-settings.permission');
                         }
 
-                        if (config('wire-module-settings.cache.store') === null && config('cache.default') === 'database') {
+                        if (Settings::cacheStore() === null && config('cache.default') === 'database') {
                             $installer->comment('  ↩︎  Settings cache in the `database` store — name a memory store in wire-module-settings.cache.store');
                         }
                     });
@@ -89,7 +90,7 @@ class WireModuleSettingsServiceProvider extends PackageServiceProvider
             // every read answers the defaults, which looks exactly like nobody
             // having set anything yet.
             'Table' => (new Setting)->getTable(),
-            'Cache store' => (string) (config('wire-module-settings.cache.store') ?? config('cache.default')),
+            'Cache store' => Settings::effectiveCacheStore(),
         ];
     }
 }

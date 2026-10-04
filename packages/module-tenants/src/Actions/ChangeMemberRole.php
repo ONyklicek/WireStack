@@ -22,6 +22,6 @@ final class ChangeMemberRole
             throw TenantMembershipException::lastOwner();
         }
 
-        $tenant->members()->updateExistingPivot($member->getKey(), ['role' => $role->value]);
+        Membership::changeRole($tenant, $member, $role);
     }
 }
