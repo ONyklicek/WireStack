@@ -255,7 +255,7 @@ class User extends Authenticatable implements HasPreferredZone
 výběr komukoli, s primární zónou i bez ní — kam míří položka „všechny zóny"
 v přepínači zón, `route('wire.zones', ['choose' => 1])`. Zóny se čtou z routeru,
 ne z configu, takže zóny deklarované v route souboru se počítají stejně jako
-`routes.zones`; `ZoneDirectory::reachableBy($user)` je týž seznam, jaký kreslí
+záznamy `wire-core.routes.groups`; `ZoneDirectory::reachableBy($user)` je týž seznam, jaký kreslí
 přepínač.
 
 **Odkud se zóna bere.** `Zone::current()` ji přečte z routy, která se právě

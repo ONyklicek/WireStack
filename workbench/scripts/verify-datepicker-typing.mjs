@@ -123,20 +123,21 @@ try {
   await goto('field-date-time-picker-bounds');
   const bounds = 'form-datetime-data.slot_at-trigger';
 
-  // No displayFormat here, so the box speaks the state's own shape.
-  await type(bounds, '2030-03-09 12:00');
+  // No displayFormat() here, so the box speaks the configured
+  // wire-forms.datetime_format (d.m.Y H:i); the state keeps its own shape.
+  await type(bounds, '09.03.2030 12:00');
   check('a day before minDate cannot be typed in either',
     (await read(bounds)).value === null, String((await read(bounds)).value));
 
-  await type(bounds, '2030-03-21 12:00');
+  await type(bounds, '21.03.2030 12:00');
   check('nor a day after maxDate', (await read(bounds)).value === null, String((await read(bounds)).value));
 
-  await type(bounds, '2030-03-10 07:00');
+  await type(bounds, '10.03.2030 07:00');
   state = await read(bounds);
   check('a clock before the bound on the boundary day is pulled up, as the steppers do',
     state.value === '2030-03-10 08:30', String(state.value));
 
-  await type(bounds, '2030-03-15 23:00');
+  await type(bounds, '15.03.2030 23:00');
   state = await read(bounds);
   check('a day between the bounds leaves the typed clock alone',
     state.value === '2030-03-15 23:00', String(state.value));

@@ -87,12 +87,35 @@ class Rating extends Field
     public function getColorClasses(): string
     {
         // The role is resolved by the canonical owner rather than encoded again
-        // here; only the -500 star vocabulary is this component's own. A role
-        // pointed at a hue with no arm below falls to the amber default.
+        // here; only the -500 star vocabulary is this component's own. Every hue
+        // a role can be pointed at has an arm, so `info` is cyan and a role moved
+        // in `wire-core.colors` moves the stars with it. Amber keeps the classic
+        // -400 star, and is what anything unrecognised falls to.
         return match (SemanticPalette::hue($this->color)) {
             'primary' => 'text-primary-500',
+            'blue' => 'text-blue-500',
             'emerald' => 'text-emerald-500',
+            'green' => 'text-green-500',
             'red' => 'text-red-500',
+            'yellow' => 'text-yellow-500',
+            'cyan' => 'text-cyan-500',
+            'orange' => 'text-orange-500',
+            'lime' => 'text-lime-500',
+            'teal' => 'text-teal-500',
+            'sky' => 'text-sky-500',
+            'indigo' => 'text-indigo-500',
+            'violet' => 'text-violet-500',
+            'purple' => 'text-purple-500',
+            'fuchsia' => 'text-fuchsia-500',
+            'pink' => 'text-pink-500',
+            'rose' => 'text-rose-500',
+            'slate' => 'text-slate-500',
+            'zinc' => 'text-zinc-500',
+            'neutral' => 'text-neutral-500',
+            'stone' => 'text-stone-500',
+            'gray' => 'text-gray-500',
+            'black' => 'text-gray-900 dark:text-white',
+            'white' => 'text-white',
             default => 'text-amber-400',
         };
     }

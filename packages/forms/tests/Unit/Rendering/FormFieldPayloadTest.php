@@ -94,7 +94,9 @@ it('keeps a field within its per-instance byte budget', function (string $type, 
     'select' => ['select', 8_200],
     'tags' => ['tags', 8_800],
     'rating' => ['rating', 10_400],
-    'rich' => ['rich', 15_500],
+    // The shipped toolbar draws its two heading buttons (h2, h3) since the
+    // config stopped naming a `heading` button the view did not know.
+    'rich' => ['rich', 16_000],
     'markdown' => ['markdown', 7_400],
 ]);
 

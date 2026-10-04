@@ -41,7 +41,7 @@
                 columnReorderable: {{ $isColumnReorderable ? 'true' : 'false' }},
                 isReordering: @entangle('isReordering'),
                 orderColumn: '{{ $orderColumn }}',
-                animation: {{ config('wire-sortable.animation', 150) }},
+                animation: @js((int) (config('wire-sortable.animation') ?? 150)),
                 dragHandleHtml: @js($table->getDragHandleHtml()->toHtml()),
             })"
             class="wire-sortable-wrapper"

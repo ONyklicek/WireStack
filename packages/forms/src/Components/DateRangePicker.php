@@ -214,7 +214,7 @@ class DateRangePicker extends LayoutComponent
             return [];
         }
 
-        return $this->presets ?? self::defaultPresets();
+        return $this->presets ?? $this->defaultPresets();
     }
 
     /**
@@ -312,17 +312,22 @@ class DateRangePicker extends LayoutComponent
     }
 
     /**
+     * "This week" starts on the day the calendar starts on — the start picker's
+     * `firstDayOfWeek()`, which is `wire-forms.first_day_of_week` unless a
+     * `configurePickers()` callback said otherwise — not on the locale's.
+     *
      * @return array<string, array{0: string, 1: string}>
      */
-    private static function defaultPresets(): array
+    private function defaultPresets(): array
     {
         $today = Carbon::today();
+        $weekStart = $this->getFromPicker()->getFirstDayOfWeek();
 
         return [
             (string) trans('wire-forms::fields.range.today') => [$today->format('Y-m-d'), $today->format('Y-m-d')],
             (string) trans('wire-forms::fields.range.this_week') => [
-                $today->copy()->startOfWeek()->format('Y-m-d'),
-                $today->copy()->endOfWeek()->format('Y-m-d'),
+                $today->copy()->startOfWeek($weekStart)->format('Y-m-d'),
+                $today->copy()->endOfWeek(($weekStart + 6) % 7)->format('Y-m-d'),
             ],
             (string) trans('wire-forms::fields.range.this_month') => [
                 $today->copy()->startOfMonth()->format('Y-m-d'),

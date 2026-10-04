@@ -207,6 +207,20 @@ it('returns the effective wire configuration', function () {
         ->assertSee('per_page');
 });
 
+it('reads the panels, admin and module namespaces too', function () {
+    // Regression: the allow-list stopped at wire-sortable, so a key the server's
+    // own instructions point agents at was refused.
+    config(['wire-panels.pages' => ['App\\Wire\\Pages\\Reports'], 'wire-module-users.navigation.group' => 'people']);
+
+    WireBoostServer::tool(WireConfig::class, ['key' => 'wire-panels.pages'])
+        ->assertOk()
+        ->assertSee('Reports');
+
+    WireBoostServer::tool(WireConfig::class, ['key' => 'wire-module-users.navigation.group'])
+        ->assertOk()
+        ->assertSee('people');
+});
+
 it('refuses to read application config keys outside the wireStack namespaces', function () {
     // Regression H6: the free-form key must not leak arbitrary application config
     // (app secrets, DB credentials) into the model context.

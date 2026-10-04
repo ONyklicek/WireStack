@@ -241,6 +241,16 @@ it('reads a route file that calls the macro as routing in place', function () {
     }
 });
 
+// Regression: the step pointed at 'routes' => ['enabled' => true] in
+// wire-panels, a key nothing reads — following it routed nothing.
+it('points an unrouted resource at the route group that routes it', function () {
+    $this->artisan('make:wire-resource', ['name' => 'Order'])
+        // Single tokens only: the bullet list wraps a long line at the terminal width.
+        ->expectsOutputToContain('config/wire-core.php')
+        ->doesntExpectOutputToContain('config/wire-panels.php')
+        ->assertSuccessful();
+});
+
 it('names only the registration step when routing is in place', function () {
     config()->set('wire-core.routes.groups', ['panel' => []]);
 

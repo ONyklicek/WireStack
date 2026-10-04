@@ -105,7 +105,10 @@ DateTimePicker::make('date')
 
 > `displayFormat()` používá tokeny PHP `date()` a mění jen to, co vidí uživatel —
 > uložená hodnota zůstává beze změny. Ctí ho vlastní picker; formát zobrazení
-> nativního inputu patří prohlížeči a locale uživatele.
+> nativního inputu patří prohlížeči a locale uživatele. Když není nastavený,
+> platí pro daný režim `date_format`, `time_format` nebo `datetime_format`
+> z `config/wire-forms.php` — kromě pole se sekundami, jehož nastavený formát
+> sekundy nemá; to ukazuje hodnotu tak, jak je uložená.
 
 ## Psaní z klávesnice
 
@@ -248,7 +251,7 @@ TimePicker::make('opens_at')
 | `asMonth()` | — | Alias pro `mode('month')`; vždy nativní |
 | `asDateTime()` | — | Alias pro `mode('datetime')` |
 | `format(string)` | string | Formát uložení (Carbon kompatibilní) |
-| `displayFormat(string)` | string | Formát zobrazení ukázaný uživateli |
+| `displayFormat(string)` | string | Formát zobrazení ukázaný uživateli; výchozí z `wire-forms.date_format` / `time_format` / `datetime_format` |
 | `minDate(string\|DateTimeInterface\|Closure)` | string | Nejdřívější volitelné datum; u `datetime` může nést i čas |
 | `maxDate(string\|DateTimeInterface\|Closure)` | string | Nejpozdější volitelné datum; mez na celý den pokrývá celý den |
 | `disabledDates(array\|Closure)` | array | Data, která nelze vybrat |

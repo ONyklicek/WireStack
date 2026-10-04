@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\Carbon;
+use Illuminate\Container\Container;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\MessageBag;
 use NyonCode\WireCore\Core\State\StateHydrator;
@@ -267,19 +268,17 @@ test('the picker is told whether to close on date selection', function () {
 // ─── Format resolution (what the input and the parser agree on) ───────
 
 test('each mode resolves its own storage format', function (string $mode, string $expected) {
-    // Pinned rather than relying on whatever the config happens to hold: the
-    // suite runs in random order, so a neighbouring test's config() write would
-    // otherwise decide the outcome. Month is the one format with no config key.
-    config()->set('wire-forms.date_format', 'Y-m-d');
-    config()->set('wire-forms.time_format', 'H:i');
-    config()->set('wire-forms.datetime_format', 'Y-m-d H:i');
+    // The stored shape is the state's own, whatever the display formats in
+    // config say — they are what the user reads, not what is written.
+    config()->set('wire-forms.date_format', 'd.m.Y');
+    config()->set('wire-forms.datetime_format', 'd.m.Y H:i');
 
     expect(DateTimePicker::make('at')->mode($mode)->getFormat())->toBe($expected);
 })->with([
     'date' => ['date', 'Y-m-d'],
     'month' => ['month', 'Y-m'],
     'time' => ['time', 'H:i'],
-    'datetime' => ['datetime', 'Y-m-d H:i'],
+    'datetime' => ['datetime', 'Y-m-d\TH:i'],
 ]);
 
 test('seconds extend the time formats, in both modes that carry a clock', function () {
@@ -299,15 +298,15 @@ test('an explicit format wins over the mode default', function () {
     expect(DateTimePicker::make('at')->asDate()->format('d.m.Y')->getFormat())->toBe('d.m.Y');
 });
 
-test('the configured formats are used when set', function () {
+test('the configured formats are what the picker displays, not what it stores', function () {
     config()->set('wire-forms.date_format', 'd/m/Y');
     config()->set('wire-forms.time_format', 'H.i');
     config()->set('wire-forms.datetime_format', 'd/m/Y H.i');
 
-    expect(DateTimePicker::make('at')->asDate()->getFormat())->toBe('d/m/Y')
-        ->and(DateTimePicker::make('at')->asTime()->getFormat())->toBe('H.i')
-        ->and(DateTimePicker::make('at')->asTime()->withSeconds()->getFormat())->toBe('H.i:s')
-        ->and(DateTimePicker::make('at')->asDateTime()->getFormat())->toBe('d/m/Y H.i');
+    expect(DateTimePicker::make('at')->asDate()->getDisplayFormat())->toBe('d/m/Y')
+        ->and(DateTimePicker::make('at')->asTime()->getDisplayFormat())->toBe('H.i')
+        ->and(DateTimePicker::make('at')->asDateTime()->getDisplayFormat())->toBe('d/m/Y H.i')
+        ->and(DateTimePicker::make('at')->asDate()->getFormat())->toBe('Y-m-d');
 });
 
 // ─── First day of the week ───────────────────────────────────────────
@@ -377,6 +376,10 @@ test('typeable accepts a closure, like every other conditional setter', function
 // The parser inverts whichever format the box is actually showing, so the two
 // have to be resolved from the same place.
 test('the typed format is the display format when there is one, and the state shape otherwise', function () {
+    config()->set('wire-forms.date_format', null);
+    config()->set('wire-forms.time_format', null);
+    config()->set('wire-forms.datetime_format', null);
+
     expect(DateTimePicker::make('at')->displayFormat('j. n. Y H:i')->getTypedFormat())->toBe('j. n. Y H:i')
         ->and(DateTimePicker::make('at')->getTypedFormat())->toBe('Y-m-d\TH:i')
         ->and(DateTimePicker::make('at')->withSeconds()->getTypedFormat())->toBe('Y-m-d\TH:i:s')
@@ -476,6 +479,8 @@ test('month mode is native everywhere, never split', function () {
 // only. A typed value, or a phone's own wheel (iOS ignores min/max), saved
 // whatever it was given.
 test('the picker bounds are held on the server too', function () {
+    config()->set('wire-forms.date_format', null);
+
     $rules = DateTimePicker::make('d')->asDate()
         ->minDate('2026-07-10')->maxDate('2026-07-20')->disabledDates(['2026-07-15'])
         ->getValidationRules();
@@ -560,4 +565,87 @@ test('the controller joins both halves into the one state, or nothing', function
     expect($controller)
         ->toContain('return this.date && this.time ? `${this.date}T${this.time}` : null')
         ->and(file_get_contents(__DIR__.'/../../../dist/wire-forms-fields.js'))->toContain('wireNativeDateTime');
+});
+
+// ─── Configured display formats ──────────────────────────────────────────────
+
+// Regression: wire-forms.date_format, time_format and datetime_format were read
+// by getFormat() alone, which nothing called — every picker showed its raw state.
+test('the configured format is the display default for its mode', function (string $mode, ?string $expected) {
+    config()->set('wire-forms.date_format', 'd.m.Y');
+    config()->set('wire-forms.time_format', 'G.i');
+    config()->set('wire-forms.datetime_format', 'd.m.Y H:i');
+
+    $field = DateTimePicker::make('at')->mode($mode);
+
+    expect($field->getDisplayFormat())->toBe($expected)
+        ->and($field->getTypedFormat())->toBe($expected ?? 'Y-m');
+})->with([
+    'date' => ['date', 'd.m.Y'],
+    'time' => ['time', 'G.i'],
+    'datetime' => ['datetime', 'd.m.Y H:i'],
+    'month has no key' => ['month', null],
+]);
+
+test('an explicit displayFormat wins over the configured one', function () {
+    config()->set('wire-forms.date_format', 'd.m.Y');
+
+    expect(DateTimePicker::make('at')->asDate()->displayFormat('j. n. Y')->getDisplayFormat())->toBe('j. n. Y');
+});
+
+test('the custom picker is told the configured format', function () {
+    config()->set('wire-forms.datetime_format', 'd.m.Y H:i');
+
+    expect(renderPickerView(DateTimePicker::make('at')))
+        ->toContain("displayFormat: 'd.m.Y H:i'")
+        ->toContain("typedFormat: 'd.m.Y H:i'");
+});
+
+test('a field keeping seconds shows its state when the configured format has none', function () {
+    config()->set('wire-forms.time_format', 'H:i');
+    config()->set('wire-forms.datetime_format', 'd.m.Y H:i:s');
+
+    expect(DateTimePicker::make('t')->asTime()->withSeconds()->getDisplayFormat())->toBeNull()
+        ->and(DateTimePicker::make('t')->asTime()->withSeconds()->getTypedFormat())->toBe('H:i:s')
+        ->and(DateTimePicker::make('at')->withSeconds()->getDisplayFormat())->toBe('d.m.Y H:i:s');
+});
+
+test('an escaped s is not a seconds token', function () {
+    config()->set('wire-forms.time_format', 'H:i \\s');
+
+    expect(DateTimePicker::make('t')->asTime()->withSeconds()->getDisplayFormat())->toBeNull();
+});
+
+test('an empty configured format shows the state', function () {
+    config()->set('wire-forms.date_format', '');
+
+    expect(DateTimePicker::make('at')->asDate()->getDisplayFormat())->toBeNull();
+});
+
+test('a bound names itself in the configured format', function () {
+    config()->set('wire-forms.date_format', 'd.m.Y');
+
+    $rules = DateTimePicker::make('d')->asDate()->minDate('2026-07-10')->getValidationRules();
+
+    expect(Validator::make(['d' => '2026-07-09'], ['d' => $rules])->errors()->get('d'))
+        ->toBe(['The d must not be earlier than 10.07.2026.']);
+});
+
+test('the stored value keeps the state shape under a configured display format', function () {
+    config()->set('wire-forms.date_format', 'd.m.Y');
+
+    expect(DateTimePicker::make('at')->asDate()->dehydrateState('2026-03-09'))->toBe('2026-03-09');
+});
+
+test('a picker built with no container to read config from shows its state', function () {
+    $field = DateTimePicker::make('at')->asDate();
+    $booted = Container::getInstance();
+
+    try {
+        Container::setInstance(new Container);
+
+        expect($field->getDisplayFormat())->toBeNull();
+    } finally {
+        Container::setInstance($booted);
+    }
 });

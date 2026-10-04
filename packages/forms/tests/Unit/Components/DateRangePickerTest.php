@@ -114,6 +114,35 @@ test('presets are resolved server-side, both ends at once', function () {
     Carbon::setTestNow();
 });
 
+// Regression: "This week" used the locale's first weekday while the calendar
+// beside it started on wire-forms.first_day_of_week.
+test('this week starts on the configured first day of the week', function (int $first, array $expected) {
+    Carbon::setTestNow('2026-09-05'); // a Saturday
+    config()->set('wire-forms.first_day_of_week', $first);
+
+    expect(DateRangePicker::make('period')->presets()->getPresets()['This week'])->toBe($expected);
+
+    Carbon::setTestNow();
+})->with([
+    'Monday' => [1, ['2026-08-31', '2026-09-06']],
+    'Sunday' => [0, ['2026-08-30', '2026-09-05']],
+    'Saturday' => [6, ['2026-09-05', '2026-09-11']],
+]);
+
+test('this week follows a first day set on the pickers themselves', function () {
+    Carbon::setTestNow('2026-09-05');
+    config()->set('wire-forms.first_day_of_week', 1);
+
+    $presets = DateRangePicker::make('period')
+        ->configurePickers(fn (DateTimePicker $picker) => $picker->firstDayOfWeek(0))
+        ->presets()
+        ->getPresets();
+
+    expect($presets['This week'])->toBe(['2026-08-30', '2026-09-05']);
+
+    Carbon::setTestNow();
+});
+
 test('a stated preset set replaces the built-in one', function () {
     $range = DateRangePicker::make('period')->presets([
         'Q1' => ['2026-01-01', '2026-03-31'],

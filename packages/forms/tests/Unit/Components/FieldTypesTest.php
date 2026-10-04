@@ -453,6 +453,19 @@ test('rich editor disable toolbar buttons', function () {
     expect($field->getToolbarButtons())->toBe(['bold', 'italic']);
 });
 
+// Regression: the shipped config listed 'heading' and '|', which the view does
+// not know, so a default install drew no heading buttons at all.
+test('rich editor shipped toolbar names only buttons the view draws', function () {
+    $view = file_get_contents(__DIR__.'/../../../resources/views/components/rich-editor.blade.php');
+    $shipped = (require __DIR__.'/../../../config/wire-forms.php')['rich_editor']['toolbar'];
+
+    foreach ($shipped as $button) {
+        expect($view)->toContain("in_array('{$button}', \$toolbarButtons)");
+    }
+
+    expect($shipped)->toContain('h2')->toContain('h3');
+});
+
 test('rich editor disable all toolbar buttons', function () {
     $field = RichEditor::make('content')->disableAllToolbarButtons();
 
