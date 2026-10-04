@@ -6,6 +6,12 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Fixed
 
+- **A `lazy()` table always arrives.** Livewire sends every call made in one tick as one request, and one
+  `skipRender()` in it skips the render for all of them. A listener that skips its own render — a status ping a page
+  dispatches on load, for example — could land in the same request as the placeholder's `loadTable()`: the table
+  went ready, no markup came back, and the placeholder, which asks only once, stayed on screen. `loadTable()` now
+  forces its render whichever way round the two calls arrive.
+
 - **A desktop no longer shows the phone's sort control.** With the `wire_viewport` cookie saying the window is wide,
   a stacked table sends only the `<table>` — but the card sort control lives in the toolbar, outside the data
   region, and took its class from a rule that read "one half sent" as "show the cards". So a desktop drew the

@@ -780,6 +780,23 @@ trait WithTable
     public function loadTable(): void
     {
         $this->tableState->set('ready', true);
+
+        // This request is the table's arrival, and it has to render: the
+        // placeholder asks once (`x-intersect.once`) and never again. Livewire
+        // bundles every call made in the same tick into one request, so a
+        // listener that ends in `skipRender()` — a status ping dispatched on page
+        // load, say — rode along with this call and suppressed the render for
+        // both. The state flipped to ready, no markup came back, and the
+        // placeholder stayed up for good.
+        //
+        // Both halves are needed because the order inside the request is the
+        // client's: clearing the store key undoes a skip that ran before this
+        // call, and `forceRender()` turns one that runs after it into a no-op.
+        // Guarded like markTableViewChanged(): WithTable runs on plain hosts too.
+        if (method_exists($this, 'forceRender') && function_exists('Livewire\store')) {
+            store($this)->set('skipRender', false);
+            $this->forceRender();
+        }
     }
 
     /**
