@@ -81,8 +81,8 @@ téže oblasti odkaz na profil, seřazený nad ním. Než ta oblast vznikla, byl
 značkování, které si každá aplikace psala ručně do slotu v layoutu.
 
 **Přihlašovací obrazovka před nehlídaným panelem je dekorace.** Instalátor řekne,
-kterou z těch dvou věcí aplikace má: čte `wire-panels.routes.middleware`
-a upozorní, když v něm `auth` chybí. Routy psané ručně dostanou tutéž
+kterou z těch dvou věcí aplikace má: čte `middleware` každého panelového záznamu
+v `wire-core.routes.groups` a upozorní, když v něm `auth` chybí. Routy psané ručně dostanou tutéž
 připomínku — nic tady nedokáže přečíst, v jaké skupině jsou.
 
 ## Konfigurace

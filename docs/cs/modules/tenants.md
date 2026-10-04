@@ -24,6 +24,13 @@ nenastavila: `wire-core.tenancy.model` se stane jeho `Tenant`
 a `wire-panels.routes.tenant_entry.view` jeho stránkou pro někoho bez firmy. Cokoli
 aplikace už pojmenovala, zůstává.
 
+Aplikace s vlastním modelem firmy ho pojmenuje ve `wire-core.tenancy.model`
+a modul registruje do něj: každá obrazovka i akce se ptá stejného resolveru,
+nejdřív nastavení jádra a modulové `model` jen tehdy, když jádro žádné neurčuje.
+Pivot je `wire-core.tenancy.members_table`, migrovaný pod tímto jménem, a jeho dva
+sloupce se řídí konvencí Laravelu pro oba modely — `company_id` a `user_id` pro
+`Company` — což je to, co čte `InteractsWithTenants`.
+
 Jeho obrazovky žijí na dvou místech, protože patří ke dvěma různým chvílím:
 
 | Kde | Routa | Co to je |

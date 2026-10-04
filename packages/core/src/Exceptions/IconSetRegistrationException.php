@@ -39,6 +39,24 @@ final class IconSetRegistrationException extends InvalidArgumentException implem
     }
 
     /**
+     * `wire-core.icons.default_set` names a key `wire-core.icons.sets` does not
+     * have, so nothing would become the unprefixed base and Heroicons would stay
+     * — the opposite of what the setting asked for, with no sign of it.
+     *
+     * @param  array<int, int|string>  $keys
+     */
+    public static function defaultSetNotListed(string $defaultSet, array $keys): self
+    {
+        $listed = $keys === [] ? 'none' : implode(', ', array_map(strval(...), $keys));
+
+        return new self(
+            "wire-core.icons.default_set is [{$defaultSet}], but wire-core.icons.sets has no "
+            ."set under that key (it lists: {$listed}). Add the set under [{$defaultSet}], or "
+            .'set default_set to one of the listed keys.'
+        );
+    }
+
+    /**
      * A non-default set declared under a numeric key, so it has no prefix to be
      * addressed by.
      */

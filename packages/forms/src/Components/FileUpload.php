@@ -16,6 +16,7 @@ use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
 use NyonCode\WireForms\Contracts\ProvidesItemValidationRules;
 use NyonCode\WireForms\Exceptions\FormConfigurationException;
 use NyonCode\WireForms\Support\FieldBounds;
+use NyonCode\WireForms\Validation\Rules\AcceptedFileTypes;
 
 /**
  * File upload field with image mode, multiple files, disk/directory configuration.
@@ -581,7 +582,22 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
         return array_values(array_filter([
             $this->maxSize !== null ? 'max:'.$this->maxSize : null,
             $this->minSize !== null ? 'min:'.$this->minSize : null,
+            $this->acceptedFileTypesRule(),
         ]));
+    }
+
+    /**
+     * The accepted types as a rule, or null when the field takes anything.
+     *
+     * Without it `acceptedFileTypes()` reached only the input's `accept`
+     * attribute — a convenience for the browser's picker that a dropped or
+     * crafted upload never passes through.
+     */
+    protected function acceptedFileTypesRule(): ?AcceptedFileTypes
+    {
+        $rule = new AcceptedFileTypes((array) $this->getAcceptedFileTypes());
+
+        return $rule->isEmpty() ? null : $rule;
     }
 
     /**
@@ -625,6 +641,10 @@ class FileUpload extends Field implements DehydratesState, ProvidesImplicitValid
 
         if ($this->minSize !== null) {
             $rules[] = 'min:'.$this->minSize;
+        }
+
+        if (($accepted = $this->acceptedFileTypesRule()) !== null) {
+            $rules[] = $accepted;
         }
 
         return $rules;

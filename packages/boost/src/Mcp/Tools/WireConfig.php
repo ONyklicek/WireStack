@@ -11,10 +11,14 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 
 #[Name('wire-config')]
-#[Description('Read the effective wireStack configuration. Returns the wire-core, wire-forms, wire-table and wire-sortable config namespaces, or a single dotted key when provided.')]
+#[Description('Read the effective wireStack configuration. Returns every wireStack config namespace that is installed — wire-core, wire-forms, wire-table, wire-sortable, wire-panels, wire-admin, wire-boost and each wire-module-* — or a single dotted key when provided.')]
 class WireConfig extends BoostTool
 {
-    private const NAMESPACES = ['wire-core', 'wire-forms', 'wire-table', 'wire-sortable', 'wire-boost'];
+    private const NAMESPACES = [
+        'wire-core', 'wire-forms', 'wire-table', 'wire-sortable', 'wire-panels', 'wire-admin', 'wire-boost',
+        'wire-module-auth', 'wire-module-users', 'wire-module-settings', 'wire-module-audit',
+        'wire-module-notifications', 'wire-module-media', 'wire-module-tenants',
+    ];
 
     protected function run(Request $request): Response
     {

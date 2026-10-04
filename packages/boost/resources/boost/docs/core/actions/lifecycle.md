@@ -205,9 +205,9 @@ button. That is the rule behind what can look like two spellings of one thing.
 ->icon(string|Icon|null $icon, string|Color|null $color = null)
 ->color(string|Color|null $color)                    // the accent, and the submit button's
 ->danger(bool $danger = true)                        // intent, not a hue: fills color only when nothing chose one
-->width(string|ModalWidth $width)                    // 'sm'|'md'|'lg'|'xl'|'2xl'…'7xl'|'full' — default 'md'
+->width(string|ModalWidth $width)                    // 'sm'|'md'|'lg'|'xl'|'2xl'…'7xl'|'full' — default: wire-core.modals.default_width
 ->maxHeight(string $maxHeight)                       // a CSS length for the body before it scrolls
-->closeOnClickAway(bool $close = true)               // default true
+->closeOnClickAway(bool $close = true)               // default: wire-core.modals.close_on_click_away
 ->closeOnEscape(bool $close = true)                  // false for a confirmation worth reading
 ->id(string $id)                                     // a stable DOM id, when something outside must address it
 ->submitLabel(?string $label)                        // default: the framework's "Confirm"

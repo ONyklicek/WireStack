@@ -314,10 +314,6 @@ trait WithTable
      * writing `perPage: 500000` over the wire, which is a page-sized read of
      * the whole table — so anything outside the offered options falls back to
      * the configured default.
-     *
-     * That clamp is also the whole gate on {@see Table::PER_PAGE_ALL}: the
-     * sentinel is a legal page size only on a table that listed `'all'` among
-     * its options, and a forged one falls back like any other.
      */
     protected function normalizePerPage(): void
     {
@@ -784,6 +780,23 @@ trait WithTable
     public function loadTable(): void
     {
         $this->tableState->set('ready', true);
+
+        // This request is the table's arrival, and it has to render: the
+        // placeholder asks once (`x-intersect.once`) and never again. Livewire
+        // bundles every call made in the same tick into one request, so a
+        // listener that ends in `skipRender()` — a status ping dispatched on page
+        // load, say — rode along with this call and suppressed the render for
+        // both. The state flipped to ready, no markup came back, and the
+        // placeholder stayed up for good.
+        //
+        // Both halves are needed because the order inside the request is the
+        // client's: clearing the store key undoes a skip that ran before this
+        // call, and `forceRender()` turns one that runs after it into a no-op.
+        // Guarded like markTableViewChanged(): WithTable runs on plain hosts too.
+        if (method_exists($this, 'forceRender') && function_exists('Livewire\store')) {
+            store($this)->set('skipRender', false);
+            $this->forceRender();
+        }
     }
 
     /**
@@ -1026,11 +1039,8 @@ trait WithTable
      */
     protected function paginateQuery(Table $table, Builder $query): LengthAwarePaginator|Paginator|CursorPaginator
     {
-        $perPage = (int) $this->tableState->get('pagination.perPage', 10);
+        $perPage = (int) $this->tableState->get('pagination.perPage', $table->getPerPage());
 
-        // The PER_PAGE_ALL sentinel is resolved by the source, which is where
-        // the count it needs lives; it arrives here as a negative perPage and
-        // leaves as one honest page.
         $paging = match ($table->getPaginationMode()) {
             'simple' => PagingRequest::simple($perPage),
             // The cursor comes from table state rather than the request:
@@ -1147,7 +1157,7 @@ trait WithTable
             return $source->get($plan)->map(fn (mixed $row) => CollectionRow::from($row, $key))->values();
         }
 
-        $perPage = (int) $this->tableState->get('pagination.perPage', 10);
+        $perPage = (int) $this->tableState->get('pagination.perPage', $table->getPerPage());
 
         $page = $source->paginate($plan, match ($table->getPaginationMode()) {
             'simple' => PagingRequest::simple($perPage),
@@ -1404,6 +1414,10 @@ trait WithTable
      */
     public function sortTable(string $column): void
     {
+        if (! $this->getTable()->isSortable()) {
+            return;
+        }
+
         if ($this->tableState->get('sort.column') === $column) {
             $this->tableState->set('sort.direction', $this->tableState->get('sort.direction') === 'asc' ? 'desc' : 'asc');
         } else {
@@ -1958,6 +1972,11 @@ trait WithTable
         }
 
         TableViewPayload::applyTo($payload, $this->tableState, $table);
+
+        // A view stores its page size as it was, and the table may not offer it
+        // any more — a size dropped from the options, or the -1 a removed "all"
+        // option left behind, which no paginator can be handed.
+        $this->normalizePerPage();
 
         // A restored view changes which records are on screen, so the page it
         // was saved on is not this view's page any more.

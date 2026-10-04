@@ -53,6 +53,7 @@ use Workbench\App\Models\Team;
 use Workbench\App\Models\User;
 use Workbench\App\Modules\BillingModule;
 use Workbench\App\Modules\OperationsModule;
+use Workbench\App\Resources\LedgerResource;
 use Workbench\App\Resources\ProjectResource;
 use Workbench\App\Settings\BrandingSettings;
 use Workbench\App\Settings\MailSettings;
@@ -101,7 +102,7 @@ class WorkbenchServiceProvider extends ServiceProvider
         // scopes nothing else.
         config()->set('wire-core.tenancy.enabled', true);
         config()->set('wire-module-tenants.home', 'previews/tenants/{tenant}');
-        config()->set('wire-core.resources', [...(array) config('wire-core.resources', []), ProjectResource::class]);
+        config()->set('wire-core.resources', [...(array) config('wire-core.resources', []), ProjectResource::class, LedgerResource::class]);
 
         config()->set('wire-core.preferences.default', 'session');
         config()->set('wire-core.preferences.guest', 'session');

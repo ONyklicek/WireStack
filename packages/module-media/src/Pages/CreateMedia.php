@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireModuleMedia\Pages;
 
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use NyonCode\WireForms\Forms\Form;
+use NyonCode\WireModuleMedia\Actions\StoreUpload;
 use NyonCode\WireModuleMedia\Models\Media;
 use NyonCode\WireModuleMedia\Resources\MediaResource;
 use NyonCode\WirePanels\Resources\Pages\CreatePage;
@@ -15,8 +14,8 @@ use NyonCode\WirePanels\Resources\Pages\CreatePage;
  * An upload becomes a row.
  *
  * The file is already on the disk by the time this runs — that is `FileUpload`'s
- * job and this page does not repeat it. What is added is what the disk cannot
- * answer: the original name, the mime type, the size and who uploaded it.
+ * job and this page does not repeat it. Making the row is
+ * {@see StoreUpload::record()}'s, the same as for every other upload.
  *
  * **Written through `using()` rather than in `mutateDataBeforeSave()`**, and the
  * difference is the order of the save pipeline: mutation runs at step 2 and the
@@ -37,19 +36,11 @@ class CreateMedia extends CreatePage
             $stored = $data['path'] ?? null;
             $path = is_array($stored) ? (string) (reset($stored) ?: '') : (string) $stored;
 
-            $storage = Storage::disk($disk);
-            $exists = $path !== '' && $storage->exists($path);
-
-            return Media::create([
-                'disk' => $disk,
-                'path' => $path,
-                'name' => ($data['name'] ?? '') !== '' ? $data['name'] : basename($path),
-                // Read from the disk rather than from the upload: what a browser
-                // reported about a file is a claim, not a fact.
-                'mime_type' => $exists ? ($storage->mimeType($path) ?: null) : null,
-                'size' => $exists ? $storage->size($path) : 0,
-                'uploaded_by' => Auth::id() === null ? null : (string) Auth::id(),
-            ]);
+            // The same row a drop-zone upload makes — hashed, measured,
+            // de-duplicated and thumbnailed. This page used to write its own
+            // shorter row, so a file uploaded here never got a thumbnail
+            // whatever `thumbnails` said.
+            return (new StoreUpload)->record($disk, $path, (string) ($data['name'] ?? ''));
         });
     }
 }

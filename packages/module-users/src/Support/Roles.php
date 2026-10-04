@@ -57,13 +57,7 @@ final class Roles
     /** Whether role management should be part of this installation. */
     public static function enabled(): bool
     {
-        $setting = config('wire-module-users.roles', 'auto');
-
-        if (is_bool($setting)) {
-            return $setting;
-        }
-
-        return $setting === 'auto' && self::available();
+        return AutoSwitch::on('wire-module-users.roles', self::available(...));
     }
 
     /**
@@ -105,7 +99,7 @@ final class Roles
     {
         $model = config('wire-module-users.model');
 
-        if (config('wire-module-users.roles', 'auto') === false
+        if (AutoSwitch::read('wire-module-users.roles') === false
             || ! self::hasExtendedPermissions()
             || ! is_string($model)
             || ! class_exists($model)

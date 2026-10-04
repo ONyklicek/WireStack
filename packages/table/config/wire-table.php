@@ -92,7 +92,7 @@ return [
     |   - \NyonCode\WireCore\Notifications\Drivers\FlasherDriver::class
     |
     */
-    'notification_driver' => null, // null = SessionDriver (default)
+    'notification_driver' => null, // null = the driver wire-core.notifications.default names
 
     /*
     |--------------------------------------------------------------------------

@@ -6,9 +6,12 @@ namespace NyonCode\WireModuleMedia\Actions;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use League\Flysystem\FilesystemException;
 use NyonCode\WireModuleMedia\Models\Media;
 use NyonCode\WireModuleMedia\Support\StoredFileFacts;
+use NyonCode\WireModuleMedia\Support\Thumbnails;
+use NyonCode\WireModuleMedia\Support\UploadLimits;
 
 /**
  * New bytes under an existing row, at the path it already has.
@@ -40,20 +43,26 @@ final readonly class ReplaceOriginal
      * False when the disk would not take the bytes, and in that case nothing has
      * changed: the old file is still there and the row still describes it. A
      * failed replacement must not be a lost original.
+     *
+     * @throws ValidationException when the new bytes are not a file the library
+     *                             takes ({@see UploadLimits}) — before anything is written
      */
     public function __invoke(Media $media, UploadedFile $upload): bool
     {
-        $storage = Storage::disk((string) $media->disk);
-        $path = (string) $media->path;
-
         $source = $upload->getRealPath();
 
         // False for an upload whose temporary file is already gone, which is
         // what a second submit of the same request looks like. Answering false
-        // here leaves the original exactly as it was.
+        // here leaves the original exactly as it was — and comes first, since
+        // there are no bytes left for the limits to measure.
         if (! is_string($source) || ! is_file($source)) {
             return false;
         }
+
+        UploadLimits::check($upload);
+
+        $storage = Storage::disk((string) $media->disk);
+        $path = (string) $media->path;
 
         $stream = @fopen($source, 'rb');
 
@@ -89,7 +98,8 @@ final readonly class ReplaceOriginal
 
         // Forced, because there is already a thumbnail and it is of the old
         // picture — which is what the whole library would keep showing.
-        app(MakeThumbnail::class)($media, force: true);
+        // On the queue when one is configured, like any other upload.
+        Thumbnails::make($media, force: true);
 
         return true;
     }

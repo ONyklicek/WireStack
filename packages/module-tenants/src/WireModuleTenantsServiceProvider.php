@@ -16,6 +16,7 @@ use NyonCode\WireModuleTenants\Livewire\RegisterTenant;
 use NyonCode\WireModuleTenants\Pages\CompanyProfile;
 use NyonCode\WireModuleTenants\Pages\ListMembers;
 use NyonCode\WireModuleTenants\Routing\TenantRoutes;
+use NyonCode\WireModuleTenants\Support\Membership;
 
 /**
  * Companies as a ready-made area (ADR 0040 §8): registering one, its profile,
@@ -82,7 +83,7 @@ class WireModuleTenantsServiceProvider extends PackageServiceProvider
                         $installer->comment('  ✅ Companies are registered as the `tenants` module');
                         $installer->comment('  • Run: php artisan migrate');
                         $installer->comment('  ↩︎  Give the user model HasTenants + InteractsWithTenants (wire-panels)');
-                        $installer->comment("  ↩︎  Route a tenant zone — 'tenant' => 'path' on a zone in config/wire-panels.php");
+                        $installer->comment("  ↩︎  Route a tenant zone — 'tenant' => 'path' on the panel's entry in wire-core.routes.groups, or Route::wire('panel', tenant: 'path')");
                     });
             })
             ->hasAbout();
@@ -94,7 +95,7 @@ class WireModuleTenantsServiceProvider extends PackageServiceProvider
     public function aboutData(): array
     {
         return [
-            'Tenant model' => (string) config('wire-core.tenancy.model'),
+            'Tenant model' => Membership::tenantModel(),
             'Registration' => var_export(config('wire-module-tenants.registration'), true),
             'Isolation' => (string) config('wire-core.tenancy.isolation', 'column'),
         ];

@@ -12,6 +12,7 @@ use Livewire\Component;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WireCore\Notifications\Contracts\ResolvesNotifiable;
+use NyonCode\WireCore\Notifications\Support\ConfiguredDrivers;
 use NyonCode\WireCore\Notifications\Support\NotificationChannel;
 use NyonCode\WireCore\Notifications\Support\NotificationStyle;
 use NyonCode\WirePanels\Resources\Pages\ViewPage;
@@ -326,7 +327,7 @@ class NotificationBell extends Component
      */
     protected function channel(): ?string
     {
-        if (! in_array('broadcast', (array) config('wire-core.notifications.default', 'session'), true)) {
+        if (! ConfiguredDrivers::includes('broadcast')) {
             return null;
         }
 

@@ -176,7 +176,9 @@
         @php($barShape = $navigationShape() === \NyonCode\WireAdmin\Enums\NavigationShape::Top)
         <x-wire-admin::sidebar :linked-only="$linkedOnly" :drawer-only="$barShape" />
 
-        <div class="min-w-0 flex-1">
+        {{-- `--wire-sticky-top` is the top bar's height, so a table header pinned
+             to the page (`stickyHeader()`) stops below the bar, not under it. --}}
+        <div class="min-w-0 flex-1" style="--wire-sticky-top: 4rem">
             <header class="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-gray-200 bg-white/90 px-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/90" @wireEl('admin-topbar')>
                 {{-- The phone handle. It lives in the top bar rather than inside
                      the drawer it opens, which is the whole fix: the old one was

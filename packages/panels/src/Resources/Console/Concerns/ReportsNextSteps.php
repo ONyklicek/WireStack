@@ -45,7 +45,7 @@ trait ReportsNextSteps
 
         if (! $routed) {
             $steps[] = 'Give registered classes URLs, once for all of them: Route::wireResources() inside your panel\'s route group in routes/web.php, '
-                ."or 'routes' => ['enabled' => true] in config/wire-panels.php.";
+                ."or 'routes' => ['groups' => ['panel' => ['prefix' => 'admin', 'middleware' => ['web', 'auth']]]] in config/wire-core.php.";
         }
 
         $this->components->bulletList($steps);

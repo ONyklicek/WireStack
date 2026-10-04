@@ -32,7 +32,7 @@ class Tenant extends Model
     /** @return BelongsToMany<Model, $this> */
     public function members(): BelongsToMany
     {
-        return $this->belongsToMany(Membership::userModel(), Membership::table(), 'tenant_id', 'user_id')
+        return $this->belongsToMany(Membership::userModel(), Membership::table(), $this->getForeignKey(), Membership::userKey())
             ->withPivot('role')
             ->withTimestamps();
     }

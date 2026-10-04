@@ -57,7 +57,7 @@ it('emits each bundle exactly once', function () {
     //
     //   core    dropdown (every shared Alpine controller), copy, chart, notifications
     //   forms   image, fields (the date/time pickers, tags, rating, the editors)
-    //   table   records, selection, live, fill, viewport
+    //   table   records, selection, live, fill, viewport, sticky
     //
     // Chart and notifications are the two that look like optional heavy bodies
     // and are not: 671 bytes and 1.2 kB of Alpine registrar around `window.Chart`
@@ -73,7 +73,8 @@ it('emits each bundle exactly once', function () {
     //
     // `wire-table-viewport.js` (under 1 kB) is in the head on purpose: it writes
     // the cookie a stacked table trims to, and the earlier it runs the sooner the
-    // first request carries it.
+    // first request carries it. `wire-table-sticky.js` (1.3 kB) moves a header
+    // pinned to the page, and has to be listening before the first scroll.
     preg_match_all('/src="[^"]*\/vendor\/[^"\/]+\/([^"\/?]+\.js)/', Blade::render('@wireStackScripts'), $matches);
 
     $emitted = $matches[1];
@@ -90,6 +91,7 @@ it('emits each bundle exactly once', function () {
         'wire-table-live.js',
         'wire-table-records.js',
         'wire-table-selection.js',
+        'wire-table-sticky.js',
         'wire-table-viewport.js',
     ]);
 });

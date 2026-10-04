@@ -139,7 +139,7 @@ oprávnění vyplatí nejvíc.
 
 | Klíč | Výchozí | Popis |
 |-----|---------|-------------|
-| `model` | `AuditEntry::class` | Model záznamu; musí dědit z modelu jádra, a ten, který nedědí, je odmítnut, místo aby se ukázal jako prázdný log |
+| `model` | `null` | Model záznamu, přes který obrazovky čtou; `null` se řídí `wire-core.audit.model`, kterým jádro zapisuje. Musí dědit z modelu jádra, a ten, který nedědí, je odmítnut, místo aby se ukázal jako prázdný log |
 | `actor.attributes` | `['name', 'email']` | Který atribut uživatele se čte jako jeho jméno; vyhrává první, který má |
 | `permission` | `null` | Oprávnění pro čtení logu — `null` ho nechává otevřený |
 | `navigation.group` | `system` | Skupina v menu |

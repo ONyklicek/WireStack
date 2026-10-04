@@ -45,6 +45,21 @@ test('rating star color classes use the bright scale', function () {
         ->and(Rating::make('s')->getColorClasses())->toBe('text-amber-400');
 });
 
+test('rating stars follow every hue a role can point at', function () {
+    // `info` used to fall through to the amber default, and a role moved in
+    // wire-core.colors to a hue with no arm did the same.
+    expect(Rating::make('s')->color('info')->getColorClasses())->toBe('text-cyan-500')
+        ->and(Rating::make('s')->color('violet')->getColorClasses())->toBe('text-violet-500')
+        ->and(Rating::make('s')->color('gray')->getColorClasses())->toBe('text-gray-500')
+        ->and(Rating::make('s')->color('black')->getColorClasses())->toBe('text-gray-900 dark:text-white')
+        ->and(Rating::make('s')->color('white')->getColorClasses())->toBe('text-white')
+        ->and(Rating::make('s')->color('nonsense')->getColorClasses())->toBe('text-amber-400');
+
+    config()->set('wire-core.colors.success', 'green');
+
+    expect(Rating::make('s')->color('success')->getColorClasses())->toBe('text-green-500');
+});
+
 // ─── Slider ────────────────────────────────────────────────────
 
 test('slider defaults', function () {

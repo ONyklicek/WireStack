@@ -113,7 +113,10 @@ final class TourState
     {
         $configured = config('wire-core.tours.postpone', 3);
 
-        return is_numeric($configured) ? max(0, (int) $configured) : 0;
+        // Anything that is not a number — `WIRE_TOURS_POSTPONE=` arrives as an
+        // empty string — keeps the shipped 3 rather than silently becoming the
+        // zero that removes the button.
+        return is_numeric($configured) ? max(0, (int) $configured) : 3;
     }
 
     /**

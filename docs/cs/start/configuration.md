@@ -98,8 +98,6 @@ return [
     ],
 
     'colors' => [
-        'palette' => [],
-
         // Role, ne barvy: každá plocha následuje to, na co ukazují. // [tl! focus:start]
         'success' => 'emerald',
         'danger' => 'red',
@@ -348,9 +346,10 @@ return [
     'rich_editor' => [
         'toolbar' => [
             'bold', 'italic', 'underline', 'strike',
-            '|', 'heading', 'bulletList', 'orderedList',
-            '|', 'link', 'blockquote', 'codeBlock',
-            '|', 'undo', 'redo',
+            'h2', 'h3',
+            'bulletList', 'orderedList',
+            'link', 'blockquote', 'codeBlock',
+            'undo', 'redo',
         ],
     ],
 ];
@@ -394,7 +393,7 @@ return [
 ];
 ```
 
-`notification_driver` může zůstat jako `null`; tabulka pak použije core session driver. Nastavte ho jen když tabulka potřebuje jinou třídu driveru.
+`notification_driver` může zůstat jako `null`; tabulka pak použije driver, který určuje `wire-core.notifications.default`. Nastavte ho na třídu driveru jen když tabulky potřebují jiný.
 
 Viz [Přehled tabulek](../table/overview.md), [Sloupce](../table/columns/index.md) a [Exporty](../table/exports.md).
 

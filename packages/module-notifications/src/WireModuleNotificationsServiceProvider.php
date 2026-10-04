@@ -9,6 +9,7 @@ use NyonCode\LaravelPackageToolkit\Packager;
 use NyonCode\LaravelPackageToolkit\PackageServiceProvider;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Foundation\Setup\SetupRegistry;
+use NyonCode\WireCore\Notifications\Support\ConfiguredDrivers;
 use NyonCode\WireModuleNotifications\Install\StoreNotifications;
 
 /** A module that arrives as a package; see wire-module-users for the shape. */
@@ -44,7 +45,7 @@ class WireModuleNotificationsServiceProvider extends PackageServiceProvider
 
                         // Without the database driver there is nothing stored to
                         // list, and a screen that is always empty reads as broken.
-                        if (! in_array('database', (array) config('wire-core.notifications.default', []), true)) {
+                        if (! ConfiguredDrivers::includes('database')) {
                             $installer->comment('  ⚠️  Add `database` to wire-core.notifications.default, or nothing is stored to show');
                         }
                     });
@@ -58,7 +59,7 @@ class WireModuleNotificationsServiceProvider extends PackageServiceProvider
     public function aboutData(): array
     {
         return [
-            'Stored notifications' => in_array('database', (array) config('wire-core.notifications.default', []), true) ? 'on' : 'off',
+            'Stored notifications' => ConfiguredDrivers::includes('database') ? 'on' : 'off',
         ];
     }
 }

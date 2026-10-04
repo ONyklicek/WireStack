@@ -24,10 +24,20 @@ final class TableConfigurationException extends InvalidArgumentException impleme
         return new self('Interval must be like "5s", "500ms", "10m" or "1h".');
     }
 
-    public static function invalidPerPageOption(string $option): self
+    public static function invalidPerPageOption(mixed $option): self
     {
+        $given = is_scalar($option) ? (string) $option : get_debug_type($option);
+
+        return new self("Page size [{$given}] is not a positive whole number.");
+    }
+
+    public static function invalidNotificationDriver(mixed $configured): self
+    {
+        $given = is_string($configured) ? $configured : get_debug_type($configured);
+
         return new self(
-            "Page size [{$option}] is not a number, and the only word a page size may be is \"all\"."
+            "wire-table.notification_driver [{$given}] is not a NotificationDriver; name a class implementing "
+            .'NyonCode\WireCore\Notifications\Contracts\NotificationDriver, or null for the global default.'
         );
     }
 

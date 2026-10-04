@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use NyonCode\WireModuleTenants\Enums\MemberRole;
+use NyonCode\WireModuleTenants\Support\Membership;
 
 /**
  * An invitation to join a company, sent to an e-mail address.
@@ -35,7 +36,7 @@ class TenantInvitation extends Model
     /** @return BelongsTo<Model, $this> */
     public function tenant(): BelongsTo
     {
-        return $this->belongsTo((string) config('wire-module-tenants.model', Tenant::class), 'tenant_id');
+        return $this->belongsTo(Membership::tenantModel(), 'tenant_id');
     }
 
     public function isOpen(): bool

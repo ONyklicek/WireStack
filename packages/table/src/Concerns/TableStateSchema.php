@@ -128,7 +128,8 @@ final class TableStateSchema
                 'direction' => 'asc',
             ],
             'pagination' => [
-                'perPage' => 10,
+                // Replaced by the table's own size once it is known — see initialFor().
+                'perPage' => (int) (config('wire-table.defaults.per_page') ?? 10),
                 // Cursor pagination only. Livewire's pagination is page-based, so
                 // a cursor has nowhere else to live — see WithTable::setTableCursor().
                 'cursor' => null,

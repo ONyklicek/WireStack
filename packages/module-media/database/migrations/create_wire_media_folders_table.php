@@ -10,14 +10,24 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('wire_media_folders', function (Blueprint $table) {
+        // The models read their table names from config, so the migrations must
+        // too. Guarded, because a name read from config is one the installer
+        // cannot see in the source, and this may be handed to a database that
+        // already has the table.
+        $folders = (string) config('wire-module-media.folders_table', 'wire_media_folders');
+
+        if (Schema::hasTable($folders)) {
+            return;
+        }
+
+        Schema::create($folders, function (Blueprint $table) use ($folders) {
             $table->id();
 
             // Self-referencing, and nullable at the root. `cascadeOnDelete` is
             // deliberately absent: deleting a folder that still holds anything is
             // refused in the model, because a cascade here would take files with
             // it silently — and a file is not the folder's to destroy.
-            $table->foreignId('parent_id')->nullable()->constrained('wire_media_folders')->nullOnDelete();
+            $table->foreignId('parent_id')->nullable()->constrained($folders)->nullOnDelete();
 
             $table->string('name');
 
@@ -35,6 +45,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('wire_media_folders');
+        Schema::dropIfExists((string) config('wire-module-media.folders_table', 'wire_media_folders'));
     }
 };

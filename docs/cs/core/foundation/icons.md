@@ -284,12 +284,74 @@ styl — nasměrujte `default_set` na její klíč:
     'default_set' => 'lucide',            // holé názvy teď resolvují vůči Lucide
     'sets' => [
         'lucide'  => LucideIconSet::class,
-        'default' => DefaultIconSet::class, // stále dostupné jako "default:pencil"
+        'default' => DefaultIconSet::class, // vynechána: základem je teď Lucide
     ],
 ],
 ```
 
+Dodaný záznam `'default'` může v seznamu zůstat; dokud je základem jiná sada,
+přeskočí se, protože `default:` vždy adresuje základní sadu. `default_set`
+s klíčem, který v `sets` není, vyhodí při startu `IconSetRegistrationException`,
+místo aby potichu ponechal Heroicons.
+
 Za běhu: `app(IconManager::class)->setDefaultIconSet(new LucideIconSet)`.
+
+### Vykreslení opakované ikony jen jednou
+
+Tabulka kreslí v každém řádku stejných pár ikon — každé tlačítko akce, booleovský
+sloupec, značku výběru — a každá z nich nese celá data svých cest. Zapněte sprite
+a opakovaná ikona putuje jen jednou:
+
+```php
+// config/wire-core.php
+'icons' => [
+    'sprite' => env('WIRE_ICONS_SPRITE', true), // [tl! focus]
+],
+```
+
+Uvnitř Livewire renderu je každá ikona stejné `<svg>` jako vždy — stejné třídy,
+viewBox, fill/stroke, `aria-*` i předané Alpine atributy — jen místo těla drží
+`<use href="#wi-…"/>`. Tělo odchází jako `<symbol>` jednou za každý kus markupu,
+který Livewire posílá celý:
+
+| kus | nese symboly, na které odkazuje |
+|---|---|
+| render komponenty | ano |
+| render ostrova (island) | ano |
+| partial, kterým odpovídá zápis (`rowPartials()`, partialy polí formuláře) | ano |
+| cokoli mimo Livewire render — PDF, e-mail, obyčejné Blade v layoutu | vůbec se nespritují; inline jako dřív |
+
+Ať prohlížeč přimorfuje kterýkoli z nich, jeho ikony se vyřeší samy, ještě než
+proběhne jakýkoli skript. Symboly jedou **uvnitř prvního spritovaného `<svg>`**
+daného kusu, ne ve skrytém elementu vedle něj: nový poslední potomek by posunul
+každé `:last-child`, `last:` i `space-y-*` z Tailwindu 4 ve vašem markupu.
+
+Malý skript `wire-core-icons.js` (pod 1 kB) kopíruje každý symbol, který uvidí,
+do jednoho spritu na konci `<body>`; na ten `<use>` sáhne, když ikona, která
+symbol nesla, byla odmorfována — třeba když se kolem ní přerenderoval ostrov.
+Livewiru ho předá jako asset první komponenta, která nakreslí spritovanou ikonu,
+takže do layoutu není co přidávat.
+
+Naměřeno na tabulce s 50 řádky, čtyřmi sloupci ikon, třemi řádkovými akcemi a
+skupinou o třech položkách (605 ikon, 17 různých): **851 965 → 705 288 bajtů
+surově (−17 %), 22 315 → 17 297 bajtů gzip (−22 %)**, čas renderu beze změny.
+
+**Za co to vyměňujete.** `<use>` kreslí svůj symbol ve stínovém stromu a
+selektory do něj nepronikají. Dědičné vlastnosti se k cestám stále dostanou —
+`color`, `fill`, `stroke`, `opacity`, `stroke-dashoffset` — což je vše, na čem
+stojí vlastní markup stacku. Váš vlastní stylopis, který sahá *dovnitř* ikony
+(`.toolbar svg path { stroke-width: 1 }`), přestane zabírat, a proto je přepínač
+ve výchozím stavu vypnutý. Než ho zapnete, projděte své CSS na selektory tvaru
+`svg path`.
+
+Některá těla se nespritují nikdy, ať přepínač říká cokoli: tělo s id nebo odkazy
+`url(#…)` (gradienty, masky, ořezové cesty), protože každá kopie symbolu by
+nesla totéž id. Inline zůstávají i ikony ve specifikaci líného menu akcí — ten
+JSON se stává markupem teprve při otevření menu.
+
+Vykreslit spritovanou ikonu sami nevyžaduje nic nového: `icon()`, `<x-wire::icon>`
+i `IconManager::render()` rozhodují při každém volání. Kód, který si `<svg>`
+staví sám, se zeptá `IconManager::body($icon)` na to, co do něj patří.
 
 ### Odchytávání překlepů
 

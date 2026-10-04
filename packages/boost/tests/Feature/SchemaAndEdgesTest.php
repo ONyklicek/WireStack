@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Laravel\Mcp\Server\Transport\FakeTransporter;
 use NyonCode\WireBoost\Contracts\SupportsGuidelines;
 use NyonCode\WireBoost\Contracts\SupportsMcp;
 use NyonCode\WireBoost\Contracts\SupportsSkills;
@@ -94,4 +95,16 @@ it('skips non-class, abstract and non-livewire files while scanning', function (
     file_put_contents($dir.'/Orphan.php', "<?php\n\nnamespace Ghost\\Pkg;\n\nclass Orphan {}\n");
 
     expect((new ComponentScanner)->scan([$dir]))->toBe([]);
+});
+
+it('reports the server identity the config names', function () {
+    config()->set('wire-boost.server.name', 'Acme Boost');
+    config()->set('wire-boost.server.version', '9.9.9');
+
+    $server = new WireBoostServer(new FakeTransporter);
+    $server->start();
+    $implementation = $server->createContext()->implementation;
+
+    expect($implementation->name)->toBe('Acme Boost')
+        ->and($implementation->version)->toBe('9.9.9');
 });

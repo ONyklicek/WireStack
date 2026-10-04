@@ -80,8 +80,8 @@ profile link in the same region, sorted above it. Before that region existed,
 both were markup every application wrote by hand into a layout slot.
 
 **A login screen in front of an unguarded panel is decoration.** The installer
-says which of the two an application has: it reads
-`wire-panels.routes.middleware` and warns when `auth` is not in it. Routes you
+says which of the two an application has: it reads the `middleware` of every
+panel entry in `wire-core.routes.groups` and warns when `auth` is not in it. Routes you
 write yourself get the same reminder, because nothing here can read which group
 they are in.
 

@@ -59,13 +59,7 @@ final class Teams
     /** Whether team switching should be part of this installation. */
     public static function enabled(): bool
     {
-        $setting = config('wire-module-users.teams.enabled', 'auto');
-
-        if (is_bool($setting)) {
-            return $setting;
-        }
-
-        return $setting === 'auto' && self::available();
+        return AutoSwitch::on('wire-module-users.teams.enabled', self::available(...));
     }
 
     /**
@@ -431,7 +425,10 @@ final class Teams
 
         $user ??= Auth::user();
 
-        if (! $user instanceof Model || ! self::available()) {
+        // `enabled()`, not `available()`: `true` is the application answering
+        // the question itself, and a team model that detection cannot find does
+        // not make the relation on the user any less there.
+        if (! $user instanceof Model || ! self::enabled()) {
             return $empty;
         }
 

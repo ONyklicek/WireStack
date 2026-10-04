@@ -218,9 +218,9 @@ it('tints each row by what kind of notification it is', function () {
     $html = Livewire::test('wire-notification-bell')->html();
 
     // Resolved in PHP, because the view may not branch on domain state — see
-    // NotificationStyle for the mapping itself.
-    expect($html)->toContain('text-red-500')
-        ->and($html)->toContain('text-emerald-600');
+    // NotificationStyle, which asks the canonical NoticePalette.
+    expect($html)->toContain('text-red-600')
+        ->and($html)->toContain('text-emerald-700');
 });
 
 /*

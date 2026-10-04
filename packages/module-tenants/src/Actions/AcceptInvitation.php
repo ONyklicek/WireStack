@@ -33,7 +33,7 @@ final class AcceptInvitation
         }
 
         if (Membership::roleOf($tenant, $user) === null) {
-            $tenant->members()->attach($user->getKey(), ['role' => $invitation->role->value]);
+            Membership::add($tenant, $user, $invitation->role);
         }
 
         $invitation->forceFill(['accepted_at' => now()])->save();

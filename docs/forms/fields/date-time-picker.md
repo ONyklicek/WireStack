@@ -106,7 +106,10 @@ DateTimePicker::make('date')
 
 > `displayFormat()` uses PHP `date()` tokens and only changes what the user sees —
 > the stored value is untouched. It is honoured by the custom picker; a native
-> input's display format belongs to the browser and the user's locale.
+> input's display format belongs to the browser and the user's locale. Left
+> unset, it is `date_format`, `time_format` or `datetime_format` from
+> `config/wire-forms.php` for the mode — except on a field with seconds whose
+> configured format has none, which shows its value as stored.
 
 ## Typing
 
@@ -254,7 +257,7 @@ TimePicker::make('opens_at')
 | `asMonth()` | — | Alias for `mode('month')`; always native |
 | `asDateTime()` | — | Alias for `mode('datetime')` |
 | `format(string)` | string | Storage format (Carbon compatible) |
-| `displayFormat(string)` | string | Display format shown to the user |
+| `displayFormat(string)` | string | Display format shown to the user; default from `wire-forms.date_format` / `time_format` / `datetime_format` |
 | `minDate(string\|DateTimeInterface\|Closure)` | string | Earliest selectable date; may carry a time on a `datetime` picker |
 | `maxDate(string\|DateTimeInterface\|Closure)` | string | Latest selectable date; a day-granular bound covers the whole day |
 | `disabledDates(array\|Closure)` | array | Dates that cannot be selected |

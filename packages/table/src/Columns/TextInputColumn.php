@@ -60,13 +60,14 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState, 
     /** @var array<string, string> */
     protected array $validationAttributes = [];
 
-    protected bool $saveOnBlur = true;
+    /** The four below resolve lazily from `config('wire-table.text_input')`. */
+    protected ?bool $saveOnBlur = null;
 
-    protected bool $saveOnEnter = true;
+    protected ?bool $saveOnEnter = null;
 
-    protected bool $liveValidation = false;
+    protected ?bool $liveValidation = null;
 
-    protected int $liveDebounce = 500;
+    protected ?int $liveDebounce = null;
 
     protected ?Closure $displayFormatter = null;
 
@@ -419,8 +420,11 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState, 
         return $this;
     }
 
-    /** Validate as the user types, debounced by the given milliseconds. */
-    public function liveValidation(bool $live = true, int $debounce = 500): static
+    /**
+     * Validate as the user types, debounced by the given milliseconds — or by
+     * `wire-table.text_input.live_debounce` when no delay is given.
+     */
+    public function liveValidation(bool $live = true, ?int $debounce = null): static
     {
         $this->liveValidation = $live;
         $this->liveDebounce = $debounce;
@@ -785,22 +789,22 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState, 
 
     public function getSaveOnBlur(): bool
     {
-        return $this->saveOnBlur;
+        return $this->saveOnBlur ?? (bool) config('wire-table.text_input.save_on_blur', true);
     }
 
     public function getSaveOnEnter(): bool
     {
-        return $this->saveOnEnter;
+        return $this->saveOnEnter ?? (bool) config('wire-table.text_input.save_on_enter', true);
     }
 
     public function getLiveValidation(): bool
     {
-        return $this->liveValidation;
+        return $this->liveValidation ?? (bool) config('wire-table.text_input.live_validation', false);
     }
 
     public function getLiveDebounce(): int
     {
-        return $this->liveDebounce;
+        return $this->liveDebounce ?? (int) config('wire-table.text_input.live_debounce', 500);
     }
 
     // ─── Build methods ──────────────────────────────────────────
@@ -923,9 +927,9 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState, 
             'min' => $this->min,
             'max' => $this->max,
             'placeholder' => $this->getPlaceholder(),
-            'saveOnBlur' => $this->saveOnBlur,
-            'saveOnEnter' => $this->saveOnEnter,
-            'liveValidation' => $this->liveValidation,
+            'saveOnBlur' => $this->getSaveOnBlur(),
+            'saveOnEnter' => $this->getSaveOnEnter(),
+            'liveValidation' => $this->getLiveValidation(),
             'prefix' => $this->inputPrefix,
             'suffix' => $this->inputSuffix,
             'helperText' => $this->helperText,

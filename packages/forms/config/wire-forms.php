@@ -33,9 +33,10 @@ return [
     'rich_editor' => [
         'toolbar' => [
             'bold', 'italic', 'underline', 'strike',
-            '|', 'heading', 'bulletList', 'orderedList',
-            '|', 'link', 'blockquote', 'codeBlock',
-            '|', 'undo', 'redo',
+            'h2', 'h3',
+            'bulletList', 'orderedList',
+            'link', 'blockquote', 'codeBlock',
+            'undo', 'redo',
         ],
     ],
 ];

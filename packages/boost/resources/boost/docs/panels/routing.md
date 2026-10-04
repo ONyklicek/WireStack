@@ -260,7 +260,7 @@ class User extends Authenticatable implements HasPreferredZone
 picker to anybody, primary zone or not — what a zone switcher's "all zones" entry
 points at, `route('wire.zones', ['choose' => 1])`. The zones are read off the
 router, not off config, so zones declared in a route file count the same as
-`routes.zones`; `ZoneDirectory::reachableBy($user)` is the same list a switcher
+`wire-core.routes.groups` entries; `ZoneDirectory::reachableBy($user)` is the same list a switcher
 draws.
 
 **Where the zone comes from.** `Zone::current()` reads it off the route being

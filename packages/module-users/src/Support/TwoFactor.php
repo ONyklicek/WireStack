@@ -39,13 +39,7 @@ final class TwoFactor
     /** Whether the two-factor card should be part of this installation. */
     public static function enabled(): bool
     {
-        $setting = config('wire-module-users.two_factor', 'auto');
-
-        if (is_bool($setting)) {
-            return $setting;
-        }
-
-        return $setting === 'auto' && self::available();
+        return AutoSwitch::on('wire-module-users.two_factor', self::available(...));
     }
 
     /**

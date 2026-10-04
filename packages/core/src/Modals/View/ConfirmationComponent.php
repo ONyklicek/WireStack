@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Modals\View;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Support\ModalDefaults;
 use NyonCode\WireCore\Modals\Support\ConfirmationStyle;
 
 /**
@@ -31,7 +32,7 @@ class ConfirmationComponent extends Component
     public function __construct(
         public ?string $heading = null,
         public ?string $description = null,
-        public string $width = 'md',
+        public ?string $width = null,
         public ?string $icon = null,
         public string $iconColor = 'warning',
         public ?string $submitLabel = null,
@@ -39,8 +40,8 @@ class ConfirmationComponent extends Component
         public ?string $color = null,
         public bool $isDanger = false,
         public bool $isInformative = false,
-        public bool $closeOnClickAway = true,
-        public bool $closeOnEscape = true,
+        public ?bool $closeOnClickAway = null,
+        public ?bool $closeOnEscape = null,
         public bool $fullScreenOnMobile = false,
         public bool $slideOverOnMobile = false,
         public ?string $breakpoint = null,
@@ -49,6 +50,11 @@ class ConfirmationComponent extends Component
         public ?int $zIndex = null,
         public ?string $openOn = null,
     ) {
+        // Unset attributes follow config('wire-core.modals') — see ModalDefaults.
+        $this->width ??= ModalDefaults::width();
+        $this->closeOnClickAway ??= ModalDefaults::closeOnClickAway();
+        $this->closeOnEscape ??= ModalDefaults::closeOnEscape();
+
         $this->submitLabel ??= Trans::get('wire-core::actions.confirm_submit');
         $this->cancelLabel ??= Trans::get('wire-core::actions.confirm_cancel');
 
@@ -60,7 +66,7 @@ class ConfirmationComponent extends Component
     public function style(): ConfirmationStyle
     {
         return new ConfirmationStyle(
-            width: $this->width,
+            width: $this->width ?? ModalDefaults::width(),
             iconColor: $this->iconColor,
             color: $this->color,
             fullScreenOnMobile: $this->fullScreenOnMobile,

@@ -115,8 +115,10 @@ return [
     ],
 
     'icons' => [
-        // Name of the base/fallback set. DefaultIconSet (the full Heroicons
-        // collection) is always registered as the base set.
+        // Key of the set in 'sets' below that is used with bare names. 'default'
+        // is the bundled Heroicons set. Point it at another key (e.g. 'lucide')
+        // to make that set the unprefixed base; the 'default' entry is then left
+        // out, and a key 'sets' does not have is refused at boot.
         'default_set' => 'default',
 
         // Icon sets registered with the IconManager. Each value must be a class
@@ -195,8 +197,6 @@ return [
     |
     */
     'colors' => [
-        'palette' => [],
-
         'success' => 'emerald',
         'danger' => 'red',
         'warning' => 'amber',
@@ -442,7 +442,9 @@ return [
             'remember_token',
         ],
 
-        // Auto-prune entries older than N days (null = no pruning)
+        // Entries older than N days are deleted by `wire-core:audit-prune`
+        // (null = keep them). Nothing prunes on its own — schedule it:
+        //   Schedule::command('wire-core:audit-prune')->daily();
         'retention_days' => null,
     ],
 

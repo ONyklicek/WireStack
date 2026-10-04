@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Notifications;
 
+use Illuminate\Container\Container;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Notifications\Contracts\NotificationDriver;
 use NyonCode\WireCore\Notifications\Drivers\CurrentComponentDriver;
@@ -16,7 +17,8 @@ use NyonCode\WireCore\Notifications\Drivers\SessionDriver;
  * The resolution order is:
  *   1. Per-component driver (e.g. Table::notificationDriver())
  *   2. Global default driver (set via NotificationManager::setDefaultDriver())
- *   3. Built-in SessionDriver (backwards compatible)
+ *   3. The driver `config('wire-core.notifications.default')` names
+ *   4. Built-in SessionDriver, when nothing is bound at all
  *
  * ─── Setup ─────────────────────────────────────────────────────
  *
@@ -100,13 +102,27 @@ final class NotificationManager
     /**
      * Get the global default notification driver.
      *
-     * Falls back to a CurrentComponentDriver wrapping the backwards-compatible
-     * SessionDriver: the driver resolves the active Livewire component itself,
-     * so call-sites don't have to pass it.
+     * Without one set explicitly, this is the driver the application configured
+     * in `wire-core.notifications.default` — the same binding `WireChannel`
+     * delivers through — wrapped in a CurrentComponentDriver, so it resolves the
+     * active Livewire component itself and call-sites don't have to pass it.
+     * Read from the container on every call rather than memoised here: the
+     * binding is already a singleton, and a static would outlive the
+     * application that built it.
      */
     public static function getDefaultDriver(): NotificationDriver
     {
-        return self::$defaultDriver ??= new CurrentComponentDriver(new SessionDriver);
+        if (self::$defaultDriver !== null) {
+            return self::$defaultDriver;
+        }
+
+        $container = Container::getInstance();
+
+        return new CurrentComponentDriver(
+            $container->bound(NotificationDriver::class)
+                ? $container->make(NotificationDriver::class)
+                : new SessionDriver,
+        );
     }
 
     // ─── Convenience shortcuts ─────────────────────────────────

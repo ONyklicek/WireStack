@@ -101,7 +101,10 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState, Pr
 
     // ─── Format ────────────────────────────────────────────────────
 
-    /** Set the display and storage date format. */
+    /**
+     * The format the value is stored in. Without one the widget's own state
+     * shape is stored as it is — see {@see dehydrateState()}.
+     */
     public function format(?string $format): static
     {
         $this->format = $format;
@@ -111,7 +114,9 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState, Pr
 
     /**
      * How the picked value is shown to the user, in PHP date() tokens
-     * (`d.m.Y`, `j. n. Y H:i`, …). The stored value is unaffected.
+     * (`d.m.Y`, `j. n. Y H:i`, …). The stored value is unaffected. Without
+     * one, `wire-forms.date_format`, `time_format` or `datetime_format` is the
+     * default for the mode.
      *
      * Honoured by the custom picker only: a native input's display format is
      * the browser's business, driven by the user's locale.
@@ -230,37 +235,79 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState, Pr
         return $this->mode;
     }
 
+    /**
+     * The format the value is stored in: `format()` when set, else the state's
+     * own shape — exactly what {@see dehydrateState()} writes.
+     */
     public function getFormat(): string
     {
-        if ($this->format) {
-            return $this->format;
+        return $this->format ?? $this->getStateFormat();
+    }
+
+    /**
+     * How the picked value is shown: `displayFormat()` when set, else the
+     * configured format for the mode, else null — the state itself.
+     */
+    public function getDisplayFormat(): ?string
+    {
+        return $this->displayFormat ?? $this->configuredDisplayFormat();
+    }
+
+    /**
+     * `wire-forms.date_format` / `time_format` / `datetime_format` for this mode.
+     *
+     * Month has no key, and a field that keeps seconds is shown as its state
+     * when the configured format has no seconds of its own: a box reading
+     * `14:30` over `14:30:15` would store `14:30:00` the moment it is retyped.
+     */
+    private function configuredDisplayFormat(): ?string
+    {
+        $key = match ($this->mode) {
+            'date' => 'date_format',
+            'time' => 'time_format',
+            'datetime' => 'datetime_format',
+            default => null,
+        };
+
+        if ($key === null) {
+            return null;
         }
 
         try {
-            return match ($this->mode) {
-                'date' => config('wire-forms.date_format', 'Y-m-d'),
-                'month' => 'Y-m',
-                'time' => $this->withSeconds
-                    ? config('wire-forms.time_format', 'H:i').':s'
-                    : config('wire-forms.time_format', 'H:i'),
-                default => config('wire-forms.datetime_format', 'Y-m-d H:i'),
-            };
+            $format = config('wire-forms.'.$key);
         } catch (\Throwable) {
             // Standalone use, with no container to read config from — the same
-            // case the modals guard. These literals are the shipped defaults,
-            // so the fallback answers exactly what config() would have.
-            return match ($this->mode) {
-                'date' => 'Y-m-d',
-                'month' => 'Y-m',
-                'time' => $this->withSeconds ? 'H:i:s' : 'H:i',
-                default => 'Y-m-d H:i',
-            };
+            // case the modals guard. The state is then shown as it is.
+            return null;
         }
+
+        if (! is_string($format) || $format === '') {
+            return null;
+        }
+
+        if ($this->hasSeconds() && ! self::formatCarriesSeconds($format)) {
+            return null;
+        }
+
+        return $format;
     }
 
-    public function getDisplayFormat(): ?string
+    /** Whether a date() format has an unescaped `s` token. */
+    private static function formatCarriesSeconds(string $format): bool
     {
-        return $this->displayFormat;
+        for ($i = 0, $length = strlen($format); $i < $length; $i++) {
+            if ($format[$i] === '\\') {
+                $i++;
+
+                continue;
+            }
+
+            if ($format[$i] === 's') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -291,7 +338,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState, Pr
      */
     public function getTypedFormat(): string
     {
-        return $this->displayFormat ?? $this->getStateFormat();
+        return $this->getDisplayFormat() ?? $this->getStateFormat();
     }
 
     /**

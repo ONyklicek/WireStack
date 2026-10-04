@@ -26,6 +26,7 @@ use NyonCode\WireModuleMedia\Models\Media;
 use NyonCode\WireModuleMedia\Pages\CreateMedia;
 use NyonCode\WireModuleMedia\Pages\ListMedia;
 use NyonCode\WireModuleMedia\Pages\ViewMedia;
+use NyonCode\WireModuleMedia\Support\UploadLimits;
 use NyonCode\WirePanels\Resources\Contracts\ProvidesResourceTable;
 use NyonCode\WireTable\Columns\BadgeColumn;
 use NyonCode\WireTable\Columns\ImageColumn;
@@ -120,8 +121,8 @@ class MediaResource implements DescribesResource, ProvidesNavigation, ProvidesPa
                         ->label(__('wire-module-media::messages.file'))
                         ->disk((string) config('wire-module-media.disk', 'public'))
                         ->directory((string) config('wire-module-media.directory', 'media'))
-                        ->acceptedFileTypes((array) config('wire-module-media.accepts', []))
-                        ->maxSize((int) config('wire-module-media.max_size', 10240))
+                        ->acceptedFileTypes(UploadLimits::accepts())
+                        ->maxSize(UploadLimits::maxSize())
                         ->columnSpanFull()
                         ->required(),
                     TextInput::make('name')

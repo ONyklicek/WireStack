@@ -101,6 +101,7 @@ use NyonCode\WireCore\Notifications\Drivers\SessionDriver;
 use NyonCode\WireCore\Notifications\Drivers\StackDriver;
 use NyonCode\WireCore\Notifications\NotificationBell;
 use NyonCode\WireCore\Notifications\NotificationManager;
+use NyonCode\WireCore\Notifications\Support\ConfiguredDrivers;
 use NyonCode\WireCore\Notifications\Support\NotificationChannel;
 use NyonCode\WireCore\Tours\TourAcknowledgement;
 use NyonCode\WireCore\Tours\TourHost;
@@ -297,6 +298,13 @@ class WireCoreServiceProvider extends PackageServiceProvider
             /** @var array<int|string, mixed> $sets */
             $sets = config('wire-core.icons.sets', []);
 
+            // Heroicons is the base without being listed, so only another base
+            // has to be found in the list — and one that is not there would leave
+            // Heroicons in its place without a word.
+            if ($defaultKey !== 'default' && ! array_key_exists($defaultKey, $sets)) {
+                throw IconSetRegistrationException::defaultSetNotListed((string) $defaultKey, array_keys($sets));
+            }
+
             foreach ($sets as $prefix => $class) {
                 // Refused rather than skipped. A typo here used to cost every
                 // icon addressed through this prefix — each one rendering the
@@ -308,6 +316,13 @@ class WireCoreServiceProvider extends PackageServiceProvider
                 if ($prefix === $defaultKey) {
                     $manager->setDefaultIconSet($app->make($class));
 
+                    continue;
+                }
+
+                // The shipped Heroicons entry, when another set took the base: it
+                // has no prefix of its own to move to ('default' is reserved), and
+                // registering it anyway refused the whole config at boot.
+                if ($prefix === 'default') {
                     continue;
                 }
 
@@ -526,8 +541,6 @@ class WireCoreServiceProvider extends PackageServiceProvider
         $this->app->bindIf(ResolvesNotifiable::class, AuthenticatedNotifiable::class);
 
         $this->app->singleton(NotificationDriver::class, function ($app) {
-            $configured = $app['config']->get('wire-core.notifications.default', 'session');
-
             // A list is the ordinary case, not an edge one: showing the toast
             // *and* keeping it in the bell is what an application usually wants,
             // and neither driver needs to know about the other.
@@ -538,10 +551,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
             // only way to ask for two drivers was to edit the published config,
             // and `wire:install` had no way to turn storage on for the
             // notifications module. One name has no comma and is unaffected.
-            $names = is_array($configured)
-                ? array_values($configured)
-                : array_values(array_filter(array_map(trim(...), explode(',', (string) $configured))));
-            $drivers = array_map(fn (mixed $name): NotificationDriver => $this->makeNotificationDriver((string) $name), $names);
+            $drivers = array_map($this->makeNotificationDriver(...), ConfiguredDrivers::names());
 
             return count($drivers) === 1 ? $drivers[0] : new StackDriver(...$drivers);
         });
@@ -617,9 +627,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
      */
     protected function authorizeNotificationChannel(): void
     {
-        $configured = (array) config('wire-core.notifications.default', 'session');
-
-        if (! in_array('broadcast', $configured, true)) {
+        if (! ConfiguredDrivers::includes('broadcast')) {
             return;
         }
 

@@ -119,6 +119,12 @@ it('rejects sort columns that are not sortable', function () {
     expect(wtqsState(['sort' => 'status'])->get('sort.column'))->toBe('');
 });
 
+it('does not seed a sort on a table that is not sortable', function () {
+    config()->set('wire-table.defaults.sortable', false);
+
+    expect(wtqsState(['sort' => 'name', 'direction' => 'desc'])->get('sort.column'))->toBe('');
+});
+
 it('normalizes unknown sort directions to asc', function () {
     expect(wtqsState(['sort' => 'name', 'direction' => 'sideways'])->get('sort.direction'))->toBe('asc');
 });

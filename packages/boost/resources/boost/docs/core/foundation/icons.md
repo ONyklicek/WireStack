@@ -282,10 +282,15 @@ style — point `default_set` at its key:
     'default_set' => 'lucide',            // bare names now resolve against Lucide
     'sets' => [
         'lucide'  => LucideIconSet::class,
-        'default' => DefaultIconSet::class, // still available as "default:pencil"
+        'default' => DefaultIconSet::class, // left out: Lucide is the base now
     ],
 ],
 ```
+
+The shipped `'default'` entry may stay in the list; it is skipped while another
+set is the base, since `default:` always addresses the base set. A `default_set`
+naming a key `sets` does not have throws an `IconSetRegistrationException` at
+boot instead of quietly keeping Heroicons.
 
 At runtime: `app(IconManager::class)->setDefaultIconSet(new LucideIconSet)`.
 

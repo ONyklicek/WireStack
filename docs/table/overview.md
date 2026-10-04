@@ -437,11 +437,11 @@ two. The tiebreaker is skipped where a key is not a legal ordering term:
 // Enable pagination
 ->paginated(bool $paginated = true)
 
-// Default per-page count — an int, or 'all' for one page holding everything
-->perPage(int|string $perPage = 10) // [tl! focus:start]
+// Default per-page count, a positive int (default: wire-table.defaults.per_page)
+->perPage(int $perPage) // [tl! focus:start]
 
-// Per-page dropdown options; a size may be the word 'all'
-->perPageOptions(array $options = [10, 25, 50, 100])
+// Per-page dropdown options (default: wire-table.defaults.per_page_options)
+->perPageOptions(array $options)
 ->perPageSelector(bool $show = true)   // draw the page-size control at all // [tl! focus:end]
 
 // Simple pagination — no COUNT(*) query, just Previous/Next
@@ -466,26 +466,6 @@ two. The tiebreaker is skipped where a key is not a legal ordering term:
 `->perPage(3)` against the default options renders a select that can actually
 show `3` instead of contradicting the rows on screen. A per-page value arriving
 from the client that the table does not offer falls back to `perPage()`.
-
-**Showing everything on one page.** A page size may be the word `'all'`, which
-adds a final option that drops the limit entirely:
-
-```php
-->perPageOptions([10, 25, 50, 'all'])
-```
-
-It always sorts last, whatever position it was declared in, and it is stored as
-the integer `Table::PER_PAGE_ALL` — the value the select posts back, the query
-string carries and the cache key compares, since every one of those handles page
-sizes as integers. `->perPage('all')` makes it the table's own default.
-
-`'all'` is deliberately **not** among the shipped options. A page size is the
-one thing standing between a table and reading its whole source into memory, and
-the fallback described above exists precisely so a crafted request cannot ask
-for that — a forged `perPage: -1` still falls back on a table that never offered
-`'all'`. Writing it is how a table says the trade is acceptable for *its* data.
-There is no ceiling behind it: put it on a table whose row count you know, not
-on one backed by a table that grows without limit.
 
 **Out-of-range pages re-anchor themselves.** Standard pagination clamps to the
 last populated page whenever the stored page points past the end of the result
@@ -525,7 +505,7 @@ selection-scope totals stay live.
 ->bordered(bool $bordered = true)
 
 // Keep the column headers in view while the rows scroll under them // [tl! focus:1]
-->stickyHeader(bool $sticky = true, string $maxHeight = '70vh')
+->stickyHeader(bool $sticky = true, ?string $maxHeight = null)
 
 // Custom CSS class on <table> element
 ->tableClass(string $class)
@@ -543,22 +523,32 @@ selection-scope totals stay live.
 ->rowInactive(bool|Closure $when = true, Closure|InactiveRow|null $configure = null)
 ```
 
-**Sticky header.** `stickyHeader()` pins the `<thead>` so the column labels stay
-readable through a long list. It also caps the height of the region the rows
-scroll in, and that is not a second, separable option — it is what makes the
-first one work. A sticky element pins to its nearest scrolling ancestor, and the
-table already has one: the wrapper carries `overflow-x: auto` for the horizontal
-case, and CSS computes the other axis to `auto` alongside it. A scrollport the
-size of its content never scrolls, so a header pinned inside an uncapped one has
-nothing to stay behind and never moves. Name your own cap when `70vh` does not
-suit the page:
+**Sticky header.** `stickyHeader()` keeps the column labels readable through a
+long list. By default the header pins to the page: scroll the page and it stays
+at the top of the window, sliding along with the rows, until the last row goes
+past. CSS `position: sticky` cannot do that on its own here — a sticky element
+pins to its nearest scrolling ancestor, and the table's wrapper is one: it
+carries `overflow-x: auto` for the horizontal case, and CSS computes the other
+axis to `auto` alongside it. That wrapper never scrolls vertically, so the
+`<thead>` is moved instead, by a scroll-driven animation the page's own scroll
+runs — in the same frame as the rows, without a scroll listener trailing a frame
+behind them (a browser without scroll timelines gets that listener as a
+fallback). It stays inside the wrapper, so a table wider than the page still
+scrolls sideways with its header.
+
+Sticky chrome over the top of the page — a top bar — would otherwise cover the
+pinned header. Declare its height as `--wire-sticky-top` on any ancestor and the
+header stops below it; the admin layout does that for its own top bar.
+
+Name a height instead, and the table becomes its own scroll region: the rows
+scroll inside a box of that height and the header pins to the top of the box.
 
 ```php
-->stickyHeader()                    // 70vh of rows under a pinned header
-->stickyHeader(maxHeight: '32rem')  // any CSS length
+->stickyHeader()                    // pinned to the page
+->stickyHeader(maxHeight: '32rem')  // the rows scroll in a 32rem box
 ```
 
-The cap is written as an inline `max-height`, not a class, so an arbitrary
+The height is written as an inline `max-height`, not a class, so an arbitrary
 length needs nothing from Tailwind's extractor. Turning the header off with
 `stickyHeader(false)` lifts the cap with it, whatever height was named.
 

@@ -9,6 +9,7 @@ use NyonCode\WireCore\Foundation\Setup\Contracts\SetupStep;
 use NyonCode\WireCore\Foundation\Setup\EnvFile;
 use NyonCode\WireCore\Foundation\Setup\SetupOutcome;
 use NyonCode\WireCore\Foundation\Setup\SetupState;
+use NyonCode\WireModuleAudit\Support\AuditLog;
 
 /**
  * Recording, without which this module is a screen over an empty table.
@@ -36,7 +37,7 @@ final readonly class RecordAuditTrail implements SetupStep
 
     public function state(): SetupState
     {
-        if (config('wire-core.audit.enabled', true) === true) {
+        if (AuditLog::recording()) {
             return SetupState::Done;
         }
 
@@ -45,7 +46,7 @@ final readonly class RecordAuditTrail implements SetupStep
 
     public function summary(): string
     {
-        if (config('wire-core.audit.enabled', true) === true) {
+        if (AuditLog::recording()) {
             return 'changes are being recorded';
         }
 

@@ -396,6 +396,7 @@
                         type="file"
                         multiple
                         wire:model="uploads"
+                        accept="{{ \NyonCode\WireModuleMedia\Support\UploadLimits::acceptAttribute() }}"
                         x-ref="fileInput"
                         x-on:change="preview($event.target.files)"
                         class="hidden"
@@ -420,6 +421,7 @@
                         multiple
                         webkitdirectory
                         wire:model="uploads"
+                        accept="{{ \NyonCode\WireModuleMedia\Support\UploadLimits::acceptAttribute() }}"
                         x-on:change="preview($event.target.files)"
                         class="hidden"
                     >
@@ -869,20 +871,26 @@
                                      refused and a file over the size limit are two
                                      different things to do something about. --}}
                                 <p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-                                    {{ __('wire-module-media::messages.tray_failed_reason', ['size' => config('wire-module-media.max_size', 10240)]) }}
+                                    {{-- A file the library's own rules refused says which rule;
+                                         one the disk refused says that, and the limit. --}}
+                                    {{ ($entry['reason'] ?? null) ?: __('wire-module-media::messages.tray_failed_reason', ['size' => \NyonCode\WireModuleMedia\Support\UploadLimits::maxSize()]) }}
 
                                     {{-- A real retry: the browser still holds the
                                          file and sends that one again. The server
-                                         could not do this — it never received it. --}}
-                                    <button
-                                        type="button"
-                                        data-testid="media-tray-retry" @wireEl('media-tray-retry')
-                                        x-on:click="
-                                            if (! retry(@js($entry['name']))) return;
-                                            $wire.forgetTrayEntry(@js($entry['name']));
-                                        "
-                                        class="text-primary-600 dark:text-primary-400 underline"
-                                    >{{ __('wire-module-media::messages.tray_retry') }}</button>
+                                         could not do this — it never received it.
+                                         Not for a file a rule refused: the same
+                                         file would be refused again. --}}
+                                    @if (! ($entry['reason'] ?? null))
+                                        <button
+                                            type="button"
+                                            data-testid="media-tray-retry" @wireEl('media-tray-retry')
+                                            x-on:click="
+                                                if (! retry(@js($entry['name']))) return;
+                                                $wire.forgetTrayEntry(@js($entry['name']));
+                                            "
+                                            class="text-primary-600 dark:text-primary-400 underline"
+                                        >{{ __('wire-module-media::messages.tray_retry') }}</button>
+                                    @endif
                                 </p>
                             @endif
                         </li>

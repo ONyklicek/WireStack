@@ -261,3 +261,25 @@ it('resolves every width across every sheet breakpoint and the unprefixed varian
     }
     expect(Modal::getMaxWidthClass('unknown', responsive: false))->toBe('max-w-md');
 });
+
+// ─── Config defaults ───────────────────────────────────────────────────
+
+it('takes whether it closes on click-away and escape from config', function () {
+    config()->set('wire-core.modals.close_on_click_away', false);
+    config()->set('wire-core.modals.close_on_escape', false);
+
+    $modal = Modal::make();
+
+    expect($modal->shouldCloseOnClickAway())->toBeFalse()
+        ->and($modal->shouldCloseOnEscape())->toBeFalse();
+});
+
+it('lets a modal override the configured close behaviour', function () {
+    config()->set('wire-core.modals.close_on_click_away', false);
+    config()->set('wire-core.modals.close_on_escape', false);
+
+    $modal = Modal::make()->closeOnClickAway()->closeOnEscape();
+
+    expect($modal->shouldCloseOnClickAway())->toBeTrue()
+        ->and($modal->shouldCloseOnEscape())->toBeTrue();
+});

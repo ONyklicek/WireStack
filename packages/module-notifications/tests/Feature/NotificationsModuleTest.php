@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Auth;
@@ -9,9 +10,12 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
+use NyonCode\WireCore\Notifications\Contracts\ResolvesNotifiable;
 use NyonCode\WireCore\Notifications\DatabaseNotification;
+use NyonCode\WireModuleNotifications\Exceptions\NotificationsModuleException;
 use NyonCode\WireModuleNotifications\Pages\ListNotifications;
 use NyonCode\WireModuleNotifications\Pages\ViewNotification;
+use NyonCode\WireModuleNotifications\Resources\NotificationResource;
 use NyonCode\WireTable\Table;
 
 /*
@@ -384,4 +388,75 @@ it('files a row with no timestamp under Earlier rather than dropping it', functi
 
     expect($html)->toContain('Earlier')
         ->and($html)->toContain('Undated');
+});
+
+/* ── What the config says ─────────────────────────────────────────────────── */
+
+class NmArchivedNotification extends DatabaseNotification
+{
+    protected $table = 'archived_notifications';
+}
+
+it('tints the tile the hue wire-core.colors gives a role', function () {
+    config()->set('wire-core.colors.success', 'green');
+    Auth::setUser(NmUser::find(1));
+    nmPayload(['type' => 'success', 'title' => 'Paid']);
+
+    expect(Livewire::test(ListNotifications::class)->html())->toContain('bg-green-100');
+});
+
+it('lists the rows of the configured model, the one the detail page opens', function () {
+    Schema::create('archived_notifications', function (Blueprint $table) {
+        $table->ulid('id')->primary();
+        $table->string('type');
+        $table->string('notifiable_type');
+        $table->string('notifiable_id');
+        $table->json('data');
+        $table->timestamp('read_at')->nullable();
+        $table->timestamps();
+    });
+
+    config()->set('wire-module-notifications.model', NmArchivedNotification::class);
+    Auth::setUser(NmUser::find(1));
+
+    nmPayload(['title' => 'In core table']);
+    NmArchivedNotification::create([
+        'id' => (string) Str::ulid(),
+        'type' => 'test',
+        'notifiable_type' => NmUser::class,
+        'notifiable_id' => '1',
+        'data' => ['title' => 'In archived table'],
+    ]);
+
+    Livewire::test(ListNotifications::class)
+        ->assertSee('In archived table')
+        ->assertDontSee('In core table');
+});
+
+it('refuses a configured model that is not a stored notification', function () {
+    config()->set('wire-module-notifications.model', NmUser::class);
+    Auth::setUser(NmUser::find(1));
+
+    expect(fn () => NotificationResource::notificationModel())
+        ->toThrow(NotificationsModuleException::class, 'wire-module-notifications.model');
+});
+
+it('scopes "own" to the recipient the application binds, as the bell does', function () {
+    nmNotification('1');
+    nmNotification('2');
+
+    // Signed in as Jane, but the application says notifications are Sam's —
+    // an impersonation, say. The bell would show Sam's, and so must this.
+    Auth::setUser(NmUser::find(1));
+    app()->instance(ResolvesNotifiable::class, new class implements ResolvesNotifiable
+    {
+        public function resolve(): ?Model
+        {
+            return NmUser::find(2);
+        }
+    });
+
+    Livewire::test(ListNotifications::class)
+        ->assertSee('Invoice paid 2')
+        ->assertDontSee('Invoice paid 1');
 });

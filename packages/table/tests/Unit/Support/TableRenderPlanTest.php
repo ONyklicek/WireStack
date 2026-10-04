@@ -473,18 +473,23 @@ it('resolves the density and border a render uses', function () {
         ->and($dense->headerPadding)->not->toBe($roomy->headerPadding);
 });
 
-it('resolves the sticky header and its cap together, or neither', function () {
-    // One decision, two strings. The header pins to the table's own scrollport,
-    // not the page — `overflow-x: auto` computes the other axis to `auto` too —
-    // and a scrollport the size of its content never scrolls, so a class without
-    // a cap would pin the header to a place that never moves.
+it('resolves the sticky header to the page, or to a capped region', function () {
+    // One promise, two mechanisms. Against the page CSS `sticky` cannot pin —
+    // the wrapper's `overflow-x: auto` makes it the scrollport, and it never
+    // scrolls vertically — so the script moves the header and nothing is capped.
+    // A named height makes the region the scrollport, and CSS pins to it.
     $off = trpLayoutPlan(dense: false)->layout();
-    $on = trpStickyPlan()->layout();
+    $page = trpStickyPlan()->layout();
+    $capped = trpStickyPlan('32rem')->layout();
 
     expect($off->stickyHeaderClass)->toBe('')
+        ->and($off->stickyHeaderFollowsPage)->toBeFalse()
         ->and($off->scrollRegionStyle)->toBe('')
-        ->and($on->stickyHeaderClass)->toContain('sticky top-0')
-        ->and($on->scrollRegionStyle)->toBe('max-height: '.Table::DEFAULT_STICKY_MAX_HEIGHT);
+        ->and($page->stickyHeaderClass)->toContain('relative z-10')
+        ->and($page->stickyHeaderFollowsPage)->toBeTrue()
+        ->and($page->scrollRegionStyle)->toBe('')
+        ->and($capped->stickyHeaderClass)->toContain('sticky top-0')
+        ->and($capped->stickyHeaderFollowsPage)->toBeFalse();
 });
 
 it('writes the cap as an inline style, where no extractor has to see it', function () {

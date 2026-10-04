@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Modals\Html;
 
 use Illuminate\Contracts\Support\Htmlable;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Support\ModalDefaults;
 use NyonCode\WireCore\Modals\Support\ConfirmationStyle;
 
 /**
@@ -32,7 +33,7 @@ final class Confirmation implements Htmlable
     public function __construct(
         public ?string $heading = null,
         public ?string $description = null,
-        public string $width = 'md',
+        public ?string $width = null,
         public ?string $icon = null,
         public string $iconColor = 'warning',
         public ?string $submitLabel = null,
@@ -40,8 +41,8 @@ final class Confirmation implements Htmlable
         public ?string $color = null,
         public bool $isDanger = false,
         public bool $isInformative = false,
-        public bool $closeOnClickAway = true,
-        public bool $closeOnEscape = true,
+        public ?bool $closeOnClickAway = null,
+        public ?bool $closeOnEscape = null,
         /** A CSS length capping the body block, which then scrolls on its own. */
         public ?string $maxHeight = null,
         public bool $fullScreenOnMobile = false,
@@ -57,6 +58,11 @@ final class Confirmation implements Htmlable
         /** @var array<int, array<string, mixed>> Additional footer actions (Action API). */
         public array $footerActions = [],
     ) {
+        // Unset attributes follow config('wire-core.modals') — see ModalDefaults.
+        $this->width ??= ModalDefaults::width();
+        $this->closeOnClickAway ??= ModalDefaults::closeOnClickAway();
+        $this->closeOnEscape ??= ModalDefaults::closeOnEscape();
+
         $this->submitLabel ??= Trans::get('wire-core::actions.confirm_submit');
         $this->cancelLabel ??= Trans::get('wire-core::actions.confirm_cancel');
 
@@ -69,7 +75,7 @@ final class Confirmation implements Htmlable
     {
         return view('wire-core::modals.confirmation', [
             'style' => new ConfirmationStyle(
-                width: $this->width,
+                width: $this->width ?? ModalDefaults::width(),
                 iconColor: $this->iconColor,
                 color: $this->color,
                 fullScreenOnMobile: $this->fullScreenOnMobile,

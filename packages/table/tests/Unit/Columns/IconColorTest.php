@@ -100,3 +100,22 @@ it('leaves the bare icon alone unless a column asks for the tile', function () {
     expect($bare)->not->toContain('rounded-[10px]')
         ->and($bare)->toContain('emerald');
 });
+
+it('repaints a tile when wire-core.colors moves its role', function () {
+    // The tile draws through the canonical icon chip, so a role pointed at
+    // another hue moves the tile with every other surface.
+    config()->set('wire-core.colors.success', 'green');
+
+    $tile = iconCell(TextColumn::make('name')->icon('check-circle')->iconColor('success')->iconTile(), new User(['name' => 'Ada']));
+
+    expect($tile)->toContain('bg-green-100')
+        ->and($tile)->toContain('text-green-700')
+        ->and($tile)->not->toContain('emerald');
+});
+
+it('reads error as danger, and takes a role\'s shipped hue by name', function () {
+    $record = new User(['name' => 'Ada']);
+
+    expect(iconCell(TextColumn::make('name')->icon('x-circle')->iconColor('error')->iconTile(), $record))->toContain('bg-red-100')
+        ->and(iconCell(TextColumn::make('name')->icon('x-circle')->iconColor('cyan')->iconTile(), $record))->toContain('bg-cyan-100');
+});

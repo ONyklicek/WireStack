@@ -79,7 +79,6 @@
     {{-- Rule 5: the Htmlable object, not <x-wire-modals::slide-over>. --}}
     {{ new \NyonCode\WireCore\Modals\Html\SlideOver(
         heading: __('wire-core::messages.notifications'),
-        width: 'md',
         stickyHeader: true,
         stickyFooter: true,
         bottomSheetOnMobile: true,

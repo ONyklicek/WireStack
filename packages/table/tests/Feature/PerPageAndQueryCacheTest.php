@@ -290,3 +290,39 @@ it('records nothing for a table that neither caches nor polls', function () {
 
     expect(app(WriteGeneration::class)->current(PpPost::class))->toBe($before);
 });
+
+it('does not search a table that is not searchable, whatever the state says', function () {
+    // A saved view from before the switch, or a client writing the entangled
+    // state, would otherwise filter the rows with no box to see or clear it.
+    config()->set('wire-table.defaults.searchable', false);
+    $c = Livewire::test(PpComponent::class, ['paginate' => false]);
+
+    $c->set('tableState.search', 'T3');
+
+    expect($c->instance()->getTableRecords()->count())->toBe(6);
+});
+
+it('does not sort a table that is not sortable, whatever the state says', function () {
+    config()->set('wire-table.defaults.sortable', false);
+    $c = Livewire::test(PpComponent::class, ['paginate' => false]);
+
+    $c->call('sortTable', 'title');
+    expect($c->instance()->tableState->get('sort.column'))->toBe('');
+
+    // Written around sortTable(), as a forged payload would.
+    $c->set('tableState.sort.column', 'title');
+    $c->set('tableState.sort.direction', 'desc');
+
+    expect($c->instance()->getTableRecords()->pluck('title')->first())->toBe('T1');
+});
+
+it('still sorts and searches when the table allows it', function () {
+    $c = Livewire::test(PpComponent::class, ['paginate' => false]);
+
+    $c->call('sortTable', 'title');
+    $c->call('sortTable', 'title');
+    expect($c->instance()->getTableRecords()->pluck('title')->first())->toBe('T6');
+
+    $c->set('tableState.search', 'T3');
+    expect($c->instance()->getTableRecords()->count())->toBe(1);
+});

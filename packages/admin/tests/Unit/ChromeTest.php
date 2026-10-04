@@ -45,6 +45,14 @@ it('mounts the notification bell where notifications are stored', function () {
     expect(chGet())->toContain('data-testid="notification-bell"');
 });
 
+it('mounts the bell when the drivers come from the environment as one string', function () {
+    // `wire:install` writes WIRE_NOTIFICATIONS_DRIVER=session,database, and an
+    // env var is a string — read as a one-element list it hid the bell.
+    config()->set('wire-core.notifications.default', 'session,database');
+
+    expect(chGet())->toContain('data-testid="notification-bell"');
+});
+
 it('leaves the bell out when nothing is stored to put in it', function () {
     // Measured, not cautious: the bell counts rows as soon as a user is
     // authenticated, so mounting it under the default `session` driver is a SQL

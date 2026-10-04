@@ -34,13 +34,7 @@ final class Passkeys
     /** Whether the passkey card should be part of this installation. */
     public static function enabled(): bool
     {
-        $setting = config('wire-module-users.passkeys', 'auto');
-
-        if (is_bool($setting)) {
-            return $setting;
-        }
-
-        return $setting === 'auto' && self::available();
+        return AutoSwitch::on('wire-module-users.passkeys', self::available(...));
     }
 
     /**

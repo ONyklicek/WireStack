@@ -97,4 +97,11 @@ class WireBoostServer extends Server
         Tinker::class,
         BrowserLogs::class,
     ];
+
+    /** The identity reported to agents comes from `config('wire-boost.server')`. */
+    protected function boot(): void
+    {
+        $this->name = (string) config('wire-boost.server.name', $this->name);
+        $this->version = (string) config('wire-boost.server.version', $this->version);
+    }
 }

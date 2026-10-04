@@ -141,6 +141,7 @@
     $headerPadding = $plan->layout()->headerPadding;
     $stickyHeaderClass = $plan->layout()->stickyHeaderClass;
     $scrollRegionStyle = $plan->layout()->scrollRegionStyle;
+    $stickyHeaderFollowsPage = $plan->layout()->stickyHeaderFollowsPage;
     $isStackedOnMobile = $plan->layout()->isStackedOnMobile;
     $tableHiddenClass = $plan->layout()->tableHiddenClass;
     $cardsVisibleClass = $plan->layout()->cardsVisibleClass;
@@ -205,6 +206,9 @@
                          and all of the wiring went with it. --}}
                     @if($rendersTable)
                         @include('wire-core::partials.scroller-assets')
+                        @if($stickyHeaderFollowsPage)
+                            @include('wire-table::tables.partials.sticky-header-assets')
+                        @endif
                     <div class="relative overflow-x-auto wire-scroller {{ $tableHiddenClass }}"
                          @if($scrollRegionStyle) style="{{ $scrollRegionStyle }}" @endif
                          @if($isFillEnabled)
@@ -233,6 +237,7 @@
                                     @endif
                                     class="w-full {{ $isBordered ? 'border-collapse' : '' }} {{ $table->getTableClass() }}">
                                 <thead
+                                        @if($stickyHeaderFollowsPage) data-wire-sticky-head @endif
                                         class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider {{ $stickyHeaderClass ?: 'bg-gray-50 dark:bg-gray-800/50' }} {{ $table->getHeaderClass() }}">
                                 {{-- `bg-inherit`: the header's colour sits on the <thead>, and a
                                      pinned <th> gets its opaque backdrop by inheriting down the
@@ -702,7 +707,7 @@
                                             {{-- Mark the live value server-side: without it the first
                                                  paint shows the first option regardless of state, and a
                                                  morph can snap the control back to it. --}}
-                                            <option value="{{ $option }}" @selected((int) $perPage === $option)>{{ $option === \NyonCode\WireTable\Table::PER_PAGE_ALL ? __('wire-table::messages.per_page_all') : $option }}</option>
+                                            <option value="{{ $option }}" @selected((int) $perPage === $option)>{{ $option }}</option>
                                         @endforeach
                                     </select>
                                     <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('wire-table::messages.records') }}</span>

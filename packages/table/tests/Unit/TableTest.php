@@ -41,6 +41,7 @@ it('has correct default values', function () {
         ->and($table->isBordered())->toBeFalse()
         ->and($table->hasStickyHeader())->toBeFalse()
         ->and($table->getStickyHeaderMaxHeight())->toBeNull()
+        ->and($table->hasPageStickyHeader())->toBeFalse()
         ->and($table->isLazy())->toBeFalse()
         ->and($table->isPolling())->toBeFalse()
         ->and($table->isStackedOnMobile())->toBeFalse()
@@ -116,6 +117,13 @@ it('reports no cap on the scroll region once the header stops pinning', function
     expect($table->getStickyHeaderMaxHeight())->toBe('32rem')
         ->and($table->stickyHeader(false)->getStickyHeaderMaxHeight())->toBeNull()
         ->and($table->hasStickyHeader())->toBeFalse();
+});
+
+it('pins the header to the page unless a height is named', function () {
+    expect(Table::make()->stickyHeader()->hasPageStickyHeader())->toBeTrue()
+        ->and(Table::make()->stickyHeader()->getStickyHeaderMaxHeight())->toBeNull()
+        ->and(Table::make()->stickyHeader(maxHeight: '32rem')->hasPageStickyHeader())->toBeFalse()
+        ->and(Table::make()->stickyHeader(false)->hasPageStickyHeader())->toBeFalse();
 });
 
 it('resolves responsive stacked layout classes from the breakpoint', function () {

@@ -15,6 +15,7 @@ use NyonCode\WireCore\Core\Query\Contracts\HasSearchColumns;
 use NyonCode\WireCore\Core\Query\Contracts\HasSearchValueType;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Colors\NoticePalette;
 use NyonCode\WireCore\Foundation\Concerns\CanBeCopyable;
 use NyonCode\WireCore\Foundation\Concerns\FormatsStateUsing;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
@@ -713,17 +714,24 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
      * Only the semantic roles get a tile. A tile is a statement about *kind* —
      * done, waiting, failed — and a raw hue makes no such statement, so anything
      * unrecognised lands on the neutral tile rather than inventing a meaning.
+     * The four hues the roles ship as are accepted by name too.
+     *
+     * The classes are the canonical icon chip's ({@see NoticePalette}), so a role
+     * pointed at another hue in `wire-core.colors` repaints the tile with it.
      */
     protected function getIconTileClasses(?string $role): string
     {
-        return match ($role) {
-            'success', 'emerald' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
-            'danger', 'red', 'error' => 'bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-400',
-            'warning', 'amber' => 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
-            'info', 'cyan' => 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-400',
-            'primary' => 'bg-primary-100 text-primary-600 dark:bg-primary-500/15 dark:text-primary-400',
-            default => 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
+        $color = match ($role) {
+            'success', 'danger', 'warning', 'info', 'primary', 'emerald', 'red', 'amber', 'cyan' => $role,
+            'error' => 'danger',
+            default => null,
         };
+
+        if ($color === null) {
+            return 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400';
+        }
+
+        return NoticePalette::iconBg($color).' '.NoticePalette::iconText($color);
     }
 
     /**

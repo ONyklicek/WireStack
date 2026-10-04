@@ -7,6 +7,7 @@ namespace NyonCode\WireAdmin\View;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 use NyonCode\WireAdmin\Enums\NavigationShape;
+use NyonCode\WireCore\Notifications\Support\ConfiguredDrivers;
 
 /**
  * The page frame: `<x-wire-admin::layout>`.
@@ -77,7 +78,7 @@ class Layout extends Component
             return $this->notifications;
         }
 
-        return in_array('database', (array) config('wire-core.notifications.default', []), true);
+        return ConfiguredDrivers::includes('database');
     }
 
     public function render(): View
