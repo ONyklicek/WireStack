@@ -12,6 +12,113 @@ All notable changes to the Wire ecosystem will be documented in this file.
   sort dropdown meant for the cards beside the header row that already sorts. `getStackedCardsVisibleClass()`
   now answers `hidden` when the table is the half sent, and `''` only when the cards are.
 
+- **A table follows `config/wire-table.php`.** `defaults.per_page`, `defaults.per_page_options`,
+  `defaults.searchable`, `defaults.sortable`, `defaults.striped` and `defaults.hoverable` were published and never
+  read — every table used the values hard-coded in `Table`. They are now each table's default, and a table's own
+  `perPage()`, `searchable()` and the rest still win over them. The same holds for `text_input` (the defaults of
+  every `TextInputColumn`) and `notification_driver` (a driver class for every table's notifications; `null` means
+  the driver `wire-core.notifications.default` names).
+
+- **A table that is not searchable or sortable is not searched or sorted.** `searchable(false)` and
+  `sortable(false)` hid the controls, but a shared `?sort=` link, a saved view or a client writing the table's state
+  still filtered or re-ordered the rows, with nothing on screen to show it. The server now ignores both; an
+  unsortable table keeps its `defaultSort()`.
+
+- **A saved view cannot restore a page size the table does not offer.** A view stores its page size as it was, and
+  restoring one skipped the check every other way of changing it goes through — so a size since dropped from the
+  options, or the `-1` an `'all'` option left behind, reached the paginator. It now falls back to the table's own
+  size.
+
+- **Notifications go through the configured driver.** `wire-core.notifications.default` reached only the `wire`
+  Laravel channel; a notification raised by an action, a table or a form always went to the session. It now goes
+  through the configured driver — so `['session', 'database']` also keeps it in the bell. A driver set in code
+  with `NotificationManager::setDefaultDriver()` still wins.
+
+- **The bell appears after `wire:install`.** The installer writes `WIRE_NOTIFICATIONS_DRIVER=session,database`, and
+  the admin layout, the bell's live updates, the broadcast channel, `about` and the notifications installer read
+  that string as one driver named `session,database` — so the bell stayed hidden and broadcasting stayed off.
+  Every reader now asks `ConfiguredDrivers`, which splits it the way the driver binding always did.
+
+- **Every modal follows `wire-core.modals`.** `default_width`, `slide_over_width`, `close_on_click_away` and
+  `close_on_escape` reached only a modal object passed to `->modal()` — the two close switches reached nothing at
+  all. An action's own modal, `->slideOver()`, an `ActionHalt`, the `<x-wire-modals::*>` components and the
+  notification bell always opened at `md` and always closed on a click outside or Esc. They now follow the config,
+  and an explicit setting still wins. A width configured as the `ModalWidth` enum works too.
+
+- **The colour roles repaint every surface.** `wire-core.colors.success` and the other roles did not reach the
+  bell's icons and action buttons, a column's icon tile, the notification history's tiles or the Rating stars,
+  which kept their shipped hues. They now resolve through the shared palette. Rating's `info` stars are cyan
+  instead of amber.
+
+- **`wire-core.icons.default_set` can name another set.** Pointing it at e.g. `lucide` while the shipped `default`
+  entry stayed in `sets` failed at boot; the entry is now skipped. A `default_set` that `sets` does not list is
+  refused at boot with a message naming the key, instead of quietly keeping Heroicons. `warn_missing` also accepts
+  `WIRE_ICONS_WARN_MISSING=1`.
+
+- **A date picker shows the configured format.** `wire-forms.date_format`, `time_format` and `datetime_format`
+  were read by `DateTimePicker::getFormat()` alone, which nothing called — every picker showed its raw state
+  (`2026-03-09`). They are now the default `displayFormat()` for their mode; the typed value, the bound messages
+  and the time slots follow it, and the stored value keeps its shape. A field with seconds whose configured format
+  has none still shows the value as stored. `getFormat()` now answers the stored format, which is what is written.
+
+- **"This week" starts on the configured first day.** A `DateRangePicker` preset used the locale's first weekday
+  while the calendar beside it used `wire-forms.first_day_of_week` (or a `firstDayOfWeek()` set through
+  `configurePickers()`).
+
+- **The rich editor's default toolbar has its heading buttons.** The shipped `rich_editor.toolbar` listed
+  `heading` and `|`, which the editor does not know; it now lists `h2` and `h3`.
+
+- **`FileUpload::acceptedFileTypes()` is checked on the server.** It reached only the input's `accept` attribute,
+  which a dropped or crafted upload never passes through. The new `AcceptedFileTypes` rule checks a fresh upload
+  (a stored path on an edit form passes), on each file of a `multiple()` field.
+
+- **The media library follows its own config on every path.** `table` and `folders_table` are now the tables the
+  migrations create. `max_size` and `accepts` are enforced on the drop zone, the picker and the image editor, not
+  only on the create page; a refused file says which rule refused it, and the file inputs offer only what
+  `accepts` allows. A file uploaded on the create page is now hashed, de-duplicated, measured and thumbnailed like
+  every other upload. A replaced original's thumbnail goes on the queue when `thumbnails.queue` names one, and
+  `WIRE_MEDIA_THUMBNAIL_QUEUE=true` or `1` means the default queue rather than a queue named "true".
+
+- **The notification history reads the configured model.** The list used core's model whatever
+  `wire-module-notifications.model` said, while the detail page used the configured one. A model that does not
+  extend `DatabaseNotification` is refused. "Own" now means the recipient the application binds, as the bell
+  already did.
+
+- **The audit screen follows core's model and hides its menu entry from people who may not open it.**
+  `wire-module-audit.model` defaults to `null`, which reads the trail through `wire-core.audit.model`, the model
+  core writes it with. A `permission` now hides the menu entry as well as guarding the routes.
+  `WIRE_AUDIT_ENABLED=1` reads as on in the installer and in `about`.
+
+- **The tenants module registers into the configured company model.** Every screen and action resolves the model
+  from `wire-core.tenancy.model` first, then the module's `model`. The pivot is created under
+  `wire-core.tenancy.members_table`, and its columns follow the same convention `InteractsWithTenants` reads
+  (`company_id` for a `Company`), so a person who registers an application-owned company can enter it.
+  `WIRE_TENANTS_REGISTRATION=true` or `1` now means anyone, not nobody.
+
+- **The user module's switches read the environment.** `roles`, `teams.enabled`, `avatar.enabled`, `two_factor`
+  and `passkeys` accept `1`/`0`, `on`/`off` and `yes`/`no`; `WIRE_USERS_ROLES=1` used to mean off. With
+  `teams.enabled` set to `true`, a person's teams are listed even when detection cannot find the team model.
+
+- **A blank `WIRE_SETTINGS_CACHE_STORE` means the default store** in the installer and in `about`, as it already
+  did for the cache itself.
+
+- **An empty `WIRE_TOURS_POSTPONE` keeps the default of 3** instead of removing a tour's "Later" button.
+
+- **`wire-sortable.animation` cannot break the table.** It was printed into the drag controller as written, so a
+  null or a word left `animation: ,` and the table stopped working; it is now a number, `150` when unset.
+
+- **The MCP server reports `wire-boost.server.name` and `version`** instead of the hard-coded identity, and the
+  `wire-config` tool reads `wire-panels`, `wire-admin` and every `wire-module-*` namespace.
+
+- **`make:wire-resource` points an unrouted resource at a route group that exists** — `wire-core.routes.groups` —
+  instead of a `wire-panels` key nothing reads.
+
+### Removed
+
+- **The `'all'` page size.** `perPage('all')`, `'all'` in `perPageOptions()` and `Table::PER_PAGE_ALL` are gone;
+  a page size is a positive whole number and anything else throws `TableConfigurationException`. A table that
+  offered `'all'` lists a large size instead. The unused `wire-core.colors.palette` key is removed as well.
+
 ## [2.5.0]
 
 ### Changed

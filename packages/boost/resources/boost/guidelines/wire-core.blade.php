@@ -276,13 +276,21 @@ dispatch and run throws too.
 `RunActionJob` reaches Notifications by class name, not import: both are L2 and the module-layer rule forbids L2→L2 — the
 same soft seam `HasLifecycle::resolveNotificationManagerClass()` uses.
 
+**Modal defaults.** `wire-core.modals.default_width`, `slide_over_width`, `close_on_click_away` and `close_on_escape`
+are the default of every modal surface — an action's own modal and `->slideOver()`, `Modal`/`SlideOver`/`Wizard`/
+`ConfirmationDialog`, `ActionHalt` and the @verbatim`<x-wire-modals::*>`@endverbatim components — read through
+`Foundation\Support\ModalDefaults`. An explicit fluent call or attribute always wins.
+
 ### Notifications
 
 `Notification` is an immutable value object dispatched through a driver (current-component, session, livewire,
 flasher, **database**, null), selected by `wire-core.notifications.default` — which takes a **list** as well as
 a string, so `['session', 'database']` shows the toast *and* keeps it in the bell (a `StackDriver` fans out;
-one driver throwing does not silence the rest, and the failure is re-thrown after all have had their turn). The built-in default is `CurrentComponentDriver`
-(decorates `SessionDriver`): it resolves the active Livewire component via `Livewire::current()` itself, so
+one driver throwing does not silence the rest, and the failure is re-thrown after all have had their turn). From the
+environment the list is a comma-separated string (`WIRE_NOTIFICATIONS_DRIVER=session,database`); never test it with
+`(array) config(...)` — ask `Notifications\Support\ConfiguredDrivers::names()` / `::includes('database')`. Unless
+`NotificationManager::setDefaultDriver()` sets one in code, the default is the configured driver wrapped in
+`CurrentComponentDriver`: it resolves the active Livewire component via `Livewire::current()` itself, so
 `NotificationManager::send($notification)` and the `InteractsWithNotifications`/`sendNotification` helpers no
 longer thread `$this`. A custom per-component driver that needs the component must wrap itself in
 `CurrentComponentDriver`.

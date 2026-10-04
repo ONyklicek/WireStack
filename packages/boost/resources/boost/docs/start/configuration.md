@@ -99,8 +99,6 @@ return [
     ],
 
     'colors' => [
-        'palette' => [],
-
         // Roles, not colours: every surface follows what they point at. // [tl! focus:start]
         'success' => 'emerald',
         'danger' => 'red',
@@ -353,9 +351,10 @@ return [
     'rich_editor' => [
         'toolbar' => [
             'bold', 'italic', 'underline', 'strike',
-            '|', 'heading', 'bulletList', 'orderedList',
-            '|', 'link', 'blockquote', 'codeBlock',
-            '|', 'undo', 'redo',
+            'h2', 'h3',
+            'bulletList', 'orderedList',
+            'link', 'blockquote', 'codeBlock',
+            'undo', 'redo',
         ],
     ],
 ];
@@ -399,7 +398,7 @@ return [
 ];
 ```
 
-`notification_driver` may be left as `null`; the table then uses the core session driver. Set it only when a table needs a different driver class.
+`notification_driver` may be left as `null`; the table then uses the driver `wire-core.notifications.default` names. Set it to a driver class only when tables need a different one.
 
 See [Table Overview](../table/overview.md), [Columns](../table/columns/index.md), and [Exports](../table/exports.md).
 
