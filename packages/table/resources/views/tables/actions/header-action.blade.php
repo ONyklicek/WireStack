@@ -17,7 +17,7 @@
 @if($action->getUrl())
     <a
             href="{{ $action->getUrl() }}"
-            @if($action->shouldOpenUrlInNewTab()) target="_blank" @endif
+            @if($action->shouldOpenUrlInNewTab()) target="_blank" @elseif($action->shouldNavigateTo($action->getUrl())) wire:navigate @endif
             class="{{ $classes }} relative"
             data-testid="header-action-{{ $action->getName() }}"
             @if($action->getLabel()) aria-label="{{ $action->getLabel() }}" @endif

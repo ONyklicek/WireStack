@@ -149,7 +149,9 @@ final class RowRenderer
     private function renderCells(Model $record, ColumnRenderPlan $columns): string
     {
         $recordUrl = $this->table->getRecordUrl($record);
-        $link = $recordUrl ? $this->table->getRecordLinkSkeleton() : null;
+        $link = $recordUrl
+            ? $this->table->getRecordLinkSkeleton($this->table->shouldNavigateToRecordUrl($recordUrl))
+            : null;
         $linkUrl = $recordUrl ? e($recordUrl) : '';
 
         $html = '';

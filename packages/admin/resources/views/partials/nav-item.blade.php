@@ -141,7 +141,7 @@
             x-bind:aria-controls="$store.wireAdmin?.railed ? '{{ $panelId }}' : 'wire-admin-sub-{{ md5($item->getLabel() ?? '') }}'"
         @elseif ($url)
             href="{{ $url }}"
-            wire:navigate
+            @wireNavigate($url)
             x-on:click="$store.wireAdmin.closeMobile()"
         @else
             aria-disabled="true"
@@ -360,7 +360,7 @@
                             <{{ $url ? 'a' : 'p' }}
                                 @if ($url)
                                     href="{{ $url }}"
-                                    wire:navigate
+                                    @wireNavigate($url)
                                     x-on:click="close()"
                                 @endif
                                 data-testid="admin-nav-flyout-label" @wireEl('admin-nav-flyout-label')

@@ -19,7 +19,7 @@
                     @foreach ($entries as $key => $item)
                         <li class="group/row relative">
                             <a
-                                @if ($item->getUrl()) href="{{ $item->getUrl() }}" wire:navigate @endif
+                                @if ($item->getUrl()) href="{{ $item->getUrl() }}" @wireNavigate($item->getUrl()) @endif
                                 data-testid="admin-nav-{{ $section }}-item"
                                 data-nav-focus
                                 data-resource="{{ $key }}"

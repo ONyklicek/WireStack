@@ -8,7 +8,7 @@
         @foreach ($crumbs as $crumb)
             <li class="flex items-center gap-1" data-testid="breadcrumb" @wireEl('breadcrumb')>
                 @if ($crumb->getUrl() && ! $loop->last)
-                    <a href="{{ $crumb->getUrl() }}" wire:navigate class="hover:text-gray-700 hover:underline dark:hover:text-gray-200">
+                    <a href="{{ $crumb->getUrl() }}" @wireNavigate($crumb->getUrl()) class="hover:text-gray-700 hover:underline dark:hover:text-gray-200">
                         {{ $crumb->getLabel() }}
                     </a>
                 @else

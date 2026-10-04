@@ -100,7 +100,7 @@ vypadalo jako menu, ve kterém to sedí:
 
 ```blade
 <x-slot:user-menu> <!-- [tl! focus:8] -->
-    <x-wire-admin::menu-item :href="route('profile')" icon="outline:user-circle" wire:navigate>
+    <x-wire-admin::menu-item :href="route('profile')" icon="outline:user-circle">
         Profil
     </x-wire-admin::menu-item>
 

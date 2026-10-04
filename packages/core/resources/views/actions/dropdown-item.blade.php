@@ -33,7 +33,7 @@
 @endphp
 
 @if($url && !$disabled)
-    <a href="{{ $url }}" @if($action->shouldOpenUrlInNewTab()) target="_blank" @endif class="{{ $classes }}"
+    <a href="{{ $url }}" @if($action->shouldOpenUrlInNewTab()) target="_blank" @elseif($action->shouldNavigateTo($url)) wire:navigate @endif class="{{ $classes }}"
        role="menuitem" data-testid="menu-action-{{ $action->getName() }}">
         @if($icon)
             {!! $action->renderIconSvg($icon, 'mr-3 h-4 w-4 text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-300') !!}

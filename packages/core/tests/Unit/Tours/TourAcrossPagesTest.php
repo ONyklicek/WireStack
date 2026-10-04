@@ -75,7 +75,19 @@ it('knows which steps are on the page it starts on, and where the others are', f
         // it the way it skips an element that is not on screen.
         ->and($payload['steps'][3]['url'])->toBeNull()
         ->and($payload['resume'])->toBeNull()
-        ->and($payload['from'])->toBeNull();
+        ->and($payload['from'])->toBeNull()
+        // A page of this application is reached the way every other link
+        // reaches one; a step with nowhere to go has nothing to navigate.
+        ->and(array_column($payload['steps'], 'navigate'))->toBe([false, false, true, false]);
+});
+
+it('reaches the next page with a full load when links do not navigate', function () {
+    config()->set('wire-core.navigate', false);
+
+    $payload = $this->get('/sales/overview')->json('payload');
+
+    expect($payload['steps'][2]['url'])->toBe('/sales/orders/index')
+        ->and($payload['steps'][2]['navigate'])->toBeFalse();
 });
 
 it('gives no address for a page this person may not open', function () {

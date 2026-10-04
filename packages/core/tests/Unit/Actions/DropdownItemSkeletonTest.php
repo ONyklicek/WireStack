@@ -85,6 +85,8 @@ function diShapes(): array
         'static url' => fn () => Action::make('open')->label('Open')->url('/x'),
         'closure url' => fn () => Action::make('open')->label('Open')->url(fn ($r) => '/r/'.$r->getKey()),
         'url new tab' => fn () => Action::make('open')->label('Open')->url('/x', true),
+        'url not navigated' => fn () => Action::make('open')->label('Open')->url('/x')->navigate(false),
+        'url elsewhere' => fn () => Action::make('open')->label('Open')->url('https://example.test/x'),
         'disabled' => fn () => Action::make('edit')->label('Edit')->disabled(),
         'closure disabled' => fn () => Action::make('edit')->label('Edit')->disabled(fn ($r) => $r->getKey() === 2),
         'confirmation' => fn () => Action::make('del')->label('Delete')->requiresConfirmation(),

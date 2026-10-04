@@ -102,7 +102,7 @@ it looks like the menu it sits in:
 
 ```blade
 <x-slot:user-menu> <!-- [tl! focus:8] -->
-    <x-wire-admin::menu-item :href="route('profile')" icon="outline:user-circle" wire:navigate>
+    <x-wire-admin::menu-item :href="route('profile')" icon="outline:user-circle">
         Profile
     </x-wire-admin::menu-item>
 

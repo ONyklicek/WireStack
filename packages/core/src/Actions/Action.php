@@ -11,6 +11,7 @@ use NyonCode\WireCore\Actions\Contracts\RendersAsMenuItem;
 use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
 use NyonCode\WireCore\Actions\Support\FixedClickResolver;
 use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithClientNavigation;
 use NyonCode\WireCore\Foundation\View\Primitives;
 use NyonCode\WireCore\Foundation\View\Skeleton;
 
@@ -29,6 +30,7 @@ class Action extends BaseAction implements RendersAsButton, RendersAsMenuItem
     // and a bulk action has a set, which is why this sits here and not on
     // BaseAction alongside its siblings.
     use Concerns\HasOptimisticLock;
+    use InteractsWithClientNavigation;
 
     protected bool $hideLabel = false;
 
@@ -342,6 +344,7 @@ class Action extends BaseAction implements RendersAsButton, RendersAsMenuItem
             $this->getIcon($record),
             $this->getColor($record),
             $this->shouldOpenUrlInNewTab(),
+            $this->getNavigatePreference(),
             $this->getKeyboardShortcutLabel(),
             $this->getAlpineKeydownExpression(),
             $this->getWireClickModifiers(),
@@ -388,6 +391,7 @@ class Action extends BaseAction implements RendersAsButton, RendersAsMenuItem
             'label' => $this->hideLabel ? '' : $this->getLabel($record),
             'tooltip' => $this->getTooltip($record),
             'target' => $this->openUrlInNewTab ? '_blank' : null,
+            'navigate' => $this->shouldNavigateTo($url, $this->openUrlInNewTab),
             'disabled' => $record ? $this->isDisabled($record) : false,
             'recordKey' => $record?->getKey(),
             'actionName' => $this->name,

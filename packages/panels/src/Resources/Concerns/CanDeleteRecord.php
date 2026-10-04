@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Actions\DeleteAction;
 use NyonCode\WireCore\Actions\ForceDeleteAction;
 use NyonCode\WireCore\Actions\RestoreAction;
+use NyonCode\WireCore\Foundation\Routing\ClientNavigation;
 use NyonCode\WirePanels\Resources\Support\RecordAbility;
 
 /**
@@ -117,7 +118,7 @@ trait CanDeleteRecord
         $index = $this->reachablePageUrl('index');
 
         if ($index !== null) {
-            $this->redirect($index, navigate: true);
+            $this->redirect($index, navigate: app(ClientNavigation::class)->shouldNavigate($index));
         }
     }
 

@@ -113,8 +113,21 @@
                                     <template x-if="item.type === 'html'">
                                         <div x-html="item.html"></div>
                                     </template>
-                                    <template x-if="item.type === 'link'">
+                                    {{-- Two link templates, not one: Livewire reads `wire:navigate`
+                                         once, when Alpine initialises the element, so an attribute
+                                         bound or added later would never navigate. --}}
+                                    <template x-if="item.type === 'link' && ! item.navigate">
                                         <a :href="item.href" :target="item.newTab ? '_blank' : null" :class="item.classes"
+                                           role="menuitem" :data-testid="item.testId">
+                                            <span class="contents" x-html="item.iconHtml"></span>
+                                            <span class="flex-1" x-text="item.label"></span>
+                                            <template x-if="item.shortcut">
+                                                <kbd class="ml-auto pl-2 text-[10px] font-mono text-gray-500 dark:text-gray-400" x-text="item.shortcut"></kbd>
+                                            </template>
+                                        </a>
+                                    </template>
+                                    <template x-if="item.type === 'link' && item.navigate">
+                                        <a :href="item.href" wire:navigate :class="item.classes"
                                            role="menuitem" :data-testid="item.testId">
                                             <span class="contents" x-html="item.iconHtml"></span>
                                             <span class="flex-1" x-text="item.label"></span>

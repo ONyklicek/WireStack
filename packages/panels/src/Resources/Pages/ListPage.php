@@ -156,8 +156,7 @@ abstract class ListPage extends Component implements HasHeaderActions, Identifie
         return Action::make('create')
             ->label(__('wire-panels::messages.create', ['label' => $this->resourceLabel() ?? '']))
             ->icon('plus')
-            ->url($url)
-            ->extraAttributes(['wire:navigate' => '']);
+            ->url($url);
     }
 
     /**

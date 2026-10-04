@@ -1044,7 +1044,7 @@
                                         <span class="rounded-sm bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-600 dark:bg-gray-800 dark:text-gray-400">{{ $use['collection'] }}</span>
 
                                         @if ($use['url'])
-                                            <a href="{{ $use['url'] }}" class="text-primary-600 dark:text-primary-400 truncate hover:underline">{{ $use['label'] }}</a>
+                                            <a href="{{ $use['url'] }}" @wireNavigate($use['url']) class="text-primary-600 dark:text-primary-400 truncate hover:underline">{{ $use['label'] }}</a>
                                         @else
                                             <span class="truncate text-gray-600 dark:text-gray-300">{{ $use['label'] }}</span>
                                         @endif

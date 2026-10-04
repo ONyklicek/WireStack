@@ -198,7 +198,8 @@ cokoliv, co odpovědělo `Form::using()`, jinak — a `null` znamená zůstat.
 [`reachablePageUrl()`](#cesta-na-jeji-dalsi-stranky) je totéž minus stránky, které
 tenhle uživatel otevřít nesmí.
 
-Přesměrování jde přes `wire:navigate`, jako každý jiný odkaz v panelu.
+Přesměrování se řídí `wire-core.navigate`, jako každý jiný odkaz v panelu —
+[Konfigurace → Navigace](../start/configuration.md#navigace).
 
 **Toast o úspěchu jde s ním.** Notifikace je browser event a navigate vymění
 dokument, který by ji ukázal — takže ji driver zároveň flashne a toast container
