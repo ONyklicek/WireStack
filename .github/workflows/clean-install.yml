@@ -14,7 +14,7 @@ name: Clean Install
 
 on:
   push:
-    branches: [1.x, 2.x, 2.0.0]
+    branches: [1.x, 2.x]
     paths:
       - 'packages/**'
       - 'scripts/verify-clean-install.sh'
