@@ -485,11 +485,21 @@ it('resolves the sticky header to the page, or to a capped region', function () 
     expect($off->stickyHeaderClass)->toBe('')
         ->and($off->stickyHeaderFollowsPage)->toBeFalse()
         ->and($off->scrollRegionStyle)->toBe('')
-        ->and($page->stickyHeaderClass)->toContain('relative z-10')
+        ->and($page->stickyHeaderClass)->toContain('relative z-30')
         ->and($page->stickyHeaderFollowsPage)->toBeTrue()
         ->and($page->scrollRegionStyle)->toBe('')
-        ->and($capped->stickyHeaderClass)->toContain('sticky top-0')
+        ->and($capped->stickyHeaderClass)->toContain('sticky top-0 z-30')
         ->and($capped->stickyHeaderFollowsPage)->toBeFalse();
+});
+
+it('isolates the region and the body under a pinned header, and only then', function () {
+    // A cell's own `relative z-10` (a radio, a checkbox list) or the fill handle
+    // would otherwise paint over the header it slides under. The `<tbody>`
+    // folds every z-index inside it into one layer; the region keeps the
+    // header's `z-30` from rising over chrome outside the table.
+    expect(trpLayoutPlan(dense: false)->layout()->stickyLayerClass)->toBe('')
+        ->and(trpStickyPlan()->layout()->stickyLayerClass)->toBe('isolate')
+        ->and(trpStickyPlan('32rem')->layout()->stickyLayerClass)->toBe('isolate');
 });
 
 it('writes the cap as an inline style, where no extractor has to see it', function () {

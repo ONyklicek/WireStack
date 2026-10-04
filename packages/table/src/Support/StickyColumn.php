@@ -49,7 +49,7 @@ use NyonCode\WireTable\Table;
  * actions column at `start` every one of them comes later in the row. A positive
  * z-index lifts the pinned cell over its whole row. `z-10` on a header cell for
  * the mirror reason — it has to beat its own row's other headers — and both stay
- * under the sticky `<thead>`'s own `z-10` stacking context, so a pinned body cell
+ * under the sticky `<thead>`'s own `z-30` stacking context, so a pinned body cell
  * can never ride over the pinned header when both axes are scrolled.
  *
  * Everything here is a literal utility string for the reason given above. The

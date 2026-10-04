@@ -142,6 +142,7 @@
     $stickyHeaderClass = $plan->layout()->stickyHeaderClass;
     $scrollRegionStyle = $plan->layout()->scrollRegionStyle;
     $stickyHeaderFollowsPage = $plan->layout()->stickyHeaderFollowsPage;
+    $stickyLayerClass = $plan->layout()->stickyLayerClass;
     $isStackedOnMobile = $plan->layout()->isStackedOnMobile;
     $tableHiddenClass = $plan->layout()->tableHiddenClass;
     $cardsVisibleClass = $plan->layout()->cardsVisibleClass;
@@ -209,7 +210,7 @@
                         @if($stickyHeaderFollowsPage)
                             @include('wire-table::tables.partials.sticky-header-assets')
                         @endif
-                    <div class="relative overflow-x-auto wire-scroller {{ $tableHiddenClass }}"
+                    <div class="relative overflow-x-auto wire-scroller {{ $tableHiddenClass }} {{ $stickyLayerClass }}"
                          @if($scrollRegionStyle) style="{{ $scrollRegionStyle }}" @endif
                          @if($isFillEnabled)
                              {{-- Deliberately NOT island-targeted, unlike the editable
@@ -401,7 +402,7 @@
                                 <tbody
                                         {{-- With a touch menu, a long press is the row's right click: iOS must
                                              not answer it with its text callout, and a double tap must not zoom. --}}
-                                        class="divide-y divide-gray-100 dark:divide-gray-700{{ $touchMenuEnabled ? ' [&>tr]:touch-manipulation [@media(pointer:coarse)]:[&>tr]:select-none [@media(pointer:coarse)]:[&>tr]:[-webkit-touch-callout:none]' : '' }}"
+                                        class="divide-y divide-gray-100 dark:divide-gray-700{{ $stickyLayerClass ? ' '.$stickyLayerClass : '' }}{{ $touchMenuEnabled ? ' [&>tr]:touch-manipulation [@media(pointer:coarse)]:[&>tr]:select-none [@media(pointer:coarse)]:[&>tr]:[-webkit-touch-callout:none]' : '' }}"
                                         @if($recordActionsRootEnabled)
                                             x-data="wireRecordActions({ bindings: @js($recordActionBindings), contextMenu: {{ $rowContextMenuEnabled ? 'true' : 'false' }}, touch: {{ $touchMenuEnabled ? 'true' : 'false' }}, keyboard: @js($recordKeyboardConfig), active: @js($activeRowConfig), gestures: @js($gestureConfig) })"
                                             {{-- Bound whenever the controller is mounted, not only for pointer

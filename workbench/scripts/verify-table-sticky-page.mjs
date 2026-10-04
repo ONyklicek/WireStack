@@ -40,6 +40,45 @@ try {
 
   await shot('01-pinned');
 
+  // Whatever a cell renders stays under the header it slides beneath: an input
+  // lifted with `relative z-10` (as a radio or a checkbox list is) and a block
+  // at `z-20` (the fill handle's tier), both later in the document than the
+  // header. The probes are placed in the row the header currently covers.
+  const covered = JSON.parse(await eval_(`(() => {
+    const head = document.querySelector('thead[data-wire-sticky-head]')
+    const h = head.getBoundingClientRect()
+    const y = h.top + h.height / 2
+    const row = Array.from(document.querySelectorAll('tbody tr')).find((tr) => {
+      const r = tr.getBoundingClientRect()
+      return r.top <= y && r.bottom >= y
+    })
+    const cell = row.querySelector('td')
+    const r = cell.getBoundingClientRect()
+    // Each probe is pulled up until it straddles the header's middle line.
+    const probe = (tag, z, name) => {
+      const el = document.createElement(tag)
+      el.className = 'relative ' + z
+      el.dataset.probe = name
+      el.style.cssText = 'position:relative;display:block;height:' + Math.ceil(r.height * 3) + 'px'
+      cell.appendChild(el)
+      el.style.marginTop = Math.floor(y - el.getBoundingClientRect().top - r.height) + 'px'
+      return el
+    }
+    const input = probe('input', 'z-10', 'input')
+    const block = probe('div', 'z-20', 'block')
+    const at = (el) => {
+      const b = el.getBoundingClientRect()
+      const hit = document.elementFromPoint(b.left + 4, y)
+      return { overlaps: b.top <= y && b.bottom >= y, head: head.contains(hit) }
+    }
+    const out = { input: at(input), block: at(block) }
+    input.remove()
+    block.remove()
+    return JSON.stringify(out)
+  })()`));
+  check('a z-10 input in a row under the header stays beneath it', covered.input.overlaps && covered.input.head, JSON.stringify(covered.input));
+  check('and so does a z-20 block', covered.block.overlaps && covered.block.head, JSON.stringify(covered.block));
+
   // A re-render rewrites the thead's style to what the server sent; the
   // header has to come back to the pin line on its own.
   const firstRow = () => eval_(`document.querySelector('tbody tr')?.textContent.trim()`);

@@ -2,6 +2,16 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.5.2]
+
+### Fixed
+
+- **A pinned table header stays on top of the rows.** The header pinned by `stickyHeader()` sat at `z-10`, and
+  anything in a row at that tier or above painted over it as it slid under — a radio or checkbox list in a cell
+  (`relative z-10`), the fill overlay and the fill handle. The header now sits at `z-30`, and the `<tbody>` and the
+  scroll region are isolated, so whatever a cell renders stays beneath the header, and the header still stays
+  beneath a sticky top bar outside the table. Both pinned modes, page and `maxHeight`, are covered.
+
 ## [2.5.1]
 
 ### Fixed
