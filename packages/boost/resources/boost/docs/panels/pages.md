@@ -422,7 +422,11 @@ public static function pages(): array
 The resource's one `form()` renders in both modals. **What they save is the
 model's**: a modal keeps its state in the action's frame rather than in a page's
 `$data`, so creating is `Model::create($data)` and editing is
-`$record->update($data)` with the validated data. A form that needs the page
+`$record->update($data)` with the validated data. **Only what the form writes is
+saved** — the keys of its fields and repeaters, minus a field that is no column
+(`dehydrated(false)`), through `Form::writableData()`. The frame's state comes
+back from the browser, so a key no field declared (an owner, a flag) would
+otherwise reach any attribute the model leaves fillable. A form that needs the page
 lifecycle — a relationship repeater, an optimistic lock, `Form::using()` — wants
 a create and an edit page instead.
 

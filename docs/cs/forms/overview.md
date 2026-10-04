@@ -261,6 +261,7 @@ Když je `->authorize()` zapnuto, formulář se stane read-only (a skryje tlač�
 ->isEditing(): bool                  // model je instance
 ->getModel(): ?Model                 // aktuální instance modelu
 ->getFlatComponents(): array         // všechny komponenty (ploše)
+->writableData(array $data): array   // $data jen s tím, co formulář zapisuje (bez nedeklarovaných klíčů a dehydrated(false))
 ```
 
 ### Rendering

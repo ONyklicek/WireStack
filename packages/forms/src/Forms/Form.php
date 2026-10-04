@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Traits\Macroable;
 use Livewire\Component;
@@ -19,10 +20,12 @@ use NyonCode\WireCore\Core\Plugin\Hooks\FormFillingPayload;
 use NyonCode\WireCore\Core\Plugin\HookTarget;
 use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Schema\Wizard;
+use NyonCode\WireForms\Contracts\SavesAfterRecord;
 use NyonCode\WireForms\Forms\Config\ConfigBuilder;
 use NyonCode\WireForms\Forms\Config\FormConfig;
 use NyonCode\WireForms\Forms\Runtime\FormRuntime;
 use NyonCode\WireForms\Forms\Runtime\StaleModelException;
+use NyonCode\WireForms\Forms\Runtime\StateDehydrator;
 use NyonCode\WireForms\Forms\Runtime\StateManager;
 use NyonCode\WireForms\Rendering\FormRenderer;
 use NyonCode\WireForms\Support\NativeSubmit;
@@ -522,6 +525,40 @@ class Form implements Htmlable, ModalForm
     public function findComponentByStatePath(string $absolutePath): ?\NyonCode\WireCore\Foundation\Components\Component
     {
         return $this->getRuntime()->findComponentByStatePath($absolutePath);
+    }
+
+    /**
+     * The part of `$data` this form writes to a record.
+     *
+     * For a host that persists a form's state itself rather than through
+     * {@see save()} — an action modal does, since its state lives in the
+     * action's frame. That state comes back from the browser, so it can carry
+     * keys no field declared; written straight into `create()`/`update()` they
+     * reach any attribute the model leaves fillable. What is kept is the set
+     * the save lifecycle writes: the keys of the form's fields and repeaters,
+     * minus a field that says it is no column (`dehydrated(false)`) and one
+     * that writes itself against the saved record ({@see SavesAfterRecord}).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function writableData(array $data): array
+    {
+        $writable = [];
+
+        foreach ((new StateDehydrator)->payloadComponents($this->getSchema()) as $component) {
+            if ($component instanceof SavesAfterRecord || ! $component->isDehydrated()) {
+                continue;
+            }
+
+            $name = $component->getName();
+
+            if (Arr::has($data, $name)) {
+                Arr::set($writable, $name, Arr::get($data, $name));
+            }
+        }
+
+        return $writable;
     }
 
     /**

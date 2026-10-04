@@ -2,6 +2,23 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **`ManagePage` saves only what its form writes.** The create and edit modals passed the action frame's whole
+  state to `Model::create()` / `$record->update()`. That state comes back from the browser, so a key no field
+  declared — an owner id, a flag — reached any attribute the model left fillable: a user could create a record
+  in somebody else's name. A field switched off with `dehydrated(false)` was written too, and on a model without
+  that column the save failed. Both modals now write `Form::writableData($data)`: the keys of the form's fields
+  and repeaters, minus a field that is no column and one that saves itself after the record — the same set the
+  form's own save lifecycle writes.
+
+### Added
+
+- `Form::writableData(array $data)` — `$data` limited to what the form writes, for a host that persists a
+  form's state itself rather than through `save()`.
+
 ## [2.5.1]
 
 ### Fixed
