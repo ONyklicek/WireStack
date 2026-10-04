@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Modals;
 
 use NyonCode\WireCore\Foundation\Concerns\HasModalProperties;
+use NyonCode\WireCore\Foundation\Support\ModalDefaults;
 use NyonCode\WireCore\Modals\Concerns\HasFooterActions;
 use NyonCode\WireCore\Modals\Concerns\HasModalIcon;
 use NyonCode\WireCore\Modals\Contracts\ModalContract;
@@ -35,13 +36,10 @@ class SlideOver implements ModalContract
 
     protected bool $mobileOnly = false;
 
-    public function __construct()
+    /** A slide-over's own default: `wire-core.modals.slide_over_width`. */
+    protected function configuredWidth(): string
     {
-        try {
-            $this->width = config('wire-core.modals.slide_over_width', 'md') ?? 'md';
-        } catch (\Throwable) {
-            // Standalone usage without Laravel container
-        }
+        return ModalDefaults::slideOverWidth();
     }
 
     public static function make(): static

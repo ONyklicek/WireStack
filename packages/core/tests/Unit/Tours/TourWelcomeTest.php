@@ -187,9 +187,15 @@ it('takes the postponement allowance from configuration when the tour says nothi
 
     expect(app(TourHost::class)->payload(greeter())['welcome']['later'])->toBeNull();
 
+    // Not a number — `WIRE_TOURS_POSTPONE=` arrives as an empty string — keeps
+    // the shipped allowance instead of quietly removing the button.
     config()->set('wire-core.tours.postpone', 'not a number');
 
-    expect(TourState::configuredPostponeLimit())->toBe(0);
+    expect(TourState::configuredPostponeLimit())->toBe(3);
+
+    config()->set('wire-core.tours.postpone', '');
+
+    expect(TourState::configuredPostponeLimit())->toBe(3);
 });
 
 // ── The ledger ──────────────────────────────────────────────────────────────

@@ -45,15 +45,6 @@ class ConfirmationDialog implements ModalContract
 
     protected bool $isInformative = false;
 
-    public function __construct()
-    {
-        try {
-            $this->width = config('wire-core.modals.default_width', 'md') ?? 'md';
-        } catch (\Throwable) {
-            // Standalone usage without Laravel container
-        }
-    }
-
     public static function make(): static
     {
         return new static;

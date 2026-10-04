@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Notifications\Support;
 
+use NyonCode\WireCore\Foundation\Colors\ButtonPalette;
+use NyonCode\WireCore\Foundation\Colors\NoticePalette;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 
 /**
@@ -43,11 +45,13 @@ final class NotificationStyle
      */
     public static function for(?string $type): self
     {
+        // The tint is the role's, through the canonical icon ink — so a role
+        // pointed elsewhere in `wire-core.colors` repaints the bell's icons too.
         return match ($type) {
-            'success' => new self('success', 'success', 'outline:check-circle', 'text-emerald-600 dark:text-emerald-400'),
-            'error' => new self('error', 'danger', 'outline:x-circle', 'text-red-500 dark:text-red-400'),
-            'warning' => new self('warning', 'warning', 'outline:exclamation-triangle', 'text-amber-600 dark:text-amber-400'),
-            default => new self('info', 'info', 'outline:information-circle', 'text-cyan-600 dark:text-cyan-400'),
+            'success' => new self('success', 'success', 'outline:check-circle', NoticePalette::iconText('success')),
+            'error' => new self('error', 'danger', 'outline:x-circle', NoticePalette::iconText('danger')),
+            'warning' => new self('warning', 'warning', 'outline:exclamation-triangle', NoticePalette::iconText('warning')),
+            default => new self('info', 'info', 'outline:information-circle', NoticePalette::iconText('info')),
         };
     }
 
@@ -72,14 +76,16 @@ final class NotificationStyle
         // the toast both draw it, and both are read on a phone.
         $base = 'inline-flex items-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition sm:py-1 ';
 
-        return $base.match ($color ?? $this->color) {
-            'success' => 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50',
-            'danger', 'error' => 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50',
-            'warning' => 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50',
-            'info' => 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-300 dark:hover:bg-cyan-900/50',
-            'primary' => 'bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-300 dark:hover:bg-primary-900/50',
-            default => 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600',
+        // Only the six named here are this surface's vocabulary; anything else is
+        // the gray pill, as it always was. The hue behind a role is the
+        // canonical palette's, so `wire-core.colors` repaints these with the rest.
+        $color = match ($color ?? $this->color) {
+            'success', 'warning', 'info', 'primary' => $color ?? $this->color,
+            'danger', 'error' => 'danger',
+            default => 'gray',
         };
+
+        return $base.ButtonPalette::soft($color);
     }
 
     /**

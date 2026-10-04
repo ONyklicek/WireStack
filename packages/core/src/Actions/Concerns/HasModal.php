@@ -17,6 +17,7 @@ use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\Support\ModalDefaults;
 use NyonCode\WireCore\Infolists\Infolist;
 use NyonCode\WireCore\Modals\Contracts\ModalContract;
 use NyonCode\WireCore\Modals\Modal;
@@ -58,11 +59,12 @@ trait HasModal
 
     protected ?string $modalSavingLabel = null;
 
-    protected ?string $modalWidth = 'md';
+    /** The three below fall back to `config('wire-core.modals')` — see {@see ModalDefaults}. */
+    protected ?string $modalWidth = null;
 
-    protected bool $modalCloseOnClickAway = true;
+    protected ?bool $modalCloseOnClickAway = null;
 
-    protected bool $modalCloseOnEscape = true;
+    protected ?bool $modalCloseOnEscape = null;
 
     /** @var ModalForm|Closure|null Form instance or closure returning a form */
     protected ModalForm|Closure|null $formInstance = null;
@@ -200,7 +202,7 @@ trait HasModal
         return $this;
     }
 
-    /** Whether clicking the backdrop closes the modal (default true). */
+    /** Whether clicking the backdrop closes the modal (default: `wire-core.modals.close_on_click_away`). */
     public function closeModalOnClickAway(bool $close = true): static
     {
         $this->modalCloseOnClickAway = $close;
@@ -208,7 +210,7 @@ trait HasModal
         return $this;
     }
 
-    /** Whether pressing Escape closes the modal (default true). */
+    /** Whether pressing Escape closes the modal (default: `wire-core.modals.close_on_escape`). */
     public function closeModalOnEscape(bool $close = true): static
     {
         $this->modalCloseOnEscape = $close;
@@ -510,19 +512,24 @@ trait HasModal
         return $this->modalSavingLabel ?? Trans::get('wire-core::actions.submit_saving');
     }
 
+    /**
+     * The modal's width: the one set, else the configured default for the
+     * surface it opens as — `slide_over_width` for a slide-over, `default_width`
+     * for a dialog.
+     */
     public function getModalWidth(): string
     {
-        return $this->modalWidth ?? 'md';
+        return $this->modalWidth ?? ($this->isSlideOver() ? ModalDefaults::slideOverWidth() : ModalDefaults::width());
     }
 
     public function shouldCloseModalOnClickAway(): bool
     {
-        return $this->modalCloseOnClickAway;
+        return $this->modalCloseOnClickAway ?? ModalDefaults::closeOnClickAway();
     }
 
     public function shouldCloseModalOnEscape(): bool
     {
-        return $this->modalCloseOnEscape;
+        return $this->modalCloseOnEscape ?? ModalDefaults::closeOnEscape();
     }
 
     public function isSlideOver(): bool

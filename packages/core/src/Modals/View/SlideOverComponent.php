@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Modals\View;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
+use NyonCode\WireCore\Foundation\Support\ModalDefaults;
 use NyonCode\WireCore\Modals\Support\SlideOverStyle;
 
 /**
@@ -33,11 +34,11 @@ class SlideOverComponent extends Component
     public function __construct(
         public ?string $heading = null,
         public ?string $description = null,
-        public string $width = 'md',
+        public ?string $width = null,
         public string $position = 'right',
         public ?string $maxHeight = null,
-        public bool $closeOnClickAway = true,
-        public bool $closeOnEscape = true,
+        public ?bool $closeOnClickAway = null,
+        public ?bool $closeOnEscape = null,
         public bool $stickyFooter = false,
         public bool $stickyHeader = false,
         public ?string $id = null,
@@ -46,12 +47,17 @@ class SlideOverComponent extends Component
         public ?string $breakpoint = null,
         public ?int $zIndex = null,
         public ?string $openOn = null,
-    ) {}
+    ) {
+        // Unset attributes follow config('wire-core.modals') — see ModalDefaults.
+        $this->width ??= ModalDefaults::slideOverWidth();
+        $this->closeOnClickAway ??= ModalDefaults::closeOnClickAway();
+        $this->closeOnEscape ??= ModalDefaults::closeOnEscape();
+    }
 
     public function style(): SlideOverStyle
     {
         return new SlideOverStyle(
-            width: $this->width,
+            width: $this->width ?? ModalDefaults::slideOverWidth(),
             position: $this->position,
             bottomSheetOnMobile: $this->bottomSheetOnMobile,
             breakpoint: $this->breakpoint,

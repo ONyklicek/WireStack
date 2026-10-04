@@ -381,7 +381,8 @@ final class IconManager
             return;
         }
 
-        if (config('wire-core.icons.warn_missing', false) !== true) {
+        // Cast, not compared: `WIRE_ICONS_WARN_MISSING=1` arrives as the string "1".
+        if (! (bool) config('wire-core.icons.warn_missing', false)) {
             return;
         }
 

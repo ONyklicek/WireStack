@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Modals\View;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
+use NyonCode\WireCore\Foundation\Support\ModalDefaults;
 use NyonCode\WireCore\Modals\Support\ModalStyle;
 
 /**
@@ -33,12 +34,12 @@ class ModalComponent extends Component
     public function __construct(
         public ?string $heading = null,
         public ?string $description = null,
-        public string $width = 'md',
+        public ?string $width = null,
         public ?string $icon = null,
         public string $iconColor = 'gray',
         public ?string $maxHeight = null,
-        public bool $closeOnClickAway = true,
-        public bool $closeOnEscape = true,
+        public ?bool $closeOnClickAway = null,
+        public ?bool $closeOnEscape = null,
         public bool $fullScreenOnMobile = false,
         public bool $slideOverOnMobile = false,
         public bool $stickyFooter = false,
@@ -48,12 +49,17 @@ class ModalComponent extends Component
         public ?string $breakpoint = null,
         public ?int $zIndex = null,
         public ?string $openOn = null,
-    ) {}
+    ) {
+        // Unset attributes follow config('wire-core.modals') — see ModalDefaults.
+        $this->width ??= ModalDefaults::width();
+        $this->closeOnClickAway ??= ModalDefaults::closeOnClickAway();
+        $this->closeOnEscape ??= ModalDefaults::closeOnEscape();
+    }
 
     public function style(): ModalStyle
     {
         return new ModalStyle(
-            width: $this->width,
+            width: $this->width ?? ModalDefaults::width(),
             maxHeight: $this->maxHeight,
             fullScreenOnMobile: $this->fullScreenOnMobile,
             slideOverOnMobile: $this->slideOverOnMobile,

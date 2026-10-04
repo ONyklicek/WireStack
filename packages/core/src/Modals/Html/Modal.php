@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Modals\Html;
 
 use Illuminate\Contracts\Support\Htmlable;
+use NyonCode\WireCore\Foundation\Support\ModalDefaults;
 use NyonCode\WireCore\Modals\Support\ModalStyle;
 
 /**
@@ -40,12 +41,12 @@ final class Modal implements Htmlable
     public function __construct(
         public ?string $heading = null,
         public ?string $description = null,
-        public string $width = 'md',
+        public ?string $width = null,
         public ?string $icon = null,
         public string $iconColor = 'gray',
         public ?string $maxHeight = null,
-        public bool $closeOnClickAway = true,
-        public bool $closeOnEscape = true,
+        public ?bool $closeOnClickAway = null,
+        public ?bool $closeOnEscape = null,
         public bool $fullScreenOnMobile = false,
         public bool $slideOverOnMobile = false,
         public bool $stickyFooter = false,
@@ -62,13 +63,18 @@ final class Modal implements Htmlable
         public string|Htmlable|null $footer = null,
         public ?string $footerView = null,
         public array $footerData = [],
-    ) {}
+    ) {
+        // Unset attributes follow config('wire-core.modals') — see ModalDefaults.
+        $this->width ??= ModalDefaults::width();
+        $this->closeOnClickAway ??= ModalDefaults::closeOnClickAway();
+        $this->closeOnEscape ??= ModalDefaults::closeOnEscape();
+    }
 
     public function toHtml(): string
     {
         return view('wire-core::modals.modal', [
             'style' => new ModalStyle(
-                width: $this->width,
+                width: $this->width ?? ModalDefaults::width(),
                 maxHeight: $this->maxHeight,
                 fullScreenOnMobile: $this->fullScreenOnMobile,
                 slideOverOnMobile: $this->slideOverOnMobile,

@@ -200,9 +200,9 @@ pravidlo za tím, co může vypadat jako dva zápisy jedné věci.
 ->icon(string|Icon|null $icon, string|Color|null $color = null)
 ->color(string|Color|null $color)                    // akcent a barva odesílacího tlačítka
 ->danger(bool $danger = true)                        // záměr, ne odstín: barvu vyplní, jen když ji nikdo nezvolil
-->width(string|ModalWidth $width)                    // 'sm'|'md'|'lg'|'xl'|'2xl'…'7xl'|'full' — výchozí 'md'
+->width(string|ModalWidth $width)                    // 'sm'|'md'|'lg'|'xl'|'2xl'…'7xl'|'full' — výchozí: wire-core.modals.default_width
 ->maxHeight(string $maxHeight)                       // CSS délka, po které se tělo začne scrollovat
-->closeOnClickAway(bool $close = true)               // výchozí true
+->closeOnClickAway(bool $close = true)               // výchozí: wire-core.modals.close_on_click_away
 ->closeOnEscape(bool $close = true)                  // false pro potvrzení, které stojí za přečtení
 ->id(string $id)                                     // stabilní DOM id, když ho musí adresovat něco zvenčí
 ->submitLabel(?string $label)                        // výchozí: „Potvrdit" z frameworku

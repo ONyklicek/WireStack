@@ -12,6 +12,7 @@ use NyonCode\WireCore\Notifications\Contracts\ResolvesNotifiable;
 use NyonCode\WireCore\Notifications\DatabaseNotification;
 use NyonCode\WireCore\Notifications\Drivers\BroadcastDriver;
 use NyonCode\WireCore\Notifications\Drivers\DatabaseDriver;
+use NyonCode\WireCore\Notifications\Drivers\NullDriver;
 use NyonCode\WireCore\Notifications\Events\NotificationReceived;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationAction;
@@ -136,6 +137,29 @@ it('sends to a recipient in one call', function () {
     NotificationManager::sendTo($this->grace, Notification::info('hi'), app(NotificationDriver::class));
 
     expect(DatabaseNotification::query()->sole()->notifiable_id)->toBe('2');
+});
+
+it('delivers through the configured driver when none is passed', function () {
+    // The configured driver is the default for every notification an action,
+    // a table or a form raises, not only for the `wire` Laravel channel.
+    config()->set('wire-core.notifications.default', 'database');
+    app()->forgetInstance(NotificationDriver::class);
+    NotificationManager::reset();
+
+    NotificationManager::sendTo($this->grace, Notification::info('hi'));
+
+    expect(DatabaseNotification::query()->sole()->notifiable_id)->toBe('2');
+});
+
+it('prefers a default set in code over the configured one', function () {
+    config()->set('wire-core.notifications.default', 'database');
+    app()->forgetInstance(NotificationDriver::class);
+    NotificationManager::setDefaultDriver(new NullDriver);
+
+    NotificationManager::sendTo($this->grace, Notification::info('hi'));
+    NotificationManager::reset();
+
+    expect(DatabaseNotification::query()->count())->toBe(0);
 });
 
 /*

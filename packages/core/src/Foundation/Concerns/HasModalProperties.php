@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Closure;
 use NyonCode\WireCore\Foundation\Enums\ModalWidth;
+use NyonCode\WireCore\Foundation\Support\ModalDefaults;
 
 /**
  * Shared modal properties: heading, description, width, close behaviour.
@@ -31,11 +32,14 @@ trait HasModalProperties
 
     protected ?Closure $descriptionCallback = null;
 
-    protected string $width = 'md';
+    /** Resolved lazily from `config('wire-core.modals')` — see {@see configuredWidth()}. */
+    protected ?string $width = null;
 
-    protected bool $closeOnClickAway = true;
+    /** Resolved lazily from `config('wire-core.modals.close_on_click_away')`. */
+    protected ?bool $closeOnClickAway = null;
 
-    protected bool $closeOnEscape = true;
+    /** Resolved lazily from `config('wire-core.modals.close_on_escape')`. */
+    protected ?bool $closeOnEscape = null;
 
     protected ?string $maxHeight = null;
 
@@ -118,7 +122,16 @@ trait HasModalProperties
 
     public function getWidth(): string
     {
-        return $this->width;
+        return $this->width ?? $this->configuredWidth();
+    }
+
+    /**
+     * The width this kind of modal takes when none was set. A dialog's; a
+     * slide-over answers its own key.
+     */
+    protected function configuredWidth(): string
+    {
+        return ModalDefaults::width();
     }
 
     /**
@@ -175,12 +188,12 @@ trait HasModalProperties
 
     public function shouldCloseOnClickAway(): bool
     {
-        return $this->closeOnClickAway;
+        return $this->closeOnClickAway ?? ModalDefaults::closeOnClickAway();
     }
 
     public function shouldCloseOnEscape(): bool
     {
-        return $this->closeOnEscape;
+        return $this->closeOnEscape ?? ModalDefaults::closeOnEscape();
     }
 
     public function getMaxHeight(): ?string

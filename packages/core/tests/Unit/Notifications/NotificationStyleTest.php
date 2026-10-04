@@ -61,3 +61,22 @@ it('falls an uncoloured action back to the notification it belongs to', function
     expect(NotificationStyle::for('error')->actionClasses(null))->toContain('red')
         ->and(NotificationStyle::for('success')->actionClasses(null))->toContain('emerald');
 });
+
+it('follows the hue wire-core.colors gives a role, on the tint and on the actions', function () {
+    // "Every surface follows it" includes the bell: a role pointed elsewhere
+    // repaints its icon and its action pills along with the rest.
+    config()->set('wire-core.colors.success', 'green');
+    config()->set('wire-core.colors.info', 'sky');
+
+    expect(NotificationStyle::for('success')->tint)->toContain('text-green-700')
+        ->and(NotificationStyle::for('success')->tint)->not->toContain('emerald')
+        ->and(NotificationStyle::for('info')->tint)->toContain('sky')
+        ->and(NotificationStyle::for('info')->actionClasses('success'))->toContain('bg-green-50')
+        ->and(NotificationStyle::for('success')->actionClasses(null))->toContain('text-green-700');
+});
+
+it('draws an action colour outside its vocabulary as the gray pill', function () {
+    // The vocabulary is the toast's six; a raw hue is not one of them.
+    expect(NotificationStyle::for('info')->actionClasses('fuchsia'))->toContain('bg-gray-100')
+        ->and(NotificationStyle::for('info')->actionClasses('fuchsia'))->not->toContain('fuchsia');
+});
