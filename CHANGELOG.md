@@ -2,6 +2,31 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.6.0]
+
+### Added
+
+- **A settings section an application already has can now be built on `wire-module-settings`.** Until now a
+  group was a schema written as it stood, on the module's own screen, under the `settings` key — so a section
+  with a preview, a rule across two fields or a calculator could not use the module at all, and an application
+  that already had a `settings` resource could not install it (the registry refuses one key twice). Each
+  capability is a small optional contract on the group, and a group that implements none is unchanged:
+  - `TransformsSettings` — `fromStorage()` / `toStorage()` shape values for the form and back. `toStorage()`
+    runs after the form shaped its own fields, so an upload is already on its disk.
+  - `ValidatesSettings` — a rule across fields; its messages stop the save and are shown under the field.
+  - `SpansSettingsGroups` — one screen over several storage groups, written in one transaction.
+  - `ExtendsSettingsScreen` — something drawn under the form from its live state (a preview, a sum).
+  - `RendersSettingsScreen` — a Livewire component of the group's own in place of the form.
+  - `ConfirmsSettingsSave` — the group's own words for "saved".
+- `wire-module-settings.screen` — `false` keeps storage, groups and contracts and registers no screen, route
+  or menu heading. `SettingsPage` can then be routed (or extended) where the application's own section is; with
+  no module route to link to, the groups switch on the page itself as `?group=…`.
+- `wire-module-settings.switcher` — `links` (default) or `tabs`, the bar `<x-wire::tabs>` draws. Anything
+  else throws `SettingsScreenException`.
+- `Settings::fillMany([$group => $values, …])` — several storage groups in one transaction, each announced
+  with `SettingsSaved`. `Settings::fill()` now goes through it.
+- Hook names `settings-component` and `settings-extension`.
+
 ## [2.5.2]
 
 ### Fixed

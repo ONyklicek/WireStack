@@ -49,6 +49,34 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | The Screen
+    |--------------------------------------------------------------------------
+    |
+    | Off keeps everything but the screen: storage, `Settings`, the groups and
+    | every contract a group implements. Nothing is registered under the
+    | `settings` key, no route and no menu entry — for an application that
+    | already has a settings section of its own (and is using that key), which
+    | routes `SettingsPage` or a subclass of it there instead.
+    |
+    */
+
+    'screen' => env('WIRE_SETTINGS_SCREEN', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Switcher
+    |--------------------------------------------------------------------------
+    |
+    | How the groups are offered when there is more than one: `links`, a row of
+    | buttons, or `tabs`, the tab bar `<x-wire::tabs>` draws. Links either way —
+    | a group is a URL, so it can be bookmarked. Anything else throws.
+    |
+    */
+
+    'switcher' => 'links',
+
+    /*
+    |--------------------------------------------------------------------------
     | Storage
     |--------------------------------------------------------------------------
     */
