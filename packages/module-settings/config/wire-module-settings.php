@@ -77,6 +77,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Layout
+    |--------------------------------------------------------------------------
+    |
+    | `width` caps how wide a group's screen grows, centred — one of the widths
+    | a modal takes (`sm` … `7xl`, `full`); null keeps the full page width.
+    | `actions_alignment` places the save button: `left`, `center` or `right`.
+    |
+    */
+
+    'width' => null,
+
+    'actions_alignment' => 'left',
+
+    /*
+    |--------------------------------------------------------------------------
     | Storage
     |--------------------------------------------------------------------------
     */

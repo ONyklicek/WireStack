@@ -364,6 +364,12 @@ already is. The page is not final for that reason: override `getTitle()` and
 groups switch on the page itself — `?group=mail`, still one URL per group, so a
 bookmark still lands on it.
 
+`width` caps how wide a group's screen grows, centred — one of the widths a modal
+takes (`sm` … `7xl`, `full`), so `2xl` is the width it is there; null keeps the
+full page. A column of short inputs stretched across a wide monitor reads as a row
+of empty boxes. `actions_alignment` places the save button (`left`, `center`,
+`right`). An unknown width throws, like an unknown switcher.
+
 `switcher` takes `links` (a row of buttons, the default) or `tabs` (the bar
 `<x-wire::tabs>` draws); both are links. Anything else throws
 `SettingsScreenException`, because a typo that quietly drew links would read as
@@ -477,6 +483,8 @@ Every key, each covered by a section above except the two at the bottom:
 'except' => [],        // storage names of contributed tabs to drop [tl! focus]
 'screen' => true,      // false: storage only — see On A Page Of Your Own
 'switcher' => 'links', // or 'tabs'
+'width' => null,       // or a modal width: 'sm' … '7xl', 'full'
+'actions_alignment' => 'left',
 'permission' => null,  // the ability the screen requires — see Who May Change What
 'table' => 'wire_settings',
 

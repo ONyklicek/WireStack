@@ -12,6 +12,9 @@ use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
+use NyonCode\WireCore\Foundation\Concerns\HasModalProperties;
+use NyonCode\WireCore\Foundation\Enums\Alignment;
+use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WireForms\Forms\Form;
@@ -240,6 +243,36 @@ class SettingsPage extends Component implements IdentifiesHookTarget, ProvidesBr
     }
 
     /**
+     * How wide the group's screen may grow: the `max-w-*` class for
+     * `wire-module-settings.width`, or null for the full width of the page.
+     *
+     * A settings form is a column of short inputs, and on a wide monitor one
+     * stretched across the page reads as a row of empty boxes; the widths are
+     * the ones a modal takes ({@see ModalWidth}), so `2xl` here is the width it
+     * is there. Anything else throws, for the reason the switcher does.
+     */
+    protected function contentWidthClass(): ?string
+    {
+        $width = config('wire-module-settings.width');
+
+        if ($width === null || $width === '') {
+            return null;
+        }
+
+        if (! (is_string($width) || $width instanceof ModalWidth) || (is_string($width) && ModalWidth::tryFrom($width) === null)) {
+            throw SettingsScreenException::unknownWidth($width, ModalWidth::values());
+        }
+
+        return HasModalProperties::getMaxWidthClass($width, responsive: false);
+    }
+
+    /** Where the save button sits under the form (`wire-module-settings.actions_alignment`). */
+    protected function actionsAlignment(): Alignment
+    {
+        return Alignment::resolve((string) config('wire-module-settings.actions_alignment', 'left'));
+    }
+
+    /**
      * The switcher's entries, resolved in PHP for the view.
      *
      * @return array<string, array{label: string, icon: ?string, url: ?string, current: bool}>
@@ -387,6 +420,8 @@ class SettingsPage extends Component implements IdentifiesHookTarget, ProvidesBr
             'description' => $this->description(),
             'breadcrumbs' => $this->breadcrumbs(),
             'surface' => $this->needsSurface(),
+            'widthClass' => $this->contentWidthClass(),
+            'actionsJustify' => $this->actionsAlignment()->justifyClass(),
             // Not `component`: Blade keeps the component it is rendering in that
             // variable, so the first <x-wire::icon> in the switcher overwrote it.
             'screenComponent' => $class === null ? null : SettingsGroupValues::component($class),

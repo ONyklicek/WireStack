@@ -348,3 +348,36 @@ it('refuses a switcher it does not know, rather than drawing links', function ()
     expect($thrown)->toBeInstanceOf(SettingsScreenException::class)
         ->and($thrown->getMessage())->toContain("'pills'");
 });
+
+// ── Layout ─────────────────────────────────────────────────────────
+
+it('caps the screen to a configured width and places the save button', function (?string $width, string $align, ?string $class, string $justify) {
+    config()->set('wire-module-settings.groups', [GcShift::class]);
+    config()->set('wire-module-settings.width', $width);
+    config()->set('wire-module-settings.actions_alignment', $align);
+
+    $html = Livewire::test(SettingsPage::class)->html();
+
+    expect($html)->toContain($justify);
+    $class === null
+        ? expect($html)->not->toContain('mx-auto w-full')
+        : expect($html)->toContain('mx-auto w-full '.$class);
+})->with([
+    'full width, left' => [null, 'left', null, 'justify-start'],
+    '2xl, right' => ['2xl', 'right', 'max-w-2xl', 'justify-end'],
+]);
+
+it('refuses a width it does not know', function (mixed $width) {
+    config()->set('wire-module-settings.groups', [GcShift::class]);
+    config()->set('wire-module-settings.width', $width);
+
+    try {
+        Livewire::test(SettingsPage::class);
+        $thrown = null;
+    } catch (Throwable $e) {
+        $thrown = $e instanceof SettingsScreenException ? $e : $e->getPrevious();
+    }
+
+    expect($thrown)->toBeInstanceOf(SettingsScreenException::class)
+        ->and($thrown->getMessage())->toContain('wire-module-settings.width');
+})->with(['an unknown token' => 'huge', 'not a string' => 42]);

@@ -26,4 +26,14 @@ final class SettingsScreenException extends InvalidArgumentException implements 
             implode(' or ', array_map(static fn (string $s): string => "'{$s}'", $known)),
         ));
     }
+
+    /** @param  array<int, string>  $known */
+    public static function unknownWidth(mixed $given, array $known): self
+    {
+        return new self(sprintf(
+            '[wire-module-settings.width] is %s; it takes null or one of %s.',
+            is_string($given) ? "'{$given}'" : get_debug_type($given),
+            implode(', ', array_map(static fn (string $s): string => "'{$s}'", $known)),
+        ));
+    }
 }

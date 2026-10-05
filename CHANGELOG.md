@@ -2,6 +2,24 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.7.1]
+
+### Fixed
+
+- **A new repeater row starts with its fields' defaults.** `addRepeaterItem` appended an empty row, so a
+  required field with a `->default()` — a direction select, say — arrived blank and the save failed on it; a
+  host had to override the endpoint to put the defaults in by hand. The row now carries every `->default()`
+  its fields declare (through layouts, an enum default as its value, a repeater nested in another's row too).
+  Defaults only, never the structural blanks a whole form self-seeds with: a relationship row becomes a record,
+  and a key set to `null` there would override the column's database default.
+
+### Added
+
+- `wire-module-settings.width` — caps a group's screen to a modal width (`sm` … `7xl`, `full`), centred; null
+  keeps the full page. An unknown width throws `SettingsScreenException`.
+- `wire-module-settings.actions_alignment` — `left` (default), `center` or `right` for the save button.
+- `Form::newRepeaterItemState()` and `FormRuntime::findRepeaterByStatePath()` / `getDefaultStateFor()`.
+
 ## [2.7.0]
 
 ### Added

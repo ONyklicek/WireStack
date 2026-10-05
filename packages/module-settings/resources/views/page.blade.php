@@ -54,6 +54,9 @@
         </nav>
     @endif
 
+    {{-- A width of its own, when one is configured: a column of short inputs
+         stretched across a wide page reads as a row of empty boxes. --}}
+    <div @class(['space-y-4 sm:space-y-6', 'mx-auto w-full '.$widthClass => $widthClass])>
     @if ($groups === [])
         {{-- No group declared: the module has storage and a screen, and the
              application has not said what is configurable yet. --}}
@@ -90,9 +93,12 @@
                 <div data-testid="settings-extension" @wireEl('settings-extension')>{{ $extension }}</div>
             @endif
 
-            <x-wire::button type="submit" data-testid="settings-save">
-                {{ __('wire-module-settings::messages.save') }}
-            </x-wire::button>
+            <div class="flex {{ $actionsJustify }}">
+                <x-wire::button type="submit" data-testid="settings-save">
+                    {{ __('wire-module-settings::messages.save') }}
+                </x-wire::button>
+            </div>
         </form>
     @endif
+    </div>
 </div>

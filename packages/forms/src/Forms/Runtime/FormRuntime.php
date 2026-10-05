@@ -263,6 +263,28 @@ final class FormRuntime
     }
 
     /**
+     * What a new repeater row starts with: the `->default()` each of its fields
+     * declares, cast the way the field reads its state — and nothing for a field
+     * that declares none.
+     *
+     * Defaults only, not the structural blanks {@see getInitialState()} adds: a
+     * row of a relationship repeater becomes a record, and a key set to `null`
+     * there overrides the column's own database default where an absent key
+     * would have left it alone.
+     *
+     * @param  array<int, mixed>  $components  The row's schema.
+     * @return array<string, mixed>
+     */
+    public function getDefaultStateFor(array $components): array
+    {
+        [, $defaults, $types] = $this->collectInitialState($components);
+
+        $types = array_intersect_key($types, $defaults);
+
+        return $types !== [] && $defaults !== [] ? (new StateHydrator)->hydrate($defaults, $types) : $defaults;
+    }
+
+    /**
      * The schema-derived initial state: a key for every field (and top-level
      * repeater) mapped to its ->default() when set, otherwise its type-correct
      * blank. This is the single canonical seed both {@see fill()} and modal
@@ -671,6 +693,52 @@ final class FormRuntime
         }
 
         return $this->findInRepeaters($nestedRepeaters, $absolutePath);
+    }
+
+    /**
+     * The repeater bound to `$absolutePath` — one of the form's own, or one
+     * nested in a row of another (`data.contacts.0.phones`).
+     *
+     * Separate from {@see findComponentByStatePath()}, which answers fields: a
+     * repeater is a layout rather than a component, kept out of the flat list
+     * and skipped when an item's schema is searched.
+     */
+    public function findRepeaterByStatePath(string $absolutePath): ?Repeater
+    {
+        return $this->findRepeaterIn($this->getRepeaters(), $absolutePath);
+    }
+
+    /**
+     * @param  array<int, Repeater>  $repeaters
+     */
+    private function findRepeaterIn(array $repeaters, string $absolutePath): ?Repeater
+    {
+        foreach ($repeaters as $repeater) {
+            $path = $repeater->getStatePath();
+
+            if ($path === $absolutePath) {
+                return $repeater;
+            }
+
+            if (! str_starts_with($absolutePath, $path.'.')) {
+                continue;
+            }
+
+            // The segment right after the repeater path must be an item index.
+            $index = explode('.', substr($absolutePath, strlen($path) + 1), 2)[0];
+
+            if (! ctype_digit($index)) {
+                continue;
+            }
+
+            $found = $this->findRepeaterIn($this->collectRepeaters($repeater->getItemSchema((int) $index)), $absolutePath);
+
+            if ($found !== null) {
+                return $found;
+            }
+        }
+
+        return null;
     }
 
     /**

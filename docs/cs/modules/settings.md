@@ -363,6 +363,13 @@ pro vlastní drobečky, `groups()` pro to, které skupiny stránka nabízí, a
 odkázal, skupiny se přepínají na stránce samotné — `?group=mail`, pořád jedna
 adresa na skupinu, takže záložka v prohlížeči na ni dál vede.
 
+`width` omezí, jak široká obrazovka skupiny naroste, a vycentruje ji — jedna ze
+šířek, které bere modal (`sm` … `7xl`, `full`), takže `2xl` je tatáž šířka jako
+tam; null nechá celou šířku stránky. Sloupec krátkých polí roztažený přes široký
+monitor se čte jako řada prázdných krabic. `actions_alignment` umístí tlačítko
+uložení (`left`, `center`, `right`). Neznámá šířka vyhodí výjimku, stejně jako
+neznámý přepínač.
+
 `switcher` bere `links` (řadu tlačítek, výchozí) nebo `tabs` (lištu, jakou kreslí
 `<x-wire::tabs>`); obojí jsou odkazy. Cokoli jiného vyhodí
 `SettingsScreenException`, protože překlep, který by potichu nakreslil odkazy,
@@ -475,6 +482,8 @@ Všechny klíče; každý má sekci výš, kromě těch dvou na konci:
 'except' => [],        // úložná jména dodaných tabů, které se mají zahodit [tl! focus]
 'screen' => true,      // false: jen úložiště — viz Na vlastní stránce
 'switcher' => 'links', // nebo 'tabs'
+'width' => null,       // nebo šířka modalu: 'sm' … '7xl', 'full'
+'actions_alignment' => 'left',
 'permission' => null,  // oprávnění, které obrazovka vyžaduje — viz Kdo co smí měnit
 'table' => 'wire_settings',
 
