@@ -6,11 +6,18 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Fixed
 
-- **A pinned table header stays on top of the rows.** The header pinned by `stickyHeader()` sat at `z-10`, and
-  anything in a row at that tier or above painted over it as it slid under — a radio or checkbox list in a cell
-  (`relative z-10`), the fill overlay and the fill handle. The header now sits at `z-30`, and the `<tbody>` and the
-  scroll region are isolated, so whatever a cell renders stays beneath the header, and the header still stays
-  beneath a sticky top bar outside the table. Both pinned modes, page and `maxHeight`, are covered.
+- **`ManagePage` saves only what its form writes.** The create and edit modals passed the action frame's whole
+  state to `Model::create()` / `$record->update()`. That state comes back from the browser, so a key no field
+  declared — an owner id, a flag — reached any attribute the model left fillable: a user could create a record
+  in somebody else's name. A field switched off with `dehydrated(false)` was written too, and on a model without
+  that column the save failed. Both modals now write `Form::writableData($data)`: the keys of the form's fields
+  and repeaters, minus a field that is no column and one that saves itself after the record — the same set the
+  form's own save lifecycle writes.
+
+### Added
+
+- `Form::writableData(array $data)` — `$data` limited to what the form writes, for a host that persists a
+  form's state itself rather than through `save()`.
 
 ## [2.5.1]
 
