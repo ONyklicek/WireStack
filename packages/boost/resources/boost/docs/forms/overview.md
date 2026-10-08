@@ -260,6 +260,7 @@ When `->authorize()` is enabled the form becomes read-only (and hides the save b
 ->isEditing(): bool                  // model is instance
 ->getModel(): ?Model                 // current model instance
 ->getFlatComponents(): array         // all components (flat)
+->writableData(array $data): array   // $data limited to what the form writes (no undeclared keys, no dehydrated(false))
 ```
 
 ### Rendering

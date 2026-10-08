@@ -33,7 +33,9 @@ use NyonCode\WireTable\Table;
  * The resource's one `form()` serves both modals, as it serves both pages of an
  * ordinary resource. **Persistence is the model's, not the form's**: a modal
  * keeps its state in the action's frame, so what it saves is `Model::create()`
- * and `$record->update()` with the validated data. A form that needs the page
+ * and `$record->update()` with the validated data — limited to what the form
+ * writes ({@see Form::writableData()}), because the frame's state comes back
+ * from the browser and may carry a key no field declared. A form that needs the page
  * lifecycle — relationship repeaters, an optimistic lock, `Form::using()` —
  * belongs on a create and an edit page.
  *
@@ -60,7 +62,7 @@ abstract class ManagePage extends ListPage
             ->icon('plus')
             ->modalHeading(__('wire-panels::messages.create', ['label' => $this->resourceLabel() ?? '']))
             ->form(fn (): Form => $this->manageForm())
-            ->action(fn (array $data) => $model::query()->create($data))
+            ->action(fn (array $data) => $model::query()->create($this->manageForm()->writableData($data)))
             ->successNotification(__('wire-panels::messages.created', ['label' => $this->resourceLabel() ?? '']));
     }
 
@@ -84,7 +86,7 @@ abstract class ManagePage extends ListPage
                 ->modalHeading(__('wire-panels::messages.edit', ['label' => $this->resourceLabel() ?? '']))
                 ->form(fn (): Form => $this->manageForm())
                 ->fillFormUsing(fn (?Model $record): array => $record?->attributesToArray() ?? [])
-                ->action(fn (Model $record, array $data) => $record->update($data))
+                ->action(fn (Model $record, array $data) => $record->update($this->manageForm()->writableData($data)))
                 ->successNotification(__('wire-panels::messages.saved')),
             $this->guardedByPolicy(DeleteAction::make(), 'delete', perRecord: true)
                 ->action(fn (Model $record) => $record->delete())
