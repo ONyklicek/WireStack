@@ -2,7 +2,7 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
-## [2.6.0]
+## [2.7.0]
 
 ### Added
 
@@ -27,6 +27,22 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **A link to another site is never navigated.** The sidebar, top navigation, breadcrumbs and pins wrote
   `wire:navigate` on every item, so a navigation item pointing at another origin was handed to Livewire, which
   refuses it. A URL is navigated only when it is a page of this application.
+## [2.5.2]
+
+### Fixed
+
+- **`ManagePage` saves only what its form writes.** The create and edit modals passed the action frame's whole
+  state to `Model::create()` / `$record->update()`. That state comes back from the browser, so a key no field
+  declared — an owner id, a flag — reached any attribute the model left fillable: a user could create a record
+  in somebody else's name. A field switched off with `dehydrated(false)` was written too, and on a model without
+  that column the save failed. Both modals now write `Form::writableData($data)`: the keys of the form's fields
+  and repeaters, minus a field that is no column and one that saves itself after the record — the same set the
+  form's own save lifecycle writes.
+
+### Added
+
+- `Form::writableData(array $data)` — `$data` limited to what the form writes, for a host that persists a
+  form's state itself rather than through `save()`.
 
 ## [2.5.1]
 

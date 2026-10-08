@@ -1,0 +1,21 @@
+{
+    "name": "Laravel AI Development",
+
+    "dockerComposeFile": "docker-compose.yml",
+
+    "service": "app",
+
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+    "remoteUser": "vscode",
+
+    "forwardPorts": [
+        8000,
+        5173,
+        8025
+    ],
+
+    "postCreateCommand": "composer install && npm install",
+
+    "postStartCommand": "php artisan storage:link 2>/dev/null || true"
+}

@@ -48,6 +48,7 @@ final class LayoutRenderPlan
      * @param  string  $headerPadding  The same for a header cell.
      * @param  string  $stickyHeaderClass  Pins the `<thead>`; empty when it does not pin.
      * @param  bool  $stickyHeaderFollowsPage  Whether `wire-table-sticky.js` moves the `<thead>` with the page scroll.
+     * @param  string  $stickyLayerClass  Isolates the scroll region and the `<tbody>` under a pinned header; empty when it does not pin.
      * @param  string  $scrollRegionStyle  Inline `max-height` for the scroll region; empty when uncapped.
      * @param  bool  $rendersTable  Whether a `<table>` is emitted in this response.
      * @param  bool  $rendersCards  Whether the card rendering is emitted in this response.
@@ -65,6 +66,7 @@ final class LayoutRenderPlan
         public readonly string $headerPadding,
         public readonly string $stickyHeaderClass,
         public readonly bool $stickyHeaderFollowsPage,
+        public readonly string $stickyLayerClass,
         public readonly string $scrollRegionStyle,
         public readonly bool $isStackedOnMobile,
         public readonly bool $rendersTable,
@@ -87,6 +89,7 @@ final class LayoutRenderPlan
         $breakpoint = $table->getMobileBreakpoint();
         $stickyMaxHeight = $table->getStickyHeaderMaxHeight();
         $followsPage = $table->hasPageStickyHeader();
+        $pins = $followsPage || $stickyMaxHeight !== null;
 
         return new self(
             isBordered: $table->isBordered(),
@@ -100,13 +103,23 @@ final class LayoutRenderPlan
             // cannot: the wrapper's `overflow-x: auto` makes the wrapper the
             // scrollport, and it never scrolls vertically. There the script
             // translates the `<thead>` instead, and `relative` is what lets its
-            // `z-10` lift it over the rows it slides across.
+            // z-index lift it over the rows it slides across.
+            //
+            // `z-30` and not `z-10`: it has to beat everything the rows and the
+            // region carry — a cell's `relative z-10` radio or checkbox list,
+            // the fill overlay (`z-10`) and the fill handle (`z-20`), all later
+            // in the document than the header. Two `isolate`s make that hold for
+            // whatever a cell renders: the `<tbody>` folds every z-index inside
+            // it into one layer at 0, and the scroll region keeps the header's
+            // `z-30` from reaching anything outside the table — the admin top
+            // bar is `z-30` too, earlier in the document, and stays on top.
             stickyHeaderClass: match (true) {
-                $followsPage => 'relative z-10 bg-gray-50 dark:bg-gray-800',
-                $stickyMaxHeight !== null => 'sticky top-0 z-10 bg-gray-50 dark:bg-gray-800',
+                $followsPage => 'relative z-30 bg-gray-50 dark:bg-gray-800',
+                $stickyMaxHeight !== null => 'sticky top-0 z-30 bg-gray-50 dark:bg-gray-800',
                 default => '',
             },
             stickyHeaderFollowsPage: $followsPage,
+            stickyLayerClass: $pins ? 'isolate' : '',
             scrollRegionStyle: $stickyMaxHeight === null
                 ? ''
                 : 'max-height: '.$stickyMaxHeight,

@@ -418,6 +418,10 @@ public static function pages(): array
 Jediný `form()` resource se vykreslí v obou modálech. **Co ukládají, je věc
 modelu**: modal drží stav v rámci akce, ne v `$data` stránky, takže založení je
 `Model::create($data)` a editace `$record->update($data)` s validovanými daty.
+**Uloží se jen to, co formulář zapisuje** — klíče jeho polí a repeaterů bez pole,
+které není sloupcem (`dehydrated(false)`), přes `Form::writableData()`. Stav rámce
+se vrací z prohlížeče, takže klíč, který žádné pole nedeklaruje (vlastník,
+příznak), by jinak došel do každého atributu, který model nechá fillable.
 Formulář, který potřebuje životní cyklus stránky — repeater nad relací,
 optimistický zámek, `Form::using()` — chce stránku založení a stránku editace.
 

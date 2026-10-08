@@ -108,7 +108,10 @@ it('pins the header to the page by default, leaving the region uncapped', functi
         ->assertDontSee('max-height:', escape: false)
         // Opaque, unlike the resting `dark:bg-gray-800/50`: a translucent header
         // shows the rows travelling underneath it.
-        ->assertSee('relative z-10 bg-gray-50 dark:bg-gray-800 ', escape: false);
+        ->assertSee('relative z-30 bg-gray-50 dark:bg-gray-800 ', escape: false)
+        // Nothing a cell renders can climb over the header it slides under.
+        ->assertSee('wire-scroller  isolate', escape: false)
+        ->assertSee('divide-gray-700 isolate', escape: false);
 });
 
 it('pins the header to a capped region when a height is named', function () {
@@ -116,7 +119,8 @@ it('pins the header to a capped region when a height is named', function () {
         ->set('sticky', true)
         ->set('stickyMaxHeight', '32rem')
         ->assertSee('max-height: 32rem', escape: false)
-        ->assertSee('sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 ', escape: false)
+        ->assertSee('sticky top-0 z-30 bg-gray-50 dark:bg-gray-800 ', escape: false)
+        ->assertSee('divide-gray-700 isolate', escape: false)
         ->assertDontSee('data-wire-sticky-head', escape: false);
 });
 

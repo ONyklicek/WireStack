@@ -49,7 +49,11 @@ class MpTagResource implements DescribesResource, ProvidesResourceForm, Provides
 
     public function form(Form $form): Form
     {
-        return $form->schema([TextInput::make('name')->required()]);
+        return $form->schema([
+            TextInput::make('name')->required(),
+            // Shown in the modal, never a column: a confirmation, a hint.
+            TextInput::make('confirm')->dehydrated(false),
+        ]);
     }
 }
 
@@ -106,6 +110,7 @@ beforeEach(function () {
     Schema::create('mp_tags', function (Blueprint $table) {
         $table->id();
         $table->string('name');
+        $table->unsignedBigInteger('owner_id')->nullable();
     });
 
     MpTag::query()->create(['name' => 'urgent']);
@@ -181,3 +186,26 @@ it('lets whoever opens an unguarded page manage it when the model has no policy'
     expect($html)->toContain('data-testid="action-create"')
         ->and($html)->toContain('data-testid="action-edit"');
 });
+
+it('saves only what the form writes, never a key the browser added', function (string $modal) {
+    // The modal's data comes back from the browser. A model as open as this
+    // one ($guarded = []) would take any key in it — an owner, a flag — so
+    // what reaches create()/update() is what the form declares, and a field
+    // that says it is not a column (dehydrated(false)) is not written either.
+    $component = Livewire::test(MpManageTags::class);
+
+    $modal === 'create'
+        ? $component->call('openHeaderActionModal', 'create')
+        : $component->call('openActionModal', '1', 'edit');
+
+    $component
+        ->set('tableState.modal.actions.0.data.name', 'billing')
+        ->set('tableState.modal.actions.0.data.confirm', 'yes')
+        ->set('tableState.modal.actions.0.data.owner_id', 99)
+        ->call('submitActionModal')
+        ->assertHasNoErrors();
+
+    $tag = MpTag::query()->where('name', 'billing')->sole();
+
+    expect($tag->getAttribute('owner_id'))->toBeNull();
+})->with(['create', 'edit']);
