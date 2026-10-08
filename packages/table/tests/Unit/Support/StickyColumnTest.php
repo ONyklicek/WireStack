@@ -28,7 +28,7 @@ it('pins to the side the column already sits on', function () {
 it('gives a header cell a higher tier than a body cell', function () {
     $sticky = StickyColumn::on('end');
 
-    // Both stay under the sticky <thead>'s own z-10 stacking context, so a
+    // Both stay under the sticky <thead>'s own z-30 stacking context, so a
     // pinned body cell cannot ride over the pinned header when both axes are
     // scrolled; within the header row, the pinned cell still has to beat its
     // siblings.
