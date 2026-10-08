@@ -83,6 +83,11 @@ $skelPerRecordConfigs = [
     'copyable' => fn () => TextColumn::make('val')->copyable(),
     'url' => fn () => TextColumn::make('val')->actionUrl(fn ($r) => 'https://x.test/'.$r->id),
     'url+newtab' => fn () => TextColumn::make('val')->actionUrl(fn ($r) => '/p?a=1&b="2"&c='.$r->id, true),
+    // A page of this application, so the link navigates — a shape of its own.
+    'url+navigate' => fn () => TextColumn::make('val')->actionUrl(fn ($r) => '/p?a=1&b="2"&c='.$r->id),
+    'url+navigate-declined' => fn () => TextColumn::make('val')->actionUrl(fn ($r) => '/p/'.$r->id)->navigate(false),
+    // Here on one row, another site on the next: two shapes from one column.
+    'url+mixed-origin' => fn () => TextColumn::make('val')->actionUrl(fn ($r) => $r->id % 2 ? '/p/'.$r->id : 'https://x.test/'.$r->id),
     'description-closure' => fn () => TextColumn::make('val')->description(fn ($r) => 'desc & <b>'.$r->id.'</b>'),
     'icon-closure' => fn () => TextColumn::make('val')->icon(fn ($record) => $record->id % 2 ? 'pencil' : 'trash'),
     'copyable+url' => fn () => TextColumn::make('val')->copyable()->actionUrl(fn ($r) => 'https://x.test/'.$r->id),
@@ -171,6 +176,20 @@ it('renders one skeleton per shape when a record turns a part off', function () 
         $record = skelRecord('v', $id);
         expect($column->renderCellFast($record))->toBe($withUrl->renderCell($record), "id=$id");
     }
+});
+
+it('marks a link to a page of this application with wire:navigate, and no other', function () {
+    $column = TextColumn::make('val')->actionUrl(fn ($r) => $r->id % 2 ? '/p/'.$r->id : 'https://x.test/'.$r->id);
+
+    expect($column->renderCellFast(skelRecord('v', 1)))->toContain('href="/p/1" wire:navigate class=')
+        ->and($column->renderCellFast(skelRecord('v', 2)))->toContain('href="https://x.test/2" class=')
+        ->and(TextColumn::make('val')->actionUrl(fn ($r) => '/p/'.$r->id, true)->renderCellFast(skelRecord('v', 1)))
+        ->toContain('target="_blank" class=');
+
+    config()->set('wire-core.navigate', false);
+
+    expect(TextColumn::make('val')->actionUrl(fn ($r) => '/p/'.$r->id)->renderCellFast(skelRecord('v', 1)))
+        ->not->toContain('wire:navigate');
 });
 
 it('leaks no sentinel into a rendered cell', function () use ($skelPerRecordConfigs) {

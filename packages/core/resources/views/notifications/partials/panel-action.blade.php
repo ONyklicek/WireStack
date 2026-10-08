@@ -13,6 +13,7 @@
 @if(! empty($action['url']))
     <a
         href="{{ $action['url'] }}"
+        @wireNavigate($action['url'])
         data-testid="notification-action" @wireEl('notification-action')
         class="{{ $action['classes'] }}"
     >{{ $action['label'] }}</a>

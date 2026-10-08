@@ -40,6 +40,22 @@ Action::make('docs')
     ->url('/docs', openInNewTab: true);
 ```
 
+URL akce, která vede na stránku této aplikace, se otevře přes `wire:navigate`,
+když je zapnutý `wire-core.navigate` (ve výchozím stavu je); nová záložka nebo
+jiný web je obyčejný odkaz. `->navigate(false)` nechá jednu akci načíst celou
+stránku — třeba stažení souboru — a `->navigate()` ji nechá navigovat, i když
+je přepínač vypnutý. Pořadí rozhodování je v
+[Konfigurace → Navigace](../../start/configuration.md#navigace).
+
+```php
+->url(Closure|string $url, bool $openInNewTab = false)  // fn ($record) => string, nebo jedna URL pro všechny řádky
+->navigate(?bool $condition = true)                      // true / false přebije wire-core.navigate; null se jím řídí
+
+Action::make('export')
+    ->url(fn ($record) => route('orders.export', $record))
+    ->navigate(false); // [tl! focus]
+```
+
 ## Klávesové zkratky
 
 ```php

@@ -38,7 +38,7 @@
                         class="cursor-grab rounded-lg border border-gray-200 bg-white p-3 shadow-sm active:cursor-grabbing dark:border-gray-700 dark:bg-gray-900"
                     >
                         @if($card['url'])
-                            <a href="{{ $card['url'] }}" wire:navigate class="block text-sm font-medium text-gray-900 hover:underline dark:text-white">{{ $card['title'] }}</a>
+                            <a href="{{ $card['url'] }}" @wireNavigate($card['url']) class="block text-sm font-medium text-gray-900 hover:underline dark:text-white">{{ $card['title'] }}</a>
                         @else
                             <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $card['title'] }}</p>
                         @endif

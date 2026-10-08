@@ -14,6 +14,7 @@ use NyonCode\WireCore\Core\Plugin\Contracts\IdentifiesHookTarget;
 use NyonCode\WireCore\Core\Query\Search\WordSearch;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesBreadcrumbs;
 use NyonCode\WireCore\Foundation\Colors\NoticePalette;
+use NyonCode\WireCore\Foundation\Routing\ClientNavigation;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WireCore\Notifications\DatabaseNotification;
@@ -130,7 +131,7 @@ class ListNotifications extends Component implements IdentifiesHookTarget, Provi
         $url = $this->destination($notification);
 
         if ($url !== null) {
-            $this->redirect($url, navigate: true);
+            $this->redirect($url, navigate: app(ClientNavigation::class)->shouldNavigate($url));
         }
     }
 

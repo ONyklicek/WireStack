@@ -405,7 +405,7 @@ aplikace. Ptá se, kam je klíč routovaný; nerozhoduje o tom.
     @foreach($group->getItems() as $key => $item)
         {{-- Registrovaná položka bez vlastní stránky do menu pořád patří;
              jen to není odkaz. --}}
-        <a @if($item->getUrl()) href="{{ $item->getUrl() }}" wire:navigate @endif>   {{-- [tl! focus] --}}
+        <a @if($item->getUrl()) href="{{ $item->getUrl() }}" @wireNavigate($item->getUrl()) @endif>   {{-- [tl! focus] --}}
             {!! icon($item->getIcon()) !!}
             {{ $item->getLabel() }}
             <x-wire::badge :color="$item->getBadgeColor() ?? 'gray'">{{ $item->getBadge() }}</x-wire::badge>
@@ -414,7 +414,7 @@ aplikace. Ptá se, kam je klíč routovaný; nerozhoduje o tom.
         @if($item->hasChildren())
             <ul>
                 @foreach($item->getChildren() as $child)
-                    <li><a href="{{ $child->getUrl() }}" wire:navigate>{{ $child->getLabel() }}</a></li>
+                    <li><a href="{{ $child->getUrl() }}" @wireNavigate($child->getUrl())>{{ $child->getLabel() }}</a></li>
                 @endforeach
             </ul>
         @endif

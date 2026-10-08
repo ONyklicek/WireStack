@@ -281,9 +281,10 @@
             try { window.sessionStorage.setItem(this.planKey(), JSON.stringify(this.plan)); } catch (e) {}
         },
 
-        {{-- To the page the next step is on. Livewire's own navigation where it
-             is on the page, so an application using `wire:navigate` keeps its
-             single-page feel; a plain visit otherwise. --}}
+        {{-- To the page the next step is on. Livewire's own navigation when the
+             step says so (`wire-core.navigate`, decided server-side), so an
+             application using `wire:navigate` keeps its single-page feel; a
+             plain visit otherwise. --}}
         go(index) {
             const step = this.steps[index];
             this.carryPlan();
@@ -292,7 +293,7 @@
             target.searchParams.set('wire-tour', this.tourId);
             target.searchParams.set('wire-tour-step', index);
             this.active = false;
-            if (window.Livewire && typeof window.Livewire.navigate === 'function') {
+            if (step.navigate && window.Livewire && typeof window.Livewire.navigate === 'function') {
                 window.Livewire.navigate(target.toString());
             } else {
                 window.location.assign(target.toString());

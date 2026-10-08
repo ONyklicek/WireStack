@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WirePanels\Resources\Concerns;
 
 use Livewire\Component;
+use NyonCode\WireCore\Foundation\Routing\ClientNavigation;
 use NyonCode\WireForms\Forms\WithForms;
 
 /**
@@ -43,10 +44,10 @@ trait RedirectsAfterSave
         $url = $this->getRedirectUrl($record);
 
         if ($url !== null && $url !== '') {
-            // `navigate`, because every other link in a panel navigates: a save
-            // that reloaded the document would drop the sidebar's own state and
-            // re-evaluate assets the rest of the shell keeps across pages.
-            $this->redirect($url, navigate: true);
+            // Navigated like every other link in a panel, when links navigate: a
+            // save that reloaded the document would drop the sidebar's own state
+            // and re-evaluate assets the rest of the shell keeps across pages.
+            $this->redirect($url, navigate: app(ClientNavigation::class)->shouldNavigate($url));
         }
 
         return $record;

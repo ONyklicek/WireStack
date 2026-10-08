@@ -28,6 +28,7 @@
     /** @var string $iconPosition before|after */
     /** @var string|null $url */
     /** @var bool $openInNewTab */
+    /** @var bool $navigate the link carries wire:navigate */
     /** @var bool $copyable */
     /** @var mixed $copyValue */
     /** @var string $copyMessage */
@@ -59,7 +60,7 @@
 <?php if ($descriptionAbove): ?><p class="text-sm text-gray-500 dark:text-gray-400">{{ $description }}</p><?php endif; ?>
 <?php if ($tooltip): ?><span title="{{ $tooltip }}" class="cursor-help"><?php endif; ?>
 <?php if ($copyable): ?><span class="inline-flex items-center gap-1.5 group"><?php endif; ?>
-<?php if ($url): ?><a href="{{ $url }}"<?php if ($openInNewTab): ?> target="_blank"<?php endif; ?> class="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 hover:underline"><?php endif; ?>
+<?php if ($url): ?><a href="{{ $url }}"<?php if ($openInNewTab): ?> target="_blank"<?php endif; ?><?php if ($navigate ?? false): ?> wire:navigate<?php endif; ?> class="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 hover:underline"><?php endif; ?>
 <?php if ($hasIcon && ! $iconAfter): ?>{!! $iconHtml !!} <?php endif; ?>
 <?php if ($textClasses !== ''): ?><span class="{{ $textClasses }}"><?php endif; ?>
 <?php if ($isHtml): ?>{!! $content !!}<?php else: ?>{{ $content }}<?php endif; ?>

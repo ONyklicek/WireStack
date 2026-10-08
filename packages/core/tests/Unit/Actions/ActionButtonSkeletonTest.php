@@ -83,6 +83,8 @@ function abShapes(): array
         'static url' => fn () => Action::make('open')->label('Open')->url('/x'),
         'closure url' => fn () => Action::make('open')->label('Open')->url(fn ($r) => '/r/'.$r->getKey()),
         'url new tab' => fn () => Action::make('open')->label('Open')->url('/x', true),
+        'url not navigated' => fn () => Action::make('open')->label('Open')->url('/x')->navigate(false),
+        'url elsewhere' => fn () => Action::make('open')->label('Open')->url('https://example.test/x'),
         'disabled' => fn () => Action::make('edit')->label('Edit')->disabled(),
         'closure disabled' => fn () => Action::make('edit')->label('Edit')->disabled(fn ($r) => $r->getKey() % 2 === 0),
         'confirmation' => fn () => Action::make('del')->label('Delete')->requiresConfirmation(),
@@ -200,4 +202,21 @@ it('gives a per-record shape its own skeleton rather than the wrong markup', fun
     foreach ([1, 2, 19, 20] as $id) {
         expect($rendered[$id])->toContain("openActionModal(&#039;{$id}&#039;,&#039;edit&#039;)");
     }
+});
+
+it('navigates to a page of this application, and only there', function () {
+    $navigates = fn (Action $action): bool => str_contains($action->render(abRecord(), abClick()), 'wire:navigate')
+        && str_contains($action->renderForDropdown(abRecord(), abClick()), 'wire:navigate');
+    $never = fn (Action $action): bool => ! str_contains($action->render(abRecord(), abClick()), 'wire:navigate')
+        && ! str_contains($action->renderForDropdown(abRecord(), abClick()), 'wire:navigate');
+
+    expect($navigates(Action::make('open')->url('/x')))->toBeTrue()
+        ->and($never(Action::make('open')->url('/x', true)))->toBeTrue()
+        ->and($never(Action::make('open')->url('/x')->navigate(false)))->toBeTrue()
+        ->and($never(Action::make('open')->url('https://example.test/x')))->toBeTrue();
+
+    config()->set('wire-core.navigate', false);
+
+    expect($never(Action::make('open')->url('/x')))->toBeTrue()
+        ->and($navigates(Action::make('open')->url('/x')->navigate()))->toBeTrue();
 });

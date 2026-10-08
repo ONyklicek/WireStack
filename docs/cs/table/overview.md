@@ -617,14 +617,21 @@ Celý stav včetně obou volitelných zámků je v
 ### URL záznamu (klikatelné řádky)
 
 ```php
-// Udělat celý řádek klikatelným
-->recordUrl(string|Closure $url)
+// Udělat celý řádek klikatelným — '{id}' v řetězci je klíč záznamu
+->recordUrl(string|Closure $url, ?bool $navigate = null)
 ```
 
 ```php
 // S Closure
 ->recordUrl(fn (User $record) => route('users.show', $record))
+
+// Načíst celou stránku, ať wire-core.navigate říká cokoli
+->recordUrl(fn (User $record) => route('users.show', $record), navigate: false) // [tl! focus]
 ```
+
+Odkaz na záznam, který vede na stránku této aplikace, se otevře přes
+`wire:navigate`, když je zapnutý `wire-core.navigate`; `navigate` je vlastní
+volba těchto odkazů — viz [Konfigurace → Navigace](../start/configuration.md#navigace).
 
 ### Responzivní layout
 

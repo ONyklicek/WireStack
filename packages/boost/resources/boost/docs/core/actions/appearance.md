@@ -41,6 +41,21 @@ Action::make('docs')
     ->url('/docs', openInNewTab: true);
 ```
 
+A URL action to a page of this application is followed with `wire:navigate`
+when `wire-core.navigate` is on, which it is by default; a new tab or another
+site is a plain link. `->navigate(false)` keeps one action a full page load —
+a download, say — and `->navigate()` makes it navigate when the switch is off.
+The order is in [Configuration → Navigation](../../start/configuration.md#navigation).
+
+```php
+->url(Closure|string $url, bool $openInNewTab = false)  // fn ($record) => string, or one URL for every row
+->navigate(?bool $condition = true)                      // true / false overrule wire-core.navigate; null follows it
+
+Action::make('export')
+    ->url(fn ($record) => route('orders.export', $record))
+    ->navigate(false); // [tl! focus]
+```
+
 ## Keyboard Shortcuts
 
 ```php

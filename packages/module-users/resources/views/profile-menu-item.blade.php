@@ -15,7 +15,6 @@
     <x-wire::menu-item
         :href="$wmuProfileUrl"
         icon="outline:user-circle"
-        wire:navigate
         data-testid="admin-profile-link"
     >
         {{ __('wire-module-users::messages.profile') }}

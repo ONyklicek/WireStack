@@ -43,7 +43,7 @@
             <div class="mt-2.5 flex flex-wrap items-center gap-2">
                 @foreach($item['actions'] as $action)
                     @if(! empty($action['url']))
-                        <a href="{{ $action['url'] }}" data-testid="notification-action" @wireEl('notification-action') class="{{ $action['classes'] }}">{{ $action['label'] }}</a>
+                        <a href="{{ $action['url'] }}" @wireNavigate($action['url']) data-testid="notification-action" @wireEl('notification-action') class="{{ $action['classes'] }}">{{ $action['label'] }}</a>
                     @elseif(! empty($action['event']))
                         <button
                             type="button"

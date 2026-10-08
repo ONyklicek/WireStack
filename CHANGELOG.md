@@ -2,6 +2,31 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.7.0]
+
+### Added
+
+- **One switch for `wire:navigate`: `wire-core.navigate` (`WIRE_NAVIGATE`, on by default).** Every link the
+  framework renders between two pages of the application now follows it — the sidebar, breadcrumbs, the record
+  sub-navigation, actions with a `url()`, a table's `recordUrl()`, `url` columns, `ButtonColumn` links, the list
+  widget, the notification bell, board cards, the user menu, and the redirect after a save, a delete, a search
+  result or a tour step. Turn it off and the whole admin goes back to full page loads.
+- **`->navigate(bool)` on a link.** `Action`, `HeaderAction` and every table column take `->navigate(false)` to keep
+  one link a full page load (a download, a page whose script must run on load) and `->navigate()` to make one
+  navigate when the switch is off. `Table::recordUrl($url, navigate: false)` does the same for record links, and
+  `<x-wire::menu-item>` takes a `:navigate` prop.
+- **`@wireNavigate($url)`** writes `wire:navigate` on a link in your own Blade when the switch and the URL allow it,
+  and nothing otherwise. `ClientNavigation` is the class behind it, for PHP that needs the same answer.
+
+### Changed
+
+- **The links that used to reload now navigate.** Actions with a `url()` — the row's *Edit* and *View*, header
+  actions, menu rows, infolist actions — a table's record links, `url` columns and `ButtonColumn` links, the list
+  widget, notification actions and the media manager's usage links did a full page load while the menu beside them
+  navigated. They now follow `wire-core.navigate` like everything else.
+- **A link to another site is never navigated.** The sidebar, top navigation, breadcrumbs and pins wrote
+  `wire:navigate` on every item, so a navigation item pointing at another origin was handed to Livewire, which
+  refuses it. A URL is navigated only when it is a page of this application.
 ## [2.5.2]
 
 ### Fixed

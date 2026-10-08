@@ -16,9 +16,10 @@
         <nav class="flex flex-wrap gap-2" data-testid="settings-groups" @wireEl('settings-groups') aria-label="{{ __('wire-module-settings::messages.settings') }}">
             @foreach ($groups as $key => $class)
                 @php($icon = \NyonCode\WireModuleSettings\Support\SettingsGroups::icon($class))
+                @php($groupUrl = \NyonCode\WireModuleSettings\Resources\SettingsResource::urlForGroup($key) ?? '#')
                 <a
-                    href="{{ \NyonCode\WireModuleSettings\Resources\SettingsResource::urlForGroup($key) ?? '#' }}"
-                    wire:navigate
+                    href="{{ $groupUrl }}"
+                    @wireNavigate($groupUrl)
                     data-testid="settings-group-link" @wireEl('settings-group-link')
                     data-group="{{ $key }}"
                     @if ($key === $current) aria-current="page" @endif

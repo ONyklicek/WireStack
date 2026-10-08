@@ -80,6 +80,7 @@ it('hands the browser one step per declared step, in order', function () {
                 // its steps are on this one and neither needs an address.
                 'here' => true,
                 'url' => null,
+                'navigate' => false,
             ],
             [
                 'selector' => '[data-wire="table-search"]',
@@ -88,6 +89,7 @@ it('hands the browser one step per declared step, in order', function () {
                 'placement' => 'bottom',
                 'here' => true,
                 'url' => null,
+                'navigate' => false,
             ],
         ])
         // Nothing in the request asked it to carry on, so it starts at the top.

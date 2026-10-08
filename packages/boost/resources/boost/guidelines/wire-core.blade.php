@@ -19,6 +19,13 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
   record-less surface (a header action, the table's empty state): a string resolves with or without a
   record, a Closure needs one and stays unresolved — the action then renders as a plain button, not a
   link. `Action::render()` / `getUrl()` therefore take an optional record, matching `RendersAsButton`.
+- **`wire:navigate` is one switch, `config('wire-core.navigate')` (default `true`), owned by
+  `Foundation\Routing\ClientNavigation`.** Never hardcode `wire:navigate` on a link in a view: write
+  `@@wireNavigate($url)` (second argument = the link's own `?bool`), and redirect with
+  `$this->redirect($url, navigate: app(ClientNavigation::class)->shouldNavigate($url))`. Only a page of this
+  application (same scheme/host/port, or a path) is ever navigated; a new tab never is. Per link:
+  `->navigate(false)` on `Action`, `HeaderAction` and any table column; `Table::recordUrl($url, navigate: false)`;
+  @verbatim`<x-wire::menu-item :navigate="false">`@endverbatim.
 - Actions can open modals via `->modal(...)` and multi-step wizards via `->steps([...])`.
 - A wizard step's `->schema(fn (array $data) => [...])` Closure builds its fields from data entered in
   earlier steps; the bag is live even for header actions (no record), so later steps can branch on it.

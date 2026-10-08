@@ -313,7 +313,12 @@ TextColumn::make('email')
 
 ```php
 ->actionUrl(Closure $url, bool $openInNewTab = false)   // udělat z buňky odkaz
+->navigate(?bool $condition = true)                     // true / false přebije wire-core.navigate; null se jím řídí
 ```
+
+Odkaz na stránku této aplikace se otevře přes `wire:navigate`, když je zapnutý
+`wire-core.navigate`; jiný web nebo nová záložka je obyčejný odkaz. Viz
+[Konfigurace → Navigace](../../start/configuration.md#navigace).
 
 ```php
 TextColumn::make('name')

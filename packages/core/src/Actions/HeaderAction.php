@@ -9,6 +9,7 @@ use NyonCode\WireCore\Actions\Concerns\HasBadge;
 use NyonCode\WireCore\Actions\Contracts\RendersAsMenuItem;
 use NyonCode\WireCore\Actions\Contracts\ResolvesActionClick;
 use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithClientNavigation;
 
 /**
  * Class HeaderAction - Enhanced with lifecycle hooks, loading state, keyboard shortcuts.
@@ -21,6 +22,7 @@ use NyonCode\WireCore\Actions\Support\MountActionClickResolver;
 class HeaderAction extends BaseAction implements RendersAsMenuItem
 {
     use HasBadge;
+    use InteractsWithClientNavigation;
 
     protected ?string $url = null;
 

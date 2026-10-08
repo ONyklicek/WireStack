@@ -622,14 +622,21 @@ The whole state, including the two optional locks, is in
 ### Record URL (Clickable Rows)
 
 ```php
-// Make entire row clickable
-->recordUrl(string|Closure $url)
+// Make entire row clickable — '{id}' in a string is the record's key
+->recordUrl(string|Closure $url, ?bool $navigate = null)
 ```
 
 ```php
 // With Closure
 ->recordUrl(fn (User $record) => route('users.show', $record))
+
+// A full page load for these links, whatever wire-core.navigate says
+->recordUrl(fn (User $record) => route('users.show', $record), navigate: false) // [tl! focus]
 ```
+
+A record link to a page of this application is followed with `wire:navigate`
+when `wire-core.navigate` is on; `navigate` is the links' own say — see
+[Configuration → Navigation](../start/configuration.md#navigation).
 
 ### Responsive Layout
 

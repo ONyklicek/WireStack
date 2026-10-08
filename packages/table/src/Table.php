@@ -23,6 +23,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasSheetOnMobile;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver;
+use NyonCode\WireCore\Foundation\Routing\ClientNavigation;
 use NyonCode\WireCore\Foundation\Support\IslandViewScope;
 use NyonCode\WireCore\Foundation\ValueObjects\ShortcutHint;
 use NyonCode\WireCore\Foundation\View\Skeleton;
@@ -104,8 +105,12 @@ class Table implements Htmlable
     /** The context-menu panel's compiled markup — {@see getRowContextMenuSkeleton()}. */
     protected ?Skeleton $rowContextMenuSkeleton = null;
 
-    /** The record link's compiled markup — {@see getRecordLinkSkeleton()}. */
-    protected ?Skeleton $recordLinkSkeleton = null;
+    /**
+     * The record link's compiled markup, one per navigate flag — {@see getRecordLinkSkeleton()}.
+     *
+     * @var array<int, Skeleton>
+     */
+    protected array $recordLinkSkeletons = [];
 
     /**
      * The sub-row expander cell, one compiled shape per state.
@@ -153,6 +158,9 @@ class Table implements Htmlable
     protected ?string $recordUrl = null;
 
     protected ?Closure $recordUrlCallback = null;
+
+    /** The record links' own say in `wire:navigate`, or null to follow `wire-core.navigate`. */
+    protected ?bool $recordUrlNavigate = null;
 
     protected mixed $livewireComponent = null;
 
@@ -782,12 +790,17 @@ class Table implements Htmlable
      * Memoised per table instance, which is per render: a row wraps one link per
      * visible column, so a 10-column page would otherwise pay ten view renders per
      * row for markup that never changes.
+     *
+     * Two shapes rather than one: whether the link carries `wire:navigate` is
+     * structure, not a value, and a slot substitutes values. In practice a table
+     * uses one of them — every record url points into the same application.
      */
-    public function getRecordLinkSkeleton(): Skeleton
+    public function getRecordLinkSkeleton(bool $navigate = false): Skeleton
     {
-        return $this->recordLinkSkeleton ??= Skeleton::compile(
+        return $this->recordLinkSkeletons[(int) $navigate] ??= Skeleton::compile(
             view('wire-table::tables.partials.record-link', [
                 'url' => Skeleton::slot('url'),
+                'navigate' => $navigate,
                 'content' => Skeleton::slot('content'),
             ])->render(),
             'url',
@@ -991,7 +1004,12 @@ class Table implements Htmlable
         return $this->hoverable ?? (bool) config('wire-table.defaults.hoverable', true);
     }
 
-    public function recordUrl(string|Closure $url): static
+    /**
+     * Link every row to its record: a URL with `{id}` in it, or a Closure that receives the record.
+     *
+     * `$navigate` is the links' own say in `wire:navigate` — null follows `wire-core.navigate`.
+     */
+    public function recordUrl(string|Closure $url, ?bool $navigate = null): static
     {
         if ($url instanceof Closure) {
             $this->recordUrlCallback = $url;
@@ -999,7 +1017,15 @@ class Table implements Htmlable
             $this->recordUrl = $url;
         }
 
+        $this->recordUrlNavigate = $navigate;
+
         return $this;
+    }
+
+    /** Whether a record link to `$url` is followed with `wire:navigate`. */
+    public function shouldNavigateToRecordUrl(string $url): bool
+    {
+        return app(ClientNavigation::class)->shouldNavigate($url, $this->recordUrlNavigate);
     }
 
     public function getRecordUrl(Model $record): ?string

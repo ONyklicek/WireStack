@@ -45,6 +45,25 @@ return [
         'groups' => [],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Navigate
+    |--------------------------------------------------------------------------
+    |
+    | Whether links between this application's pages are followed with
+    | Livewire's `wire:navigate` — the page's body is fetched and swapped in,
+    | so the layout, its scroll position and the assets already loaded stay —
+    | or as an ordinary full page load.
+    |
+    | One switch for every link the framework renders: the sidebar, breadcrumbs,
+    | actions with a url, a table's record links and url columns, and the
+    | redirect after a save or a delete. A link to another site, a `mailto:` or
+    | one that opens in a new tab is never navigated. A single link can still
+    | choose for itself with `->navigate(false)` (or `->navigate()`).
+    |
+    */
+    'navigate' => env('WIRE_NAVIGATE', true),
+
     'notifications' => [
         /*
         | Which driver delivers a notification.

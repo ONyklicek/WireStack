@@ -34,6 +34,7 @@ Potřebujete jen tagy balíčků, které jste nainstalovali.
 
 | Proměnná | Výchozí | Používá |
 |----------|---------|---------|
+| `WIRE_NAVIGATE` | `true` | Odkazy mezi stránkami aplikace jdou přes `wire:navigate` |
 | `WIRE_NOTIFICATIONS_DRIVER` | `session` | Core notifikace |
 | `WIRE_AUDIT_ENABLED` | `true` | Core audit log |
 | `WIRE_AUDIT_USER_MODEL` | `App\Models\User` | Core audit log |
@@ -80,6 +81,8 @@ Konfigurace `wire-core` řídí sdílené chování UI.
 
 ```php
 return [
+    'navigate' => env('WIRE_NAVIGATE', true),
+
     'notifications' => [
         'default' => env('WIRE_NOTIFICATIONS_DRIVER', 'session'),
     ],
@@ -123,6 +126,63 @@ return [
     ],
 ];
 ```
+
+### Navigace
+
+`navigate` rozhoduje, jestli se odkaz z jedné stránky aplikace na jinou
+otevře přes Livewire `wire:navigate` — tělo další stránky se stáhne a vymění,
+takže layout, scroll sidebaru i už načtené assety zůstanou — nebo obyčejným
+načtením celé stránky. Ve výchozím stavu je zapnutý.
+
+Je to jeden přepínač pro všechny odkazy, které framework vykresluje: sidebar
+a horní navigaci, drobečkovou navigaci, sub-navigaci záznamu, akce s `url()`
+(tlačítka, položky menu, akce v hlavičce, akce v infolistu), `recordUrl()`
+tabulky, sloupce s URL a odkazy `ButtonColumn`, list widget, zvonek
+notifikací, karty boardu, uživatelské menu a redirect po uložení, smazání,
+výběru výsledku hledání nebo kroku průvodce.
+
+Každý odkaz se rozhoduje v tomto pořadí:
+
+1. **Je to stránka této aplikace?** Cesta, nebo absolutní URL se stejným
+   schématem, hostem a portem jako aplikace. Jiný web, odkaz `mailto:` nebo
+   `tel:` a samotný `#fragment` se nenavigují nikdy, ať přepínač říká cokoli
+   — Livewire nedokáže vyměnit stránku z jiného originu.
+2. **Otevírá se v nové záložce?** Pak není co navigovat.
+3. **Má odkaz vlastní volbu?** `->navigate(false)` nechá jeden odkaz načíst
+   celou stránku i v aplikaci, která naviguje — stažení souboru nebo stránku
+   s vlastním skriptem, který musí proběhnout při načtení. `->navigate()`
+   naopak nechá jeden odkaz navigovat v aplikaci, která přepínač vypnula.
+4. **Jinak přepínač.**
+
+```php
+// config/wire-core.php
+'navigate' => env('WIRE_NAVIGATE', true),
+```
+
+```php
+Action::make('export')
+    ->url(fn (Order $record) => route('orders.export', $record))
+    ->navigate(false), // [tl! focus]
+
+TextColumn::make('customer.name')
+    ->actionUrl(fn (Order $record) => route('customers.show', $record->customer))
+    ->navigate(false), // [tl! focus]
+
+$table->recordUrl(fn (Order $record) => route('orders.show', $record), navigate: false); // [tl! focus]
+```
+
+Vlastní Blade se ptá stejně, direktivou `@wireNavigate`:
+
+```blade
+<a href="{{ $url }}" @wireNavigate($url)>Objednávky</a>
+<a href="{{ $url }}" @wireNavigate($url, false)>Stáhnout</a>
+```
+
+Vypíše `wire:navigate`, nebo nic. `<x-wire::menu-item>` má pro tutéž volbu
+prop `:navigate`.
+
+Dvě místa schválně načítají celou stránku: přepínač tenantů a přepínač týmů,
+protože celý layout patří tenantovi nebo týmu, ze kterého se odchází.
 
 ### Notifikace
 

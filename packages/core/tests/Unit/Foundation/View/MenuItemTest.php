@@ -60,3 +60,15 @@ it('carries through the attributes a caller needs on the element itself', functi
     expect($html)->toContain('wire:navigate')
         ->toContain('data-testid="row"');
 });
+
+it('navigates a row that links into this application, once', function () {
+    $html = Blade::render('<x-wire::menu-item href="/p">Profile</x-wire::menu-item>');
+    $written = Blade::render('<x-wire::menu-item href="/p" wire:navigate>Profile</x-wire::menu-item>');
+
+    expect(substr_count($html, 'wire:navigate'))->toBe(1)
+        // A layout that wrote the attribute itself does not get it twice.
+        ->and(substr_count($written, 'wire:navigate'))->toBe(1)
+        ->and(Blade::render('<x-wire::menu-item href="/p" :navigate="false">Profile</x-wire::menu-item>'))->not->toContain('wire:navigate')
+        ->and(Blade::render('<x-wire::menu-item href="https://example.test">Docs</x-wire::menu-item>'))->not->toContain('wire:navigate')
+        ->and(Blade::render('<x-wire::menu-item type="submit">Sign out</x-wire::menu-item>'))->not->toContain('wire:navigate');
+});

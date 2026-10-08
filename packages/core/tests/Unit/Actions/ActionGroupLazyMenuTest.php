@@ -56,7 +56,19 @@ it('marks a disabled action and a link distinctly', function () {
         ->and($specs[0])->not->toHaveKey('method')
         ->and($specs[1]['type'])->toBe('link')
         ->and($specs[1]['href'])->toBe('https://example.test/docs')
-        ->and($specs[1]['newTab'])->toBeTrue();
+        ->and($specs[1]['newTab'])->toBeTrue()
+        // A tab of its own is never navigated into.
+        ->and($specs[1]['navigate'])->toBeFalse();
+});
+
+it('says which links navigate, so the menu can render the attribute up front', function () {
+    $specs = ActionGroup::make([
+        Action::make('edit')->url('/orders/1/edit'),
+        Action::make('export')->url('/orders/1/export')->navigate(false),
+        Action::make('docs')->url('https://example.test/docs'),
+    ])->getDropdownItemSpecs(lazyRecord());
+
+    expect(array_column($specs, 'navigate'))->toBe([true, false, false]);
 });
 
 it('emits a divider entry', function () {

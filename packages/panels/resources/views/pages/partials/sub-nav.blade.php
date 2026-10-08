@@ -30,7 +30,7 @@
 
             <a
                 href="{{ $tab->getUrl() }}"
-                wire:navigate
+                @wireNavigate($tab->getUrl())
                 @if ($isCurrent) aria-current="page" @endif
                 data-testid="panels-sub-nav-item" @wireEl('panels-sub-nav-item')
                 data-page="{{ $pageKind }}"

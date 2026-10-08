@@ -200,7 +200,8 @@ stay. `pageUrl()` is the sibling-URL helper described below;
 [`reachablePageUrl()`](#reaching-its-other-pages) is the same thing minus the
 pages this user may not open.
 
-The redirect uses `wire:navigate`, like every other link in a panel.
+The redirect follows `wire-core.navigate`, like every other link in a panel —
+[Configuration → Navigation](../start/configuration.md#navigation).
 
 **The success toast comes with it.** A notification is a browser event, and the
 navigate replaces the document that would have shown it — so the driver flashes

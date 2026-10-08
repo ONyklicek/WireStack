@@ -314,7 +314,12 @@ TextColumn::make('email')
 
 ```php
 ->actionUrl(Closure $url, bool $openInNewTab = false)   // make the cell a link
+->navigate(?bool $condition = true)                     // true / false overrule wire-core.navigate; null follows it
 ```
+
+A link to a page of this application is followed with `wire:navigate` when
+`wire-core.navigate` is on; another site or a new tab is a plain link. See
+[Configuration → Navigation](../../start/configuration.md#navigation).
 
 ```php
 TextColumn::make('name')

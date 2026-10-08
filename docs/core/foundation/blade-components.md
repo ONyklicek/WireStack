@@ -45,10 +45,15 @@ A **menu row** is `<x-wire::menu-item>` — a link, or a button that submits the
 form around it, drawn the way the framework's own menus draw one:
 
 ```blade
-<x-wire::menu-item :href="route('profile')" icon="outline:user-circle" wire:navigate>
+<x-wire::menu-item :href="route('profile')" icon="outline:user-circle">
     Profile
 </x-wire::menu-item>
 ```
+
+A row with an `href` into this application follows `wire:navigate` when
+`wire-core.navigate` is on; `:navigate="false"` keeps it a full page load, and
+`:navigate="true"` navigates when the switch is off
+([Configuration → Navigation](../../start/configuration.md#navigation)).
 
 It is the core component; `<x-wire-admin::menu-item>` is the same row inside the
 [admin shell's](../../admin/layout.md) user menu, so anything you put there looks

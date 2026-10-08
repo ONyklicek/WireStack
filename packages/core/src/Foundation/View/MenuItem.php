@@ -29,6 +29,8 @@ class MenuItem extends Component
         public ?string $href = null,
         public ?string $icon = null,
         public string $type = 'button',
+        // Null follows `wire-core.navigate`; true or false is this row's own say.
+        public ?bool $navigate = null,
     ) {}
 
     public function render(): View
