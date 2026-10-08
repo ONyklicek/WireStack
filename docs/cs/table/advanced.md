@@ -144,7 +144,7 @@ $table->subRowView('components.order-items-detail')
 <a id="summary-footer"></a>
 ## Souhrnná patička (agregáty)
 
-Trait `HasSummary` přidává agregátní řádky patičky — sum, avg, count, min, max, range.
+Concern `CanBeSummarized` přidává agregátní řádky patičky — sum, avg, count, min, max, range.
 
 ### Souhrn na úrovni sloupce
 
@@ -218,30 +218,16 @@ TextColumn::make('total')
 
 ### Jak to funguje
 
-1. **Rozsah page**: po načtení výsledků `HasSummary` projde Collection a spočítá
+1. **Rozsah page**: po načtení výsledků `CanBeSummarized` projde Collection a spočítá
    agregát v PHP.
 2. **Rozsah query**: samostatný `$query->sum('amount')` (nebo avg/count/min/max) se
    vykoná proti filtrovanému (ale nestránkovanému) datasetu.
 
 ### API souhrnů
 
-Tyto metody žijí na **sloupci** (`HasSummary`):
-
-```php
-->summarize(
-    string|Closure $type,           // 'sum','avg','count','min','max','range','distinct','median'
-    ?string $label = null,
-    string $scope = 'query',         // 'query' | 'page' | 'selection' | 'subRows'
-    ?Closure $format = null,         // fn(mixed $value): string
-    ?Closure $when = null,           // fn(Builder $query): Builder
-)
-->summaryDecimals(int $decimals, string $decimalSeparator = ',', string $thousandsSeparator = ' ')
-
-// Zkratky — každá bere (?string $label = null, string $scope = 'query'):
-->summarizeSum()      ->summarizeAvg()     ->summarizeCount()
-->summarizeMin()      ->summarizeMax()     ->summarizeRange()
-->summarizeDistinct() ->summarizeMedian()
-```
+Tyto metody žijí na **sloupci** (`CanBeSummarized`); kompletní typované API,
+včetně zkratek a podmíněné agregace, popisují
+[Souhrny](summaries.md).
 
 ---
 
@@ -1198,10 +1184,10 @@ TextColumn::make('email')->visibleFrom('md')
 TextColumn::make('phone')->hiddenFrom('lg')
 
 // Zkratky
-TextColumn::make('address')->onlyOnDesktop()       // ≥lg
+TextColumn::make('address')->onlyOnDesktop()       // ≥md
 TextColumn::make('avatar')->onlyOnMobile()          // <md
-TextColumn::make('subtitle')->onlyOnTabletAndUp()   // ≥md
-TextColumn::make('metadata')->onlyOnLargeScreens()  // ≥xl
+TextColumn::make('subtitle')->onlyOnTabletAndUp()   // ≥sm
+TextColumn::make('metadata')->onlyOnLargeScreens()  // ≥lg
 ```
 
 ### Mobilní zobrazení jednotlivých záznamů

@@ -142,7 +142,7 @@ $table->subRowView('components.order-items-detail')
 
 ## Summary Footer (Aggregates)
 
-The `HasSummary` trait adds aggregate footer rows — sum, avg, count, min, max, range.
+The `CanBeSummarized` concern adds aggregate footer rows — sum, avg, count, min, max, range.
 
 ### Column-Level Summary
 
@@ -216,30 +216,16 @@ TextColumn::make('total')
 
 ### How It Works
 
-1. **Page scope**: after results are fetched, `HasSummary` iterates the
+1. **Page scope**: after results are fetched, `CanBeSummarized` iterates the
    Collection and computes the aggregate in PHP.
 2. **Query scope**: a separate `$query->sum('amount')` (or avg/count/min/max) is
    executed against the filtered (but unpaginated) dataset.
 
 ### Summary API
 
-These methods live on the **column** (`HasSummary`):
-
-```php
-->summarize(
-    string|Closure $type,           // 'sum','avg','count','min','max','range','distinct','median'
-    ?string $label = null,
-    string $scope = 'query',         // 'query' | 'page' | 'selection' | 'subRows'
-    ?Closure $format = null,         // fn(mixed $value): string
-    ?Closure $when = null,           // fn(Builder $query): Builder
-)
-->summaryDecimals(int $decimals, string $decimalSeparator = ',', string $thousandsSeparator = ' ')
-
-// Shortcuts — each takes (?string $label = null, string $scope = 'query'):
-->summarizeSum()      ->summarizeAvg()     ->summarizeCount()
-->summarizeMin()      ->summarizeMax()     ->summarizeRange()
-->summarizeDistinct() ->summarizeMedian()
-```
+These methods live on the **column** (`CanBeSummarized`); the complete typed
+API, including shortcuts and conditional aggregation, is documented in
+[Summaries](summaries.md).
 
 ---
 
@@ -1200,10 +1186,10 @@ TextColumn::make('email')->visibleFrom('md')
 TextColumn::make('phone')->hiddenFrom('lg')
 
 // Shortcuts
-TextColumn::make('address')->onlyOnDesktop()       // ≥lg
+TextColumn::make('address')->onlyOnDesktop()       // ≥md
 TextColumn::make('avatar')->onlyOnMobile()          // <md
-TextColumn::make('subtitle')->onlyOnTabletAndUp()   // ≥md
-TextColumn::make('metadata')->onlyOnLargeScreens()  // ≥xl
+TextColumn::make('subtitle')->onlyOnTabletAndUp()   // ≥sm
+TextColumn::make('metadata')->onlyOnLargeScreens()  // ≥lg
 ```
 
 ### Per-Record Mobile Display

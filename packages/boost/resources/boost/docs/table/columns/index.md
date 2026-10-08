@@ -49,8 +49,8 @@ Every column inherits these capabilities from the base `Column` class.
 ### Factory & Identity
 
 ```php
-Column::make(string $name)           // static factory — $name is dot-notation path
-->label(string|Closure $label)        // display label in <th> (auto-generated from name)
+Column::make(string $name): static     // static factory — $name is dot-notation path
+->label(string|Closure|null $label): static // display label in <th> (auto-generated from name)
 ->getName(): string                   // get column name
 ->getLabel(): string                  // get resolved label
 ```
@@ -58,12 +58,12 @@ Column::make(string $name)           // static factory — $name is dot-notation
 ### Sorting
 
 ```php
-->sortable(bool $sortable = true, ?Closure $query = null)
+->sortable(bool $sortable = true, ?Closure $query = null): static
 ->isSortable(): bool
 ->getSortColumn(): ?string           // the attribute the header orders by
 
 // Custom sort logic
-->sortUsing(Closure $fn)
+->sortUsing(Closure $fn): static
 ```
 
 `isSortable()` decides whether the header is clickable; `getSortColumn()` decides
@@ -86,17 +86,18 @@ TextColumn::make('full_name')
 ### Searching
 
 ```php
-->searchable(bool|array $searchable = true)
+// [tl! focus]
+->searchable(bool|array $searchable = true): static
 ->isSearchable(): bool
 
 // Pass an array to search specific DB columns (when the column name is virtual)
 ->searchable(['first_name', 'last_name', 'email'])
 
 // Custom search logic
-->searchUsing(Closure $fn)
+->searchUsing(Closure $fn): static
 
 // Declare what the column holds, so >100 and 10..20 can be typed into search
-->searchAs(SearchValueType|string $type)      // 'text' | 'numeric' | 'date' | 'code'
+->searchAs(SearchValueType|string $type): static // 'text' | 'numeric' | 'date' | 'code'
 
 // Get resolved search columns
 ->getSearchColumns(): array
@@ -152,18 +153,21 @@ comparing it as text correct, and only the owner knows that. It unlocks
 ### Visibility & Toggleability
 
 ```php
-->hidden(bool|Closure $hidden = true)        // hide column
+->hidden(bool|Closure $hidden = true): static // hide column
 ->isHidden(): bool
 
 // User-toggleable (column picker)
-->toggleable(bool $toggleable = true)
+->toggleable(bool $toggleable = true): static
 
 // Permission-based
-->permission(?string $permission)            // visible only if user has permission
-->visible(Closure $callback)                 // custom visibility callback (Closure only)
+->permission(?string $permission): static    // visible only if user has permission
+->authorize(?string $ability): static        // authorize through a Laravel Gate ability
+// [tl! focus]
+->authorizeUsing(?Closure $callback): static  // fn ($user, $record = null) => bool
+->visible(bool|Closure $condition = true): static // custom visibility condition
 
 // Per-record cell visibility (redact a single cell by row)
-->visibleForRecord(Closure $callback)        // fn ($record) => bool
+->visibleForRecord(Closure $callback): static // fn ($record) => bool
 ```
 
 `->hidden()`, `->permission()`, `->visible()` and `->authorize()` decide whether
@@ -182,33 +186,54 @@ TextColumn::make('salary')
 ### Responsive Breakpoints
 
 ```php
-->visibleFrom(string $breakpoint)      // hidden below this breakpoint
-->hiddenFrom(string $breakpoint)       // hidden from this breakpoint up
-->onlyOnMobile()                       // visible only on mobile (<md)
-->onlyOnDesktop()                      // visible only on desktop (≥lg)
-->onlyOnTabletAndUp()                  // visible from md up
-->onlyOnLargeScreens()                 // visible from xl up
+->visibleFrom(string|Breakpoint $breakpoint): static // hidden below this breakpoint
+->hiddenFrom(string|Breakpoint $breakpoint): static  // hidden from this breakpoint up
+->onlyOnMobile(): static                 // visible only below md
+->mobileOnly(): static                   // alias for onlyOnMobile()
+->onlyOnDesktop(): static                // visible from md up
+->desktopOnly(): static                  // alias for onlyOnDesktop()
+->onlyOnTabletAndUp(): static            // visible from sm up
+->onlyOnLargeScreens(): static           // visible from lg up
+->hasResponsiveVisibility(): bool
 ```
+
+The `Breakpoint` enum accepts `sm`, `md`, `lg`, `xl` and `2xl`; string tokens
+and enum cases are interchangeable. These helpers resolve to responsive classes
+on the cell and header, rather than changing the query or removing the column.
 
 ```php
 TextColumn::make('phone')
     ->visibleFrom('md')          // hidden on mobile, visible from md
 
 TextColumn::make('notes')
-    ->onlyOnLargeScreens()       // only visible on xl+
+    ->onlyOnLargeScreens()       // only visible on lg+
 ```
 
 ### Responsive Display Variants
 
 ```php
 // Custom render for mobile vs desktop
-->mobileDisplayUsing(Closure $fn)
-->desktopDisplayUsing(Closure $fn)
+// [tl! focus]
+->mobileDisplayUsing(Closure $callback): static
+->desktopDisplayUsing(Closure $callback): static
+->mobileBreakpoint(string|Breakpoint $breakpoint): static // switches at 'md' by default
 ->hasResponsiveDisplay(): bool
 
 // Where the column lands on a stacked mobile card (see Advanced → Responsive Layout)
-->mobileTitle() ->mobileSubtitle() ->mobileMetric() ->mobileMeta() ->mobileDetail()
+->mobileSlot(MobileSlot|string $slot): static // 'title' | 'subtitle' | 'metric' | 'meta' | 'detail'
+->mobileTitle(): static
+->mobileSubtitle(): static
+->mobileMetric(): static
+->mobileMeta(): static
+->mobileDetail(): static
+->getMobileSlot(): ?MobileSlot
 ```
+
+Without an explicit `mobileSlot()`, the stacked card derives a slot from column
+order and alignment. Slot selection controls the card's hierarchy; it does not
+hide a column at any breakpoint. `mobileDisplayUsing()` and
+`desktopDisplayUsing()` instead replace the displayed content on each side of
+`mobileBreakpoint()`.
 
 ```php
 TextColumn::make('user')
@@ -219,15 +244,17 @@ TextColumn::make('user')
 ### Value Formatting
 
 ```php
-->formatStateUsing(Closure $fn)        // transform value for display
-->displayUsing(Closure $fn)            // alias for formatStateUsing
-->default(mixed $value)                // value when state is null
-->placeholder(string $text)            // text shown when value is null/empty
-->limit(int $chars)                    // truncate to N characters
-->prefix(string $prefix)              // prepend text
-->suffix(string $suffix)              // append text
-->html(bool $html = true)             // render value as raw HTML
-->wrap(bool $wrap = true)             // allow text wrapping (default: nowrap)
+->formatStateUsing(Closure $fn): static // transform value for display
+->displayUsing(Closure $fn): static     // alias for formatStateUsing
+->default(mixed $default): static       // fallback when the resolved state is null or empty
+->getDefault(): mixed
+->placeholder(string|Closure|null $placeholder): static // text shown when value is null/empty
+->getPlaceholder(): ?string
+->limit(?int $chars): static            // truncate to N characters
+->prefix(?string $prefix): static       // prepend text
+->suffix(?string $suffix): static       // append text
+->html(bool $html = true): static       // render value as raw HTML
+->wrap(bool $wrap = true): static       // allow text wrapping (default: nowrap)
 ```
 
 ```php
@@ -251,11 +278,27 @@ TextColumn::make('content')
 Use `->textSize()` for the cell's **font size**. `->size()` (from the shared `HasSize` concern) sets the column's *structural* size and does **not** change the text font.
 
 ```php
-->textSize(string $size)               // 'xs', 'sm', 'md', 'lg', 'xl' — text font size
-->weight(string $weight)              // 'thin', 'light', 'normal', 'medium', 'semibold', 'bold', 'extrabold'
-->textColor(string $color)            // Tailwind color name or 'gray', 'primary', etc.
-->fontFamily(string $family)          // 'sans', 'serif', 'mono' (TextColumn only)
+->size(string|Size|Closure $size): static // structural size — 'xs'|'sm'|'md'|'lg'|'xl'; default 'md'
+->xs(): static
+->sm(): static
+->md(): static
+->lg(): static
+->xl(): static
+->getSize(): string
+->textSize(string $size): static          // text font size; accepts Tailwind text-size tokens
+->getTextSize(): ?string
+->weight(string|FontWeight $weight): static
+->getTextWeight(): ?string
+->textColor(string|Color $color): static
+->getTextColor(): ?string
+->fontFamily(?string $family): static     // 'sans', 'serif', 'mono' (TextColumn only; null clears)
+->getFontFamily(): ?string
 ```
+
+`size()` controls the column's structural sizing and defaults to `md`;
+`Size` enum cases, strings and closures are accepted. It is independent of
+`textSize()`, which controls the cell's typography. `weight()` accepts the
+canonical `FontWeight` enum or a string token.
 
 ```php
 TextColumn::make('name')
@@ -271,16 +314,17 @@ TextColumn::make('subtitle')
 ### Width & Alignment
 
 ```php
-->width(string $width)                 // preferred CSS width: '200px', '20%', 'auto'
-->minWidth(string $width)              // minimum CSS width: '120px', '12rem', '25%'
-->maxWidth(string $width)              // maximum CSS width: '400px', '32rem', '80%'
-->alignment(string $alignment)         // 'left', 'center', 'right'
-->alignLeft()                          // shortcut
-->alignCenter()                        // shortcut
-->alignRight()                         // shortcut
+->width(string $width): static          // preferred CSS width
+->minWidth(string $width): static       // minimum CSS width
+->maxWidth(string $width): static       // maximum CSS width
 ->getWidth(): ?string
 ->getMinWidth(): ?string
 ->getMaxWidth(): ?string
+->alignment(string|Alignment $alignment): static // 'left' | 'center' | 'right'; default 'left'
+->alignLeft(): static
+->alignCenter(): static
+->alignRight(): static
+->getAlignment(): string
 ```
 
 The three width values are optional and independent. `width()` sets the preferred
@@ -300,10 +344,10 @@ TextColumn::make('reference')
 ### Icons
 
 ```php
-->icon(string|Icon|Closure|null $icon, ?string $position = 'before')   // position: 'before' | 'after'
-->color(string|Color $color)           // the column's colour: text, and the icon when it has no colour of its own
-->iconColor(string|Color|Closure|null $color)   // the icon's colour, per record — a role, or a closure returning one
-->iconTile(bool $tile = true)           // seat the icon in a tinted tile — the list archetype's row anchor
+->icon(string|Icon|Closure|null $icon, ?string $position = 'before'): static // position: 'before' | 'after'
+->color(string|Color|null $color): static // the column's colour: text, and the icon when it has no colour of its own
+->iconColor(string|Color|Closure|null $color): static // the icon's colour, per record
+->iconTile(bool $tile = true): static   // seat the icon in a tinted tile
 ```
 
 On a **list** (`layout('list')`) reach for `iconTile()` as well: a bare tinted
@@ -332,8 +376,8 @@ TextColumn::make('email')
 ### URL (Clickable Cell)
 
 ```php
-->actionUrl(Closure $url, bool $openInNewTab = false)   // make the cell a link
-->navigate(?bool $condition = true)                     // true / false overrule wire-core.navigate; null follows it
+->actionUrl(Closure $callback, bool $openInNewTab = false): static // make the cell a link
+->navigate(?bool $condition = true): static // true / false overrule wire-core.navigate; null follows it
 ```
 
 A link to a page of this application is followed with `wire:navigate` when
@@ -349,15 +393,18 @@ TextColumn::make('name')
 ### Copyable
 
 ```php
-->copyable(bool $copyable = true)      // click-to-copy icon
-->copyMessage(string $msg)             // feedback text after copy
+->copyable(bool $copyable = true, ?string $copyMessage = null): static // click-to-copy icon
+->copyMessage(string $copyMessage): static // feedback text after copy
+->getCopyMessage(): ?string
 ```
 
 ### Tooltip & Description
 
 ```php
-->tooltip(string|Closure $tooltip)     // hover tooltip
-->description(string|Closure $desc)    // secondary text below value
+->tooltip(string|Closure|null $tooltip): static // hover tooltip; null clears
+->getTooltip(): ?string
+->description(string|Closure $description, string $position = 'below'): static // secondary text and position
+->getDescription(): string|Closure|null
 ```
 
 ```php
@@ -369,19 +416,24 @@ TextColumn::make('title')
 ### Summary (Aggregate Footer)
 
 ```php
-->summarize(string $aggregate, ?string $label = null)
+->summarize(string|Closure|SummaryType $type, ?string $label = null, string $scope = 'query', ?Closure $format = null, ?Closure $when = null): static
+->summaryDecimals(int $decimals, string $decimalSeparator = ',', string $thousandsSeparator = ' '): static
 ```
 
-Available aggregates: `'sum'`, `'avg'`, `'count'`, `'min'`, `'max'`, `'range'`
+Summary shortcuts, scopes and the full aggregate vocabulary are listed in
+[Summaries](../summaries.md).
 
 See [Advanced — Summary](../advanced.md#summary-footer-aggregates) for details.
 
 ### Extra HTML Attributes
 
 ```php
-->extraAttributes(array $attrs)        // on <td>
-->extraHeaderAttributes(array $attrs)  // on <th>
+->extraAttributes(array|string $attributes): static // on <td>; arrays are escaped, strings are raw
+->extraHeaderAttributes(array $attributes): static  // on <th>
 ```
+
+Prefer the array form for `extraAttributes()`; string attributes are trusted
+markup and must be escaped by the caller.
 
 ```php
 TextColumn::make('notes')
@@ -392,7 +444,7 @@ TextColumn::make('notes')
 ### Pivot Columns
 
 ```php
-->pivot(bool $isPivot = true)          // marks as pivot table column
+->pivot(bool $isPivot = true): static  // marks as pivot table column
 ->isPivot(): bool
 ```
 
@@ -406,9 +458,25 @@ TextColumn::make('roles.pivot.assigned_at')
 ### State Access
 
 ```php
-->state(mixed $value)                  // override state value
+->state(Closure $callback): static     // fn (Model $record) => mixed
 ->getState(Model $record): mixed       // resolve state from record
+->getRawState(Model $record): mixed    // underlying value before display formatting
 ```
+
+### Eager Loading For Closure-backed Values
+
+The query planner can infer relations from a column path such as
+`company.name`. It cannot inspect a closure used by `displayUsing()`, `actionUrl()`
+or a color callback, so declare those relations explicitly to avoid one lazy
+load per row:
+
+```php
+->loadRelations(string|array $relations): static
+->getEagerLoadRelations(): array
+```
+
+Repeated calls merge and deduplicate relation names. See
+[Relation Paths](relations.md#eager-loading-for-closure-backed-values).
 
 ### Custom Rendering (Blade Partials)
 

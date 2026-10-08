@@ -98,6 +98,30 @@ Každá zkratka přijímá volitelný popisek a rozsah:
 ->summarizeSum('Grand total', scope: 'query')
 ```
 
+### Typované API
+
+```php
+->summarize(string|Closure|SummaryType $type, ?string $label = null, string $scope = 'query', ?Closure $format = null, ?Closure $when = null): static
+->summaryDecimals(int $decimals, string $decimalSeparator = ',', string $thousandsSeparator = ' '): static
+->summarizeSum(?string $label = null, string $scope = 'query'): static
+->summarizeAvg(?string $label = null, string $scope = 'query'): static
+->summarizeCount(?string $label = null, string $scope = 'query'): static
+->summarizeDistinct(?string $label = null, string $scope = 'query'): static
+->summarizeMin(?string $label = null, string $scope = 'query'): static
+->summarizeMax(?string $label = null, string $scope = 'query'): static
+->summarizeRange(?string $label = null, string $scope = 'query'): static
+->summarizeMedian(?string $label = null, string $scope = 'query'): static
+->summarizeStddev(?string $label = null, string $scope = 'query'): static
+->hasSummary(): bool
+->hasSummaryInScope(string $scope): bool
+->getSummaries(): array
+```
+
+`$when` filtruje, které záznamy vstoupí do agregace: pro rozsah `query` může
+omezit databázový dotaz, pro výpočty v paměti testuje každou hodnotu a záznam.
+`$format` formátuje vypočtený výsledek a má přednost před výchozím číselným
+formátováním.
+
 ## Rozsahy
 
 `scope:` rozhoduje, **které záznamy** se agregují.

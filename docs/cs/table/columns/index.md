@@ -49,8 +49,8 @@ Každý sloupec dědí tyto schopnosti ze základní třídy `Column`.
 ### Factory a identita
 
 ```php
-Column::make(string $name)           // statická factory — $name je cesta v tečkové notaci
-->label(string|Closure $label)        // zobrazovací popisek v <th> (automaticky generovaný z názvu)
+Column::make(string $name): static     // statická factory — $name je cesta v tečkové notaci
+->label(string|Closure|null $label): static // zobrazovací popisek v <th> (automaticky generovaný z názvu)
 ->getName(): string                   // získat název sloupce
 ->getLabel(): string                  // získat resolvovaný popisek
 ```
@@ -58,12 +58,12 @@ Column::make(string $name)           // statická factory — $name je cesta v t
 ### Řazení
 
 ```php
-->sortable(bool $sortable = true, ?Closure $query = null)
+->sortable(bool $sortable = true, ?Closure $query = null): static
 ->isSortable(): bool
 ->getSortColumn(): ?string           // atribut, podle kterého hlavička řadí
 
 // Vlastní logika řazení
-->sortUsing(Closure $fn)
+->sortUsing(Closure $fn): static
 ```
 
 `isSortable()` rozhoduje, jestli je hlavička klikací; `getSortColumn()` rozhoduje,
@@ -86,17 +86,18 @@ TextColumn::make('full_name')
 ### Hledání
 
 ```php
-->searchable(bool|array $searchable = true)
+// [tl! focus]
+->searchable(bool|array $searchable = true): static
 ->isSearchable(): bool
 
 // Předejte pole pro hledání v konkrétních DB sloupcích (když je název sloupce virtuální)
 ->searchable(['first_name', 'last_name', 'email'])
 
 // Vlastní logika hledání
-->searchUsing(Closure $fn)
+->searchUsing(Closure $fn): static
 
 // Deklarovat, co sloupec drží, aby šlo do hledání psát >100 a 10..20
-->searchAs(SearchValueType|string $type)      // 'text' | 'numeric' | 'date' | 'code'
+->searchAs(SearchValueType|string $type): static // 'text' | 'numeric' | 'date' | 'code'
 
 // Získat resolvované sloupce hledání
 ->getSearchColumns(): array
@@ -151,18 +152,21 @@ porovnání textem správným — a ví to jen vlastník. Odemyká
 ### Viditelnost a přepínatelnost
 
 ```php
-->hidden(bool|Closure $hidden = true)        // skrýt sloupec
+->hidden(bool|Closure $hidden = true): static // skrýt sloupec
 ->isHidden(): bool
 
 // Přepínatelné uživatelem (výběr sloupců)
-->toggleable(bool $toggleable = true)
+->toggleable(bool $toggleable = true): static
 
 // Podle oprávnění
-->permission(?string $permission)            // viditelné jen když má uživatel oprávnění
-->visible(Closure $callback)                 // vlastní callback viditelnosti (jen Closure)
+->permission(?string $permission): static    // viditelné jen když má uživatel oprávnění
+->authorize(?string $ability): static        // autorizovat přes Laravel Gate ability
+// [tl! focus]
+->authorizeUsing(?Closure $callback): static // fn ($user, $record = null) => bool
+->visible(bool|Closure $condition = true): static // vlastní podmínka viditelnosti
 
 // Viditelnost buňky pro každý záznam (redakce jedné buňky na řádek)
-->visibleForRecord(Closure $callback)        // fn ($record) => bool
+->visibleForRecord(Closure $callback): static // fn ($record) => bool
 ```
 
 `->hidden()`, `->permission()`, `->visible()` a `->authorize()` rozhodují, zda
@@ -181,33 +185,53 @@ TextColumn::make('salary')
 ### Responzivní breakpointy
 
 ```php
-->visibleFrom(string $breakpoint)      // skryté pod tímto breakpointem
-->hiddenFrom(string $breakpoint)       // skryté od tohoto breakpointu nahoru
-->onlyOnMobile()                       // viditelné jen na mobilu (<md)
-->onlyOnDesktop()                      // viditelné jen na desktopu (≥lg)
-->onlyOnTabletAndUp()                  // viditelné od md nahoru
-->onlyOnLargeScreens()                 // viditelné od xl nahoru
+->visibleFrom(string|Breakpoint $breakpoint): static // skryté pod tímto breakpointem
+->hiddenFrom(string|Breakpoint $breakpoint): static  // skryté od tohoto breakpointu nahoru
+->onlyOnMobile(): static                 // viditelné jen pod md
+->mobileOnly(): static                   // alias pro onlyOnMobile()
+->onlyOnDesktop(): static                // viditelné od md nahoru
+->desktopOnly(): static                  // alias pro onlyOnDesktop()
+->onlyOnTabletAndUp(): static            // viditelné od sm nahoru
+->onlyOnLargeScreens(): static           // viditelné od lg nahoru
+->hasResponsiveVisibility(): bool
 ```
+
+Enum `Breakpoint` přijímá `sm`, `md`, `lg`, `xl` a `2xl`; řetězce a enum
+varianty jsou zaměnitelné. Tyto pomocníky nastaví responzivní třídy na buňce
+a hlavičce, nemění dotaz ani sloupec neodstraňují.
 
 ```php
 TextColumn::make('phone')
     ->visibleFrom('md')          // skryté na mobilu, viditelné od md
 
 TextColumn::make('notes')
-    ->onlyOnLargeScreens()       // viditelné jen na xl+
+    ->onlyOnLargeScreens()       // viditelné jen na lg+
 ```
 
 ### Responzivní varianty zobrazení
 
 ```php
 // Vlastní render pro mobil vs desktop
-->mobileDisplayUsing(Closure $fn)
-->desktopDisplayUsing(Closure $fn)
+// [tl! focus]
+->mobileDisplayUsing(Closure $callback): static
+->desktopDisplayUsing(Closure $callback): static
+->mobileBreakpoint(string|Breakpoint $breakpoint): static // přepíná na 'md' ve výchozím stavu
 ->hasResponsiveDisplay(): bool
 
 // Kam sloupec padne na skládané mobilní kartě (viz Pokročilé → Responzivní rozvržení)
-->mobileTitle() ->mobileSubtitle() ->mobileMetric() ->mobileMeta() ->mobileDetail()
+->mobileSlot(MobileSlot|string $slot): static // 'title' | 'subtitle' | 'metric' | 'meta' | 'detail'
+->mobileTitle(): static
+->mobileSubtitle(): static
+->mobileMetric(): static
+->mobileMeta(): static
+->mobileDetail(): static
+->getMobileSlot(): ?MobileSlot
 ```
+
+Bez explicitního `mobileSlot()` odvodí skládaná karta slot z pořadí a zarovnání
+sloupců. Volba slotu určuje hierarchii karty; neskrývá sloupec v žádném
+breakpointu. `mobileDisplayUsing()` a `desktopDisplayUsing()` naopak nahrazují
+zobrazovaný obsah na každé straně `mobileBreakpoint()`.
 
 ```php
 TextColumn::make('user')
@@ -218,15 +242,17 @@ TextColumn::make('user')
 ### Formátování hodnot
 
 ```php
-->formatStateUsing(Closure $fn)        // transformovat hodnotu pro zobrazení
-->displayUsing(Closure $fn)            // alias pro formatStateUsing
-->default(mixed $value)                // hodnota, když je stav null
-->placeholder(string $text)            // text zobrazený, když je hodnota null/prázdná
-->limit(int $chars)                    // zkrátit na N znaků
-->prefix(string $prefix)              // předřadit text
-->suffix(string $suffix)              // přidat text
-->html(bool $html = true)             // vykreslit hodnotu jako raw HTML
-->wrap(bool $wrap = true)             // povolit zalamování textu (výchozí: nowrap)
+->formatStateUsing(Closure $fn): static // transformovat hodnotu pro zobrazení
+->displayUsing(Closure $fn): static     // alias pro formatStateUsing
+->default(mixed $default): static       // fallback, když je resolvovaný stav null nebo prázdný
+->getDefault(): mixed
+->placeholder(string|Closure|null $placeholder): static // text zobrazený, když je hodnota null/prázdná
+->getPlaceholder(): ?string
+->limit(?int $chars): static            // zkrátit na N znaků
+->prefix(?string $prefix): static       // předřadit text
+->suffix(?string $suffix): static       // přidat text
+->html(bool $html = true): static       // vykreslit hodnotu jako raw HTML
+->wrap(bool $wrap = true): static       // povolit zalamování textu (výchozí: nowrap)
 ```
 
 ```php
@@ -250,11 +276,27 @@ TextColumn::make('content')
 Použijte `->textSize()` pro **velikost písma** buňky. `->size()` (ze sdíleného concernu `HasSize`) nastaví *strukturální* velikost sloupce a **nemění** písmo textu.
 
 ```php
-->textSize(string $size)               // 'xs', 'sm', 'md', 'lg', 'xl' — velikost písma textu
-->weight(string $weight)              // 'thin', 'light', 'normal', 'medium', 'semibold', 'bold', 'extrabold'
-->textColor(string $color)            // název Tailwind barvy nebo 'gray', 'primary', atd.
-->fontFamily(string $family)          // 'sans', 'serif', 'mono' (jen TextColumn)
+->size(string|Size|Closure $size): static // strukturální velikost — 'xs'|'sm'|'md'|'lg'|'xl'; výchozí 'md'
+->xs(): static
+->sm(): static
+->md(): static
+->lg(): static
+->xl(): static
+->getSize(): string
+->textSize(string $size): static          // velikost písma; přijímá velikostní tokeny Tailwindu
+->getTextSize(): ?string
+->weight(string|FontWeight $weight): static
+->getTextWeight(): ?string
+->textColor(string|Color $color): static
+->getTextColor(): ?string
+->fontFamily(?string $family): static     // 'sans', 'serif', 'mono' (jen TextColumn; null zruší)
+->getFontFamily(): ?string
 ```
+
+`size()` řídí strukturální velikost sloupce a výchozí je `md`; přijímá případy
+enumu `Size`, řetězce i closures. Je nezávislá na `textSize()`, která řídí
+typografii buňky. `weight()` přijímá kanonický enum `FontWeight` nebo řetězcový
+token.
 
 ```php
 TextColumn::make('name')
@@ -270,16 +312,17 @@ TextColumn::make('subtitle')
 ### Šířka a zarovnání
 
 ```php
-->width(string $width)                 // preferovaná CSS šířka: '200px', '20%', 'auto'
-->minWidth(string $width)              // minimální CSS šířka: '120px', '12rem', '25%'
-->maxWidth(string $width)              // maximální CSS šířka: '400px', '32rem', '80%'
-->alignment(string $alignment)         // 'left', 'center', 'right'
-->alignLeft()                          // zkratka
-->alignCenter()                        // zkratka
-->alignRight()                         // zkratka
+->width(string $width): static          // preferovaná CSS šířka
+->minWidth(string $width): static       // minimální CSS šířka
+->maxWidth(string $width): static       // maximální CSS šířka
 ->getWidth(): ?string
 ->getMinWidth(): ?string
 ->getMaxWidth(): ?string
+->alignment(string|Alignment $alignment): static // 'left' | 'center' | 'right'; výchozí 'left'
+->alignLeft(): static
+->alignCenter(): static
+->alignRight(): static
+->getAlignment(): string
 ```
 
 Všechny tři hodnoty šířky jsou volitelné a nezávislé. `width()` nastavuje
@@ -300,10 +343,10 @@ TextColumn::make('reference')
 ### Ikony
 
 ```php
-->icon(string|Icon|Closure|null $icon, ?string $position = 'before')   // pozice: 'before' | 'after'
-->color(string|Color $color)           // barva sloupce: text a ikona, pokud nemá vlastní
-->iconColor(string|Color|Closure|null $color)   // barva ikony pro každý záznam — role, nebo closure, která ji vrátí
-->iconTile(bool $tile = true)           // posadit ikonu do tónované dlaždice — kotva řádku v seznamu
+->icon(string|Icon|Closure|null $icon, ?string $position = 'before'): static // pozice: 'before' | 'after'
+->color(string|Color|null $color): static // barva sloupce: text a ikona, pokud nemá vlastní
+->iconColor(string|Color|Closure|null $color): static // barva ikony pro každý záznam
+->iconTile(bool $tile = true): static   // posadit ikonu do tónované dlaždice
 ```
 
 Na **seznamu** (`layout('list')`) sáhněte i po `iconTile()`: holá tónovaná ikona
@@ -332,8 +375,8 @@ TextColumn::make('email')
 ### URL (klikatelná buňka)
 
 ```php
-->actionUrl(Closure $url, bool $openInNewTab = false)   // udělat z buňky odkaz
-->navigate(?bool $condition = true)                     // true / false přebije wire-core.navigate; null se jím řídí
+->actionUrl(Closure $callback, bool $openInNewTab = false): static // udělat z buňky odkaz
+->navigate(?bool $condition = true): static // true / false přebije wire-core.navigate; null se jím řídí
 ```
 
 Odkaz na stránku této aplikace se otevře přes `wire:navigate`, když je zapnutý
@@ -349,15 +392,18 @@ TextColumn::make('name')
 ### Kopírovatelné
 
 ```php
-->copyable(bool $copyable = true)      // ikona kopírování kliknutím
-->copyMessage(string $msg)             // text zpětné vazby po zkopírování
+->copyable(bool $copyable = true, ?string $copyMessage = null): static // ikona kopírování kliknutím
+->copyMessage(string $copyMessage): static // text zpětné vazby po zkopírování
+->getCopyMessage(): ?string
 ```
 
 ### Tooltip a popis
 
 ```php
-->tooltip(string|Closure $tooltip)     // tooltip při hoveru
-->description(string|Closure $desc)    // sekundární text pod hodnotou
+->tooltip(string|Closure|null $tooltip): static // tooltip při hoveru; null jej zruší
+->getTooltip(): ?string
+->description(string|Closure $description, string $position = 'below'): static // sekundární text a pozice
+->getDescription(): string|Closure|null
 ```
 
 ```php
@@ -369,19 +415,22 @@ TextColumn::make('title')
 ### Souhrn (agregátní patička)
 
 ```php
-->summarize(string $aggregate, ?string $label = null)
+->summarize(string|Closure|SummaryType $type, ?string $label = null, string $scope = 'query', ?Closure $format = null, ?Closure $when = null): static
+->summaryDecimals(int $decimals, string $decimalSeparator = ',', string $thousandsSeparator = ' '): static
 ```
 
-Dostupné agregáty: `'sum'`, `'avg'`, `'count'`, `'min'`, `'max'`, `'range'`
-
-Detaily viz [Pokročilé — Souhrn](../advanced.md#souhrnna-paticka-agregaty).
+Zkratky pro souhrny, rozsahy a úplný slovník agregací jsou uvedené v
+[souhrnech](../summaries.md).
 
 ### Extra HTML atributy
 
 ```php
-->extraAttributes(array $attrs)        // na <td>
-->extraHeaderAttributes(array $attrs)  // na <th>
+->extraAttributes(array|string $attributes): static // na <td>; array se escapuje, string je raw
+->extraHeaderAttributes(array $attributes): static  // na <th>
 ```
+
+U `extraAttributes()` upřednostněte variantu s array; string je důvěryhodný
+markup, který musí escapovat volající.
 
 ```php
 TextColumn::make('notes')
@@ -392,7 +441,7 @@ TextColumn::make('notes')
 ### Pivot sloupce
 
 ```php
-->pivot(bool $isPivot = true)          // označí jako sloupec pivot tabulky
+->pivot(bool $isPivot = true): static  // označí jako sloupec pivot tabulky
 ->isPivot(): bool
 ```
 
@@ -406,9 +455,25 @@ TextColumn::make('roles.pivot.assigned_at')
 ### Přístup ke stavu
 
 ```php
-->state(mixed $value)                  // přepsat hodnotu stavu
+->state(Closure $callback): static     // fn (Model $record) => mixed
 ->getState(Model $record): mixed       // resolvovat stav ze záznamu
+->getRawState(Model $record): mixed    // původní hodnota před formátováním zobrazení
 ```
+
+### Eager loading hodnot z closure
+
+Query planner odvodí relace z cesty sloupce jako `company.name`. Neumí
+prohlédnout closure použité v `displayUsing()`, `actionUrl()` nebo callbacku
+barvy, proto relace deklarujte explicitně, abyste se vyhnuli línému načtení na
+každém řádku:
+
+```php
+->loadRelations(string|array $relations): static
+->getEagerLoadRelations(): array
+```
+
+Opakovaná volání sloučí a deduplikují názvy relací. Viz
+[Cesty relací](relations.md).
 
 ### Vlastní rendering (Blade partialy)
 

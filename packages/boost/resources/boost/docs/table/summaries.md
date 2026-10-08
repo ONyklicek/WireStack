@@ -98,6 +98,30 @@ Each shortcut accepts an optional label and scope:
 ->summarizeSum('Grand total', scope: 'query')
 ```
 
+### Typed API
+
+```php
+->summarize(string|Closure|SummaryType $type, ?string $label = null, string $scope = 'query', ?Closure $format = null, ?Closure $when = null): static
+->summaryDecimals(int $decimals, string $decimalSeparator = ',', string $thousandsSeparator = ' '): static
+->summarizeSum(?string $label = null, string $scope = 'query'): static
+->summarizeAvg(?string $label = null, string $scope = 'query'): static
+->summarizeCount(?string $label = null, string $scope = 'query'): static
+->summarizeDistinct(?string $label = null, string $scope = 'query'): static
+->summarizeMin(?string $label = null, string $scope = 'query'): static
+->summarizeMax(?string $label = null, string $scope = 'query'): static
+->summarizeRange(?string $label = null, string $scope = 'query'): static
+->summarizeMedian(?string $label = null, string $scope = 'query'): static
+->summarizeStddev(?string $label = null, string $scope = 'query'): static
+->hasSummary(): bool
+->hasSummaryInScope(string $scope): bool
+->getSummaries(): array
+```
+
+`$when` filters which records enter the aggregate: it may constrain the database
+query for the `query` scope or test each value and record for in-memory scopes.
+`$format` formats the computed result and takes precedence over the default
+numeric formatting.
+
 ## Scopes
 
 `scope:` decides **which records** are aggregated.

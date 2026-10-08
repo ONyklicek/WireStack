@@ -79,7 +79,6 @@ docs/table/actions.md#7ec2e6ce
 docs/table/advanced.md#1c6b27c1
 docs/table/advanced.md#e84363e5
 docs/table/advanced.md#889546ac
-docs/table/advanced.md#84c9740a
 docs/table/advanced.md#725ac5c0
 docs/table/advanced.md#a700366b
 docs/table/advanced.md#f8560000
@@ -92,8 +91,6 @@ docs/table/columns/casts.md#95b1ecc3
 docs/table/columns/casts.md#e0f4a1d0
 docs/table/columns/editing.md#51ad2350
 docs/table/columns/icon.md#9720c33f
-docs/table/columns/index.md#834a7bde
-docs/table/columns/index.md#eb4f6f56
 docs/table/columns/patterns.md#ca5badb8
 docs/table/columns/patterns.md#c87baab9
 docs/table/columns/patterns.md#c98a78b0

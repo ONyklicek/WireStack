@@ -31,6 +31,28 @@ TextColumn::make('bids.min.amount')            // withMin
 TextColumn::make('bids.max.amount')            // withMax
 ```
 
+Sloupec může rollup relace deklarovat i přímo, včetně případu, kdy zobrazený
+názvem sloupce není název agregačního atributu:
+
+```php
+->counts(string $relationship): static
+->sums(string $relationship, string $column): static
+->averages(string $relationship, string $column): static
+->mins(string $relationship, string $column): static
+->maxes(string $relationship, string $column): static
+->isAggregate(): bool
+->getAggregateFunction(): ?string
+->getAggregateRelation(): ?string
+->getAggregateColumn(): ?string
+->getAggregateAttribute(): ?string
+```
+
+Konvence atributu je `{relationship}_{function}` pro počty a
+`{relationship}_{function}_{column}` pro ostatní agregáty. Například
+`sums('orders', 'total')` čte `orders_sum_total`. Tyto metody deklarují hodnoty
+rollupu pro každý záznam; agregace v patičce se nastavuje zvlášť přes
+`summarize()`. Viz [Souhrny](../summaries.md).
+
 ## Pivot data
 
 ```php
@@ -43,6 +65,28 @@ TextColumn::make('roles.pivot.assigned_at')->dateTime()
 ```php
 TextColumn::make('commentable.title')          // polymorfní
 ```
+
+## Eager loading hodnot z closure
+
+Query planner odvodí relace z cesty sloupce, například `company.name`. Neumí
+prohlédnout closure použitou v `displayUsing()`, `actionUrl()` nebo callbacku
+barvy. Relace používané pouze uvnitř takových closures deklarujte, abyste se
+vyhnuli línému načtení na každém řádku:
+
+```php
+TextColumn::make('company')
+    ->displayUsing(fn ($state, $record) => $record->company->name)
+    ->loadRelations('company');
+```
+
+```php
+->loadRelations(string|array $relations): static
+->getEagerLoadRelations(): array
+```
+
+`loadRelations()` přijímá jeden název relace nebo seznam. Opakovaná volání názvy
+sloučí a deduplikují. Je potřeba jen pro relace skryté uvnitř closures; relace
+pojmenované tečkovou cestou sloupce se odvozují automaticky.
 
 ## Řazení a filtrování podle singulární relace
 
