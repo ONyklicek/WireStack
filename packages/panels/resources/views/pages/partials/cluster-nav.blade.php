@@ -51,7 +51,7 @@
             @php($isCurrent = $clusterNavigation->isCurrent($key))
 
             <a
-                @if ($item->getUrl()) href="{{ $item->getUrl() }}" wire:navigate @endif
+                @if ($item->getUrl()) href="{{ $item->getUrl() }}" @wireNavigate($item->getUrl()) @endif
                 @if ($isCurrent) aria-current="page" data-active="true" @endif
                 data-testid="panels-cluster-nav-item" @wireEl('panels-cluster-nav-item')
                 data-member="{{ $key }}"

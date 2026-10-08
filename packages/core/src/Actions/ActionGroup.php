@@ -498,7 +498,7 @@ class ActionGroup implements Htmlable
             ];
 
             if ($url && ! $disabled) {
-                $specs[] = [...$base, 'type' => 'link', 'href' => $url, 'newTab' => $item->shouldOpenUrlInNewTab(), 'classes' => $this->menuItemClasses($item, $record, false)];
+                $specs[] = [...$base, 'type' => 'link', 'href' => $url, 'newTab' => $item->shouldOpenUrlInNewTab(), 'navigate' => $item->shouldNavigateTo($url, $item->shouldOpenUrlInNewTab()), 'classes' => $this->menuItemClasses($item, $record, false)];
 
                 continue;
             }

@@ -40,7 +40,7 @@
 @if($actionUrl)
     <a
         href="{{ $actionUrl }}"
-        @if($action->shouldOpenUrlInNewTab()) target="_blank" rel="noopener" @endif
+        @if($action->shouldOpenUrlInNewTab()) target="_blank" rel="noopener" @elseif($action->shouldNavigateTo($actionUrl)) wire:navigate @endif
         data-testid="{{ $actionTestid }}"
         @if($actionLabel) aria-label="{{ $actionLabel }}" @endif
         @if($action->getTooltip()) title="{{ $action->getTooltip() }}" @endif

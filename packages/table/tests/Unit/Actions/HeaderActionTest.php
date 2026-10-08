@@ -27,6 +27,13 @@ it('can open url in new tab', function () {
 
 // ─── Badge ──────────────────────────────────────────────────────────────────
 
+it('renders a link to a page of this application with wire:navigate', function () {
+    expect(HeaderAction::make('create')->url('/users/create')->render())->toContain('wire:navigate')
+        ->and(HeaderAction::make('docs')->url('/docs', openInNewTab: true)->render())->not->toContain('wire:navigate')
+        ->and(HeaderAction::make('export')->url('/users.csv')->navigate(false)->render())->not->toContain('wire:navigate')
+        ->and(HeaderAction::make('help')->url('https://example.test/help')->render())->not->toContain('wire:navigate');
+});
+
 it('has no badge by default', function () {
     expect(HeaderAction::make('test')->hasBadge())->toBeFalse();
 });

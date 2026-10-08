@@ -20,7 +20,7 @@
 @if($url)
     <a
         href="{{ $url }}"
-        @if($openInNewTab) target="_blank" rel="noopener noreferrer" @endif
+        @if($openInNewTab) target="_blank" rel="noopener noreferrer" @elseif($navigate ?? false) wire:navigate @endif
         class="{{ $classes }}"
         data-testid="column-button" @wireEl('column-button')
         @if($buttonLabel) aria-label="{{ $buttonLabel }}" @endif

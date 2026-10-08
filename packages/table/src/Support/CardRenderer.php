@@ -89,7 +89,7 @@ final class CardRenderer
         $url = $this->table->getRecordUrl($record);
 
         return $url
-            ? $this->table->getRecordLinkSkeleton()->fill([
+            ? $this->table->getRecordLinkSkeleton($this->table->shouldNavigateToRecordUrl($url))->fill([
                 'url' => e($url),
                 'content' => $cell,
             ])

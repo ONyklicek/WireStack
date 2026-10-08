@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Tours;
 
 use Illuminate\Contracts\Auth\Factory as Auth;
 use Illuminate\Http\Request;
+use NyonCode\WireCore\Foundation\Routing\ClientNavigation;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 use NyonCode\WireCore\Foundation\Support\MobileSheet;
 
@@ -54,6 +55,7 @@ final class TourHost
         private readonly Auth $auth,
         private readonly Request $request,
         private readonly TourDestination $destination,
+        private readonly ClientNavigation $navigation,
     ) {}
 
     /**
@@ -113,7 +115,9 @@ final class TourHost
      * tour across pages without knowing a single route. A step whose page
      * resolves to nothing — not routed in this zone — gets no URL, and the
      * browser skips it the way it skips an element that is not on screen. So
-     * does one whose page this person may not open.
+     * does one whose page this person may not open. `navigate` says whether that
+     * page is reached with Livewire's navigation or a full load
+     * ({@see ClientNavigation}).
      *
      * `resume` is the step a navigated-to page carries on at, or null for a
      * tour starting from its first step. `from` is the step somebody reached
@@ -127,7 +131,7 @@ final class TourHost
      * then would be in whatever locale the console had. `later` is null when the
      * tour allows no postponement, and the browser renders no button for it.
      *
-     * @return array{id: string, breakpoint: float, resume: int|null, from: int|null, welcome: array{heading: string|null, text: string|null, start: string, later: string|null, view: string|null}|null, steps: array<int, array{selector: string, heading: string|null, text: string|null, placement: string, here: bool, url: string|null}>}
+     * @return array{id: string, breakpoint: float, resume: int|null, from: int|null, welcome: array{heading: string|null, text: string|null, start: string, later: string|null, view: string|null}|null, steps: array<int, array{selector: string, heading: string|null, text: string|null, placement: string, here: bool, url: string|null, navigate: bool}>}
      */
     public function payload(Tour $tour): array
     {
@@ -148,7 +152,8 @@ final class TourHost
                     'text' => $step->getText(),
                     'placement' => $step->getPlacement(),
                     'here' => $here = $tour->stepIsHere($step, $zone, $resource, $page),
-                    'url' => $here ? null : $this->urlOf($tour, $step, $zone),
+                    'url' => $url = $here ? null : $this->urlOf($tour, $step, $zone),
+                    'navigate' => $this->navigation->shouldNavigate($url),
                 ],
                 $tour->getSteps(),
             ),

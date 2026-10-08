@@ -322,10 +322,12 @@ class ButtonColumn extends Column
 
         $isDisabled = $this->isDisabledForRecord($record);
         $url = $this->evaluateForRecord($this->urlCallback, $record);
+        $openInNewTab = (bool) $this->evaluateForRecord($this->openUrlInNewTab, $record);
 
         return $this->renderView('tables.columns.button', [
             'url' => $url,
-            'openInNewTab' => (bool) $this->evaluateForRecord($this->openUrlInNewTab, $record),
+            'openInNewTab' => $openInNewTab,
+            'navigate' => $this->shouldNavigateTo(is_string($url) ? $url : null, $openInNewTab),
             'classes' => $this->getButtonClasses($record),
             'iconHtml' => $this->renderButtonIcon($record),
             'iconPosition' => $this->buttonIconPosition,

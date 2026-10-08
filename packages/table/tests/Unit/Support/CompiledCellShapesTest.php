@@ -154,6 +154,29 @@ it('compiles the record link once and fills it per cell', function () {
         ->toBe('<a href="/rows/1?a=1&amp;b=2" class="hover:text-primary-600 dark:hover:text-primary-400"><span>Ada</span></a>');
 });
 
+it('compiles a second record link for one that navigates', function () {
+    // Whether the link carries `wire:navigate` is structure, so it is a shape
+    // of its own rather than a slot — and still one compile per table.
+    $table = shapesTable();
+    $skeleton = $table->getRecordLinkSkeleton(navigate: true);
+
+    expect($table->getRecordLinkSkeleton(navigate: true))->toBe($skeleton)
+        ->and($table->getRecordLinkSkeleton())->not->toBe($skeleton)
+        ->and($skeleton->fill(['url' => '/rows/1', 'content' => 'Ada']))
+        ->toBe('<a href="/rows/1" wire:navigate class="hover:text-primary-600 dark:hover:text-primary-400">Ada</a>');
+});
+
+it('asks the record url whether it navigates', function () {
+    expect(shapesTable()->recordUrl('/rows/{id}')->shouldNavigateToRecordUrl('/rows/1'))->toBeTrue()
+        ->and(shapesTable()->recordUrl('/rows/{id}', navigate: false)->shouldNavigateToRecordUrl('/rows/1'))->toBeFalse()
+        ->and(shapesTable()->recordUrl('/rows/{id}')->shouldNavigateToRecordUrl('https://example.com/rows/1'))->toBeFalse();
+
+    config()->set('wire-core.navigate', false);
+
+    expect(shapesTable()->recordUrl('/rows/{id}')->shouldNavigateToRecordUrl('/rows/1'))->toBeFalse()
+        ->and(shapesTable()->recordUrl('/rows/{id}', navigate: true)->shouldNavigateToRecordUrl('/rows/1'))->toBeTrue();
+});
+
 it('compiles one meta chip for the card, not one per record', function () {
     $table = shapesTable();
     $skeleton = $table->getMobileCardMetaSkeleton();

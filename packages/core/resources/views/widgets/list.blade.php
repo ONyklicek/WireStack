@@ -22,7 +22,7 @@
                 <li @foreach($item->getExtraAttributes() as $attr => $val) {{ $attr }}="{{ $val }}" @endforeach>
                     @if($item->getUrl())
                         <a href="{{ $item->getUrl() }}"
-                           @if($item->opensInNewTab()) target="_blank" rel="noopener noreferrer" @endif
+                           @if($item->opensInNewTab()) target="_blank" rel="noopener noreferrer" @else @wireNavigate($item->getUrl()) @endif
                            class="flex items-start gap-3 rounded-md py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             @include('wire-core::widgets.partials.list-item', ['item' => $item])
                         </a>

@@ -89,7 +89,17 @@ it('renders ButtonColumn (link) through its partial', function () {
 
     expect($html)->toContain('<a')
         ->and($html)->toContain('href="https://example.test"')
-        ->and($html)->toContain('Open');
+        ->and($html)->toContain('Open')
+        // Another site is never navigated into.
+        ->and($html)->not->toContain('wire:navigate');
+});
+
+it('navigates a ButtonColumn link to a page of this application', function () {
+    $render = fn (ButtonColumn $column): string => $column->buttonLabel('Open')->renderCell(partialRecord(['id' => 1]));
+
+    expect($render(ButtonColumn::make('go')->actionUrl(fn () => '/orders/1')))->toContain('wire:navigate')
+        ->and($render(ButtonColumn::make('go')->actionUrl(fn () => '/orders/1', true)))->not->toContain('wire:navigate')
+        ->and($render(ButtonColumn::make('go')->actionUrl(fn () => '/orders/1')->navigate(false)))->not->toContain('wire:navigate');
 });
 
 it('does not let record-derived confirmation text break out of the wire:click attribute', function () {

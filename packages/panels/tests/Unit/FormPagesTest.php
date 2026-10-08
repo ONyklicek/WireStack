@@ -389,6 +389,24 @@ it('sends a created record to its own page', function () {
         ]));
 });
 
+it('reaches the next page the way every other link does', function () {
+    fpRoute(FpIndexOnlyResource::class);
+
+    $navigated = Livewire::test(FpCreateIndexOnly::class)
+        ->set('data.number', 'N-1')
+        ->call('save');
+
+    config()->set('wire-core.navigate', false);
+
+    $reloaded = Livewire::test(FpCreateIndexOnly::class)
+        ->set('data.number', 'N-2')
+        ->call('save');
+
+    expect($navigated->effects['redirectUsingNavigate'] ?? false)->toBeTrue()
+        ->and($reloaded->effects['redirectUsingNavigate'] ?? false)->toBeFalse()
+        ->and($reloaded->effects['redirect'] ?? null)->toBe(ResourceRoutes::urlFor('fp-index-only'));
+});
+
 it('falls back to the edit page when the resource has no view page', function () {
     fpRoute(FpNoViewResource::class);
 

@@ -36,6 +36,7 @@ you, so the lines above are for an application setting one up by hand.
 
 | Variable | Default | Used by |
 |----------|---------|---------|
+| `WIRE_NAVIGATE` | `true` | Links between this application's pages follow `wire:navigate` |
 | `WIRE_NOTIFICATIONS_DRIVER` | `session` | Core notifications |
 | `WIRE_AUDIT_ENABLED` | `true` | Core audit log |
 | `WIRE_AUDIT_USER_MODEL` | `App\Models\User` | Core audit log |
@@ -81,6 +82,8 @@ The `wire-core` config controls shared UI behavior.
 
 ```php
 return [
+    'navigate' => env('WIRE_NAVIGATE', true),
+
     'notifications' => [
         'default' => env('WIRE_NOTIFICATIONS_DRIVER', 'session'),
     ],
@@ -124,6 +127,63 @@ return [
     ],
 ];
 ```
+
+### Navigation
+
+`navigate` decides whether a link from one page of your application to another
+is followed with Livewire's `wire:navigate` — the next page's body is fetched
+and swapped in, so the layout, the sidebar's scroll and the assets already
+loaded stay — or as an ordinary full page load. It is on by default.
+
+It is one switch for every link the framework renders: the sidebar and the top
+navigation, breadcrumbs, the record sub-navigation, actions with a `url()`
+(buttons, menu rows, header actions, infolist actions), a table's
+`recordUrl()`, `url` columns and `ButtonColumn` links, the list widget, the
+notification bell, board cards, the user menu, and the redirect after a save,
+a delete, a search result or a tour step.
+
+Each link is decided in this order:
+
+1. **Is it a page of this application?** A path, or an absolute URL on the
+   application's own scheme, host and port. Another site, a `mailto:` or
+   `tel:` link and a bare `#fragment` are never navigated, whatever the
+   switch says — Livewire cannot swap in a page from another origin.
+2. **Does it open in a new tab?** Then there is nothing to navigate.
+3. **Does the link have its own say?** `->navigate(false)` keeps one link a
+   full page load in a navigating application — a file download, or a page
+   with a script of its own that must run on load. `->navigate()` makes one
+   link navigate in an application that turned the switch off.
+4. **Otherwise the switch.**
+
+```php
+// config/wire-core.php
+'navigate' => env('WIRE_NAVIGATE', true),
+```
+
+```php
+Action::make('export')
+    ->url(fn (Order $record) => route('orders.export', $record))
+    ->navigate(false), // [tl! focus]
+
+TextColumn::make('customer.name')
+    ->actionUrl(fn (Order $record) => route('customers.show', $record->customer))
+    ->navigate(false), // [tl! focus]
+
+$table->recordUrl(fn (Order $record) => route('orders.show', $record), navigate: false); // [tl! focus]
+```
+
+Your own Blade asks the same question with `@wireNavigate`:
+
+```blade
+<a href="{{ $url }}" @wireNavigate($url)>Orders</a>
+<a href="{{ $url }}" @wireNavigate($url, false)>Download</a>
+```
+
+It writes `wire:navigate` or nothing. `<x-wire::menu-item>` takes a
+`:navigate` prop for the same choice.
+
+Two places stay a full page load on purpose: the tenant switcher and the team
+switcher, because the whole layout belongs to the tenant or team being left.
 
 ### Notifications
 

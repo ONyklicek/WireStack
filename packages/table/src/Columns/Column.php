@@ -26,6 +26,7 @@ use NyonCode\WireCore\Foundation\Concerns\HasPlaceholder;
 use NyonCode\WireCore\Foundation\Concerns\HasSize;
 use NyonCode\WireCore\Foundation\Concerns\HasTooltip;
 use NyonCode\WireCore\Foundation\Concerns\HasVisibility;
+use NyonCode\WireCore\Foundation\Concerns\InteractsWithClientNavigation;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
@@ -79,6 +80,7 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     use HasView;
     use HasVisibility;
     use HasWidth;
+    use InteractsWithClientNavigation;
 
     /**
      * Macroable, for the reason `Table` and `BaseAction` already are: an
@@ -305,6 +307,8 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
             ? (is_callable($this->description) ? ($this->description)($record) : $this->description)
             : null;
 
+        $url = $this->getUrl($record);
+
         // Column owns state/config; the text partial owns all cell markup.
         return trim($this->renderView('tables.columns.text', [
             'content' => $content,
@@ -312,8 +316,9 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
             'isHtml' => $this->html,
             'iconHtml' => $this->iconHtmlFor($record),
             'iconPosition' => $this->iconPosition ?? 'before',
-            'url' => $this->getUrl($record),
+            'url' => $url,
             'openInNewTab' => $this->openUrlInNewTab,
+            'navigate' => $this->shouldNavigateTo($url, $this->openUrlInNewTab),
             'copyable' => $this->copyable,
             'copyValue' => EnumResolver::scalar($state),
             // Only a copyable cell uses this; resolving the translated default for
@@ -404,12 +409,16 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
             ? $this->iconHtmlFor($record)
             : ($this->staticIconHtml ??= $this->iconHtmlFor(null));
 
+        // Whether the link navigates is structure, not a value — a second shape.
+        $navigate = $url !== null && $url !== '' && $this->shouldNavigateTo($url, $this->openUrlInNewTab);
+
         $shape = ($url !== null && $url !== '' ? 'u' : '')
+            .($navigate ? 'n' : '')
             .($description !== null && $description !== '' ? 'd' : '')
             .($iconHtml !== '' ? 'i' : '');
 
         $skeleton = $this->cellSkeletons[$shape]
-            ??= $this->buildCellSkeleton($url, $description, $iconHtml);
+            ??= $this->buildCellSkeleton($url, $navigate, $description, $iconHtml);
 
         // Each value arrives encoded exactly as the partial would have encoded it in
         // that position: content raw or escaped per ->html(), url/description/copy
@@ -462,12 +471,12 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
      * Render the partial once for one cell *shape*, with a sentinel wherever a value
      * varies by record.
      *
-     * The three arguments are the resolved values for THIS shape, and only their
-     * presence is read: they decide whether the partial builds the `<a>`, the
-     * description block and the icon at all. Their content arrives later, through
+     * The arguments are the resolved values for THIS shape, and only their
+     * presence is read: they decide whether the partial builds the `<a>` (and
+     * whether it navigates), the description block and the icon at all. Their content arrives later, through
      * {@see Skeleton::fill()}.
      */
-    private function buildCellSkeleton(?string $url, ?string $description, string $iconHtml): Skeleton
+    private function buildCellSkeleton(?string $url, bool $navigate, ?string $description, string $iconHtml): Skeleton
     {
         return Skeleton::compile($this->renderView('tables.columns.text', [
             'content' => Skeleton::slot('content'),
@@ -479,6 +488,7 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
             'iconPosition' => $this->iconPosition ?? 'before',
             'url' => ($url === null || $url === '') ? null : Skeleton::slot('url'),
             'openInNewTab' => $this->openUrlInNewTab,
+            'navigate' => $navigate,
             'copyable' => $this->copyable,
             'copyValue' => $this->copyable ? Skeleton::slot('copyValue') : null,
             // Column-static, so it stays baked in rather than becoming a slot. Same

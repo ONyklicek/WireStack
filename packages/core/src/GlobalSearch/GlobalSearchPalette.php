@@ -14,6 +14,7 @@ use NyonCode\WireCore\Foundation\Contracts\ClassifiesComponentActions;
 use NyonCode\WireCore\Foundation\Contracts\ProvidesCommands;
 use NyonCode\WireCore\Foundation\Contracts\RunsComponentActions;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
+use NyonCode\WireCore\Foundation\Routing\ClientNavigation;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\Zone;
 
@@ -261,7 +262,7 @@ class GlobalSearchPalette extends Component
 
             $this->close();
 
-            return $this->redirect($url, navigate: true);
+            return $this->redirect($url, navigate: app(ClientNavigation::class)->shouldNavigate($url));
         }
 
         return $this->invoke($row);
@@ -351,7 +352,7 @@ class GlobalSearchPalette extends Component
 
         $this->close();
 
-        return $this->redirect($target, navigate: true);
+        return $this->redirect($target, navigate: app(ClientNavigation::class)->shouldNavigate($target));
     }
 
     /**

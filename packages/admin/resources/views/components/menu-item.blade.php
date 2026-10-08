@@ -9,8 +9,9 @@
     'href' => null,
     'icon' => null,
     'type' => 'button',
+    'navigate' => null,
 ])
 
-<x-wire::menu-item :href="$href" :icon="$icon" :type="$type" {{ $attributes }}>
+<x-wire::menu-item :href="$href" :icon="$icon" :type="$type" :navigate="$navigate" {{ $attributes }}>
     {{ $slot }}
 </x-wire::menu-item>

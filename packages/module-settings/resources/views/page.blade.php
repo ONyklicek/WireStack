@@ -29,7 +29,7 @@
             @foreach ($links as $key => $link)
                 <a
                     href="{{ $link['url'] ?? '#' }}"
-                    wire:navigate
+                    @wireNavigate($link['url'] ?? '#')
                     data-testid="settings-group-link" @wireEl('settings-group-link')
                     data-group="{{ $key }}"
                     @if ($switcher === 'tabs') role="tab" aria-selected="{{ $link['current'] ? 'true' : 'false' }}" @endif

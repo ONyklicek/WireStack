@@ -65,6 +65,7 @@ use NyonCode\WireCore\Foundation\Mentions\MentionRegistry;
 use NyonCode\WireCore\Foundation\Mentions\MentionRenderer;
 use NyonCode\WireCore\Foundation\Registration\Catalog;
 use NyonCode\WireCore\Foundation\Registration\ClassDiscovery;
+use NyonCode\WireCore\Foundation\Routing\ClientNavigation;
 use NyonCode\WireCore\Foundation\Routing\Contracts\AuthorizesUrls;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
 use NyonCode\WireCore\Foundation\Routing\RenderedPage;
@@ -386,6 +387,11 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // registry holding half the tours — with which half depending on who
         // resolved it first.
         $this->app->singleton(Tours::class);
+
+        // Whether a link is followed with `wire:navigate`. Scoped rather than a
+        // singleton because it compares a url against the request's own origin,
+        // and an Octane worker serves more than one.
+        $this->app->scoped(ClientNavigation::class);
     }
 
     protected function bootFoundation(): void
@@ -448,6 +454,15 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // on its root tag. A directive rather than a partial because the field
         // wrapper renders once per field of every form, and an `@include` there
         // costs a view render per field (FormRenderCountTest measures it).
+        // `<a href="{{ $url }}" @wireNavigate($url)>` — `wire:navigate` when
+        // `wire-core.navigate` is on and the url is this application's, nothing
+        // otherwise. A second argument is the link's own preference.
+        Blade::directive('wireNavigate', static fn (string $expression): string => sprintf(
+            '<?php echo app(%s::class)->attribute(%s); ?>',
+            '\\'.ClientNavigation::class,
+            $expression,
+        ));
+
         Blade::directive('wireExtraAttributes', static fn (string $expression): string => sprintf(
             '<?php echo %s::for(%s)->toHtml(); ?>',
             '\\'.ExtraAttributes::class,

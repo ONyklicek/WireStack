@@ -37,6 +37,7 @@
             @if($recordKeyForMorph) wire:key="{{ $recordKeyForMorph }}" @endif
             href="{{ $data['url'] }}"
             @if($data['target']) target="{{ $data['target'] }}" @endif
+            @if($data['navigate'] ?? false) wire:navigate @endif
             class="{{ $data['classes'] }}"
             data-testid="action-{{ $action->getName() }}"
             @if($action->getLabel($record ?? null)) aria-label="{{ $action->getLabel($record ?? null) }}" @endif

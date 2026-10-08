@@ -413,7 +413,7 @@ menu is the application's. It asks where a key is routed; it does not decide.
     @foreach($group->getItems() as $key => $item)
         {{-- A registered entry with no page of its own still belongs in the
              menu; it simply is not a link. --}}
-        <a @if($item->getUrl()) href="{{ $item->getUrl() }}" wire:navigate @endif>   {{-- [tl! focus] --}}
+        <a @if($item->getUrl()) href="{{ $item->getUrl() }}" @wireNavigate($item->getUrl()) @endif>   {{-- [tl! focus] --}}
             {!! icon($item->getIcon()) !!}
             {{ $item->getLabel() }}
             <x-wire::badge :color="$item->getBadgeColor() ?? 'gray'">{{ $item->getBadge() }}</x-wire::badge>
@@ -422,7 +422,7 @@ menu is the application's. It asks where a key is routed; it does not decide.
         @if($item->hasChildren())
             <ul>
                 @foreach($item->getChildren() as $child)
-                    <li><a href="{{ $child->getUrl() }}" wire:navigate>{{ $child->getLabel() }}</a></li>
+                    <li><a href="{{ $child->getUrl() }}" @wireNavigate($child->getUrl())>{{ $child->getLabel() }}</a></li>
                 @endforeach
             </ul>
         @endif

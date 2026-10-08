@@ -10,6 +10,9 @@
     @wireEl('menu-item')
     @if ($href)
         href="{{ $href }}"
+        {{-- Unless the caller already wrote it: a layout that predates the switch
+             passes `wire:navigate` itself, and the attribute twice is noise. --}}
+        @unless ($attributes->has('wire:navigate')) @wireNavigate($href, $navigate) @endunless
     @else
         type="{{ $type }}"
     @endif

@@ -7,7 +7,7 @@
     $ariaCurrent = $active->ariaCurrent($item, $itemKey);
 @endphp
 <a
-    @if ($url) href="{{ $url }}" wire:navigate @else aria-disabled="true" @endif
+    @if ($url) href="{{ $url }}" @wireNavigate($url) @else aria-disabled="true" @endif
     @if ($ariaCurrent) aria-current="{{ $ariaCurrent }}" @endif
     @if ($isActive) data-active="true" @endif
     data-testid="{{ $testid }}"

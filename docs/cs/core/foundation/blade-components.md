@@ -45,10 +45,15 @@ vymění plnou výplň za obrys.
 formulář kolem sebe, nakreslené tak, jak takový řádek kreslí menu frameworku:
 
 ```blade
-<x-wire::menu-item :href="route('profile')" icon="outline:user-circle" wire:navigate>
+<x-wire::menu-item :href="route('profile')" icon="outline:user-circle">
     Profil
 </x-wire::menu-item>
 ```
+
+Řádek s `href` do této aplikace jde přes `wire:navigate`, když je zapnutý
+`wire-core.navigate`; `:navigate="false"` nechá načíst celou stránku a
+`:navigate="true"` naviguje i při vypnutém přepínači
+([Konfigurace → Navigace](../../start/configuration.md#navigace)).
 
 Tohle je komponenta z core; `<x-wire-admin::menu-item>` je tentýž řádek uvnitř
 uživatelského menu [admin shellu](../../admin/layout.md) — takže cokoli tam dáte
