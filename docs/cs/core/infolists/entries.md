@@ -157,14 +157,38 @@ Vykreslí vzorek plus hodnotu barvy, volitelně kopírovatelnou.
 ColorEntry::make('brand_color')->copyable();
 ```
 
+Formátovaná hodnota se zobrazí jako text, ale vzorek se vykreslí jen tehdy, když
+projde seznamem povolených CSS barev: hex, `rgb()`/`rgba()`, `hsl()`/`hsla()`
+nebo samotné klíčové slovo CSS barvy. Nepodporované nebo nebezpečné hodnoty
+nevytvoří vzorek, místo aby se vložily do atributu `style`.
+`copyable()` pochází ze sdílené schopnosti kopírovatelného entry.
+
+### ColorEntry API
+
+```php
+->getSwatch(): ?string              // bezpečná CSS barva, nebo null, pokud nejde o přijatou barvu
+```
+
 ## KeyValueEntry
 
-Vykreslí array (nebo JSON-cast atribut) jako tabulku klíč/hodnota.
+Vykreslí array nebo iterable (včetně JSON-cast atributu) jako tabulku
+klíč/hodnota. Vnořené hodnoty se zakódují jako JSON; prázdný nebo neiterovatelný
+stav vykreslí placeholder entry.
 
 ```php
 KeyValueEntry::make('meta')
     ->keyLabel('Attribute')
     ->valueLabel('Value');
+```
+
+### KeyValueEntry API
+
+```php
+->keyLabel(string $label): static       // popisek hlavičky — výchozí 'Key'
+->getKeyLabel(): string
+->valueLabel(string $label): static     // popisek hlavičky — výchozí 'Value'
+->getValueLabel(): string
+->getPairs(): array                     // normalizované dvojice; neiterovatelný stav se změní na []
 ```
 
 ## HtmlEntry
@@ -212,13 +236,23 @@ RepeatableEntry::make('items')
     ]);
 ```
 
-| Metoda | Popis |
-|--------|-------------|
-| `schema(array)` | Schéma entries vykreslené pro každou položku |
-| `columns(int)` | Sloupce gridu na řádek |
-| `contained(bool = true)` | Obalit každý řádek do ohraničené karty |
-| `actions(array)` | Akční tlačítka pro každý řádek (viz [Akce](actions.md#akce)) |
-| `with(array\|string)` | Eager load relací na řádcích (viz níže) |
+### RepeatableEntry API
+
+```php
+->schema(array $components): static       // Entry objekty vykreslené pro každou položku
+->getSchema(): array
+->columns(int $columns): static            // sloupce mřížky položky — výchozí 1
+->getColumns(): int
+->contained(bool $condition = true): static // zabalit každou položku do orámované karty — výchozí true
+->isContained(): bool
+->with(array|string $relations): static    // eager-load relací; opakovaná volání se sloučí bez duplicit
+->getWith(): array
+->getRowItems(): array                     // seznam položek stavu přeindexovaných od nuly
+->getRows(): array                         // seznam naklonovaných podřízených entries navázaných na položku
+```
+
+Akce pro každý řádek `actions(array $actions)` se dědí ze sdíleného API entry;
+viz [Akce infolistu](actions.md#akce).
 
 ### Předcházení N+1 na řádcích relace
 
