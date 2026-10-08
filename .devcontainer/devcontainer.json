@@ -1,12 +1,13 @@
 {
-    "name": "Laravel 13 AI",
+    "name": "WireStack Laravel",
 
-    "image": "mcr.microsoft.com/devcontainers/php:3-8.5-trixie",
+    "image": "mcr.microsoft.com/devcontainers/php:4-8.4-trixie",
 
     "features": {
-        "ghcr.io/devcontainers/features/node:1": {
+        "ghcr.io/devcontainers/features/node:2": {
             "version": "24"
         },
+
         "ghcr.io/devcontainers/features/github-cli:1": {}
     },
 
@@ -20,6 +21,7 @@
             "label": "Laravel",
             "onAutoForward": "openBrowser"
         },
+
         "5173": {
             "label": "Vite",
             "onAutoForward": "silent"
@@ -35,8 +37,9 @@
                 "onecentlin.laravel-blade",
                 "shufo.vscode-blade-formatter",
                 "bradlc.vscode-tailwindcss",
-                "EditorConfig.EditorConfig",
+                "stef-k.laravel-goto",
                 "eamodio.gitlens",
+                "EditorConfig.EditorConfig",
                 "GitHub.copilot",
                 "GitHub.copilot-chat"
             ],
@@ -51,11 +54,7 @@
                 "files.trimTrailingWhitespace": true,
                 "files.insertFinalNewline": true,
 
-                "php.validate.executablePath": "/usr/local/bin/php",
-
-                "intelephense.environment.phpVersion": "8.5.0",
-
-                "intelephense.files.maxSize": 5000000,
+                "intelephense.environment.phpVersion": "8.4.0",
 
                 "[php]": {
                     "editor.defaultFormatter": "bmewburn.vscode-intelephense-client"
@@ -63,24 +62,12 @@
 
                 "[blade]": {
                     "editor.defaultFormatter": "shufo.vscode-blade-formatter"
-                },
-
-                "[json]": {
-                    "editor.defaultFormatter": "vscode.json-language-features"
-                },
-
-                "[javascript]": {
-                    "editor.defaultFormatter": "esbenp.prettier-vscode"
-                },
-
-                "[typescript]": {
-                    "editor.defaultFormatter": "esbenp.prettier-vscode"
                 }
             }
         }
     },
 
-    "postCreateCommand": "composer install && npm install && composer global require laravel/lsp",
+    "postCreateCommand": "composer install && npm install",
 
     "postStartCommand": "php artisan storage:link 2>/dev/null || true"
 }
