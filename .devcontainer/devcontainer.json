@@ -1,30 +1,40 @@
 {
-    "name": "WireStack Laravel",
+    "name": "WireStack",
 
-    "image": "mcr.microsoft.com/devcontainers/php:4-8.4-trixie",
+    // The compose file is what builds the Dockerfile and ships php.ini and
+    // xdebug.ini; a bare "image" here used to bypass all three.
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "runServices": ["app", "mysql", "mariadb", "postgres", "redis", "mailpit"],
+    "workspaceFolder": "/workspaces/WireStack",
+    "shutdownAction": "stopCompose",
+    "remoteUser": "vscode",
 
     "features": {
-        "ghcr.io/devcontainers/features/node:2": {
-            "version": "24"
+        // CI's docs and asset jobs run on Node 22.
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "22"
         },
-
         "ghcr.io/devcontainers/features/github-cli:1": {}
     },
 
-    "forwardPorts": [
-        8000,
-        5173
-    ],
+    "forwardPorts": [8085, 5173, "mailpit:8025"],
 
     "portsAttributes": {
-        "8000": {
-            "label": "Laravel",
-            "onAutoForward": "openBrowser"
+        "8085": {
+            "label": "Workbench (testbench serve)",
+            "onAutoForward": "notify"
         },
-
         "5173": {
             "label": "Vite",
             "onAutoForward": "silent"
+        },
+        "mailpit:8025": {
+            "label": "Mailpit"
+        },
+        "9003": {
+            "label": "Xdebug",
+            "onAutoForward": "ignore"
         }
     },
 
@@ -33,11 +43,11 @@
             "extensions": [
                 "laravel.vscode-laravel",
                 "bmewburn.vscode-intelephense-client",
-                "ikappas.composer",
+                "xdebug.php-debug",
+                "open-southeners.laravel-pint",
+                "m1guelpf.better-pest",
                 "onecentlin.laravel-blade",
-                "shufo.vscode-blade-formatter",
                 "bradlc.vscode-tailwindcss",
-                "stef-k.laravel-goto",
                 "eamodio.gitlens",
                 "EditorConfig.EditorConfig",
                 "GitHub.copilot",
@@ -45,29 +55,52 @@
             ],
 
             "settings": {
-                "editor.formatOnSave": true,
-
-                "editor.codeActionsOnSave": {
-                    "source.fixAll": "explicit"
-                },
-
                 "files.trimTrailingWhitespace": true,
                 "files.insertFinalNewline": true,
 
-                "intelephense.environment.phpVersion": "8.4.0",
+                "php.validate.executablePath": "/usr/local/bin/php",
+                "intelephense.environment.phpVersion": "8.2.0",
+                "intelephense.files.exclude": [
+                    "**/.git/**",
+                    "**/node_modules/**",
+                    "**/docs-site/dist/**",
+                    "**/build/**"
+                ],
 
+                // pint.json is the style; Intelephense's formatter is not.
+                "laravel-pint.enable": true,
                 "[php]": {
-                    "editor.defaultFormatter": "bmewburn.vscode-intelephense-client"
+                    "editor.defaultFormatter": "open-southeners.laravel-pint",
+                    "editor.formatOnSave": true
                 },
 
+                // No Blade formatter on save: `@wireEl('…')` hooks must stay
+                // inside their opening tags (npm run hooks:verify).
                 "[blade]": {
-                    "editor.defaultFormatter": "shufo.vscode-blade-formatter"
+                    "editor.formatOnSave": false
+                },
+
+                "files.watcherExclude": {
+                    "**/vendor/**": true,
+                    "**/node_modules/**": true,
+                    "**/docs-site/dist/**": true,
+                    "**/build/**": true
+                },
+
+                "launch": {
+                    "version": "0.2.0",
+                    "configurations": [
+                        {
+                            "name": "Listen for Xdebug",
+                            "type": "php",
+                            "request": "launch",
+                            "port": 9003
+                        }
+                    ]
                 }
             }
         }
     },
 
-    "postCreateCommand": "composer install && npm install",
-
-    "postStartCommand": "php artisan storage:link 2>/dev/null || true"
+    "postCreateCommand": "bash .devcontainer/post-create.sh"
 }
