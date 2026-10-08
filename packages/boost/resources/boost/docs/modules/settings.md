@@ -209,6 +209,172 @@ there first creates the one instance and the other finds it — without that, a
 registration would land in a throwaway object and the tab would be missing on
 some machines depending on a lockfile.
 
+## Shaping Values On The Way In And Out
+
+A form field has a shape of its own and the code reading a setting usually wants
+a narrower one: a time picker answers `08:30` and the timer reads `08:30:00`, a
+set of checkboxes answers whatever was ticked in the order it was ticked and the
+reader wants only the cases an enum knows. `TransformsSettings` is the seam
+between the two:
+
+```php
+use NyonCode\WireModuleSettings\Contracts\SettingsGroup;
+use NyonCode\WireModuleSettings\Contracts\TransformsSettings;
+
+final class ShiftSettings implements SettingsGroup, TransformsSettings
+{
+    // group(), label(), schema() …
+
+    public static function fromStorage(array $values): array   // [tl! focus:start]
+    {
+        return [...$values, 'start' => substr((string) ($values['start'] ?? ''), 0, 5)];
+    }
+
+    public static function toStorage(array $data): array
+    {
+        return [...$data, 'start' => $data['start'].':00'];
+    }                                                            // [tl! focus:end]
+}
+```
+
+`fromStorage()` gets the stored values with the group's defaults under them and
+answers the form's state. `toStorage()` runs **after the form shaped its own
+fields** — validated, and a `FileUpload`'s pending upload already moved to its
+disk — and answers what is written: a key it drops is not stored, a key it adds
+is. That is also where an upload goes somewhere of your own, since the path is
+what the field hands over.
+
+## Rules Across Fields
+
+A field's rules see the field. "A start number needs the year it starts in" is
+about two of them, and its message belongs beside one, not in a toast:
+
+```php
+use NyonCode\WireModuleSettings\Contracts\ValidatesSettings;
+
+public static function validateSettings(array $data): array
+{
+    return blank($data['start']) === blank($data['start_year'])
+        ? []
+        : ['start' => __('Fill in the number and its year, or neither.')];   // [tl! focus]
+}
+```
+
+It is asked after every field rule passed, with the validated state. An empty
+answer saves; a message stops the save — nothing is written — and is shown under
+the field it is keyed by.
+
+## One Screen Over Several Storage Groups
+
+Storage groups are cached and announced one by one, so they follow the code that
+reads them; a screen follows the person changing them. When the two disagree —
+the timer reads `timers`, the reports read `reports`, and both are "how work is
+reported" — one group spans both:
+
+```php
+use NyonCode\WireModuleSettings\Contracts\SpansSettingsGroups;
+
+public static function storage(): array
+{
+    return ['timers' => ['check_interval', 'shift_start', 'shift_end']];   // [tl! focus]
+}
+```
+
+A listed key is read from and written to the storage group it is listed under;
+every other key stays in the group's own. A save writes all of them in **one
+transaction** through `Settings::fillMany()` and announces each storage group it
+wrote. A key nobody stored yet keeps the default the group declares for it.
+
+```php
+Settings::fillMany([
+    'reports' => ['format' => 'decimal'],
+    'timers' => ['check_interval' => 15],
+]);
+```
+
+## Drawing From The Live State
+
+Some settings are easier to set when you can see what they do — the number a
+format makes, what a rate pays. That is not a field but a reading of the fields,
+so the group renders it from the state the form holds now:
+
+```php
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
+use NyonCode\WireModuleSettings\Contracts\ExtendsSettingsScreen;
+
+public static function screenExtension(array $data): ?Htmlable
+{
+    return new HtmlString(e(OfferNumber::preview($data['format'] ?? '')));   // [tl! focus]
+}
+```
+
+It is drawn under the form on every render, so a `live()` field it reads redraws
+it as the value changes. It reads and never writes — saving is the form's.
+
+## A Screen Of Its Own
+
+The way out for what a form cannot describe — a calculator with state of its own,
+a connection to test before saving. The group names a Livewire component and the
+module draws it in place of the form, keeping the switcher, the heading, the URL
+and who may open it:
+
+```php
+use NyonCode\WireModuleSettings\Contracts\RendersSettingsScreen;
+
+public static function component(): string
+{
+    return WageSettingsScreen::class;   // mounted with the group's name as `group` [tl! focus]
+}
+```
+
+The component saves through `Settings` like any other code; the page's own save
+refuses a group like this (404), so nothing is written in its name. `schema()` may
+simply return `[]`.
+
+A group can also word its own confirmation, which matters once there are several
+of them — "Settings saved." does not say which:
+
+```php
+use NyonCode\WireModuleSettings\Contracts\ConfirmsSettingsSave;
+
+public static function savedMessage(): string
+{
+    return __('Offer settings saved.');
+}
+```
+
+## On A Page Of Your Own
+
+An application that already has a settings section — its own route, menu entry
+and trail, and very likely the `settings` key — keeps it and builds it on the
+module instead. Switch the module's own screen off, which leaves storage, the
+groups and every contract working and registers nothing under that key:
+
+```php
+// config/wire-module-settings.php
+'screen' => false,     // storage and groups only — no route, no menu entry [tl! focus]
+'switcher' => 'tabs',  // draw the group links as a tab bar
+```
+
+Then route `SettingsPage`, or a class of your own extending it, where your section
+already is. The page is not final for that reason: override `getTitle()` and
+`breadcrumbs()` for your trail, `groups()` for which groups this page offers, and
+`groupUrl()` for an address of your own. With no module route to link to, the
+groups switch on the page itself — `?group=mail`, still one URL per group, so a
+bookmark still lands on it.
+
+`width` caps how wide a group's screen grows, centred — one of the widths a modal
+takes (`sm` … `7xl`, `full`), so `2xl` is the width it is there; null keeps the
+full page. A column of short inputs stretched across a wide monitor reads as a row
+of empty boxes. `actions_alignment` places the save button (`left`, `center`,
+`right`). An unknown width throws, like an unknown switcher.
+
+`switcher` takes `links` (a row of buttons, the default) or `tabs` (the bar
+`<x-wire::tabs>` draws); both are links. Anything else throws
+`SettingsScreenException`, because a typo that quietly drew links would read as
+"tabs are not supported".
+
 ## Who May Change What
 
 Two levels, and both are `Gate::allows()` — nothing here re-implements an
@@ -309,12 +475,16 @@ Settings::forget('branding');
 
 ## The Rest Of The File
 
-Four keys, each covered by a section above except the two at the bottom:
+Every key, each covered by a section above except the two at the bottom:
 
 ```php
 // config/wire-module-settings.php
 'groups' => [],        // your own group classes — see How It Works
 'except' => [],        // storage names of contributed tabs to drop [tl! focus]
+'screen' => true,      // false: storage only — see On A Page Of Your Own
+'switcher' => 'links', // or 'tabs'
+'width' => null,       // or a modal width: 'sm' … '7xl', 'full'
+'actions_alignment' => 'left',
 'permission' => null,  // the ability the screen requires — see Who May Change What
 'table' => 'wire_settings',
 

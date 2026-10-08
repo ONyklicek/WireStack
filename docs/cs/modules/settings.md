@@ -207,6 +207,174 @@ tam první, vytvoří jedinou instanci a druhý ji najde. Bez toho by registrace
 skončila v zahozeném objektu a tab by na některých strojích chyběl podle
 lockfilu.
 
+## Úprava hodnot cestou tam i zpátky
+
+Pole formuláře má vlastní tvar a kód, který nastavení čte, obvykle chce užší:
+výběr času odpoví `08:30` a stopky čtou `08:30:00`, sada zaškrtávátek odpoví tím,
+co bylo zaškrtnuté, v pořadí, v jakém to bylo zaškrtnuté, a čtenář chce jen
+případy, které zná enum. `TransformsSettings` je švem mezi nimi:
+
+```php
+use NyonCode\WireModuleSettings\Contracts\SettingsGroup;
+use NyonCode\WireModuleSettings\Contracts\TransformsSettings;
+
+final class ShiftSettings implements SettingsGroup, TransformsSettings
+{
+    // group(), label(), schema() …
+
+    public static function fromStorage(array $values): array   // [tl! focus:start]
+    {
+        return [...$values, 'start' => substr((string) ($values['start'] ?? ''), 0, 5)];
+    }
+
+    public static function toStorage(array $data): array
+    {
+        return [...$data, 'start' => $data['start'].':00'];
+    }                                                            // [tl! focus:end]
+}
+```
+
+`fromStorage()` dostane uložené hodnoty s výchozími hodnotami skupiny pod nimi
+a vrátí stav formuláře. `toStorage()` běží **až po tom, co formulář upravil svá
+pole** — po validaci a s nahraným souborem `FileUpload` už přesunutým na disk —
+a vrátí to, co se zapíše: klíč, který vynechá, se neuloží, klíč, který přidá,
+ano. Tady také nahraný soubor dostanete kamkoli vlastního, protože pole předává
+jeho cestu.
+
+## Pravidla napříč poli
+
+Pravidla pole vidí jen pole. „Počáteční číslo potřebuje rok, ve kterém začíná“
+se týká dvou polí a jeho zpráva patří k jednomu z nich, ne do toastu:
+
+```php
+use NyonCode\WireModuleSettings\Contracts\ValidatesSettings;
+
+public static function validateSettings(array $data): array
+{
+    return blank($data['start']) === blank($data['start_year'])
+        ? []
+        : ['start' => __('Vyplňte číslo i jeho rok, nebo ani jedno.')];   // [tl! focus]
+}
+```
+
+Volá se po tom, co prošla všechna pravidla polí, s validovaným stavem. Prázdná
+odpověď uloží; zpráva uložení zastaví — nic se nezapíše — a zobrazí se pod
+polem, jehož jménem je klíčovaná.
+
+## Jedna obrazovka nad několika úložnými skupinami
+
+Úložné skupiny se cachují a oznamují jedna po druhé, takže se řídí kódem, který
+je čte; obrazovka se řídí člověkem, který je mění. Když se ti dva neshodnou —
+stopky čtou `timers`, výkazy čtou `reports` a obojí je „jak se vykazuje práce“ —
+jedna skupina pokryje obě:
+
+```php
+use NyonCode\WireModuleSettings\Contracts\SpansSettingsGroups;
+
+public static function storage(): array
+{
+    return ['timers' => ['check_interval', 'shift_start', 'shift_end']];   // [tl! focus]
+}
+```
+
+Vyjmenovaný klíč se čte z úložné skupiny, pod kterou je uvedený, a do ní se i
+zapisuje; každý jiný klíč zůstává ve vlastní skupině. Uložení zapíše všechny
+v **jedné transakci** přes `Settings::fillMany()` a ohlásí každou úložnou
+skupinu, kterou zapsalo. Klíč, který zatím nikdo neuložil, si drží výchozí
+hodnotu, kterou pro něj skupina deklaruje.
+
+```php
+Settings::fillMany([
+    'reports' => ['format' => 'decimal'],
+    'timers' => ['check_interval' => 15],
+]);
+```
+
+## Kreslení z živého stavu
+
+Některá nastavení se nastavují snáz, když je vidět, co dělají — číslo, které
+tvar vyrobí, kolik sazba vyplatí. To není pole, ale čtení polí, takže ho skupina
+vykreslí ze stavu, který formulář drží právě teď:
+
+```php
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
+use NyonCode\WireModuleSettings\Contracts\ExtendsSettingsScreen;
+
+public static function screenExtension(array $data): ?Htmlable
+{
+    return new HtmlString(e(OfferNumber::preview($data['format'] ?? '')));   // [tl! focus]
+}
+```
+
+Kreslí se pod formulářem při každém vykreslení, takže pole s `live()`, které
+čte, ho překreslí, jak se hodnota mění. Čte a nikdy nezapisuje — ukládání patří
+formuláři.
+
+## Vlastní obrazovka
+
+Úniková cesta pro to, co formulář nepopíše — kalkulačka s vlastním stavem,
+spojení, které je potřeba otestovat před uložením. Skupina pojmenuje Livewire
+komponentu a modul ji vykreslí místo formuláře; přepínač, nadpis, adresa i to,
+kdo ji smí otevřít, zůstávají jeho:
+
+```php
+use NyonCode\WireModuleSettings\Contracts\RendersSettingsScreen;
+
+public static function component(): string
+{
+    return WageSettingsScreen::class;   // připojená s názvem skupiny jako `group` [tl! focus]
+}
+```
+
+Komponenta ukládá přes `Settings` jako jakýkoli jiný kód; vlastní uložení stránky
+takovou skupinu odmítne (404), takže se jejím jménem nic nezapíše. `schema()`
+může klidně vrátit `[]`.
+
+Skupina může také vlastními slovy potvrdit uložení, na čemž záleží, jakmile je
+skupin víc — „Nastavení uloženo.“ neřekne, které:
+
+```php
+use NyonCode\WireModuleSettings\Contracts\ConfirmsSettingsSave;
+
+public static function savedMessage(): string
+{
+    return __('Nastavení nabídek uloženo.');
+}
+```
+
+## Na vlastní stránce
+
+Aplikace, která už sekci nastavení má — vlastní routu, položku v menu, drobečky
+a velmi pravděpodobně i klíč `settings` — si ji nechá a postaví ji na modulu.
+Vypněte vlastní obrazovku modulu; úložiště, skupiny i všechny kontrakty dál
+fungují a pod tím klíčem se nic nezaregistruje:
+
+```php
+// config/wire-module-settings.php
+'screen' => false,     // jen úložiště a skupiny — žádná routa, žádná položka v menu [tl! focus]
+'switcher' => 'tabs',  // odkazy na skupiny jako lišta záložek
+```
+
+Potom routujte `SettingsPage` nebo vlastní třídu, která z ní dědí, tam, kde vaše
+sekce už je. Proto stránka není final: přepište `getTitle()` a `breadcrumbs()`
+pro vlastní drobečky, `groups()` pro to, které skupiny stránka nabízí, a
+`groupUrl()` pro vlastní adresu. Když modul nemá vlastní routu, na kterou by
+odkázal, skupiny se přepínají na stránce samotné — `?group=mail`, pořád jedna
+adresa na skupinu, takže záložka v prohlížeči na ni dál vede.
+
+`width` omezí, jak široká obrazovka skupiny naroste, a vycentruje ji — jedna ze
+šířek, které bere modal (`sm` … `7xl`, `full`), takže `2xl` je tatáž šířka jako
+tam; null nechá celou šířku stránky. Sloupec krátkých polí roztažený přes široký
+monitor se čte jako řada prázdných krabic. `actions_alignment` umístí tlačítko
+uložení (`left`, `center`, `right`). Neznámá šířka vyhodí výjimku, stejně jako
+neznámý přepínač.
+
+`switcher` bere `links` (řadu tlačítek, výchozí) nebo `tabs` (lištu, jakou kreslí
+`<x-wire::tabs>`); obojí jsou odkazy. Cokoli jiného vyhodí
+`SettingsScreenException`, protože překlep, který by potichu nakreslil odkazy,
+by se četl jako „záložky nejsou podporované“.
+
 ## Kdo co smí měnit
 
 Dvě úrovně a obě jsou `Gate::allows()` — nic tady kontrolu oprávnění
@@ -306,12 +474,16 @@ Settings::forget('branding');
 
 ## Zbytek souboru
 
-Čtyři klíče; každý má sekci výš, kromě těch dvou na konci:
+Všechny klíče; každý má sekci výš, kromě těch dvou na konci:
 
 ```php
 // config/wire-module-settings.php
 'groups' => [],        // vaše vlastní třídy skupin — viz Jak to funguje
 'except' => [],        // úložná jména dodaných tabů, které se mají zahodit [tl! focus]
+'screen' => true,      // false: jen úložiště — viz Na vlastní stránce
+'switcher' => 'links', // nebo 'tabs'
+'width' => null,       // nebo šířka modalu: 'sm' … '7xl', 'full'
+'actions_alignment' => 'left',
 'permission' => null,  // oprávnění, které obrazovka vyžaduje — viz Kdo co smí měnit
 'table' => 'wire_settings',
 

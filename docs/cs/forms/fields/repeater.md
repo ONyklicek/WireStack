@@ -29,6 +29,13 @@ jednom vlastníkovi pro každého hostitele, který vykresluje formulář — pr
 samostatnou komponentu i pro modal akce v tabulce. Každé je round trip a
 autoritou nad obsahem seznamu je serverový re-render.
 
+**Nový řádek začíná výchozími hodnotami svých polí.** `addRepeaterItem` řádek
+naplní každým `->default()`, který jeho pole deklarují — i skrz layouty, výchozí
+enum jako jeho hodnotou — a pole bez výchozí hodnoty vynechá. Jen výchozí
+hodnoty, ne prázdné hodnoty, kterými se sám plní celý formulář: řádek relace se
+stane záznamem a klíč nastavený tam na `null` by přebil výchozí hodnotu sloupce
+v databázi.
+
 **Tažení se před dotazem vrátí zpět.** SortableJS nechá DOM v pořadí, do kterého
 jste pustili; controller uzel vrátí tam, kde byl, a zavolá
 `reorderRepeaterItems`. Karta nenese `wire:key`, kdežto blok Builderu je klíčovaný

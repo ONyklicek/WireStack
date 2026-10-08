@@ -6,6 +6,7 @@ namespace NyonCode\WireModuleSettings;
 
 use NyonCode\WireCore\Core\Modules\Module;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
+use NyonCode\WireModuleSettings\Pages\SettingsPage;
 use NyonCode\WireModuleSettings\Resources\SettingsResource;
 
 /** What this package contributes: a place to keep what an application configures. */
@@ -16,13 +17,28 @@ class SettingsModule extends Module
         return 'settings';
     }
 
+    /**
+     * The screen, unless the application switched it off.
+     *
+     * Off is storage only: `Settings`, the groups and their contracts all
+     * work, and nothing is registered under the `settings` key — the key an
+     * application that has its own settings section is already using, and which
+     * the registry refuses twice. That application routes {@see SettingsPage}
+     * (or a subclass) itself.
+     */
     public function resources(): array
     {
-        return [SettingsResource::class];
+        return self::screen() ? [SettingsResource::class] : [];
     }
 
     public function navigation(): ?NavigationGroup
     {
+        // No screen, no heading to put it under: a group nothing sits in would
+        // be an empty heading in the menu.
+        if (! self::screen()) {
+            return null;
+        }
+
         $group = NavigationGroup::make((string) config('wire-module-settings.navigation.group', 'system'))
             ->icon('outline:wrench-screwdriver')
             ->sort((int) config('wire-module-settings.navigation.sort', 97));
@@ -38,5 +54,11 @@ class SettingsModule extends Module
         return is_string($label) && $label !== ''
             ? $group->label($label)
             : $group->label(fn (): string => __('wire-module-settings::messages.system'));
+    }
+
+    /** Whether the module registers its own screen (`wire-module-settings.screen`). */
+    public static function screen(): bool
+    {
+        return (bool) config('wire-module-settings.screen', true);
     }
 }

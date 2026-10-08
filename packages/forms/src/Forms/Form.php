@@ -528,6 +528,20 @@ class Form implements Htmlable, ModalForm
     }
 
     /**
+     * What a new row of the repeater at `$repeaterStatePath` starts with — its
+     * fields' declared defaults ({@see FormRuntime::getDefaultStateFor()}) —
+     * or null when no repeater of this form sits at that path.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function newRepeaterItemState(string $repeaterStatePath): ?array
+    {
+        $repeater = $this->getRuntime()->findRepeaterByStatePath($repeaterStatePath);
+
+        return $repeater === null ? null : $this->getRuntime()->getDefaultStateFor($repeater->getItemSchema(0));
+    }
+
+    /**
      * The part of `$data` this form writes to a record.
      *
      * For a host that persists a form's state itself rather than through

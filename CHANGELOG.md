@@ -2,7 +2,7 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
-## [2.7.0]
+## [2.8.0]
 
 ### Added
 
@@ -27,6 +27,50 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **A link to another site is never navigated.** The sidebar, top navigation, breadcrumbs and pins wrote
   `wire:navigate` on every item, so a navigation item pointing at another origin was handed to Livewire, which
   refuses it. A URL is navigated only when it is a page of this application.
+
+## [2.7.1]
+
+### Fixed
+
+- **A new repeater row starts with its fields' defaults.** `addRepeaterItem` appended an empty row, so a
+  required field with a `->default()` — a direction select, say — arrived blank and the save failed on it; a
+  host had to override the endpoint to put the defaults in by hand. The row now carries every `->default()`
+  its fields declare (through layouts, an enum default as its value, a repeater nested in another's row too).
+  Defaults only, never the structural blanks a whole form self-seeds with: a relationship row becomes a record,
+  and a key set to `null` there would override the column's database default.
+
+### Added
+
+- `wire-module-settings.width` — caps a group's screen to a modal width (`sm` … `7xl`, `full`), centred; null
+  keeps the full page. An unknown width throws `SettingsScreenException`.
+- `wire-module-settings.actions_alignment` — `left` (default), `center` or `right` for the save button.
+- `Form::newRepeaterItemState()` and `FormRuntime::findRepeaterByStatePath()` / `getDefaultStateFor()`.
+
+## [2.7.0]
+
+### Added
+
+- **A settings section an application already has can now be built on `wire-module-settings`.** Until now a
+  group was a schema written as it stood, on the module's own screen, under the `settings` key — so a section
+  with a preview, a rule across two fields or a calculator could not use the module at all, and an application
+  that already had a `settings` resource could not install it (the registry refuses one key twice). Each
+  capability is a small optional contract on the group, and a group that implements none is unchanged:
+  - `TransformsSettings` — `fromStorage()` / `toStorage()` shape values for the form and back. `toStorage()`
+    runs after the form shaped its own fields, so an upload is already on its disk.
+  - `ValidatesSettings` — a rule across fields; its messages stop the save and are shown under the field.
+  - `SpansSettingsGroups` — one screen over several storage groups, written in one transaction.
+  - `ExtendsSettingsScreen` — something drawn under the form from its live state (a preview, a sum).
+  - `RendersSettingsScreen` — a Livewire component of the group's own in place of the form.
+  - `ConfirmsSettingsSave` — the group's own words for "saved".
+- `wire-module-settings.screen` — `false` keeps storage, groups and contracts and registers no screen, route
+  or menu heading. `SettingsPage` can then be routed (or extended) where the application's own section is; with
+  no module route to link to, the groups switch on the page itself as `?group=…`.
+- `wire-module-settings.switcher` — `links` (default) or `tabs`, the bar `<x-wire::tabs>` draws. Anything
+  else throws `SettingsScreenException`.
+- `Settings::fillMany([$group => $values, …])` — several storage groups in one transaction, each announced
+  with `SettingsSaved`. `Settings::fill()` now goes through it.
+- Hook names `settings-component` and `settings-extension`.
+
 ## [2.5.2]
 
 ### Fixed
