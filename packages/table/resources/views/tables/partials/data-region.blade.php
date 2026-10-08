@@ -309,7 +309,7 @@
                                                 scope="col"
                                                 data-column="{{ $column->getName() }}"
                                                 class="{{ $headerPadding }} {{ $hm['alignment'] }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $hm['responsive'] }}"
-                                                @if($column->getWidth()) style="width: {{ $column->getWidth() }}" @endif
+                                                @if($hm['widthStyles']) style="{{ $hm['widthStyles'] }}" @endif
                                                 @if($hm['extraHeader']) {!! $hm['extraHeader'] !!} @endif
                                         >
                                             @if($column->isSortable() && $table->isSortable())

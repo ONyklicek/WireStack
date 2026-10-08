@@ -270,11 +270,31 @@ TextColumn::make('subtitle')
 ### Šířka a zarovnání
 
 ```php
-->width(string $width)                 // CSS šířka: '200px', '20%', 'auto'
+->width(string $width)                 // preferovaná CSS šířka: '200px', '20%', 'auto'
+->minWidth(string $width)              // minimální CSS šířka: '120px', '12rem', '25%'
+->maxWidth(string $width)              // maximální CSS šířka: '400px', '32rem', '80%'
 ->alignment(string $alignment)         // 'left', 'center', 'right'
 ->alignLeft()                          // zkratka
 ->alignCenter()                        // zkratka
 ->alignRight()                         // zkratka
+->getWidth(): ?string
+->getMinWidth(): ?string
+->getMaxWidth(): ?string
+```
+
+Všechny tři hodnoty šířky jsou volitelné a nezávislé. `width()` nastavuje
+preferovanou šířku; `minWidth()` a `maxWidth()` ji omezují při rozvržení tabulky
+v prohlížeči. Hodnoty se předávají jako CSS, nepřevádějí se na Tailwind třídy ani
+nenormalizují, proto používejte platné CSS hodnoty jako délky, procenta, `auto`
+nebo `min-content`. Deklarace se vykreslí na `<th>` daného sloupce; pokud nejsou
+nastavené žádné z nich, hlavička nedostane žádný inline styl šířky a prohlížeč
+použije běžné rozvržení tabulky.
+
+```php
+TextColumn::make('reference')
+    ->width('9rem')
+    ->minWidth('8rem')
+    ->maxWidth('12rem');
 ```
 
 ### Ikony

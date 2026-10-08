@@ -199,7 +199,9 @@ it('uses displayUsing override in renderCell', function () {
 it('covers the remaining fluent configuration getters', function () {
     $column = TextColumn::make('a')
         ->toggleable()
-        ->width('w-32')
+        ->width('32rem')
+        ->minWidth('12rem')
+        ->maxWidth('24rem')
         ->alignCenter()
         ->default('def')
         ->tooltip('tt')
@@ -214,7 +216,9 @@ it('covers the remaining fluent configuration getters', function () {
         ->html();
 
     expect($column->isToggleable())->toBeTrue()
-        ->and($column->getWidth())->toBe('w-32')
+        ->and($column->getWidth())->toBe('32rem')
+        ->and($column->getMinWidth())->toBe('12rem')
+        ->and($column->getMaxWidth())->toBe('24rem')
         ->and($column->getAlignment())->toBe('center')
         ->and($column->getDefault())->toBe('def')
         ->and($column->getTooltip())->toBe('tt')

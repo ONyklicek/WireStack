@@ -271,11 +271,30 @@ TextColumn::make('subtitle')
 ### Width & Alignment
 
 ```php
-->width(string $width)                 // CSS width: '200px', '20%', 'auto'
+->width(string $width)                 // preferred CSS width: '200px', '20%', 'auto'
+->minWidth(string $width)              // minimum CSS width: '120px', '12rem', '25%'
+->maxWidth(string $width)              // maximum CSS width: '400px', '32rem', '80%'
 ->alignment(string $alignment)         // 'left', 'center', 'right'
 ->alignLeft()                          // shortcut
 ->alignCenter()                        // shortcut
 ->alignRight()                         // shortcut
+->getWidth(): ?string
+->getMinWidth(): ?string
+->getMaxWidth(): ?string
+```
+
+The three width values are optional and independent. `width()` sets the preferred
+width; `minWidth()` and `maxWidth()` bound it when the browser lays out the table.
+Values are passed through as CSS, not converted to Tailwind classes or normalized,
+so use valid CSS values such as lengths, percentages, `auto`, or `min-content`.
+The declarations are emitted on that column's `<th>`; when all three are unset,
+the header gets no inline width style and the browser uses its normal table layout.
+
+```php
+TextColumn::make('reference')
+    ->width('9rem')
+    ->minWidth('8rem')
+    ->maxWidth('12rem');
 ```
 
 ### Icons
