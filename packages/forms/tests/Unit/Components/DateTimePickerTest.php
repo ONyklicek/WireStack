@@ -9,6 +9,7 @@ use Illuminate\Support\MessageBag;
 use NyonCode\WireCore\Core\State\StateHydrator;
 use NyonCode\WireCore\Foundation\Enums\NativeControlMode;
 use NyonCode\WireForms\Components\DateTimePicker;
+use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Validation\Rules\DateWithinBounds;
 
 test('default mode is datetime', function () {
@@ -674,8 +675,8 @@ test('mobileControlIdFor() names the phone control only when it is its own eleme
         ->and(DateTimePicker::make('d')->asDate()->mobileControlIdFor('d'))->toBeNull()
         ->and(DateTimePicker::make('d')->asDate()->native()->touchOnMobile()->mobileControlIdFor('d'))->toBeNull()
         // A select's touch sheet opens from the desktop trigger itself.
-        ->and(\NyonCode\WireForms\Components\Select::make('s')->options(['a' => 'A'])->touchOnMobile()->mobileControlIdFor('s'))->toBeNull()
-        ->and(\NyonCode\WireForms\Components\Select::make('s')->options(['a' => 'A'])->nativeOnMobile()->mobileControlIdFor('s'))->toBe('s-native');
+        ->and(Select::make('s')->options(['a' => 'A'])->touchOnMobile()->mobileControlIdFor('s'))->toBeNull()
+        ->and(Select::make('s')->options(['a' => 'A'])->nativeOnMobile()->mobileControlIdFor('s'))->toBe('s-native');
 });
 
 test('the label follows the global mobile defaults and native() too', function () {

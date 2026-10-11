@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Foundation\Support;
 
+use NyonCode\WireCore\Foundation\Concerns\HasNativeControl;
 use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 
 /**
@@ -165,7 +166,7 @@ final class MobileSheet
      * one label, always shown; otherwise the label is drawn twice and each copy
      * shows on the screen its control does — a label aimed at a display:none
      * control does nothing when tapped. `$mobileId` comes from
-     * {@see \NyonCode\WireCore\Foundation\Concerns\HasNativeControl::mobileControlIdFor()}.
+     * {@see HasNativeControl::mobileControlIdFor()}.
      *
      * `$display` is the label's own display utility (`block`). It goes on the
      * desktop copy and the always-shown one only: the phone copy carries its
