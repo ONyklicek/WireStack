@@ -29,6 +29,12 @@ host that renders a form — a standalone component and a table action modal ali
 Each is a roundtrip, and the server's re-render is the authority on what the list
 now contains.
 
+**A new row starts with its fields' defaults.** `addRepeaterItem` seeds the row
+with every `->default()` its fields declare — through layouts, an enum default as
+its value — and leaves out a field that declares none. Defaults only, not the
+blanks a whole form self-seeds with: a relationship row becomes a record, and a
+key set to `null` there would override the column's database default.
+
 **Dragging reverts before it asks.** SortableJS leaves the DOM in the dropped
 order; the controller puts the node back where it started and calls
 `reorderRepeaterItems` instead. A card carries no `wire:key` while a Builder's

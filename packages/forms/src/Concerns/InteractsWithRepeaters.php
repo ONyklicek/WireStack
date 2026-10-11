@@ -35,9 +35,38 @@ trait InteractsWithRepeaters
             $items = [];
         }
 
-        $items[] = [];
+        $items[] = $this->newRepeaterItem($statePath);
 
         $this->writeRepeaterItems($statePath, $items);
+    }
+
+    /**
+     * What a new row starts with: its fields' declared `->default()`s, from
+     * whichever of the host's forms holds the repeater.
+     *
+     * Without it a row's defaults were promised and never given — a required
+     * `Select` with a default arrived empty and the save failed on it, so a
+     * host had to override this endpoint to put them in by hand. A host with no
+     * forms to ask (or a repeater none of them knows) gets the empty row it
+     * always got.
+     *
+     * @return array<string, mixed>
+     */
+    private function newRepeaterItem(string $statePath): array
+    {
+        if (! method_exists($this, 'fieldActionForms')) {
+            return [];
+        }
+
+        foreach ($this->fieldActionForms() as $form) {
+            $state = $form->newRepeaterItemState($statePath);
+
+            if ($state !== null) {
+                return $state;
+            }
+        }
+
+        return [];
     }
 
     /**

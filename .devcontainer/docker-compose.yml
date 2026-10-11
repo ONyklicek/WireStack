@@ -1,72 +1,86 @@
-services:
+# The default database is SQLite (phpunit.xml, testbench.yaml), so nothing here
+# sets DB_* for the app container: phpunit.xml's <env> entries do not override
+# variables that are already set, and a DB_CONNECTION here would silently move
+# every Pest run off SQLite. The servers below mirror CI's database legs and are
+# reached through .devcontainer/test-db.sh.
 
+services:
   app:
     build:
       context: ..
       dockerfile: .devcontainer/Dockerfile
 
     volumes:
-      - ..:/workspaces/${localWorkspaceFolderBasename}:cached
+      - ..:/workspaces/WireStack:cached
+      - composer-cache:/home/vscode/.composer/cache
+      - npm-cache:/home/vscode/.npm
 
     command: sleep infinity
 
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-
     environment:
-      DB_HOST: mysql
-      REDIS_HOST: redis
+      CHROME_BIN: /usr/bin/chromium
+      MAIL_MAILER: smtp
       MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      REDIS_HOST: redis
 
   mysql:
-    image: mysql:8.4
-
+    image: mysql:8.0
     restart: unless-stopped
-
     environment:
-      MYSQL_DATABASE: laravel
-      MYSQL_USER: laravel
-      MYSQL_PASSWORD: laravel
-      MYSQL_ROOT_PASSWORD: root
-
+      MYSQL_DATABASE: wire_test
+      MYSQL_ROOT_PASSWORD: password
     volumes:
       - mysql-data:/var/lib/mysql
-
     healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-proot"
-        ]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-ppassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mariadb:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: wire_test
+      MARIADB_ROOT_PASSWORD: password
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wire_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
       timeout: 5s
       retries: 20
 
   redis:
     image: redis:7-alpine
-
     restart: unless-stopped
-
     volumes:
       - redis-data:/data
 
   mailpit:
     image: axllent/mailpit:latest
-
     restart: unless-stopped
 
-    ports:
-      - "8025:8025"
-
 volumes:
+  composer-cache:
+  npm-cache:
   mysql-data:
+  mariadb-data:
+  postgres-data:
   redis-data:

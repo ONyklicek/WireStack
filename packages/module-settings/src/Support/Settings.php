@@ -6,6 +6,7 @@ namespace NyonCode\WireModuleSettings\Support;
 
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
+use NyonCode\WireModuleSettings\Contracts\SpansSettingsGroups;
 use NyonCode\WireModuleSettings\Events\SettingsSaved;
 use NyonCode\WireModuleSettings\Models\Setting;
 
@@ -90,22 +91,46 @@ final class Settings
      */
     public static function fill(array $values, string $group = 'general'): void
     {
-        if ($values === []) {
+        self::fillMany([$group => $values]);
+    }
+
+    /**
+     * Write several groups at once, in one transaction.
+     *
+     * For a screen that edits one thing stored in more than one group
+     * ({@see SpansSettingsGroups}): two
+     * {@see fill()} calls would be two transactions, and the second failing
+     * would leave the first written — exactly the "half of it saved" this class
+     * promises a screen never has to explain. Each group's cache is dropped and
+     * each group is announced on its own afterwards, the same as {@see fill()}
+     * does for one; a group with nothing in it is neither.
+     *
+     * @param  array<string, array<string, mixed>>  $groups  Values by storage group.
+     */
+    public static function fillMany(array $groups): void
+    {
+        $groups = array_filter($groups, static fn (array $values): bool => $values !== []);
+
+        if ($groups === []) {
             return;
         }
 
-        Setting::query()->getConnection()->transaction(static function () use ($values, $group): void {
-            foreach ($values as $key => $value) {
-                Setting::query()->updateOrCreate(
-                    ['group' => $group, 'key' => (string) $key],
-                    ['value' => $value],
-                );
+        Setting::query()->getConnection()->transaction(static function () use ($groups): void {
+            foreach ($groups as $group => $values) {
+                foreach ($values as $key => $value) {
+                    Setting::query()->updateOrCreate(
+                        ['group' => (string) $group, 'key' => (string) $key],
+                        ['value' => $value],
+                    );
+                }
             }
         });
 
-        self::forget($group);
+        foreach ($groups as $group => $values) {
+            self::forget((string) $group);
 
-        event(new SettingsSaved($group, $values));
+            event(new SettingsSaved((string) $group, $values));
+        }
     }
 
     /**
