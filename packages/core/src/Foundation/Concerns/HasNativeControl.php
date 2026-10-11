@@ -128,6 +128,34 @@ trait HasNativeControl
     }
 
     /**
+     * The id of the control a phone sees, when it is not the one `$id` names —
+     * the native twin of `->nativeOnMobile()`, or a touch control that is an
+     * element of its own (a picker's wheel). Null when the phone sees the same
+     * element as the desktop. A `<label>` points at this one below the
+     * breakpoint; the twin's own markup takes its id from here too, so the two
+     * cannot drift.
+     */
+    public function mobileControlIdFor(string $id): ?string
+    {
+        $suffix = match (true) {
+            $this->usesTouchOnMobile() => $this->touchControlIdSuffix(),
+            $this->getNativeControlMode()->isResponsive() => '-native',
+            default => null,
+        };
+
+        return $suffix === null ? null : $id.$suffix;
+    }
+
+    /**
+     * The id suffix of a touch control drawn as a separate element. Null for a
+     * surface whose touch mode reuses the desktop trigger (a select's sheet).
+     */
+    protected function touchControlIdSuffix(): ?string
+    {
+        return null;
+    }
+
+    /**
      * The surface's default when native() was never called.
      */
     protected function defaultNative(): bool

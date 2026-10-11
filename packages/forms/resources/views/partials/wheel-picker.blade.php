@@ -15,7 +15,7 @@
     use NyonCode\WireCore\Foundation\Support\MobileSheet;
 
     $mode = $field->getMode();
-    $wheelId = $field->getId().'-wheel';
+    $wheelId = $field->mobileControlIdFor($field->getId());
     $testId = 'form-'.$field->getStatePath().'-wheel';
 @endphp
 <div

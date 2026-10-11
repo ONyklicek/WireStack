@@ -97,5 +97,6 @@ it('renders the combobox and a native twin when native on mobile', function () {
     expect($html)
         ->toContain('<div class="hidden max-sm:block">')
         ->toContain('id="filter-active-native"')
+        ->toContain('<label for="filter-active-native" ')
         ->toContain('wireSearchableSelect(');
 });

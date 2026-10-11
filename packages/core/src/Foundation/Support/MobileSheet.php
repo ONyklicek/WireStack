@@ -160,6 +160,33 @@ final class MobileSheet
     }
 
     /**
+     * Where a `<label for>` points, keyed by id, each with the classes that
+     * show it. With no phone control of its own (`$mobileId` null) that is the
+     * one label, always shown; otherwise the label is drawn twice and each copy
+     * shows on the screen its control does — a label aimed at a display:none
+     * control does nothing when tapped. `$mobileId` comes from
+     * {@see \NyonCode\WireCore\Foundation\Concerns\HasNativeControl::mobileControlIdFor()}.
+     *
+     * `$display` is the label's own display utility (`block`). It goes on the
+     * desktop copy and the always-shown one only: the phone copy carries its
+     * display in {@see showBelow()}, and two display utilities on one element
+     * resolve by stylesheet order.
+     *
+     * @return array<string, string|null>
+     */
+    public static function labelTargets(string $id, ?string $mobileId, ?string $breakpoint = null, ?string $display = null): array
+    {
+        if ($mobileId === null) {
+            return [$id => $display];
+        }
+
+        return [
+            $id => trim(($display ?? '').' '.self::hideBelow($breakpoint)),
+            $mobileId => self::showBelow($breakpoint),
+        ];
+    }
+
+    /**
      * A trigger sized for a thumb below the breakpoint: a 44px target and 16px
      * text (iOS Safari zooms into anything smaller). For the trigger of a
      * control that opens a touch sheet (`->touchOnMobile()`).
