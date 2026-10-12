@@ -16,8 +16,8 @@
              and the fade are inline: the package is styled through a consumer's
              Tailwind build, so arbitrary utilities are not guaranteed to exist. --}}
         <div
-                class="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto contain-[paint] sm:flex-wrap sm:overflow-visible"
-                style="scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 1.5rem),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 1.5rem),transparent);"
+                class="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible"
+                style="scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 1.5rem),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 1.5rem),transparent);contain: paint;"
                 data-testid="filter-indicators" @wireEl('filter-indicators')
         >
             @foreach($indicators as $filterName => $indicatorLabel)
