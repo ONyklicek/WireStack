@@ -15,7 +15,7 @@
     use NyonCode\WireCore\Foundation\Support\MobileSheet;
 
     $mode = $field->getMode();
-    $wheelId = $field->getId().'-wheel';
+    $wheelId = $field->mobileControlIdFor($field->getId());
     $testId = 'form-'.$field->getStatePath().'-wheel';
 @endphp
 <div
@@ -71,7 +71,7 @@
                 x-cloak
                 x-transition.opacity.duration.150ms
                 @click="cancel()"
-                class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70"
+                class="fixed inset-0 z-50 bg-gray-500/60 dark:bg-gray-900/70"
             ></div>
 
             <div
@@ -89,7 +89,7 @@
                 x-transition:leave="transition ease-in duration-150"
                 x-transition:leave-start="translate-y-0"
                 x-transition:leave-end="translate-y-full"
-                class="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl dark:bg-gray-800"
+                class="fixed border inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl dark:bg-gray-800"
                 data-testid="{{ $testId }}-sheet"
                 style="display: none;"
             >

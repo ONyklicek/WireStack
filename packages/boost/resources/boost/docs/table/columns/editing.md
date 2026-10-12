@@ -106,6 +106,28 @@ The `options` argument of `filterable()` / `filterAsSelect()` accepts a PHP enum
 class — it expands to `value => label` exactly like the dedicated
 `SelectColumn`/`SelectFilter`. See [Enum Options](select.md#enum-options).
 
+### Inline Editing API
+
+```php
+->editable(bool $editable = true): static
+->isEditable(): bool
+->authorizeInline(?string $ability): static
+->getInlineEditAbility(): ?string
+->canInlineEdit(): bool
+->fillable(bool $condition = true): static
+->isFillable(): bool
+->editableRules(Closure $callback): static // fn (?Model $record): array
+->getEditableRules(?Model $record): array
+->editableUsing(Closure $callback): static // custom persistence callback
+->getEditableCallback(): ?Closure
+```
+
+`authorizeInline()` names a Laravel Gate ability checked for inline edits.
+`editable(false)` disables the editor and refuses writes for that column;
+`fillable(false)` separately prevents the fill handle from writing it.
+`editableUsing()` replaces the default attribute write with a custom persistence
+callback. The editor itself still comes from a dedicated column type.
+
 ### How inline saves work
 
 Saving a cell (`updateTableCell`) **re-renders the table**, and the cell protects its own state

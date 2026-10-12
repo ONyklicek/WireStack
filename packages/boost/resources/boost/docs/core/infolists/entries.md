@@ -157,14 +157,38 @@ Renders a swatch plus the color value, optionally copyable.
 ColorEntry::make('brand_color')->copyable();
 ```
 
+The formatted value is shown as text, but a swatch is drawn only when it passes
+the CSS color allowlist: hex, `rgb()`/`rgba()`, `hsl()`/`hsla()`, or a bare CSS
+color keyword. Unsupported or unsafe values produce no swatch, rather than
+being interpolated into a `style` attribute. `copyable()` comes from the shared
+copyable entry capability.
+
+### ColorEntry API
+
+```php
+->getSwatch(): ?string              // safe CSS color, or null when it is not an accepted color
+```
+
 ## KeyValueEntry
 
-Renders an array (or JSON-cast attribute) as a key/value table.
+Renders an array or iterable (including a JSON-cast attribute) as a key/value
+table. Nested values are JSON-encoded; an empty or non-iterable state renders
+the entry placeholder.
 
 ```php
 KeyValueEntry::make('meta')
     ->keyLabel('Attribute')
     ->valueLabel('Value');
+```
+
+### KeyValueEntry API
+
+```php
+->keyLabel(string $label): static       // header label — default 'Key'
+->getKeyLabel(): string
+->valueLabel(string $label): static     // header label — default 'Value'
+->getValueLabel(): string
+->getPairs(): array                     // normalized pairs; non-iterable state becomes []
 ```
 
 ## HtmlEntry
@@ -213,13 +237,23 @@ RepeatableEntry::make('items')
     ]);
 ```
 
-| Method | Description |
-|--------|-------------|
-| `schema(array)` | Entry schema rendered per item |
-| `columns(int)` | Grid columns per row |
-| `contained(bool = true)` | Wrap each row in a bordered card |
-| `actions(array)` | Per-row action buttons (see [Actions](actions.md#actions)) |
-| `with(array\|string)` | Eager-load relations on the rows (see below) |
+### RepeatableEntry API
+
+```php
+->schema(array $components): static       // Entry objects rendered for each item
+->getSchema(): array
+->columns(int $columns): static            // grid columns per item — default 1
+->getColumns(): int
+->contained(bool $condition = true): static // wrap each item in a bordered card — default true
+->isContained(): bool
+->with(array|string $relations): static    // eager-load relations; repeated calls merge without duplicates
+->getWith(): array
+->getRowItems(): array                     // list of state items re-indexed from zero
+->getRows(): array                         // list of cloned child entries bound to each row item
+```
+
+Per-row `actions(array $actions)` is inherited from the shared entry API; see
+[Infolist actions](actions.md#actions).
 
 ### Avoiding N+1 on relation rows
 

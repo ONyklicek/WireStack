@@ -6,6 +6,40 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Added
 
+- **`minWidth()` and `maxWidth()` on a table column.** Beside `width()`, a column now takes a lower and an upper
+  bound: `TextColumn::make('reference')->width('9rem')->minWidth('8rem')->maxWidth('12rem')`. The three are optional
+  and independent, passed through as CSS as written — lengths, percentages, `auto`, `min-content` — and land on the
+  column's `<th>`. A column with none of them gets no inline style, and the browser lays it out as before.
+  `getMinWidth()` and `getMaxWidth()` read them back.
+- **`HasNativeControl::mobileControlIdFor($id)`** answers the id of the control a phone sees when it is not the
+  desktop one — `{id}-native` for `->nativeOnMobile()`, `{id}-wheel` for a date picker's wheel, `null` when the phone
+  sees the desktop trigger. **`MobileSheet::labelTargets()`** turns it into the label copies to render, each with the
+  classes that show it on its screen.
+
+### Fixed
+
+- **Tapping a field label on a phone focuses the control you see.** Below the mobile breakpoint `->touchOnMobile()`
+  and `->nativeOnMobile()` put another element in front of the desktop control, which is then hidden — but
+  `<label for>` still named the hidden one, so tapping the label did nothing and the label did not name the visible
+  control. Form fields and the select and ternary table filters now render the label once per screen, each pointing
+  at the control shown there.
+- **Active filter indicators no longer paint outside their strip on a phone.** The horizontally scrolling row of
+  filter chips now contains its own paint, so a chip scrolled out of view stays clipped.
+- **The date picker's wheel backdrop covers the page.** It sat on `z-40`, below anything else on `z-50`; it is now on
+  `z-50` with the sheet, and the sheet has a border.
+
+### Documentation
+
+- Table columns: the complete inline editing API, relation rollups (`counts()`, `sums()`, `averages()`, `mins()`,
+  `maxes()`), `loadRelations()` for relations used only inside closures, the full typed summaries API, and corrected
+  breakpoints for `onlyOnDesktop()`, `onlyOnTabletAndUp()` and `onlyOnLargeScreens()`.
+- Infolists: typed API sections for `ColorEntry`, `KeyValueEntry` and `RepeatableEntry`, and when a color entry draws
+  a swatch.
+
+## [2.7.0]
+
+### Added
+
 - **One switch for `wire:navigate`: `wire-core.navigate` (`WIRE_NAVIGATE`, on by default).** Every link the
   framework renders between two pages of the application now follows it — the sidebar, breadcrumbs, the record
   sub-navigation, actions with a `url()`, a table's `recordUrl()`, `url` columns, `ButtonColumn` links, the list

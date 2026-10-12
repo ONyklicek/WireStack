@@ -15,12 +15,12 @@
 
      Expects: $field, $wireAttr, $wireModifier, $minBound, $maxBound, $livewire,
      and $responsive — true when this is the phone twin of the custom picker
-     (->nativeOnMobile()). The twin takes its own id (the <label for> points at
-     the custom trigger), names itself, and swaps `required` for aria-required:
-     on a desktop it is display:none, and a required hidden control would stop
+     (->nativeOnMobile()). The twin takes its own id (the field label
+     points at it below the breakpoint), names itself, and swaps `required` for
+     aria-required: on a desktop it is display:none, and a required hidden control would stop
      the form submitting. --}}
 @php
-    $nativeId = $responsive ? $field->getId().'-native' : $field->getId();
+    $nativeId = $responsive ? $field->mobileControlIdFor($field->getId()) : $field->getId();
     $nativeLabel = $responsive ? $field->getLabel() : null;
     $nativeTestId = 'form-datetime-'.$field->getStatePath().'-native';
     $state = $livewire ? data_get($livewire, $field->getStatePath()) : null;

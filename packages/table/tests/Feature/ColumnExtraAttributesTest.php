@@ -34,6 +34,9 @@ class ExtraAttrHost extends Component
             ->model(ExtraAttrRow::class)
             ->columns([
                 TextColumn::make('name')
+                    ->width('160px')
+                    ->minWidth('120px')
+                    ->maxWidth('240px')
                     ->extraAttributes('data-cell-role="name" title="A name"')
                     ->extraHeaderAttributes(['data-head-role' => 'name', 'aria-description' => 'The name']),
                 TextColumn::make('note'),
@@ -74,6 +77,15 @@ it('puts the header attributes on that column header only', function () {
 
     expect(substr_count($html, 'data-head-role="name"'))->toBe(1)
         ->and($html)->toContain('aria-description="The name"');
+});
+
+it('applies width constraints to the header and leaves unconstrained headers alone', function () {
+    $html = Livewire::test(ExtraAttrHost::class)->html();
+    preg_match('/<th[^>]*data-column="note"[^>]*>/s', $html, $noteHeader);
+
+    expect($html)->toContain('style="width: 160px; min-width: 120px; max-width: 240px"')
+        ->and(substr_count($html, 'style="width: 160px; min-width: 120px; max-width: 240px"'))->toBe(1)
+        ->and($noteHeader[0] ?? '')->not->toContain('style=');
 });
 
 it('leaves a column that asked for nothing untouched', function () {

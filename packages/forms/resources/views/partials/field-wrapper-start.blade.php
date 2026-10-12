@@ -26,12 +26,25 @@
     {{-- $hideLabel is this wrapper's own override (a layout that already names the
          field); the rest of the rule lives on HasLabel so every surface agrees. --}}
     @if($field->hasVisibleLabel() && !($hideLabel ?? false))
-        <label for="{{ $field->getId() }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        @php
+            // Below the breakpoint the phone may see another element than the
+            // desktop (->nativeOnMobile(), ->touchOnMobile()); the label follows
+            // it, or a tap on it lands on a display:none control.
+            $labelTargets = \NyonCode\WireCore\Foundation\Support\MobileSheet::labelTargets(
+                $field->getId(),
+                method_exists($field, 'mobileControlIdFor') ? $field->mobileControlIdFor($field->getId()) : null,
+                method_exists($field, 'getMobileBreakpoint') ? $field->getMobileBreakpoint() : null,
+                'block',
+            );
+        @endphp
+        @foreach($labelTargets as $labelFor => $labelVisibility)
+        <label for="{{ $labelFor }}" @class([$labelVisibility, 'text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'])>
             {{ $field->getLabel() }}
             @if($field->isRequired())
                 <span class="text-red-600 dark:text-red-400">*</span>
             @endif
         </label>
+        @endforeach
     @endif
 
     @php

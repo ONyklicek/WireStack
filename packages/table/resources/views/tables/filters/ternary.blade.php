@@ -15,9 +15,12 @@
 @endphp
 
 <div class="flex flex-col gap-1">
-    <label for="filter-{{ $name }}" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+    {{-- Follows the control a phone sees: the native twin of ->nativeOnMobile(). --}}
+    @foreach(\NyonCode\WireCore\Foundation\Support\MobileSheet::labelTargets('filter-' . $name, $filter->mobileControlIdFor('filter-' . $name), $filter->getMobileBreakpoint()) as $labelFor => $labelVisibility)
+    <label for="{{ $labelFor }}" @class(array_filter(['text-sm font-medium text-gray-700 dark:text-gray-300', $labelVisibility]))>
         {{ $label }}
     </label>
+    @endforeach
     {{-- The same select surface as the select filter and the forms Select.
          "All" is the placeholder — picking it clears the filter. --}}
     @include('wire-core::partials.select-control', [

@@ -171,6 +171,7 @@ final class ColumnRenderPlan
                 'responsive' => $column->getResponsiveClasses(),
                 'editable' => $column->isEditable(),
                 'responsiveDisplay' => $column->hasResponsiveDisplay(),
+                'widthStyles' => $column->getWidthStyles(),
                 // Author-supplied cell/header attributes, resolved here with the
                 // rest of the column-static metadata rather than per cell.
                 'extraCell' => $column->getExtraAttributes(),

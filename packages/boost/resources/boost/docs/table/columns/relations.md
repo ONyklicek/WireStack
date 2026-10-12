@@ -31,6 +31,28 @@ TextColumn::make('bids.min.amount')            // withMin
 TextColumn::make('bids.max.amount')            // withMax
 ```
 
+Columns can also declare a relation rollup directly, including when the displayed
+column name is not the aggregate attribute:
+
+```php
+->counts(string $relationship): static
+->sums(string $relationship, string $column): static
+->averages(string $relationship, string $column): static
+->mins(string $relationship, string $column): static
+->maxes(string $relationship, string $column): static
+->isAggregate(): bool
+->getAggregateFunction(): ?string
+->getAggregateRelation(): ?string
+->getAggregateColumn(): ?string
+->getAggregateAttribute(): ?string
+```
+
+The attribute convention is `{relationship}_{function}` for counts and
+`{relationship}_{function}_{column}` for the other aggregates. For example,
+`sums('orders', 'total')` reads `orders_sum_total`. These methods declare
+per-record rollup values; footer aggregation is configured separately with
+`summarize()`. See [Summaries](../summaries.md).
+
 ## Pivot Data
 
 ```php
@@ -43,6 +65,28 @@ TextColumn::make('roles.pivot.assigned_at')->dateTime()
 ```php
 TextColumn::make('commentable.title')          // polymorphic
 ```
+
+## Eager Loading for Closure-backed Values
+
+The query planner infers relations from a column path such as `company.name`.
+It cannot inspect a closure used by `displayUsing()`, `actionUrl()` or a color
+callback. Declare relations touched only inside those closures to avoid one
+lazy load per row:
+
+```php
+TextColumn::make('company')
+    ->displayUsing(fn ($state, $record) => $record->company->name)
+    ->loadRelations('company');
+```
+
+```php
+->loadRelations(string|array $relations): static
+->getEagerLoadRelations(): array
+```
+
+`loadRelations()` accepts one relation name or a list. Repeated calls merge and
+deduplicate the names. It is only needed for relations hidden inside closures;
+relations named by the column's dot path are already inferred.
 
 ## Sorting & Filtering a Singular Relation
 

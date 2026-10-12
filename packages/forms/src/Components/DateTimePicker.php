@@ -423,6 +423,12 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState, Pr
         return in_array($this->mode, ['time', 'date', 'datetime'], true);
     }
 
+    /** The wheel is its own trigger, beside the hidden desktop one. */
+    protected function touchControlIdSuffix(): ?string
+    {
+        return '-wheel';
+    }
+
     /** Whether the native control is a list of clock slots rather than a time input. */
     public function usesNativeSlots(): bool
     {

@@ -165,6 +165,20 @@ it('renders the combobox and a native twin when native on mobile', function () {
         ->toContain("\$wire.entangle('tableState.filters.status.value').live");
 });
 
+// Regression: the label pointed at the combobox trigger, display:none on a phone.
+it('points the label at the control each screen shows', function () {
+    $twin = SelectFilter::make('status')->options(['paid' => 'Paid'])->nativeOnMobile()->mobileBreakpoint('md')->render();
+    $plain = SelectFilter::make('status')->options(['paid' => 'Paid'])->render();
+    $touch = SelectFilter::make('status')->options(['paid' => 'Paid'])->touchOnMobile()->render();
+
+    expect($twin)
+        ->toContain('<label for="filter-status" class="text-sm font-medium text-gray-700 dark:text-gray-300 max-md:hidden">')
+        ->toContain('<label for="filter-status-native" class="text-sm font-medium text-gray-700 dark:text-gray-300 hidden max-md:block">')
+        ->and($plain)->toContain('<label for="filter-status" class="text-sm font-medium text-gray-700 dark:text-gray-300">')
+        // The touch sheet opens from the combobox trigger itself.
+        ->and(substr_count($touch, '<label'))->toBe(1);
+});
+
 it('searchable() lifts native() back to the default, not to a pinned custom control', function () {
     config(['wire-core.mobile.native' => true]);
 

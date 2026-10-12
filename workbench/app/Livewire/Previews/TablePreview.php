@@ -919,7 +919,10 @@ class TablePreview extends Component
                         'manager' => 'Manager',
                         'editor' => 'Editor',
                         'viewer' => 'Viewer',
-                    ]),
+                    ])
+                    // The phone's own <select>, and a label that follows it.
+                    // Driven by verify-label-target.
+                    ->nativeOnMobile($this->variant === 'native-filters'),
             ])
             ->actions(match ($this->variant) {
                 'actions-group' => [

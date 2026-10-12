@@ -106,6 +106,28 @@ Argument `options` u `filterable()` / `filterAsSelect()` přijímá i PHP enum �
 rozbalí se na `value => label` stejně jako u `SelectColumn`/`SelectFilter`.
 Viz [Možnosti z enumu](select.md#moznosti-z-enumu).
 
+### API inline editace
+
+```php
+->editable(bool $editable = true): static
+->isEditable(): bool
+->authorizeInline(?string $ability): static
+->getInlineEditAbility(): ?string
+->canInlineEdit(): bool
+->fillable(bool $condition = true): static
+->isFillable(): bool
+->editableRules(Closure $callback): static // fn (?Model $record): array
+->getEditableRules(?Model $record): array
+->editableUsing(Closure $callback): static // vlastní callback pro uložení
+->getEditableCallback(): ?Closure
+```
+
+`authorizeInline()` pojmenuje Laravel Gate ability ověřovanou při inline editaci.
+`editable(false)` vypne editor a odmítne zápisy do sloupce; `fillable(false)`
+samostatně zabrání zápisu přes fill handle. `editableUsing()` nahradí výchozí
+zápis atributu vlastním callbackem pro uložení. Samotný editor stále pochází z
+dedikovaného typu sloupce.
+
 ### Jak fungují inline uložení
 
 Uložení buňky (`updateTableCell`) **překreslí tabulku** a buňka si přitom ochrání vlastní stav.

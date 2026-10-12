@@ -115,7 +115,8 @@ See [TiptapEditor · Mentions](../../forms/fields/tiptap-editor.md#mentions).
 ->since()                            // relative time (diffForHumans)
 ->money(string $currency)            // currency formatting
 ->numeric(int $decimals = 0, ?string $decimalSeparator = ',', ?string $thousandsSeparator = ' ')
-->fontFamily(string $family)         // 'sans', 'serif', 'mono'
+->fontFamily(?string $family): static // 'sans', 'serif', 'mono'; null clears it
+->getFontFamily(): ?string
 ->richContent(bool $condition = true)  // resolve mentions; implies ->html()
 ->isRichContent(): bool
 ->isMoney(): bool

@@ -9,6 +9,7 @@ use Illuminate\Support\MessageBag;
 use NyonCode\WireCore\Core\State\StateHydrator;
 use NyonCode\WireCore\Foundation\Enums\NativeControlMode;
 use NyonCode\WireForms\Components\DateTimePicker;
+use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Validation\Rules\DateWithinBounds;
 
 test('default mode is datetime', function () {
@@ -648,4 +649,45 @@ test('a picker built with no container to read config from shows its state', fun
     } finally {
         Container::setInstance($booted);
     }
+});
+
+// Regression: the label always pointed at the desktop input, which is
+// display:none below the breakpoint, so on a phone a tap on it did nothing.
+test('the label follows the control a phone sees', function () {
+    $wheel = renderPickerView(DateTimePicker::make('d')->label('When')->asDate()->touchOnMobile()->mobileBreakpoint('md'));
+    $native = renderPickerView(DateTimePicker::make('d')->label('When')->asDate()->nativeOnMobile());
+    $plain = renderPickerView(DateTimePicker::make('d')->label('When')->asDate());
+
+    expect($wheel)
+        ->toContain('<label for="d" class="block max-md:hidden ')
+        ->toContain('<label for="d-wheel" class="hidden max-md:block ')
+        ->toContain('id="d-wheel"')
+        ->and($native)
+        ->toContain('<label for="d" class="block max-sm:hidden ')
+        ->toContain('<label for="d-native" class="hidden max-sm:block ')
+        ->and(substr_count($plain, '<label'))->toBe(1)
+        ->and($plain)->toContain('<label for="d" class="block text-sm ');
+});
+
+test('mobileControlIdFor() names the phone control only when it is its own element', function () {
+    expect(DateTimePicker::make('d')->asDate()->touchOnMobile()->mobileControlIdFor('d'))->toBe('d-wheel')
+        ->and(DateTimePicker::make('d')->asDate()->nativeOnMobile()->mobileControlIdFor('d'))->toBe('d-native')
+        ->and(DateTimePicker::make('d')->asDate()->mobileControlIdFor('d'))->toBeNull()
+        ->and(DateTimePicker::make('d')->asDate()->native()->touchOnMobile()->mobileControlIdFor('d'))->toBeNull()
+        // A select's touch sheet opens from the desktop trigger itself.
+        ->and(Select::make('s')->options(['a' => 'A'])->touchOnMobile()->mobileControlIdFor('s'))->toBeNull()
+        ->and(Select::make('s')->options(['a' => 'A'])->nativeOnMobile()->mobileControlIdFor('s'))->toBe('s-native');
+});
+
+test('the label follows the global mobile defaults and native() too', function () {
+    config(['wire-core.mobile.touch' => true]);
+    expect(renderPickerView(DateTimePicker::make('d')->label('When')->asDate()))->toContain('<label for="d-wheel" ')
+        // native() is the browser's element on every screen: one label, one id.
+        ->and(renderPickerView(DateTimePicker::make('d')->label('When')->asDate()->native()))
+        ->toContain('<label for="d" class="block text-sm ')->and(substr_count(renderPickerView(DateTimePicker::make('d')->label('When')->asDate()->native()), '<label'))->toBe(1)
+        // A month has no wheel; it is native everywhere.
+        ->and(renderPickerView(DateTimePicker::make('d')->label('When')->asMonth()))->not->toContain('<label for="d-wheel"');
+
+    config(['wire-core.mobile.touch' => false, 'wire-core.mobile.native' => true]);
+    expect(renderPickerView(DateTimePicker::make('d')->label('When')->asDate()))->toContain('<label for="d-native" ');
 });

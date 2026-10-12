@@ -112,7 +112,10 @@ native date on a datetime, joined by `wireNativeDateTime` — never as `<input t
 `wire-core.mobile.touch` — gives a picker a scroll-snap wheel and a select a bottom-sheet list, keeping remote
 search, create-option and disabled days. Precedence is one rule: `native()` > `touchOnMobile()` >
 `nativeOnMobile()`. The select list is `wire-core::partials.select-touch-sheet`, rendered by `select-control`
-beside the floating panel on the same `wireSearchableSelect` state — never a second select component. Every select goes through
+beside the floating panel on the same `wireSearchableSelect` state — never a second select component.
+The phone control's id is `mobileControlIdFor($id)` (`{id}-native`, a picker's wheel `{id}-wheel`, null when
+the phone sees the desktop trigger); a label goes through `MobileSheet::labelTargets()`, which points it
+at that control below the breakpoint — never spell a suffix by hand. Every select goes through
 `wire-core::partials.select-control` — never hand-write a `<select>` or include the combobox beside it.
 
 ### Layouts

@@ -114,7 +114,8 @@ Viz [TiptapEditor · Zmínky](../../forms/fields/tiptap-editor.md#zminky).
 ->since()                            // relativní čas (diffForHumans)
 ->money(string $currency)            // formátování měny
 ->numeric(int $decimals = 0, ?string $decimalSeparator = ',', ?string $thousandsSeparator = ' ')
-->fontFamily(string $family)         // 'sans', 'serif', 'mono'
+->fontFamily(?string $family): static // 'sans', 'serif', 'mono'; null zruší
+->getFontFamily(): ?string
 ->richContent(bool $condition = true)  // rozbalí zmínky; implikuje ->html()
 ->isRichContent(): bool
 ->isMoney(): bool
