@@ -22,6 +22,9 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **Alignment inside a `SplitColumn`.** A child's `alignRight()` went on a `<td>` the child never gets, and was lost;
   it now goes on the child's box. The split's own `alignRight()` moves a row of children to the end of the cell
   instead of leaving them on the left.
+- **The filter chip row on a phone is clipped for real.** 2.8.0 contained its paint with the `contain-[paint]`
+  utility, an arbitrary class an application's own Tailwind build need not generate. It is now an inline
+  `contain: paint`, beside the mask the row already sets inline for the same reason.
 
 ## [2.8.0]
 
