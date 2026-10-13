@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Columns\ImageColumn;
 use NyonCode\WireTable\Columns\SplitColumn;
@@ -137,6 +138,68 @@ test('an image child is rendered apart from the text children', function () {
         ->and($html)->toContain('ada.png');
 });
 
+// A child's markup is often bare text, and bare text dropped into a flex
+// container is one anonymous flex item — two stacked amounts printed as
+// "500 Kč1 000 Kč" on a single line. Each child now gets a box of its own.
+test('a vertical split gives every child a box of its own', function () {
+    $column = SplitColumn::split([
+        TextColumn::make('name'),
+        TextColumn::make('email'),
+    ], 'identity')->vertical();
+
+    expect($column->renderCell(splitRecord()))
+        ->toContain('<div class="">Ada Lovelace</div><div class="">ada@example.com</div>');
+});
+
+test('the text beside an image stacks instead of running together', function () {
+    $html = SplitColumn::split([
+        ImageColumn::make('avatar'),
+        TextColumn::make('name'),
+        TextColumn::make('email'),
+    ], 'identity')->renderCell(splitRecord());
+
+    expect($html)->toContain('<div class="">Ada Lovelace</div><div class="">ada@example.com</div>');
+});
+
+// The row branch used to merge an empty image slot into its children, which
+// put an empty flex item — and so a gap — in front of the first value.
+test('a row without an image has no empty leading box', function () {
+    $html = SplitColumn::split([TextColumn::make('name')], 'identity')->renderCell(splitRecord());
+
+    expect($html)->not->toContain('<div></div>')
+        ->and($html)->toContain('<div class="min-w-0 ">Ada Lovelace</div>');
+});
+
+test('a child that renders nothing takes no place in the split', function () {
+    $html = SplitColumn::split([
+        TextColumn::make('name')->visibleForRecord(fn () => false),
+        TextColumn::make('email'),
+    ], 'identity')->vertical()->renderCell(splitRecord());
+
+    expect(substr_count($html, '<div class="'))->toBe(2);
+});
+
+// A child's alignment normally sits on its <td>, which a child inside a split
+// never gets.
+test('a child keeps its own alignment, and an unset one inherits the split', function () {
+    $html = SplitColumn::split([
+        TextColumn::make('name')->alignRight(),
+        TextColumn::make('email'),
+    ], 'identity')->vertical()->renderCell(splitRecord());
+
+    expect($html)->toContain('<div class="text-right">Ada Lovelace</div>')
+        ->and($html)->toContain('<div class="">ada@example.com</div>');
+});
+
+test('a row follows the split\'s own text alignment on its main axis', function () {
+    $right = SplitColumn::split([TextColumn::make('name')], 'identity')->alignRight();
+
+    expect($right->getJustifyClass())->toBe('justify-end')
+        ->and($right->renderCell(splitRecord()))->toContain('justify-end')
+        ->and(SplitColumn::make()->getJustifyClass())->toBe('')
+        ->and($right->vertical()->getJustifyClass())->toBe('');
+});
+
 test('a hidden split renders nothing at all', function () {
     $column = SplitColumn::split([TextColumn::make('name')], 'identity')
         ->visibleForRecord(fn () => false);
@@ -163,6 +226,28 @@ test('a split with no searchable child falls back to its own capability', functi
         ->and($column->getSearchColumns())->toBe([]);
 
     expect($column->searchable()->isSearchable())->toBeTrue();
+});
+
+// The query planner asks the capability, not isSearchable() — the split has to
+// answer there too, or the search box never reaches its children.
+test('the split carries the capabilities its children have', function () {
+    $column = SplitColumn::split([
+        TextColumn::make('name')->searchable(),
+        TextColumn::make('email')->sortable(),
+    ], 'identity');
+
+    expect($column->hasCapability(Capability::Searchable))->toBeTrue()
+        ->and($column->hasCapability(Capability::Sortable))->toBeTrue()
+        ->and(SplitColumn::split([TextColumn::make('name')], 'identity')->hasCapability(Capability::Searchable))->toBeFalse();
+});
+
+test('a child\'s explicit search columns are what the split searches', function () {
+    $column = SplitColumn::split([
+        TextColumn::make('full_name')->searchable(['first_name', 'last_name']),
+        TextColumn::make('email')->searchable(),
+    ], 'identity');
+
+    expect($column->getSearchColumns())->toBe(['first_name', 'last_name', 'email']);
 });
 
 // ─── Sorting ───────────────────────────────────────────────────────

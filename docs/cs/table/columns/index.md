@@ -323,6 +323,7 @@ TextColumn::make('subtitle')
 ->alignCenter(): static
 ->alignRight(): static
 ->getAlignment(): string
+->hasAlignment(): bool                // false, dokud sloupec padá na výchozí 'left'
 ```
 
 Všechny tři hodnoty šířky jsou volitelné a nezávislé. `width()` nastavuje
