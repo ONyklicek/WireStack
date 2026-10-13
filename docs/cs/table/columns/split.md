@@ -11,6 +11,32 @@ Vodorovně rozdělí prostor mezi několik dětských sloupců.
 use NyonCode\WireTable\Columns\SplitColumn;
 ```
 
+## Jak to funguje
+
+Split vykreslí každé dítě jeho vlastním `renderCell()` — s jeho formátováním,
+prefixem, stylem textu, ikonou i odkazem — a výsledky rozloží do jednoho flex
+kontejneru: ve výchozím stavu do řádku, po `vertical()` do sloupce. Dítě typu
+`ImageColumn` z toho toku vypadne a kreslí se jako první, vedle ostatních.
+
+- **Každé dítě má vlastní box.** Výstup dítěte bývá holý text a holý text vložený
+  do flex kontejneru je jedna anonymní položka — dvě částky pod sebou se dřív
+  vypsaly jako `500 Kč1 000 Kč` na jednom řádku. Dítě, které nic nevykreslí
+  (skryté, nebo neviditelné pro daný záznam), box nedostane, takže nenechá mezeru.
+- **Zarovnání má dva zdroje.** Dítě nikdy nedostane vlastní `<td>`, takže jeho
+  `alignRight()` jde na jeho box; dítě bez zarovnání dědí to splitu. Vlastní
+  `alignRight()` splitu zarovná text splitu po `vertical()` a v řádku posune děti
+  na konec buňky (`justify-end`). `alignCenter()` a `alignStart()` jsou něco
+  jiného: na splitu zarovnávají děti na **příčné ose**, jak popisuje
+  [S mezerou a zarovnáním](#s-mezerou-a-zarovnanim).
+- **Hledání a řazení dosáhne na děti.** Split je prohledávatelný, jakmile je
+  prohledávatelné kterékoli dítě, a dotaz hledá v každém takovém dítěti — v jeho
+  vlastních sloupcích `searchable(['first_name', 'last_name'])`, pokud je
+  vyjmenuje, jinak podle jeho jména. Samotný split `->searchable()` označovat
+  nemusíte. Řadí se podle prvního řaditelného dítěte; viz
+  [Jak funguje řazení splitu](#jak-funguje-razeni-splitu).
+- **Dítě není sloupec tabulky.** Nemá vlastní hlavičku, přepínač ani souhrn a jeho
+  `->sortable()` se počítá jen tehdy, když je prvním řaditelným dítětem.
+
 ## Základní split
 
 ```php
@@ -32,6 +58,31 @@ SplitColumn::make('address')
     ])
     ->vertical()
 ```
+
+## Dvě hodnoty pod sebou
+
+Zaplacená částka nad celkem, ke kterému patří: `vertical()` skládá děti pod sebe,
+`prefix()` dopíše spojku a styl textu druhého dítěte ho ztlumí. Obě zůstávají
+prohledávatelné a hlavička řadí podle zaplacené částky.
+
+```php
+SplitColumn::make('pay_status')
+    ->label('Zaplaceno')
+    ->vertical()
+    ->gap('none')
+    ->columns([
+        TextColumn::make('paid_amount')->money('Kč')->weight('medium')->sortable()->searchable(),
+        TextColumn::make('total_amount')->money('Kč')->prefix('z ')->textColor('muted')->textSize('sm')->searchable(), // [tl! focus]
+    ])
+```
+
+```text
+500 Kč
+z 1 000 Kč
+```
+
+Přidejte splitu `->alignRight()` a částky se srovnají k pravému okraji buňky, jak
+peněžní sloupec obvykle sedí.
 
 ## S mezerou a zarovnáním
 
@@ -74,14 +125,16 @@ třída, kterou Tailwind nikdy nevygeneroval.
 ->alignCenter(bool $align = true)    // na příčné ose na střed
 ->alignStart()                       // na začátek příčné osy
 ->getAlignClass(): string            // '' dokud se o zarovnání neřeklo
+->getJustifyClass(): string          // 'justify-*' řádku z alignRight()/alignLeft(), '' když není nastaveno nebo je vertical
 ->getColumns(): array
 ```
 
 Co split odpovídá dotazovému švu za svoje děti:
 
 ```php
+->hasCapability(Capability $capability): bool  // Searchable/Sortable: true, má-li ji kterékoli dítě, jinak vlastní příznak
 ->isSearchable(): bool               // true, pokud je jakékoli dítě searchable
-->getSearchColumns(): array          // sloučené z dětí
+->getSearchColumns(): array          // explicitní sloupce hledání každého searchable dítěte, jinak jeho jméno
 ->isSortable(): bool                 // true, pokud je sortable kterékoli dítě, jinak vlastní příznak
 ->getSortColumn(): ?string           // první sortable dítě, jinak vlastní jméno
 ```

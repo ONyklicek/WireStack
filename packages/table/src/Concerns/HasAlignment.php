@@ -62,6 +62,12 @@ trait HasAlignment
         return $this->alignment(Alignment::Right);
     }
 
+    /** Whether an alignment was set, as opposed to the left it falls back to. */
+    public function hasAlignment(): bool
+    {
+        return $this->alignment !== null;
+    }
+
     /**
      * Get the current text alignment of the column.
      */

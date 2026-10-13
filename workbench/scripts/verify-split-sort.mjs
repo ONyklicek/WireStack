@@ -41,12 +41,18 @@ try {
     // Read it structurally rather than by pattern: the workbench database is
     // shared with every other driver, and verify-cell-island writes into these
     // very users' email addresses, so no cell's *text* is stable across a sweep.
-    // Child *nodes*, not elements: an unstyled TextColumn renders as a bare text
-    // node and a styled one as a <span>, so the name half has no element to hold.
+    // Every child sits in a box of its own. It used not to: an unstyled
+    // TextColumn rendered as a bare text node straight into the flex container,
+    // and bare text beside more bare text is ONE flex item — two values on one
+    // line. Elements, then, and their geometry, not their text.
     window.splitCell = (tr) => tr.querySelector('[data-column="identity"] [class*="flex-col"]');
     window.names = () => [...document.querySelectorAll('tbody tr')]
-      .map((tr) => splitCell(tr)?.firstChild?.textContent.trim() ?? '');
-    window.childCount = () => splitCell(document.querySelector('tbody tr'))?.childNodes.length ?? 0;
+      .map((tr) => splitCell(tr)?.firstElementChild?.textContent.trim() ?? '');
+    window.childCount = () => splitCell(document.querySelector('tbody tr'))?.children.length ?? 0;
+    window.childrenStack = () => {
+      const [a, b] = splitCell(document.querySelector('tbody tr'))?.children ?? [];
+      return !! (a && b) && b.getBoundingClientRect().top >= a.getBoundingClientRect().bottom - 0.5;
+    };
     window.sortButton = (name) => document.querySelector('[data-testid="table-sort-' + name + '"]');
     true;
   `);
@@ -60,7 +66,10 @@ try {
 
   // ── The split renders both children in one cell ───────────────────────
   const childCount = await eval_(`childCount()`);
-  check('the split cell stacks both of its children', childCount === 2, `children=${childCount}`);
+  check('the split cell holds both of its children, each in a box', childCount === 2, `children=${childCount}`);
+
+  const stacked = await eval_(`childrenStack()`);
+  check('a vertical split puts the second child below the first, not beside it', stacked);
 
   // ── The layout settings a vertical split could not express ────────────
   const layout = await eval_(`splitCell(document.querySelector('tbody tr')).className`);

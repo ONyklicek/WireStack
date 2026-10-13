@@ -2,6 +2,27 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.8.1]
+
+### Added
+
+- **`hasAlignment()` on a table column** says whether an alignment was set, as opposed to the left it falls back to.
+
+### Fixed
+
+- **A `vertical()` `SplitColumn` stacks its children.** A child's markup is often bare text, and bare text dropped
+  into a flex container is one item: two amounts printed as `500 Kč1 000 Kč` on a single line, and the text beside an
+  `ImageColumn` ran together the same way. Every child now gets a box of its own, and a child that renders nothing
+  gets none, so it leaves no gap. A row without an image also lost the empty box it used to put in front of the first
+  value, which pushed everything in by one gap.
+- **A `SplitColumn` is searched through its children.** It answered `isSearchable()` for its children, but the query
+  asks the column's `Searchable` capability, so a split whose children were all `->searchable()` was not searched at
+  all unless the split itself was marked too. It is now searchable as soon as any child is, and a child's own
+  `searchable(['first_name', 'last_name'])` columns are what it searches.
+- **Alignment inside a `SplitColumn`.** A child's `alignRight()` went on a `<td>` the child never gets, and was lost;
+  it now goes on the child's box. The split's own `alignRight()` moves a row of children to the end of the cell
+  instead of leaving them on the left.
+
 ## [2.8.0]
 
 ### Added

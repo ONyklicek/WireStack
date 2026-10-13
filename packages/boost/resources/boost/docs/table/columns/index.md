@@ -325,6 +325,7 @@ TextColumn::make('subtitle')
 ->alignCenter(): static
 ->alignRight(): static
 ->getAlignment(): string
+->hasAlignment(): bool                // false while the column falls back to 'left'
 ```
 
 The three width values are optional and independent. `width()` sets the preferred
