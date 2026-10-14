@@ -11,6 +11,8 @@ use NyonCode\WireCore\Foundation\Enums\NativeControlMode;
 use NyonCode\WireForms\Components\DateTimePicker;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Validation\Rules\DateWithinBounds;
+use Symfony\Component\Process\ExecutableFinder;
+use Symfony\Component\Process\Process;
 
 test('default mode is datetime', function () {
     $field = DateTimePicker::make('created_at');
@@ -309,6 +311,32 @@ test('the configured formats are what the picker displays, not what it stores', 
         ->and(DateTimePicker::make('at')->asDateTime()->getDisplayFormat())->toBe('d/m/Y H.i')
         ->and(DateTimePicker::make('at')->asDate()->getFormat())->toBe('Y-m-d');
 });
+
+// Regression: once time_format reached the picker, formatState() split a
+// time-only state ('07:15') as if it were a date, so every H:i field read 00:00
+// whatever it held — and an edit to it never showed.
+test('the display format renders every state shape the picker writes', function (string $state, string $format, string $expected) {
+    $node = (new ExecutableFinder)->find('node');
+
+    if ($node === null) {
+        $this->markTestSkipped('Node is not installed.');
+    }
+
+    $module = 'file://'.realpath(__DIR__.'/../../../resources/js/fields/typing.js');
+    $script = 'import(process.argv[1]).then(({ formatState }) => process.stdout.write(formatState(process.argv[2], process.argv[3])))';
+
+    $process = new Process([$node, '-e', $script, $module, $state, $format]);
+    $process->mustRun();
+
+    expect($process->getOutput())->toBe($expected);
+})->with([
+    'time' => ['07:15', 'H:i', '07:15'],
+    'time, unpadded hour' => ['07:05', 'G.i', '7.05'],
+    'time with seconds' => ['07:15:30', 'H:i:s', '07:15:30'],
+    'datetime' => ['2026-10-14T07:15', 'd.m.Y H:i', '14.10.2026 07:15'],
+    'date' => ['2026-10-14', 'd.m.Y', '14.10.2026'],
+    'month' => ['2026-10', 'm/Y', '10/2026'],
+]);
 
 // ─── First day of the week ───────────────────────────────────────────
 

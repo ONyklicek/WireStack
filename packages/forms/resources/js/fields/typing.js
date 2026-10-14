@@ -120,7 +120,10 @@ export const formatState = (state, format) => {
     if (! state) return ''
     if (! format) return state
 
-    const [datePart = '', timePart = ''] = String(state).split(/[T ]/)
+    // A time-only state ('14:30') has no date half to split off; read as one, its
+    // clock would land in the date tokens and every H:i would render 00:00.
+    const timeOnly = /^\d{1,2}:\d{2}/.test(String(state))
+    const [datePart = '', timePart = ''] = timeOnly ? ['', String(state)] : String(state).split(/[T ]/)
     const [y, mo, d] = datePart.split('-')
     const [h, mi, sec] = timePart.split(':')
 
