@@ -2,6 +2,15 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.8.2]
+
+### Fixed
+
+- **A time-only `DateTimePicker` shows its value again.** Since the configured `wire-forms.time_format` reaches the
+  picker, its display ran the state through `formatState()`, which split `07:15` as if it were a date: the clock
+  landed in the date tokens and every `asTime()` field read `00:00`, whatever it held. A changed time was stored but
+  never shown, so editing one looked broken. A state that starts with the clock is now read as a time.
+
 ## [2.8.1]
 
 ### Added
