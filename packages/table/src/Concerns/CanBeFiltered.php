@@ -229,11 +229,14 @@ trait CanBeFiltered
      */
     protected function ensureFilter(): Filter
     {
-        if ($this->filter === null) {
-            $this->filter($this->filterFactory()->text($this->name));
+        $filter = $this->filter;
+
+        if ($filter === null) {
+            $filter = $this->filterFactory()->text($this->name);
+            $this->filter($filter);
         }
 
-        return $this->filter;
+        return $filter;
     }
 
     protected function filterFactory(): ColumnFilterFactory

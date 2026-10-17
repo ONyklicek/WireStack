@@ -54,7 +54,7 @@ class RunImportJob implements ShouldQueue
     {
         $host = app($this->host);
 
-        if (! method_exists($host, 'importTable')) {
+        if (! is_object($host) || ! method_exists($host, 'importTable')) {
             return;
         }
 

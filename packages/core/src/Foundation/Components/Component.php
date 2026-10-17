@@ -50,6 +50,8 @@ abstract class Component implements Htmlable
 
     /**
      * Get the view name for rendering this component.
+     *
+     * @return view-string
      */
     abstract protected function viewName(): string;
 

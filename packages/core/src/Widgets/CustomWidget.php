@@ -6,12 +6,17 @@ namespace NyonCode\WireCore\Widgets;
 
 class CustomWidget extends Widget
 {
+    /** @var view-string|null */
     protected ?string $customView = null;
 
     /** @var array<string, mixed> */
     protected array $customViewData = [];
 
-    /** Set the Blade view that renders the widget body. */
+    /**
+     * Set the Blade view that renders the widget body.
+     *
+     * @param  view-string  $view
+     */
     public function view(string $view): static
     {
         $this->customView = $view;
@@ -31,6 +36,7 @@ class CustomWidget extends Widget
         return $this;
     }
 
+    /** @return view-string|null */
     public function getCustomView(): ?string
     {
         return $this->customView;

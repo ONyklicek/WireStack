@@ -54,7 +54,10 @@ trait InteractsWithSelectCreation
             return;
         }
 
-        $this->createOptionFormData = [];
+        // Seed like an action form does: every field at its ->default() or a
+        // type-correct blank. An empty bag leaves a defaulted Select showing
+        // nothing and a required field with a default failing on submit.
+        $this->createOptionFormData = $field->getCreateOptionForm($this)?->getInitialState() ?? [];
         $this->mountedCreateOptionSelect = $statePath;
     }
 
@@ -91,7 +94,15 @@ trait InteractsWithSelectCreation
         $value = Select::normalizeOptionValue($field->createOption($form->getState()));
 
         if ($value !== null) {
+            $old = data_get($this, $statePath);
+
             $this->selectCreatedOption($field, $statePath, $value);
+
+            // The write happens on the server, so no Livewire `updated` hook
+            // fires for it — run the Select's reactive callback here, exactly as
+            // picking an existing option would (e.g. copying the new record's
+            // price into a sibling field).
+            $field->runAfterStateUpdated($old);
 
             // Let the combobox merge the new option client-side: Alpine seeds its
             // option map at first render and never re-reads it on morph, so

@@ -193,7 +193,8 @@ checked at registration, so **list a dependency before its dependant in config**
 
 **A hook does nothing until something runs it.** `hook('name', $cb)` stores a callback; behaviour changes only
 where a `runHook()` / `runTypedHook()` call exists. Callbacks run by ascending priority; an array-hook callback
-returning an array replaces the payload, anything else leaves it unchanged. Names come from the `Hook` enum
+returning an array replaces the payload, anything else leaves it unchanged; a typed-hook callback replaces it
+only with an instance of the payload's own class (mutate and return it), anything else is ignored. Names come from the `Hook` enum
 (strings still accepted). **`table.composing` ≠ `table.configuring`**: composing runs once on the table instance
 the host built (a column added there renders), configuring runs in `TableQueryService` on arrays the planner
 consumes (a column added there is searched and sorted on and never drawn). `form.configuring` is the form's

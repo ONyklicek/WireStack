@@ -35,6 +35,7 @@ use NyonCode\WireTable\Table;
  */
 trait HasDataSource
 {
+    /** @var class-string<Model>|null */
     protected ?string $model = null;
 
     /** @var Builder<Model>|null */
@@ -55,7 +56,11 @@ trait HasDataSource
      */
     protected bool $customDataSource = false;
 
-    /** Build the table's rows from this Eloquent model. */
+    /**
+     * Build the table's rows from this Eloquent model.
+     *
+     * @param  class-string<Model>  $model
+     */
     public function model(string $model): static
     {
         $this->model = $model;

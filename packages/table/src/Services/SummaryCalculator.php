@@ -70,10 +70,11 @@ final class SummaryCalculator
         }
 
         // In-memory scopes: 'page', 'selection', 'subRows'.
-        $values = $pageRecords
-            ->when($when !== null, fn ($records) => $records->filter(
-                fn ($record) => (bool) $when(data_get($record, $target->column), $record),
-            ))
+        $records = $when === null ? $pageRecords : $pageRecords->filter(
+            fn ($record) => (bool) $when(data_get($record, $target->column), $record),
+        );
+
+        $values = $records
             ->pluck($target->column)
             ->filter(fn ($v) => $v !== null)
             ->values();

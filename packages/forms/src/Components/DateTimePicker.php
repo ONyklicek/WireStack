@@ -375,7 +375,7 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState, Pr
     {
         $min = $this->getMinDate();
         $max = $this->getMaxDate();
-        $disabled = $this->mode === 'time' ? [] : $this->getDisabledDates();
+        $disabled = $this->mode === 'time' ? [] : array_values($this->getDisabledDates());
 
         if ($min === null && $max === null && $disabled === []) {
             return [];
@@ -484,12 +484,13 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState, Pr
     {
         // A datetime's display format carries a date a bare slot does not have.
         $display = $this->mode === 'time' ? $this->getDisplayFormat() : null;
+        $parsed = $display === null ? null : Carbon::createFromFormat('H:i:s', $time);
 
-        if ($display === null) {
+        if ($display === null || $parsed === null) {
             return substr($time, 0, $this->hasSeconds() ? 8 : 5);
         }
 
-        return Carbon::createFromFormat('H:i:s', $time)->format($display);
+        return $parsed->format($display);
     }
 
     public function getFirstDayOfWeek(): int

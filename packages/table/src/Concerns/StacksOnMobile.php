@@ -216,7 +216,7 @@ trait StacksOnMobile
     public function groupCards(iterable $records): array
     {
         $groups = [];
-        $last = null;
+        $current = null;
 
         foreach ($records as $record) {
             $label = $this->listHeading === null ? null : $this->listHeading->__invoke($record);
@@ -224,12 +224,19 @@ trait StacksOnMobile
 
             // A new run starts on the first record and whenever the heading
             // changes; equal neighbours share the one above them.
-            if ($groups === [] || $last !== $label) {
-                $groups[] = ['heading' => $label, 'records' => []];
-                $last = $label;
+            if ($current === null || $current['heading'] !== $label) {
+                if ($current !== null) {
+                    $groups[] = $current;
+                }
+
+                $current = ['heading' => $label, 'records' => []];
             }
 
-            $groups[array_key_last($groups)]['records'][] = $record;
+            $current['records'][] = $record;
+        }
+
+        if ($current !== null) {
+            $groups[] = $current;
         }
 
         return $groups;

@@ -210,8 +210,8 @@ final class TourHost
         return [
             'heading' => $welcome->getHeading(),
             'text' => $welcome->getText(),
-            'start' => $welcome->getStart() ?? __('wire-core::messages.tour_start'),
-            'later' => $postponable ? ($welcome->getLater() ?? __('wire-core::messages.tour_later')) : null,
+            'start' => $welcome->getStart() ?? (string) __('wire-core::messages.tour_start'),
+            'later' => $postponable ? ($welcome->getLater() ?? (string) __('wire-core::messages.tour_later')) : null,
             'view' => $welcome->getView(),
         ];
     }

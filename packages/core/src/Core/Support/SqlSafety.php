@@ -82,6 +82,8 @@ final class SqlSafety
      * unexpected value collapses to the safe `asc` default. Use this when a
      * direction is interpolated into raw SQL (orderByRaw) and a hard failure is
      * undesirable.
+     *
+     * @return 'asc'|'desc'
      */
     public static function normalizeDirection(string $direction): string
     {

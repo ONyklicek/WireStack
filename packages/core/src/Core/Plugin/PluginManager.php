@@ -366,8 +366,10 @@ final class PluginManager
 
             $result = ($hook['callback'])($scope);
 
-            if ($result instanceof View || $result instanceof Htmlable) {
+            if ($result instanceof Htmlable) {
                 $html .= $result->toHtml();
+            } elseif ($result instanceof View) {
+                $html .= $result->render();
             } elseif (is_string($result)) {
                 $html .= e($result);
             }
@@ -412,8 +414,10 @@ final class PluginManager
                 continue;
             }
 
+            // Only a payload of the same kind replaces it: anything else would
+            // reach a caller that reads properties this object does not have.
             $result = ($hook['callback'])($payload);
-            if ($result !== null && is_object($result)) {
+            if ($result instanceof $payload) {
                 $payload = $result;
             }
         }

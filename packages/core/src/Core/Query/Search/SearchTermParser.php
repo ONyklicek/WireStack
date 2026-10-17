@@ -110,7 +110,7 @@ final class SearchTermParser
 
         foreach ($matches as $match) {
             $isPhrase = str_starts_with($match[0], '"');
-            $value = $isPhrase ? $match[1] : $match[0];
+            $value = $isPhrase ? ($match[1] ?? '') : $match[0];
 
             if (trim($value) === '') {
                 continue;

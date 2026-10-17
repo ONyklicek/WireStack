@@ -29,7 +29,7 @@ final class MoneyAmount implements ValidationRule
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $amount = $this->format->parse(is_scalar($value) ? $value : null);
+        $amount = $this->format->parse(is_scalar($value) && ! is_bool($value) ? $value : null);
 
         if ($amount === null) {
             $fail('wire-forms::fields.money.invalid')->translate();

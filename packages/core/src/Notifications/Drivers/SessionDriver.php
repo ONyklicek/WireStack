@@ -39,7 +39,7 @@ class SessionDriver implements NotificationDriver
     {
         session()->flash($this->sessionKey, $notification->toArray());
 
-        if ($livewireComponent && method_exists($livewireComponent, 'dispatch')) {
+        if (is_object($livewireComponent) && method_exists($livewireComponent, 'dispatch')) {
             // Forward the full payload (title, duration, actions, …) so rich
             // toasts survive the server round-trip, not just type + message.
             $livewireComponent->dispatch($this->eventName, ...$notification->toArray());

@@ -39,7 +39,9 @@ final readonly class RouteAccess implements AuthorizesUrls
                 continue;
             }
 
-            [$ability, $arguments] = array_pad(explode(',', substr($middleware, 4), 2), 2, null);
+            $parts = explode(',', substr($middleware, 4), 2);
+            $ability = $parts[0];
+            $arguments = $parts[1] ?? null;
 
             if (! $this->gate->forUser($user)->allows($ability, $arguments === null ? [] : explode(',', $arguments))) {
                 return false;

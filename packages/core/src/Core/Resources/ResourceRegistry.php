@@ -41,14 +41,14 @@ final class ResourceRegistry implements RegistrySource
     private ?array $byModel = null;
 
     /**
-     * @param  class-string<DescribesResource>  $resource
+     * @param  string  $resource  validated here: anything but a resource class throws
      *
      * @throws ResourceRegistrationException When the class is not a resource, or
      *                                       when its key is already taken by a different class.
      */
     public function register(string $resource): void
     {
-        if (! is_subclass_of($resource, DescribesResource::class) && ! in_array(DescribesResource::class, class_implements($resource) ?: [], true)) {
+        if (! class_exists($resource) || ! is_a($resource, DescribesResource::class, true)) {
             throw ResourceRegistrationException::notAResource($resource, DescribesResource::class);
         }
 

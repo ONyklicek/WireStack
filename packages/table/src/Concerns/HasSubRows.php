@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Str;
+use NyonCode\WireCore\Actions\ActionGroup;
+use NyonCode\WireCore\Actions\BaseAction;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Exceptions\TableConfigurationException;
 
@@ -106,7 +108,7 @@ trait HasSubRows
     /**
      * Per-child-row actions, rendered in a trailing actions cell.
      *
-     * @var array<int, object>
+     * @var array<int, BaseAction|ActionGroup>
      */
     protected array $subRowActions = [];
 
@@ -279,7 +281,7 @@ trait HasSubRows
      * Set per-child-row actions. Each action renders against the sub-row record,
      * the same way main-table actions render against a parent record.
      *
-     * @param  array<int, object>  $actions
+     * @param  array<int, BaseAction|ActionGroup>  $actions
      */
     public function subRowActions(array $actions): static
     {
@@ -365,6 +367,10 @@ trait HasSubRows
     protected function recordHasChildren(mixed $record): bool
     {
         $relation = $this->subRowRelation;
+
+        if ($relation === null) {
+            return false;
+        }
 
         if ($record instanceof Model) {
             $planned = $record->getAttribute(self::SUB_ROWS_PRESENCE_COUNT);
@@ -470,7 +476,7 @@ trait HasSubRows
     }
 
     /**
-     * @return array<int, object>
+     * @return array<int, BaseAction|ActionGroup>
      */
     public function getSubRowActions(): array
     {
@@ -493,6 +499,10 @@ trait HasSubRows
     public function getSubRowsQuery(mixed $record, ?array $sort = null, bool $applyLimit = true): Builder
     {
         $relation = $this->subRowRelation;
+
+        if ($relation === null) {
+            throw TableConfigurationException::subRowsNotConfigured('getSubRowsQuery');
+        }
 
         // A typo'd relation name would otherwise surface as a bare
         // "Call to undefined method Model::itemz()" that never mentions subRows().

@@ -165,8 +165,11 @@ final class ClassSource
 
         $line = 'use '.ltrim($class, '\\').';';
 
-        if (preg_match_all('/^use\s+[^;]+;$/m', $this->contents, $matches, PREG_OFFSET_CAPTURE) > 0) {
-            $last = end($matches[0]);
+        $last = preg_match_all('/^use\s+[^;]+;$/m', $this->contents, $matches, PREG_OFFSET_CAPTURE) > 0
+            ? end($matches[0])
+            : false;
+
+        if ($last !== false) {
             $at = $last[1] + strlen($last[0]);
             $this->contents = substr($this->contents, 0, $at)."\n".$line.substr($this->contents, $at);
         } else {

@@ -520,7 +520,7 @@ class ActionGroup implements Htmlable
      * Menu-item classes, byte-identical to dropdown-item.blade.php so a lazily
      * rendered item looks the same as an eagerly rendered one.
      */
-    private function menuItemClasses(Action $item, Model $record, bool $disabled): string
+    private function menuItemClasses(Action $item, ?Model $record, bool $disabled): string
     {
         $base = 'group flex w-full items-center px-4 py-2 text-sm text-left';
 

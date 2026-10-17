@@ -220,7 +220,7 @@ class NotificationBell extends Component
      */
     protected function items(Collection $notifications): array
     {
-        return $notifications->map(function (DatabaseNotification $notification): array {
+        return array_values($notifications->map(function (DatabaseNotification $notification): array {
             // The value object it was raised as, so the panel reads the payload
             // through the same owner a toast does.
             $payload = $notification->toNotification();
@@ -251,7 +251,7 @@ class NotificationBell extends Component
                     $payload->actions,
                 ),
             ];
-        })->all();
+        })->all());
     }
 
     /**

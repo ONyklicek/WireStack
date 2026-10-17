@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Panels;
 
 use Illuminate\Contracts\Support\Htmlable;
+use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Infolists\Components\Entry;
 use NyonCode\WireCore\Infolists\Infolist;
@@ -98,7 +99,7 @@ class Panel implements Htmlable
      * Propagate the bound record to every entry, recursing through layout
      * components — the same binding contract as an infolist.
      *
-     * @param  array<int, Entry|LayoutComponent>  $components
+     * @param  array<int, Component|LayoutComponent>  $components  anything but an entry or a layout is passed over
      */
     protected function prepareComponents(array $components): void
     {

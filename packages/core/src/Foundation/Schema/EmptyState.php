@@ -84,7 +84,7 @@ class EmptyState extends LayoutComponent
      */
     public function getActionsHtml(): array
     {
-        return array_map(static fn (Htmlable|string $action): string => (string) $action, $this->actions);
+        return array_map(static fn (Htmlable|string $action): string => $action instanceof Htmlable ? $action->toHtml() : $action, $this->actions);
     }
 
     protected function viewName(): string

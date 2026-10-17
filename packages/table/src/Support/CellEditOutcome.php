@@ -90,7 +90,7 @@ final readonly class CellEditOutcome
      * The wire shape read by `wireEditableCell`. Optional keys stay absent rather
      * than null, matching what `updateTableCell()` has always returned.
      *
-     * @return array{success: bool, message?: string, errors?: array<int, string>, conflict?: bool, currentValue?: string, currentVersion?: string|null, version?: string|null}
+     * @return array{success: bool, message?: string|null, errors?: array<int, string>, conflict?: bool, currentValue?: string, currentVersion?: string|null, version?: string|null}
      */
     public function toArray(): array
     {

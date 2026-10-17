@@ -81,7 +81,7 @@ final readonly class FillResult
             'results' => $results,
             'message' => $succeeded
                 ? null
-                : __('wire-table::messages.fill_partial', [
+                : (string) __('wire-table::messages.fill_partial', [
                     'filled' => $this->filled(),
                     'total' => $this->total(),
                 ]),

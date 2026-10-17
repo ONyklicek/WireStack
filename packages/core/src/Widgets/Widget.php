@@ -259,6 +259,7 @@ abstract class Widget implements HasFieldActions, Htmlable
         return "callWidgetAction('".addslashes($this->key)."', '".addslashes($action->getName())."')";
     }
 
+    /** @return view-string */
     abstract protected function viewName(): string;
 
     /**

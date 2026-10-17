@@ -44,8 +44,8 @@ final class IdentifyTenant
         // whether it carries the parameter this reads.
         $route = $request->route();
 
-        if (! $route->hasParameter(self::PARAMETER)) {
-            throw TenancyConfigurationException::noParameter($route->getName() ?? $route->uri());
+        if ($route === null || ! $route->hasParameter(self::PARAMETER)) {
+            throw TenancyConfigurationException::noParameter($route?->getName() ?? $route?->uri() ?? $request->path());
         }
 
         $user = $request->user();

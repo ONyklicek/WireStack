@@ -39,6 +39,8 @@ trait HasDynamicProperties
      * actions carry no record), only context-free closures such as
      * `fn () => 'Label'` run; record-scoped closures (`fn ($record) => …`) still
      * fall back to the static value instead of erroring on a null record.
+     *
+     * @phpstan-assert-if-true !null $callback
      */
     protected function shouldInvokeDynamicCallback(?Closure $callback, mixed $context): bool
     {

@@ -232,6 +232,7 @@ class Form implements Htmlable, ModalForm
 
     // ─── Model & save ──────────────────────────────────────────────
 
+    /** @param  class-string<Model>|Model|null  $model */
     public function model(string|Model|null $model): static
     {
         $this->configBuilder->model($model);
@@ -502,6 +503,7 @@ class Form implements Htmlable, ModalForm
         return $this->getConfig()->isEditing();
     }
 
+    /** @return class-string<Model>|Model|null */
     public function getModel(): string|Model|null
     {
         return $this->getConfig()->model;

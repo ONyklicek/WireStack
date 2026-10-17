@@ -43,13 +43,13 @@ final class ApplyFilters implements QueryPipe
     private function applyFilter(Builder $builder, FilterClause $filter): void
     {
         if ($filter->isAggregate && $filter->aggregateRelation !== null) {
-            $this->applyAggregateFilter($builder, $filter);
+            $this->applyAggregateFilter($builder, $filter, $filter->aggregateRelation);
 
             return;
         }
 
         if ($filter->isRelation && $filter->relationPath !== null) {
-            $this->applyRelationFilter($builder, $filter);
+            $this->applyRelationFilter($builder, $filter, $filter->relationPath);
 
             return;
         }
@@ -77,10 +77,8 @@ final class ApplyFilters implements QueryPipe
      *
      * @param  Builder<Model>  $builder
      */
-    private function applyRelationFilter(Builder $builder, FilterClause $filter): void
+    private function applyRelationFilter(Builder $builder, FilterClause $filter, string $relationPath): void
     {
-        $relationPath = $filter->relationPath;
-
         if (! $this->isWhereHasSafe($builder->getModel(), $relationPath)) {
             return;
         }
@@ -112,10 +110,8 @@ final class ApplyFilters implements QueryPipe
      *
      * @param  Builder<Model>  $builder
      */
-    private function applyAggregateFilter(Builder $builder, FilterClause $filter): void
+    private function applyAggregateFilter(Builder $builder, FilterClause $filter, string $relation): void
     {
-        $relation = $filter->aggregateRelation;
-
         if (! $this->isWhereHasSafe($builder->getModel(), $relation)) {
             return;
         }

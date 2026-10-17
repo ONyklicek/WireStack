@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Support;
 
+use NyonCode\WireTable\Contracts\SummarisesTable;
 use NyonCode\WireTable\Table;
 
 /**
@@ -31,12 +32,17 @@ use NyonCode\WireTable\Table;
  */
 final class TablePartials
 {
+    /**
+     * @param  SummarisesTable  $host  The Livewire component; typed `object` natively
+     *                                 so a consumer's component needs no `implements`.
+     */
     private function __construct(
         private readonly Table $table,
         private readonly object $host,
         private readonly TableRenderPlan $plan,
     ) {}
 
+    /** @param  SummarisesTable  $host */
     public static function for(Table $table, object $host, TableRenderPlan $plan): self
     {
         return new self($table, $host, $plan);

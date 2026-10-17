@@ -24,7 +24,7 @@ final class RememberPage
 {
     public function handle(Request $request, Closure $next): Response
     {
-        app(RenderedPage::class)->remember($request->route()->getName());
+        app(RenderedPage::class)->remember($request->route()?->getName());
 
         return $next($request);
     }

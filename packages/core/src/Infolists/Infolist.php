@@ -8,6 +8,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use NyonCode\WireCore\Core\Plugin\HookDispatch;
 use NyonCode\WireCore\Core\Plugin\Hooks\InfolistConfiguringPayload;
 use NyonCode\WireCore\Core\Plugin\HookTarget;
+use NyonCode\WireCore\Foundation\Components\Component;
 use NyonCode\WireCore\Foundation\Components\LayoutComponent;
 use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Schema\Grid;
@@ -201,7 +202,7 @@ class Infolist implements Htmlable
      * components. Repeatable entries receive the parent record and rebind their
      * own children per row at render time.
      *
-     * @param  array<int, Entry|LayoutComponent>  $components
+     * @param  array<int, Component|LayoutComponent>  $components  anything but an entry or a layout is passed over
      */
     protected function prepareComponents(array $components): void
     {

@@ -35,7 +35,9 @@ final class MenuDividers
      */
     public static function clean(array $items): array
     {
+        /** @var array<int, T> $cleaned */
         $cleaned = [];
+        /** @var T|null $pending */
         $pending = null;
 
         foreach ($items as $item) {

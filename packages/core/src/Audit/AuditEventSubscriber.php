@@ -62,6 +62,10 @@ class AuditEventSubscriber
     {
         $listeners = $events->getRawListeners()[AuditableEvent::class] ?? [];
 
+        if (! is_array($listeners)) {
+            return false;
+        }
+
         foreach ($listeners as $listener) {
             if (is_string($listener) && str_contains($listener, '@')) {
                 $listener = explode('@', $listener, 2);

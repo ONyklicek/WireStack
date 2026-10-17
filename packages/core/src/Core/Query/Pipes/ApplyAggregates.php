@@ -33,15 +33,25 @@ final class ApplyAggregates implements QueryPipe
     /** @param Builder<Model> $builder */
     private function applyAggregate(Builder $builder, AggregateClause $aggregate): void
     {
-        $relation = $aggregate->relation;
+        $relation = $aggregate->relation.' as '.$aggregate->getAlias();
+        $column = $aggregate->column;
 
         match ($aggregate->function) {
-            'count' => $builder->withCount([$relation.' as '.$aggregate->getAlias()]),
-            'exists' => $builder->withExists([$relation.' as '.$aggregate->getAlias()]),
-            'sum' => $builder->withSum($relation.' as '.$aggregate->getAlias(), $aggregate->column),
-            'avg' => $builder->withAvg($relation.' as '.$aggregate->getAlias(), $aggregate->column),
-            'min' => $builder->withMin($relation.' as '.$aggregate->getAlias(), $aggregate->column),
-            'max' => $builder->withMax($relation.' as '.$aggregate->getAlias(), $aggregate->column),
+            'count' => $builder->withCount([$relation]),
+            'exists' => $builder->withExists([$relation]),
+            default => null,
+        };
+
+        // sum/avg/min/max aggregate a column; without one there is nothing to add.
+        if ($column === null) {
+            return;
+        }
+
+        match ($aggregate->function) {
+            'sum' => $builder->withSum($relation, $column),
+            'avg' => $builder->withAvg($relation, $column),
+            'min' => $builder->withMin($relation, $column),
+            'max' => $builder->withMax($relation, $column),
             default => null,
         };
     }

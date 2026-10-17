@@ -46,6 +46,11 @@ final class StateColorResolver
 
         $key = EnumResolver::scalar($state);
 
+        // A bool or float key is read the way PHP stores it in the map: as an int.
+        if (is_bool($key) || is_float($key)) {
+            $key = (int) $key;
+        }
+
         if ($map !== null && is_scalar($key) && array_key_exists($key, $map)) {
             return $this->normalize($map[$key]);
         }
