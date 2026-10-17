@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Query;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Capabilities\Capability;
 use NyonCode\WireCore\Core\Components\DataComponent;
@@ -39,7 +40,7 @@ final class QueryPlanner
     /**
      * Analyze all inputs and produce a QueryPlan.
      *
-     * @param  string  $modelClass  The base model class
+     * @param  class-string<Model>  $modelClass  The base model class
      * @param  array<int, DataComponent>  $columns  Components to display/query
      * @param  array<int, FilterDefinition>  $filters  Active filters with values
      * @param  array<int, SortDefinition>  $sorts  Active sorts
@@ -126,6 +127,7 @@ final class QueryPlanner
     }
 
     /**
+     * @param  class-string<Model>  $modelClass
      * @param  array<int, SearchClause>  $searchClauses
      */
     private function planSimpleColumn(
@@ -175,6 +177,8 @@ final class QueryPlanner
      * The owner's own declaration wins, then the model's cast, then the
      * registered database type. Anything unrecognised stays text, where a
      * comparison is skipped rather than guessed at.
+     *
+     * @param  class-string<Model>  $modelClass
      */
     private function resolveValueType(
         DataComponent $component,
@@ -227,6 +231,7 @@ final class QueryPlanner
     }
 
     /**
+     * @param  class-string<Model>  $modelClass
      * @param  array<int, string>  $eagerLoads
      * @param  array<int, SearchClause>  $searchClauses
      */
@@ -274,7 +279,9 @@ final class QueryPlanner
         foreach ($relationSegments as $segment) {
             $segmentName = $segment->getName();
             $relationNames[] = $segmentName;
-            $relation = $this->metadataRegistry->getRelation($currentModel, $segmentName);
+            $relation = $currentModel !== null
+                ? $this->metadataRegistry->getRelation($currentModel, $segmentName)
+                : null;
 
             if ($relation === null || ! $relation->isJoinable()) {
                 $canJoin = false;
@@ -307,6 +314,7 @@ final class QueryPlanner
     }
 
     /**
+     * @param  class-string<Model>  $modelClass
      * @param  array<int, string>  $eagerLoads
      * @param  array<int, FilterClause>  $filterClauses
      */
@@ -375,6 +383,7 @@ final class QueryPlanner
     }
 
     /**
+     * @param  class-string<Model>  $modelClass
      * @param  array<int, SortClause>  $sortClauses
      */
     private function planSort(
@@ -418,6 +427,7 @@ final class QueryPlanner
     /**
      * Register joins for a relation chain and return the final table alias.
      *
+     * @param  class-string<Model>  $modelClass
      * @param  array<int, string>  $relationNames
      */
     private function registerRelationJoins(
@@ -434,7 +444,7 @@ final class QueryPlanner
             $pathSoFar[] = $relationName;
             $relation = $this->metadataRegistry->getRelation($currentModel, $relationName);
 
-            if ($relation === null || ! $relation->isJoinable()) {
+            if ($relation === null || ! $relation->isJoinable() || $relation->relatedModel === null) {
                 return null;
             }
 

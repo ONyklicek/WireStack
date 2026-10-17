@@ -214,7 +214,7 @@ class MoneyInput extends TextInput implements DehydratesState, HydratesState, Pr
     public function dehydrateState(mixed $state, ?Model $record = null): mixed
     {
         $format = $this->getMoneyFormat();
-        $amount = $format->parse(is_scalar($state) ? $state : null);
+        $amount = $format->parse(is_scalar($state) && ! is_bool($state) ? $state : null);
 
         if ($amount === null) {
             return null;

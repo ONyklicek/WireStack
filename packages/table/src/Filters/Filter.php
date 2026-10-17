@@ -457,7 +457,7 @@ class Filter implements Htmlable
         // This is kept for backwards compatibility when used directly
         if ($this->relation) {
             $relation = $this->relation;
-            $attribute = $this->getRelationshipAttribute();
+            $attribute = $this->relatedAttribute();
 
             return $query->whereHas($relation, function ($q) use ($attribute, $value) {
                 if (is_array($value)) {
@@ -484,13 +484,13 @@ class Filter implements Htmlable
      */
     public function getRelationshipAttribute(): ?string
     {
-        if (! $this->relation) {
-            return null;
-        }
+        return $this->relation ? $this->relatedAttribute() : null;
+    }
 
-        $parts = explode('.', $this->name);
-
-        return end($parts);
+    /** The last segment of a dotted name: the column on the related model. */
+    protected function relatedAttribute(): string
+    {
+        return Str::afterLast($this->name, '.');
     }
 
     public function getColumn(): string
@@ -570,6 +570,10 @@ class Filter implements Htmlable
      */
     protected function applyQueryCallback(Builder $query, mixed $value, mixed $raw): Builder
     {
+        if ($this->queryCallback === null) {
+            return $query;
+        }
+
         /** @var Builder<Model> */
         return ($this->queryCallback)($query, $value, $raw);
     }

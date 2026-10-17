@@ -164,7 +164,7 @@ class Table implements Htmlable
 
     protected mixed $livewireComponent = null;
 
-    protected ?string $primaryKey = 'id';
+    protected string $primaryKey = 'id';
 
     // Table styling
     protected bool $compact = false;

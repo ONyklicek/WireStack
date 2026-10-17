@@ -147,6 +147,8 @@ final class EnumResolver
      *
      * Use to detect the Filament-style shorthand where an owner passes an enum
      * class to an options API (`->options(Status::class)`) instead of an array.
+     *
+     * @phpstan-assert-if-true class-string<UnitEnum> $value
      */
     public static function isEnumClass(mixed $value): bool
     {

@@ -95,7 +95,7 @@ interface DataSource
      * returns.
      *
      * @param  array<int, int|string>  $keys
-     * @return Collection<int, RecordContract>
+     * @return Collection<int, covariant RecordContract>
      */
     public function resolveRecords(array $keys): Collection;
 

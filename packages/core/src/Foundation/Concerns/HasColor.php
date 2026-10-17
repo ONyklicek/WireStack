@@ -42,30 +42,30 @@ trait HasColor
      */
     protected function getOutlinedColorClasses(?string $color = null): string
     {
-        return self::getOutlinedClasses($color ?? $this->getColor());
+        return self::getOutlinedClasses($color ?? $this->getColor() ?? 'gray');
     }
 
     /** @see ButtonPalette::solid() */
     protected function getSolidColorClasses(?string $color = null): string
     {
-        return ButtonPalette::solid($color ?? $this->getColor());
+        return ButtonPalette::solid($color ?? $this->getColor() ?? 'gray');
     }
 
     /** @see ButtonPalette::ghost() */
     protected function getGhostColorClasses(?string $color = null): string
     {
-        return ButtonPalette::ghost($color ?? $this->getColor());
+        return ButtonPalette::ghost($color ?? $this->getColor() ?? 'gray');
     }
 
     /** @see ButtonPalette::iconButton() */
     protected function getIconButtonColorClasses(?string $color = null): string
     {
-        return ButtonPalette::iconButton($color ?? $this->getColor());
+        return ButtonPalette::iconButton($color ?? $this->getColor() ?? 'gray');
     }
 
     /** @see ButtonPalette::quiet() */
     protected function getQuietButtonColorClasses(?string $color = null): string
     {
-        return ButtonPalette::quiet($color ?? $this->getColor());
+        return ButtonPalette::quiet($color ?? $this->getColor() ?? 'gray');
     }
 }

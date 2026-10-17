@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Metadata\RelationMetadata;
@@ -52,6 +53,7 @@ final class TableQueryService
 
     private ?MetadataRegistry $registry = null;
 
+    /** @var class-string<Model>|null */
     private ?string $currentModelClass = null;
 
     /**
@@ -123,8 +125,11 @@ final class TableQueryService
                 'table.configuring',
                 new TableConfiguringPayload($table, $columns, $filters, target: $hookTarget),
             );
-            $columns = $typedPayload->columns;
-            $filters = $typedPayload->filters;
+            // A plugin hands back what it was given, perhaps changed. Anything in
+            // it that is not a column or a filter would fatal further down, so it
+            // is dropped here rather than there.
+            $columns = array_values(array_filter($typedPayload->columns, static fn (object $c): bool => $c instanceof Column));
+            $filters = array_values(array_filter($typedPayload->filters, static fn (object $f): bool => $f instanceof Filter));
         }
 
         // ── 1. Collect custom callbacks that bypass the planner ──
@@ -192,7 +197,7 @@ final class TableQueryService
         // matches ALL active sub-row filters combined — one whereHas, not one per
         // filter, so the surviving parents actually have displayable children.
         $subRowConstraint = null;
-        if ($subRowScopedFilters !== []) {
+        if ($subRowScopedFilters !== [] && $subRowRelation !== null) {
             $subRowConstraint = static function (Builder $q) use ($subRowScopedFilters): void {
                 foreach ($subRowScopedFilters as $item) {
                     $item['filter']->apply($q, $item['value']);
@@ -622,6 +627,12 @@ final class TableQueryService
 
             try {
                 $relationInstance = $current->{$methodName}();
+
+                // A method of that name that is not a relation ends the walk.
+                if (! $relationInstance instanceof Relation) {
+                    return;
+                }
+
                 $relatedModel = $relationInstance->getRelated();
                 $relatedClass = get_class($relatedModel);
 

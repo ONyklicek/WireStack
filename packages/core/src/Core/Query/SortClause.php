@@ -11,7 +11,11 @@ use NyonCode\WireCore\Core\Support\SqlSafety;
  */
 final readonly class SortClause
 {
-    /** Sort direction, normalised to a safe `asc`/`desc` keyword. */
+    /**
+     * Sort direction, normalised to a safe `asc`/`desc` keyword.
+     *
+     * @var 'asc'|'desc'
+     */
     public string $direction;
 
     /** NULLS position, normalised to a safe `FIRST`/`LAST` keyword or null. */

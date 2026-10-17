@@ -110,7 +110,7 @@ final class RowRenderPlan
         $pageRecordKeys = [];
 
         if ($isSelectable) {
-            foreach ($records as $pageRecord) {
+            foreach ($records instanceof Collection ? $records->all() : $records->items() as $pageRecord) {
                 // The keys a tick can reach, which is what the client's
                 // select-all, its ranges and its sweep all work from — an
                 // inactive record whose state withholds the selection is left

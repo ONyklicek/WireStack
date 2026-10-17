@@ -281,7 +281,7 @@ class DateFilter extends Filter
 
         if ($this->monthMode && is_string($value) && preg_match('/^\d{4}-\d{1,2}$/', $value)) {
             try {
-                return Carbon::createFromFormat('Y-m', $value)->translatedFormat('F Y');
+                return Carbon::createFromFormat('Y-m', $value)?->translatedFormat('F Y') ?? $value;
                 // @codeCoverageIgnoreStart
                 // Carbon overflows an out-of-range month (e.g. 2026-99) instead of
                 // throwing, so with a regex-valid value this catch is unreachable —

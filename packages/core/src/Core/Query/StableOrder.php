@@ -100,6 +100,7 @@ final class StableOrder
 
     /**
      * @param  array<int, array<string, mixed>>  $orders
+     * @return 'asc'|'desc'
      */
     private function trailingDirection(array $orders): string
     {

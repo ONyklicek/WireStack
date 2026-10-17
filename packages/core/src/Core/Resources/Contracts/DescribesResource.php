@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Resources\Contracts;
 
+use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Foundation\Registration\Contracts\HasRegistryKey;
 
 /**
@@ -48,7 +49,7 @@ interface DescribesResource extends HasRegistryKey
      * a model nor a builder; a resource over one of those is registered and
      * routed like any other, it just cannot be found by model.
      *
-     * @return class-string|null
+     * @return class-string<Model>|null
      */
     public static function modelClass(): ?string;
 

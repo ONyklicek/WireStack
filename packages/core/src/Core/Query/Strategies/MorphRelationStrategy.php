@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Core\Query\Strategies;
 
+use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Metadata\MetadataRegistry;
 use NyonCode\WireCore\Core\Query\AggregateClause;
 use NyonCode\WireCore\Core\Relations\RelationPath;
@@ -24,6 +25,8 @@ final readonly class MorphRelationStrategy
 
     /**
      * Determine if a relation path contains a morph relation.
+     *
+     * @param  class-string<Model>  $modelClass
      */
     public function isMorphPath(RelationPath $path, string $modelClass): bool
     {
@@ -77,6 +80,8 @@ final readonly class MorphRelationStrategy
 
     /**
      * Check if a specific relation requires morph handling.
+     *
+     * @param  class-string<Model>  $modelClass
      */
     public function requiresMorphHandling(string $modelClass, string $relationName): bool
     {
@@ -87,6 +92,8 @@ final readonly class MorphRelationStrategy
 
     /**
      * Get the morph type column for a morph relation.
+     *
+     * @param  class-string<Model>  $modelClass
      */
     public function getMorphType(string $modelClass, string $relationName): ?string
     {

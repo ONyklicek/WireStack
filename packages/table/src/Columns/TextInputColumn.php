@@ -361,7 +361,8 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState, 
         if ($validator->fails()) {
             return [
                 'valid' => false,
-                'errors' => $validator->errors()->get($this->getName()),
+                // Only this one field is validated, so every message is its own.
+                'errors' => $validator->errors()->all(),
             ];
         }
 
@@ -728,7 +729,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState, 
         $version = $this->recordVersion($record);
 
         return strtr($this->editableSkeleton ??= $this->buildEditableSkeleton(), [
-            e(json_encode(self::EDIT_VAL)) => e(json_encode($value)),  // Alpine config
+            e(json_encode(self::EDIT_VAL, JSON_THROW_ON_ERROR)) => e(json_encode($value, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE)),  // Alpine config
             e(self::EDIT_VAL) => e($value),                           // data-server-value
             self::EDIT_KEY => e($key),                                // wire:key + data-record-key
             self::EDIT_VER => $version,                               // version (numeric)
@@ -809,7 +810,7 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState, 
 
     // ─── Build methods ──────────────────────────────────────────
 
-    /** @var array<string, string> */
+    /** @var array<int|string, string> keyed "00".."11"; PHP stores "10"/"11" as ints */
     private array $inputClassesCache = [];
 
     private ?string $inputAttributesCache = null;
@@ -861,8 +862,11 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState, 
 
         $attrs['type'] = $this->inputType;
 
-        if ($this->placeholder) {
-            $attrs['placeholder'] = $this->placeholder;
+        // Through the getter: a placeholder given as a closure is evaluated there.
+        $placeholder = $this->getPlaceholder();
+
+        if ($placeholder) {
+            $attrs['placeholder'] = $placeholder;
         }
 
         if ($this->maxLength) {

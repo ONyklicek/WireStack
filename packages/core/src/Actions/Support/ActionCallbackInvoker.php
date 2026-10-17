@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireCore\Actions\Support;
 
+use Closure;
 use NyonCode\WireCore\Foundation\Support\EvaluatesClosures;
 use ReflectionFunction;
 
@@ -36,7 +37,7 @@ final class ActionCallbackInvoker
      */
     public function invoke(callable $callback, array $payload): mixed
     {
-        $reflection = new ReflectionFunction($callback);
+        $reflection = new ReflectionFunction(Closure::fromCallable($callback));
         $arguments = [];
 
         foreach ($reflection->getParameters() as $parameter) {

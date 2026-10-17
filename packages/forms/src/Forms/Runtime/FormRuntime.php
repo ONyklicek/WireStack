@@ -165,8 +165,10 @@ final class FormRuntime
         $messages = $resolver->getMessages();
         $attributes = $resolver->getAttributes();
 
-        if ($this->stateManager->hasLivewire()) {
-            return $this->stateManager->getLivewire()->validate(
+        $livewire = $this->stateManager->getLivewire();
+
+        if ($livewire !== null) {
+            return $livewire->validate(
                 $rules,
                 $messages,
                 $attributes,
@@ -533,7 +535,7 @@ final class FormRuntime
 
         $record = match (true) {
             $model instanceof Model => $model,
-            is_string($model) && is_a($model, Model::class, true) => new $model,
+            is_string($model) => new $model,
             default => null,
         };
 
@@ -557,7 +559,7 @@ final class FormRuntime
     private function applyRecordToSchema(array $components, Model $record): void
     {
         foreach ($components as $component) {
-            if (method_exists($component, 'record')) {
+            if (is_object($component) && method_exists($component, 'record')) {
                 $component->record($record);
             }
 

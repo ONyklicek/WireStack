@@ -99,12 +99,14 @@ class SelectFilter extends Filter
             return parent::apply($query, $value);
         }
 
-        if ($this->getRelation() !== null) {
-            $attribute = $this->getRelationshipAttribute();
+        $relation = $this->getRelation();
+
+        if ($relation !== null) {
+            $attribute = $this->relatedAttribute();
 
             /** @var Builder<Model> */
             return $query->whereHas(
-                $this->getRelation(),
+                $relation,
                 fn (Builder $q) => $q->whereIn($attribute, $value),
             );
         }

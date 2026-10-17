@@ -39,19 +39,30 @@ final class AggregateSubqueries
         ?Closure $subRowConstraint = null,
     ): Builder {
         foreach ($columns as $column) {
-            if (! $column->isAggregate()) {
+            $relation = $column->getAggregateRelation();
+
+            if (! $column->isAggregate() || $relation === null) {
                 continue;
             }
-
-            $relation = $column->getAggregateRelation();
-            $aggregateCol = $column->getAggregateColumn();
 
             $target = ($subRowConstraint !== null && $relation === $subRowRelation)
                 ? [$relation => $subRowConstraint]
                 : $relation;
 
+            if ($column->getAggregateFunction() === 'count') {
+                $query->withCount($target);
+
+                continue;
+            }
+
+            // sum/avg/min/max aggregate a column; without one there is nothing to add.
+            $aggregateCol = $column->getAggregateColumn();
+
+            if ($aggregateCol === null) {
+                continue;
+            }
+
             match ($column->getAggregateFunction()) {
-                'count' => $query->withCount($target),
                 'sum' => $query->withSum($target, $aggregateCol),
                 'avg' => $query->withAvg($target, $aggregateCol),
                 'min' => $query->withMin($target, $aggregateCol),

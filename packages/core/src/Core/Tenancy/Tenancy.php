@@ -87,7 +87,7 @@ final class Tenancy
      * @template TReturn
      *
      * @param  Closure(Model): TReturn  $callback  Receives the tenant.
-     * @return TReturn
+     * @return TReturn|null
      */
     public function runAs(Model $tenant, Closure $callback): mixed
     {

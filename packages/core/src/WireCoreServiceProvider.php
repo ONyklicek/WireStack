@@ -870,7 +870,11 @@ class WireCoreServiceProvider extends PackageServiceProvider
     {
         $this->app->singleton(WireRoutes::class);
 
-        Route::macro(WireRoutes::MACRO, fn (string $key, mixed ...$options): array => app(WireRoutes::class)->wire($key, $options));
+        // Only named arguments are options; a positional one names nothing.
+        Route::macro(WireRoutes::MACRO, fn (string $key, mixed ...$options): array => app(WireRoutes::class)->wire(
+            $key,
+            array_filter($options, is_string(...), ARRAY_FILTER_USE_KEY),
+        ));
     }
 
     protected function bootResources(): void
@@ -942,7 +946,7 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
         // Register plugins from config
         $this->app->afterResolving(PluginManager::class, function (PluginManager $manager) {
-            $plugins = $this->app['config']->get('wire-core.plugins', []);
+            $plugins = config('wire-core.plugins', []);
 
             // Named rather than fatal. Without this the foreach below dies inside
             // a package provider on a mistake that lives in the application's own

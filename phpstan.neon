@@ -1,5 +1,9 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
+
 parameters:
-    level: 6
+    level: 8
     paths:
         - packages/core/src
         - packages/forms/src
@@ -112,3 +116,42 @@ parameters:
         - { identifier: trait.unused, path: packages/panels/src/Resources/Concerns/ResolvesScopedRecord.php }
         - { identifier: trait.unused, path: packages/core/src/Core/Resources/Concerns/DescribesRecords.php }
         - { identifier: trait.unused, path: packages/core/src/Core/Tenancy/Concerns/BelongsToTenant.php }
+        # Larastan types the raw-SQL builder methods as `literal-string`, a guard
+        # against interpolating user input. These sites interpolate only what the
+        # framework has already made safe: identifiers through the grammar's
+        # wrap(), operators and directions through SqlSafety's allow-lists, and an
+        # owner's own sqlExpression(). Every value still travels as a binding.
+        -
+            message: '#expects (Illuminate\\Contracts\\Database\\Query\\Expression\|)?literal-string, (non-falsy-)?string given#'
+            identifier: argument.type
+            paths:
+                - packages/core/src/Core/Query/Pipes/ApplyFilters.php
+                - packages/core/src/Core/Query/Pipes/ApplySorting.php
+                - packages/core/src/Core/Query/Search/LikePredicate.php
+                - packages/core/src/Core/Query/Search/SearchClauseCompiler.php
+                - packages/table/src/Data/EloquentDataSource.php
+                - packages/table/src/Services/SummaryBatch.php
+        # Larastan checks a `view-string` against the views it can see. These
+        # names exist only at run time — read from config, resolved through a
+        # view()->exists() fallback chain, or built from a partial's name — so
+        # there is nothing static to check them against.
+        -
+            message: '#expects view-string(\|null)?, string given#'
+            identifier: argument.type
+            paths:
+                - packages/core/src/Foundation/View/ComponentRenderer.php
+                - packages/forms/src/Components/Display/Html.php
+                - packages/panels/src/Routing/TenantEntry.php
+                - packages/panels/src/Routing/ZoneEntry.php
+                - packages/table/src/Columns/Column.php
+                - packages/table/src/Concerns/HasView.php
+                - packages/table/src/Filters/Filter.php
+        # Larastan resolves `$request->user()` to the user model the analysis
+        # boots with — the workbench's, which implements HasTenants. A package
+        # cannot assume that of an application's user model, so the check stays.
+        -
+            identifier: instanceof.alwaysTrue
+            paths:
+                - packages/panels/src/Http/Middleware/IdentifyTenant.php
+                - packages/panels/src/Routing/TenantEntry.php
+        - { identifier: booleanAnd.alwaysFalse, path: packages/panels/src/Http/Middleware/IdentifyTenant.php }

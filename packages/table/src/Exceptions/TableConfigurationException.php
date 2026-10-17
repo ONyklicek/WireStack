@@ -175,4 +175,12 @@ final class TableConfigurationException extends InvalidArgumentException impleme
             "[{$model}], but none exists. Check the spelling, or define the relationship."
         );
     }
+
+    public static function subRowsNotConfigured(string $method): self
+    {
+        return new self(
+            "{$method}() reads a record's children, but the table names no relationship ".
+            'for them. Call subRows(\'relation\') on the table first.'
+        );
+    }
 }

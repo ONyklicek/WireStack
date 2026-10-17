@@ -58,11 +58,11 @@ final readonly class SubRowPanel
     ) {}
 
     /**
-     * @param  object  $host  The Livewire component. Typed loosely for the same
-     *                        reason {@see ColumnRenderPlan::resolve()} types its own — a consumer's
-     *                        component needs no `implements` to keep working. What it must be able
-     *                        to answer is {@see ExpandsTableRows} plus {@see SummarisesTable}, and
-     *                        that is what a test double implements.
+     * @param  ExpandsTableRows&SummarisesTable  $host  The Livewire component. Typed loosely for the same
+     *                                                  reason {@see ColumnRenderPlan::resolve()} types its own — a consumer's
+     *                                                  component needs no `implements` to keep working. What it must be able
+     *                                                  to answer is {@see ExpandsTableRows} plus {@see SummarisesTable}, and
+     *                                                  that is what a test double implements.
      * @param  Collection<int, Model>  $subRows  The children actually being rendered,
      *                                           already limited and filtered.
      * @param  array<int, Column>|null  $columns  The plan's resolved list, when the caller

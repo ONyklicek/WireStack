@@ -58,7 +58,7 @@ class RunExportJob implements ShouldQueue
     {
         $host = app($this->host);
 
-        if (! method_exists($host, 'buildTableExport')) {
+        if (! is_object($host) || ! method_exists($host, 'buildTableExport')) {
             return;
         }
 

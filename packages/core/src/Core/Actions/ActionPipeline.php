@@ -79,7 +79,7 @@ final class ActionPipeline
      * so the default stages only wrap it: before-callbacks guard/halt ahead of
      * it, and after-callbacks / notification / redirect post-process the result.
      *
-     * @return array<Closure|ActionStage>
+     * @return array<callable|ActionStage>
      */
     private function resolveStages(): array
     {

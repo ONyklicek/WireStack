@@ -243,8 +243,8 @@ class TextInput extends Field implements DehydratesState, SupportsNativeSubmit
      */
     public function datalist(array|string $options): static
     {
-        if (EnumResolver::isEnumClass($options)) {
-            $options = array_values(EnumResolver::options($options));
+        if (is_string($options)) {
+            $options = EnumResolver::isEnumClass($options) ? array_values(EnumResolver::options($options)) : [];
         }
 
         $this->datalistOptions = $options;

@@ -37,7 +37,7 @@ final class TenantSwitcher
         $user = $request->user();
         $route = $request->route();
 
-        if ($current === null || ! $user instanceof HasTenants) {
+        if ($current === null || $route === null || ! $user instanceof HasTenants) {
             return null;
         }
 

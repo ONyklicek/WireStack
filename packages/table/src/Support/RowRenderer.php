@@ -96,7 +96,7 @@ final class RowRenderer
         if ($row->isSelectable) {
             $selectionCell = $inactiveRow !== null && ! $inactiveRow->allowsSelection()
                 ? $this->table->getSelectionCellSkeleton(inert: true)
-                : $row->selectionCellSkeleton;
+                : ($row->selectionCellSkeleton ?? $this->table->getSelectionCellSkeleton());
 
             $html .= $selectionCell->fill(['keyJs' => $keyJs, 'key' => $key]);
         }

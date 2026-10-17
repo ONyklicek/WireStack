@@ -319,7 +319,13 @@ final class MentionRenderer
 
         // The wrapper div is the document element — parse() always writes one, and
         // serialize() only runs on a document that already yielded mention nodes.
-        foreach ($dom->documentElement->childNodes as $child) {
+        $root = $dom->documentElement;
+
+        if ($root === null) {
+            return $html;
+        }
+
+        foreach ($root->childNodes as $child) {
             $html .= $dom->saveHTML($child);
         }
 

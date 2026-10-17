@@ -29,7 +29,7 @@ final class PageRegistry implements RegistrySource
     public function __construct(private readonly ClassDiscovery $discovery) {}
 
     /**
-     * @param  class-string  $page
+     * @param  string  $page  validated here: anything but a page class throws
      *
      * @throws PageRegistrationException When it is not a page, or its key is another page's.
      */

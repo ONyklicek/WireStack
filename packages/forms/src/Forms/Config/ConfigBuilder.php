@@ -19,6 +19,7 @@ final class ConfigBuilder
 
     private ?string $statePath = null;
 
+    /** @var class-string<Model>|Model|null */
     private string|Model|null $model = null;
 
     private ?Closure $mutateDataBeforeSave = null;
@@ -57,6 +58,7 @@ final class ConfigBuilder
         return $this;
     }
 
+    /** @param  class-string<Model>|Model|null  $model */
     public function model(string|Model|null $model): self
     {
         $this->model = $model;
@@ -161,6 +163,7 @@ final class ConfigBuilder
         return $this->statePath;
     }
 
+    /** @return class-string<Model>|Model|null */
     public function getModel(): string|Model|null
     {
         return $this->model;

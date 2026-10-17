@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WirePanels\Resources\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 use NyonCode\WireCore\Foundation\Console\Support\StubWriter;
@@ -114,6 +115,12 @@ final class MakeResourceCommand extends Command
 
         if (! class_exists($model)) {
             $this->components->warn("[{$model}] does not exist yet, so there is no table to read: the resource is written without generated fields.");
+
+            return $none;
+        }
+
+        if (! is_subclass_of($model, Model::class)) {
+            $this->components->warn("[{$model}] is not an Eloquent model, so there is no table to read: the resource is written without generated fields.");
 
             return $none;
         }

@@ -110,7 +110,9 @@ final class PagingRenderPlan
         $isSimple = ! $hasPaginator && $records instanceof Paginator;
         $knowsRange = $hasPaginator || $isSimple;
 
-        $recordCount = $hasPaginator ? $records->total() : $records->count();
+        // The pagination contracts promise items(), not count() or iteration.
+        $pageCount = count($records instanceof Collection ? $records->all() : $records->items());
+        $recordCount = $records instanceof LengthAwarePaginator ? $records->total() : $pageCount;
 
         return new self(
             isPaginated: $table->isPaginated(),
@@ -128,12 +130,12 @@ final class PagingRenderPlan
             // "No results match your filters" rather than "nothing here yet" —
             // the empty state that offers a way back.
             isEmptyDueToFilter: $hasActiveFilters && $recordCount === 0,
-            rangeFrom: $knowsRange
+            rangeFrom: $records instanceof Paginator
                 ? ($records->firstItem() ?? 0)
-                : ($records->count() > 0 ? 1 : 0),
-            rangeTo: $knowsRange
+                : ($pageCount > 0 ? 1 : 0),
+            rangeTo: $records instanceof Paginator
                 ? ($records->lastItem() ?? 0)
-                : $records->count(),
+                : $pageCount,
             headerRowCount: 1 + ($hasColumnFilters ? 1 : 0),
         );
     }

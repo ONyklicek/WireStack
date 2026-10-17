@@ -28,7 +28,7 @@ final class DashboardRegistry implements RegistrySource
     private array $dashboards = [];
 
     /**
-     * @param  class-string<Dashboard>  $dashboard
+     * @param  string  $dashboard  validated here: anything but a dashboard class throws
      *
      * @throws ResourceRegistrationException When the class is not a dashboard, or
      *                                       when its key is already taken by a different class.

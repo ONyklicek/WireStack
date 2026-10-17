@@ -211,13 +211,16 @@ trait FormatsState
 
         // Date / datetime
         if (($this->date || $this->dateTime || $this->since) && $value) {
+            // date(null) / dateTime(null) ask for the default format, not none.
+            $format = $this->dateFormat ?? ($this->dateTime ? 'd.m.Y H:i' : 'd.m.Y');
+
             $value = $this->since
                 ? ($value instanceof Carbon
                     ? $value->diffForHumans()
                     : Carbon::parse($value)->diffForHumans())
                 : ($value instanceof Carbon
-                    ? $value->format($this->dateFormat)
-                    : Carbon::parse($value)->format($this->dateFormat));
+                    ? $value->format($format)
+                    : Carbon::parse($value)->format($format));
         }
 
         // 💰 Money (priority)

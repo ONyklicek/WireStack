@@ -71,7 +71,7 @@ final class DateBoundary
             return null;
         }
 
-        return preg_split('/[T ]/', $bound)[0];
+        return (preg_split('/[T ]/', $bound) ?: [$bound])[0];
     }
 
     /**
@@ -85,7 +85,7 @@ final class DateBoundary
             return null;
         }
 
-        $parts = preg_split('/[T ]/', $bound);
+        $parts = preg_split('/[T ]/', $bound) ?: [$bound];
         $time = count($parts) > 1 ? $parts[1] : $parts[0];
 
         if (preg_match('/^(\d{2}):(\d{2})(?::(\d{2}))?$/', $time, $m) !== 1) {

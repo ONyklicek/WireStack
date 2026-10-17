@@ -405,7 +405,7 @@ class GlobalSearchPalette extends Component
     {
         $resource = app(Catalog::class)->find($resourceKey);
 
-        if (! is_subclass_of($resource, DescribesResource::class)) {
+        if ($resource === null || ! is_subclass_of($resource, DescribesResource::class)) {
             return null;
         }
 
@@ -509,7 +509,7 @@ class GlobalSearchPalette extends Component
 
             $resource = $catalog->find($key);
 
-            $labels[$key] = is_subclass_of($resource, DescribesResource::class)
+            $labels[$key] = $resource !== null && is_subclass_of($resource, DescribesResource::class)
                 ? $resource::pluralLabel()
                 : $key;
         }

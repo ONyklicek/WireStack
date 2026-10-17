@@ -201,6 +201,8 @@ abstract class LayoutComponent implements HasStateAccessors, Htmlable
 
     /**
      * Get the view name for rendering this layout.
+     *
+     * @return view-string
      */
     abstract protected function viewName(): string;
 

@@ -128,7 +128,7 @@ final class CollectionDataSource implements DataSource
 
     /**
      * @param  array<int, int|string>  $keys
-     * @return Collection<int, RecordContract>
+     * @return Collection<int, covariant RecordContract>
      */
     public function resolveRecords(array $keys): Collection
     {

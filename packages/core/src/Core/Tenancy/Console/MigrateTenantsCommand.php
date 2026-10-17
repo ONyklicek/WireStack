@@ -38,7 +38,7 @@ final class MigrateTenantsCommand extends Command
 
     public function handle(Tenancy $tenancy, TenantDatabases $databases): int
     {
-        $tenants = $this->tenants((array) $this->option('tenant'));
+        $tenants = $this->tenants(array_values(array_filter((array) $this->option('tenant'), 'is_string')));
 
         if ($tenants->isEmpty()) {
             $this->components->warn('No tenant to migrate.');

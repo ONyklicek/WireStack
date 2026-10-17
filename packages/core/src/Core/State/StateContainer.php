@@ -220,11 +220,9 @@ final class StateContainer implements \ArrayAccess, WritableStateBag
 
     public function offsetSet(mixed $offset, mixed $value): void
     {
-        if ($offset === null) {
-            $this->state[] = $value;
-        } else {
-            $this->set((string) $offset, $value);
-        }
+        // An append (`$state[] = …`) has no path of its own; it takes the next
+        // index and goes through set() like any other write, so it is tracked.
+        $this->set((string) ($offset ?? count($this->state)), $value);
     }
 
     public function offsetUnset(mixed $offset): void

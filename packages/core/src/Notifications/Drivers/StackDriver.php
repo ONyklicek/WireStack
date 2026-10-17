@@ -33,7 +33,7 @@ final class StackDriver implements NotificationDriver
 
     public function __construct(NotificationDriver ...$drivers)
     {
-        $this->drivers = $drivers;
+        $this->drivers = array_values($drivers);
     }
 
     public function send(Notification $notification, mixed $livewireComponent = null): void

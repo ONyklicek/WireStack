@@ -229,7 +229,7 @@ final class ResourceRoutes
     /**
      * Register one registered class's pages — all of them, or the ones named.
      *
-     * @param  class-string  $resource
+     * @param  string  $resource  validated here: anything that provides no pages throws
      * @param  array<int, string>  $pages  Page keys to route; empty means all.
      * @return array<int, Route>
      */

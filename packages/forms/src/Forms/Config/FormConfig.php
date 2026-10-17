@@ -21,6 +21,7 @@ final class FormConfig implements FormConfigContract
 {
     /**
      * @param  array<int, mixed>  $schema  Schema components
+     * @param  class-string<Model>|Model|null  $model
      * @param  array<string, string>  $validationMessages
      */
     public function __construct(
@@ -53,6 +54,7 @@ final class FormConfig implements FormConfigContract
         return $this->model !== null;
     }
 
+    /** @return class-string<Model>|Model|null */
     public function getModel(): string|Model|null
     {
         return $this->model;

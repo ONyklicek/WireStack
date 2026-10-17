@@ -21,9 +21,6 @@ use RuntimeException;
  */
 final class ResourceRoutingException extends RuntimeException implements WireException
 {
-    /**
-     * @param  class-string  $resource
-     */
     public static function declaresNoPages(string $resource): self
     {
         return new self(

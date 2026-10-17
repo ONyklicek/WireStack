@@ -64,7 +64,13 @@ final class RecordVersion
         // name the column something else, and the old hand-rolled copies read the
         // literal attribute, so such a record silently had no version at all —
         // which left it unguarded rather than merely unstamped.
-        $updatedAt = $record->getAttribute($record->getUpdatedAtColumn());
+        $column = $record->getUpdatedAtColumn();
+
+        if ($column === null) {
+            return null;
+        }
+
+        $updatedAt = $record->getAttribute($column);
 
         return $updatedAt instanceof DateTimeInterface
             ? (string) $updatedAt->getTimestamp()

@@ -340,14 +340,17 @@ final readonly class WidgetLayout
         }
 
         $index = $this->indexOf($key);
+        $placements = $this->placements;
 
-        if ($index === null) {
+        if ($index === null || ! isset($placements[$index])) {
             return $this;
         }
 
-        $placements = $this->placements;
-        $placements[$index]['w'] = self::clamp($width, 1, 4);
-        $placements[$index]['h'] = self::clamp($height, 1, 6);
+        $placements[$index] = [
+            'key' => $placements[$index]['key'],
+            'w' => self::clamp($width, 1, 4),
+            'h' => self::clamp($height, 1, 6),
+        ];
 
         return new self($placements);
     }
@@ -361,7 +364,7 @@ final readonly class WidgetLayout
     {
         $index = $this->indexOf($key);
 
-        return $index === null ? null : $this->placements[$index];
+        return $index === null ? null : ($this->placements[$index] ?? null);
     }
 
     private function indexOf(string $key): ?int

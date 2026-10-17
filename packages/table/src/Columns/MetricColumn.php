@@ -95,7 +95,11 @@ class MetricColumn extends TextColumn
             return [];
         }
 
-        return array_values(array_filter($series, is_numeric(...)));
+        // A numeric string counts, and is handed on as the number it spells.
+        return array_values(array_map(
+            static fn (int|float|string $point): int|float => $point + 0,
+            array_filter($series, is_numeric(...)),
+        ));
     }
 
     /**

@@ -29,7 +29,7 @@ class LivewireEventDriver implements NotificationDriver
 
     public function send(Notification $notification, mixed $livewireComponent = null): void
     {
-        if (! $livewireComponent || ! method_exists($livewireComponent, 'dispatch')) {
+        if (! is_object($livewireComponent) || ! method_exists($livewireComponent, 'dispatch')) {
             // Fallback: store in session so it's not lost
             session()->flash('table-notification', $notification->toArray());
 

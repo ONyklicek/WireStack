@@ -176,10 +176,10 @@ final class Tour
      */
     public function zones(?string ...$zones): self
     {
-        $this->zones = array_map(
+        $this->zones = array_values(array_map(
             static fn (?string $zone): ?string => $zone === null ? null : Zone::prefix($zone),
             $zones,
-        );
+        ));
 
         return $this;
     }
