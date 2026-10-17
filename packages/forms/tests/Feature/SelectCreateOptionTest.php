@@ -80,7 +80,9 @@ class CreateOptionSelectComponent extends Component
                         Select::make('unit')->options(['pcs' => 'pcs', 'm' => 'm'])->default('pcs')->required(),
                         TextInput::make('price')->integer()->default(0)->required(),
                     ])
-                    ->createOptionUsing(fn (array $data) => OptionStore::create("{$data['name']} {$data['unit']} {$data['price']}")),
+                    ->createOptionUsing(fn (array $data) => OptionStore::create("{$data['name']} {$data['unit']} {$data['price']}"))
+                    ->afterStateUpdated(fn ($state, $old, $set) => $set('picked', OptionStore::label($state).' after '.($old ?? 'none'))),
+                TextInput::make('picked'),
                 Select::make('plain')->options(['a' => 'A']),
                 Select::make('broken')
                     ->createOptionForm(fn () => 'not-an-array')
@@ -113,6 +115,15 @@ test('mountCreateOption seeds the modal form with its fields\' defaults', functi
         ->assertSet('data.priced', 'c2');
 
     expect(OptionStore::label('c2'))->toBe('Cable pcs 0');
+});
+
+test('createSelectOption runs the select\'s afterStateUpdated like picking an option would', function () {
+    Livewire::test(CreateOptionSelectComponent::class)
+        ->call('mountCreateOption', 'data.priced')
+        ->set('createOptionFormData.name', 'Cable')
+        ->set('createOptionFormData.price', 12)
+        ->call('createSelectOption')
+        ->assertSet('data.picked', 'Cable pcs 12 after none');
 });
 
 test('mountCreateOption is a no-op for a select without a create form', function () {
