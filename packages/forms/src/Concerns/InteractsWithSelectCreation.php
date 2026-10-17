@@ -54,7 +54,10 @@ trait InteractsWithSelectCreation
             return;
         }
 
-        $this->createOptionFormData = [];
+        // Seed like an action form does: every field at its ->default() or a
+        // type-correct blank. An empty bag leaves a defaulted Select showing
+        // nothing and a required field with a default failing on submit.
+        $this->createOptionFormData = $field->getCreateOptionForm($this)?->getInitialState() ?? [];
         $this->mountedCreateOptionSelect = $statePath;
     }
 
