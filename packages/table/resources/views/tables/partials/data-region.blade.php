@@ -702,7 +702,7 @@
                                             wire:model.live="tableState.pagination.perPage"
                                             data-testid="table-per-page" @wireEl('table-per-page')
                                             aria-label="{{ __('wire-table::messages.show') }}"
-                                            class="rounded-lg border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 focus:border-primary-500 focus:ring-primary-500 py-1.5"
+                                            class="rounded-lg border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-base sm:text-sm text-gray-700 dark:text-gray-300 focus:border-primary-500 focus:ring-primary-500 py-1.5"
                                     >
                                         @foreach($table->getPerPageOptions() as $option)
                                             {{-- Mark the live value server-side: without it the first

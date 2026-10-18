@@ -54,8 +54,14 @@ final class TextControl
     /** Hover feedback, and the transition that keeps it from snapping. */
     private const HOVER = 'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150';
 
-    /** The dark-mode pair, and the type scale the field layer settled on. */
-    private const DARK = 'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm';
+    /**
+     * The dark-mode pair, and the type scale the field layer settled on.
+     *
+     * 16px below `sm`, 14px from it up: iOS Safari zooms the page into any
+     * focused control under 16px, and on a phone that reads as the form
+     * overflowing its screen.
+     */
+    private const DARK = 'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-base sm:text-sm';
 
     /**
      * Every always-on group, in the order `wire-forms` already established.

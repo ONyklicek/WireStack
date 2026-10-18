@@ -293,7 +293,7 @@
                                                 placeholder="{{ __('wire-table::messages.search') }}..."
                                                 aria-label="{{ __('wire-table::messages.search') }}"
                                                 data-testid="table-search" @wireEl('table-search')
-                                                class="block w-full rounded-lg border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 pl-9 pr-3 py-2 text-sm placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500 focus:ring-primary-500 dark:text-white"
+                                                class="block w-full rounded-lg border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 pl-9 pr-3 py-2 text-base sm:text-sm placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500 focus:ring-primary-500 dark:text-white"
                                         >
                                     </div>
                                 @endif

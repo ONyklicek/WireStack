@@ -46,7 +46,7 @@
                         x-on:change="$wire.applyWidgetLayout(layout)"
                         data-testid="widget-layout-view" @wireEl('widget-layout-view')
                         aria-label="{{ __('wire-core::messages.widget_saved_layouts') }}"
-                        class="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                        class="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-base sm:text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
                     >
                         <option value="">{{ __('wire-core::messages.widget_saved_layout_current') }}</option>
                         @foreach($layoutNames as $layoutName)

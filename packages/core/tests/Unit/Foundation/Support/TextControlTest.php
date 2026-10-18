@@ -21,7 +21,7 @@ test('the base carries every always-on group, in the established order', functio
         .'focus:border-primary-500 focus:ring-primary-500 '
         .'placeholder:text-gray-500 dark:placeholder:text-gray-400 '
         .'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150 '
-        .'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm'
+        .'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-base sm:text-sm'
     );
 });
 

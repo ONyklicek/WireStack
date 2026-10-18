@@ -59,7 +59,7 @@
             spellcheck="false"
             autocorrect="off"
             autocapitalize="off"
-            class="flex-1 block w-full bg-transparent border-0 ring-0 shadow-none focus:ring-0 focus:border-0 focus:outline-none px-3 py-3 text-gray-100 text-xs leading-5 resize-none placeholder-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex-1 block w-full bg-transparent border-0 ring-0 shadow-none focus:ring-0 focus:border-0 focus:outline-none px-3 py-3 text-gray-100 text-base sm:text-xs leading-5 resize-none placeholder-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
         ></textarea>
     </div>
 

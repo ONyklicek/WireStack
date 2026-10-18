@@ -91,7 +91,9 @@ it('keeps a field within its per-instance byte budget', function (string $type, 
     'text' => ['text', 2_000],
     'datetime' => ['datetime', 16_000],
     'time' => ['time', 8_400],
-    'select' => ['select', 8_200],
+    // The trigger label truncates and an option label wraps, so neither pushes a
+    // phone-width form sideways.
+    'select' => ['select', 8_300],
     'tags' => ['tags', 8_800],
     'rating' => ['rating', 10_400],
     // The shipped toolbar draws its two heading buttons (h2, h3) since the

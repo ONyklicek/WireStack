@@ -831,7 +831,8 @@ class TextInputColumn extends Column implements DehydratesState, HydratesState, 
         $classes = [
             'block w-full rounded-md border-gray-300 shadow-sm',
             'focus:border-primary-500 focus:ring-primary-500',
-            'text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white',
+            // 16px on a phone: iOS Safari zooms into any focused input under it.
+            'text-base sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'transition-colors',
         ];

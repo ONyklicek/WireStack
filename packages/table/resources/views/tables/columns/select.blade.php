@@ -34,7 +34,7 @@
         :class="{ 'border-red-500 focus:border-red-500 focus:ring-red-500': error }"
         @if($disabled) disabled @else :disabled="saving" @endif
         {{-- Match the searchable combobox trigger so all selects share one design. --}}
-        class="block w-full rounded-md border border-gray-300 bg-white shadow-sm text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+        class="block w-full rounded-md border border-gray-300 bg-white shadow-sm text-base sm:text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-white"
     >
         @if($placeholder)
             {{-- Server-rendered selected is a fallback before Alpine (x-model) drives the value. --}}

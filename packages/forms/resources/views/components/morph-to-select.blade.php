@@ -32,7 +32,7 @@
         @if($field->isDisabled()) disabled @endif
         {{-- Match the searchable combobox trigger so all selects share one design. --}}
         @class([
-            'block w-full rounded-md border border-gray-300 bg-white shadow-sm text-sm',
+            'block w-full rounded-md border border-gray-300 bg-white shadow-sm text-base sm:text-sm',
             'focus:border-primary-500 focus:ring-1 focus:ring-primary-500',
             'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150',
             'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -54,7 +54,7 @@
         @if($field->isDisabled()) disabled @endif
         {{-- Match the searchable combobox trigger so all selects share one design. --}}
         @class([
-            'block w-full rounded-md border border-gray-300 bg-white shadow-sm text-sm',
+            'block w-full rounded-md border border-gray-300 bg-white shadow-sm text-base sm:text-sm',
             'focus:border-primary-500 focus:ring-1 focus:ring-primary-500',
             'hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-150',
             'disabled:opacity-50 disabled:cursor-not-allowed',

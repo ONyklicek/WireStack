@@ -39,7 +39,7 @@
                 <select wire:change="setDashboardFilter(@js($filterName), $event.target.value)"
                         data-testid="widget-filter-{{ $filterName }}"
                         aria-label="{{ $dashboardFilter->getLabel() }}"
-                        class="rounded-full border-gray-200 py-1 pl-3 pr-8 text-xs font-semibold text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                        class="rounded-full border-gray-200 py-1 pl-3 pr-8 text-base sm:text-xs font-semibold text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
                     <option value="">{{ $dashboardFilter->getPlaceholder() ?? $dashboardFilter->getLabel() }}</option>
                     @foreach($dashboardFilter->getOptions() as $value => $optionLabel)
                         <option value="{{ $value }}" @selected((string) $value === $current)>{{ $optionLabel }}</option>

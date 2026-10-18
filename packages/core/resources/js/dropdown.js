@@ -88,6 +88,8 @@ export const floatingAnchor = (reference, floating, config = {}) => {
     // the panel and never overrides a smaller intentional cap.
     const naturalMax = parseFloat(getComputedStyle(floating).maxHeight)
     const cappedMax = Number.isNaN(naturalMax) ? Infinity : naturalMax
+    const naturalMaxWidth = parseFloat(getComputedStyle(floating).maxWidth)
+    const cappedMaxWidth = Number.isNaN(naturalMaxWidth) ? Infinity : naturalMaxWidth
 
     // Likewise capture the view's own layer (its `z-50` class) before any inline
     // write, so the resolved layer below can only ever *raise* the panel. A
@@ -101,7 +103,10 @@ export const floatingAnchor = (reference, floating, config = {}) => {
     // chosen side. Capping to it (with overflow) means a tall panel — a calendar,
     // a long option list — scrolls inside itself on a short (e.g. landscape phone)
     // viewport instead of spilling off-screen. `matchWidth` panels also grow to
-    // their trigger's width here.
+    // their trigger's width here. The width is capped to the viewport (less the
+    // shift padding on both sides), not to `availableWidth`: `shift` can still
+    // slide a panel that fits, but nothing can save one wider than a phone — a
+    // long option label would otherwise push it off the edge.
     const middleware = [
         offset(gap),
         flip(),
@@ -112,6 +117,7 @@ export const floatingAnchor = (reference, floating, config = {}) => {
                 Object.assign(elements.floating.style, {
                     maxHeight: `${Math.round(Math.min(availableHeight, cappedMax))}px`,
                     overflowY: 'auto',
+                    maxWidth: `${Math.round(Math.min(document.documentElement.clientWidth - 16, cappedMaxWidth))}px`,
                 })
                 if (matchWidth) {
                     elements.floating.style.minWidth = `${rects.reference.width}px`
@@ -155,7 +161,7 @@ export const floatingAnchor = (reference, floating, config = {}) => {
             // A bottom sheet is viewport-pinned by its own `max-sm:` classes, so
             // hand every inline style back — including the layer, which the sheet's
             // own z-index class owns.
-            Object.assign(floating.style, { position: '', top: '', left: '', maxHeight: '', overflowY: '', minWidth: '', zIndex: '' })
+            Object.assign(floating.style, { position: '', top: '', left: '', maxHeight: '', maxWidth: '', overflowY: '', minWidth: '', zIndex: '' })
             panelZ = null
 
             return

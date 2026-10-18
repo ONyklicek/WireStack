@@ -104,7 +104,7 @@
                                 x-ref="name"
                                 :disabled="busy"
                                 data-testid="passkey-name"
-                                class="block w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                class="block w-full rounded-md border-gray-300 text-base sm:text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
                             >
                         </div>
 
