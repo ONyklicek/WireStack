@@ -177,7 +177,7 @@
         :aria-activedescendant="$data.activeDescendant"
         @if($disabled) disabled @endif
         @class([
-            'flex items-center justify-between w-full rounded-md border border-gray-300 shadow-sm px-3 py-2 text-left text-sm',
+            'flex items-center justify-between gap-2 w-full rounded-md border border-gray-300 shadow-sm px-3 py-2 text-left text-sm',
             'bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white',
             'focus:border-primary-500 focus:ring-1 focus:ring-primary-500',
             'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150',
@@ -186,7 +186,10 @@
             \NyonCode\WireCore\Foundation\Support\MobileSheet::touchTrigger($mobileBreakpoint) => $touch,
         ])
     >
-        <span x-text="$data.selectedLabel || $data.placeholder" :class="{ 'text-gray-500 dark:text-gray-400': ! $data.selectedLabel }"></span>
+        {{-- Truncated, never wrapped or stretched: a long label — or a multi-select's
+             comma-joined list — would otherwise widen the trigger past a phone's
+             edge. --}}
+        <span class="min-w-0 flex-1 truncate" x-text="$data.selectedLabel || $data.placeholder" :class="{ 'text-gray-500 dark:text-gray-400': ! $data.selectedLabel }"></span>
         {!! icon('chevron-down', 'w-4 h-4', 'w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0 transition-transform duration-150', '', [':class' => "{ 'rotate-180': \$data.open }"]) !!}
     </button>
 
@@ -235,6 +238,9 @@
                 @include('wire-core::partials.sheet-grabber', ['dismiss' => 'open = false; activeIndex = -1', 'breakpoint' => $mobileBreakpoint])
             @endif
             @if($showSearch)
+            {{-- 16px below sm, as on the native twin: the input takes focus as the
+                 list opens, and iOS Safari zooms the page into any control under
+                 16px — on a phone the whole form looks pushed off the edge. --}}
             <div class="p-2">
                 <input
                     type="text"
@@ -246,7 +252,7 @@
                     placeholder="{{ $searchPrompt }}"
                     aria-label="{{ $searchPrompt }}"
                     data-testid="select-search" @wireEl('select-search')
-                    class="w-full rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:border-primary-500 focus:ring-primary-500 transition-colors duration-150 placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                    class="w-full rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-base sm:text-sm focus:border-primary-500 focus:ring-primary-500 transition-colors duration-150 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     x-ref="searchInput"
                 />
             </div>
@@ -281,7 +287,7 @@
                                 'hover:bg-gray-100 dark:hover:bg-gray-700': $data.activeIndex !== index && ! $data.isSelected?.(value) && ! $data.isOptionDisabled?.(value),
                             }"
                         >
-                            <span x-text="label"></span>
+                            <span class="min-w-0 break-words" x-text="label"></span>
                             {!! icon('check', 'w-4 h-4', 'w-4 h-4 shrink-0', '', ['x-show' => '$data.isSelected?.(value)', 'x-cloak' => '']) !!}
                         </button>
                     </li>

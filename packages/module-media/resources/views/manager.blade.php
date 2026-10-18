@@ -175,7 +175,7 @@
                         data-testid="media-new-folder-name" @wireEl('media-new-folder-name')
                         placeholder="{{ __('wire-module-media::messages.folder_name') }}"
                         autofocus
-                        class="min-w-0 flex-1 rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800 placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                        class="min-w-0 flex-1 rounded-lg border border-gray-200 px-2 py-1 text-base sm:text-sm dark:border-gray-700 dark:bg-gray-800 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     >
                     <button type="submit" class="bg-primary-600 rounded-lg px-2 py-1 text-sm text-white">
                         {{ __('wire-module-media::messages.create') }}
@@ -335,14 +335,14 @@
                     wire:model.live.debounce.300ms="search"
                     data-testid="media-search" @wireEl('media-search')
                     placeholder="{{ __('wire-module-media::messages.search') }}"
-                    class="w-40 rounded-lg border border-gray-200 px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800 placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                    class="w-40 rounded-lg border border-gray-200 px-3 py-1.5 text-base sm:text-sm dark:border-gray-700 dark:bg-gray-800 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                 >
 
                 <select
                     wire:model.live="type"
                     data-testid="media-type" @wireEl('media-type')
                     aria-label="{{ __('wire-module-media::messages.type') }}"
-                    class="rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                    class="rounded-lg border border-gray-200 px-2 py-1.5 text-base sm:text-sm dark:border-gray-700 dark:bg-gray-800"
                 >
                     {{-- Coarse on purpose: a library's filter is for "show me the
                          pictures", and a list of eleven mime types is a list
@@ -356,7 +356,7 @@
                     wire:model.live="sort"
                     data-testid="media-sort" @wireEl('media-sort')
                     aria-label="{{ __('wire-module-media::messages.sort') }}"
-                    class="rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                    class="rounded-lg border border-gray-200 px-2 py-1.5 text-base sm:text-sm dark:border-gray-700 dark:bg-gray-800"
                 >
                     <option value="created_at:desc">{{ __('wire-module-media::messages.sort_newest') }}</option>
                     <option value="created_at:asc">{{ __('wire-module-media::messages.sort_oldest') }}</option>
@@ -625,7 +625,7 @@
                                                 wire:model="renamingName"
                                                 data-testid="media-rename-input" @wireEl('media-rename-input')
                                                 autofocus
-                                                class="w-full rounded-sm border border-gray-200 px-1 py-0.5 text-xs dark:border-gray-700 dark:bg-gray-800"
+                                                class="w-full rounded-sm border border-gray-200 px-1 py-0.5 text-base sm:text-xs dark:border-gray-700 dark:bg-gray-800"
                                             >
                                         </form>
                                     @else
@@ -794,7 +794,7 @@
                     <select
                         wire:change="moveSelectedTo($event.target.value)"
                         data-testid="media-move-select" @wireEl('media-move-select')
-                        class="ms-auto rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
+                        class="ms-auto rounded-lg border border-gray-200 px-2 py-1 text-base sm:text-sm dark:border-gray-700 dark:bg-gray-800"
                     >
                         <option value="__">{{ __('wire-module-media::messages.move_to') }}</option>
                         <option value="">{{ __('wire-module-media::messages.library') }}</option>
@@ -982,7 +982,7 @@
                                 type="text"
                                 wire:model="detailAlt"
                                 data-testid="media-detail-alt" @wireEl('media-detail-alt')
-                                class="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
+                                class="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1 text-base sm:text-sm dark:border-gray-700 dark:bg-gray-800"
                             >
                         </label>
 
@@ -992,7 +992,7 @@
                                 type="text"
                                 wire:model="detailTitle"
                                 data-testid="media-detail-title" @wireEl('media-detail-title')
-                                class="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
+                                class="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1 text-base sm:text-sm dark:border-gray-700 dark:bg-gray-800"
                             >
                         </label>
 

@@ -79,6 +79,7 @@ try {
         scrolls: list.scrollHeight > list.clientHeight,
       } : null,
       slots: document.querySelectorAll('[data-testid^="form-time-data.opens_at-slot-"]').length,
+      dial: !! document.querySelector('[data-testid="form-time-data.opens_at-dial"]'),
     });
   })()`));
   const openAt = async (w, h) => {
@@ -145,8 +146,11 @@ try {
     d.open && d.rect.left > 1 && d.rect.w < d.vw - 50, `left=${d.rect?.left} w=${d.rect?.w} vw=${d.vw}`);
   check('desktop shows no backdrop', d.open && d.backdropVisible === false);
   check('desktop hides the grabber', d.open && d.grabberVisible === false);
-  check('desktop keeps the narrow list and its 7-row cap',
-    d.open && d.list && d.list.w < 200 && d.list.h <= 224, `w=${d.list?.w} h=${d.list?.h}`);
+  // From the breakpoint up the panel is the clock dial; the slot list is the
+  // phone's alone (verify-time-picker drives the dial itself).
+  check('desktop shows the clock dial instead of the slot list',
+    d.open && d.dial === true && d.slots === 0, `dial=${d.dial} slots=${d.slots}`);
+  check('the phone keeps the slot list and no dial', m.slots === 96 && m.dial === false, `slots=${m.slots} dial=${m.dial}`);
 
   console.log('\nSummary: ' + results.filter(r => r.ok).length + '/' + results.length + ' checks passed');
   console.log('Screenshots: ' + shotDir);

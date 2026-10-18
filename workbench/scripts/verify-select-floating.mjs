@@ -98,6 +98,43 @@ try {
   check('desktop select is a trigger-anchored panel, not a full-viewport sheet', d.open && d.rect.left > 1 && d.rect.w < d.vw - 50, `left=${d.rect?.left} w=${d.rect?.w} vw=${d.vw}`);
   check('desktop shows no backdrop', d.open && d.backdropVisible === false);
 
+  // A label longer than a phone is wide, with no space to break at: the trigger
+  // truncates it, the panel stays inside the viewport and wraps it, and the page
+  // never scrolls sideways.
+  await page('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+  await page('Page.navigate', { url: `${base}/field-select-floating` });
+  await sleep(2600);
+  const o = JSON.parse(await eval_(`(async () => {
+    const trigger = document.querySelector('button[aria-haspopup="listbox"]');
+    const data = Alpine.$data(trigger.closest('[x-data]'));
+    const value = data.order[0];
+    data.options = { ...data.options, [value]: 'Supercalifragilisticexpialidocious'.repeat(4) };
+    data.select(value);
+    await new Promise((r) => setTimeout(r, 300));
+    trigger.click();
+    await new Promise((r) => setTimeout(r, 700));
+    const panel = [...document.querySelectorAll('[x-ref="panel"]')].find(p => getComputedStyle(p).display !== 'none');
+    const t = trigger.getBoundingClientRect();
+    const label = trigger.querySelector('span').getBoundingClientRect();
+    const p = panel?.getBoundingClientRect();
+    return JSON.stringify({
+      vw: document.documentElement.clientWidth,
+      scrollW: document.documentElement.scrollWidth,
+      trigger: { right: Math.round(t.right), h: Math.round(t.height), labelRight: Math.round(label.right) },
+      panel: p ? { left: Math.round(p.left), right: Math.round(p.right), scrollW: panel.scrollWidth, clientW: panel.clientWidth } : null,
+    });
+  })()`));
+  console.log('long label:', JSON.stringify(o));
+  await shot('03-select-long-label-390');
+  check('a long selected label stays one line inside the trigger', o.trigger.h < 50 && o.trigger.labelRight <= o.trigger.right && o.trigger.right <= o.vw, JSON.stringify(o.trigger));
+  check('a long option label keeps the panel inside the viewport gutter', o.panel && o.panel.left >= 8 && o.panel.right <= o.vw - 8, JSON.stringify(o.panel));
+  check('a long option label wraps instead of scrolling the panel sideways', o.panel && o.panel.scrollW <= o.panel.clientW, JSON.stringify(o.panel));
+  // Chrome's device emulation does not zoom into a focused input the way iOS
+  // Safari does, so the cause is checked instead: under 16px, Safari zooms.
+  const searchPx = parseFloat(await eval_(`getComputedStyle(document.querySelector('[data-testid="select-search"]')).fontSize`));
+  check('the search input is 16px+ on a phone, so iOS does not zoom on focus', searchPx >= 16, `font-size=${searchPx}px`);
+  check('the page does not scroll sideways', o.scrollW <= o.vw, `scrollWidth=${o.scrollW} vw=${o.vw}`);
+
   console.log('\nSummary: ' + results.filter(r => r.ok).length + '/' + results.length + ' checks passed');
   console.log('Screenshots: ' + shotDir);
   if (results.some(r => !r.ok)) process.exitCode = 1;

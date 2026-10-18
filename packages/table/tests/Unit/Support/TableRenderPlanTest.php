@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\BulkAction;
+use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Foundation\Support\MobileSheet;
 use NyonCode\WireTable\Actions\TableActionClickResolver;
 use NyonCode\WireTable\Columns\TextColumn;
@@ -316,8 +318,8 @@ class TrpActionsComponent extends Component
             ->actionsColumnWidth('12rem')
             ->columns([TextColumn::make('name')])
             ->actions([Action::make('edit'), Action::make('delete')])
-            ->headerActions([Action::make('create')])
-            ->bulkActions([Action::make('bulkDelete')]);
+            ->headerActions([HeaderAction::make('create')])
+            ->bulkActions([BulkAction::make('bulkDelete')]);
 
         if ($this->collapse) {
             $table->collapseActionsOnMobile(true, 1)->collapseHeaderActionsOnMobile(true, 1);

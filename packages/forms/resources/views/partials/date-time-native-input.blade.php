@@ -18,8 +18,10 @@
      (->nativeOnMobile()). The twin takes its own id (the field label
      points at it below the breakpoint), names itself, and swaps `required` for
      aria-required: on a desktop it is display:none, and a required hidden control would stop
-     the form submitting. --}}
+     the form submitting. The same holds for a picker drawn below the
+     breakpoint only (a DateRangePicker's two ends). --}}
 @php
+    $ariaRequiredOnly = $responsive || $field->isBelowBreakpointOnly();
     $nativeId = $responsive ? $field->mobileControlIdFor($field->getId()) : $field->getId();
     $nativeLabel = $responsive ? $field->getLabel() : null;
     $nativeTestId = 'form-datetime-'.$field->getStatePath().'-native';
@@ -39,8 +41,8 @@
         'multiple' => false,
         'placeholder' => $field->getPlaceholder(),
         'disabled' => $field->isDisabled() || $field->isReadOnly(),
-        'required' => $field->isRequired() && ! $responsive,
-        'ariaRequired' => $field->isRequired() && $responsive,
+        'required' => $field->isRequired() && ! $ariaRequiredOnly,
+        'ariaRequired' => $field->isRequired() && $ariaRequiredOnly,
         'hasError' => $errors->has($field->getStatePath()),
         'disabledValues' => [],
         'selectedValues' => null,
@@ -80,7 +82,7 @@
             @if($maxBound) max="{{ \NyonCode\WireCore\Foundation\Support\DateBoundary::datePart($maxBound) }}" @endif
             @if($field->isDisabled()) disabled @endif
             @if($field->isReadOnly()) readonly @endif
-            @if($field->isRequired()) @if($responsive) aria-required="true" @else required @endif @endif
+            @if($field->isRequired()) @if($ariaRequiredOnly) aria-required="true" @else required @endif @endif
             class="{{ $inputClasses }}"
         />
         @include('wire-core::partials.native-select', $slotSelect + [
@@ -108,7 +110,7 @@
         @if($field->isDisabled()) disabled @endif
         @if($field->isReadOnly()) readonly @endif
         @if($field->hasAutofocus() && ! $responsive) autofocus @endif
-        @if($field->isRequired()) @if($responsive) aria-required="true" @else required @endif @endif
+        @if($field->isRequired()) @if($ariaRequiredOnly) aria-required="true" @else required @endif @endif
         class="{{ $inputClasses }}"
     />
 @endif

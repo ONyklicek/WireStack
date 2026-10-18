@@ -436,7 +436,7 @@ test('the parser is given the format, and the shared module that reads it', func
 test('the panel opens from the keyboard and from a real toggle button', function () {
     $html = renderPickerView(DateTimePicker::make('event_at'));
 
-    expect($html)->toContain('@keydown.down.prevent="open = true"')
+    expect($html)->toContain('@keydown.down.prevent="open ? (wide && hasDate ? focusGrid() : null) : openWithKeyboard()"')
         ->toContain('aria-haspopup="dialog"')
         ->toContain(':aria-expanded="open ? \'true\' : \'false\'"')
         ->toContain('data-testid="form-datetime-event_at-toggle"');

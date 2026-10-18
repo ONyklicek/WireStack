@@ -35,7 +35,7 @@ try {
     window.preset = (index) => document.querySelector(
       '[data-testid="form-date-range-data.valid_from-preset-' + index + '"]'
     );
-    window.presets = () => [...document.querySelectorAll('[data-testid^="form-date-range-"]')];
+    window.presets = () => [...document.querySelectorAll('[data-testid^="form-date-range-data.valid_from-preset-"]')];
     window.trigger = (end) => document.querySelector(
       '[data-testid="form-datetime-data.valid_' + end + '-trigger"]'
     );
@@ -85,7 +85,10 @@ try {
   check('both pickers redraw with the values the preset wrote', shown === after,
     `pickers=${shown} state=${after}`);
 
-  // And the coupling follows the new period rather than the seeded one.
+  // And the coupling follows the new period rather than the seeded one. The
+  // end's picker is keyed on its bounds, so the new bound arrives as a fresh
+  // element once the roundtrip's morph lands — wait for it, do not race it.
+  await waitFor(`picker('to').minDay === '${after.split('..')[0]}'`).catch(() => {});
   const boundAfter = await eval_(`picker('to').minDay ?? '<none>'`);
   check('the end stays bounded by the start the preset set',
     boundAfter === after.split('..')[0], `minDay=${boundAfter}`);

@@ -156,7 +156,7 @@ test('typeable(false) leaves only the slot list', function () {
 
 test('the list opens from the keyboard and from a real toggle button', function () {
     expect(renderTimePickerView(TimePicker::make('opens_at')))
-        ->toContain('@keydown.down.prevent="open = true"')
+        ->toContain('@keydown.down.prevent="openWithKeyboard()"')
         ->toContain('aria-haspopup="dialog"')
         ->toContain('data-testid="form-time-opens_at-toggle"');
 });
@@ -249,4 +249,17 @@ test('a date wheel carries its bounds and disabled days to the browser', functio
 
 test('the wheel controller ships in the fields bundle', function () {
     expect(file_get_contents(__DIR__.'/../../../dist/wire-forms-fields.js'))->toContain('wireWheelPicker');
+});
+
+test('the desktop draws a clock dial while the phone keeps the slot list', function () {
+    $html = renderTimePickerView(TimePicker::make('opens_at')->minTime('08:00')->maxTime('17:00'));
+
+    expect($html)->toContain('<template x-if="wide">')
+        ->and($html)->toContain('<template x-if="! wide">')
+        ->and($html)->toContain('data-testid="form-time-opens_at-dial"')
+        ->and($html)->toContain('role="slider"')
+        ->and($html)->toContain('data-testid="form-time-opens_at-ok"')
+        ->and($html)->toContain('data-testid="form-time-opens_at-cancel"')
+        ->and($html)->toContain('data-testid="form-time-opens_at-list"')
+        ->and($html)->toContain('mobileBreakpoint: 639.98');
 });

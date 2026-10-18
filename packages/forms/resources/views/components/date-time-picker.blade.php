@@ -46,6 +46,12 @@
     // rather than three conditions repeated down the markup.
     $typeable = $field->acceptsTypedInput();
     $livewire = $field->getLivewire();
+    $testId = 'form-datetime-'.$field->getStatePath();
+    // Bounds can follow other state (a DateRangePicker end follows the other
+    // end), and a changed x-data is reconciled by Alpine onto the old object —
+    // writing the fresh `$wire.entangle` placeholder to the server as the value.
+    // Keyed on the bounds, a changed picker is a new element instead.
+    $boundsKey = md5((string) json_encode([$minBound, $maxBound, $disabledDates, $field->getMinTime(), $field->getMaxTime()]));
 @endphp
 
 @include('wire-forms::partials.field-assets')
@@ -75,6 +81,7 @@
          through config because `$wire.entangle` is an Alpine magic and magics are
          in scope only inside an x-data expression. --}}
     <div
+            wire:key="picker-{{ $field->getStatePath() }}-{{ $boundsKey }}"
             x-data="wireDateTimePicker({
             {{-- Honor live(): mirror the other entangle-based fields. --}}
             state: $wire.entangle('{{ $field->getWireModelAttribute() }}'){{ $wireModifier ? '.' . $wireModifier : '' }},
@@ -87,6 +94,8 @@
             maxDay: @js($maxDay),
             minTime: @js($minTime),
             maxTime: @js($maxTime),
+            windowMin: @js($field->getMinTime()),
+            windowMax: @js($field->getMaxTime()),
             hoursStep: @js($hoursStep),
             minutesStep: @js($minutesStep),
             secondsStep: @js($secondsStep),
@@ -97,6 +106,7 @@
             typeable: @js($typeable),
             sheetOnMobile: @js($sheetOnMobile),
             sheetBreakpoint: @js($sheetBpPx),
+            mobileBreakpoint: @js($sheetBpPx),
         })"
             @class(['relative', MobileSheet::hideBelow($sheetBp) => $responsive || $wheel])
     >
@@ -125,7 +135,7 @@
                              to place it would otherwise close the panel. The
                              chevron is the toggle. --}}
                         @click="open = true"
-                        @keydown.down.prevent="open = true"
+                        @keydown.down.prevent="open ? (wide && hasDate ? focusGrid() : null) : openWithKeyboard()"
                     @endunless
                     @keydown.escape="cancelTyped(); open = false"
                     @unless($typeable) readonly @endunless
@@ -133,14 +143,14 @@
                     @if($field->isDisabled()) disabled @endif
                     @if($field->hasAutofocus()) autofocus @endif
                     {{-- A hidden twin must not block the form: see the native partial. --}}
-                    @if($field->isRequired()) @if($responsive) aria-required="true" @else required @endif @endif
+                    @if($field->isRequired()) @if($responsive || $field->isBelowBreakpointOnly()) aria-required="true" @else required @endif @endif
                     @class([
                         'block w-full rounded-md border-gray-300 shadow-sm',
                         // Only a box that cannot be typed into is a button.
                         'cursor-pointer' => ! $typeable,
                         'focus:border-primary-500 focus:ring-primary-500',
                         'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150',
-                        'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm',
+                        'dark:bg-gray-800 dark:border-gray-600 dark:text-white text-base sm:text-sm',
                         'border-red-500 focus:border-red-500 focus:ring-red-500' => $errors->has($field->getStatePath()),
                     ])
             />
@@ -154,7 +164,7 @@
                     tabindex="-1"
                     data-testid="form-datetime-{{ $field->getStatePath() }}-toggle"
                     aria-label="{{ $hasDate ? __('Open calendar') : __('Open clock') }}"
-                    @click="open = ! open"
+                    @click="open ? (open = false) : openWithKeyboard()"
                     @if($field->isDisabled() || $field->isReadOnly()) disabled @endif
                     class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-600 dark:hover:text-gray-200 disabled:pointer-events-none transition-colors duration-150"
             >
@@ -201,14 +211,22 @@
                     $sheetPanel => $sheetOnMobile,
                 ])
                 @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
-                @keydown.escape="open = false"
+                @keydown.escape="wide ? closeToTrigger() : (open = false)"
                 x-cloak
                 style="display: none;"
         >
             @if($sheetOnMobile)
                 @include('wire-core::partials.sheet-grabber', ['dismiss' => 'open = false', 'breakpoint' => $sheetBp])
             @endif
+            {{-- Below the breakpoint the panel is the phone's and stays exactly
+                 that: the stepping header, the steppers, the two-button footer.
+                 From it up (`wide`), the desktop panel: a header that opens month
+                 and year grids, a keyboard-driven grid, and the clock as a dial
+                 beside the calendar rather than steppers under it. --}}
+            <div @if($hasDate && $hasTime) :class="wide ? 'flex items-start gap-4' : ''" @endif>
             @if($hasDate)
+                <div>
+                <template x-if="! wide">
                 {{-- Month/year navigation --}}
                 <div class="flex items-center justify-between mb-3">
                     <button type="button" @click="prevMonth()" :disabled="!canGoPrev"
@@ -225,7 +243,12 @@
                         {!! icon('chevron-right', 'w-4 h-4', 'h-4 w-4') !!}
                     </button>
                 </div>
+                </template>
+                <template x-if="wide">
+                    @include('wire-forms::partials.calendar.header', ['testId' => $testId])
+                </template>
 
+                <div x-show="! wide || view === 'days'">
                 {{-- Day names --}}
                 <div class="grid grid-cols-7 gap-0 mb-1">
                     <template x-for="name in dayNames" :key="name">
@@ -234,8 +257,9 @@
                     </template>
                 </div>
 
-                {{-- Calendar grid --}}
-                <div class="grid grid-cols-7 gap-0">
+                {{-- Calendar grid. From the breakpoint up the arrows, PageUp/PageDown
+                     and Home/End walk it (calendar.js); a phone taps. --}}
+                <div class="grid grid-cols-7 gap-0" role="grid" @keydown="wide && onGridKey($event)">
                     <template x-for="(cell, idx) in days" :key="idx">
                         <button
                                 type="button"
@@ -249,15 +273,25 @@
                                 'bg-primary-600 text-white hover:bg-primary-700': isSelected(cell.date),
                                 'ring-1 ring-primary-500': isToday(cell.date) && !isSelected(cell.date),
                                 'hover:bg-gray-100 dark:hover:bg-gray-700': cell.current && !isDisabled(cell.date) && !isSelected(cell.date),
+                                'w-8 h-8 rounded-full': ! wide,
+                                'w-9 h-9 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-gray-800': wide,
+                                'font-semibold': wide && isToday(cell.date),
                             }"
-                                class="w-8 h-8 text-sm rounded-full flex items-center justify-center transition-colors duration-150"
+                                :data-date="cell.date"
+                                :tabindex="wide ? (cell.date && cell.date === focusDay ? 0 : -1) : null"
+                                class="text-sm flex items-center justify-center transition-colors duration-150"
                                 x-text="cell.day"
                         ></button>
                     </template>
                 </div>
+                </div>
+
+                @include('wire-forms::partials.calendar.months', ['testId' => $testId])
+                </div>
             @endif
 
             @if($hasTime)
+                <template x-if="! wide">
                 {{-- Time selector --}}
                 <div @class(['flex items-center justify-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-600 mt-3' => $hasDate, 'flex items-center justify-center gap-2' => !$hasDate])>
                     {{-- Hours --}}
@@ -308,9 +342,17 @@
                         </div>
                     @endif
                 </div>
+                </template>
+                <template x-if="wide">
+                    <div @class(['pl-4 border-l border-gray-200 dark:border-gray-600' => $hasDate])>
+                        @include('wire-forms::partials.clock-dial', ['testId' => $testId, 'footer' => false])
+                    </div>
+                </template>
             @endif
+            </div>
 
             {{-- Footer --}}
+            <template x-if="! wide">
             <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                 <button type="button" @click="clear(); open = false" data-testid="form-datetime-{{ $field->getStatePath() }}-clear"
                         class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
@@ -323,6 +365,27 @@
                     </button>
                 @endif
             </div>
+            </template>
+            <template x-if="wide">
+                <div class="flex items-center justify-between gap-6 mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                    <button type="button" @click="pickNow()" :disabled="! canPickNow" data-testid="{{ $testId }}-now"
+                            class="text-xs font-medium text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150">
+                        {{ $hasTime ? __('wire-forms::fields.picker.now') : __('wire-forms::fields.picker.today') }}
+                    </button>
+                    <div class="flex items-center gap-4">
+                        <button type="button" @click="clear(); open = false" data-testid="{{ $testId }}-clear"
+                                class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-150">
+                            {{ __('wire-forms::fields.picker.clear') }}
+                        </button>
+                        @if($hasDate && $hasTime)
+                            <button type="button" @click="closeToTrigger()" data-testid="{{ $testId }}-done"
+                                    class="rounded-md bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-700 transition-colors duration-150">
+                                {{ __('wire-forms::fields.picker.done') }}
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            </template>
         </div>
         </div>
         </template>

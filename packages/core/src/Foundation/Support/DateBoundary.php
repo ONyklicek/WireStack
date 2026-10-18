@@ -95,6 +95,37 @@ final class DateBoundary
         return $m[1].':'.$m[2].':'.($m[3] ?? '00');
     }
 
+    /**
+     * A time of day as `HH:MM:SS` — the daily window a picker's `minTime()` /
+     * `maxTime()` declare, padded like {@see timePart()} so the two compare as
+     * strings. Takes `H:i`, `G:i` or `H:i:s`, or a DateTimeInterface's clock.
+     *
+     * Strict where {@see min()} is lenient on purpose: `'6 pm'` or `'25:00'`
+     * read through Carbon would land on some instant, and a window that quietly
+     * shifted would disable every slot or none.
+     */
+    public static function timeOfDay(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return $value->format('H:i:s');
+        }
+
+        if (! is_string($value)) {
+            throw InvalidDateBoundaryException::unsupportedType(get_debug_type($value));
+        }
+
+        if (preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', trim($value), $m) !== 1
+            || (int) $m[1] > 23 || (int) $m[2] > 59 || (int) ($m[3] ?? 0) > 59) {
+            throw InvalidDateBoundaryException::unreadableTime($value);
+        }
+
+        return str_pad($m[1], 2, '0', STR_PAD_LEFT).':'.$m[2].':'.($m[3] ?? '00');
+    }
+
     private static function parse(mixed $value): ?Carbon
     {
         if ($value === null || $value === '') {

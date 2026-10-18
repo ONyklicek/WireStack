@@ -107,7 +107,7 @@ a drag-to-dismiss grabber and a focus trap automatically — do not re-implement
 custom control carries something the native one cannot overrides `supportsNativeOnMobile()` (only remote
 search and create/edit option stay custom). A clock step goes native as a `<select>` of the slots — beside a
 native date on a datetime, joined by `wireNativeDateTime` — never as `<input type="time" step>`, which iOS ignores.
-`DateTimePicker` also validates its bounds server-side (`DateWithinBounds`) — a native wheel ignores them.
+`DateTimePicker` also validates its bounds and its daily `minTime()`/`maxTime()` window server-side (`DateWithinBounds`) — a native wheel ignores them.
 **Touch-built control on a phone:** `Foundation\Concerns\HasNativeControl` — `->touchOnMobile()`, global
 `wire-core.mobile.touch` — gives a picker a scroll-snap wheel and a select a bottom-sheet list, keeping remote
 search, create-option and disabled days. Precedence is one rule: `native()` > `touchOnMobile()` >

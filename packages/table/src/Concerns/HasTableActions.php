@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Concerns;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\BaseAction;
+use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Foundation\Enums\Alignment;
 use NyonCode\WireCore\Foundation\View\Skeleton;
@@ -48,10 +49,10 @@ trait HasTableActions
     /** @var array<int, Action|ActionGroup> */
     protected array $actions = [];
 
-    /** @var array<int, Action> */
+    /** @var array<int, BulkAction> */
     protected array $bulkActions = [];
 
-    /** @var array<int, Action> */
+    /** @var array<int, HeaderAction> */
     protected array $headerActions = [];
 
     /** @var array<int, Action|HeaderAction> */
@@ -147,7 +148,7 @@ trait HasTableActions
     }
 
     /**
-     * @param  array<int, Action>  $bulkActions
+     * @param  array<int, BulkAction>  $bulkActions
      */
     public function bulkActions(array $bulkActions): static
     {
@@ -157,7 +158,7 @@ trait HasTableActions
     }
 
     /**
-     * @return array<int, Action>
+     * @return array<int, BulkAction>
      */
     public function getBulkActions(): array
     {
@@ -165,7 +166,7 @@ trait HasTableActions
     }
 
     /**
-     * @param  array<int, Action>  $headerActions
+     * @param  array<int, HeaderAction>  $headerActions
      */
     public function headerActions(array $headerActions): static
     {
@@ -175,7 +176,7 @@ trait HasTableActions
     }
 
     /**
-     * @return array<int, Action>
+     * @return array<int, HeaderAction>
      */
     public function getHeaderActions(): array
     {

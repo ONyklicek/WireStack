@@ -2,6 +2,60 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.0]
+
+### Added
+
+- **A desktop panel for `DateTimePicker`.** From the mobile breakpoint up the calendar's month name and year are
+  buttons that open a grid of months and a grid of twenty years, so a date years away is year → month → day instead of
+  a click per month. A `datetime` or `asTime()` picker picks its time on the same clock dial as `TimePicker`, beside the
+  calendar, rather than with steppers, and the footer has **Today** / **Now**. The grid follows the keyboard: the
+  arrows move a day or a week, Home/End go to the ends of the week, PageUp/PageDown move a month (a year with Shift),
+  Enter picks, and Escape returns to the box. Days, months and years outside the bounds are greyed and skipped.
+  Below the breakpoint the phone keeps its sheet, steppers, native input or touch wheel exactly as before.
+- **`DateRangePicker` as one control on a desktop.** One box reads the whole period (`01.10.2026 – 31.10.2026`) and
+  opens one panel with two months side by side and the presets listed beside them. The first click starts the
+  period and the second ends it, with the span previewed under the pointer or the keyboard focus in between. A period
+  clicked backwards is stored forwards, and a period can be typed (`1. 9. 2026 – 15. 9. 2026`). With `withTime()`
+  one clock dial sets both ends, with a From / To switch above it that reads both times. The value still lands in
+  the same two columns, and below the breakpoint the phone still gets the two pickers and the preset chips.
+- **A daily time window: `minTime()` and `maxTime()`.** `DateTimePicker::make('appointment_at')->minTime('06:00')
+  ->maxTime('18:00')` keeps the clock between 06:00 and 18:00 on **every** day, where a time carried by `minDate()` /
+  `maxDate()` binds only on its own day; on a boundary day the stricter of the two wins. It works on `time` and
+  `datetime` pickers, on `TimePicker` (its slot list and native `<select>` stop at the window) and on both ends of
+  `DateRangePicker::withTime()`. Hours and minutes outside the window are greyed in the panel, and the server
+  refuses a value outside it with its own message. `getMinTime()`, `getMaxTime()` and `getTimeBoundsFor($day)` read
+  it back.
+- **`DateBoundary::timeOfDay()`** reads a time of day (`H:i`, `H:i:s`, or a `DateTimeInterface`'s clock) into the
+  padded `H:i:s` the pickers compare, and throws `InvalidDateBoundaryException` on anything else (`'6 pm'`,
+  `'25:00'`) instead of letting it disable every hour or none.
+- **A clock dial for `TimePicker` on a desktop.** From the mobile breakpoint up the time is picked on a dial drawn the
+  way SAP's clock is: two big buttons read the time being chosen, the hours face has 1–12 outside and 13–23 and 00
+  inside, and lifting off an hour turns it to the minutes, which snap to `minutesStep()`. The rim carries a dot for
+  every value that can be picked — sixty at a one-minute step, none between the numbers at 15 — and the chosen value
+  is a rim marker and a bubble that reads it, with a lighter one under the pointer. Hours and minutes outside the
+  bounds or off the step are greyed. The dial edits a draft that only **OK** writes; **Cancel** and Escape leave the value. The face is a
+  keyboard slider too: the arrows step, Enter moves on and then confirms. Below the breakpoint the phone keeps the
+  slot list.
+
+### Fixed
+
+- **A `DateRangePicker` with `touchOnMobile()` no longer breaks the form on a phone.** Picking one end changes the
+  other end's bounds, and the wheel met the changed bounds by being updated in place, which sent an internal
+  placeholder to the server as the other end's value. The next render then threw `InvalidDateBoundaryException`
+  ("Date bound of type [array]"). A wheel or picker whose bounds change is now rebuilt instead, so both ends stay
+  dates.
+
+- **A hidden range picker no longer blocks a form.** The two pickers a `DateRangePicker` shows on a phone are hidden
+  on a desktop; marked `required()`, a hidden input would stop the browser submitting a surrounding `<form>`. They
+  now say `aria-required`, and the server still requires both ends.
+
+### Documentation
+
+- `DateTimePicker`: the desktop panel and its keys, and the daily time window. `TimePicker`: the clock dial and the
+  window. `DateRangePicker`: picking and typing a period, the window on both ends, and how the desktop control
+  and the phone's two pickers share the same two columns.
+
 ## [2.8.2]
 
 ### Fixed

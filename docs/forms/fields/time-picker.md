@@ -1,11 +1,12 @@
 ---
-summary: A time chosen from a list of slots at a fixed interval, rather than wound up on a stepper.
+summary: A time picked on a clock dial on a desktop and from a list of slots on a phone, at a fixed interval.
 ---
 
 # TimePicker
 
-Time-only picker. The time is chosen from a **list of slots** at a fixed
-interval, rather than by winding steppers.
+Time-only picker for times that come in **slots** at a fixed interval. On a
+desktop the time is picked on a **clock dial** — hours, then minutes — and
+confirmed with OK; on a phone it is picked from a list of the slots.
 
 ```php
 use NyonCode\WireForms\Components\TimePicker;
@@ -15,8 +16,40 @@ use NyonCode\WireForms\Components\TimePicker;
 TimePicker::make('opens_at')
 ```
 
-Opening the field shows a scrollable list — `00:00`, `00:30`, `01:00`, … — and
-clicking one commits it and closes the panel.
+From the field's [mobile breakpoint](../../start/configuration.md#mobile) up,
+opening the field shows the dial; below it, a scrollable list — `00:00`,
+`00:30`, `01:00`, … — where a tap commits a slot and closes the panel. Both
+write the same value.
+
+## The Clock Dial
+
+The desktop panel follows Fiori's time picker:
+
+- **Two big buttons** read the time being chosen (`14 : 30`) and say which
+  part the face is setting; a click on either goes back to it.
+- **The hours face** has two rings — 1–12 outside, 13–23 and 00 inside. A click
+  or a drag picks, and lifting off an hour turns the face to the minutes. The
+  **minutes face** snaps to `minutesStep()`; with `withSeconds()` a seconds face
+  follows.
+- **The rim shows what can be picked.** A dot sits under every number and,
+  between the numbers, at each minute the step reaches — sixty places at the
+  default step of one minute, none between the numbers at a step of 15. There
+  is no hand: the chosen value is a marker on the rim and a filled bubble that
+  reads it (`07` too, between two numbers), and the value under the pointer
+  gets a lighter one before the click. The face's middle names the part it
+  sets.
+- **Greyed is not pickable.** An hour wholly outside the bounds or the
+  [daily window](date-time-picker.md#daily-time-window), and a minute off the
+  step or outside them, are greyed and ignored by the pointer.
+- **Nothing is written before OK.** The face edits a draft: **OK** commits it,
+  **Cancel** and <kbd>Escape</kbd> leave the value as it was, **Now** sets the
+  draft to the current time (rounded down to the step, pulled inside the
+  bounds) and **Clear** empties the field. An empty field opens on now, pulled
+  inside the bounds, rather than on midnight.
+- **The keyboard.** <kbd>↓</kbd> in the box, or the clock icon, opens the panel
+  with focus on the face — a slider: the arrows step the part being set,
+  skipping what is greyed, and <kbd>Enter</kbd> moves on to the minutes, then
+  confirms. A time can always be typed into the box as well.
 
 ## TimePicker vs. DateTimePicker::asTime()
 
@@ -24,8 +57,8 @@ Both store the same value in the same format. They differ only in the panel:
 
 | | Panel |
 |---|---|
-| `TimePicker::make('x')` | A list of times at `minutesStep()` |
-| `DateTimePicker::make('x')->asTime()` | Hour / minute / second steppers |
+| `TimePicker::make('x')` | A clock dial (a list of times at `minutesStep()` on a phone) |
+| `DateTimePicker::make('x')->asTime()` | The same dial, set live without OK (steppers on a phone) |
 
 Pick `TimePicker` when the times are slots — opening hours, appointments,
 schedules. Pick [`asTime()`](date-time-picker.md) when any minute of the day is
@@ -62,6 +95,16 @@ TimePicker::make('opens_at')
 The panel opens on the current value, or on the first slot the bounds allow — so
 a morning-to-evening field does not open at midnight. That holds on a phone too,
 where the panel becomes a bottom sheet.
+
+For opening hours the natural words are `minTime()` / `maxTime()` — the
+[daily time window](date-time-picker.md#daily-time-window). On a `TimePicker`
+they read the same as the bounds, and where both are set the stricter one wins:
+
+```php
+TimePicker::make('opens_at')
+    ->minTime('06:00')
+    ->maxTime('18:00')
+```
 
 ## Everything Else Is DateTimePicker
 

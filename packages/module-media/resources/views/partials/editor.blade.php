@@ -101,7 +101,7 @@
                             min="16"
                             x-model="targetWidth"
                             data-testid="media-editor-width" @wireEl('media-editor-width')
-                            class="w-20 rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
+                            class="w-20 rounded-lg border border-gray-200 px-2 py-1 text-base sm:text-sm dark:border-gray-700 dark:bg-gray-800"
                         >
                         <span class="text-xs text-gray-500 dark:text-gray-400">{{ __('wire-module-media::messages.output_width') }}</span>
                     </div>
@@ -109,7 +109,7 @@
                     <select
                         x-model="format"
                         data-testid="media-editor-format" @wireEl('media-editor-format')
-                        class="mt-1.5 w-full rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
+                        class="mt-1.5 w-full rounded-lg border border-gray-200 px-2 py-1 text-base sm:text-sm dark:border-gray-700 dark:bg-gray-800"
                     >
                         <option value="">{{ __('wire-module-media::messages.keep_format') }}</option>
                         <option value="image/webp">{{ __('wire-module-media::messages.to_webp') }}</option>

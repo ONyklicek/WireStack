@@ -271,7 +271,7 @@ final class InvoiceResource implements ConfiguresRoutes, DescribesResource, Glob
                 'paid' => 'Paid',
                 'overdue' => 'Overdue',
             ])->required()->default('draft'),
-            DateTimePicker::make('issued_at'),
+            DateTimePicker::make('issued_at')->touchOnMobile(),
 
             // The two seams the media module adds to the rest of the system,
             // exercised on a real form rather than only in a preview: a field

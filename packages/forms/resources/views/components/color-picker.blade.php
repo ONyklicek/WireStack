@@ -43,7 +43,7 @@
             @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
             @if($field->isDisabled()) disabled @endif
             @if($field->isReadOnly()) readonly @endif
-            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150 dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm"
+            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150 dark:bg-gray-800 dark:border-gray-600 dark:text-white text-base sm:text-sm"
     />
 
     @if($field->getSwatches())

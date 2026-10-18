@@ -93,6 +93,10 @@
         min-height: var(--tt-min-height, 240px);
         padding: .75rem 1rem;
     }
+    /* iOS Safari zooms the page into any focused editor under 16px. */
+    @media (max-width: 639.98px) {
+        .tiptap-content .ProseMirror { font-size: 1rem; }
+    }
     .tiptap-content .ProseMirror p.is-editor-empty:first-child::before {
         content: attr(data-placeholder); float: left;
         color: #9ca3af; pointer-events: none; height: 0;

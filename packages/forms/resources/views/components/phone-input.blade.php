@@ -31,7 +31,7 @@
         @if($field->isDisabled()) disabled @endif
         @if($field->isReadOnly()) disabled @endif
         @class([
-            'rounded-l-md border border-r-0 border-gray-300 bg-gray-50 py-2 pl-3 pr-7 text-sm text-gray-600',
+            'rounded-l-md border border-r-0 border-gray-300 bg-gray-50 py-2 pl-3 pr-7 text-base sm:text-sm text-gray-600',
             'focus:border-primary-500 focus:ring-1 focus:ring-primary-500',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300',
@@ -56,7 +56,7 @@
         @if($field->hasAutofocus()) autofocus @endif
         @if($field->isRequired()) required @endif
         @class([
-            'block w-full rounded-r-md border-gray-300 shadow-sm text-sm',
+            'block w-full rounded-r-md border-gray-300 shadow-sm text-base sm:text-sm',
             'focus:border-primary-500 focus:ring-primary-500',
             'placeholder:text-gray-500 dark:placeholder:text-gray-400',
             'hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-150',

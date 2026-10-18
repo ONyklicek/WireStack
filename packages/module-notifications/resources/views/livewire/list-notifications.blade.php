@@ -76,7 +76,7 @@
                 wire:model.live.debounce.300ms="search"
                 data-testid="notification-search" @wireEl('notification-search')
                 placeholder="{{ __('wire-table::messages.search') }}"
-                class="w-full border-0 bg-transparent p-0 text-sm text-gray-900 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-0 dark:text-white"
+                class="w-full border-0 bg-transparent p-0 text-base sm:text-sm text-gray-900 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-0 dark:text-white"
             >
         </label>
     </div>
