@@ -76,6 +76,7 @@
                 {{-- 16px, or iOS zooms the page in the moment it is tapped. --}}
                 <input
                     type="search"
+                    autocomplete="off"
                     x-model.debounce.300ms="search"
                     placeholder="{{ $searchPrompt }}"
                     aria-label="{{ $searchPrompt }}"
