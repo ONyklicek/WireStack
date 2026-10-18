@@ -1,11 +1,12 @@
 ---
-summary: Čas volený ze seznamu slotů v pevném intervalu, ne natáčený na stepperu.
+summary: Čas vybíraný na desktopu na ciferníku a na telefonu ze seznamu slotů, v pevném intervalu.
 ---
 
 # TimePicker
 
-Picker jen pro čas. Čas se vybírá ze **seznamu slotů** v pevném intervalu, ne
-otáčením stepperů.
+Picker jen pro čas, jehož hodnoty jsou **sloty** v pevném intervalu. Na desktopu
+se čas vybírá na **ciferníku** — hodiny, pak minuty — a potvrdí tlačítkem OK; na
+telefonu se vybírá ze seznamu slotů.
 
 ```php
 use NyonCode\WireForms\Components\TimePicker;
@@ -15,8 +16,37 @@ use NyonCode\WireForms\Components\TimePicker;
 TimePicker::make('opens_at')
 ```
 
-Po otevření pole se ukáže rolovatelný seznam — `00:00`, `00:30`, `01:00`, … —
-a kliknutí na položku ji uloží a panel zavře.
+Od [mobilního breakpointu](../../start/configuration.md#mobil) pole výš ukáže
+otevřené pole ciferník; pod ním rolovatelný seznam — `00:00`, `00:30`, `01:00`,
+… — kde klepnutí slot uloží a panel zavře. Obojí zapisuje tutéž hodnotu.
+
+## Ciferník
+
+Desktopový panel se drží time pickeru z Fiori:
+
+- **Dvě velká tlačítka** ukazují vybíraný čas (`14 : 30`) a říkají, kterou část
+  ciferník nastavuje; kliknutím na kterékoli se k ní vrátíte.
+- **Ciferník hodin** má dva kruhy — venku 1–12, uvnitř 13–23 a 00. Kliknutí
+  nebo tažení vybírá a puštění na hodině přepne ciferník na minuty. **Ciferník
+  minut** přichytává na `minutesStep()`; s `withSeconds()` následují sekundy.
+- **Okraj ukazuje, co jde vybrat.** Tečka je pod každým číslem a mezi čísly u
+  každé minuty, na kterou krok dosáhne — šedesát míst při výchozím kroku jedné
+  minuty, mezi čísly žádná při kroku 15. Ručička není: vybraná hodnota je
+  značka na okraji a vyplněná bublina, která ji čte (i `07` mezi dvěma čísly),
+  a hodnota pod ukazatelem dostane před kliknutím světlejší. Uprostřed
+  ciferníku je název nastavované části.
+- **Zašedlé nejde vybrat.** Hodina celá mimo meze nebo
+  [denní okno](date-time-picker.md#denni-casove-okno) a minuta mimo krok nebo
+  meze jsou zašedlé a ukazatel je ignoruje.
+- **Před OK se nic nezapíše.** Ciferník upravuje koncept: **OK** ho uloží,
+  **Zrušit** a <kbd>Escape</kbd> nechají hodnotu, jaká byla, **Teď** nastaví
+  koncept na aktuální čas (zaokrouhlený dolů na krok a vtažený do mezí) a
+  **Vymazat** pole vyprázdní. Prázdné pole se otevře na aktuálním čase vtaženém
+  do mezí, ne o půlnoci.
+- **Klávesnice.** <kbd>↓</kbd> v poli nebo ikona hodin otevře panel s fokusem na
+  ciferníku — je to slider: šipky posouvají nastavovanou část a přeskakují
+  zašedlé, <kbd>Enter</kbd> přejde na minuty a pak potvrdí. Čas jde do pole vždy
+  i napsat.
 
 ## TimePicker vs. DateTimePicker::asTime()
 
@@ -24,8 +54,8 @@ Obojí ukládá tutéž hodnotu ve stejném formátu. Liší se jen panelem:
 
 | | Panel |
 |---|---|
-| `TimePicker::make('x')` | Seznam časů po `minutesStep()` |
-| `DateTimePicker::make('x')->asTime()` | Steppery hodin / minut / sekund |
+| `TimePicker::make('x')` | Ciferník (na telefonu seznam časů po `minutesStep()`) |
+| `DateTimePicker::make('x')->asTime()` | Tentýž ciferník, nastavovaný průběžně bez OK (na telefonu steppery) |
 
 `TimePicker` zvolte tam, kde jsou časy sloty — otevírací doba, termíny, rozvrhy.
 [`asTime()`](date-time-picker.md) zvolte tam, kde je platná libovolná minuta dne,
@@ -62,6 +92,16 @@ TimePicker::make('opens_at')
 Panel se otevře na aktuální hodnotě, nebo na prvním slotu, který meze dovolují —
 pole od rána do večera se tedy neotevře o půlnoci. Platí to i na mobilu, kde se
 z panelu stane spodní sheet.
+
+Pro otevírací dobu jsou přirozenější `minTime()` / `maxTime()` —
+[denní časové okno](date-time-picker.md#denni-casove-okno). U `TimePickeru` se
+čtou stejně jako meze a když jsou nastavené obě, vyhrává přísnější:
+
+```php
+TimePicker::make('opens_at')
+    ->minTime('06:00')
+    ->maxTime('18:00')
+```
 
 ## Všechno ostatní je DateTimePicker
 

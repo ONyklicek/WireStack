@@ -26,6 +26,11 @@ final class InvalidDateBoundaryException extends InvalidArgumentException implem
         );
     }
 
+    public static function unreadableTime(string $value): self
+    {
+        return new self("Time of day [{$value}] could not be read. Pass it as H:i or H:i:s (\"06:00\", \"18:30:00\").");
+    }
+
     public static function unsupportedType(string $type): self
     {
         return new self(

@@ -87,3 +87,24 @@ it('reads a time-only bound as a time', function () {
     expect(DateBoundary::timePart('08:30'))->toBe('08:30:00')
         ->and(DateBoundary::timePart('08:30:45'))->toBe('08:30:45');
 });
+
+// ─── A time of day (minTime() / maxTime()) ──────────────────────────────────
+
+it('reads a time of day into the padded shape the clock compares', function (mixed $given, ?string $expected) {
+    expect(DateBoundary::timeOfDay($given))->toBe($expected);
+})->with([
+    'absent' => [null, null],
+    'empty' => ['', null],
+    'one-digit hour' => ['6:00', '06:00:00'],
+    'with seconds' => ['18:30:15', '18:30:15'],
+    'padded by space' => [' 07:45 ', '07:45:00'],
+    'a date object' => [CarbonImmutable::parse('2026-10-01 09:15:30'), '09:15:30'],
+]);
+
+it('refuses a time of day it cannot read', function (string $given) {
+    DateBoundary::timeOfDay($given);
+})->with(['25:00', '06:60', '6 pm', 'noon', '2026-10-01'])->throws(InvalidDateBoundaryException::class);
+
+it('refuses a time of day of a type it does not take', function () {
+    DateBoundary::timeOfDay(['06:00']);
+})->throws(InvalidDateBoundaryException::class);

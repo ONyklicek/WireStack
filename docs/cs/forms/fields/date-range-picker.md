@@ -1,5 +1,5 @@
 ---
-summary: Dva provázané date pickery nad dvěma sloupci, s obdobími na jedno kliknutí.
+summary: Na desktopu jedno pole od–do nad kalendářem dvou měsíců, na telefonu dva provázané pickery — uloženo do dvou sloupců, s obdobími na jedno kliknutí.
 ---
 
 # DateRangePicker
@@ -14,6 +14,16 @@ use NyonCode\WireForms\Components\DateRangePicker;
 ```
 
 ## Jak to funguje
+
+**Dva pohledy na tytéž dva sloupce.** Od
+[mobilního breakpointu](../../start/configuration.md#mobil) pole výš je rozsah
+jedno pole s textem `01.10.2026 – 31.10.2026`, které otevře jeden panel: dva
+měsíce vedle sebe, předvolby vedle nich a s `withTime()` hodiny pro každý konec.
+Pod breakpointem vidí telefon dva pickery popsané níž — ovládání, které telefon
+už dobře zvládá, beze změny. Obojí je v markupu, navázané na tytéž dvě stavové
+cesty, a CSS na breakpointu ukáže jedno, takže ani jedno neví, které bylo
+použito. Skrytá dvojice nese `aria-required` místo `required`, protože povinný
+vstup schovaný stylem by zastavil odeslání formuláře.
 
 **Dvojice se skládá, nepíše se znovu.** Každý konec je běžný
 [DateTimePicker](date-time-picker.md) navázaný na vlastní sloupec, takže
@@ -53,6 +63,20 @@ DateRangePicker::make('validity')
 
 Dva date pickery nad `validity_from` a `validity_to`.
 
+## Výběr období
+
+Na desktopu první kliknutí na den období začne a druhé ho ukončí. Mezi nimi se
+rozsah ukazuje pod ukazatelem myši — nebo pod fokusem klávesnice, který oběma
+měsíci prochází stejnými klávesami jako
+[panel DateTimePickeru](date-time-picker.md#desktopovy-panel). Druhý den před
+prvním se čte jako období vybrané pozpátku a uloží se popředu; zavření panelu
+s jediným vybraným koncem nechá období, jaké bylo.
+
+Do pole jde i psát: dvě data ve formátu pole s pomlčkou mezi nimi
+(`1. 9. 2026 – 15. 9. 2026`, nebo ` - ` s mezerami). Obě poloviny projdou stejnými
+pravidly dnů jako kliknutí a odmítnutá kterákoli z nich vrátí poslední období.
+Vyprázdnění pole vymaže oba konce.
+
 ## Pojmenování sloupců
 
 ```php
@@ -73,7 +97,20 @@ DateRangePicker::make('validity')
 ```
 
 Každý konec čte mez rozsahu, dokud není vybraný ten druhý — a od té chvíle jeho
-hodnotu.
+hodnotu. V desktopovém panelu jsou měsíce a dny mimo meze zašedlé a šipky se na
+nich zastaví.
+
+S časem jde omezit i hodiny každého dne — `minTime()` / `maxTime()` je
+[denní časové okno](date-time-picker.md#denni-casove-okno), předané oběma koncům:
+
+```php
+DateRangePicker::make('shift')
+    ->withTime()
+    ->minDate('2026-10-01')
+    ->maxDate('2026-12-31')
+    ->minTime('06:00')         // oba konce mezi 06:00 a 18:00, každý den
+    ->maxTime('18:00')
+```
 
 ## Období s časem
 
@@ -83,6 +120,13 @@ DateRangePicker::make('shift')
     ->until('ends_at')
     ->withTime()               // oba konce vybírají datum i hodinu
 ```
+
+Na desktopu je vedle kalendáře jeden [ciferník](time-picker.md#cifernik) s
+přepínačem **Od / Do** nad ním, který ukazuje oba časy a říká, který konec
+ciferník nastavuje; ciferník přichytává na `minutesStep()` pickerů, nastavuje
+zvolený konec průběžně a Enter na minutách začátku přejde na konec. Nový začátek se otevře v 00:00 a nový konec na posledním
+kroku svého dne, takže jednodenní období pokryje celý den; v jednodenním období
+nesmí konec nikdy předběhnout začátek.
 
 ## Období na jedno kliknutí
 
@@ -100,7 +144,8 @@ DateRangePicker::make('period')
 ```
 
 Vlastní sada nahradí vestavěnou. Každá hodnota je cokoli, co umí naparsovat
-Carbon.
+Carbon. Na desktopu jsou období seznam vedle kalendáře s označeným platným, na
+telefonu čipy nad oběma pickery.
 
 ## Přístup k pickerům
 
@@ -171,6 +216,8 @@ na to přes `configurePickers()`.
 ->maxDate(string|DateTimeInterface|Closure|null $date)
 ->displayFormat(?string $format)            // tokeny PHP date(); uloženou hodnotu neovlivní
 ->withTime(bool $condition = true)          // oba konce vybírají datum i čas
+->minTime(string|Closure|null $time)        // denní okno, 'H:i' — oba konce, každý den
+->maxTime(string|Closure|null $time)
 ->required(bool $condition = true)          // vyžaduje oba konce
 ->presets(array $presets = [])              // ['popisek' => [od, do], …]; prázdné = vestavěná sada
 ->configurePickers(?Closure $callback)      // fn (DateTimePicker $picker) => …, jednou za konec
@@ -184,6 +231,8 @@ potřebuje sáhnout přímo na jeden z nich:
 ->getUntilName(): string
 ->getFromPicker(): DateTimePicker
 ->getUntilPicker(): DateTimePicker
+->hasTime(): bool
+->isRequired(): bool
 ->hasPresets(): bool
 ->getPresets(): array                       // ['popisek' => ['Y-m-d', 'Y-m-d'], …]
 ```

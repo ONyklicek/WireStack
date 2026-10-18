@@ -80,7 +80,7 @@
             @if($maxBound) max="{{ \NyonCode\WireCore\Foundation\Support\DateBoundary::datePart($maxBound) }}" @endif
             @if($field->isDisabled()) disabled @endif
             @if($field->isReadOnly()) readonly @endif
-            @if($field->isRequired()) @if($responsive) aria-required="true" @else required @endif @endif
+            @if($field->isRequired()) @if($responsive || $field->isBelowBreakpointOnly()) aria-required="true" @else required @endif @endif
             class="{{ $inputClasses }}"
         />
         @include('wire-core::partials.native-select', $slotSelect + [
@@ -108,7 +108,7 @@
         @if($field->isDisabled()) disabled @endif
         @if($field->isReadOnly()) readonly @endif
         @if($field->hasAutofocus() && ! $responsive) autofocus @endif
-        @if($field->isRequired()) @if($responsive) aria-required="true" @else required @endif @endif
+        @if($field->isRequired()) @if($responsive || $field->isBelowBreakpointOnly()) aria-required="true" @else required @endif @endif
         class="{{ $inputClasses }}"
     />
 @endif

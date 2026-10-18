@@ -33,7 +33,8 @@ DateTimePicker::make('x')->mode('date')      // 'date', 'month', 'time', 'dateti
 > `asMonth()` always renders the browser-native `<input type="month">` — the custom
 > calendar has no month-only grid — so it stays native even if you pass `->native(false)`.
 
-> `asTime()` picks the time with hour/minute steppers. For a field whose times are
+> `asTime()` picks the time on a clock dial on a desktop and with steppers on
+> a phone. For a field whose times are
 > **slots** — opening hours, appointments — [`TimePicker`](time-picker.md) stores
 > the same value but picks it from a list at a fixed interval instead.
 
@@ -79,6 +80,51 @@ whenever it has anything to hold, and the error names the bound in
 `displayFormat()` when there is one. A field with no bounds and no disabled
 dates adds no rule.
 
+## Daily Time Window
+
+`minDate()` and `maxDate()` bound the **days**; a time they carry binds on the
+first or last day only. Opening hours are a different rule — a time of day that
+holds on every day — and that is `minTime()` / `maxTime()`:
+
+```php
+DateTimePicker::make('appointment_at')
+    ->minDate('2026-10-01')
+    ->maxDate('2026-12-31')
+    ->minTime('06:00')             // every day from 06:00…
+    ->maxTime('18:00')             // …until 18:00
+    ->minutesStep(15)
+```
+
+How it is resolved:
+
+- **Every day.** The window applies to the clock of a `time` or `datetime`
+  picker on each day the calendar allows. A `date` or `month` picker has no
+  clock, so the two are ignored there.
+- **The stricter wins.** On a boundary day whose `minDate()`/`maxDate()` carries
+  a time, the later of the two lower bounds (and the earlier of the upper ones)
+  applies. On a `time` picker both always apply, since it has a single day.
+
+```php
+DateTimePicker::make('slot')
+    ->minDate('2026-10-01 08:30')  // 1 October opens at 08:30, not 06:00
+    ->minTime('06:00')
+    ->maxTime('18:00')
+```
+
+- **Drawn, then held.** In the panel an hour or minute outside the window is
+  greyed out, an hour that only straddles it stays pickable and is pulled inside
+  (picking 18 under `maxTime('18:00')` lands on 18:00), and a fresh clock opens
+  on the window rather than on midnight. A [`TimePicker`](time-picker.md)'s slot
+  list and a native slot `<select>` simply stop at its edges. The server repeats
+  it through the same `DateWithinBounds` rule as the dates, with its own message
+  ("The time in … must not be before 06:00").
+- **The touch wheel** of a `datetime` picker does not grey the window yet; the
+  server still refuses a value outside it.
+- **Format.** `H:i` or `H:i:s` (`'6:00'` is read as `06:00`), a
+  `DateTimeInterface` (its clock is taken), or a `$get`-aware Closure. Anything
+  else — `'6 pm'`, `'25:00'` — throws when the field renders, rather than
+  quietly disabling every hour or none.
+
 ## Time Options
 
 ```php
@@ -110,6 +156,46 @@ DateTimePicker::make('date')
 > unset, it is `date_format`, `time_format` or `datetime_format` from
 > `config/wire-forms.php` for the mode — except on a field with seconds whose
 > configured format has none, which shows its value as stored.
+
+## Desktop Panel
+
+From the field's [mobile breakpoint](../../start/configuration.md#mobile) up the
+panel is built for a mouse and a keyboard; below it the phone keeps its own
+controls — the bottom sheet with steppers, the native input, or the
+[touch wheel](#touch-wheel-on-phones) — unchanged. Both are drawn by the same
+controller over the same state, so a value picked on one is the value the other
+shows.
+
+- **The header** pages a month with its arrows, and its month name and year are
+  buttons: the month opens a grid of twelve months, the year a grid of twenty
+  years. A date five years back is year → month → day, not sixty clicks. Months
+  and years entirely outside `minDate()`/`maxDate()` are greyed, and the arrows
+  stop at the bounds.
+- **The clock** of a `datetime` sits beside the calendar as the
+  [clock dial](time-picker.md#the-clock-dial) `TimePicker` draws — the hours
+  face (1–12 outside, 13–23 and 00 inside), then the minutes, snapping to
+  `minutesStep()`, with hours and minutes outside the bounds greyed. Here it
+  sets the value as it moves, without an OK of its own: the panel's **Done**
+  closes it. An `asTime()` picker shows the dial alone.
+- **Today / Now** in the footer picks the current day (and, with a clock, the
+  current time rounded down to the step), unless the bounds exclude it. **Done**
+  closes a `datetime` panel; **Clear** empties the field.
+- **The keyboard.** <kbd>↓</kbd> in the box, or the calendar icon, opens the
+  panel with focus on the picked day (else today, pulled inside the bounds); a
+  click into the box opens it and leaves the caret there for typing.
+
+```text
+← →                 previous / next day
+↑ ↓                 previous / next week
+Home / End          first / last day of the week
+PageUp / PageDown   previous / next month (with Shift: year)
+Enter / Space       pick the focused day
+↑ ↓ on the dial     previous / next hour or minute
+Escape              close and return to the box
+```
+
+  A day the bounds or `disabledDates()` exclude is stepped over in the
+  direction of travel, never landed on.
 
 ## Typing
 
@@ -267,6 +353,8 @@ TimePicker::make('opens_at')
 | `hoursStep(int)` | int | Hour increment step |
 | `minutesStep(int)` | int | Minute increment step |
 | `secondsStep(int)` | int | Second increment step |
+| `minTime(string\|Closure\|null)` | string | Earliest time of day on **every** day, `H:i`/`H:i:s`; `time`/`datetime` only — see [daily time window](#daily-time-window) |
+| `maxTime(string\|Closure\|null)` | string | Latest time of day on every day |
 | `touchOnMobile(bool $condition = true)` | bool | Touch wheel in a bottom sheet below the mobile breakpoint; not for `asMonth()` (default: `false`) — see [touch wheel on phones](#touch-wheel-on-phones) |
 | `timezone(string)` | string | Show the value in this timezone and convert back to the app timezone on save; `datetime` only |
 | `native(bool $native = true)` | bool | Use the browser-native control instead of the custom picker (default: `false`) |

@@ -33,7 +33,7 @@ DateTimePicker::make('x')->mode('date')      // 'date', 'month', 'time', 'dateti
 > `asMonth()` vždy renderuje nativní `<input type="month">` prohlížeče — vlastní kalendář
 > nemá month-only mřížku — takže zůstane nativní i když předáte `->native(false)`.
 
-> `asTime()` vybírá čas steppery hodin a minut. Pro pole, jehož časy jsou **sloty**
+> `asTime()` vybírá čas na desktopu na ciferníku, na telefonu steppery. Pro pole, jehož časy jsou **sloty**
 > — otevírací doba, termíny — ukládá [`TimePicker`](time-picker.md) tutéž hodnotu,
 > ale vybírá ji ze seznamu v pevném intervalu.
 
@@ -78,6 +78,51 @@ pravidlo (`Validation\Rules\DateWithinBounds`), kdykoli má co hlídat, a chybov
 hláška pojmenuje mez v `displayFormat()`, pokud je nastavený. Pole bez mezí a bez
 zakázaných dnů žádné pravidlo nepřidá.
 
+## Denní časové okno
+
+`minDate()` a `maxDate()` omezují **dny**; čas, který nesou, platí jen první či
+poslední den. Otevírací doba je jiné pravidlo — denní doba, která platí každý
+den — a tu nastavují `minTime()` / `maxTime()`:
+
+```php
+DateTimePicker::make('appointment_at')
+    ->minDate('2026-10-01')
+    ->maxDate('2026-12-31')
+    ->minTime('06:00')             // každý den od 06:00…
+    ->maxTime('18:00')             // …do 18:00
+    ->minutesStep(15)
+```
+
+Jak se vyhodnotí:
+
+- **Každý den.** Okno platí pro hodiny pickeru `time` nebo `datetime` v každém
+  dni, který kalendář dovolí. Picker `date` nebo `month` hodiny nemá, takže se
+  tam obě metody ignorují.
+- **Vyhrává přísnější.** V hraniční den, jehož `minDate()`/`maxDate()` nese čas,
+  platí pozdější z obou dolních mezí (a dřívější z horních). U pickeru `time`
+  platí vždy obě, protože má jen jeden den.
+
+```php
+DateTimePicker::make('slot')
+    ->minDate('2026-10-01 08:30')  // 1. října až od 08:30, ne od 06:00
+    ->minTime('06:00')
+    ->maxTime('18:00')
+```
+
+- **Nakreslené, pak ohlídané.** V panelu je hodina či minuta mimo okno zašedlá,
+  hodina, která do okna zasahuje jen zčásti, zůstane volitelná a čas se do okna
+  vtáhne (výběr 18 při `maxTime('18:00')` dá 18:00) a prázdné hodiny se otevřou
+  na začátku okna, ne o půlnoci. Seznam slotů [`TimePickeru`](time-picker.md) i
+  nativní `<select>` slotů na okraji okna prostě končí. Server okno hlídá stejným
+  pravidlem `DateWithinBounds` jako data, s vlastní hláškou („Čas v poli … nesmí
+  být dříve než 06:00“).
+- **Dotykové kolečko** pickeru `datetime` okno zatím nezašedí; hodnotu mimo něj
+  ale server odmítne.
+- **Formát.** `H:i` nebo `H:i:s` (`'6:00'` se přečte jako `06:00`),
+  `DateTimeInterface` (vezme se jeho čas) nebo Closure s `$get`. Cokoli jiného —
+  `'6 pm'`, `'25:00'` — vyhodí výjimku při vykreslení pole, místo aby tiše
+  zakázalo všechny hodiny, nebo žádnou.
+
 ## Volby času
 
 ```php
@@ -109,6 +154,45 @@ DateTimePicker::make('date')
 > platí pro daný režim `date_format`, `time_format` nebo `datetime_format`
 > z `config/wire-forms.php` — kromě pole se sekundami, jehož nastavený formát
 > sekundy nemá; to ukazuje hodnotu tak, jak je uložená.
+
+## Desktopový panel
+
+Od [mobilního breakpointu](../../start/configuration.md#mobil) pole
+výš je panel stavěný pro myš a klávesnici; pod ním si telefon nechává své
+ovládání — bottom sheet se steppery, nativní vstup nebo
+[dotykové kolečko](#dotykove-kolecko-na-telefonu) — beze změny. Obojí kreslí
+tentýž controller nad týmž stavem, takže hodnota vybraná v jednom je hodnota,
+kterou ukáže druhé.
+
+- **Hlavička** listuje šipkami po měsících a název měsíce i rok jsou tlačítka:
+  měsíc otevře mřížku dvanácti měsíců, rok mřížku dvaceti let. Datum o pět let
+  zpět je rok → měsíc → den, ne šedesát kliknutí. Měsíce a roky celé mimo
+  `minDate()`/`maxDate()` jsou zašedlé a šipky se na mezích zastaví.
+- **Hodiny** pickeru `datetime` jsou vedle kalendáře jako
+  [ciferník](time-picker.md#cifernik), který kreslí `TimePicker` — ciferník
+  hodin (venku 1–12, uvnitř 13–23 a 00), pak minut, s přichycením na
+  `minutesStep()` a se zašedlými hodinami a minutami mimo meze. Tady nastavuje
+  hodnotu průběžně, bez vlastního OK: panel zavře jeho **Hotovo**. Picker
+  `asTime()` ukáže jen ciferník.
+- **Dnes / Teď** v patičce vybere dnešní den (a s hodinami aktuální čas
+  zaokrouhlený dolů na krok), pokud ho meze nevylučují. **Hotovo** zavře panel
+  `datetime`; **Vymazat** pole vyprázdní.
+- **Klávesnice.** <kbd>↓</kbd> v poli nebo ikona kalendáře otevře panel s fokusem
+  na vybraném dni (jinak na dnešku vtaženém do mezí); kliknutí do pole ho otevře
+  a kurzor nechá v poli pro psaní.
+
+```text
+← →                 předchozí / další den
+↑ ↓                 předchozí / další týden
+Home / End          první / poslední den týdne
+PageUp / PageDown   předchozí / další měsíc (se Shiftem rok)
+Enter / Space       vybrat den s fokusem
+↑ ↓ na ciferníku    předchozí / další hodina či minuta
+Escape              zavřít a vrátit se do pole
+```
+
+  Den, který meze nebo `disabledDates()` vylučují, se přeskočí ve směru pohybu,
+  nikdy se na něm nepřistane.
 
 ## Psaní z klávesnice
 
@@ -261,6 +345,8 @@ TimePicker::make('opens_at')
 | `hoursStep(int)` | int | Krok inkrementu hodin |
 | `minutesStep(int)` | int | Krok inkrementu minut |
 | `secondsStep(int)` | int | Krok inkrementu sekund |
+| `minTime(string\|Closure\|null)` | string | Nejdřívější denní čas platný **každý** den, `H:i`/`H:i:s`; jen `time`/`datetime` — viz [denní časové okno](#denni-casove-okno) |
+| `maxTime(string\|Closure\|null)` | string | Nejpozdější denní čas platný každý den |
 | `touchOnMobile(bool $condition = true)` | bool | Dotykové kolečko v bottom sheetu pod mobilním breakpointem; ne pro `asMonth()` (výchozí: `false`) — viz [dotykové kolečko na telefonu](#dotykove-kolecko-na-telefonu) |
 | `timezone(string)` | string | Zobrazí hodnotu v této timezone a při uložení ji převede zpět do timezone aplikace; jen pro `datetime` |
 | `native(bool $native = true)` | bool | Použít nativní ovládání prohlížeče místo vlastního pickeru (výchozí: `false`) |

@@ -1,5 +1,4 @@
 @php
-    use NyonCode\WireCore\Foundation\Support\DateBoundary;
     use NyonCode\WireCore\Foundation\Support\MobileSheet;
     use NyonCode\WireForms\Components\TimePicker;
 
@@ -13,8 +12,9 @@
     // plain string.
     $minBound = $field->getMinDate();
     $maxBound = $field->getMaxDate();
-    $minTime = DateBoundary::timePart($minBound);
-    $maxTime = DateBoundary::timePart($maxBound);
+    // The bounds' clock half and the daily window (minTime()/maxTime()), the
+    // stricter of each — a time has one day, so both always apply.
+    [$minTime, $maxTime] = $field->getTimeBoundsFor();
     // Custom list, native input, or both split at the mobile breakpoint
     // (->nativeOnMobile()); a sheet nobody can see is not rendered.
     $nativeMode = $field->getNativeControlMode();
@@ -73,6 +73,7 @@
             typeable: @js($typeable),
             sheetOnMobile: @js($sheetOnMobile),
             sheetBreakpoint: @js($sheetBpPx),
+            mobileBreakpoint: @js($sheetBpPx),
         })"
             @class(['relative', MobileSheet::hideBelow($sheetBp) => $responsive || $wheel])
     >
@@ -99,7 +100,7 @@
                         {{-- Opens, never toggles: clicking to place the caret must
                              not close the list. The chevron is the toggle. --}}
                         @click="open = true"
-                        @keydown.down.prevent="open = true"
+                        @keydown.down.prevent="openWithKeyboard()"
                     @endunless
                     @keydown.escape="cancelTyped(); open = false"
                     @unless($typeable) readonly @endunless
@@ -124,7 +125,7 @@
                     tabindex="-1"
                     data-testid="form-time-{{ $field->getStatePath() }}-toggle"
                     aria-label="{{ __('Open clock') }}"
-                    @click="open = ! open"
+                    @click="open ? (open = false) : openWithKeyboard()"
                     @if($field->isDisabled() || $field->isReadOnly()) disabled @endif
                     class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-600 dark:hover:text-gray-200 disabled:pointer-events-none transition-colors duration-150"
             >
@@ -168,7 +169,7 @@
                     $sheetPanel => $sheetOnMobile,
                 ])
                 @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
-                @keydown.escape="open = false"
+                @keydown.escape="closeToTrigger()"
                 x-cloak
                 style="display: none;"
         >
@@ -176,6 +177,10 @@
                 @include('wire-core::partials.sheet-grabber', ['dismiss' => 'open = false', 'breakpoint' => $sheetBp])
             @endif
 
+            {{-- Below the breakpoint: the slot list it always was — tap a time,
+                 done. From it up (`wide`): the clock dial, confirmed with OK. --}}
+            <template x-if="! wide">
+            <div>
             {{-- The slot list. Capped in height so a 24-hour day scrolls inside the
                  panel instead of running off the viewport; on a sheet the panel owns
                  its own height, so the cap lifts.
@@ -186,6 +191,8 @@
                  which reads as a clipping bug rather than as "there is more". --}}
             <div
                 x-ref="list"
+                role="listbox"
+                @keydown="onListKey($event)"
                 data-testid="form-time-{{ $field->getStatePath() }}-list"
                 @class([
                     'overflow-y-auto overscroll-contain max-h-56 w-36',
@@ -200,13 +207,15 @@
                             @click="select(slot)"
                             :disabled="slot.disabled"
                             :data-active="isSelected(slot.value)"
+                            role="option"
+                            :aria-selected="isSelected(slot.value) ? 'true' : 'false'"
                             :data-testid="'form-time-{{ $field->getStatePath() }}-slot-' + slot.value"
                             :class="{
                                 'bg-primary-600 text-white hover:bg-primary-700': isSelected(slot.value),
                                 'opacity-40 cursor-not-allowed': slot.disabled,
                                 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700': ! slot.disabled && ! isSelected(slot.value),
                             }"
-                            class="block w-full text-left px-3 py-1.5 text-sm rounded-sm transition-colors duration-150 tabular-nums"
+                            class="block w-full text-left px-3 py-1.5 text-sm rounded-sm transition-colors duration-150 tabular-nums focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
                             x-text="slot.label"
                     ></button>
                 </template>
@@ -219,6 +228,11 @@
                     {{ __('Clear') }}
                 </button>
             </div>
+            </div>
+            </template>
+            <template x-if="wide">
+                @include('wire-forms::partials.clock-dial', ['testId' => 'form-time-'.$field->getStatePath()])
+            </template>
         </div>
         </div>
         </template>

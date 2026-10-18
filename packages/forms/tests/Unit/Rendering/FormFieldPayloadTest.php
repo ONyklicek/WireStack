@@ -89,8 +89,16 @@ it('keeps a field within its per-instance byte budget', function (string $type, 
     // TextInput is the control: it never had an x-data body, so its cost is what
     // a field's markup costs when nothing is inlined into it.
     'text' => ['text', 2_000],
-    'datetime' => ['datetime', 16_000],
-    'time' => ['time', 8_400],
+    // The panel draws twice over the same controller: the phone's (steppers,
+    // a stepping header) and, from the breakpoint up, the desktop one (month
+    // and year grids, the clock dial with its rim, hover and selection marks,
+    // a Today footer). Both are markup, not a controller body — that one is
+    // still guarded below.
+    'datetime' => ['datetime', 29_000],
+    // The phone's slot list and, from the breakpoint up, the clock dial (rim,
+    // hover and selection marks) with its OK/Cancel footer — two panels over
+    // one controller.
+    'time' => ['time', 17_000],
     // The trigger label truncates and an option label wraps, so neither pushes a
     // phone-width form sideways.
     'select' => ['select', 8_300],

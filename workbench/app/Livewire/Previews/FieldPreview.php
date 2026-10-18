@@ -90,6 +90,10 @@ class FieldPreview extends Component
             'signature' => null,
             'valid_from' => '2026-06-01',
             'valid_to' => '2026-06-30',
+            'shift_from' => null,
+            'period_from' => null,
+            'period_to' => null,
+            'shift_to' => null,
             'event_at' => '2026-06-15 14:30',
             // Left empty on purpose: the bounds preview has to show where an
             // unset picker opens. The key still has to exist — entangle() is a
@@ -136,6 +140,55 @@ class FieldPreview extends Component
                     ->from('valid_from')
                     ->until('valid_to')
                     ->presets(),
+            ];
+        }
+
+        // The bounds the owner keeps on a period: the days it may fall on (Q4
+        // 2026) and, with a clock, the hours of each day (06:00–18:00).
+        if ($field === 'date-range-picker-hours') {
+            return [
+                DateRangePicker::make('shift')
+                    ->label('Shift')
+                    ->from('shift_from')
+                    ->until('shift_to')
+                    ->withTime()
+                    ->minDate('2026-10-01')
+                    ->maxDate('2026-12-31')
+                    ->minTime('06:00')
+                    ->maxTime('18:00')
+                    ->configurePickers(fn (DateTimePicker $picker) => $picker->minutesStep(15))
+                    ->presets(),
+            ];
+        }
+
+        // Every picker at once, ->touchOnMobile() where it has a touch control:
+        // the desktop panels from sm up, the wheel on a phone. For trying the
+        // phone side by hand.
+        if ($field === 'pickers-touch') {
+            return [
+                DateTimePicker::make('due_on')->label('Date')->asDate()
+                    ->minDate('2026-10-01')->maxDate('2026-12-31')->touchOnMobile(),
+                DateTimePicker::make('starts_at')->label('Date and time, 06:00–18:00')
+                    ->minDate('2026-10-01')->maxDate('2026-12-31')
+                    ->minTime('06:00')->maxTime('18:00')->minutesStep(15)->touchOnMobile(),
+                TimePicker::make('opens_at')->label('Time, 06:00–18:00')
+                    ->minTime('06:00')->maxTime('18:00')->touchOnMobile(),
+                DateRangePicker::make('validity')
+                    ->label('Period, Q4 2026')
+                    ->from('period_from')
+                    ->until('period_to')
+                    ->minDate('2026-10-01')
+                    ->maxDate('2026-12-31')
+                    ->configurePickers(fn (DateTimePicker $picker) => $picker->touchOnMobile())
+                    ->presets(),
+                DateRangePicker::make('shift')
+                    ->label('Shift with time, 06:00–18:00')
+                    ->from('shift_from')
+                    ->until('shift_to')
+                    ->withTime()
+                    ->minTime('06:00')
+                    ->maxTime('18:00')
+                    ->configurePickers(fn (DateTimePicker $picker) => $picker->minutesStep(15)->touchOnMobile()),
             ];
         }
 
@@ -535,6 +588,18 @@ class FieldPreview extends Component
                 ->helperText('Between 10 March 08:30 and 20 March 17:00, 2030.')
                 ->minDate('2030-03-10 08:30')
                 ->maxDate('2030-03-20 17:00')
+                ->mode('datetime'),
+
+            // The daily window: 06:00–18:00 on every day, not only on the
+            // first and last one a minDate()/maxDate() time would bind.
+            'date-time-picker-hours' => DateTimePicker::make('slot_at')
+                ->label('Appointment')
+                ->helperText('Any day from 1 October to 31 December 2026, between 06:00 and 18:00.')
+                ->minDate('2026-10-01')
+                ->maxDate('2026-12-31')
+                ->minTime('06:00')
+                ->maxTime('18:00')
+                ->minutesStep(15)
                 ->mode('datetime'),
 
             // The facade over ->asTime(): a clock with no calendar above it, and

@@ -101,26 +101,39 @@ try {
   check('picking the lower boundary day pulls the clock up to its time',
     atMin.value === '2030-03-10 08:30', atMin.value);
 
-  await click('form-datetime-data.slot_at-hours-down');
-  const belowMin = await state();
-  check('the clock cannot be wound back past the lower bound',
-    belowMin.value === '2030-03-10 08:30', belowMin.value);
+  // From the breakpoint up the clock is columns, not steppers: an hour that
+  // lies wholly outside the day's bounds is greyed out, and one that only
+  // straddles a bound stays pickable and is pulled inside it.
+  // The clock is a dial: a label says it is greyed, and a press on the face
+  // where it is drawn picks it. Lifting off an hour turns the face to minutes,
+  // so each hour check first shows the hours again.
+  const T = 'form-datetime-data.slot_at';
+  const hour = (n) => `(() => { document.querySelector('[data-testid="${T}-dial-hours"]').click(); return true })() && new Promise((r) => setTimeout(() => r(document.querySelector('[data-testid="${T}-dial-hours-${n}"]')?.dataset.disabled === 'true'), 150))`;
+  const pressHour = async (n) => {
+    await eval_(`document.querySelector('[data-testid="${T}-dial-hours"]').click()`);
+    await sleep(150);
+    await eval_(`(() => {
+      const face = document.querySelector('[data-testid="${T}-dial"]');
+      const r = document.querySelector('[data-testid="${T}-dial-hours-${n}"]').getBoundingClientRect();
+      const at = { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, pointerId: 1, bubbles: true };
+      face.dispatchEvent(new PointerEvent('pointerdown', at));
+      face.dispatchEvent(new PointerEvent('pointerup', at));
+      return true;
+    })()`);
+    await sleep(250);
+  };
+  check('an hour wholly before the lower bound cannot be picked on its day',
+    await eval_(hour(7)) === true && await eval_(hour(8)) === false);
 
-  await click('form-datetime-data.slot_at-hours-up');
+  await pressHour(9);
   const aboveMin = await state();
   check('the clock still moves freely inside the bounds',
     aboveMin.value === '2030-03-10 09:30', aboveMin.value);
 
-  // The upper boundary day: 09:30 is fine, 18:30 is not.
+  // The upper boundary day: 09:30 is fine, 18:00 is not.
   await click('form-datetime-data.slot_at-day-20');
-  await click('form-datetime-data.slot_at-hours-up');
-  await click('form-datetime-data.slot_at-hours-up');
-  await click('form-datetime-data.slot_at-hours-up');
-  await click('form-datetime-data.slot_at-hours-up');
-  await click('form-datetime-data.slot_at-hours-up');
-  await click('form-datetime-data.slot_at-hours-up');
-  await click('form-datetime-data.slot_at-hours-up');
-  await click('form-datetime-data.slot_at-hours-up');
+  check('an hour wholly after the upper bound cannot be picked on its day', await eval_(hour(18)) === true);
+  await pressHour(17);
   const atMax = await state();
   console.log('max day:', JSON.stringify(atMax));
   await shot('02-bounds-clamped-clock');
@@ -129,7 +142,8 @@ try {
 
   // A day in the middle carries no clock bound at all.
   await click('form-datetime-data.slot_at-day-15');
-  await click('form-datetime-data.slot_at-hours-up');
+  check('a day between the bounds frees every hour', await eval_(hour(18)) === false && await eval_(hour(7)) === false);
+  await pressHour(18);
   const midday = await state();
   check('a day between the bounds leaves the clock alone',
     midday.value === '2030-03-15 18:00', midday.value);

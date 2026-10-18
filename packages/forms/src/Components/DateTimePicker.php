@@ -62,6 +62,12 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState, Pr
 
     protected ?string $timezone = null;
 
+    protected string|Closure|null $minTime = null;
+
+    protected string|Closure|null $maxTime = null;
+
+    protected bool $belowBreakpointOnly = false;
+
     // ─── Mode ──────────────────────────────────────────────────────
 
     /** Set the picker mode directly (date, time, or datetime). */
@@ -156,6 +162,53 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState, Pr
         $this->maxDate = $date;
 
         return $this;
+    }
+
+    /**
+     * The earliest time of day selectable on every day — opening hours.
+     *
+     * Unlike a time carried by `minDate('2026-07-10 08:30')`, which binds only
+     * on that one day, this window holds on each day of a datetime picker:
+     * `minTime('06:00')->maxTime('18:00')` leaves 06:00–18:00 pickable from
+     * Monday to Sunday. On a time picker the two read alike, and the stricter
+     * one wins. Takes `H:i` or `H:i:s`, or a `$get`-aware Closure.
+     */
+    public function minTime(string|Closure|null $time): static
+    {
+        $this->minTime = $time;
+
+        return $this;
+    }
+
+    /** The latest time of day selectable on every day — see {@see minTime()}. */
+    public function maxTime(string|Closure|null $time): static
+    {
+        $this->maxTime = $time;
+
+        return $this;
+    }
+
+    /**
+     * Mark this picker as the phone's only: from the mobile breakpoint up it is
+     * display:none and another control stands in for it — a DateRangePicker's
+     * own. A hidden control must not carry `required`, or the browser refuses
+     * to submit a form it cannot point the user to; it says `aria-required`.
+     *
+     * @internal
+     *
+     * @docs-ignore Plumbing, not configuration: DateRangePicker sets it on the
+     *              two ends it composes.
+     */
+    public function belowBreakpointOnly(bool $condition = true): static
+    {
+        $this->belowBreakpointOnly = $condition;
+
+        return $this;
+    }
+
+    public function isBelowBreakpointOnly(): bool
+    {
+        return $this->belowBreakpointOnly;
     }
 
     /** Set the first day of the week in the calendar (0 = Sunday). */
@@ -356,6 +409,41 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState, Pr
     }
 
     /**
+     * The daily window's lower edge as `H:i:s`, or null. Only a picker with a
+     * clock has one: a date or a month has no time of day to hold.
+     */
+    public function getMinTime(): ?string
+    {
+        return $this->hasClock() ? DateBoundary::timeOfDay($this->evaluate($this->minTime)) : null;
+    }
+
+    public function getMaxTime(): ?string
+    {
+        return $this->hasClock() ? DateBoundary::timeOfDay($this->evaluate($this->maxTime)) : null;
+    }
+
+    /**
+     * The time-of-day bounds the clock draws on `$day`: the daily window, and
+     * on the first or last allowed day the time a `minDate()` / `maxDate()`
+     * carries — whichever is stricter. A time picker has no day, so both
+     * always apply there.
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    public function getTimeBoundsFor(?string $day = null): array
+    {
+        $min = $this->getMinDate();
+        $max = $this->getMaxDate();
+        $onMinDay = $this->mode === 'time' || ($day !== null && $day === DateBoundary::datePart($min));
+        $onMaxDay = $this->mode === 'time' || ($day !== null && $day === DateBoundary::datePart($max));
+
+        $lower = array_filter([$this->getMinTime(), $onMinDay ? DateBoundary::timePart($min) : null]);
+        $upper = array_filter([$this->getMaxTime(), $onMaxDay ? DateBoundary::timePart($max) : null]);
+
+        return [$lower === [] ? null : max($lower), $upper === [] ? null : min($upper)];
+    }
+
+    /**
      * Month mode has no custom picker — the browser's <input type="month"> is the
      * only UI there — so it forces the native control even over ->native(false).
      */
@@ -376,12 +464,14 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState, Pr
         $min = $this->getMinDate();
         $max = $this->getMaxDate();
         $disabled = $this->mode === 'time' ? [] : array_values($this->getDisabledDates());
+        $minTime = $this->getMinTime();
+        $maxTime = $this->getMaxTime();
 
-        if ($min === null && $max === null && $disabled === []) {
+        if ($min === null && $max === null && $disabled === [] && $minTime === null && $maxTime === null) {
             return [];
         }
 
-        $rule = new DateWithinBounds($min, $max, $disabled, $this->getDisplayFormat());
+        $rule = new DateWithinBounds($min, $max, $disabled, $this->getDisplayFormat(), $minTime, $maxTime);
 
         return $this->isRequired() ? [$rule] : ['nullable', $rule];
     }
@@ -452,9 +542,11 @@ class DateTimePicker extends Field implements DehydratesState, HydratesState, Pr
     public function getSlotOptions(mixed $state = null): array
     {
         $interval = max(1, $this->getSlotInterval() ?? 1);
-        $bounded = $this->mode === 'time';
-        $min = $bounded ? DateBoundary::timePart($this->getMinDate()) : null;
-        $max = $bounded ? DateBoundary::timePart($this->getMaxDate()) : null;
+        // A time is bounded by its own min/max and the window; a datetime's
+        // slots are every day's clock, so only the daily window narrows them.
+        [$min, $max] = $this->mode === 'time'
+            ? $this->getTimeBoundsFor()
+            : [$this->getMinTime(), $this->getMaxTime()];
         // The state is H:i, or H:i:s with seconds; slots key by that shape.
         $length = $this->hasSeconds() ? 8 : 5;
         $slots = [];

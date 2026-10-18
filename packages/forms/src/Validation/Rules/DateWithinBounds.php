@@ -26,12 +26,16 @@ final class DateWithinBounds implements ValidationRule
     /**
      * @param  list<string>  $disabledDates  `Y-m-d` days that cannot be picked
      * @param  string|null  $displayFormat  how a bound is named in the message
+     * @param  string|null  $minTime  `H:i:s` the clock may not be before, on any day
+     * @param  string|null  $maxTime  `H:i:s` the clock may not be after, on any day
      */
     public function __construct(
         private readonly ?string $min = null,
         private readonly ?string $max = null,
         private readonly array $disabledDates = [],
         private readonly ?string $displayFormat = null,
+        private readonly ?string $minTime = null,
+        private readonly ?string $maxTime = null,
     ) {}
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
@@ -62,6 +66,22 @@ final class DateWithinBounds implements ValidationRule
 
         if (in_array($date->format('Y-m-d'), $this->disabledDates, true)) {
             $fail('wire-forms::fields.date.disabled')->translate();
+
+            return;
+        }
+
+        // The daily window: compared on the clock alone, so it holds on every
+        // day rather than on the first and last one.
+        $clock = $date->format('H:i:s');
+
+        if ($this->minTime !== null && $clock < $this->minTime) {
+            $fail('wire-forms::fields.date.min_time')->translate(['min' => substr($this->minTime, 0, 5)]);
+
+            return;
+        }
+
+        if ($this->maxTime !== null && $clock > $this->maxTime) {
+            $fail('wire-forms::fields.date.max_time')->translate(['max' => substr($this->maxTime, 0, 5)]);
         }
     }
 

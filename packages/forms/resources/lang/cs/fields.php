@@ -61,6 +61,8 @@ return [
         'min' => 'Pole :attribute nesmí být dříve než :min.',
         'max' => 'Pole :attribute nesmí být později než :max.',
         'disabled' => 'Zvolené datum v poli :attribute není k dispozici.',
+        'min_time' => 'Čas v poli :attribute nesmí být dříve než :min.',
+        'max_time' => 'Čas v poli :attribute nesmí být později než :max.',
     ],
 
     'money' => [
@@ -106,5 +108,25 @@ return [
         'done' => 'Hotovo',
         'cancel' => 'Zrušit',
         'clear' => 'Vymazat',
+    ],
+
+    // Desktopový panel pickeru: hlavička, sloupce času a patička.
+    'picker' => [
+        'previous' => 'Předchozí',
+        'next' => 'Další',
+        'choose_month' => 'Vybrat měsíc',
+        'choose_year' => 'Vybrat rok',
+        'hours' => 'Hodiny',
+        'minutes' => 'Minuty',
+        'seconds' => 'Sekundy',
+        'today' => 'Dnes',
+        'now' => 'Teď',
+        'clear' => 'Vymazat',
+        'done' => 'Hotovo',
+        'cancel' => 'Zrušit',
+        'start' => 'Začátek',
+        'end' => 'Konec',
+        'presets' => 'Období',
+        'pick_end' => 'Vyberte konec období',
     ],
 ];

@@ -61,6 +61,8 @@ return [
         'min' => 'The :attribute must not be earlier than :min.',
         'max' => 'The :attribute must not be later than :max.',
         'disabled' => 'The selected :attribute is not available.',
+        'min_time' => 'The time in :attribute must not be before :min.',
+        'max_time' => 'The time in :attribute must not be after :max.',
     ],
 
     'money' => [
@@ -107,5 +109,25 @@ return [
         'done' => 'Done',
         'cancel' => 'Cancel',
         'clear' => 'Clear',
+    ],
+
+    // The desktop picker panel: its header, its clock columns and its footer.
+    'picker' => [
+        'previous' => 'Previous',
+        'next' => 'Next',
+        'choose_month' => 'Choose month',
+        'choose_year' => 'Choose year',
+        'hours' => 'Hours',
+        'minutes' => 'Minutes',
+        'seconds' => 'Seconds',
+        'today' => 'Today',
+        'now' => 'Now',
+        'clear' => 'Clear',
+        'done' => 'Done',
+        'cancel' => 'Cancel',
+        'start' => 'Start',
+        'end' => 'End',
+        'presets' => 'Periods',
+        'pick_end' => 'Pick the end of the period',
     ],
 ];

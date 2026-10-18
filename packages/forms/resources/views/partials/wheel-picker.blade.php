@@ -17,14 +17,23 @@
     $mode = $field->getMode();
     $wheelId = $field->mobileControlIdFor($field->getId());
     $testId = 'form-'.$field->getStatePath().'-wheel';
+    $wheelSlots = $mode === 'time' ? array_keys($field->getSlotOptions()) : null;
+    // The wheel's x-data carries its bounds, and a bound can follow other state
+    // (a DateRangePicker end is bounded by the other end). Alpine meets a
+    // changed x-data by reconciling the old object onto the new one, which
+    // writes the fresh `$wire.entangle` placeholder into the bound property —
+    // and from there to the server as the field's value. A key that changes
+    // with the bounds makes a changed wheel a new element instead.
+    $wheelKey = md5((string) json_encode([$field->getMinDate(), $field->getMaxDate(), $field->getDisabledDates(), $wheelSlots]));
 @endphp
 <div
+    wire:key="wheel-{{ $field->getStatePath() }}-{{ $wheelKey }}"
     x-data="wireWheelPicker({
         state: $wire.entangle('{{ $field->getWireModelAttribute() }}'){{ $wireModifier ? '.' . $wireModifier : '' }},
         kind: @js($mode),
         {{-- A time's slots carry its bounds; a datetime's clock is the whole day
              at the interval, its bounds checked per day in the browser. --}}
-        slots: @js($mode === 'time' ? array_keys($field->getSlotOptions()) : null),
+        slots: @js($wheelSlots),
         interval: @js($field->getSlotInterval() ?? 1),
         min: @js($mode === 'time' ? null : $field->getMinDate()),
         max: @js($mode === 'time' ? null : $field->getMaxDate()),

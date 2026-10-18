@@ -28,6 +28,13 @@ use NyonCode\WireCore\Foundation\Components\LayoutComponent;
  *    row is a fact.
  *  - **the presets.** "This month" is one click that writes both ends.
  *
+ * How it is drawn splits at the mobile breakpoint. Below it the phone sees the
+ * two pickers, each its own field — the controls a phone already handles well.
+ * From it up one box reads the whole period and opens one panel: two months
+ * side by side, the presets beside them, the span previewed under the pointer
+ * between the first click and the second (`wireDateRangePicker`). Both are
+ * bound to the same two state paths, so neither knows which one was used.
+ *
  * Being a layout rather than a field is what makes it persist without a seam of
  * its own: the form flattens layout children into the field list, so the two
  * pickers are ordinary fields to filling, validation and saving, and a range
@@ -56,6 +63,10 @@ class DateRangePicker extends LayoutComponent
     protected string|DateTimeInterface|Closure|null $maxDate = null;
 
     protected ?string $displayFormat = null;
+
+    protected string|Closure|null $minTime = null;
+
+    protected string|Closure|null $maxTime = null;
 
     protected bool $withTime = false;
 
@@ -114,6 +125,26 @@ class DateRangePicker extends LayoutComponent
     public function maxDate(string|DateTimeInterface|Closure|null $date): static
     {
         $this->maxDate = $date;
+
+        return $this;
+    }
+
+    /**
+     * The earliest time of day either end may hold, on every day — with
+     * `withTime()`, `minTime('06:00')->maxTime('18:00')` keeps a period inside
+     * working hours. See {@see DateTimePicker::minTime()}.
+     */
+    public function minTime(string|Closure|null $time): static
+    {
+        $this->minTime = $time;
+
+        return $this;
+    }
+
+    /** The latest time of day either end may hold, on every day. */
+    public function maxTime(string|Closure|null $time): static
+    {
+        $this->maxTime = $time;
 
         return $this;
     }
@@ -194,6 +225,16 @@ class DateRangePicker extends LayoutComponent
     public function getUntilPicker(): DateTimePicker
     {
         return $this->buildPickers()[1];
+    }
+
+    public function hasTime(): bool
+    {
+        return $this->withTime;
+    }
+
+    public function isRequired(): bool
+    {
+        return $this->required;
     }
 
     public function hasPresets(): bool
@@ -283,8 +324,13 @@ class DateRangePicker extends LayoutComponent
 
         $picker->minDate($this->minDate)
             ->maxDate($this->maxDate)
+            ->minTime($this->minTime)
+            ->maxTime($this->maxTime)
             ->displayFormat($this->displayFormat)
             ->required($this->required)
+            // From the breakpoint up the range draws its own one-box control
+            // (the view), and these two are the phone's.
+            ->belowBreakpointOnly()
             // Both ends have to be readable server-side as the other one is
             // picked: the bound closures above run on the roundtrip.
             ->live();
