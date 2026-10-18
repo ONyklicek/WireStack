@@ -2,6 +2,17 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.1]
+
+### Fixed
+
+- **A date or time picker opens on the first click in Safari.** Safari read a state path such as
+  `tableState.modal.…` as an address field and drew its AutoFill button in the picker's box, and the first click
+  went to that button, so the panel opened only on the second. Every text box that opens a panel or searches inside
+  one — `DateTimePicker`, `TimePicker`, `DateRangePicker`, the searchable select (desktop and touch sheet), `Tags`,
+  the `CheckboxList` search and the `ColorPicker` hex box — now says `autocomplete="off"`. An `autocomplete` given
+  through `extraInputAttributes()` still wins.
+
 ## [2.9.0]
 
 ### Added

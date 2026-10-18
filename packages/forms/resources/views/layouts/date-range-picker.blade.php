@@ -69,6 +69,8 @@
             <div class="relative" x-ref="trigger">
                 <input
                     type="text"
+                    {{-- Never autofilled: see date-time-picker.blade.php. --}}
+                    autocomplete="off"
                     id="{{ $controlId }}"
                     :value="typing ? typed : displayValue"
                     data-testid="{{ $testId }}-trigger"

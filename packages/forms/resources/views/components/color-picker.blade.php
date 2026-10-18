@@ -38,6 +38,7 @@
     />
     <input
             type="text"
+            autocomplete="off"
             x-model="color"
             data-testid="form-color-{{ $field->getStatePath() }}-hex"
             @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif

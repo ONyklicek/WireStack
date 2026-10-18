@@ -50,6 +50,7 @@
         <div class="relative" x-ref="trigger">
             <input
                 type="text"
+                autocomplete="off"
                 x-model="input"
                 @keydown="onKeydown($event)"
                 @focus="focused = true; activeIndex = -1"

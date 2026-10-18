@@ -115,6 +115,12 @@
             <input
                     type="text"
                     {!! $field->getExtraInputAttributesHtml() !!}
+                    {{-- A box that opens a panel is never autofilled. Without this,
+                         Safari reads a state path such as `tableState.…` as an
+                         address field, draws its AutoFill button in the box and
+                         takes the first click for it — the panel opens on the
+                         second. After the extra attributes, so an app's own wins. --}}
+                    autocomplete="off"
                     id="{{ $fieldId }}"
                     {{-- Mid-edit the box shows what is being typed; otherwise the
                          formatted value. Swapping on `typing` rather than on a

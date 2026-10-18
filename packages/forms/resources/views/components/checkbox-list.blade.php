@@ -74,6 +74,7 @@
             <div class="p-2 border-b border-gray-200 dark:border-gray-700">
                 <input
                     type="text"
+                    autocomplete="off"
                     x-model="search"
                     data-testid="form-checklist-{{ $field->getStatePath() }}-search"
                     placeholder="{{ $field->getSearchPrompt() }}"

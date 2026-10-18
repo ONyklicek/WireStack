@@ -82,6 +82,8 @@
             <input
                     type="text"
                     {!! $field->getExtraInputAttributesHtml() !!}
+                    {{-- Never autofilled: see date-time-picker.blade.php. --}}
+                    autocomplete="off"
                     id="{{ $fieldId }}"
                     {{-- Mid-edit the box shows what is being typed; otherwise the
                          formatted value. --}}

@@ -244,6 +244,7 @@
             <div class="p-2">
                 <input
                     type="text"
+                    autocomplete="off"
                     x-model.debounce.300ms="search"
                     @keydown.arrow-down.prevent="onArrowDown()"
                     @keydown.arrow-up.prevent="onArrowUp()"
