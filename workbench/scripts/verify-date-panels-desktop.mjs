@@ -200,6 +200,15 @@ const helpers = (prefix) => `
     await eval_(`press('minutes-45')`); await step(800);
     check('each end keeps its own clock', await eval_(period) === '2026-10-20 08:30..2026-10-22 16:45', await eval_(period));
     check('the switch reads both times', await eval_(`tid('dial-end-from').textContent.includes('08:30') && tid('dial-end-to').textContent.includes('16:45')`));
+    // An end changed from outside — the phone's pair, a fill, a roundtrip —
+    // is the clock the dial shows and goes on from, not the one it set last.
+    await eval_(`wire().set('data.shift_to', '2026-10-22 12:15')`);
+    await waitFor(`tid('dial-end-to').textContent.includes('12:15')`).catch(() => {});
+    check('the switch follows an end changed from outside', await eval_(`tid('dial-end-to').textContent.includes('12:15')`),
+      await eval_(`tid('dial-end-to').textContent.trim()`));
+    await eval_(`click('dial-end-to')`); await step();
+    await eval_(`press('hours-17')`); await step(800);
+    check('the dial goes on from that clock', await eval_(period) === '2026-10-20 08:30..2026-10-22 17:15', await eval_(period));
     check('a 15-minute step draws no ticks between the labels',
       await eval_(`greyed('minutes-20') && ! tid('dial').querySelector('.h-1.w-1')`));
     check('no console errors', consoleErrors.length === 0, consoleErrors[0]);

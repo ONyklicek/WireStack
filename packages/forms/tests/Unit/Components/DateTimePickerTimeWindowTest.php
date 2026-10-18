@@ -128,6 +128,18 @@ test('a picker shown below the breakpoint only does not hold a hidden required',
         ->and($plain)->toMatch('/\srequired(\s|>)/');
 });
 
+test('a stepped native clock shown below the breakpoint only does not hold a hidden required', function () {
+    // The native datetime with a step is a date input and a slot <select>;
+    // neither may stop a desktop form the user cannot see it on.
+    $twin = renderWindowPicker(DateTimePicker::make('valid_from')->native()->minutesStep(15)->required()->belowBreakpointOnly());
+    $plain = renderWindowPicker(DateTimePicker::make('valid_from')->native()->minutesStep(15)->required());
+
+    expect($twin)->toContain('data-testid="form-datetime-valid_from-native-time"')
+        ->and($twin)->toContain('aria-required="true"')
+        ->and($twin)->not->toMatch('/\srequired(\s|>)/')
+        ->and($plain)->toMatch('/\srequired(\s|>)/');
+});
+
 test('a range hands the window to both ends and marks them as the phone\'s', function () {
     $range = DateRangePicker::make('shift')->withTime()->minTime('06:00')->maxTime('18:00');
 

@@ -61,8 +61,16 @@ const wireDateRangePicker = (config = {}) => mix(typing(), calendar(), clockDial
         this.fromTime = this.readTime(this.from, { hours: 0, minutes: 0 })
         // An end with no time yet ends on the last step of its day, so a fresh
         // one-day period is that whole day rather than a zero-length instant.
+        // The last multiple of the step, not 60 minus it: a step of 17 reaches
+        // :51, never :43.
         const step = Math.max(1, this.minutesStep || 1)
-        this.toTime = this.readTime(this.to, { hours: 23, minutes: 60 - step })
+        this.toTime = this.readTime(this.to, { hours: 23, minutes: Math.floor(59 / step) * step })
+
+        // The two ends also change from outside — the phone's pair, a fill, any
+        // Livewire roundtrip — and the dial has to show, and later write, the
+        // clock they now hold. An end without one keeps the dial's.
+        this.$watch('from', (value) => { this.fromTime = this.readTime(value, this.fromTime) })
+        this.$watch('to', (value) => { this.toTime = this.readTime(value, this.toTime) })
 
         this.showMonthOf(this.clampDay(this.dayOf(this.from) || this.todayStr()))
         this.buildDayNames()
