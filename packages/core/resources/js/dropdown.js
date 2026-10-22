@@ -128,6 +128,9 @@ export const floatingAnchor = (reference, floating, config = {}) => {
 
     // The layer this panel must clear, resolved when it opens (see layerAbove).
     let panelZ = null
+    // The coordinates last written, so the observer below can tell our own
+    // style write from a morph that stripped it.
+    let pinned = null
 
     const reposition = () => {
         // A Livewire morph can detach/replace the trigger; positioning against a
@@ -138,7 +141,8 @@ export const floatingAnchor = (reference, floating, config = {}) => {
         }
 
         computePosition(reference, floating, { placement, middleware }).then(({ x, y }) => {
-            Object.assign(floating.style, { left: `${x}px`, top: `${y}px` })
+            pinned = { left: `${x}px`, top: `${y}px` }
+            Object.assign(floating.style, pinned)
             // Re-assert the layer here, not just on open: a morph strips the whole
             // inline style attribute (it is absent from the server HTML), which
             // would drop the panel back to its `z-50` class and behind its modal.
@@ -182,11 +186,16 @@ export const floatingAnchor = (reference, floating, config = {}) => {
         // are absent from the server HTML), so any re-render while the panel is
         // open drops it into the top-left corner until the next scroll/resize.
         // Re-pin on every morph that touches the panel, ignoring our own style
-        // writes to avoid a loop.
+        // writes to avoid a loop. A morph that changes nothing BUT the style
+        // attribute (a poll tick re-rendering an open modal) is a style-only
+        // mutation too — so "ours" means the coordinates we wrote are still there,
+        // never merely "only the style changed".
         observer = new MutationObserver((mutations) => {
             const onlyOurStyle = mutations.every(
                 (m) => m.target === floating && m.type === 'attributes' && m.attributeName === 'style',
-            )
+            ) && pinned !== null
+                && floating.style.left === pinned.left
+                && floating.style.top === pinned.top
 
             if (! onlyOurStyle) {
                 reposition()

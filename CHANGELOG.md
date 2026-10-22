@@ -11,6 +11,11 @@ All notable changes to the Wire ecosystem will be documented in this file.
   alone: the modal opened on the server and never reached the page. The header-action button now targets the
   `action-modals` island whenever the action has a modal, as wire-core's action button already did. In the toolbar
   the same attribute spares the table a render when a modal opens.
+- **An open floating panel stays by its box when the page re-renders.** A poll tick (a `live()` table) re-rendering
+  an open modal strips Floating UI's inline `left`/`top` from a teleported panel — a date picker, a select, a
+  dropdown — and changes nothing else on it. The observer that re-pins the panel read every style-only change as its
+  own write, so the panel stayed in the top-left corner of the page. It now skips a style change only while the
+  coordinates it wrote are still on the panel.
 
 ## [2.9.1]
 

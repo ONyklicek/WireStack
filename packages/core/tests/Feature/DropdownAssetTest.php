@@ -34,6 +34,18 @@ test('the shipped bundle keeps the panel pinned across Livewire morphs', functio
         ->toContain('MutationObserver');
 });
 
+test('the source re-pins a panel whose coordinates a morph stripped, even when only the style changed', function () {
+    $source = file_get_contents(dirname(WireCoreServiceProvider::ASSETS_PATH).'/resources/js/dropdown.js');
+
+    // A poll tick re-rendering an open modal changes nothing on the panel but its
+    // style attribute, so "every mutation was a style write" cannot mean "it was
+    // ours" — the panel then stayed in the top-left corner for good. Ours means
+    // the coordinates written are still on the element.
+    expect($source)
+        ->toContain('floating.style.left === pinned.left')
+        ->toContain('floating.style.top === pinned.top');
+});
+
 test('the shipped bundle caps floating panels to the available viewport height', function () {
     $bundle = WireCoreServiceProvider::ASSETS_PATH.'/wire-core-dropdown.js';
 
