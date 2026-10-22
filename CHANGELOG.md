@@ -2,6 +2,16 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.2]
+
+### Fixed
+
+- **A `HeaderAction` with a modal opens it from the table's empty state.** The empty state sits inside the
+  `data-region` island, and Livewire targets the closest island by itself, so a click there asked for that island
+  alone: the modal opened on the server and never reached the page. The header-action button now targets the
+  `action-modals` island whenever the action has a modal, as wire-core's action button already did. In the toolbar
+  the same attribute spares the table a render when a modal opens.
+
 ## [2.9.1]
 
 ### Fixed

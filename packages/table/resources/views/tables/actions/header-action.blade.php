@@ -42,6 +42,13 @@
     <button
             type="button"
             wire:click{{ $loadingState['wireModifiers'] }}="{{ $wireAction }}"
+            {{-- Targets the modal island, as wire-core's action button does. In the
+                 toolbar it only spares the table a render; in the empty state it is
+                 what makes the button work at all: that state sits inside the
+                 data-region island, Livewire targets the closest island by itself,
+                 and a call targeting data-region returns that island alone — the
+                 modal opens on the server and never reaches the page. --}}
+            @if($action->hasModal()) wire:island="action-modals" @endif
             class="{{ $classes }} relative"
             data-testid="header-action-{{ $action->getName() }}"
             @if($action->getLabel()) aria-label="{{ $action->getLabel() }}" @endif
