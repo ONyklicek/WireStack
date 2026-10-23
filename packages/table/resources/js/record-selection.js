@@ -49,6 +49,19 @@ function wireRecordSelection(config = {}) {
        value (filter 128k rows down to 7 and the bar would still say 128k). */
     let root = null;
 
+    /* Where the page's keys and count are read: the data region's own copy,
+       because a poll renders that island alone and leaves the root's attributes
+       as the last full render left them. The first copy that belongs to THIS
+       root — a nested table carries its own. The root's attributes stay the
+       fallback for markup without the region copy. */
+    const selectionSource = () => {
+        if (! root) return null;
+        for (const el of root.querySelectorAll('[data-selection-sync]')) {
+            if (el.closest('[data-selection-root]') === root) return el;
+        }
+        return root;
+    };
+
     return {
         // The entangles MUST be created here in the returned literal.
         // Created in init() they would store the raw interceptor object —
@@ -76,8 +89,8 @@ function wireRecordSelection(config = {}) {
            table-wrapper), so Livewire morphs it in place and a seeded value
            would keep the first render's count forever (filter 128k rows down
            to 7 and the bar would still say 128k). */
-        get matching() { return Number(root?.dataset.matching || 0); },
-        get pageKeys() { return JSON.parse(root?.dataset.pageKeys || '[]'); },
+        get matching() { return Number(selectionSource()?.dataset.matching || 0); },
+        get pageKeys() { return JSON.parse(selectionSource()?.dataset.pageKeys || '[]'); },
         get selectsAll() { return this.mode === 'all'; },
         get selectedCount() { return this.selectsAll ? Math.max(0, this.matching - this.selected.length) : this.selected.length; },
         get allSelected() { return this.pageKeys.length > 0 && this.pageKeys.every((k) => this.isSelected(k)); },

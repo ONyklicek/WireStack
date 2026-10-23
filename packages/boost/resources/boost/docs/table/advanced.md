@@ -305,6 +305,24 @@ search, a filter or the sort. In that request the change wins and the table
 renders; a skip there would leave the browser showing the previous view until the
 user did something else.
 
+### A Tick Refreshes the Data, Not the Page
+
+A tick answers with the rows and nothing around them: the changed rows with
+[row partials](#row-partials), nothing when nothing moved, and otherwise the data
+region — the table, the stacked cards and the pagination footer — as one island.
+The toolbar, the filter panels, the modals and every floating panel opened from
+them (a date picker, a select, a dropdown, the row context menu) stay exactly as
+the user has them.
+
+While an action modal is open the tick sends nothing at all, and the rows catch
+up on the first tick after it closes. A tick that shares its request with
+something else — a field typed in that modal, a page-size change — renders the
+way that other change needs, since Livewire decides the skip only after the last
+call in the request.
+
+The selection's page keys and matching count travel with the region, so "select
+the page" and "select all N" follow a tick that brought or removed rows.
+
 ---
 
 ## Live Tables (Multi-User)
@@ -605,7 +623,7 @@ last sent and answers with the rows that moved:
 - **nothing moved** → nothing is sent at all, not even markup;
 - **a row moved** → that row (and its card, and the totals);
 - **the page's shape moved** — a row arrived, left, or moved under the sort →
-  the whole table.
+  the data region, never the toolbar or the modals around it.
 
 This is the case the feature exists for: several people editing one table, where
 a colleague's write should repaint their row and leave whatever you have

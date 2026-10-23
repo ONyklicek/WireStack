@@ -678,11 +678,15 @@
                             {{-- Scope: this page, or every row the filter matches. Always
                                  present while something is selected, so the wider reach is
                                  never a surprise the user has to discover. --}}
-                            @if($recordCount > count($pageRecordKeys))
+                            {{-- Shown and counted by the controller, not by the server: a
+                                 poll renders the rows' island alone, and this strip sits
+                                 outside it, so a printed count or an @if would go stale. --}}
                                 <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-primary-700 dark:text-primary-300"
-                                     data-testid="table-selection-scope" @wireEl('table-selection-scope')>
+                                     data-testid="table-selection-scope" @wireEl('table-selection-scope')
+                                     x-show="matching > pageKeys.length"
+                                     @if($recordCount <= count($pageRecordKeys)) style="display: none;" @endif>
                                     <template x-if="selectsAll">
-                                        <span>{{ __('wire-table::messages.selection_all_matching', ['count' => $recordCount]) }}</span>
+                                        <span x-text="@js(__('wire-table::messages.selection_all_matching', ['count' => ':count'])).replace(':count', matching)">{{ __('wire-table::messages.selection_all_matching', ['count' => $recordCount]) }}</span>
                                     </template>
                                     <template x-if="!selectsAll">
                                         <span x-text="@js(__('wire-table::messages.selection_on_page')).replace(':count', selectedCount)"></span>
@@ -694,6 +698,7 @@
                                             x-on:click="selectAllMatching()"
                                             data-testid="table-select-all-matching" @wireEl('table-select-all-matching')
                                             class="font-semibold underline underline-offset-2 hover:no-underline"
+                                            x-text="@js(__('wire-table::messages.selection_select_all_matching', ['count' => ':count'])).replace(':count', matching)"
                                     >
                                         {{ __('wire-table::messages.selection_select_all_matching', ['count' => $recordCount]) }}
                                     </button>
@@ -708,7 +713,6 @@
                                         {{ __('wire-table::messages.selection_only_this_page') }}
                                     </button>
                                 </div>
-                            @endif
                         </div>
                     @endif
 

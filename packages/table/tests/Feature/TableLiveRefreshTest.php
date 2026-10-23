@@ -116,7 +116,7 @@ it('re-renders on the tick that follows another session\'s edit', function () {
     Livewire::test(LiveHost::class)->call('updateTableCell', 1, 'title', 'Written elsewhere');
 
     expect($us->instance()->pollWouldSkipRender())->toBeFalse()
-        ->and($us->call('refreshTable')->html())->toContain('Written elsewhere');
+        ->and(implode('', $us->call('refreshTable')->effects['islandFragments'] ?? []))->toContain('Written elsewhere');
 });
 
 it('re-renders after another session fills a range', function () {
@@ -162,7 +162,7 @@ it('picks up a write made outside any table once the clock moves on', function (
     ]);
 
     expect($us->instance()->pollWouldSkipRender())->toBeFalse()
-        ->and($us->call('refreshTable')->html())->toContain('Written by a job');
+        ->and(implode('', $us->call('refreshTable')->effects['islandFragments'] ?? []))->toContain('Written by a job');
 });
 
 it('says nothing to other sessions unless the table asked it to', function () {

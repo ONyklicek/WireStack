@@ -308,6 +308,24 @@ hledání, filtr nebo řazení. V takovém požadavku vyhrává změna a tabulka
 vyrenderuje; přeskočení by nechalo v prohlížeči starý pohled až do další akce
 uživatele.
 
+### Tick obnovuje data, ne stránku
+
+Tick odpoví řádky a ničím kolem nich: změněnými řádky s
+[řádkovými partials](#radkove-partials), ničím, když se nic nepohnulo, a jinak datovou
+oblastí — tabulkou, kartami na mobilu a patičkou se stránkováním — jako jedním
+islandem. Toolbar, panely filtrů, modaly a každý plovoucí panel z nich otevřený
+(date picker, select, dropdown, kontextové menu řádku) zůstanou přesně tak, jak je
+uživatel má.
+
+Dokud je otevřený modal akce, tick neodešle vůbec nic a řádky se doženou prvním
+tickem po jeho zavření. Tick, který sdílí požadavek s něčím jiným — polem
+vyplněným v tom modalu, změnou velikosti stránky — se vyrenderuje tak, jak tu
+druhou změnu potřebuje, protože Livewire o přeskočení rozhoduje až po posledním
+volání v požadavku.
+
+Klíče stránky a počet pro výběr cestují s oblastí, takže „vybrat stránku“
+a „vybrat všech N“ sledují i tick, který řádky přidal nebo ubral.
+
 ---
 
 ## Živé tabulky (více uživatelů)
@@ -605,7 +623,7 @@ poslal, a odpoví řádky, které se pohnuly:
 - **nic se nepohnulo** → neodešle se vůbec nic, ani markup;
 - **pohnul se řádek** → ten řádek (a jeho karta a totály);
 - **pohnul se tvar stránky** — řádek přibyl, zmizel nebo se posunul pod řazením →
-  celá tabulka.
+  datová oblast, nikdy toolbar ani modaly kolem ní.
 
 Tohle je případ, kvůli kterému ta funkce existuje: víc lidí edituje jednu tabulku
 a zápis kolegy má překreslit jeho řádek a nechat na pokoji to, co máte

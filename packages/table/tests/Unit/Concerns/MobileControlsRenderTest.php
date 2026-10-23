@@ -131,9 +131,13 @@ it('offers the whole filtered set once more rows exist than the page shows', fun
         ->assertSee(__('wire-table::messages.selection_select_all_matching', ['count' => 5]));
 });
 
-it('omits the scope line when everything already fits on one page', function () {
-    Livewire::test(MobComponent::class, ['paginate' => false])
-        ->assertDontSee('table-selection-scope', escape: false);
+it('hides the scope line when everything already fits on one page', function () {
+    // Hidden, not left out: the controller shows it once a poll brings the set
+    // past the page, which a server-side @if could not follow — a tick renders
+    // the rows alone and this line sits outside them.
+    $html = Livewire::test(MobComponent::class, ['paginate' => false])->html();
+
+    expect($html)->toMatch('/data-testid="table-selection-scope"[^>]*x-show="matching > pageKeys.length"[^>]*style="display: none;"/');
 });
 
 it('offers the way back from an all-matching selection', function () {

@@ -99,9 +99,11 @@ it('sends nothing at all when nothing moved', function () {
         ->and($test->effects['html'] ?? null)->toBeNull();
 });
 
-it('renders the whole table when the page itself changed', function () {
+it('renders the whole data region, and only it, when the page itself changed', function () {
     // A row that arrived, left or moved under the sort is a change no per-row
-    // partial can express: the page's shape moved, not a row's contents.
+    // partial can express: the page's shape moved, not a row's contents. Still
+    // the data — the toolbar, the panels and the modals around it stay as the
+    // user has them.
     $test = Livewire::test(RfHost::class);
 
     $test->call('refreshTable');
@@ -110,8 +112,11 @@ it('renders the whole table when the page itself changed', function () {
 
     $test->call('refreshTable');
 
+    $fragments = implode('', $test->effects['islandFragments'] ?? []);
+
     expect($test->effects['wirePartials'] ?? null)->toBeNull()
-        ->and($test->effects['html'] ?? null)->not->toBeNull();
+        ->and($test->effects['html'] ?? null)->toBeNull()
+        ->and($fragments)->toContain('Third');
 });
 
 it('carries the fresh version stamp with the row it refreshes', function () {

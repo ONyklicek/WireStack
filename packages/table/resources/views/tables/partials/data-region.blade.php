@@ -167,6 +167,13 @@
     $rangeTo = $plan->paging()->rangeTo;
     $headerRowCount = $plan->paging()->headerRowCount;
 @endphp
+                    @if($isSelectable)
+                        {{-- The page's keys and the matching count, for the selection
+                             controller on the wrapper. The wrapper carries them too,
+                             but a poll renders this island alone and leaves the
+                             wrapper as it was, so the controller reads this copy. --}}
+                        <span hidden data-selection-sync data-page-keys="{{ json_encode($pageRecordKeys) }}" data-matching="{{ $recordCount }}"></span>
+                    @endif
                     @if($tracksClientLayout)
                         <span hidden data-wire-layout="{{ $plan->layout()->clientLayout ?? 'both' }}" data-wire-layout-query="{{ $plan->layout()->stackedMediaQuery }}"></span>
                     @endif
