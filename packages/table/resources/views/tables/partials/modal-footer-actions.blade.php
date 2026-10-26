@@ -27,6 +27,8 @@
         @endif
         wire:loading.attr="disabled"
         wire:target="{{ $footerClick }}"
+        data-testid="modal-footer-action-{{ $footerAction['name'] }}"
+        @if(! empty($footerAction['label'])) aria-label="{{ $footerAction['label'] }}" @endif
         @class(['inline-flex items-center gap-2', $buttonClasses])
     >
         @include('wire-core::partials.spinner', ['wireTarget' => $footerClick, 'class' => 'h-4 w-4'])
