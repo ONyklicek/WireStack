@@ -69,6 +69,7 @@ use NyonCode\WireTable\Services\TableQueryEvents;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Services\WriteGeneration;
 use NyonCode\WireTable\Support\CellEditOutcome;
+use NyonCode\WireTable\Support\PollCommit;
 use NyonCode\WireTable\Support\RowRenderer;
 use NyonCode\WireTable\Support\RowStamps;
 use NyonCode\WireTable\Support\StateInvalidation;
@@ -413,21 +414,43 @@ trait WithTable
     // ==========================================
 
     /**
-     * Refresh table data (called by wire:poll).
+     * Refresh table data (called by wire:poll and by the live() nudge).
+     *
+     * **A tick refreshes the data and nothing else.** Whatever it answers with is
+     * confined to the rows: changed rows as partials, nothing when nothing moved,
+     * and when the page itself moved, the data region's island alone. The
+     * toolbar, the filter panels, the modals and every floating panel opened from
+     * them are left exactly as the user has them — a full render would morph them
+     * mid-use, which is how an open date picker in a modal lost its position on
+     * every tick.
      */
     public function refreshTable(): void
     {
-        // Check if polling should be active
+        // Paused (the Stop control, pollWhen()): one ordinary render, which is
+        // what takes the wire:poll wrapper out of the page.
         if (! $this->shouldPoll()) {
             return;
         }
 
-        // Don't re-render while any modal with a form is open. A poll re-render
-        // hits the server before debounced wire:model.live values are synced,
-        // causing morph to overwrite whatever the user has typed. Keeping
-        // wire:poll in the DOM means polling resumes automatically on the next
-        // tick once the modal closes — no extra work needed.
+        // Pooled with anything else — a field update in an open modal, a page
+        // change, a cell save: that request renders anyway, and a skip from here
+        // would swallow the render the other call needs. Let it, with fresh data.
+        // A host that is no Livewire component has no request to share.
+        $id = method_exists($this, 'getId') ? $this->getId() : null;
+
+        if ($id !== null && ! PollCommit::isAlone($id, ['refreshTable'])) {
+            $this->tableInstance = null;
+
+            return;
+        }
+
+        // A modal with a form is open: leave the page alone entirely. A tick
+        // reaching the server before debounced wire:model.live values are synced
+        // would morph over what the user is typing. wire:poll stays in the DOM, so
+        // the data catches up on the first tick after the modal closes.
         if ($this->actionFrameCount() > 0 || $this->tableState->get('modal.halt.show')) {
+            $this->skipTableRender();
+
             return;
         }
 
@@ -448,7 +471,40 @@ trait WithTable
         // case: while several people edit one table, a colleague's write should
         // repaint their row and leave everything else — including whatever the
         // reader has half-typed in a cell of their own — untouched.
-        $this->queueChangedRowPartials();
+        if ($this->queueChangedRowPartials()) {
+            return;
+        }
+
+        $this->renderTableDataRegionOnly();
+    }
+
+    /**
+     * Answer this request with the data region's island and nothing around it.
+     *
+     * Unless the same request also changed what the table shows — a page size, a
+     * sort, a filter Livewire pooled into the tick's commit — which the toolbar
+     * and the filter chips have to reflect, so the full render stands.
+     */
+    protected function renderTableDataRegionOnly(): void
+    {
+        if ($this->tableStateChangedThisRequest || ! method_exists($this, 'getIslands')) {
+            return;
+        }
+
+        // Only an island this component has rendered before can be sent alone;
+        // without one, renderIsland() renders nothing and the skip would leave
+        // the rows stale.
+        $region = array_filter(
+            $this->getIslands(),
+            fn (array $island): bool => $island['name'] === 'data-region' && ! empty($island['token']),
+        );
+
+        if ($region === []) {
+            return;
+        }
+
+        $this->renderIsland('data-region');
+        $this->skipTableRender();
     }
 
     /**
@@ -477,16 +533,19 @@ trait WithTable
      * The hashes live in the poll state, which costs the snapshot a few bytes a
      * row and is why this only runs where row partials are on.
      *
-     * **The key SET changing means a full render**, and that is not a shortcut: a
-     * row that arrived, left, or moved under the sort is a change no per-row
-     * partial can express — the page's shape moved, not a row's contents.
+     * **The key SET changing means the whole data region**, and that is not a
+     * shortcut: a row that arrived, left, or moved under the sort is a change no
+     * per-row partial can express — the page's shape moved, not a row's contents.
+     *
+     * Returns whether the request is answered (rows queued, or nothing moved);
+     * false leaves the caller to render the region.
      */
-    protected function queueChangedRowPartials(): void
+    protected function queueChangedRowPartials(): bool
     {
         $table = $this->getTable();
 
         if (! $table->usesRowPartials() || ! method_exists($this, 'renderPartial')) {
-            return;
+            return false;
         }
 
         $key = $table->getPrimaryKey();
@@ -503,9 +562,9 @@ trait WithTable
         $this->tableState->set('polling.rows', $stamps);
 
         // Null, not empty: the page holds different rows than last time, so no
-        // per-row partial can describe what happened and the full render stands.
+        // per-row partial can describe what happened and the region renders whole.
         if ($changed === null) {
-            return;
+            return false;
         }
 
         // Nothing moved, and this knew it per row rather than from a checksum over
@@ -514,7 +573,7 @@ trait WithTable
         if ($changed === []) {
             $this->skipTableRender();
 
-            return;
+            return true;
         }
 
         $partials = TablePartials::for($table, $this, $this->tableRenderPlan());
@@ -527,6 +586,8 @@ trait WithTable
         foreach ($partials->satellites($moved) as $name => $html) {
             $this->renderPartial($name, $html);
         }
+
+        return true;
     }
 
     /**

@@ -109,6 +109,9 @@ const installMorphGuards = () => {
     // than a skip: a menu can stay open indefinitely, and refusing the morph
     // for as long as it does would freeze the whole table behind it.
     window.Livewire.hook('morphed', restoreRecordMenu)
+    // A poll tick, a sort or a page change renders the rows' island alone, and
+    // an island announces its own morph instead of `morphed`.
+    window.Livewire.hook('island.morphed', restoreRecordMenu)
 }
 
 /**

@@ -367,8 +367,11 @@ already gives you:
   depends entirely on the table: 43% less markup on a four-row page, but **36% of the render time
   and only 9% of the bytes** on a 25-column, 20-row page, where 500 cells dwarf the chrome. Judge
   it by the absolute figure — roughly 50-90 kB a render — not by a percentage. Anything fired from
-  **outside** the table — the search box, a filter, a column toggle, a poll tick — still renders
-  everything, so nothing goes stale. You get this without asking for it; the one thing to know is
+  **outside** the table — the search box, a filter, a column toggle — still renders
+  everything, so nothing goes stale. **A poll tick never does**: it answers with changed rows,
+  nothing, or the data region alone, sends nothing while an action modal is open, and renders
+  in full only when its request also carries something else (`Support\PollCommit`). Never make
+  a tick re-render the component — it morphs open modals and floating panels mid-use. You get this without asking for it; the one thing to know is
   that a **custom action whose only effect is outside the table region** (say it writes a property
   that a heading above the table reads) will not repaint that heading when fired from a row. Put
   such an action in the toolbar, or have it dispatch to the surface that owns the heading.
@@ -396,7 +399,7 @@ A write answers with **everything it moved**, not just the row: the record's car
 - **With `rowPartials()` on, a poll answers with the rows that moved.** `refreshTable()` — what
   `poll()` calls and what the `live(broadcast: true)` bridge nudges — compares each row on the
   page against a hash of the record it last sent, and queues a partial for the ones that changed:
-  nothing at all when nothing moved, the whole table when the page's *shape* changed (a row
+  nothing at all when nothing moved, the data region's island when the page's *shape* changed (a row
   arrived, left, or moved under the sort — no per-row partial can express that). This is the point
   of the feature on a shared table: a colleague's write repaints their row and leaves whatever you
   have half-typed in a cell of your own alone, where a full re-render morphs the lot.

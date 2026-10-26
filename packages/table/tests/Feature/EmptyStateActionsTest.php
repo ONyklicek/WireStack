@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
 use NyonCode\WireTable\Columns\TextColumn;
@@ -76,6 +77,34 @@ class EsaStackedComponent extends Component
                 Action::make('create')
                     ->label('Create post')
                     ->keyboardShortcut('mod+n')
+                    ->action(fn () => null),
+            ]);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+class EsaHeaderActionComponent extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(EsaPost::class)
+            ->paginated(false)
+            ->columns([TextColumn::make('title')])
+            ->emptyState('No posts yet', 'Write the first one.')
+            ->emptyStateActions([
+                HeaderAction::make('createFirst')
+                    ->label('Create with form')
+                    ->form([TextInput::make('title')])
+                    ->action(fn () => null),
+                HeaderAction::make('createDirect')
+                    ->label('Create now')
                     ->action(fn () => null),
             ]);
     }
@@ -156,6 +185,28 @@ it('binds an empty state shortcut once across both layouts', function () {
     // The shortcut binding is `x-on:keydown.<keys>.window.prevent="$el.click()"`.
     expect(substr_count($html, 'window.prevent="$el.click()"'))->toBe(1);
 });
+
+// The empty state sits inside the data-region island, and Livewire targets the
+// closest island on its own: without an explicit target a modal button there
+// asks for data-region alone, and the modal it opens never reaches the page.
+it('targets the modal island from an empty state button that opens a modal', function (string $component, string $name) {
+    $html = Livewire::test($component)->html();
+
+    expect($html)->toMatch('/<button[^>]*wire:island="action-modals"[^>]*data-testid="(header-)?action-'.$name.'"/');
+})->with([
+    'row action' => [EsaComponent::class, 'createModal'],
+    'header action' => [EsaHeaderActionComponent::class, 'createFirst'],
+]);
+
+it('leaves an empty state button without a modal untargeted', function (string $component, string $name) {
+    $html = Livewire::test($component)->html();
+
+    expect($html)->toMatch('/data-testid="(header-)?action-'.$name.'"/')
+        ->not->toMatch('/<button[^>]*wire:island=[^>]*data-testid="(header-)?action-'.$name.'"/');
+})->with([
+    'row action' => [EsaComponent::class, 'createInline'],
+    'header action' => [EsaHeaderActionComponent::class, 'createDirect'],
+]);
 
 // ─── Execution ───────────────────────────────────────────────────
 

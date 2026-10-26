@@ -2,6 +2,30 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.2]
+
+### Fixed
+
+- **A `HeaderAction` with a modal opens it from the table's empty state.** The empty state sits inside the
+  `data-region` island, and Livewire targets the closest island by itself, so a click there asked for that island
+  alone: the modal opened on the server and never reached the page. The header-action button now targets the
+  `action-modals` island whenever the action has a modal, as wire-core's action button already did. In the toolbar
+  the same attribute spares the table a render when a modal opens.
+- **An open floating panel stays by its box when the page re-renders.** A poll tick (a `live()` table) re-rendering
+  an open modal strips Floating UI's inline `left`/`top` from a teleported panel — a date picker, a select, a
+  dropdown — and changes nothing else on it. The observer that re-pins the panel read every style-only change as its
+  own write, so the panel stayed in the top-left corner of the page. It now skips a style change only while the
+  coordinates it wrote are still on the panel.
+- **A poll tick refreshes the data, never the page around it.** A tick answers with the changed rows, with nothing,
+  or with the data region's island alone — the toolbar, the filter panels, the modals and every floating panel
+  opened from them are left as the user has them. While an action modal was open a tick returned early without
+  skipping the render, so Livewire re-rendered the whole component and morphed the open modal on every tick. It now
+  sends nothing until the modal closes. A tick that shares its request with something else (a field typed in that
+  modal, a page-size change) still renders in full, because Livewire decides a skip only after the request's last
+  call (`Support\PollCommit`). The selection's page keys and matching count now travel inside the region, so
+  "select the page" and "select all N" follow a tick that brought or removed rows, and the row context menu is
+  restored after an island morph as it already was after a full one.
+
 ## [2.9.1]
 
 ### Fixed

@@ -117,8 +117,12 @@ it('keeps the page keys on the selection root while the fill handle nests inside
         ->and($rootTag)->toContain('wireRecordSelection(')
         ->and($fillTag)->toContain('wireFillHandle(')
         ->and($fillTag)->not->toContain('data-page-keys')
-        ->and(substr_count($html, 'data-page-keys'))->toBe(1)
-        ->and(substr_count($html, 'data-selection-root'))->toBe(1);
+        ->and(substr_count($html, 'data-selection-root'))->toBe(1)
+        // The other copy is the data region's own, which a poll renders without
+        // the wrapper — inside the root, on an element of its own.
+        ->and(substr_count($html, 'data-page-keys'))->toBe(2)
+        ->and(substr_count($html, 'data-selection-sync'))->toBe(1)
+        ->and(strpos($html, 'data-selection-sync'))->toBeGreaterThan($selectionRoot);
 });
 
 it('reads the selection datasets off a captured element, never off $root', function () {
@@ -133,8 +137,10 @@ it('reads the selection datasets off a captured element, never off $root', funct
 
     expect($source)->not->toContain('$root.dataset')
         ->toContain("root = el?.closest?.('[data-selection-root]')")
-        ->toContain('get pageKeys() { return JSON.parse(root?.dataset.pageKeys')
-        ->toContain('get matching() { return Number(root?.dataset.matching');
+        ->toContain('get pageKeys() { return JSON.parse(selectionSource()?.dataset.pageKeys')
+        ->toContain('get matching() { return Number(selectionSource()?.dataset.matching')
+        // …and the region copy it prefers is this root's, never a nested table's.
+        ->toContain("el.closest('[data-selection-root]') === root");
 
     // Same guarantee in what actually ships (needs `npm run build:table-assets`).
     $bundle = file_get_contents(WireTableServiceProvider::ASSETS_PATH.'/wire-table-selection.js');
