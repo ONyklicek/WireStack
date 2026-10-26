@@ -165,6 +165,14 @@ final class FormRuntime
         $messages = $resolver->getMessages();
         $attributes = $resolver->getAttributes();
 
+        // Nothing to check is an answer, not a request for the host's own rules:
+        // Livewire reads `validate([])` as "use the component's rules()", so a form
+        // made only of display fields (Html, Placeholder) threw MissingRulesException
+        // on a host with none — and on a host with some, validated what it never showed.
+        if ($rules === []) {
+            return [];
+        }
+
         $livewire = $this->stateManager->getLivewire();
 
         if ($livewire !== null) {

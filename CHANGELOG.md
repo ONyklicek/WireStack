@@ -2,6 +2,18 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.3]
+
+### Fixed
+
+- **A modal form made only of display fields submits.** A form of `Html`, `Placeholder` and the like declares no
+  rules, and the form handed that empty list to Livewire's `validate()` — which reads an empty list as "use the
+  component's `rules()`". On a host with none the submit threw `MissingRulesException`; on a host with rules of its
+  own it validated properties the modal never showed. A form with nothing to check now returns without validating,
+  in an action modal and in a standalone form alike.
+- **A table action modal's footer actions carry `data-testid="modal-footer-action-{name}"`** and the action's
+  label as `aria-label`, as the documentation says and the action modal host already rendered.
+
 ## [2.9.2]
 
 ### Fixed

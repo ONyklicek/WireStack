@@ -54,3 +54,13 @@ it('gates each footer action\'s loading state on that action alone', function ()
         ->and($html)->toContain('wire:target="callModalFooterAction(&#039;reset&#039;)"')
         ->and($html)->not->toContain('wire:target="callModalFooterAction"');
 });
+
+it('names each footer action for browser tests, as the action modal host does', function () {
+    $html = renderModalFooterActions([
+        ModalFooterAction::make('preview')->label('Preview'),
+    ]);
+
+    expect($html)
+        ->toContain('data-testid="modal-footer-action-preview"')
+        ->toContain('aria-label="Preview"');
+});
