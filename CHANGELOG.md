@@ -2,6 +2,16 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.4]
+
+### Fixed
+
+- **A remote select lists only what the search found.** The `preload()` seed stayed at the top of the list while
+  the user typed, the term's matches merged in below it, so a shortlist answered for an empty term buried every
+  search. A typed term now lists the server's matches alone — the seed is the list again once the term is
+  cleared — and an answer for a term already typed over is dropped instead of listed. The selection keeps its
+  label on the trigger whether or not the term matches it.
+
 ## [2.9.3]
 
 ### Fixed
