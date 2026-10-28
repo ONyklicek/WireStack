@@ -118,7 +118,10 @@ Select::make('author_id')
   label(s) for the current selection, so the trigger stays readable even when the
   chosen option was never preloaded.
 - `preload()` eagerly seeds the remote list on render (runs the search callback with
-  an empty term) instead of waiting for the first keystroke.
+  an empty term) instead of waiting for the first keystroke. The seed is the list
+  while nothing is typed — so the callback can answer an empty term with a
+  shortlist (the most used, the most recent) — and a typed term lists only the
+  server's matches, never the seed above them.
 
 The host must expose the search endpoint — any `WithForms` component or a table
 action modal does. A [`BelongsToSelect`](belongs-to-select.md) gets relationship-driven

@@ -25,6 +25,12 @@ const wireSearchableSelect = (config = {}) => ({
     initialOptions: {},
     options: {},
     order: [],
+    // Remote search: the values the server answered for the current term, in
+    // its order. `options` stays the label map (seed + every result), so the
+    // trigger keeps reading a selection the term no longer matches, while the
+    // list shows what was searched for — never the seed above it. Null while
+    // nothing is typed: the seed (a `preload()`) is the list then.
+    remoteKeys: null,
     disabledValues: (config.disabledValues ?? []).map(String),
     placeholder: config.placeholder ?? '',
     selected: config.state,
@@ -85,8 +91,11 @@ const wireSearchableSelect = (config = {}) => ({
         this.loading = true
         this.activeIndex = -1
         try {
-            const results = await this.$wire.searchSelectOptions(this.statePath, search ?? '')
-            this.options = { ...this.initialOptions, ...(results ?? {}) }
+            const results = await this.$wire.searchSelectOptions(this.statePath, search ?? '') ?? {}
+            // An answer for a term already typed over would list the wrong matches.
+            if ((search ?? '') !== this.search) return
+            this.options = { ...this.initialOptions, ...results }
+            this.remoteKeys = this.search ? Object.keys(results) : null
         } finally {
             this.loading = false
         }
@@ -107,6 +116,10 @@ const wireSearchableSelect = (config = {}) => ({
 
     get filteredOptions() {
         // The server already narrowed remote results; never re-filter locally.
+        // Until the first answer arrives the list is empty (and loading), not the seed.
+        if (this.remote && this.search) {
+            return (this.remoteKeys ?? []).filter((value) => value in this.options).map((value) => [value, this.options[value]])
+        }
         if (this.remote || ! this.search) return this.orderedOptions
         const matches = searchMatcher(this.search)
         return this.orderedOptions.filter(([, label]) => matches(label))
@@ -145,6 +158,9 @@ const wireSearchableSelect = (config = {}) => ({
         if (! this.order.includes(String(detail.value))) this.order = [...this.order, String(detail.value)]
         this.initialOptions = { ...this.initialOptions, [detail.value]: detail.label }
         this.options = { ...this.options, [detail.value]: detail.label }
+        if (this.remoteKeys !== null && ! this.remoteKeys.includes(String(detail.value))) {
+            this.remoteKeys = [...this.remoteKeys, String(detail.value)]
+        }
     },
 
     /**
