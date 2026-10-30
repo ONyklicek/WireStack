@@ -41,6 +41,8 @@ you, so the lines above are for an application setting one up by hand.
 | `WIRE_AUDIT_ENABLED` | `true` | Core audit log |
 | `WIRE_AUDIT_USER_MODEL` | `App\Models\User` | Core audit log |
 | `WIRE_FORMS_UPLOAD_DISK` | `public` | Forms file upload |
+| `WIRE_TABLE_PREFERENCES_DRIVER` | `null` | Persistence driver for signed-in users' saved table preferences |
+| `WIRE_TABLE_PREFERENCES_GUEST_DRIVER` | `session` | Persistence driver for guests' saved table preferences |
 | `WIRE_MOBILE_SHEET` | `true` | Core mobile bottom-sheets |
 | `WIRE_MOBILE_BREAKPOINT` | `sm` | Core mobile sheet breakpoint |
 | `WIRE_MOBILE_NATIVE` | `false` | Browser-native selects and date/time inputs below the mobile breakpoint |
@@ -432,33 +434,79 @@ WIRE_FORMS_UPLOAD_DISK=s3
 
 See [Field Reference](../forms/fields/index.md) for field-specific options.
 
-## Table
+## Tables
 
-The `wire-table` config controls default table behavior and inline text input behavior.
+The `wire-table` config sets project-wide table defaults, inline text-input behavior,
+the table notification driver, and the preference drivers. A table's explicit
+configuration takes precedence over these defaults.
+
+The relevant keys are:
 
 ```php
-return [
-    'defaults' => [
-        'per_page' => 10,
-        'per_page_options' => [10, 25, 50, 100],
-        'searchable' => true,
-        'sortable' => true,
-        'hoverable' => true,
-        'striped' => false,
-    ],
+'defaults' => [
+    'per_page' => 10,
+    'per_page_options' => [10, 25, 50, 100],
+    'searchable' => true,
+    'sortable' => true,
+    'hoverable' => true,
+    'striped' => false,
+    'gestures' => null,              // [tl! focus:start]
+    'visible_layout_only' => true,
+    'inactive_rows' => null,         // [tl! focus:end]
+],
 
-    'text_input' => [
-        'save_on_blur' => true,
-        'save_on_enter' => true,
-        'live_validation' => false,
-        'live_debounce' => 500,
-    ],
+'text_input' => [
+    'save_on_blur' => true,
+    'save_on_enter' => true,
+    'live_validation' => false,
+    'live_debounce' => 500,
+],
 
-    'notification_driver' => null,
-];
+'notification_driver' => null,
+
+'preferences' => [
+    'default' => env('WIRE_TABLE_PREFERENCES_DRIVER', 'null'),
+    'guest' => env('WIRE_TABLE_PREFERENCES_GUEST_DRIVER', 'session'),
+],
 ```
 
-`notification_driver` may be left as `null`; the table then uses the driver `wire-core.notifications.default` names. Set it to a driver class only when tables need a different one.
+`per_page` and `per_page_options` set the initial page size and the choices in the
+page-size selector. Search, sorting, hover highlighting and striping are enabled
+or disabled with their respective keys.
+
+`gestures` accepts `null`, `true`, `false`, or a map of capability names to
+booleans. `null` keeps the built-in defaults; for example, keyboard navigation,
+range selection and drag selection remain opt-in. A table's `gestures()` call
+takes precedence. See [The Gesture Layer](../table/gestures.md).
+
+`visible_layout_only` defaults to `true`. On a table using `stackedOnMobile()`,
+the server emits only the layout selected by the browser's viewport cookie; when
+that cookie is unavailable, it emits both layouts. Set the value to `false` if
+client-side code also needs to inspect the hidden layout. See
+[Advanced Features](../table/advanced.md).
+
+`inactive_rows` sets the project-wide appearance and permissions for rows
+declared inactive with `rowInactive()`. A value of `null` keeps the built-in
+defaults; a per-table configurator can override individual options. See
+[Inactive Records](../table/inactive-records.md).
+
+The `text_input` values are the defaults for `TextInputColumn`: save on blur or
+Enter, live validation, and its debounce interval in milliseconds. Per-column
+configuration takes precedence.
+
+`notification_driver` may remain `null`, in which case tables use the driver
+configured by `wire-core.notifications.default`. Set it to a driver class only
+when tables need a different one.
+
+`preferences.default` selects storage for signed-in users; `preferences.guest`
+selects it for guests. A table opts in to remembering column visibility and its
+expand-all/collapse-all choice with `rememberColumns('stable-key')`; named saved
+views use the same driver. Built-in aliases are `null` (no persistence),
+`session`, and `database`; aliases map to driver classes under
+`preferences.drivers`. The database driver uses the `wire_preferences` table from
+`wire-core`; publish and run its migration with
+`php artisan vendor:publish --tag="wire-core::migrations"`. See
+[Advanced Features](../table/advanced.md).
 
 See [Table Overview](../table/overview.md), [Columns](../table/columns/index.md), and [Exports](../table/exports.md).
 
@@ -646,7 +694,8 @@ each one is covered where the thing it declares is explained:
 | `discover` | Directories to find resources, dashboards and wire-panels pages in — `'resources' => [namespace => directory]`, off until named | [Resources](../panels/resources.md#discovering-them) |
 | `tenancy` | `enabled` and the `column` a tenant scope is applied on | [Authorization](authorization.md) |
 
-`config/wire-table.php` has one more: `preferences` picks the driver a table's
-per-user column order, visibility and page size are stored in (`null`, `session`
-or `database`, with `guest` naming the driver for a visitor who is not signed
-in). See [Advanced Features](../table/advanced.md).
+`config/wire-table.php` has one more: `preferences` selects where opted-in tables
+store per-user column visibility and the expand-all/collapse-all choice, and
+which driver named table views use (`null`, `session` or `database`); `guest`
+selects the driver for visitors who are not signed in. See
+[Advanced Features](../table/advanced.md).
