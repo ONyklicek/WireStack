@@ -65,7 +65,6 @@ docs/sortable/column-sorting.md#a07eec1a
 docs/sortable/overview.md#68e94737
 docs/sortable/row-sorting.md#ce18d507
 docs/sortable/row-sorting.md#90dda02b
-docs/start/configuration.md#2d761f4d
 docs/start/configuration.md#f86e97ff
 docs/start/cookbook.md#42f703d1
 docs/start/cookbook.md#4b6e388d

@@ -5,18 +5,19 @@ summary: Vlastnická vrstva — jedna entita deklarovaná jednou, stránky, kter
 
 # Panely
 
-`wire-panels` je vrstva nad komponentami. Tabulka, formulář a infolist jsou
-nezávislé primitivy, které o sobě navzájem nevědí; tenhle balíček přidává třídu,
-která říká, že **je to všechno jedna entita**, a stránky, menu a routy, které z
-toho jednoho prohlášení plynou.
+`wire-panels` propojuje jednotlivé komponenty. Tabulka, formulář a infolist
+fungují samostatně; tento balíček umožňuje popsat jednu aplikační entitu
+(`resource`) na jediném místě a propojit ji s tabulkami, formuláři, stránkami,
+nabídkou a routami.
 
 ```bash
 composer require nyoncode/wire-panels
 ```
 
-Nic tenhle balíček nevyžaduje. Aplikace, která své tabulky a formuláře vykresluje
-z vlastních Livewire komponent, ho nikdy nenainstaluje a všechno pod ním funguje
-dál — což je zkouška toho, jestli je vlastnická vrstva opravdu volitelná.
+Ostatní balíčky na `wire-panels` nezávisí. Pokud aplikace vykresluje tabulky
+a formuláře ve vlastních komponentách Livewire, nemusíte tento balíček
+instalovat; ostatní části budou dál fungovat samostatně. `wire-panels` tak
+zůstává skutečně volitelnou nadstavbou.
 
 ## Jak to funguje
 

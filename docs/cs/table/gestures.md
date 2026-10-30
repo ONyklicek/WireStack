@@ -5,13 +5,14 @@ summary: Tabulka, která se chová jako desktopová aplikace — šipky, rozsahy
 
 # Vrstva gest
 
-Tabulka wire-table se umí chovat jako desktopová aplikace: šipky procházejí
-řádky, `Shift` roztahuje rozsah, myš označuje tažením přes checkboxový sloupec,
-pravý klik otevře menu řádku, `?` vysvětlí zkratky a fill handle roztáhne jednu
-hodnotu přes mnoho buněk.
+Tabulka wire-table podporuje ovládání známé z desktopových aplikací: šipkami lze
+procházet řádky, klávesou `Shift` rozšířit výběr, tažením přes sloupec
+zaškrtávacích polí vybrat více řádků, pravým tlačítkem otevřít nabídku řádku,
+klávesou `?` zobrazit klávesové zkratky a úchytem pro vyplnění zkopírovat
+hodnotu do dalších buněk.
 
-Pro back office je to přesně ono. Pro veřejný výpis je to obvykle špatně —
-zvýrazněný řádek a zabavený pravý klik tam v lepším případě jen ruší.
+Toto ovládání se hodí zejména pro interní administraci. U veřejných výpisů může
+být rušivé, proto je ve výchozím stavu vypnuté.
 
 Je to proto jeden vypínač a tabulka začíná na té tiché straně:
 
@@ -24,9 +25,9 @@ většina stránek chce.
 
 ## Co tabulka dostane, když si neřekne
 
-**Každý způsob ovládání řádku je vypnutý, dokud si o něj neřeknete.** Tři
-schopnosti mění chování tabulky vůči návštěvníkovi, který ji ovládat nezamýšlel,
-a všechny tři čekají:
+**Ovládání řádků je ve výchozím stavu vypnuté.** Jednotlivé funkce aktivujete
+pouze tehdy, když je vaše tabulka potřebuje. Tím zůstane běžné ovládání pro
+návštěvníky jednoduché:
 
 - **Klávesová navigace** dá řádky do pořadí tabulátoru, označí aktivní řádek
   a začne odpovídat na šipky a `mod`+klávesu.

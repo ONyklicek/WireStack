@@ -67,14 +67,15 @@ funguje offline i pod přísnou Content Security Policy.
 
 ### Doručení JavaScriptu
 
-Jako u každého wireStack balíčku se sortable bundle doručuje dvěma cestami a stačí
-kterákoli z nich:
+Stejně jako ostatní balíčky WireStack může Sortable načíst svůj JavaScript dvěma
+způsoby. Stačí použít jeden z nich:
 
 - pohled sortable tabulky ho vypíše sám, když se vykreslí, a
 - `@wireStackScripts` v `<head>` vašeho layoutu ho vypíše na každé stránce.
 
-Direktivu přidejte, pokud vaše aplikace naviguje přes `wire:navigate` — proč je právě
-umístění v layoutu to, které přežije cestu cachovaného Zpět/Vpřed, vysvětluje
+Direktivu přidejte, pokud aplikace používá navigaci přes `wire:navigate`.
+Umístění v layoutu zajistí, že skript zůstane dostupný i po navigaci pomocí
+mezipaměti prohlížeče Zpět/Vpřed. Podrobnosti najdete v části
 [Začínáme → JavaScriptové assety](../start/getting-started.md#javascriptove-assety).
 
 ### `sortablejs_cdn`

@@ -198,19 +198,20 @@ Mřížka vykreslí skeleton kartu o velikosti widgetu, `wire:init` zavolá na
 hostiteli `loadWidget()` a odpověď nese markup toho jednoho widgetu jako
 `wire:partial` oblast. Stránka je interaktivní dřív, než se číslo vrátí.
 
-**Jednou načteno, načteno.** Hostitel si zapíše, které widgety už byly staženy,
-takže pozdější tik pollingu, změna filtru nebo plný render nakreslí skutečný
-widget, místo aby spadly zpátky na skeleton.
+**Po načtení zůstane widget načtený.** Hostitel si zapamatuje, které widgety už
+načetl. Při dalším automatickém obnovení, změně filtru nebo novém vykreslení tak
+zobrazí skutečný widget, nikoli znovu jeho zástupnou podobu.
 
-**Placeholder je karta, ne spinner** — mřížka už se rozhodla pro rozložení a
-placeholder nižší než jeho widget způsobí, že stránka poskočí, až ten skutečný
-dorazí. Nadpis se kreslí doopravdy, protože ho server už zná, a skeletonové
-pruhy nesou `aria-busy` s živou oblastí oznamující čekání.
+**Místo indikátoru načítání se zobrazí karta** — mřížka už má určené rozložení
+a příliš nízká zástupná karta by při načtení widgetu způsobila poskočení stránky.
+Nadpis se zobrazí hned, protože ho server zná předem. Zástupné pruhy navíc
+pomocí `aria-busy` a živé oblasti oznamují, že se obsah načítá.
 
-> **Sahejte po tom jako po posledním.** Pravidlo frameworku je udělat render
-> *levným*, ne ho odložit: eager HTML zachová celý DOM, nepřidá žádnou latenci
-> při otevření a nepotřebuje překreslení na klientovi. `lazy()` je pro widget,
-> který je **pomalý**, ne pro ten, který je jen velký.
+> **Odložené vykreslení použijte až jako poslední možnost.** Framework se snaží
+> vykreslovat obsah rychle, místo aby jeho zobrazení odkládal: HTML připravené
+> předem zachová celý DOM, nezpomalí otevření stránky a nevyžaduje další
+> vykreslení v prohlížeči. `lazy()` se hodí pro widget, který se načítá pomalu,
+> ne pouze pro widget s velkým obsahem.
 
 ---
 

@@ -5,9 +5,9 @@ summary: Čtrnáct balíčků, k čemu který je, na čem závisí a nejkratší
 
 # Mapa projektu
 
-Wire je ekosystém Livewire balíčků rozdělený do čtrnácti composer balíčků.
-Nainstalujte si jen ten, který odpovídá tomu, co stavíte; jeho závislosti se
-dotáhnou samy a nic nad ním se vám neinstaluje.
+Wire tvoří čtrnáct samostatných balíčků Composeru pro Laravel a Livewire.
+Nainstalujte pouze ty, které váš projekt potřebuje. Composer k nim doplní
+požadované závislosti, ale nepřidá žádné volitelné nadstavby.
 
 ## Balíčky
 
@@ -17,9 +17,9 @@ dotáhnou samy a nic nad ním se vám neinstaluje.
 | Forms | `nyoncode/wire-forms` | Schéma formuláře, komponenty polí, validace, životní cyklus ukládání | Core |
 | Table | `nyoncode/wire-table` | Tabulky, sloupce, filtry, akce, inline editace, exporty, gesta | Core, Forms |
 | Sortable | `nyoncode/wire-sortable` | Drag & drop řazení řádků a sloupců | Core, Table |
-| Panels | `nyoncode/wire-panels` | Vlastnická vrstva: resource, jejich stránky a routovací makro | Core, Forms, Table |
-| Admin | `nyoncode/wire-admin` | Volitelný shell: layout a sidebar nad katalogem | Core, Panels |
-| Suite | `nyoncode/wire-suite` | Celý stack v jednom require plus `php artisan wire:install` | všechno výše |
+| Panels | `nyoncode/wire-panels` | Registrace aplikačních entit (resources), jejich stránek a rout | Core, Forms, Table |
+| Admin | `nyoncode/wire-admin` | Volitelné rozhraní administrace s hlavním rozvržením a postranním menu | Core, Panels |
+| Suite | `nyoncode/wire-suite` | Všechny základní balíčky v jednom příkazu Composeru a nastavení přes `php artisan wire:install` | všechno výše |
 | Users | `nyoncode/wire-module-users` | Hotová uživatelská oblast, s rolemi tam, kde je aplikace má | Panels |
 | Auth | `nyoncode/wire-module-auth` | Odhlášené obrazovky nad Laravel Fortify | Core |
 | Settings | `nyoncode/wire-module-settings` | Typovaná nastavení aplikace, s úložištěm i obrazovkou | Panels |
@@ -29,16 +29,16 @@ dotáhnou samy a nic nad ním se vám neinstaluje.
 | Companies | `nyoncode/wire-module-tenants` | Registrace firmy, profil a členové nad tenantovou zónou | Panels |
 | Boost | `nyoncode/wire-boost` | AI nástroje: MCP server, guidelines a skills pro agenty | Core |
 
-Graf má jeden směr. `wire-panels` smí jmenovat každý komponentový balíček a žádný
-z nich nesmí jmenovat jeho; `wire-admin` sedí nad panely a nic ho nevyžaduje;
-modul sedí nad obojím. Právě to dělá každou vrstvu odebratelnou — proč je ten směr
-záměrem, vysvětlují [Panely](../panels/overview.md).
+Závislosti vedou jedním směrem: `wire-panels` může používat základní balíčky,
+nikoli naopak. `wire-admin` staví na panelech, ale není povinný; hotové moduly
+můžete přidat podle potřeb aplikace. Díky tomu si vyberete jen potřebné části.
+Více o této architektuře vysvětluje stránka [Panely](../panels/overview.md).
 
 ## Instalační cesty
 
 | Cíl | Instalace |
 |-----|-----------|
-| Celý admin, nastavený interaktivně | `composer require nyoncode/wire-suite` a pak `php artisan wire:install` |
+| Kompletní administrace s automatickým nastavením | `composer require nyoncode/wire-suite` a pak `php artisan wire:install` |
 | Postavit tabulkové UI | `composer require nyoncode/wire-table` |
 | Jen samostatné formuláře | `composer require nyoncode/wire-forms` |
 | Přidat řazení řádků nebo sloupců | `composer require nyoncode/wire-sortable` |

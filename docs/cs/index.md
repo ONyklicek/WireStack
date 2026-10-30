@@ -1,23 +1,24 @@
 ---
 order: 1
-summary: Rozcestník dokumentace Wire — dva povrchy, kvůli kterým sem většina lidí přichází, z čeho jsou postavené a vrstvy, které z nich složí celý admin.
+summary: Postavte formuláře, datové tabulky a administraci pro Laravel a Livewire. Vyberte si potřebné balíčky a rozšiřujte aplikaci podle jejích potřeb.
 ---
 
 # Dokumentace Wire
 
-Wire je ekosystém Livewire komponent pro Laravel: tabulka, formulářový systém a
-vrstvy, které z nich udělají admin — vlastník pro každou entitu, shell, ve kterém
-se vykreslí, a hotové oblasti, které se instalují místo psaní.
+Wire je sada balíčků pro Laravel a Livewire, se kterými postavíte tabulky,
+formuláře i kompletní administraci. Začněte jen s tím, co váš projekt potřebuje;
+další moduly můžete přidat později — například správu uživatelů, přihlašování,
+nastavení nebo knihovnu médií.
 
 ```bash
 composer require nyoncode/wire-suite
 php artisan wire:install
 ```
 
-Nic vás k téhle cestě nenutí. Každý balíček níž se instaluje samostatně a celý
-stack nad `wire-core` je volitelný — viz [Instalace Wire](start/installation.md)
-pro setup na jeden příkaz a [Mapa projektu](start/project-map.md) pro to, co na
-čem závisí.
+Nemusíte instalovat vše najednou. Každý balíček lze přidat samostatně a všechny
+nadstavbové části nad `wire-core` jsou volitelné. [Instalace Wire](start/installation.md)
+vás provede automatickým nastavením; [Mapa projektu](start/project-map.md)
+ukazuje, jak na sebe balíčky navazují.
 
 ## Začínáme
 
@@ -37,8 +38,8 @@ pro setup na jeden příkaz a [Mapa projektu](start/project-map.md) pro to, co n
 
 ## Formuláře
 
-`wire-forms` — schéma polí deklarované v PHP, navázané na Livewire hostitele nebo
-použité samostatně.
+`wire-forms` — formuláře definované v PHP, které můžete připojit ke komponentě
+Livewire nebo používat samostatně.
 
 | Dokument | Popis |
 |----------|-------|
@@ -51,8 +52,8 @@ použité samostatně.
 
 ## Tabulka
 
-`wire-table` — povrch pro výpisy: sloupce, filtry, akce, inline editace, exporty a
-vrstva gest.
+`wire-table` — tabulky pro přehledné zobrazení a správu dat: sloupce, filtry,
+akce, úpravy přímo v řádcích, exporty a ovládání klávesnicí či myší.
 
 | Dokument | Popis |
 |----------|-------|
@@ -71,8 +72,8 @@ vrstva gest.
 
 ## Core
 
-`wire-core` — z čeho jsou oba povrchy postavené a povrchy, které vlastní seznam
-ani formulář nemají.
+`wire-core` — společný základ pro formuláře a tabulky i další funkce, které
+nepatří výhradně k jednomu z těchto rozhraní.
 
 | Dokument | Popis |
 |----------|-------|
@@ -91,8 +92,8 @@ ani formulář nemají.
 
 ## Panely
 
-`wire-panels` — vlastnická vrstva: jedna entita deklarovaná jednou a k ní
-stránky, menu a routy.
+`wire-panels` — registrace aplikačních entit a jejich propojení se stránkami,
+nabídkou a routami.
 
 | Dokument | Popis |
 |----------|-------|
@@ -105,7 +106,8 @@ stránky, menu a routy.
 
 ## Admin
 
-`wire-admin` — volitelný shell. Všechno ostatní funguje i bez něj.
+`wire-admin` — volitelné rozhraní administrace s hlavním rozvržením a postranním
+menu. Ostatní balíčky fungují i bez něj.
 
 | Dokument | Popis |
 |----------|-------|

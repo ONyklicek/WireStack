@@ -6,21 +6,23 @@ summary: Přerovnatelné řádky a sloupce pro wire-table — kde se každé po�
 
 # Wire Sortable
 
-Přeřaditelné řádky a sloupce pro [wire-table](../table/overview.md). Řazení řádků se ukládá do databázového sloupce. Řazení sloupců se do databáze ukládá zvlášť pro každého uživatele, model a komponentu tabulky.
+Balíček [wire-table](../table/overview.md) umožňuje měnit pořadí řádků i sloupců.
+Pořadí řádků se ukládá do databázového sloupce, zatímco pořadí sloupců se
+ukládá samostatně pro každou kombinaci uživatele, modelu a komponenty tabulky.
 
 Postaveno na [SortableJS](https://sortablejs.github.io/Sortable/) a [Alpine.js](https://alpinejs.dev/).
 
 ## Funkce
 
-- **Řazení řádků** -- toggle tlačítko přepne tabulku do reorder režimu; táhněte řádky pro změnu jejich pozice, ukládá se do databázového sloupce
-- **Vždy zapnutý reorder režim** -- volitelně přeskočte toggle a nechte drag handly viditelné neustále
-- **Řazení sloupců** -- táhněte hlavičky sloupců pro přeuspořádání; pořadí se v databázi ukládá zvlášť pro každého uživatele, model a komponentu tabulky
-- **Reorder režim** -- v reorder režimu jsou stránkování, řazení, hledání a filtry vypnuté, aby uživatel mohl volně táhnout přes celý dataset
-- **Stránkované během reorderingu** -- volitelně nechte stránkování zapnuté během reorder režimu
-- **Hooky životního cyklu** -- `beforeReorder()` / `afterReorder()` pro autorizaci, cachování, události
-- **Podpora více tabulek** -- více table komponent nad stejným modelem dostane nezávislá pořadí sloupců
-- **Dark mode** -- všechny drag indikátory podporují světlý a tmavý motiv
-- **Livewire 4 kompatibilní** -- přežije morphy, stránkování a změny filtrů
+- **Řazení řádků** — přepínač aktivuje režim změny pořadí; přetažením řádků změníte jejich pozici a nové pořadí se uloží do databázového sloupce
+- **Trvale aktivní režim změny pořadí** — přepínač můžete vynechat a úchyty pro přetažení zobrazovat stále
+- **Řazení sloupců** — přetažením záhlaví sloupců změníte jejich pořadí; pořadí se v databázi ukládá samostatně pro každého uživatele, model a komponentu tabulky
+- **Režim změny pořadí** — stránkování, řazení, vyhledávání a filtry se v tomto režimu vypnou, aby uživatel mohl přesouvat řádky mezi všemi záznamy
+- **Stránkování při změně pořadí** — stránkování můžete v tomto režimu ponechat zapnuté
+- **Metody životního cyklu** — `beforeReorder()` / `afterReorder()` pro autorizaci, ukládání do mezipaměti a události
+- **Podpora více tabulek** — více tabulkových komponent nad stejným modelem může mít nezávislé pořadí sloupců
+- **Tmavý režim** — všechny indikátory přetažení podporují světlý i tmavý motiv
+- **Kompatibilita s Livewire 4** — zachovává řazení při aktualizaci rozhraní, stránkování i změně filtrů
 
 ## Typické nastavení
 

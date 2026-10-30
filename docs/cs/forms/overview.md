@@ -5,9 +5,10 @@ summary: "Formulářový systém: schéma deklarované v PHP, navázané na Live
 
 # Wire Forms
 
-Samostatný systém formulářů pro Laravel Livewire. Funguje nezávisle nebo s Wire Table.
+Formulářový systém pro Laravel a Livewire. Můžete ho používat samostatně nebo
+společně s Wire Table.
 
-> Potřebujete záznam **zobrazit** read-only místo editace? Viz [Infolisty](../core/infolists/index.md) — stejné schéma a layout, jen se zobrazovacími entries místo vstupních polí.
+> Potřebujete záznam pouze zobrazit, nikoli upravovat? Podívejte se na [infolisty](../core/infolists/index.md). Používají stejné schéma a rozložení jako formuláře, ale místo vstupních polí obsahují zobrazovací položky.
 
 ## Instalace
 

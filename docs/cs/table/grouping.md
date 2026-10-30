@@ -120,11 +120,11 @@ z nich selhávají tiše — fill, který nic nezapíše, rozsah, který přesko
 Viditelné zůstane to, kvůli čemu má smysl sbalenou skupinu číst: její hlavička
 a řádek mezisoučtu. Dvacet faktur se sbalí a součet za zákazníka je pořád vidět.
 
-Sbalená množina je klíčovaná hodnotou skupiny, ne řádky v ní, takže skupina
-zůstane sbalená, i když se její obsah změní — filtr, který vymění všechny řádky
-ve skupině `Overdue`, ji nechá sbalenou, což je přesně to, o co uživatel žádal.
-Žije ve stavu tabulky pod `rows.collapsedGroups`, takže přežije Livewire round
-trip a je jednou z věcí, které nese [uložený pohled](advanced.md#ulozene-pohledy).
+Stav sbalení se ukládá podle hodnoty skupiny, nikoli podle jednotlivých řádků.
+Skupina proto zůstane sbalená i po změně svého obsahu — například když filtr
+nahradí všechny řádky ve skupině `Overdue`. Stav se ukládá do stavu tabulky pod
+`rows.collapsedGroups`, takže přetrvá i po požadavku Livewire a uloží se spolu
+s [uloženým pohledem](advanced.md#ulozene-pohledy).
 
 ```php
 use Livewire\Component;

@@ -5,16 +5,17 @@ summary: "Co žije ve wire-core, jak jsou jeho moduly navrstvené a která strá
 
 # Wire Core
 
-`wire-core` je to, z čeho je postavené všechno ostatní. Neveze žádnou tabulku ani
-formulář: veze slovník, kterým obojí mluví — akce, modaly, notifikace, ikony,
-barvy, schéma — plus povrchy, které vlastní seznam ani formulář nepotřebují.
+`wire-core` poskytuje společný základ pro ostatní balíčky. Neobsahuje tabulky ani
+formuláře; nabízí sdílené funkce, například akce, modaly, notifikace, ikony,
+barvy a schéma. Najdete v něm také komponenty a funkce, které nepotřebují vlastní
+tabulku ani formulář.
 
 ```bash
 composer require nyoncode/wire-core
 ```
 
-Každý další balíček ho vyžaduje a on nevyžaduje žádný z nich. Proto sem patří
-concern, který je opravdu sdílený — a ne do balíčku, který ho náhodou potřeboval
+Každý další balíček vyžaduje `wire-core`, ale `wire-core` nevyžaduje žádný z nich.
+Sdílené funkce proto patří sem, nikoli do balíčku, který je začal používat jako
 první.
 
 ## Jak to funguje
@@ -32,10 +33,10 @@ Dva povrchy z L2, které si potřebují říct, to udělají přes kontrakt ve
 používá infolisty a žádné notifikace, nenačte notifikační manager — a právě proto
 by se kterýkoli z nich dal vyčlenit do vlastního balíčku bez přepisování.
 
-Praktický důsledek pro čtenáře: **schopnost, která se objevuje na dvou místech, tu
-má jednoho vlastníka.** Barva je `HasColor`, ikona `HasIcon`, velikost `HasSize` —
-a badge sloupec, badge entry i notifikace si tu svou řeší stejným kódem, takže se
-ten slovník vyplatí naučit jednou.
+Prakticky to znamená, že každá sdílená funkce má v kódu jednoho vlastníka. Barvy
+spravuje `HasColor`, ikony `HasIcon` a velikosti `HasSize`; sloupce s odznaky,
+položky infolistů i notifikace tak používají stejné rozhraní. Tento společný
+způsob práce se proto stačí naučit jednou.
 
 ## V této sekci
 

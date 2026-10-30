@@ -30,6 +30,10 @@ php artisan vendor:publish --tag=wire-module-tenants::config
 
 Potřebujete jen tagy balíčků, které jste nainstalovali.
 
+Instalátor každého modulu (`php artisan wire-module-users:install` a podobně)
+publikuje jeho konfiguraci automaticky. Příkazy výše jsou určené aplikacím, které
+si konfiguraci nastavují ručně.
+
 ## Proměnné prostředí
 
 | Proměnná | Výchozí | Používá |
@@ -39,6 +43,8 @@ Potřebujete jen tagy balíčků, které jste nainstalovali.
 | `WIRE_AUDIT_ENABLED` | `true` | Core audit log |
 | `WIRE_AUDIT_USER_MODEL` | `App\Models\User` | Core audit log |
 | `WIRE_FORMS_UPLOAD_DISK` | `public` | Forms upload souborů |
+| `WIRE_TABLE_PREFERENCES_DRIVER` | `null` | Driver preferencí tabulek pro přihlášené uživatele |
+| `WIRE_TABLE_PREFERENCES_GUEST_DRIVER` | `session` | Driver preferencí tabulek pro hosty |
 | `WIRE_MOBILE_SHEET` | `true` | Core mobilní bottom-sheety |
 | `WIRE_MOBILE_BREAKPOINT` | `sm` | Breakpoint mobilního sheetu |
 | `WIRE_MOBILE_NATIVE` | `false` | Nativní selecty a vstupy data/času prohlížeče pod mobilním breakpointem |
@@ -427,33 +433,81 @@ WIRE_FORMS_UPLOAD_DISK=s3
 
 Volby specifické pro pole viz [Reference polí](../forms/fields/index.md).
 
-## Table
+## Tabulky
 
-Konfigurace `wire-table` řídí výchozí chování tabulky a chování inline text inputu.
+Konfigurace `wire-table` určuje výchozí chování tabulek v celém projektu,
+nastavení textových polí upravovaných přímo v tabulce, ovladač notifikací
+a způsob ukládání uživatelských voleb. Výslovné nastavení konkrétní tabulky má
+před těmito výchozími hodnotami přednost.
+
+Jde o nejdůležitější klíče:
 
 ```php
-return [
-    'defaults' => [
-        'per_page' => 10,
-        'per_page_options' => [10, 25, 50, 100],
-        'searchable' => true,
-        'sortable' => true,
-        'hoverable' => true,
-        'striped' => false,
-    ],
+'defaults' => [
+    'per_page' => 10,
+    'per_page_options' => [10, 25, 50, 100],
+    'searchable' => true,
+    'sortable' => true,
+    'hoverable' => true,
+    'striped' => false,
+    'gestures' => null,              // [tl! focus:start]
+    'visible_layout_only' => true,
+    'inactive_rows' => null,         // [tl! focus:end]
+],
 
-    'text_input' => [
-        'save_on_blur' => true,
-        'save_on_enter' => true,
-        'live_validation' => false,
-        'live_debounce' => 500,
-    ],
+'text_input' => [
+    'save_on_blur' => true,
+    'save_on_enter' => true,
+    'live_validation' => false,
+    'live_debounce' => 500,
+],
 
-    'notification_driver' => null,
-];
+'notification_driver' => null,
+
+'preferences' => [
+    'default' => env('WIRE_TABLE_PREFERENCES_DRIVER', 'null'),
+    'guest' => env('WIRE_TABLE_PREFERENCES_GUEST_DRIVER', 'session'),
+],
 ```
 
-`notification_driver` může zůstat jako `null`; tabulka pak použije driver, který určuje `wire-core.notifications.default`. Nastavte ho na třídu driveru jen když tabulky potřebují jiný.
+`per_page` a `per_page_options` určují výchozí počet řádků na stránku a možnosti
+ve voliči velikosti stránky. Klíče pro vyhledávání, řazení, zvýraznění při najetí
+kurzorem a pruhování zapínají nebo vypínají příslušné funkce.
+
+`gestures` přijímá `null`, `true`, `false` nebo mapu názvů funkcí na booleovské
+hodnoty. `null` zachovává vestavěné výchozí chování; například navigace klávesnicí,
+výběr rozsahu i výběr tažením zůstávají vypnuté, dokud je výslovně nezapnete. Volání
+`gestures()` na konkrétní tabulce má přednost. Viz [Vrstva gest](../table/gestures.md).
+
+`visible_layout_only` je ve výchozím stavu `true`. U tabulky používající
+`stackedOnMobile()` server vykreslí pouze rozvržení určené cookie s informací o
+šířce obrazovky; pokud cookie chybí, vykreslí obě rozvržení. Nastavte `false`,
+pokud potřebuje klientský kód pracovat i se skrytým rozvržením. Viz
+[Pokročilé funkce](../table/advanced.md).
+
+`inactive_rows` určuje vzhled a oprávnění řádků označených metodou
+`rowInactive()` v celém projektu. Hodnota `null` zachová vestavěné výchozí
+chování; konfigurátor konkrétní tabulky může změnit jednotlivé volby. Viz
+[Neaktivní záznamy](../table/inactive-records.md).
+
+Hodnoty v `text_input` jsou výchozím nastavením pro `TextInputColumn`: ukládání
+při opuštění pole nebo stisku Enter, průběžná validace a prodleva před její
+aktualizací v milisekundách. Nastavení konkrétního sloupce má přednost.
+
+Pokud `notification_driver` ponecháte jako `null`, tabulky použijí ovladač
+nastavený v `wire-core.notifications.default`. Vlastní třídu ovladače zadejte
+jen tehdy, když mají tabulky používat jiný způsob odesílání notifikací.
+
+`preferences.default` vybírá úložiště pro přihlášené uživatele,
+`preferences.guest` pro nepřihlášené návštěvníky. Ukládání zapnete pro konkrétní
+tabulku metodou `rememberColumns('stable-key')`. Uloží se viditelnost sloupců
+a volba, zda mají být podřádky rozbalené, nebo sbalené. Pojmenované uložené
+pohledy používají stejné úložiště. Dostupné ovladače jsou `null` (bez ukládání),
+`session` a `database`; jejich třídy najdete v `preferences.drivers`.
+Databázový ovladač používá tabulku `wire_preferences` z `wire-core`; migraci
+publikujte a spusťte příkazem
+`php artisan vendor:publish --tag="wire-core::migrations"`. Viz
+[Pokročilé funkce](../table/advanced.md).
 
 Viz [Přehled tabulek](../table/overview.md), [Sloupce](../table/columns/index.md) a [Exporty](../table/exports.md).
 
@@ -641,7 +695,8 @@ popsaný tam, kde se vysvětluje věc, kterou deklaruje:
 | `discover` | Adresáře, ve kterých hledat resource, dashboardy a stránky wire-panels — `'resources' => [namespace => adresář]`, vypnuté, dokud se nic nepojmenuje | [Resources](../panels/resources.md#jak-je-najit-samy) |
 | `tenancy` | `enabled` a `column`, na který se aplikuje tenant scope | [Autorizace](authorization.md) |
 
-`config/wire-table.php` má ještě jeden: `preferences` volí driver, do kterého se
-ukládá pořadí sloupců pro každého uživatele, jejich viditelnost a velikost stránky
-(`null`, `session` nebo `database`, přičemž `guest` pojmenovává driver pro
-nepřihlášeného návštěvníka). Viz [Pokročilé funkce](../table/advanced.md).
+`config/wire-table.php` obsahuje také nastavení `preferences`. Určuje úložiště
+viditelnosti sloupců a volby rozbalení podřádků u tabulek, které ukládání zapnou,
+a ovladač pro pojmenované pohledy (`null`, `session` nebo `database`). Klíč
+`guest` určuje ovladač pro nepřihlášené návštěvníky. Viz
+[Pokročilé funkce](../table/advanced.md).

@@ -5,7 +5,8 @@ summary: "Tabulkový povrch: hostitelský trait, dotaz, který staví, a základ
 
 # Wire Table
 
-Tabulková Livewire komponenta na enterprise úrovni pro Laravel. Závisí na `wire-core` a `wire-forms`.
+Tabulková komponenta pro Laravel a Livewire pro vyhledávání, řazení, filtrování
+a hromadnou správu záznamů. Vyžaduje balíčky `wire-core` a `wire-forms`.
 
 ## Instalace
 

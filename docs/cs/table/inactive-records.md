@@ -150,7 +150,7 @@ Zbylé dvě věci jdou vypnout, když je neaktivní záznam opravdu netečný.
 Zaškrtávátko řádku se stane `inert` (nejen neklikatelné — vypadne i z pořadí
 tabulátoru), „vybrat stránku“ i zaškrtávátko v hlavičce řádek přeskočí a
 podvržené přepnutí je odmítnuto. Odškrtnout jde vždycky, takže řádek zamčený *až
-poté*, co byl vybrán, jde ze výběru pořád odebrat.
+poté*, co byl vybrán, lze z výběru pořád odebrat.
 
 Jedno omezení, a to upřímné: výběr **„vybrat vše odpovídající“** je dotaz, ne
 seznam — teprve to umožňuje vybrat 128 000 řádků — a predikát napsaný v PHP do

@@ -142,10 +142,10 @@ Importér zvládá UTF-8 BOM, prázdné řádky a řádky s méně/více buňkam
 
 ## Import na frontě
 
-Import byl už předtím cesta dovnitř, výsledek ven — přesun na frontu proto v jeho
-pipeline nemění nic. Job přidává ty tři věci, které si od requestu vypůjčit
-nemůže: soubor, který ho přežije, výsledek, který má kam jít, a selhání, které je
-vidět.
+Import už předtím přijímal soubor a vracel výsledek. Přesun do fronty proto
+nemění jeho základní chování. Úloha pouze zajistí tři věci, které nelze převzít
+z původního požadavku: soubor dostupný i po skončení požadavku, místo pro uložení
+výsledku a způsob, jak oznámit případné selhání.
 
 ```php
 public function importInBackground(): void
@@ -161,10 +161,10 @@ public function importInBackground(): void
 worker může být klidně jiný stroj a dočasný soubor Livewire tam v tu chvíli
 nebude.
 
-Výsledek přijde jako notifikace — počet naimportovaných a odmítnutých řádků —
-protože import na frontě nemá návratovou hodnotu. Běh, který nějaké řádky
-odmítl, hlásí **varování**, ne úspěch: import, který potichu zahodil řádek, je
-přesně ten druh úspěchu, o kterém je lepší vědět.
+Výsledek se zobrazí jako notifikace s počtem importovaných a odmítnutých řádků,
+protože import spuštěný na pozadí nemá návratovou hodnotu. Pokud byly některé
+řádky odmítnuty, import oznámí **varování**, nikoli úspěch. Uživatel tak vždy ví,
+že část dat nebyla importována.
 
 **Chybějící soubor job položí.** Čtečka CSV bere nečitelnou cestu jako „žádné
 řádky“, což je správně, když se uživatel dívá, a lež, když běží fronta:

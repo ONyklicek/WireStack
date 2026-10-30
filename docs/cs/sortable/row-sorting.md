@@ -128,17 +128,20 @@ return $table
     ->columns([...]);
 ```
 
-> **Poznámka:** Se zapnutým stránkováním mohou uživatelé přeřazovat jen v rámci aktuální stránky. Puštění přeuspořádá řádky té stránky mezi sebou a všechny ostatní stránky nechá tam, kde byly.
+> **Poznámka:** Se zapnutým stránkováním mohou uživatelé měnit pořadí pouze na
+> aktuální stránce. Po uvolnění řádku se přeuspořádají jen řádky této stránky;
+> řádky na ostatních stránkách zůstanou beze změny.
 
 ## Přeřazování zúženého seznamu
 
-Uživatel v reorder režimu může stále hledat, filtrovat a -- s
-`paginatedWhileReordering()` -- stránkovat. Tažení se tedy obvykle odehrává nad
-*podmnožinou* tabulky a řádky, které tato podmnožina skryla, se pohnout nesmí.
+V režimu změny pořadí může uživatel stále vyhledávat, filtrovat a při použití
+`paginatedWhileReordering()` také stránkovat. Řádky se proto obvykle přemisťují
+pouze v aktuálně zobrazené části tabulky. Řádky skryté filtrem nebo vyhledáváním
+se nesmí změnit.
 
-A nepohnou se, protože puštění řádky, které dostane, nepřečísluje. Posbírá
-hodnoty pořadí, které tyto řádky už mají, seřadí je vzestupně a rozdá je zpět
-v novém vizuálním pořadí:
+Tyto řádky zůstanou beze změny, protože uvolnění nepřiděluje pořadí znovu celé
+tabulce. Systém převezme jejich stávající hodnoty pořadí, seřadí je vzestupně
+a přiřadí je novému pořadí zobrazených řádků:
 
 ```php
 // Řádky s sort_order 10, 20, 30. Přetáhněte poslední úplně nahoru:

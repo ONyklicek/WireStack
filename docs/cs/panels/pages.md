@@ -122,11 +122,12 @@ Editace a detail ukazují jeden záznam a ten přichází jako **klíč**:
 @livewire(EditOrder::class, ['record' => $order->getKey()])
 ```
 
-Ne model, a je to záměr. Mount argumenty Livewire komponenty končí v jejím
-snapshotu, takže hydratovaný model je tam jednak větší než klíč, jednak zastaralý
-v okamžiku, kdy dorazí další request. Cestuje klíč; záznam se resolvuje per
-request. Přebijte `resolveRecord()`, když ho chcete hledat jinak — soft-delete
-scope, tenant guard, non-Eloquent zdroj. Vrací `Model|RecordContract|null`, takže
+Nepředává se celý model, a to záměrně. Argumenty `mount()` se ukládají do
+snapshotu Livewire komponenty. Hydratovaný model by byl větší než samotný klíč a
+při dalším požadavku by mohl obsahovat zastaralá data. Komponenta proto předává
+pouze klíč a záznam vyhledá při každém požadavku. Metodu `resolveRecord()`
+přepište, pokud potřebujete vlastní způsob vyhledávání, například scope pro
+soft-deleted záznamy, kontrolu tenanta nebo zdroj, který není založený na Eloquentu. Vrací `Model|RecordContract|null`, takže
 override opravdu může vrátit něco, co není model:
 
 ```php
@@ -136,12 +137,12 @@ protected function resolveRecord(): RecordContract
 }
 ```
 
-**View stránka** to vykreslí tak, jak to je: infolist se každou hodnotu zeptá
-kontraktu, místo aby do záznamu sahal. **Edit stránka** to odmítne, a to zprávou,
-která pojmenuje cestu ven — životní cyklus ukládání formuláře je Eloquent (relační
-repeatery, optimistický zámek, `$model->save()`), takže záznam, který se
-nerozbalí na model, na něj navázat nejde. Přebijte na stránce `form()`, nechte model
-nenavázaný a dejte formuláři vlastní příkaz.
+**Zobrazovací stránka** vykreslí záznam bez úprav: infolist čte jednotlivé hodnoty
+prostřednictvím kontraktu a do záznamu nezapisuje. **Editační stránka** takový
+záznam odmítne a zobrazí srozumitelnou chybu. Ukládání formuláře používá Eloquent,
+včetně relačních repeaterů, optimistického zámku a `$model->save()`, takže záznam
+musí být možné převést na model. Na stránce přepište `form()`, model nepřipojujte
+a určete vlastní způsob uložení formuláře.
 
 **Perzistence zůstává formuláři.** `Form` už vlastní validate → mutate → hooky →
 persist → notify; stránka jen naváže model a zavolá `save()`. Resource nad

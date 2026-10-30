@@ -25,10 +25,10 @@ nová nahrání a stará nechá čitelná.
 **Metadata se čtou z disku, ne z prohlížeče.** Mime typ a velikost jsou to, čím
 uložený soubor doopravdy je; co o sobě nahrání tvrdilo, je tvrzení.
 
-**Záznam se zapisuje v kroku perzistence**, přes seam `using()` formuláře. To
-není detail, který jde ignorovat, když tohle rozšiřujete: souborová pole se
-dehydratují **až po** `mutateDataBeforeSave()`, takže cokoli, co čte `path` dřív,
-dostane dočasné nahrání, ne uložený soubor.
+**Záznam se ukládá spolu s formulářem** pomocí `using()`. Při rozšiřování
+formuláře je důležité počítat s tím, že souborová pole se převedou do uložené
+podoby **až po** `mutateDataBeforeSave()`. Kód, který čte `path` dříve, proto
+získá cestu k dočasnému nahrání, nikoli k uloženému souboru.
 
 **Z editace obrázku vzniká ve výchozím případě nový soubor.** Přepsat bajty pod
 cestou, na kterou už míří jiné záznamy, je způsob, jak knihovna tiše změní, co
@@ -247,12 +247,12 @@ originál, kterého se nikdo nedotkne.
 ],
 ```
 
-**Jedna kopie obsluhovala tři plochy.** 32pixelový řádek v seznamu, dlaždice
-v mřížce i náhled v detailu načítaly tentýž 400pixelový WebP — a dvě z těch tří
-platily za pixely, které zahodily, na každé obrazovce knihovny. Každá plocha si
-teď řekne o velikost, kterou opravdu kreslí, a retina displej dostane přes
-`srcset` tu o stupeň větší. Rozlišovací deskriptory, ne šířky: atribut `sizes` je
-odhad o layoutu, na který model nevidí.
+**Jeden soubor se používá ve třech zobrazeních.** Náhled v seznamu široký
+32 pixelů, dlaždice v mřížce i náhled v detailu dříve načítaly stejný WebP široký
+400 pixelů. Dvě z těchto zobrazení proto stahovala data, která nevyužila. Každé
+zobrazení nyní načítá potřebnou velikost a displej s vysokou hustotou pixelů
+získá přes `srcset` o jednu větší variantu. Atribut `sizes` odhaduje šířku, kterou
+obrázek zabere v rozvržení stránky; model tuto šířku nezná.
 
 `width` pořád pojmenovává **dlaždici** a `thumb_path` ji pořád drží. Knihovna po
 upgradu vykresluje přesně jako předtím a ostatní velikosti získá s nahrávanými
@@ -552,4 +552,3 @@ pohodlí, které stahuje každé nahrání dvakrát, pohodlí není.
 
 - [Nahrávání souborů](../forms/fields/file-upload.md) — pole, které se tu používá
 - [Moduly](../panels/modules.md) — jak balíček dodává takovou oblast
-

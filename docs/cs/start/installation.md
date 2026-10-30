@@ -10,10 +10,10 @@ composer require nyoncode/wire-suite
 php artisan wire:install
 ```
 
-První řádek přinese core, formuláře, tabulky, sortable, resources a admin shell.
-Druhý je nastaví — průvodce v číslovaných krocích, který se zeptá, co chcete,
-spustí vlastní instalátor každého vybraného balíčku místo jeho kopie a pak
-nastaví aplikaci, kterou ty balíčky potřebují.
+První příkaz nainstaluje core, formuláře, tabulky, řazení, resources a základ
+administrace. Druhý spustí průvodce, který se vás zeptá, které části chcete
+používat, zavolá instalační příkaz každého vybraného balíčku a připraví aplikaci
+na jejich použití.
 
 ## Co instalátor dělá
 
@@ -55,18 +55,17 @@ nastaví aplikaci, kterou ty balíčky potřebují.
   …
 ```
 
-Jeden řádek na část, zakončený tím, co se s ní stalo — stejný tvar, jaký používá
-fáze nastavení níž. Dřív to byly tři seznamy: co se našlo, co už je nastavené a
-co se právě spouští — většina částí tam byla dvakrát a některé třikrát, pokaždé
-jiným slovníkem.
+Každá část má jeden řádek zakončený výsledkem — stejný formát používají i
+následující kroky instalace. Dříve instalátor vypisoval tři samostatné seznamy:
+co našel, co už bylo nastavené a co právě spouští. Většina částí se tak
+zobrazovala vícekrát a pokaždé pod jiným označením.
 
-**Dvě otázky, a druhá jen tehdy, když dává smysl.** Nejdřív stack — formuláře,
-tabulky, sortable, resources, shell. Hotové oblasti přijdou na řadu až potom, a
-jen když je admin shell součástí odpovědi — ať zaškrtnutý teď, nebo nastavený už
-dřívějším během: modul se vykresluje *uvnitř* panelu, a nabízet oblast uživatelů
-někomu, kdo si panel nevzal, je nabízet mu obrazovku, která nemá kde se objevit.
-Odškrtněte shell a moduly se vypíšou jako `LEFT ALONE`, místo aby se nainstalovaly
-za vašimi zády.
+**Instalátor položí nejvýše dvě otázky.** Nejprve vyberete základní části:
+formuláře, tabulky, řazení, resources a administraci. Potom můžete zvolit hotové
+moduly — pouze pokud je součástí instalace také administrace. Moduly totiž
+zobrazují své stránky uvnitř ní; bez administrace by je uživatelé neměli kde
+otevřít. Pokud administraci nevyberete, instalátor moduly označí jako
+`LEFT ALONE` a sám je nenainstaluje.
 
 **Kroky se počítají, neslibují.** Každá fáze na začátku vypíše `Step N — …` a
 číslo odpovídá tomu, kolik fází tento běh opravdu má: `--all` se na nic neptá,

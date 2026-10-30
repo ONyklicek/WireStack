@@ -30,10 +30,10 @@ uvnitř zóny udělá čtyři věci, v tomto pořadí:
    tenanta. Parametr se pak z routy odebere, takže žádný `mount()` stránky
    nedostane parametr, o který si neřekl.
 
-**Livewire round trip ho udrží.** Update request jde na `livewire/update`, kde
-žádný `{tenant}` není; middleware je zaregistrovaný jako Livewire *persistent*
-middleware, takže Livewire sestaví původní request stránky a spustí ho znovu.
-Druhé vykreslení je scopované a prolinkované stejně jako první.
+**Kontext tenanta se zachová i při požadavcích Livewire.** Požadavek na
+`livewire/update` neobsahuje parametr `{tenant}`. Middleware je proto zaregistrovaný
+jako trvalý middleware Livewire, který znovu sestaví původní požadavek stránky.
+Druhé vykreslení tak použije stejného tenanta a stejné odkazy jako první.
 
 **Pasti.** Zóna round trip přežije stejně, na každé stránce zaregistrované přes
 `Route::wireResources()`; komponenta na vaší vlastní routě si zónu přečtenou

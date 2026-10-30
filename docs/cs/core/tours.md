@@ -1,17 +1,16 @@
 ---
 order: 82
-summary: Průvodci, kteří se spustí, když člověk obrazovku vidí poprvé, a znovu, když ji aktualizace změní. Omezení na zónu, resource, stránku a oprávnění.
+summary: Interaktivní průvodci provedou uživatele aplikací při prvním použití i po důležitých změnách.
 ---
 
 # Tour
 
-Průvodce, který krok za krokem ukazuje na skutečné prvky obrazovky: panel vedle
-prvku, jedna nebo dvě věty o něm a tlačítka Další, Zpět a Přeskočit. Spustí se
-sám, když člověk poprvé uvidí obrazovku, kterou si průvodce nárokuje. Po
-aktualizaci ho můžete spustit znovu pro každého, kdo prošel předchozí verzi.
-Sáhněte po něm, když je na obrazovce tolik věcí, že nový uživatel neví, kde
-začít. Na jeden ovládací prvek stačí tooltip; průvodce je na to, jak spolu
-souvisí víc prvků.
+Průvodce postupně zvýrazňuje prvky obrazovky, vysvětluje jejich účel a nabízí
+tlačítka **Další**, **Zpět** a **Přeskočit**. Při prvním zobrazení stránky, na
+kterou se vztahuje, se může spustit automaticky. Po důležité aktualizaci jej
+můžete nabídnout znovu. Hodí se, když potřebujete uživatelům představit více
+souvisejících částí rozhraní; pro vysvětlení jednoho ovládacího prvku stačí
+krátká nápověda.
 
 ```php
 use NyonCode\WireCore\Tours\Tour;

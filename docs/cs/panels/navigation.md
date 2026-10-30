@@ -185,7 +185,8 @@ neosiří. [`Page`](pages.md#registrace) řekne totéž vlastností
 
 1. **Rodič, kterého nic neregistrovalo, nebo položka sama, se odmítne**
    výjimkou `NavigationParentException`, a to při prvním sestaveném menu, ne až
-   u jednoho uživatele. Tichý fallback by dal řádek tam, kam ho nikdo nedal.
+   u jednoho uživatele. Tiché náhradní umístění by položku zobrazilo na místě,
+   které nikdo neurčil.
 2. **Rodič, který registrovaný je, ale v tomhle menu není** — skrytý tomuto
    uživateli, vynechaný přes `linkedOnly`, odebraný hookem — nechá položku tam,
    kde by byla bez něj, ve vlastní skupině. Kdyby zmizela s rodičem, schovala by

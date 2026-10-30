@@ -1,15 +1,14 @@
 ---
 order: 84
-summary: Blok, kterým průvodce začíná — čeho se prohlídka týká a volba mezi „spustit teď“ a „zeptej se znovu později“.
+summary: Úvodní karta představí obsah průvodce a nabídne jeho spuštění nebo odložení na později.
 ---
 
 # TourWelcome
 
-Blok, kterým [průvodce](tours.md) začíná: karta uprostřed obrazovky s tím, co
-prohlídka pokrývá, a dvě tlačítka — spustit teď, nebo se nechat zeptat znovu
-později. Sáhněte po něm, když je průvodce dost dlouhý na to, aby jeho nevyžádané
-spuštění bylo vyrušení. Bez něj průvodce začne tím, že ztlumí stránku a na něco
-ukáže, což je to, co dělal vždycky.
+Úvodní karta [průvodce](tours.md) stručně představí jeho obsah a nabídne dvě
+možnosti: spustit jej hned, nebo se k němu vrátit později. Hodí se zejména pro
+delší průvodce, jejichž automatické spuštění by mohlo uživatele vyrušit. Bez
+úvodní karty průvodce rovnou ztlumí stránku a zvýrazní první prvek.
 
 ```php
 use NyonCode\WireCore\Tours\TourWelcome;
@@ -17,56 +16,57 @@ use NyonCode\WireCore\Tours\TourWelcome;
 
 ## Jak to funguje
 
-**Kdy se zobrazí.** Prohlížeč si nejdřív naplánuje průvodce — které kroky mají
-na této stránce prvek — a teprve pak pozdraví. Průvodce, kterému chybí prvky
-všech kroků, se nespustí, takže ani nepozdraví. Karta se zobrazí **jen když
-průvodce začíná od začátku**: kdo se sem dostal krokem s
-[`on()`](tour-step.md#na-jine-strance) nebo se vrací k prohlídce, kterou nechal
-rozdělanou, je vrácen tam, kde skončil, aniž by se ho někdo ptal, jestli spustit
-něco, co už běží.
+**Kdy se zobrazí.** Prohlížeč nejprve ověří, které kroky odkazují na prvek na
+aktuální stránce. Teprve potom může zobrazit úvodní kartu. Pokud žádný krok
+neodkazuje na prvek na této stránce, průvodce se nespustí a karta se nezobrazí.
+Karta se zobrazí **pouze při spuštění od začátku**. Pokud uživatel přejde
+na stránku pomocí [`on()`](tour-step.md#na-jine-strance) nebo se vrátí
+k nedokončenému průvodci, pokračuje rovnou tam, kde skončil.
 
 **Dvě odpovědi.**
 
-- **Spustit** zavře kartu a začne prohlídku prvním krokem. Nic se nezaznamenává
-  — dokončení nebo přeskočení se zaznamená později, jako vždy.
-- **Odložit** zavře průvodce a zaznamená *odklad*: průvodce se do konce této
-  session znovu nenabídne a při příští návštěvě se zeptá znovu.
+- **Spustit** zavře kartu a zahájí průvodce prvním krokem. Zatím se nic
+  neukládá; dokončení nebo přeskočení se zaznamená později.
+- **Odložit** zavře kartu a uloží *odložení*. Průvodce se znovu nabídne až při
+  další návštěvě, po skončení aktuální relace.
 
-**Odložit není Přeskočit.** Přeskočit je konečné — ukládá se přesně jako
-dokončení, protože kdo přeskočil, rozhodl se. Odložit je odpověď, která se dřív
-nedala dát: teď ne, zeptej se znovu.
+**Odložit neznamená Přeskočit.** Přeskočení je konečné a uloží se stejně jako
+dokončení. Odložení pouze znamená „teď ne, zeptej se znovu později“.
 
-**Odklady se počítají a dojdou.** Pozdrav, který se vrací navždy, by byl horší
-než ten, který se nezeptal nikdy. Každé Odložit zvýší počet a to, které dosáhne
-limitu z [`postpone()`](tours.md#api-tour), místo toho průvodce potvrdí — tentýž
-záznam, jaký píše Přeskočit, takže nic dalšího nemusí řešit čtvrtý stav. Výchozí
-limit je `3` a konfiguruje se jako `wire-core.tours.postpone`. `->postpone(0)`
-tlačítko Odložit odstraní úplně a zbyde karta, kterou lze jen spustit.
+**Počet odložení je omezený.** Průvodce se nebude nabízet stále dokola. Každé
+odložení zvýší počítadlo. Po dosažení limitu nastaveného pomocí
+[`postpone()`](tours.md#api-tour) se uloží stejný stav jako při přeskočení a
+průvodce se přestane nabízet. Počet odložení se počítá napříč relacemi.
+Výchozí limit je `3`; nastavuje se v `wire-core.tours.postpone`.
+Volání `->postpone(0)` tlačítko **Odložit** skryje a ponechá pouze možnost
+průvodce spustit.
 
-**Proč session a ne hodiny.** Odklad je orazítkovaný id session, ve které
-vznikl, a platí, jen dokud trvá ta session. To je to, co dává „později“ na každém
-driveru stejný význam: na `session` by záznam stejně vypršel, zatímco na
-`database` sezení přežije — a bez toho porovnání by se odklad nedal odlišit od
-přeskočení. Žádná doba ke konfiguraci a žádné hodiny, které by šly splést mezi
-časovými pásmy.
+**Proč se odložení váže na relaci, ne na čas.** Ukládá se identifikátor relace,
+ve které k odložení došlo, a odložení platí jen po dobu jejího trvání. Díky tomu
+má „později“ stejný význam při použití obou ovladačů: při `session` záznam po
+skončení relace zanikne, zatímco `database` jej uchová. Identifikátor relace
+umožňuje odlišit odložení od přeskočení. Není třeba nastavovat časový limit ani
+řešit časová pásma.
 
-**Kde běží.** Karta je markup, který stránka už nesla, jen ho Alpine zobrazí a
-skryje. Request dělá jedině Odložit, aby odklad zaznamenal. Escape kartu zavře a
-znamená totéž co Odložit — a u průvodce, který odklad nepovoluje, ji zavře bez
-zaznamenání čehokoli, takže průvodce při příští návštěvě pozdraví znovu.
+**Kde běží.** Karta je součástí HTML stránky; Alpine ji pouze zobrazí nebo skryje.
+Požadavek na server odešle jen tlačítko **Odložit**, aby se odložení zaznamenalo.
+Klávesa Esc kartu zavře a chová se stejně jako **Odložit**. Pokud průvodce
+odložení nepovoluje, karta se zavře bez uložení a při další návštěvě se zobrazí
+znovu.
 
-**Pasti.**
+**Na co dát pozor.**
 
-- **Počet přežije změnu verze, ale ne dokončení.** Dokončení, přeskočení i
-  opětovné spuštění odklad i s jeho počtem smažou. Změna
-  [`since()`](tours.md#co-je-noveho-po-aktualizaci) počet také začne od nuly,
-  protože počet držený proti starší verzi by znamenal, že autorův třetí pozdrav
-  je pro někoho prvním.
-- **Popisky se překládají při vykreslení stránky, ne při registraci.** Průvodce
-  se registruje v `boot()` service provideru a překlad vyhodnocený tam je v tom
-  jazyce, který měla konzole. Nechte `start()` a `later()` nenastavené a
-  dostanete přeloženou formulaci frameworku.
-- **Karta potřebuje layout, který ji kreslí**, stejně jako zbytek průvodce. Viz
+- **Počet odložení se zachová při změně verze, ale ne po dokončení.**
+  Dokončení, přeskočení i opětovné spuštění průvodce smaže počet odložení.
+  Změnou [`since()`](tours.md#co-je-noveho-po-aktualizaci) se počet také
+  vynuluje. Odložení z předchozí verze se tak nezapočítají do nového průvodce.
+- **Popisky se překládají při vykreslení stránky, nikoli při registraci.**
+  Průvodce se registruje v metodě `boot()` poskytovatele služeb. Pokud by se
+  překlad vyhodnotil už při registraci, použil by jazyk aktivní v konzoli.
+  Ponechte `start()` a `later()` bez vlastních popisků a použije se překlad
+  frameworku.
+- **Karta potřebuje rozvržení stránky, které ji vykreslí**, stejně jako zbytek
+  průvodce. Viz
   [Tour → Vlastní layout](tours.md#vlastni-layout).
 
 ## Základní použití
@@ -75,18 +75,19 @@ zaznamenání čehokoli, takže průvodce při příští návštěvě pozdraví
 Tour::make('getting-started')
     ->welcome(
         TourWelcome::make()
-            ->heading('Vítejte na palubě')
-            ->text('Minuta, a budete vědět, kde co je.'),
+            ->heading('Vítejte v aplikaci')
+            ->text('Za minutu se zorientujete v jejích hlavních částech.'),
     )
     ->steps([
-        TourStep::make('admin-sidebar')->text('Všechny části aplikace jsou tady.'),
+        TourStep::make('admin-sidebar')->text('Hlavní části aplikace najdete v této nabídce.'),
     ]);
 ```
 
 ## Obsah
 
-`heading()` je tučný řádek, `text()` věta nebo dvě pod ním. Obojí je prostý text
-a kterékoli z nich se dá vynechat. Překládejte je jako každý jiný řetězec:
+`heading()` nastavuje nadpis karty a `text()` krátký popis pod ním. Obojí je
+prostý text a kteroukoli hodnotu můžete vynechat. Překládejte je stejně jako
+ostatní texty v aplikaci:
 
 ```php
 TourWelcome::make()
@@ -96,9 +97,9 @@ TourWelcome::make()
 
 ## Tlačítka
 
-Oba popisky jsou volitelné a oba se vrací k přeložené formulaci frameworku — což
-obvykle chcete, protože opakovat ji v každém průvodci je způsob, jak jeden z nich
-skončí ve špatném jazyce:
+Oba popisky jsou nepovinné. Pokud je nenastavíte, použije se přeložené znění
+frameworku. Nemusíte tak opakovat stejný text v každém průvodci a riskovat, že
+některý zůstane v nesprávném jazyce:
 
 ```php
 TourWelcome::make()
@@ -106,8 +107,9 @@ TourWelcome::make()
     ->later('Teď ne');             // výchozí: „Třeba později“
 ```
 
-Tlačítko Odložit se vykreslí, jen když průvodce odklad povoluje. Tyhle dvě věci
-říkají totéž — karta, kterou lze jen spustit:
+Tlačítko **Odložit** se zobrazí pouze tehdy, když průvodce odložení povoluje.
+Následující příklad nastavuje stejný výsledek jako `->postpone(0)` — kartu, ze
+které lze průvodce pouze spustit:
 
 ```php
 Tour::make('one-step')->postpone(0)->welcome(TourWelcome::make()->heading('Novinka ve 2.2'));
@@ -115,8 +117,9 @@ Tour::make('one-step')->postpone(0)->welcome(TourWelcome::make()->heading('Novin
 
 ## Jak často se zeptá znovu
 
-`postpone()` patří na [Tour](tours.md#api-tour), ne sem: kolikrát se smí
-prohlídka odložit, je vlastnost prohlídky, ne karty, která ji nabízí.
+`postpone()` nastavujete na [Tour](tours.md#api-tour), nikoli na kartě
+`TourWelcome`. Počet povolených odložení je vlastností průvodce, který kartu
+zobrazuje.
 
 ```php
 Tour::make('getting-started')->postpone(5);   // pět „později“, pak se ptát přestane
@@ -133,8 +136,8 @@ Když se nenastaví, platí konfigurovaná výchozí hodnota:
 
 ## Vlastní markup
 
-Když chcete jiný markup, a ne jiné stylování — ilustraci, logo, krátké video —
-`view()` kartu frameworku nahradí úplně:
+Pokud chcete změnit strukturu karty, nejen její vzhled — například přidat
+ilustraci, logo nebo krátké video — nahraďte výchozí kartu pomocí `view()`:
 
 ```php
 TourWelcome::make()
@@ -142,18 +145,18 @@ TourWelcome::make()
     ->view('tours.welcome');
 ```
 
-View se vloží **dovnitř vlastního Alpine scope průvodce** a ten scope je celý
-kontrakt:
+Vlastní view se vloží **do Alpine komponenty průvodce**. V tomto kontextu jsou
+dostupné následující vlastnosti a metody:
 
 | Jméno | Co to je |
 | --- | --- |
-| `greeting` | Jestli má být karta vidět. View si svou viditelnost řídí samo — nikdo ji za vás nezobrazí |
-| `begin()` | Spustit prohlídku |
-| `later()` | Zavřít ji a zaznamenat odklad, pokud ho průvodce povoluje |
-| `welcome` | Vyhodnocená data: `heading`, `text`, `start`, `later` (null, když je odklad vypnutý) |
+| `greeting` | Určuje, zda se karta zobrazí. Vlastní view musí její viditelnost řídit samo, například pomocí `x-show="greeting"` |
+| `begin()` | Spustí průvodce |
+| `later()` | Zavře kartu a uloží odložení, pokud ho průvodce povoluje |
+| `welcome` | Hodnoty `heading`, `text`, `start` a `later`; při zakázaném odložení je `later` rovno `null` |
 
-Dostane také `$welcome` (tento objekt) a `$tour`, pro cokoli, co raději vykreslíte
-na serveru:
+View obdrží také `$welcome` (objekt s daty karty) a `$tour`. Můžete je použít
+pro obsah, který chcete vykreslit na serveru:
 
 ```blade
 {{-- resources/views/tours/welcome.blade.php --}}
@@ -172,18 +175,19 @@ na serveru:
 </div>
 ```
 
-View je únikový poklop pro markup, ne pro chování: kdy se karta objeví a co stojí
-Odložit, zůstává u průvodce.
+Vlastní view mění strukturu karty, nikoli její chování. O tom, kdy se karta
+zobrazí a co se stane po odložení, stále rozhoduje průvodce.
 
 ## Stylování
 
-Karta frameworku nese element hooky, takže většina změn žádné view nepotřebuje:
+Výchozí karta obsahuje element hooky, takže většinu úprav vzhledu zvládnete bez
+vlastního view:
 
 | Hook | Prvek |
 | --- | --- |
-| `tour-welcome` | Vycentrovaná vrstva |
-| `tour-welcome-heading`, `tour-welcome-text` | Dva řádky |
-| `tour-welcome-start`, `tour-welcome-later` | Dvě tlačítka |
+| `tour-welcome` | Vrstva přes celou obrazovku s kartou uprostřed |
+| `tour-welcome-heading`, `tour-welcome-text` | Nadpis a popis karty |
+| `tour-welcome-start`, `tour-welcome-later` | Tlačítka pro spuštění a odložení |
 
 ```css
 [data-wire="tour-welcome"] > div { @apply max-w-lg rounded-3xl; }
@@ -192,8 +196,8 @@ Karta frameworku nese element hooky, takže většina změn žádné view nepot�
 
 ## Rozšířený příklad
 
-Průvodce při prvním spuštění, který se před startem zeptá, povolí dva odklady a
-vlastními slovy aplikace řekne, o co jde.
+Ukázka průvodce pro první použití aplikace: před spuštěním představí jeho obsah
+a dovolí jej dvakrát odložit.
 
 ```php
 <?php
@@ -215,15 +219,15 @@ class AppServiceProvider extends ServiceProvider
                 ->postpone(2)                                    // [tl! focus:start]
                 ->welcome(
                     TourWelcome::make()
-                        ->heading('Dvě minuty a budete se tu vyznat')
-                        ->text('Ukážeme na čtyři věci a pak vás necháme být.')
-                        ->start('Ukázat')
+                        ->heading('Za dvě minuty se v aplikaci zorientujete')
+                        ->text('Představíme vám čtyři důležité části aplikace.')
+                        ->start('Spustit průvodce')
                         ->later('Teď ne'),
                 )                                                // [tl! focus:end]
                 ->steps([
                     TourStep::make('admin-sidebar')
-                        ->heading('Všechno je tady')
-                        ->text('Každá část aplikace má v tomhle menu svou položku.')
+                        ->heading('Hlavní části aplikace')
+                        ->text('Jednotlivé části najdete v této nabídce.')
                         ->placement('right-start'),
 
                     TourStep::make('global-search-trigger')
@@ -234,23 +238,24 @@ class AppServiceProvider extends ServiceProvider
 }
 ```
 
-Kdo zvolí „Teď ne“, bude se dotázán při příští návštěvě a ještě jednou potom.
-Potřetí by to byl čtvrtý pozdrav, takže se průvodce místo toho zaznamená jako
-viděný a přestane. Pořád si ho může vrátit přes
+Pokud uživatel zvolí „Teď ne“, průvodce se nabídne při příští návštěvě a ještě
+jednou potom. Další odložení by znamenalo čtvrté zobrazení, proto se průvodce
+místo toho označí jako vyřízený a přestane se nabízet. Uživatel jej může znovu
+spustit přes
 [Spustit průvodce znovu](tours.md#opetovne-spusteni) v uživatelském menu.
 
 ## API TourWelcome
 
 ```php
-TourWelcome::make()                   // bez argumentů — všechno na něm je volitelné
-->heading(?string $heading)           // tučný řádek — výchozí žádný
-->text(?string $text)                 // tělo, prostý text — výchozí žádné
+TourWelcome::make()                   // bez argumentů — všechny volby jsou nepovinné
+->heading(?string $heading)           // nadpis karty — bez výchozí hodnoty
+->text(?string $text)                 // popis karty, prostý text — bez výchozí hodnoty
 ->start(?string $start)               // popisek tlačítka pro spuštění — výchozí __('wire-core::messages.tour_start')
 ->later(?string $later)               // popisek tlačítka pro odložení — výchozí __('wire-core::messages.tour_later')
-->view(?string $view)                 // vykreslit tohle view místo karty frameworku — výchozí žádné
+->view(?string $view)                 // použít toto view místo výchozí karty — bez výchozí hodnoty
 ->getHeading(): ?string
 ->getText(): ?string
-->getStart(): ?string                 // autorův popisek, nebo null pro ten frameworkový
+->getStart(): ?string                 // vlastní popisek, nebo null při použití výchozího překladu
 ->getLater(): ?string
 ->getView(): ?string
 ```

@@ -18,30 +18,32 @@ Tento průvodce popisuje produkční nastavení Wire v Laravel aplikaci.
 | Alpine.js | 3.x+ (součástí Livewire) |
 | `nyoncode/laravel-package-toolkit` | ^2.5.2 (nainstaluje se sám) |
 
-Poslední řádek si sami nepřidáváte — Composer ho stáhne spolu s balíčky Wire.
-Je tu proto, že rozhoduje o dvou řádcích nad ním. Toolkit vlastní zrcadlo do
-`public/vendor`, které dostane JavaScriptové bundly na disk (viz
-[JavaScriptové assety](#javascriptove-assety)), a verze 2.5 vyžaduje
-`illuminate/support ^12.61.1|^13.12.0` — takže právě tohle, a ne `^12.0`, které
-deklarují balíčky Wire, je verze Laravelu, vůči které se instalace opravdu
-řeší. Aplikace, která si toolkit připíná sama, mu musí povolit `^2.5`, jinak
-`composer require nyoncode/wire-table` vůbec neprojde.
+Poslední řádek nemusíte přidávat sami — Composer nainstaluje toolkit spolu
+s balíčky Wire. Je tu proto, že ovlivňuje požadovanou verzi Laravelu. Toolkit
+kopíruje JavaScriptové balíčky do `public/vendor` (viz
+[JavaScriptové assety](#javascriptove-assety)) a jeho verze 2.5 vyžaduje
+`illuminate/support ^12.61.1|^13.12.0`. Tato závislost má přednost před
+požadavkem `^12.0`, který uvádějí balíčky Wire. Pokud toolkit přidáváte do
+aplikace samostatně, povolte mu verzi `^2.5`; jinak Composer instalaci
+`nyoncode/wire-table` nedokončí.
 
 ## Instalace
 
-Nainstalujte si vrstvu, kterou potřebujete. Každá si dotáhne to, na čem závisí, a nic
-nad sebou — celý seznam je v [Mapě projektu](project-map.md#balicky).
+Nainstalujte pouze balíčky, které potřebujete. Composer k nim doplní jejich
+závislosti, ale nepřidá žádné volitelné nadstavbové balíčky. Úplný seznam najdete
+v [Mapě projektu](project-map.md#balicky).
 
-### Celý stack, nastavený za vás
+### Kompletní instalace s automatickým nastavením
 
 ```bash
 composer require nyoncode/wire-suite
 php artisan wire:install
 ```
 
-Interaktivní instalátor je nejkratší cesta z čistého Laravelu k funkčnímu adminu;
-co dělá a co záměrně nedělá, popisuje [Instalace Wire](installation.md). Všechno
-níž je ten samý stack, poskládaný ručně.
+Interaktivní instalátor vás rychle provede cestou od čisté aplikace Laravel
+k funkční administraci. Co přesně nastaví a co záměrně ponechá na vás, popisuje
+[Instalace Wire](installation.md). Následující části ukazují, jak stejné balíčky
+nainstalovat ručně.
 
 ### Tabulky (table + forms + core)
 
@@ -84,10 +86,11 @@ Service providery se registrují automaticky přes Laravel auto-discovery.
 
 ## Produkční checklist
 
-Než vykreslíte první komponentu, ujistěte se, že platí všechno níže:
+Než začnete zobrazovat komponenty, ověřte, že jsou splněny všechny následující
+podmínky:
 
 - Livewire 4 je nainstalováno
-- Tailwind skenuje vendor pohledy Wire
+- Tailwind prohledává pohledy balíčků Wire ve složce `vendor`
 - vaše aplikace definuje barvu `primary`
 - hlavní layout obsahuje `@vite`, `@livewireStyles` a `@livewireScripts`
 - layout má v `<head>` `@wireStackScripts` — v praxi nutné pro každou aplikaci, která
@@ -96,9 +99,10 @@ Než vykreslíte první komponentu, ujistěte se, že platí všechno níže:
 
 ## Konfigurace Tailwind CSS
 
-Wire generuje část utility tříd z PHP (resolvery barev/velikostí, třídy mobilního
-bottom-sheetu, responzivní sloupce gridu, …), takže Tailwind musí skenovat jak
-**pohledy, tak `src`** balíčků — samotné skenování pohledů tyto třídy mine.
+Wire vytváří některé utility třídy v PHP, například pro barvy, velikosti,
+mobilní spodní panel nebo responzivní mřížku. Tailwind proto musí prohledávat
+**pohledy i adresáře `src`** jednotlivých balíčků. Pokud prohledává pouze pohledy,
+tyto třídy nenajde.
 
 **Tailwind 3** — přidejte cesty do `tailwind.config.js`:
 
