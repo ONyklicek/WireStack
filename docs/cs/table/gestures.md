@@ -1,6 +1,6 @@
 ---
 order: 48
-summary: Tabulka, která se chová jako desktopová aplikace — šipky, rozsahy, tažení výběru, řádkové menu, `?` a fill handle, každé zvlášť zapínatelné.
+summary: Ovládejte tabulku klávesnicí, vybírejte řádky tažením a používejte kontextovou nabídku i úchyt pro vyplnění. Každou funkci lze zapnout zvlášť.
 ---
 
 # Vrstva gest

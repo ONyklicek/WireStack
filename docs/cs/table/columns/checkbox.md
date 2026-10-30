@@ -1,6 +1,6 @@
 ---
 order: 23
-summary: Inline checkbox zapisující booleovskou hodnotu rovnou do záznamu — tam, kde se přepínač čte špatně nebo je tabulka moc hustá.
+summary: Zaškrtávací políčko v řádku mění hodnotu přímo v záznamu. Hodí se tam, kde přepínač není dostatečně srozumitelný nebo se do tabulky nevejde.
 ---
 
 # CheckboxColumn

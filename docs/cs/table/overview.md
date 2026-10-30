@@ -1,6 +1,6 @@
 ---
 order: 10
-summary: "Tabulkový povrch: hostitelský trait, dotaz, který staví, a základní konfigurace, na které stojí každý sloupec, filtr i akce."
+summary: Sestavte tabulku z dotazu, sloupců, filtrů a akcí. Seznamte se se společným nastavením, které ovlivňuje všechny její části.
 ---
 
 # Wire Table

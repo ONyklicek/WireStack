@@ -1,6 +1,6 @@
 ---
 order: 65
-summary: "Relací omezená tabulka jako samostatná komponenta: vlastnická relace se pojmenuje jednou, tabulka se píše jako obvykle."
+summary: Zobrazte související záznamy v samostatné tabulce. Relaci nastavíte jednou a tabulku pak nakonfigurujete obvyklým způsobem.
 ---
 
 # Správci relací

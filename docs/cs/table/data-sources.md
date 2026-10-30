@@ -1,6 +1,6 @@
 ---
 order: 70
-summary: Odkud tabulka bere řádky, když nejsou v databázi — kontrakt zdroje a co od něj tabulka pořád očekává.
+summary: Připojte tabulku k vlastnímu zdroji dat. Zjistěte, jaké operace a rozhraní musí zdroj podporovat.
 ---
 
 # Zdroje dat

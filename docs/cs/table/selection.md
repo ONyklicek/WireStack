@@ -1,23 +1,24 @@
 ---
 order: 47
-summary: Checkboxy, výběr všeho, hromadná lišta — a co výběr znamená, když se k němu dostane i tažení a klávesnice.
+summary: Vyberte řádky pomocí zaškrtávacích políček, klávesnice nebo tažení myší a pracujte s nimi hromadně.
 ---
 
 # Výběr řádků
 
-Z výběru může být sada gest, ne jen sloupec zaškrtávátek. Tabulka se
-`->selectable()` — nebo taková, která má jen `->bulkActions()`, což výběr
-implikuje — dává zaškrtávátka, ovladače „vybrat vše“ a bulk bar:
+Řádky lze vybírat zaškrtávacími políčky nebo gesty. `->selectable()` zobrazí
+zaškrtávací políčka a ovládání pro výběr všech řádků; `->bulkActions()` výběr
+zapne automaticky a přidá lištu pro hromadné akce:
 
 ```php
 ->selectable()
 ->bulkActions([DeleteBulkAction::make()])
 ```
 
-Přidejte `->gestures()` a chová se navíc jako seznam v desktopovém správci
-souborů: `Shift`+klik vezme rozsah, `mod`+klik přidá jeden řádek, tažení po
-sloupci se zaškrtávátky nabere celý blok a z klávesnice šipky procházejí řádky,
-`Space` přepíná, `Shift`+šipky roztahují a `mod`+`A` vezme stránku.
+Po zapnutí `->gestures()` můžete řádky vybírat také myší a klávesnicí.
+`Shift`+klik vybere rozsah, `mod`+klik přidá jednotlivý řádek a tažením po
+sloupci zaškrtávacích políček vyberete souvislou skupinu. Šipkami přecházíte
+mezi řádky, `Space` mění výběr, `Shift`+šipky rozšíří rozsah a `mod`+`A` vybere
+všechny řádky na stránce.
 
 ```php
 ->gestures()

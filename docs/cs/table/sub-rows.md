@@ -1,6 +1,6 @@
 ---
 order: 60
-summary: Podřízené záznamy v rozbalovacím panelu pod každým řádkem — pro ponor do detailu bez opuštění tabulky.
+summary: Zobrazte související záznamy v rozbalovacím panelu přímo pod řádkem, aniž byste opustili tabulku.
 ---
 
 # Podřádky

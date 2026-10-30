@@ -1,17 +1,16 @@
 ---
 order: 49
-summary: Stornovaný, zrušený nebo archivovaný záznam, který v seznamu zůstává a přestává být zapisovatelný — ztlumený, na přání přeškrtnutý a obarvený, a tak jako tak odmítnutý serverem.
+summary: Zrušené, stornované nebo archivované záznamy mohou zůstat v tabulce, ale server odmítne jejich změnu. Nastavte jejich vzhled i omezení akcí.
 ---
 
 # Neaktivní záznamy
 
-Záznam může přestat být živý, aniž by z tabulky zmizel. Stornovaná objednávka,
-zrušený řádek faktury, archivovaný zákazník: pořád se čte, pořád se v něm hledá,
-pořád se počítá do součtů — a už do něj nikdo nemá psát.
+Neaktivní záznam nemusíte z tabulky skrývat. Zrušenou objednávku, stornovanou
+fakturu nebo archivovaného zákazníka mohou uživatelé dál zobrazit, vyhledat
+a zahrnout do souhrnů. Inline úpravy se zablokují; výběr a dostupné akce můžete
+omezit zvlášť.
 
-Skrýt ho by byla lež o datech. Nechat otevřené jeho editory je pozvánka k zápisu,
-který doména už jednou odmítla. Tabulce se proto jednou řekne, které záznamy jsou
-neaktivní:
+Určete, podle jaké podmínky tabulka pozná neaktivní záznam:
 
 ```php
 ->rowInactive(fn (Order $order) => $order->status === 'cancelled')

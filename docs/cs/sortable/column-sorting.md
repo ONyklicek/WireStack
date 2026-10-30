@@ -1,7 +1,8 @@
 ---
 title: Řazení sloupců
 order: 40
-summary: Přerovnávání sloupců tažením za jejich hlavičky, zapamatované zvlášť pro každého uživatele a každou tabulku.
+
+summary: Uživatelé mohou měnit pořadí sloupců tažením za hlavičky. Nastavení se ukládá zvlášť pro každého uživatele a tabulku.
 ---
 
 # Řazení sloupců
