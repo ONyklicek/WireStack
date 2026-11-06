@@ -134,6 +134,13 @@ trait HasAuditable
 
         $exclude = $this->getAuditExclude();
 
+        // The lock version is bookkeeping, not a change anybody made: every
+        // update raises it, so left in it would put a "4 → 5" line on every
+        // entry of the trail.
+        if (method_exists($this, 'getLockVersionColumn')) {
+            $exclude[] = $this->getLockVersionColumn();
+        }
+
         if (! empty($exclude)) {
             $attributes = array_diff_key($attributes, array_flip($exclude));
         }

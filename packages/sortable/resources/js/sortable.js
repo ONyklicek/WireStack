@@ -183,7 +183,19 @@ export function wireSortable(config = {}) {
             // the drag-handle <td> cells, which collapses the table layout and
             // kills focus. Focus anywhere else in the table — the search box, a
             // filter, the per-page select — is outside <tbody> and survives it.
-            if (this.editingCell()) return;
+            //
+            // The header is outside <tbody> too, and the morph has just wiped
+            // the `data-sortable-column` marks off it (the server render knows
+            // nothing of them). Marking them again touches no cell and moves no
+            // focus — skip it and the columns stop being draggable for as long
+            // as the focus stays in a cell, which since a saving cell keeps the
+            // focus (readonly, no longer disabled) is the whole time somebody
+            // works down a row.
+            if (this.editingCell()) {
+                this.remarkHeader();
+
+                return;
+            }
 
             this.scheduleSetup();
         },
@@ -510,6 +522,14 @@ export function wireSortable(config = {}) {
             });
 
             return order;
+        },
+
+        /** Put the header marks back without touching the Sortable instance or the body. */
+        remarkHeader() {
+            if (!this.config.columnReorderable) return;
+
+            const thead = this.$root.querySelector('thead tr');
+            if (thead) this.markHeaderCells(thead);
         },
 
         markHeaderCells(thead) {

@@ -42,6 +42,7 @@ parameters:
         - { identifier: trait.unused, path: packages/core/src/Actions/Concerns/InteractsWithActions.php }
         - { identifier: trait.unused, path: packages/core/src/Actions/Concerns/InteractsWithHalt.php }
         - { identifier: trait.unused, path: packages/core/src/Audit/Concerns/HasAuditable.php }
+        - { identifier: trait.unused, path: packages/core/src/Foundation/Support/HasLockVersion.php }
         - { identifier: trait.unused, path: packages/core/src/Foundation/Concerns/HasLivewire.php }
         - { identifier: trait.unused, path: packages/core/src/Foundation/Routing/Concerns/InteractsWithPageUrls.php }
         - { identifier: trait.unused, path: packages/panels/src/Clusters/Concerns/InteractsWithCluster.php }

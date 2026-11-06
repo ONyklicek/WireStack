@@ -55,11 +55,12 @@
     <div class="relative">
         <input {!! $attrs !!}
                x-model="value"
+               :readonly="saving"
+               :aria-busy="saving"
                @focus="onFocus()"
                @blur="onBlur()"
                @keydown.enter.prevent="onEnter()"
                @keydown.escape="onEscape()"
-               :disabled="saving"
                :class="{'border-red-500 focus:border-red-500 focus:ring-red-500': error, 'border-green-500 focus:border-green-500 focus:ring-green-500': success}"
                x-ref="input"
                class="{{ $inputClasses }}"

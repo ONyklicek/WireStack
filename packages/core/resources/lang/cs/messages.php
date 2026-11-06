@@ -112,4 +112,5 @@ return [
     'tour_start' => 'Spustit průvodce',
     'tour_later' => 'Třeba později',
     'tour_replay' => 'Spustit průvodce znovu',
+    'unsaved_edits' => 'Některé změny ještě nejsou uložené. Opravdu odejít?',
 ];

@@ -2,6 +2,45 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.6]
+
+### Added
+
+- **`HasLockVersion` — an exact optimistic-lock version for a model.** An integer column (`lock_version` by
+  default, `$lockVersionColumn` to rename it) that the database raises on every Eloquent update
+  (`lock_version + 1`, never computed in PHP), read back into the model after the write. `RecordVersion` then
+  stamps the record `{lock version}.{updated_at}`: two writes inside one second — which `updated_at`, stored to
+  the second, could not tell apart — are now two versions, and a query-builder write that raises no lock version
+  still moves `updated_at` and is still a conflict. Every surface that reads the version (editable columns, the
+  fill handle, editable panel entries, `optimisticLock()`) picks it up unchanged; the audit trail leaves the
+  column out. Opt-in per model — without it the version is `updated_at`, as before.
+
+### Fixed
+
+- **Filling in a row fast no longer loses the second value.** Livewire holds a call back while another request
+  of the component is in flight, with the arguments it was made with — so the second cell of a row committed
+  while the first was on its way left with the version read *before* the first write, and was refused as
+  "modified by another user": the value flipped back. A record's writes now queue in the browser and read their
+  version when they leave (`editable/lanes.js`), so a user's own writes never conflict with each other, while a
+  write somebody else made in between is still refused.
+- **A saving cell keeps the focus.** The control was `disabled` while its write was out, which drops the focus:
+  after Enter the next keystroke and the next Tab went nowhere. A text input is now `readonly` with `aria-busy`
+  for that time, and a select, toggle or checkbox puts back a change made meanwhile — locked, still focused, and
+  nothing else on the page waits for it. A second commit while one is out is refused rather than sent beside it.
+- **Leaving a page does not drop an inline edit silently.** `wire:navigate` is held until the writes still on
+  their way have landed — text typed and never committed is committed first — and then carries on by itself,
+  asking only when a value cannot be saved. A reload, a closed tab or an ordinary link raises the browser's own
+  prompt while anything is unsaved or still being written. A write that reached the server finishes there:
+  `updateTableCell()`, `fillTableCells()` and `updatePanelEntry()` call `ignore_user_abort(true)`.
+- **A reorderable table's columns stay draggable while a cell has the focus.** wire-sortable skips its re-setup
+  after a morph while an editable cell is focused (rebuilding the drag-handle cells would take the focus), and
+  with it skipped re-marking the header — so a write answered while the user was still in a cell left the
+  headers unmarked and the next column drag failed. The header marks, outside `<tbody>`, are now put back on
+  every morph; only the body setup waits for the focus to leave.
+- **Live validation stays out of a write's way.** A check is not sent while the cell is writing (the write
+  validates anyway), a pending one is cancelled when a write starts, and an answer for a value already typed over
+  is dropped — each check is a request, and requests of one component queue behind each other.
+
 ## [2.9.5]
 
 ### Fixed

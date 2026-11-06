@@ -144,16 +144,35 @@ all of this — text inputs, selects and toggles use it, so they behave consiste
 - **Optimistic + rollback.** The cell shows the new value immediately, then calls the server; if
   the save fails (validation, permission, error) it rolls back to the last server-confirmed value
   and surfaces the message.
-- **Optimistic locking.** Each edit carries the row's version (`updated_at`, resolved through the
-  model's own timestamp column, so `const UPDATED_AT` is honoured). If the row changed since the
-  page loaded, the save is rejected as a conflict: the cell loads the current value and shows the
+- **Optimistic locking.** Each edit carries the row's version. If the row changed since the cell
+  read it, the save is rejected as a conflict: the cell loads the current value and shows the
   conflict message **inline on the cell itself** (a red state on the text/select/toggle, no toast
-  or `NotificationManager` setup required) — so two people (or two quick edits that bump the row)
-  can't silently clobber each other. Any re-render — a poll tick, a modal write, another session's
-  change arriving — refreshes each cell's value *and* its version through the sync node, so the
-  next edit is compared against what is actually in the database. Opt in to *also* raise a (more
-  prominent) toast for conflicts with `Table::notifyEditConflicts()` — this one needs the
-  notification system wired up (a toast container); the inline message works without it.
+  or `NotificationManager` setup required) — so two people can't silently clobber each other. Any
+  re-render — a poll tick, a modal write, another session's change arriving — refreshes each cell's
+  value *and* its version through the sync node, so the next edit is compared against what is
+  actually in the database. Opt in to *also* raise a (more prominent) toast for conflicts with
+  `Table::notifyEditConflicts()` — this one needs the notification system wired up (a toast
+  container); the inline message works without it. What the version is made of is
+  [below](#exact-versions-with-haslockversion).
+- **The cell is locked while its own write is out — and nothing else is.** From the commit until
+  the server answers, a text input is `readonly` and carries `aria-busy`; a select, toggle or
+  checkbox puts back a change made meanwhile. Locked, never `disabled`: a disabled control drops
+  the focus, so after Enter the next keystroke and the next Tab went nowhere. The rest of the table
+  stays editable — tab out of a saving cell straight into the next one and keep typing.
+- **One record's writes go one after another, with the version the previous one produced.**
+  Livewire sends one request per component at a time and holds a later call back, with the
+  arguments it was made with. A second cell of the same row committed while the first was on its
+  way therefore used to leave with the version from *before* the first write — and was refused as
+  somebody else's edit. Each cell now waits for the record's previous write to settle and reads
+  its version only when it leaves. Your own writes never conflict with each other; a write somebody
+  else made in between is still a different version, and still refused.
+- **Leaving the page does not lose an edit silently.** A write that has reached the server
+  finishes there whatever the browser does (the cell endpoints call `ignore_user_abort()`).
+  `wire:navigate` waits for the writes still on their way, commits text that was typed and never
+  committed, and then carries on by itself — it asks only when a value cannot be saved (refused,
+  invalid). A reload, a closed tab or an ordinary link cannot be held, so the browser's own prompt
+  is raised while anything is unsaved or still being written; the typed text is committed on the
+  way, so staying saves it.
 - **Opting out of the render.** `Table::refreshAfterEdit(false)` goes back to answering an edit
   with no HTML at all. Worth it only for a table where the query behind a render is expensive and
   nothing on screen depends on the edited value: the cell still reconciles itself from the
@@ -166,6 +185,43 @@ all of this — text inputs, selects and toggles use it, so they behave consiste
   handle included. It is a second, independent source of the per-record `disabled()` state above:
   either one locks the cell, whichever was declared first. See
   [Inactive Records](../inactive-records.md).
+
+### Exact versions with `HasLockVersion`
+
+By default a record's version is its `updated_at`, resolved through the model's own timestamp
+column (so `const UPDATED_AT` is honoured). That column is stored **to the second**, which leaves
+the lock a one-second hole: two writes inside one second leave the same stamp, and a client holding
+the stamp from the first is not told about the second. On a grid several people fill in at once,
+that second is where the work happens.
+
+`HasLockVersion` closes it. The model gets an integer column the **database** raises on every
+Eloquent update (`SET lock_version = lock_version + 1`, never `N + 1` computed in PHP, so two
+processes saving the same row get two versions), and the value the write produced is read back
+into the model:
+
+```php
+Schema::table('order_lines', function (Blueprint $table) {
+    $table->unsignedBigInteger('lock_version')->default(0); // [tl! focus]
+});
+```
+
+```php
+use NyonCode\WireCore\Foundation\Support\HasLockVersion;
+
+class OrderLine extends Model
+{
+    use HasLockVersion; // [tl! focus]
+
+    // protected string $lockVersionColumn = 'revision';   // another column name
+}
+```
+
+The stamp is then `{lock version}.{updated_at}` — both, because a query-builder write
+(`OrderLine::query()->update()`, `increment()`) fires no model event and raises no lock version, but
+still moves `updated_at`; with both in the stamp either kind of write is a conflict. Nothing else
+changes: every editable column, the fill handle, editable panel entries and an action's
+`optimisticLock()` read the version through the same `RecordVersion`. The audit trail leaves the
+column out — it moves on every update and nobody wrote it.
 
 ## Constraining An Edit You Do Not Own
 

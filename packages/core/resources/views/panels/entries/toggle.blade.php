@@ -41,7 +41,7 @@
             :aria-checked="value ? 'true' : 'false'"
             aria-label="{{ $field->getLabel() ?? $name }}"
             :title="error"
-            @if($disabled) disabled @else @click="commit(! value)" :disabled="saving" @endif
+            @if($disabled) disabled @else @click="change(! value)" :aria-busy="saving" @endif
             :class="{
                 '{{ $field->getOnColorClass() }}': value && ! error,
                 '{{ $field->getOffColorClass() }}': ! value && ! error,

@@ -175,4 +175,5 @@ return [
     // Frontované exporty ({@see Export\Jobs\RunExportJob}).
     'export_queued' => 'Export se připravuje na pozadí.',
     'export_ready' => 'Export je hotový: :file',
+    'unsaved_edits' => 'Některé změny ještě nejsou uložené. Opravdu odejít?',
 ];

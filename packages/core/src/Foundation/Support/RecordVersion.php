@@ -10,9 +10,10 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * The optimistic-locking convention shared by every inline-edit surface.
  *
- * A record's "version" is its `updated_at` timestamp as a string. The client
- * holds the version it read, sends it back with the edit, and the write is
- * rejected if the record moved underneath it.
+ * A record's "version" is its `updated_at` timestamp as a string — or, on a
+ * model using {@see HasLockVersion}, an exact lock version beside it (see
+ * {@see stamp()}). The client holds the version it read, sends it back with the
+ * edit, and the write is rejected if the record moved underneath it.
  *
  * Small, but it is domain knowledge rather than a helper, and it was written out
  * twice — once in the table's updateTableCell(), once in the panel's
@@ -57,8 +58,35 @@ final class RecordVersion
      */
     private array $baselines = [];
 
-    /** The version stamp a client should hold for this record, if it has one. */
+    /**
+     * The version stamp a client should hold for this record, if it has one.
+     *
+     * A model with {@see HasLockVersion} is stamped `{lock version}.{updated_at}`.
+     * The lock version is exact — the database raises it on every Eloquent
+     * update, so two writes inside one second still get two stamps. `updated_at`
+     * stays in the stamp because a query-builder write (`Model::query()->update()`)
+     * fires no model event and raises no lock version, but does move the
+     * timestamp; with both in the stamp, either kind of write is a conflict.
+     *
+     * Without the trait it is `updated_at` alone, to the second.
+     */
     public function stamp(Model $record): ?string
+    {
+        $updatedAt = $this->timestamp($record);
+
+        if (method_exists($record, 'getLockVersionColumn')) {
+            $lock = $record->getAttribute($record->getLockVersionColumn());
+
+            if (is_int($lock) || (is_string($lock) && ctype_digit($lock))) {
+                return $lock.'.'.($updatedAt ?? '0');
+            }
+        }
+
+        return $updatedAt;
+    }
+
+    /** `updated_at` as a UNIX timestamp, or null for an untimestamped record. */
+    private function timestamp(Model $record): ?string
     {
         // Via getUpdatedAtColumn() rather than ->updated_at: a model is free to
         // name the column something else, and the old hand-rolled copies read the

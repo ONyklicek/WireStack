@@ -137,7 +137,7 @@ test('re-initialisation is deferred while a cell is being edited, and coalesced 
     // during an edit. And `morph.updated` fires for every patched node, so the
     // rebuild is queued once per morph rather than once per node.
     expect(mgSource())
-        ->toContain('if (this.editingCell()) return;')
+        ->toMatch('/if \(this\.editingCell\(\)\) \{\s*this\.remarkHeader\(\);\s*return;\s*\}/')
         ->toContain('if (this._setupQueued) return;')
         ->toMatch('/scheduleSetup\(\) \{/');
 });
@@ -198,4 +198,14 @@ test('the wrapper carrying the guards comes from reordering, not from the trait'
         ->toContain('x-data="wireSortable(')
         ->and(Livewire::test(MgPlainHost::class)->html())
         ->not->toContain('wire-sortable-wrapper');
+});
+
+test('the header marks come back on a morph even while a cell is being edited', function () {
+    // The morph wipes `data-sortable-column` off the header, and the header is
+    // outside <tbody>: marking it again touches no cell and moves no focus.
+    // Skipped along with setup(), the columns stopped being draggable for as
+    // long as the focus stayed in a cell.
+    expect(mgSource())
+        ->toMatch('/remarkHeader\(\) \{[^}]*columnReorderable[^}]*markHeaderCells\(thead\)/s')
+        ->not->toMatch('/remarkHeader\(\) \{[^}]*(destroy|new Sortable)/s');
 });

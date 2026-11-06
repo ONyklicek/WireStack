@@ -35,7 +35,7 @@
                 type="checkbox"
                 :checked="value"
                 aria-label="{{ $field->getLabel() ?? $name }}"
-                @if($disabled) disabled @else @change="commit($event.target.checked)" :disabled="saving" @endif
+                @if($disabled) disabled @else @change="change($event.target.checked, $event)" :aria-busy="saving" @endif
                 :class="{ 'ring-2 ring-red-500': error }"
                 class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 dark:bg-gray-800 {{ $field->getAccentColorClass() }} focus:ring-primary-500"
             >
