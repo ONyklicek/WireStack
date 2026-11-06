@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Tours;
 use Illuminate\Contracts\Auth\Authenticatable;
 use NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver;
 use NyonCode\WireCore\Foundation\Preferences\PreferenceManager;
+use WeakMap;
 
 /**
  * What each user has acknowledged, and at which version.
@@ -76,7 +77,30 @@ final class TourLedger
     /** The key a put-off tour's session and count live under, inside the same bag. */
     public const POSTPONED = 'postponed';
 
-    public function __construct(private readonly ?PreferenceDriver $driver = null) {}
+    /**
+     * The bag each user's reads were answered from, keyed by the user object.
+     *
+     * {@see TourState::match()} asks two questions of every registered tour, and
+     * each was a read of the same row: on a page with a dozen tours that was two
+     * dozen identical queries before anything rendered. One read per user per
+     * ledger answers all of them.
+     *
+     * Keyed by the object, not its id, and held by this instance only: a ledger
+     * is built per lookup, an entry goes with the user object it was read for,
+     * and nothing is carried from one request to the next — under a long-lived
+     * worker either. Every write here forgets it.
+     *
+     * @var WeakMap<Authenticatable, array<string, mixed>>
+     */
+    private WeakMap $bags;
+
+    /** @var array<string, mixed>|null The same, for a guest. */
+    private ?array $guestBag = null;
+
+    public function __construct(private readonly ?PreferenceDriver $driver = null)
+    {
+        $this->bags = new WeakMap;
+    }
 
     /**
      * The versions this user has acknowledged, keyed by tour id.
@@ -85,7 +109,7 @@ final class TourLedger
      */
     public function acknowledged(?Authenticatable $user): array
     {
-        return $this->versionsIn($this->driver($user)->load(self::SURFACE, $user));
+        return $this->versionsIn($this->bag($user));
     }
 
     /**
@@ -125,7 +149,7 @@ final class TourLedger
      */
     public function reached(Tour $tour, ?Authenticatable $user): ?int
     {
-        $reached = $this->reachedIn($this->driver($user)->load(self::SURFACE, $user))[$tour->getId()] ?? null;
+        $reached = $this->reachedIn($this->bag($user))[$tour->getId()] ?? null;
 
         return $reached !== null && $reached['since'] === $tour->getVersion() ? $reached['step'] : null;
     }
@@ -144,6 +168,8 @@ final class TourLedger
                 $tour->getId() => ['since' => $tour->getVersion(), 'step' => $step],
             ],
         ]);
+
+        $this->forgetBags();
     }
 
     /**
@@ -168,7 +194,7 @@ final class TourLedger
             return false;
         }
 
-        $entry = $this->postponedIn($this->driver($user)->load(self::SURFACE, $user))[$tour->getId()] ?? null;
+        $entry = $this->postponedIn($this->bag($user))[$tour->getId()] ?? null;
 
         return $entry !== null && $entry['since'] === $tour->getVersion() && $entry['session'] === $session;
     }
@@ -183,7 +209,7 @@ final class TourLedger
      */
     public function postponements(Tour $tour, ?Authenticatable $user): int
     {
-        $entry = $this->postponedIn($this->driver($user)->load(self::SURFACE, $user))[$tour->getId()] ?? null;
+        $entry = $this->postponedIn($this->bag($user))[$tour->getId()] ?? null;
 
         return $entry !== null && $entry['since'] === $tour->getVersion() ? $entry['count'] : 0;
     }
@@ -206,6 +232,8 @@ final class TourLedger
                 ],
             ],
         ]);
+
+        $this->forgetBags();
     }
 
     /**
@@ -259,6 +287,8 @@ final class TourLedger
             self::REACHED => $reached,
             self::POSTPONED => $postponed,
         ]);
+
+        $this->forgetBags();
     }
 
     /**
@@ -376,6 +406,26 @@ final class TourLedger
      * — per-surface override, then a global test swap, then config — stay in the
      * one class that owns them.
      */
+    /**
+     * This user's stored bag, read once per ledger — see {@see $bags}.
+     *
+     * @return array<string, mixed>
+     */
+    private function bag(?Authenticatable $user): array
+    {
+        if ($user === null) {
+            return $this->guestBag ??= $this->driver($user)->load(self::SURFACE, $user);
+        }
+
+        return $this->bags[$user] ??= $this->driver($user)->load(self::SURFACE, $user);
+    }
+
+    private function forgetBags(): void
+    {
+        $this->bags = new WeakMap;
+        $this->guestBag = null;
+    }
+
     private function driver(?Authenticatable $user): PreferenceDriver
     {
         return PreferenceManager::resolve(
