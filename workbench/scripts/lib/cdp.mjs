@@ -196,7 +196,10 @@ export async function openPage({ url, shotPrefix, width = 1200, height = 1200, m
    */
   const waitFor = (expression, options) => until(() => eval_(expression), options);
 
-  return { page, eval_, waitFor, shot, shotDir, consoleErrors, badResponses, close };
+  /** Listen to the page's CDP events (`Page.javascriptDialogOpening`, `Fetch.requestPaused`, …). */
+  const on = (fn) => cdp.on((msg) => { if (! msg.sessionId || msg.sessionId === sessionId) fn(msg); });
+
+  return { page, eval_, waitFor, shot, shotDir, consoleErrors, badResponses, close, on };
 }
 
 /** A check recorder that prints as it goes and can report the verdict. */

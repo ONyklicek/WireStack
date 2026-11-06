@@ -209,6 +209,7 @@
                          the tick. This asks wire-core to sequence them the way
                          Livewire sequences one scope (support/island-coordination.js). --}}
                     data-wire-islands="shared-state"
+                    data-msg-unsaved-edits="{{ __('wire-table::messages.unsaved_edits') }}"
                     @if($isSelectable)
                         data-page-keys="{{ json_encode($pageRecordKeys) }}"
                         data-matching="{{ $recordCount }}"

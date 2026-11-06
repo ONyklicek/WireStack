@@ -175,4 +175,5 @@ return [
     // Queued exports ({@see Export\Jobs\RunExportJob}).
     'export_queued' => 'The export is being prepared in the background.',
     'export_ready' => 'Your export is ready: :file',
+    'unsaved_edits' => 'Some changes have not been saved yet. Leave anyway?',
 ];

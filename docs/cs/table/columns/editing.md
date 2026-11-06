@@ -142,16 +142,33 @@ i toggly ji používají, takže se chovají konzistentně.
 
 - **Optimistic + rollback.** Buňka hned ukáže novou hodnotu, pak zavolá server; když uložení selže
   (validace, oprávnění, chyba), vrátí se na poslední serverem potvrzenou hodnotu a zobrazí zprávu.
-- **Optimistic locking.** Každý edit nese verzi řádku (`updated_at`, resolvovaný přes vlastní
-  timestamp sloupec modelu, takže `const UPDATED_AT` je respektován). Když se řádek od načtení
-  stránky změnil, uložení se odmítne jako konflikt: buňka načte aktuální hodnotu a zobrazí zprávu o
-  konfliktu **přímo na buňce** (červený stav na text/select/toggle, bez toastu nebo nastavení
-  `NotificationManager`) — dva lidé (nebo dva rychlé edity, které řádek bumpnou) se tak tiše
-  nepřepíšou. Jakýkoli re-render — tick pollingu, zápis z modalu, příchozí změna z jiné relace —
-  obnoví přes sync uzel hodnotu buňky *i* její verzi, takže další edit se porovnává proti tomu, co
-  je opravdu v databázi. Volitelně lze pro konflikty vyvolat i (nápadnější) toast přes
-  `Table::notifyEditConflicts()` — ten už vyžaduje zapojený notifikační systém (toast container);
-  inline hláška funguje i bez něj.
+- **Optimistic locking.** Každý edit nese verzi řádku. Když se řádek od chvíle, kdy ho buňka
+  načetla, změnil, uložení se odmítne jako konflikt: buňka načte aktuální hodnotu a zobrazí zprávu
+  o konfliktu **přímo na buňce** (červený stav na text/select/toggle, bez toastu nebo nastavení
+  `NotificationManager`) — dva lidé se tak tiše nepřepíšou. Jakýkoli re-render — tick pollingu,
+  zápis z modalu, příchozí změna z jiné relace — obnoví přes sync uzel hodnotu buňky *i* její
+  verzi, takže další edit se porovnává proti tomu, co je opravdu v databázi. Volitelně lze pro
+  konflikty vyvolat i (nápadnější) toast přes `Table::notifyEditConflicts()` — ten už vyžaduje
+  zapojený notifikační systém (toast container); inline hláška funguje i bez něj. Z čeho se verze
+  skládá, popisuje [oddíl níže](#presne-verze-s-haslockversion).
+- **Buňka je během vlastního zápisu zamčená — a nic jiného.** Od uložení do odpovědi serveru je
+  text input `readonly` a nese `aria-busy`; select, toggle a checkbox změnu provedenou mezitím
+  vrátí. Zamčená, nikdy `disabled`: zakázaný prvek ztratí focus, takže po Enteru šel další stisk
+  klávesy i Tab do prázdna. Zbytek tabulky zůstává editovatelný — z ukládané buňky lze Tabem
+  rovnou přejít do další a psát dál.
+- **Zápisy jednoho záznamu jdou za sebou, s verzí, kterou vytvořil ten předchozí.** Livewire posílá
+  na komponentu jeden požadavek najednou a pozdější volání podrží — s argumenty, se kterými vzniklo.
+  Druhá buňka téhož řádku uložená, zatímco první byla na cestě, proto odcházela s verzí z doby
+  *před* prvním zápisem a server ji odmítl jako cizí editaci. Každá buňka teď počká, až se
+  předchozí zápis záznamu vyřídí, a verzi si přečte teprve při odeslání. Vaše vlastní zápisy se
+  nikdy nepřou; zápis někoho jiného mezi nimi je pořád jiná verze a pořád se odmítne.
+- **Odchod ze stránky editaci tiše neztratí.** Zápis, který už dorazil na server, tam doběhne, ať
+  prohlížeč udělá cokoli (endpointy buněk volají `ignore_user_abort()`). `wire:navigate` počká na
+  zápisy, které jsou ještě na cestě, uloží napsaný a neodeslaný text a pak sám pokračuje — ptá se
+  jen tehdy, když hodnotu nejde uložit (odmítnutá, nevalidní). Obnovení stránky, zavření panelu
+  nebo obyčejný odkaz podržet nejde, takže dokud je něco neuložené nebo se ještě zapisuje,
+  prohlížeč zobrazí vlastní výzvu; napsaný text se přitom začne ukládat, takže zůstat znamená ho
+  uložit.
 - **Vypnutí renderu.** `Table::refreshAfterEdit(false)` se vrací k odpovědi bez HTML. Vyplatí se
   jen u tabulky, kde je dotaz za renderem drahý a na editované hodnotě nic na obrazovce nezávisí:
   buňka se z odpovědi sesynchronizuje pořád, okolí ne.
@@ -163,6 +180,43 @@ i toggly ji používají, takže se chovají konzistentně.
   tutéž bránu, fill handle včetně. Je to druhý, nezávislý zdroj per-record `disabled()` stavu
   z předchozího bodu: buňku zamkne kterýkoli z nich, ať byl deklarován první nebo druhý. Viz
   [Neaktivní záznamy](../inactive-records.md).
+
+### Přesné verze s `HasLockVersion`
+
+Ve výchozím stavu je verzí záznamu jeho `updated_at`, resolvovaný přes vlastní timestamp sloupec
+modelu (takže `const UPDATED_AT` je respektován). Ten sloupec se ukládá **na sekundy**, takže zámek
+má jednosekundovou díru: dva zápisy v jedné sekundě zanechají stejné razítko a klient, který drží
+razítko z prvního, se o druhém nedozví. Na gridu, který vyplňuje víc lidí najednou, se práce
+odehrává právě v té sekundě.
+
+`HasLockVersion` ji zavře. Model dostane celočíselný sloupec, který při každém Eloquent updatu
+zvedá **databáze** (`SET lock_version = lock_version + 1`, nikdy `N + 1` spočítané v PHP, takže dva
+procesy ukládající týž řádek dostanou dvě verze), a hodnota, kterou zápis vytvořil, se načte zpět
+do modelu:
+
+```php
+Schema::table('order_lines', function (Blueprint $table) {
+    $table->unsignedBigInteger('lock_version')->default(0); // [tl! focus]
+});
+```
+
+```php
+use NyonCode\WireCore\Foundation\Support\HasLockVersion;
+
+class OrderLine extends Model
+{
+    use HasLockVersion; // [tl! focus]
+
+    // protected string $lockVersionColumn = 'revision';   // jiný název sloupce
+}
+```
+
+Razítko je pak `{lock version}.{updated_at}` — obojí, protože zápis přes query builder
+(`OrderLine::query()->update()`, `increment()`) nespustí žádnou událost modelu a lock version
+nezvedne, ale `updated_at` posune; s obojím v razítku je konfliktem kterýkoli z nich. Nic jiného se
+nemění: každý editovatelný sloupec, fill handle, editovatelné položky panelu i `optimisticLock()`
+akce čtou verzi přes tentýž `RecordVersion`. Audit sloupec vynechává — mění se při každém updatu a
+nikdo ho nezapsal.
 
 ## Omezení editace, kterou nevlastníte
 

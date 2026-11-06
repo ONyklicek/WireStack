@@ -113,4 +113,5 @@ return [
     'tour_start' => 'Start the tour',
     'tour_later' => 'Maybe later',
     'tour_replay' => 'Replay the tour',
+    'unsaved_edits' => 'Some changes have not been saved yet. Leave anyway?',
 ];

@@ -191,9 +191,10 @@ ToggleEntry::make('is_active')
 
 Each commit updates the control immediately, then reconciles with the server:
 
-- **Success** — the value sticks and the record's `updated_at` version advances.
+- **Success** — the value sticks and the record's version advances.
 - **Failure** — the control rolls back to the last confirmed value and shows the message inline.
-- **Conflict** — if the record changed elsewhere since the panel loaded (its `updated_at` no longer matches), the write is refused, the control adopts the server's current value, and the user sees a "changed elsewhere" note. No lost updates.
+- **Conflict** — if the record changed elsewhere since the panel loaded (its version no longer matches), the write is refused, the control adopts the server's current value, and the user sees a "changed elsewhere" note. No lost updates. The version is `updated_at`, to the second, or exact with [`HasLockVersion`](../table/columns/editing.md#exact-versions-with-haslockversion).
+- **While it is out** — the entry is locked (a text input `readonly`, a select or switch puts a change back) but keeps the focus, and two entries of the record written one after the other never conflict with each other: the second leaves with the version the first produced. Leaving the page waits for, or warns about, a write still on its way — the same rules as [editable table cells](../table/columns/editing.md#how-inline-saves-work).
 
 The record is always resolved server-side from the component's own bound record inside a locked transaction — the client never chooses which row or column is written.
 

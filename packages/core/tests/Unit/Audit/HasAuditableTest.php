@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use NyonCode\WireCore\Audit\Concerns\HasAuditable;
+use NyonCode\WireCore\Foundation\Support\HasLockVersion;
 
 // ─── filterAuditAttributes ──────────────────────────────────────────────────
 
@@ -65,6 +66,17 @@ it('returns all attributes when no include/exclude configured', function () {
         'name' => 'Alice',
         'email' => 'alice@example.com',
     ]);
+});
+
+it('leaves the lock version out of the trail', function () {
+    // Every update raises it; left in, every entry would carry a "4 → 5" line
+    // nobody wrote.
+    $filtered = (new AuditableLockedTestModel)->publicFilterAuditAttributes([
+        'name' => 'Alice',
+        'lock_version' => 5,
+    ]);
+
+    expect($filtered)->toBe(['name' => 'Alice']);
 });
 
 // ─── Model events registration ───────────────────────────────────────────────
@@ -165,6 +177,25 @@ class AuditableBothTestModel extends Model
 class AuditableNoFilterTestModel extends Model
 {
     use HasAuditable;
+
+    protected $table = 'test_models';
+
+    protected $guarded = [];
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    public function publicFilterAuditAttributes(array $attributes): array
+    {
+        return $this->filterAuditAttributes($attributes);
+    }
+}
+
+class AuditableLockedTestModel extends Model
+{
+    use HasAuditable;
+    use HasLockVersion;
 
     protected $table = 'test_models';
 

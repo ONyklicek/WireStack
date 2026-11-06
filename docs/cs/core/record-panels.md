@@ -191,9 +191,10 @@ ToggleEntry::make('is_active')
 
 Každý commit prvek okamžitě aktualizuje, pak se srovná se serverem:
 
-- **Úspěch** — hodnota zůstane a verze `updated_at` záznamu se posune.
+- **Úspěch** — hodnota zůstane a verze záznamu se posune.
 - **Selhání** — prvek se vrátí na poslední potvrzenou hodnotu a zobrazí zprávu inline.
-- **Konflikt** — pokud se záznam od načtení panelu změnil jinde (jeho `updated_at` už nesedí), zápis je odmítnut, prvek převezme aktuální serverovou hodnotu a uživatel vidí poznámku „změněno jinde“. Žádné ztracené aktualizace.
+- **Konflikt** — pokud se záznam od načtení panelu změnil jinde (jeho verze už nesedí), zápis je odmítnut, prvek převezme aktuální serverovou hodnotu a uživatel vidí poznámku „změněno jinde“. Žádné ztracené aktualizace. Verzí je `updated_at` na sekundy, nebo přesná verze s [`HasLockVersion`](../table/columns/editing.md#presne-verze-s-haslockversion).
+- **Během zápisu** — položka je zamčená (text input `readonly`, select či přepínač změnu vrátí), ale drží focus, a dvě položky záznamu uložené po sobě se nikdy nepřou: druhá odchází s verzí, kterou vytvořila první. Odchod ze stránky na rozjetý zápis počká, nebo na něj upozorní — stejná pravidla jako u [editovatelných buněk tabulky](../table/columns/editing.md#jak-funguji-inline-ulozeni).
 
 Záznam se vždy dohledá na serveru z vlastního navázaného záznamu komponenty uvnitř zamčené transakce — klient nikdy nevolí, který řádek ani sloupec se zapíše.
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Workbench\App\Providers;
 
 use Illuminate\Http\Middleware\TrustProxies;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
@@ -13,6 +14,7 @@ use Laravel\Fortify\Contracts\CreatesNewUsers;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 use Laravel\Fortify\Features;
 use Livewire\Livewire;
+use NyonCode\WireCore\Core\Events\CellUpdating;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroups;
@@ -241,6 +243,19 @@ class WorkbenchServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // A slow inline write, on demand, for the drivers that leave a page
+        // while a write is on the server (verify-cell-write-leave.mjs). A file
+        // rather than a header or a cookie: the cell's request is Livewire's,
+        // and an unencrypted cookie never survives EncryptCookies. The file
+        // holds the delay in milliseconds; no file, no delay.
+        Event::listen(CellUpdating::class, function (): void {
+            $flag = storage_path('framework/slow-cell-write');
+
+            if (is_file($flag)) {
+                usleep(max(0, (int) file_get_contents($flag)) * 1000);
+            }
+        });
+
         // What a full-page Livewire component is wrapped in. The framework does
         // not supply this on purpose: the shell around a routed page belongs to
         // the application, exactly as the routes do.

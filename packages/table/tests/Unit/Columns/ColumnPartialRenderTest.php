@@ -249,7 +249,7 @@ it('renders ToggleColumn through its partial', function () {
     expect($html)->toContain('<button')
         ->and($html)->toContain('role="switch"')
         ->and($html)->toContain('wireEditableCell(')
-        ->and($html)->toContain('commit(! value)')
+        ->and($html)->toContain('change(! value)')
         ->and($html)->toContain('data-record-key="1"')
         ->and($html)->toContain('data-column-name="active"');
 });
@@ -309,7 +309,7 @@ it('renders CheckboxColumn through its partial', function () {
 
     expect($html)->toContain('type="checkbox"')
         ->and($html)->toContain('wireEditableCell(')
-        ->and($html)->toContain('commit($event.target.checked)')
+        ->and($html)->toContain('change($event.target.checked, $event)')
         ->and($html)->toContain('data-record-key="7"')
         ->and($html)->toContain('data-column-name="active"');
 });
@@ -319,7 +319,7 @@ it('does not wire a disabled checkbox cell for editing', function () {
     $column = CheckboxColumn::make('active')->disabled(fn () => true);
 
     expect($column->renderCell($record))->toContain('disabled')
-        ->and($column->renderCell($record))->not->toContain('commit($event.target.checked)')
+        ->and($column->renderCell($record))->not->toContain('change($event.target.checked, $event)')
         // The client-side disabled state is cosmetic; the server must refuse too.
         ->and($column->canEdit($record))->toBeFalse();
 });

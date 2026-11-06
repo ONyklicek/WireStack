@@ -34,7 +34,7 @@
         role="switch"
         :aria-checked="value ? 'true' : 'false'"
         :title="error"
-        @if($disabled) disabled @else @click="commit(! value)" :disabled="saving" @endif
+        @if($disabled) disabled @else @click="change(! value)" :aria-busy="saving" @endif
         :class="{
             '{{ $onColorClass }}': value && ! error,
             '{{ $offColorClass }}': ! value && ! error,

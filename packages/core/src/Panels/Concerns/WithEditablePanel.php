@@ -51,6 +51,12 @@ trait WithEditablePanel
      */
     public function updatePanelEntry(mixed $recordKey, string $entryName, mixed $value, ?string $recordVersion = null): array
     {
+        // A write that reached the server finishes here, whatever the browser
+        // does next: closing the tab mid-request must not leave half of an edit
+        // the user saw as sent. See core editable/leave-guard.js for the half
+        // that never left the browser.
+        ignore_user_abort(true);
+
         // Do not re-render: a DOM morph would destroy the cell's Alpine state.
         // The cell switches optimistically and reconciles from the response.
         if (method_exists($this, 'skipRender')) {

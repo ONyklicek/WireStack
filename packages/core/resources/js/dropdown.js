@@ -1,6 +1,8 @@
 import { computePosition, autoUpdate, flip, shift, offset, size } from '@floating-ui/dom'
 
 import { syncNodeOf } from './editable/sync'
+import { laneKey, runInLane } from './editable/lanes'
+import { guardCell } from './editable/leave-guard'
 import { targeting } from './support/island'
 import './support/partials'
 import './support/island-scope'
@@ -651,13 +653,18 @@ const wireWizard = (initial = 0) => ({
 /*
  * wireEditableCell — canonical inline-editable table cell.
  *
- * updateTableCell() calls skipRender() so the table is NOT re-rendered (a DOM
- * morph would destroy Alpine cell state), which means every editable cell must
- * switch its own appearance optimistically and reconcile with the server:
+ * The cell switches its own appearance optimistically and reconciles with the
+ * server:
  *
  *  - commit(next): optimistic value → $wire.updateTableCell(key, col, next, ver);
  *    on failure it rolls back to the last server-confirmed value, and on an
  *    optimistic-lock conflict it adopts the server's current value + version.
+ *  - while its own write is out the cell is locked — readonly, never disabled,
+ *    so it keeps the focus — and nothing else on the page waits for it
+ *    (see commit()).
+ *  - writes of one record queue behind each other and read their version when
+ *    they leave, not when they are made (see editable/lanes.js), so a second
+ *    cell of the row is never refused for the first cell's write.
  *  - a MutationObserver on the cell's sync node (data-server-value /
  *    data-record-version — see editable/sync.js) reconciles the cell when a
  *    poll, a modal write or any other re-render changes the row underneath it.
@@ -690,7 +697,12 @@ const wireEditableCell = (config = {}) => ({
     // Livewire component id of the host, used to scope sibling version syncing to
     // cells of the same table row / same panel record (see below).
     componentId: null,
+    // A write of this cell is queued or in flight. What a poll and a re-render
+    // ask before touching the cell, and what the spinner shows.
     saving: false,
+    // The write is on the wire right now — its answer is about to carry the
+    // authoritative version, so nothing else may set one meanwhile.
+    inFlight: false,
     error: null,
     success: false,
     focused: false,
@@ -707,6 +719,15 @@ const wireEditableCell = (config = {}) => ({
     _sync: null,
     _observer: null,
     _onSiblingCommit: null,
+    _unguard: null,
+    // The write under way and the value it carries, so a refused second commit
+    // can still be awaited and a refused change put back (see change()).
+    _writing: null,
+    _sending: undefined,
+    // Pending live-validation timer and the number of the newest check, so an
+    // answer for a value already typed over is dropped (see validate()).
+    _validateTimer: null,
+    _validateSeq: 0,
 
     get dirty() {
         return this.value !== this.serverValue
@@ -745,10 +766,17 @@ const wireEditableCell = (config = {}) => ({
             invalid: this.$el.dataset.msgInvalid,
         }
 
+        // Each check is a request to the host, and requests of one component
+        // queue behind each other — so a check is never sent for a value that
+        // is already being written (the write validates it anyway), and one
+        // still waiting is cancelled the moment a write starts (commit()).
         if (config.liveValidation) {
-            this.$watch('value', window.Alpine.debounce(() => {
-                if (this.dirty) this.validate()
-            }, config.debounce ?? 500))
+            this.$watch('value', () => {
+                clearTimeout(this._validateTimer)
+                this._validateTimer = setTimeout(() => {
+                    if (this.dirty && ! this.saving) this.validate()
+                }, config.debounce ?? 500)
+            })
         }
 
         // The channel the server keeps current: a child node, because this root
@@ -774,7 +802,7 @@ const wireEditableCell = (config = {}) => ({
                     // Not while a write of ours is in flight: that response is
                     // about to hand back the authoritative version, and this
                     // render was generated before our write landed.
-                    if (! this.saving) {
+                    if (! this.inFlight) {
                         this.setRecordVersion(this._sync.dataset.recordVersion)
                     }
                 }
@@ -792,22 +820,33 @@ const wireEditableCell = (config = {}) => ({
         // commit we broadcast the new version; siblings of the same host component
         // and record adopt it. A genuine external change still never dispatches
         // this event, so real cross-client conflicts are still caught.
+        //
+        // Adopted even by a cell the user is typing into, and by one whose own
+        // write is queued: the version moved because of the user's own write
+        // to another column, which changes nothing about this cell's value —
+        // and the queued write is exactly the one that must leave with it.
+        // Only a write already on the wire is left alone; its answer brings
+        // the version after it.
         this.componentId = this.$el.closest('[wire\\:id]')?.getAttribute('wire:id') ?? null
         this._onSiblingCommit = (e) => {
             const d = e.detail || {}
             if (d.componentId !== this.componentId) return
             if (String(d.recordKey) !== String(this.recordKey)) return
             if (d.column === this.columnName) return   // that was us
-            if (this.saving) return                    // don't disturb an in-flight save
-            if (this.focused && this.dirty) return     // nor a field being edited
+            if (this.inFlight) return
             this.setRecordVersion(d.version)
         }
         window.addEventListener('wire-editable-committed', this._onSiblingCommit)
+
+        // Leaving the page while this cell still has something to write — see
+        // editable/leave-guard.js.
+        this._unguard = guardCell(this, this.$el)
     },
 
     destroy() {
         this._observer?.disconnect()
         window.removeEventListener('wire-editable-committed', this._onSiblingCommit)
+        this._unguard?.()
     },
 
     /**
@@ -863,60 +902,133 @@ const wireEditableCell = (config = {}) => ({
         if (this.dirty) this.commit(this.value)
     },
 
-    async commit(next) {
-        if (this.saving) return
+    /**
+     * Write `next`. The cell is locked until the write has settled.
+     *
+     * Locked, not disabled: the views make the control `readonly` (a select, a
+     * toggle and a checkbox refuse the change instead) while `saving` is true.
+     * A disabled control drops the focus — after Enter the next keystroke and
+     * the next Tab went nowhere — and a readonly one keeps it, so the user stays
+     * where they were and the cell simply does not take input until the server
+     * has answered. Nothing else on the page waits for it: other cells stay
+     * editable, and a second cell of the same row queues its write behind this
+     * one (see write()).
+     *
+     * A commit asked for while one is out is refused here too, which is what
+     * a forged or scripted call would otherwise slip past the views with.
+     */
+    commit(next) {
+        if (this.saving) return this._writing ?? Promise.resolve()
+
+        this._sending = next
         this.value = next                       // optimistic
-        this.saving = true
         this.error = null
+        clearTimeout(this._validateTimer)
+        this._validateSeq++                     // an answer still out is stale now
+        this.saving = true
+
+        this._writing = this.write(next).finally(() => {
+            this.saving = false
+            this._writing = null
+        })
+
+        return this._writing
+    },
+
+    /**
+     * A select, toggle or checkbox changed. Commits, unless the cell's write is
+     * still out — then the change is put back.
+     *
+     * Those controls have no `readonly`, and `disabled` would take the focus
+     * away, so the lock is enforced here instead: the control the user touched
+     * shows the value being written again, which is also what the server will
+     * hold once it answers.
+     */
+    change(next, event = null) {
+        if (! this.saving) return this.commit(next)
+
+        this.value = this._sending
+        const target = event?.target
+        if (target?.type === 'checkbox') target.checked = !! this._sending
+        else if (target && 'value' in target) target.value = this._sending ?? ''
+
+        return this._writing ?? Promise.resolve()
+    },
+
+    /**
+     * One write, queued behind the record's other writes. True when it landed.
+     *
+     * The version is read inside the lane — when the write actually leaves —
+     * because the write before it may have moved it. See editable/lanes.js.
+     */
+    async write(next) {
+        let r
         try {
-            const r = await targeting(this.$wire, this.island)[this.commitMethod](
-                this.recordKey,
-                this.columnName,
-                next,
-                this.recordVersion,
-            )
-            if (r?.success === false) {
-                this.value = this.serverValue   // rollback to last confirmed
-                this.error = r.message || r.errors?.[0] || this.messages.error
-                if (r?.conflict) {              // someone else won the race
-                    this.value = this.parse(r.currentValue)
-                    this.serverValue = this.value
-                    this.setRecordVersion(r.currentVersion)
+            r = await runInLane(laneKey(this.componentId, this.recordKey), async () => {
+                this.inFlight = true
+                try {
+                    return await targeting(this.$wire, this.island)[this.commitMethod](
+                        this.recordKey,
+                        this.columnName,
+                        next,
+                        this.recordVersion,
+                    )
+                } finally {
+                    this.inFlight = false
                 }
-            } else {
-                this.serverValue = next
-                this.setRecordVersion(r.version)
-                this.success = true
-                setTimeout(() => { this.success = false }, 1500)
-                // Tell sibling cells of the same record their optimistic-lock
-                // version just advanced, so the next field edited on the same
-                // record does not falsely conflict.
-                if (r?.version) {
-                    window.dispatchEvent(new CustomEvent('wire-editable-committed', {
-                        detail: {
-                            componentId: this.componentId,
-                            recordKey: this.recordKey,
-                            column: this.columnName,
-                            version: r.version,
-                        },
-                    }))
-                }
-            }
+            })
         } catch (e) {
             this.value = this.serverValue       // rollback
             this.error = this.messages.saveFailed
-        } finally {
-            this.saving = false
+
+            return false
         }
+
+        if (r?.success === false) {
+            this.value = this.serverValue       // rollback to last confirmed
+            this.error = r.message || r.errors?.[0] || this.messages.error
+            if (r?.conflict) {                  // someone else won the race
+                this.value = this.parse(r.currentValue)
+                this.serverValue = this.value
+                this.setRecordVersion(r.currentVersion)
+            }
+
+            return false
+        }
+
+        this.serverValue = next
+        this.setRecordVersion(r?.version)
+        this.success = true
+        setTimeout(() => { this.success = false }, 1500)
+        // Tell sibling cells of the same record their optimistic-lock
+        // version just advanced, so the next field edited on the same
+        // record does not falsely conflict.
+        if (r?.version) {
+            window.dispatchEvent(new CustomEvent('wire-editable-committed', {
+                detail: {
+                    componentId: this.componentId,
+                    recordKey: this.recordKey,
+                    column: this.columnName,
+                    version: r.version,
+                },
+            }))
+        }
+
+        return true
     },
 
     async validate() {
+        const seq = ++this._validateSeq
+        const checked = this.value
         try {
             const r = await this.$wire[this.validateMethod](
                 this.recordKey,
                 this.columnName,
-                this.value,
+                checked,
             )
+            // Typed over, or a write started meanwhile: this answer is about a
+            // value nobody is looking at any more.
+            if (seq !== this._validateSeq || this.saving || this.value !== checked) return
             this.error = (r && !r.valid) ? (r.errors?.[0] || this.messages.invalid) : null
         } catch (e) {}
     },
