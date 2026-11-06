@@ -2,6 +2,17 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.5]
+
+### Fixed
+
+- **Picking the tour for a page read the same preference row once per question.** `TourState::match()` asks
+  whether every registered tour was seen and whether it was put off, and the ledger answered each from a fresh
+  `load()` — on the database driver two queries per tour on every page, about a dozen on an application with six
+  tours, before the tour was even decided. The ledger now reads each user's bag once and answers every question
+  from it; a write through the ledger forgets it. Held per ledger and keyed by the user object, so nothing is
+  carried from one request to the next, under a long-lived worker (Octane) either.
+
 ## [2.9.4]
 
 ### Fixed
