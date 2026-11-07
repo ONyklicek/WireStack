@@ -5,7 +5,9 @@ declare(strict_types=1);
 use Illuminate\Support\Collection;
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\BulkAction;
+use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Data\CollectionDataSource;
@@ -71,6 +73,17 @@ class CollectionSourceTable extends Component
                 TextFilter::make('name'),
                 NumberRangeFilter::make('score'),
                 ...CstPeople::$extraFilters,
+            ])
+            ->actions([
+                Action::make('greet')->action(function ($record): void {
+                    CstPeople::$touched = [$record::class.':'.$record->name];
+                }),
+                Action::make('rename')
+                    ->form([TextInput::make('name')->required()])
+                    ->fillFormUsing(fn ($record) => ['name' => $record->name])
+                    ->action(function ($record, array $data): void {
+                        CstPeople::$touched = [$record->name.' -> '.$data['name']];
+                    }),
             ])
             ->selectable()
             ->bulkActions([
@@ -294,4 +307,29 @@ it('pages simply without claiming a total, and refuses a cursor it cannot fake',
 
     expect(fn () => Livewire::test(CollectionSourceTable::class))
         ->toThrow(Exception::class, 'cursor paging');
+});
+
+it('runs a row action on the row that was clicked, handed over as the row it drew', function () {
+    Livewire::test(CollectionSourceTable::class)
+        ->call('executeTableAction', '3', 'greet');
+
+    expect(CstPeople::$touched)->toBe([CollectionRow::class.':Alan Turing']);
+});
+
+it('opens a row action form prefilled from the row and submits it', function () {
+    Livewire::test(CollectionSourceTable::class)
+        ->call('openActionModal', '2', 'rename')
+        ->assertSet('tableState.modal.actions.0.data.name', 'Grace Hopper')
+        ->set('tableState.modal.actions.0.data.name', 'Grace B. Hopper')
+        ->call('submitActionModal')
+        ->assertHasNoErrors();
+
+    expect(CstPeople::$touched)->toBe(['Grace Hopper -> Grace B. Hopper']);
+});
+
+it('ignores a row action for a key the source does not have', function () {
+    Livewire::test(CollectionSourceTable::class)
+        ->call('executeTableAction', '99', 'greet');
+
+    expect(CstPeople::$touched)->toBe([]);
 });

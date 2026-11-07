@@ -385,7 +385,7 @@ trait CanSelectRecords
             }
         }
 
-        $record = $table->getDataSource()->resolveRecord($key)?->unwrap();
+        $record = $table->findRecord($key);
 
         return $record !== null && $table->isRecordSelectionLocked($record);
     }

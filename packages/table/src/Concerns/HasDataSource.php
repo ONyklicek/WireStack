@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Data\DataSource;
+use NyonCode\WireTable\Data\CollectionRow;
 use NyonCode\WireTable\Data\EloquentDataSource;
 use NyonCode\WireTable\Exceptions\CustomDataSourceException;
 use NyonCode\WireTable\Exceptions\TableHasNoDataSourceException;
@@ -193,6 +194,24 @@ trait HasDataSource
     public function getDataSource(): DataSource
     {
         return $this->dataSource ??= new EloquentDataSource($this->getQuery(), $this->resolvesTrashedRecords());
+    }
+
+    /**
+     * One row by key, as the model the list drew it as — or null when the
+     * source has no such row.
+     *
+     * The list hands every row to columns and actions as a model
+     * ({@see CollectionRow::from()}), and so must every lookup by key: an
+     * action clicked on a row, its modal, the halt that asks before it runs,
+     * a cell edit. Unwrapping the source's record alone answers with an array
+     * for a non-Eloquent source, and everything downstream is typed `Model`.
+     * An Eloquent source's model is kept as it is.
+     */
+    public function findRecord(int|string $key): ?Model
+    {
+        $record = $this->getDataSource()->resolveRecord($key);
+
+        return $record === null ? null : CollectionRow::from($record->unwrap(), $this->getPrimaryKey());
     }
 
     /**

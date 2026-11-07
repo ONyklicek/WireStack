@@ -12,6 +12,7 @@ use Illuminate\Validation\Rules\In;
 use NyonCode\WireCore\Foundation\Support\StateMatcher;
 use NyonCode\WireForms\Contracts\ProvidesImplicitValidationRules;
 use NyonCode\WireForms\Exceptions\FormConfigurationException;
+use ReflectionFunction;
 
 /**
  * Validation support for form field components.
@@ -39,7 +40,10 @@ trait HasFormValidation
      * Accepts a plain array/string, a Closure returning either, or an array
      * whose individual entries may be Closures. Closures are resolved lazily in
      * {@see getValidationRules()} with the field's reactive `$get` / `$set`
-     * accessors, so rules can depend on live sibling state.
+     * accessors, so rules can depend on live sibling state. An entry that takes
+     * a `$fail` parameter is Laravel's own closure rule
+     * (`function ($attribute, $value, $fail)`) and is handed to the validator
+     * as it is, never evaluated as a factory.
      *
      * @param  array<int, mixed>|string|Closure  $rules
      */
@@ -206,7 +210,7 @@ trait HasFormValidation
         $resolved = [];
 
         foreach ($rules as $rule) {
-            $rule = $rule instanceof Closure ? $this->evaluate($rule) : $rule;
+            $rule = $rule instanceof Closure && ! self::isLaravelClosureRule($rule) ? $this->evaluate($rule) : $rule;
 
             if (is_array($rule)) {
                 foreach ($rule as $nested) {
@@ -220,6 +224,25 @@ trait HasFormValidation
         }
 
         return $resolved;
+    }
+
+    /**
+     * Whether a rule entry is Laravel's closure rule rather than a rule factory.
+     *
+     * The validator calls such a closure with `$attribute, $value, $fail`; a
+     * factory is evaluated here with `$get` / `$set` and returns the rule. The
+     * `$fail` parameter is what only the former has, and evaluating it as a
+     * factory would ask the container for `$attribute` and die.
+     */
+    private static function isLaravelClosureRule(Closure $rule): bool
+    {
+        foreach ((new ReflectionFunction($rule))->getParameters() as $parameter) {
+            if ($parameter->getName() === 'fail') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

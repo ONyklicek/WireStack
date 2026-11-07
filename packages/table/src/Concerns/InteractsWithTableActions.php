@@ -250,7 +250,7 @@ trait InteractsWithTableActions
         // Through the source, like executeTableAction(): one lookup rule for a
         // row whether its action runs at once or asks first — which is also
         // what finds a trashed row a TrashedFilter brought into the list.
-        $record = $table->getDataSource()->resolveRecord($recordKey)?->unwrap();
+        $record = $table->findRecord($recordKey);
 
         // An inactive record whose state withholds its actions refuses the modal
         // too: the inert action cell is a client fact, and a modal opened from a
@@ -344,7 +344,7 @@ trait InteractsWithTableActions
         // resolves by contract so a custom source is asked too, and hands
         // user code a Model, which is what every action closure expects
         // (ADR 0019 invariant 3, as amended).
-        $record = $table->getDataSource()->resolveRecord($recordKey)?->unwrap();
+        $record = $table->findRecord($recordKey);
 
         // The server's half of Support\InactiveRow::actions(false) — see
         // openActionModal(). A bulk action is deliberately not covered: it acts

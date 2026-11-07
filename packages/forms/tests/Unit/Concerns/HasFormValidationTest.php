@@ -48,6 +48,29 @@ test('rules() flattens Closure entries inside a rules array', function () {
     expect($field->getValidationRules())->toBe(['string', 'max:10', 'min:2', 'alpha']);
 });
 
+test('rules() keeps a Laravel closure rule (one taking $fail) as the rule itself', function () {
+    $rule = function (string $attribute, mixed $value, Closure $fail): void {
+        if ($value !== 'ok') {
+            $fail('Not ok.');
+        }
+    };
+    $field = TextInput::make('name')->rules(['string', $rule]);
+
+    $rules = $field->getValidationRules();
+
+    expect($rules)->toBe(['string', $rule])
+        ->and(validator(['name' => 'ok'], ['name' => $rules])->passes())->toBeTrue()
+        ->and(validator(['name' => 'nope'], ['name' => $rules])->errors()->first('name'))->toBe('Not ok.');
+});
+
+test('a rule factory may still return a Laravel closure rule', function () {
+    $field = TextInput::make('name')->rules([fn () => function (string $attribute, mixed $value, Closure $fail): void {
+        $fail('Never.');
+    }]);
+
+    expect(validator(['name' => 'x'], ['name' => $field->getValidationRules()])->errors()->first('name'))->toBe('Never.');
+});
+
 test('rules() Closure can read live sibling state via $get', function () {
     $field = TextInput::make('company')
         ->statePath('data')
