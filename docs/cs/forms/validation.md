@@ -216,6 +216,20 @@ TextInput::make('slug')->rules([
 ]);
 ```
 
+Taková closura je *továrna* na pravidlo: vyhodnotí se a pravidlem je to, co
+vrátí. Laravelí closure pravidlo — to, které přijímá `$fail` — se podle tohoto
+parametru rozpozná a předá validátoru tak, jak je:
+
+```php
+TextInput::make('domain')->rules([
+    function (string $attribute, mixed $value, Closure $fail) { // [tl! focus:start]
+        if (! str_contains((string) $value, '.')) {
+            $fail('Zadejte celou doménu.');
+        }
+    }, // [tl! focus:end]
+]);
+```
+
 ### Podmiňovací helpery
 
 Fluent zkratky vyjadřují nejběžnější mezipolní podmínky bez psaní closury. Každá

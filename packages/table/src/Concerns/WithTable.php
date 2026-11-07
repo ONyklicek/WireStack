@@ -2267,7 +2267,7 @@ trait WithTable
             return null;
         }
 
-        $record = $this->getTable()->getDataSource()->resolveRecord((string) $recordKey)?->unwrap();
+        $record = $this->getTable()->findRecord((string) $recordKey);
 
         return $record instanceof Model ? $record : null;
     }
@@ -2552,7 +2552,7 @@ trait WithTable
             return ['valid' => false, 'errors' => [__('wire-table::messages.column_not_found')]];
         }
 
-        $record = $table->getDataSource()->resolveRecord($recordKey)?->unwrap();
+        $record = $table->findRecord($recordKey);
 
         if (! $record) {
             return ['valid' => false, 'errors' => [__('wire-table::messages.record_not_found')]];
