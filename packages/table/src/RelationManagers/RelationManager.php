@@ -54,7 +54,14 @@ abstract class RelationManager extends Component
     /** Optional heading rendered above the table. */
     protected ?string $title = null;
 
-    protected bool $relationshipQueryApplied = false;
+    /**
+     * The table instance the relationship query was pinned to.
+     *
+     * An instance, not a flag: an action that succeeds drops the table
+     * ({@see invalidateTable()}) and the next read in the same request builds a
+     * new one, which a flag would leave without the query.
+     */
+    protected ?Table $scopedTable = null;
 
     public function mount(?Model $ownerRecord = null): void
     {
@@ -107,7 +114,7 @@ abstract class RelationManager extends Component
     {
         $table = $this->resolveBaseTable();
 
-        if (! $this->relationshipQueryApplied) {
+        if ($this->scopedTable !== $table) {
             $relation = $this->getRelationship();
             $query = $relation->getQuery();
 
@@ -120,7 +127,7 @@ abstract class RelationManager extends Component
             }
 
             $table->query($query);
-            $this->relationshipQueryApplied = true;
+            $this->scopedTable = $table;
         }
 
         return $table;

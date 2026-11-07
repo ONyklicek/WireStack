@@ -2,6 +2,23 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.7]
+
+### Fixed
+
+- **A row action works over a `CollectionDataSource`.** The list drew each row as a `CollectionRow` model, but
+  clicking an action looked the row up again through the source and unwrapped it to an array, and the action
+  engine (typed `Model`) died with a `TypeError` — a plain action, a modal action and its form prefill alike.
+  Every lookup by key (row and modal actions, the halt, a cell edit, selection locks) now goes through
+  `Table::findRecord()`, which answers with the same model the list drew; an Eloquent source's model is kept.
+- **A relation manager keeps its query after an action.** A successful action drops the table
+  (`invalidateTable()`) and the response builds a new one, but the manager remembered "query applied" as a flag,
+  so the new table had none and the render threw `TableHasNoDataSourceException`. It now remembers the table
+  instance the relationship was pinned to.
+- **`->rules([function ($attribute, $value, $fail) { … }])` works.** Every Closure entry was evaluated as a rule
+  factory, so Laravel's own closure rule asked the container for `$attribute` and failed. An entry that takes
+  `$fail` is now passed to the validator as the rule itself; factories are unchanged.
+
 ## [2.9.6]
 
 ### Added

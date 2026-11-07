@@ -257,7 +257,7 @@ trait InteractsWithTableModals
 
         $table = $this->getTable();
 
-        return $table->getDataSource()->resolveRecord($key)?->unwrap();
+        return $table->findRecord($key);
     }
 
     // ==========================================
@@ -339,7 +339,7 @@ trait InteractsWithTableModals
         }
 
         $table = $this->getTable();
-        $record = $table->getDataSource()->resolveRecord($recordKey)?->unwrap();
+        $record = $table->findRecord($recordKey);
 
         if (! $record || ! $action->canExecute($record)) {
             return;

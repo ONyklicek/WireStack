@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
+use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\RelationManagers\RelationManager;
 use NyonCode\WireTable\Table;
@@ -69,6 +70,20 @@ class RmPostsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table->columns([TextColumn::make('title')]);
+    }
+}
+
+class RmShoutingPostsRelationManager extends RelationManager
+{
+    protected string $relationship = 'posts';
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->columns([TextColumn::make('title')])
+            ->actions([
+                Action::make('shout')->action(fn (RmPost $record) => $record->update(['title' => strtoupper($record->title)])),
+            ]);
     }
 }
 
@@ -167,6 +182,16 @@ test('the table query is scoped to the owner relationship', function () {
     $titles = $rm->getTable()->getQuery()->pluck('title')->all();
 
     expect($titles)->toBe(['Alice One', 'Alice Two']);
+});
+
+test('the table stays scoped when it is rebuilt within the same request (regression: lost after an action)', function () {
+    $rm = makeRelationManager(RmPostsRelationManager::class, $this->author);
+    $rm->getTable();
+
+    // What every successful action does before the response renders.
+    (fn () => $this->invalidateTable())->call($rm);
+
+    expect($rm->getTable()->getQuery()->pluck('title')->all())->toBe(['Alice One', 'Alice Two']);
 });
 
 test('a different owner scopes to its own related rows', function () {
@@ -285,6 +310,17 @@ test('it renders the relationship-scoped table with its title', function () {
         ->assertOk()
         ->assertSee('Posts')
         ->assertSee('Alice One')
+        ->assertSee('Alice Two')
+        ->assertDontSee('Bob One');
+});
+
+test('it renders the related rows again after a row action ran', function () {
+    $post = RmPost::query()->where('title', 'Alice One')->sole();
+
+    Livewire::test(RmShoutingPostsRelationManager::class, ['ownerRecord' => $this->author])
+        ->call('executeTableAction', (string) $post->getKey(), 'shout')
+        ->assertOk()
+        ->assertSee('ALICE ONE')
         ->assertSee('Alice Two')
         ->assertDontSee('Bob One');
 });
