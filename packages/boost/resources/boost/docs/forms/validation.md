@@ -215,6 +215,20 @@ TextInput::make('slug')->rules([
 ]);
 ```
 
+Such a Closure is a rule *factory*: it is evaluated and what it returns is the
+rule. Laravel's own closure rule — one that takes `$fail` — is told apart by that
+parameter and handed to the validator as it is:
+
+```php
+TextInput::make('domain')->rules([
+    function (string $attribute, mixed $value, Closure $fail) { // [tl! focus:start]
+        if (! str_contains((string) $value, '.')) {
+            $fail('Enter a full domain.');
+        }
+    }, // [tl! focus:end]
+]);
+```
+
 ### Conditioning Helpers
 
 Fluent shortcuts express the most common cross-field conditions without writing
