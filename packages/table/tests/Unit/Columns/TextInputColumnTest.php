@@ -406,8 +406,11 @@ it('draws the validation message under the input, out of the flow, so the input 
 
     // Inside the input's own wrapper, after the input: `top-full` is right under it.
     expect(strpos($html, 'x-ref="input"'))->toBeLessThan(strpos($html, 'data-testid="table-editable-error"'))
-        ->and($error)->toContain('absolute inset-x-0 top-full')
-        ->toContain('whitespace-normal break-words');
+        ->and($error)->toContain('absolute inset-x-0')
+        ->toContain('whitespace-normal break-words')
+        // Under the input, or above it where below is clipped (the last row):
+        // wireEditableCell's placeError() decides, the browser driver checks.
+        ->and($html)->toContain('x-ref="error"'."\n".'           :class="errorAbove ? \'bottom-full mb-1\' : \'top-full mt-1\'"');
 });
 
 it('keeps the helper text wrapping in the input and its space while an error shows', function () {

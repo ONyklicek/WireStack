@@ -177,6 +177,23 @@ class TablePreview extends Component
             return $this->editableFillTable($table);
         }
 
+        if ($this->variant === 'editable-errors') {
+            // A cell whose rule fails on purpose, with a message long enough to
+            // wrap: where it lands — under the input, or above it on the last
+            // row, where the table's scroll box would clip it — is a browser
+            // fact, so verify-editable-error-placement.mjs drives it.
+            return $table
+                ->model(User::class)
+                ->columns([
+                    TextColumn::make('name')->label('Name'),
+                    TextInputColumn::make('email')->label('Email')
+                        ->rules(['numeric'])
+                        ->validationMessages(['numeric' => 'Enter a year (2026), a month and year (4.2026) or a valid date (15.03.2026).']),
+                ])
+                ->searchable(false)
+                ->paginated(false);
+        }
+
         if ($this->variant === 'inactive-rows') {
             return $this->inactiveRowsTable($table);
         }

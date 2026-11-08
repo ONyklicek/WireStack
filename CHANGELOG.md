@@ -2,6 +2,16 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.11]
+
+### Fixed
+
+- **A validation message on the last row of a `TextInputColumn` is no longer cut off.** 2.9.9 laid the message under
+  the input, out of the flow — and the table scrolls sideways in an `overflow-x: auto` box, which clips vertically
+  too, so on the last row the message was in the DOM, shown, and invisible. `wireEditableCell` now places it above
+  the input whenever below would be clipped and above has more room (`placeError()`, measured on the frame the
+  message appears in). `workbench/scripts/verify-editable-error-placement.mjs` drives both rows.
+
 ## [2.9.10]
 
 ### Changed

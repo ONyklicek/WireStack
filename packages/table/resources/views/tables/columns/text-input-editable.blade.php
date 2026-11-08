@@ -88,10 +88,13 @@
              moved the input up the moment validation failed — under the caret.
              Laid over what is below instead, as wide as the input and wrapping
              inside it (absolute, so it adds nothing to the column's width), on
-             a surface of its own so the row underneath does not show through. --}}
-        <p x-show="error" x-cloak x-text="error"
+             a surface of its own so the row underneath does not show through.
+             Above the input where below would be clipped — the last row, in
+             the table's scroll box (`placeError()` in wireEditableCell). --}}
+        <p x-show="error" x-cloak x-text="error" x-ref="error"
+           :class="errorAbove ? 'bottom-full mb-1' : 'top-full mt-1'"
            data-testid="table-editable-error"
-           class="absolute inset-x-0 top-full z-10 mt-1 whitespace-normal break-words rounded-md bg-white px-1.5 py-0.5 text-xs text-red-600 shadow-sm ring-1 ring-red-200 dark:bg-gray-900 dark:text-red-400 dark:ring-red-900/60"></p>
+           class="absolute inset-x-0 z-10 whitespace-normal break-words rounded-md bg-white px-1.5 py-0.5 text-xs text-red-600 shadow-sm ring-1 ring-red-200 dark:bg-gray-900 dark:text-red-400 dark:ring-red-900/60"></p>
     </div>
 
     {{-- Helper text wraps inside the input's width instead of widening the
