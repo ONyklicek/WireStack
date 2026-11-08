@@ -72,11 +72,22 @@ return [
     | what they say. It is not a second search: ⌘K searches records and
     | commands, this narrows the list you are looking at.
     |
+    | `pins` lets a person pin a row: a bookmark on every row that is a page,
+    | and a "Pinned" section above the groups. `recent` records the pages a
+    | person opens and lists the last five in a "Recent" section. Each is
+    | switched on its own, and each needs somewhere to keep it — the
+    | `wire-core.preferences` driver; over `null` neither is drawn. Off,
+    | nothing is written either: no pin, no visit.
+    |
     */
     'navigation' => [
         'filter' => env('WIRE_ADMIN_NAV_FILTER', 'auto'),
 
         'filter_threshold' => 12,
+
+        'pins' => env('WIRE_ADMIN_NAV_PINS', true),
+
+        'recent' => env('WIRE_ADMIN_NAV_RECENT', true),
     ],
 
 ];

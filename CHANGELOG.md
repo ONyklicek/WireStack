@@ -2,6 +2,18 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.10]
+
+### Added
+
+- **Pins and recent pages switch on their own: `wire-admin.navigation.pins` and `wire-admin.navigation.recent`**
+  (`WIRE_ADMIN_NAV_PINS`, `WIRE_ADMIN_NAV_RECENT`, both `true` by default). Before, the only way to hide either was
+  to bind `NavigationMemory` to the `null` driver, which took both away together. Off means off on the server too:
+  with `pins` off no row carries a pin, no "Pinned" section and no pin button beside a recent entry are drawn, and
+  `NavigationPins::toggle()` writes nothing; with `recent` off the section draws no "Recent" and `page.mounting`
+  records no visit. With both off the section is not mounted. `Support\MenuMemory` is the one place that answers
+  both questions — the switch and a driver that keeps something.
+
 ## [2.9.9]
 
 ### Changed

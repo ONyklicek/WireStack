@@ -185,6 +185,23 @@ se nevykreslí ani špendlíky, ani sekce. Zvolte ho v `config/wire-core.php`:
 ],
 ```
 
+**Každou polovinu zapnete zvlášť**, v `config/wire-admin.php`:
+
+```php
+'navigation' => [
+    'pins' => env('WIRE_ADMIN_NAV_PINS', true),     // záložka na řádcích + „Připnuté“
+    'recent' => env('WIRE_ADMIN_NAV_RECENT', true), // „Nedávné“
+],
+```
+
+Vypnuté znamená vypnuté všude, ne jen na obrazovce: s vypnutým `pins` nemá žádný
+řádek špendlík, sekce nekreslí „Připnuté“ ani tlačítko pro připnutí vedle
+nedávné položky a podvržené `wire-admin-pin` nic nezapíše; s vypnutým `recent`
+sekce nekreslí „Nedávné“ a mount stránky žádnou návštěvu nezaznamená — seznam,
+který nikdo nevidí, nemá stát zápis při každém zobrazení stránky. S oběma
+vypnutými se sekce vůbec nemountuje. Obojí dál potřebuje driver, který něco
+uchová; přepínač může jen ubrat.
+
 Zbytek je rozhodnutý za vás:
 
 - **Uložený klíč se nikdy nekreslí přímo z úložiště.** Ukazuje se průnik

@@ -195,6 +195,22 @@ nothing — and a pin that silently does nothing is worse than no pin, so with t
 ],
 ```
 
+**Each half switches on its own**, in `config/wire-admin.php`:
+
+```php
+'navigation' => [
+    'pins' => env('WIRE_ADMIN_NAV_PINS', true),     // the bookmark on rows + "Pinned"
+    'recent' => env('WIRE_ADMIN_NAV_RECENT', true), // "Recent"
+],
+```
+
+Off means off everywhere, not only on screen: with `pins` off no row carries a
+pin, the section draws no "Pinned" and no pin button beside a recent entry, and
+a forged `wire-admin-pin` writes nothing; with `recent` off the section draws no
+"Recent" and a page mounting records no visit — a list nobody is shown is not a
+write per page view. With both off the section is not mounted at all. Both
+still need a driver that keeps something; the switch can only take away.
+
 The rest is decided for you:
 
 - **A stored key is never drawn from storage.** What is shown is the stored

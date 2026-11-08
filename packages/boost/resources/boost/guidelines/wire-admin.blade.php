@@ -72,7 +72,9 @@ resource pages and its own chrome simply does not install this.
 @endverbatim
 - **Pins and recent pages are `NavigationMemory`** (wire-core, over the `PreferenceDriver` — `navigation[:zone]`
   bag of keys), drawn by the one Livewire piece of the menu, `wire-admin.nav-pins`. Offered only when
-  `stores()` (never over the `null` driver); keys are intersected with the current `Workspace::items()`, never
+  `stores()` (never over the `null` driver) and switched on by `wire-admin.navigation.pins` / `.recent`, each
+  on its own — ask `Support\MenuMemory` (`pins()`, `recent()`), never the config or `stores()` alone; off
+  writes nothing either (no pin, no visit). Never bind `NavigationMemory` to the `null` driver to hide them; keys are intersected with the current `Workspace::items()`, never
   drawn from storage; recent is written on `page.mounting` only, never while the menu renders. A row's pin
   dispatches `wire-admin-pin`; the section answers `wire-admin-pinned`. Never give pins a store of their own.
 - **Focus is the shell's**: the phone drawer is `x-trap`ped while open (first row focused, focus returned to

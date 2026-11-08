@@ -236,3 +236,52 @@ it('unpins from the Pinned section and pins from Recent', function () {
         ->call('toggle', 'invoices')
         ->assertDispatched('wire-admin-pinned', keys: ['invoices']);
 });
+
+it('switches pins and recent pages on their own', function (bool $pins, bool $recent) {
+    npStoring();
+    config()->set('wire-admin.navigation.pins', $pins);
+    config()->set('wire-admin.navigation.recent', $recent);
+
+    app(NavigationMemory::class)->pin('orders');
+    app(NavigationMemory::class)->remember('invoices');
+
+    $html = Blade::render('<x-wire-admin::sidebar />');
+
+    expect(str_contains($html, 'data-testid="admin-nav-pin"'))->toBe($pins)
+        ->and(str_contains($html, 'data-testid="admin-nav-pinned-item"'))->toBe($pins)
+        ->and(str_contains($html, 'data-testid="admin-nav-recent-item"'))->toBe($recent)
+        // A recent entry offers to pin it only where pins are on.
+        ->and(str_contains($html, 'data-testid="admin-nav-recent-toggle"'))->toBe($pins && $recent)
+        ->and(str_contains($html, 'data-testid="admin-nav-memory"'))->toBe($pins || $recent);
+})->with([
+    'both' => [true, true],
+    'pins only' => [true, false],
+    'recent only' => [false, true],
+    'neither' => [false, false],
+]);
+
+it('writes no pin while pins are off, even from a forged event', function () {
+    npStoring();
+    config()->set('wire-admin.navigation.pins', false);
+
+    Livewire::test(NavigationPins::class)
+        ->call('toggle', 'orders')
+        ->assertNotDispatched('wire-admin-pinned');
+
+    expect(app(NavigationMemory::class)->pinned())->toBe([]);
+});
+
+it('records no visit while recent pages are off', function (bool $recent, array $expected) {
+    npStoring();
+    config()->set('wire-admin.navigation.recent', $recent);
+
+    HookDispatch::typed(Hook::PageMounting, fn () => new PageMountingPayload(
+        page: new stdClass,
+        target: new HookTarget(surface: 'page', key: 'orders'),
+    ));
+
+    expect(app(NavigationMemory::class)->recent())->toBe($expected);
+})->with([
+    'on' => [true, ['orders']],
+    'off' => [false, []],
+]);

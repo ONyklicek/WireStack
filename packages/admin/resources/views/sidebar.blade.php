@@ -129,7 +129,7 @@
             </div>
         @endif
 
-        @if ($pins)
+        @if ($memorySection)
             @livewire('wire-admin.nav-pins', ['zone' => $zone, 'current' => $activeKey, 'linkedOnly' => $linkedOnly], key('wire-admin-nav-pins'))
         @endif
 
