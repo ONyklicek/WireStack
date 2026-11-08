@@ -188,6 +188,7 @@ class TablePreview extends Component
                     TextColumn::make('name')->label('Name'),
                     TextInputColumn::make('email')->label('Email')
                         ->rules(['numeric'])
+                        ->liveValidation()
                         ->validationMessages(['numeric' => 'Enter a year (2026), a month and year (4.2026) or a valid date (15.03.2026).']),
                 ])
                 ->searchable(false)

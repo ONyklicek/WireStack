@@ -69,7 +69,12 @@ const layerAbove = (reference) => {
  *
  * @param {Element} reference  the trigger element
  * @param {Element} floating   the panel element (already visible)
- * @param {{placement?: string, offset?: number, matchWidth?: boolean, sheetOnMobile?: boolean, sheetBreakpoint?: number}} config
+ * `sameWidth` pins the panel to exactly its trigger's width — never wider, unlike
+ * `matchWidth`, which only sets a floor. Written in `size`, which runs on every
+ * reposition, so a morph that strips the inline style gets it back with the
+ * coordinates instead of leaving a panel as wide as its text.
+ *
+ * @param {{placement?: string, offset?: number, matchWidth?: boolean, sameWidth?: boolean, sheetOnMobile?: boolean, sheetBreakpoint?: number}} config
  * @returns {() => void} cleanup function that stops the auto-updater
  */
 export const floatingAnchor = (reference, floating, config = {}) => {
@@ -80,6 +85,7 @@ export const floatingAnchor = (reference, floating, config = {}) => {
     const placement = config.placement || 'bottom-end'
     const gap = config.offset ?? 6
     const matchWidth = config.matchWidth ?? false
+    const sameWidth = config.sameWidth ?? false
     const sheetBreakpoint = config.sheetBreakpoint ?? 640
     const sheetQuery = config.sheetOnMobile
         ? window.matchMedia(`(max-width: ${sheetBreakpoint - 0.02}px)`)
@@ -116,13 +122,22 @@ export const floatingAnchor = (reference, floating, config = {}) => {
         size({
             padding: 8,
             apply({ availableHeight, rects, elements }) {
-                Object.assign(elements.floating.style, {
+                const style = elements.floating.style
+                const exact = `${Math.round(rects.reference.width)}px`
+                // Each value written once, and only when it changed: every write
+                // is a mutation the morph observer below answers with another
+                // reposition, so a value written twice per pass (a width cap,
+                // then the exact width over it) repositioned for ever.
+                const next = {
                     maxHeight: `${Math.round(Math.min(availableHeight, cappedMax))}px`,
                     overflowY: 'auto',
-                    maxWidth: `${Math.round(Math.min(document.documentElement.clientWidth - 16, cappedMaxWidth))}px`,
-                })
-                if (matchWidth) {
-                    elements.floating.style.minWidth = `${rects.reference.width}px`
+                    maxWidth: sameWidth ? exact : `${Math.round(Math.min(document.documentElement.clientWidth - 16, cappedMaxWidth))}px`,
+                    ...(matchWidth ? { minWidth: `${rects.reference.width}px` } : {}),
+                    ...(sameWidth ? { width: exact } : {}),
+                }
+
+                for (const [key, value] of Object.entries(next)) {
+                    if (style[key] !== value) style[key] = value
                 }
             },
         }),
@@ -167,7 +182,7 @@ export const floatingAnchor = (reference, floating, config = {}) => {
             // A bottom sheet is viewport-pinned by its own `max-sm:` classes, so
             // hand every inline style back — including the layer, which the sheet's
             // own z-index class owns.
-            Object.assign(floating.style, { position: '', top: '', left: '', maxHeight: '', maxWidth: '', overflowY: '', minWidth: '', zIndex: '' })
+            Object.assign(floating.style, { position: '', top: '', left: '', maxHeight: '', maxWidth: '', overflowY: '', minWidth: '', width: '', zIndex: '' })
             panelZ = null
 
             return
@@ -746,7 +761,9 @@ const wireEditableCell = (config = {}) => ({
      * `overflow-x: auto` box, which clips vertically too, so on the last row a
      * message laid under the input was in the DOM, shown, and invisible. It goes
      * through the canonical floating primitive every panel uses instead — under
-     * the input, as wide as it, kept there through scroll and morphs, and flipped
+     * the input and exactly as wide as it (`sameWidth`, re-applied after every
+     * morph: a width written once was stripped by the next render and the
+     * message spread to its text's width), kept there through scroll, and flipped
      * only where the window itself has no room below. Anchored on the next frame:
      * `x-show` displays it in an effect of its own, and the primitive wants a
      * panel that is already visible.
@@ -762,8 +779,7 @@ const wireEditableCell = (config = {}) => ({
             const input = this.$refs.input
             if (! this.error || ! message || ! input || message.style.display === 'none') return
 
-            message.style.width = `${input.offsetWidth}px`
-            this._errorFloat = floatingAnchor(input, message, { placement: 'bottom-start', offset: 4, matchWidth: true })
+            this._errorFloat = floatingAnchor(input, message, { placement: 'bottom-start', offset: 4, sameWidth: true })
         })
     },
 

@@ -2,6 +2,17 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.13]
+
+### Fixed
+
+- **A cell's validation message is exactly as wide as its input, always.** 2.9.12 wrote the width once, by hand,
+  before anchoring the message; anything that rewrote its inline style left it as wide as its text, spreading past
+  the column. `floatingAnchor()` takes `sameWidth` now — the panel pinned to its trigger's width, never wider, unlike
+  `matchWidth`, which only sets a floor — written in `size` on every reposition, so it comes back with the
+  coordinates. `size` also writes each value once and only when it changed: a value written twice per pass is a
+  mutation the morph observer answers with another reposition, and pinned the page in a loop.
+
 ## [2.9.12]
 
 ### Fixed
