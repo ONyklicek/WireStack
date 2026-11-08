@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Support;
 
+use Closure;
+use NyonCode\WireCore\Foundation\Support\IslandViewScope;
 use NyonCode\WireTable\Contracts\SummarisesTable;
 use NyonCode\WireTable\Table;
 
@@ -41,6 +43,31 @@ final class TablePartials
         private readonly object $host,
         private readonly TableRenderPlan $plan,
     ) {}
+
+    /**
+     * Render one region the way a partial of it is rendered, wherever it is
+     * rendered from.
+     *
+     * A partial is morphed over what the full render left on the page, pairing
+     * children by position, so the two have to be the same nodes. They were not:
+     * the full render runs inside Livewire's pass, where every block `@if` of a
+     * cell view emits `[if BLOCK]` comments, and the partial runs after it, where
+     * none do. A comment meeting the input's wrapper made the morph swap the
+     * wrapper — and the input the user had just clicked into lost the focus the
+     * moment the previous cell's save came back. Rendering both outside the pass
+     * makes them one render rather than two that are kept in step.
+     *
+     * Only on a table that sends partials: one that does not has nothing to keep
+     * in step, and keeps rendering exactly as it did.
+     *
+     * @param  Closure(): string  $render
+     */
+    public static function region(Table $table, Closure $render): string
+    {
+        return $table->usesRowPartials()
+            ? IslandViewScope::outsideLivewireRender($render)
+            : $render();
+    }
 
     /** @param  SummarisesTable  $host */
     public static function for(Table $table, object $host, TableRenderPlan $plan): self

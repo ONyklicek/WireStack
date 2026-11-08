@@ -7,8 +7,12 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
+use NyonCode\WireCore\Actions\Action;
+use NyonCode\WireTable\Columns\CheckboxColumn;
+use NyonCode\WireTable\Columns\SelectColumn;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
+use NyonCode\WireTable\Columns\ToggleColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Support\TablePartials;
 use NyonCode\WireTable\Table;
@@ -97,11 +101,69 @@ class RpHost extends Component
     }
 }
 
+/**
+ * Every editable cell the table ships, each with the chrome its view draws
+ * behind a condition — prefix, suffix, helper text, placeholder, icons — beside
+ * a read-only input and a row action, on the stacked layout and with totals so
+ * the card and both footers are anchored too.
+ */
+class RpEditorsHost extends Component
+{
+    use WithTable;
+
+    public bool $partials = true;
+
+    public function mount(bool $partials = true): void
+    {
+        $this->partials = $partials;
+    }
+
+    public function table(Table $table): Table
+    {
+        return $table->model(RpRow::class)
+            ->columns([
+                TextInputColumn::make('name')->inputPrefix('#')->suffix('ks')->helperText('Označení'),
+                TextInputColumn::make('amount')->disabled()->summarizeSum(),
+                SelectColumn::make('status')->options(['open' => 'Open', 'done' => 'Done'])->placeholder('—'),
+                ToggleColumn::make('flag')->onIcon('check')->offIcon('x-mark'),
+                CheckboxColumn::make('checked'),
+            ])
+            ->actions([Action::make('open')->action(fn () => null)])
+            ->stackedOnMobile()
+            ->rowPartials($this->partials);
+    }
+
+    public function render()
+    {
+        return $this->getTableProperty();
+    }
+}
+
+/** The element answering to `wire:partial="$name"`, re-serialised so two renders compare node for node. */
+function rpRegion(string $html, string $name): string
+{
+    $document = new DOMDocument;
+    $previous = libxml_use_internal_errors(true);
+    // A lone row has to be parsed inside a table or the parser drops the tags.
+    $body = str_starts_with(ltrim($html), '<tr') ? '<table><tbody>'.$html.'</tbody></table>' : $html;
+    $document->loadHTML('<?xml encoding="utf-8"?><html><body>'.$body.'</body></html>', LIBXML_NOERROR);
+    libxml_use_internal_errors($previous);
+
+    $nodes = (new DOMXPath($document))->query('//*[@*[name()="wire:partial"]="'.$name.'"]');
+
+    expect($nodes->length)->toBe(1, "exactly one element answers to partial {$name}");
+
+    return $document->saveHTML($nodes->item(0));
+}
+
 beforeEach(function () {
     Schema::create('rp_rows', function (Blueprint $t) {
         $t->id();
         $t->string('name');
         $t->integer('amount')->default(1);
+        $t->string('status')->nullable();
+        $t->boolean('flag')->default(false);
+        $t->boolean('checked')->default(false);
     });
 
     RpRow::create(['name' => 'First', 'amount' => 1]);
@@ -328,4 +390,71 @@ it('queues nothing at all when no record moved', function () {
 
     expect($partials)->toBe([])
         ->and($test->effects['wirePartials'] ?? null)->toBeNull();
+});
+
+it('sends a region with the same nodes the full render put on the page', function (string $region) {
+    // The client morphs a partial into the page with `lookahead: false`, so it
+    // pairs children by position. Livewire wraps every block `@if`/`@foreach` of
+    // a full render in `[if BLOCK]` comments and leaves them out of a render
+    // outside its own pass — which a partial is. One cell view with a condition
+    // was enough: the comment met the input's wrapper, the morph swapped the
+    // wrapper for a new one, and the input the user had just clicked into lost
+    // the focus the moment the previous cell's save came back.
+    $test = Livewire::test(RpEditorsHost::class);
+
+    $test->call('updateTableCell', '1', 'name', 'Edited', null);
+
+    $partial = $test->effects['wirePartials'][$region] ?? null;
+
+    expect($partial)->not->toBeNull()
+        ->and($partial)->not->toContain('<!--[if');
+
+    // A fresh full render of the same state, which is what is on the page once
+    // the partial has been morphed in — and what the next partial meets there.
+    $page = Livewire::test(RpEditorsHost::class)->html();
+
+    expect(rpRegion($partial, $region))->toBe(rpRegion($page, $region));
+})->with([
+    'row' => 'row-1',
+    'card' => 'card-1',
+    'totals' => 'summary',
+    'card totals' => 'summary-mobile',
+]);
+
+it('sends the group subtotal with the same nodes the full render put on the page', function () {
+    // The subtotal rows were drawn by an @include in the page and by the
+    // renderer in a partial — two paths, one region. They are one path now.
+    $test = Livewire::test(RpHost::class, ['grouped' => true, 'summaries' => true]);
+
+    $test->call('updateTableCell', '1', 'name', 'Edited', null);
+
+    $groups = collect($test->effects['wirePartials'] ?? [])
+        ->filter(fn (string $html, string $name): bool => str_starts_with($name, 'group-'));
+
+    expect($groups)->not->toBeEmpty();
+
+    $page = Livewire::test(RpHost::class, ['grouped' => true, 'summaries' => true])->html();
+
+    $groups->each(fn (string $html, string $name) => expect(rpRegion($html, $name))->toBe(rpRegion($page, $name)));
+});
+
+it('draws a read-only input cell without morph markers, partials or not', function () {
+    // One span either way, so Livewire has no block of the view's to bracket —
+    // on a table that never sends a partial too, where the cell is rendered
+    // inside its pass. The markers sat straight in the <td>, where the morph
+    // paired them against the cell's only element.
+    $html = Livewire::test(RpEditorsHost::class, ['partials' => false])->html();
+
+    $document = new DOMDocument;
+    $previous = libxml_use_internal_errors(true);
+    $document->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR);
+    libxml_use_internal_errors($previous);
+
+    $cells = (new DOMXPath($document))->query('//*[@data-testid="table-cell-amount"]');
+
+    expect($cells->length)->toBeGreaterThan(0);
+
+    foreach ($cells as $cell) {
+        expect($document->saveHTML($cell))->not->toContain('<!--[if');
+    }
 });

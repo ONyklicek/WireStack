@@ -174,6 +174,74 @@ try {
   check('one row of markup, not a page of it', markup > 0 && markup < 20000, `${markup} B`);
 
   await shot('02-after');
+
+  // ── Moving on while the save is out ────────────────────────────────
+  // What somebody filling a grid does: type into a cell, click the next one, keep
+  // going. The click blurs the first cell, which saves, and its partial comes back
+  // while the focus is already in the next control. The full render had left the
+  // cell views' `[if BLOCK]` comments on the page and the partial carried none, so
+  // the morph — pairing by position — swapped the next control's wrapper for a new
+  // one, and the focus fell to <body> as the save landed.
+  //
+  // Each case starts on a row no partial has touched yet: the first partial into a
+  // row replaces what the full render left there, so only the FIRST save after a
+  // full render could show it — which is every first edit of a row on a fresh page.
+  // The node has to be the SAME one: a re-focused copy would still lose what was
+  // typed into it meanwhile.
+  for (const [label, row, target] of [
+    ['the next input of the same row', 1, `window.$rows()[1].querySelector('[data-column-name="bio"] input')`],
+    ['a select of the same row', 2, `window.$rows()[2].querySelector('[data-column-name="role"] select')`],
+    ['a cell of another row', 3, `window.$cellIn(window.$rows()[0])`],
+  ]) {
+    const moved = await eval_(`(async () => {
+      const input = window.$cellIn(window.$rows()[${row}]);
+      const next = ${target};
+
+      input.focus();
+      const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+      setValue.call(input, 'focus-' + Date.now() + '@example.test');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+
+      window.__wire = [];
+      next.focus();   // blurs the first cell, which saves it
+
+      // …and starts typing there before the save has answered. What the user
+      // reported as "it resets": a swapped cell is a new component that starts
+      // from the server's value, so what was typed meanwhile is gone with it.
+      let typed = null;
+      if (next.tagName === 'INPUT') {
+        typed = 'typed-' + Date.now();
+        setValue.call(next, typed);
+        next.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      await new Promise((r) => setTimeout(r, 1500));
+
+      return JSON.stringify({
+        wire: window.__wire,
+        focusedNext: document.activeElement === next,
+        stillOnPage: next.isConnected,
+        focused: document.activeElement?.tagName ?? null,
+        typed,
+        shown: typed === null ? null : (document.activeElement?.value ?? null),
+      });
+    })()`);
+
+    const focus = JSON.parse(moved);
+
+    check(`the save behind ${label} came back as a row partial`,
+      focus.wire.some((r) => r.partials.some((p) => p.startsWith('row-'))), moved);
+
+    check(`…and ${label} kept the focus through it, as the same node`,
+      focus.focusedNext === true && focus.stillOnPage === true, moved);
+
+    if (focus.typed !== null) {
+      check(`…and what was typed into ${label} meanwhile is still there`,
+        focus.shown === focus.typed, moved);
+    }
+  }
+
+  await shot('03-moved-on');
 } catch (err) {
   check('driver ran to completion', false, err?.message ?? String(err));
 } finally {

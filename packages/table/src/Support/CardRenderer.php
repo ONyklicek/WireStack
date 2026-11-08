@@ -48,6 +48,11 @@ final class CardRenderer
 
     public function render(Model $record): string
     {
+        return TablePartials::region($this->table, fn (): string => $this->card($record));
+    }
+
+    private function card(Model $record): string
+    {
         $recordKey = (string) $record->{$this->table->getPrimaryKey()};
         $actions = $this->plan->actions();
 

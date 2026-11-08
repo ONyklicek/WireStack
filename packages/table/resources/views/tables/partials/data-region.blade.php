@@ -482,19 +482,7 @@
 
                                     {{-- Group subtotal --}}
                                     @if($isGroupEnd && $hasGroupSummaries)
-                                        @include('wire-table::tables.partials.group-subtotal', [
-                                            'table' => $table,
-                                            'component' => $component,
-                                            'groupSummaries' => $component->computeGroupSummaries($groupValue),
-                                            'partialAnchors' => $summaryRenderer->groupAnchors($groupValue),
-                                            'visibleColumns' => $visibleColumns,
-                                            'colSpan' => $colSpan,
-                                            'cellPadding' => $cellPadding,
-                                            'isBordered' => $isBordered,
-                                            'isSelectable' => $isSelectable,
-                                            'hasActions' => $hasActions,
-                                            'actionsPosition' => $actionsPosition,
-                                        ])
+                                        {!! $summaryRenderer->groupRows($groupValue) !!}
                                     @endif
                                 @empty
                                     <tr>
