@@ -4,18 +4,16 @@ import { openPage, checker } from './lib/cdp.mjs';
  * Interactive CDP driver for where an inline cell's validation message lands
  * (/previews/table-editable-errors).
  *
- * The message is laid out of the flow, right under the input, so a failing
- * rule moves neither the input nor the column. Out of the flow, though, it can
- * fall outside the box that clips it: the table scrolls sideways in an
- * `overflow-x: auto` wrapper, which computes `overflow-y` to `auto` as well, and
- * on the last row a message under the input was simply cut off — present in the
- * DOM, `x-show` true, invisible. `placeError()` in wireEditableCell moves it
- * above the input there. Only a browser can say what is clipped.
+ * The message is out of the flow, so a failing rule moves neither the input
+ * nor the column. Inside the cell it was clipped: the table scrolls sideways in
+ * an `overflow-x: auto` wrapper, which clips vertically as well, and on the last
+ * row the message was in the DOM, shown, and invisible. It is teleported to
+ * <body> now and pinned under the input by the floating primitive. Only a
+ * browser can say what is clipped.
  *
- * Asserted per row:
- *   - the message shows, and lies wholly inside the clipping box and the window
- *   - on the first row it lies under the input; on the last, where below is
- *     clipped, above it
+ * Asserted on the first and the last row:
+ *   - the message shows, under the input, as wide as it
+ *   - nothing covers or clips it: the point at its centre is the message
  *   - the input itself did not move when the message appeared
  *
  * Usage:
@@ -43,46 +41,34 @@ const fail = (which) => eval_(`(async () => {
   await window.Alpine.$data(cell).commit('not a number');
   await new Promise((r) => setTimeout(r, 1500));
 
-  const message = cell.querySelector('[data-testid="table-editable-error"]');
+  const message = window.Alpine.$data(cell).$refs.error;
   const m = message.getBoundingClientRect();
   const i = input.getBoundingClientRect();
-
-  let clip = cell.parentElement;
-  while (clip && clip !== document.body) {
-    const s = getComputedStyle(clip);
-    if (s.overflowY !== 'visible' || s.overflowX !== 'visible') break;
-    clip = clip.parentElement;
-  }
-  const box = clip && clip !== document.body ? clip.getBoundingClientRect() : { top: 0, bottom: innerHeight };
+  const hit = document.elementFromPoint(m.left + m.width / 2, m.top + m.height / 2);
 
   return JSON.stringify({
     found: true,
     shown: getComputedStyle(message).display !== 'none' && message.textContent.trim() !== '',
-    inside: m.top >= Math.max(box.top, 0) - 0.5 && m.bottom <= Math.min(box.bottom, innerHeight) + 0.5,
+    teleported: ! cell.contains(message),
     below: m.top >= i.bottom - 0.5,
-    above: m.bottom <= i.top + 0.5,
+    wide: Math.abs(m.width - i.width) <= 1,
+    visible: hit === message || message.contains(hit),
     moved: Math.abs(i.top - before) > 0.5,
   });
 })()`).then(JSON.parse);
 
 try {
-  const first = await fail('first');
-  await shot('01-first-row');
+  for (const which of ['first', 'last']) {
+    const r = await fail(which);
+    await shot(`${which}-row`);
+    const d = JSON.stringify(r);
 
-  check('the first row has an editable cell', first.found === true, JSON.stringify(first));
-  check('…its message shows', first.shown === true, JSON.stringify(first));
-  check('…under the input', first.below === true, JSON.stringify(first));
-  check('…inside the clipping box', first.inside === true, JSON.stringify(first));
-  check('…and the input did not move', first.moved === false, JSON.stringify(first));
-
-  const last = await fail('last');
-  await shot('02-last-row');
-
-  check('the last row has an editable cell', last.found === true, JSON.stringify(last));
-  check('…its message shows', last.shown === true, JSON.stringify(last));
-  check('…inside the clipping box, not cut off below it', last.inside === true, JSON.stringify(last));
-  check('…above the input, where below would be clipped', last.above === true, JSON.stringify(last));
-  check('…and the input did not move', last.moved === false, JSON.stringify(last));
+    check(`the ${which} row has an editable cell`, r.found === true, d);
+    check('…its message shows, teleported out of the table', r.shown === true && r.teleported === true, d);
+    check('…under the input, as wide as it', r.below === true && r.wide === true, d);
+    check('…and nothing clips or covers it', r.visible === true, d);
+    check('…and the input did not move', r.moved === false, d);
+  }
 } catch (err) {
   check('driver ran to completion', false, err?.message ?? String(err));
 } finally {
