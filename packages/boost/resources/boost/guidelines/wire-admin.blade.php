@@ -50,10 +50,9 @@ resource pages and its own chrome simply does not install this.
   would shadow the object) and passed to every row, never worked out in the Blade.
 - **`aria-current` is `page` for the page, `true` for the branch.** A resource row stays active on
   that resource's edit screen without claiming to *be* it — the record's tabs above the form say
-  that. A parent is drawn as Filament draws one: with a URL a link to its own page, children shown
-  while it or one of them is the page; without one a heading that always shows them (a `<button>` only
-  for the rail's popover). No row folds by hand — a group does. While a child is the page, the parent
-  says `true`, never `page`. A pin goes only on a row that is a page.
+  that. A row with children is the heading of its group — a disclosure `<button>`
+  that folds its list (popover in the rail), never a link, even when its resource has a page — and it
+  never says `page`; the child that links there does. A pin goes only on a row that is a page.
 - **Zone and active key are read at page render, in the component constructor** — never re-derived per render.
   Inside a Livewire update `Route::currentRouteName()` is `livewire.update`, so a re-derived answer is right
   once and null forever after, while rendering perfectly.

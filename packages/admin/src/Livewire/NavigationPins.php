@@ -85,9 +85,10 @@ class NavigationPins extends Component
      * `Workspace::items()`: a child adopted through `parent()` sits under its
      * parent only there, and a hand-written child is in neither list on its
      * own. A row is pinnable when it is a page — it has a URL — and a key to be
-     * kept by: a parent that is a page too, a parent with no page (a heading)
-     * never, since its pinned copy would be a link to nowhere. A key stored
-     * before that held is not drawn. The first row under a key wins.
+     * kept by. A row with children never is: it is the heading of its group,
+     * a disclosure rather than a page, even when its resource has a URL, so its
+     * pinned copy would be a link standing for a list. A key stored before
+     * that held is not drawn. The first row under a key wins.
      *
      * @return array<string, NavigationItem>
      */
@@ -97,7 +98,7 @@ class NavigationPins extends Component
 
         foreach (app(Workspace::class)->navigation($this->zone, $this->linkedOnly) as $group) {
             foreach ($group->getItems() as $key => $item) {
-                if ($item->getUrl() !== null) {
+                if ($item->getUrl() !== null && ! $item->hasChildren()) {
                     $items[$key] ??= $item;
                 }
 

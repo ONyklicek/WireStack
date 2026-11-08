@@ -4,6 +4,16 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ## [2.9.10]
 
+### Changed
+
+- **A row with children is the heading of its group again, never a page.** 2.9.9 drew a parent that carried a URL
+  — the index of its resource, filled in for every routed entry — as a link, with its children shown only inside
+  the section and no way to fold them; a group heading became a link to a page and lost its disclosure. The row is
+  a disclosure `<button>` with its arrow and remembered fold state once more, in the sidebar, the rail's popover
+  (whose heading no longer links either) and the top bar's panels. What 2.9.9 dropped stays dropped: a parent is
+  not repeated as its own first child — list its page as a child when it belongs in the menu — and a group row
+  carries no pin.
+
 ### Added
 
 - **Pins and recent pages switch on their own: `wire-admin.navigation.pins` and `wire-admin.navigation.recent`**

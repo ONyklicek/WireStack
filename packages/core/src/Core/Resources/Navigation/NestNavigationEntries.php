@@ -35,10 +35,9 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\BelongsToCluster;
  * 4. Otherwise the entry leaves its group and joins the parent's children,
  *    after any the parent wrote itself, ordered by `sort()` among them.
  *
- * A parent that is a page of its own stays a link to it, with its children
- * under it — the way Filament draws a parent item — so nothing is repeated
- * here: a copy of the parent among its children would be the same page listed
- * twice.
+ * A parent is the heading of its children, never a page of the menu, so
+ * nothing is added among them on its behalf: an application whose parent has
+ * a page that belongs in the menu lists it as a child.
  */
 final class NestNavigationEntries
 {

@@ -223,24 +223,33 @@ it('stays marked on a page of that resource without claiming to be it', function
         ->not->toContain('aria-current="page"');
 });
 
-it('draws a parent that is a page as a link, and as the page while you are on it', function () {
-    // The way Filament draws a parent item: a link to its own page, never a
-    // disclosure, and its children shown under it while you are in there.
+it('draws a parent as the disclosure of its group, never a link, even when its resource has a page', function () {
+    // A parent is the heading of its children. Its resource is routed here, and
+    // it still opens its list rather than going anywhere: a page that belongs
+    // in the menu is one of the children.
+    app(ResourceRegistry::class)->register(SbCatalogueResource::class);
+
+    $html = sbRender();
+    $row = Str::afterLast(Str::before($html, 'data-resource="sb-catalogues"'), '<');
+
+    expect($row)->toStartWith('button')
+        ->not->toContain('href=')
+        ->and($html)->toContain('aria-controls="wire-admin-sub-')
+        ->toContain('expanded = ! expanded')
+        // Nor is it a link in the rail's popover, where its name heads the list.
+        ->and(Str::before(Str::after($html, 'data-testid="admin-nav-flyout-label"'), '</p>'))->not->toContain('href=');
+});
+
+it('never calls the parent the current page, even on its own resource\'s page', function () {
     app(ResourceRegistry::class)->register(SbCatalogueResource::class);
 
     Route::get('/admin/sb-catalogues', fn () => sbRender())->name('wire.sb-catalogues.index');
 
     $html = $this->get('/admin/sb-catalogues')->getContent();
 
-    // Up to the row's class list; the tag's own `=>` in Alpine rules out `[^>]*`.
-    preg_match('/<(\w+)[^<]*?data-resource="sb-catalogues".*?class="[^"]*"/s', $html, $row);
-
-    expect($row)->not->toBeEmpty()
-        ->and($row[1])->toBe('a')
-        ->and($row[0])->toContain('href="/admin/sb-catalogues"')
-        ->toContain('aria-current="page"')
-        ->toContain('bg-primary-50')
-        ->and(Str::before(Str::after($html, 'data-testid="admin-nav-children"'), '>'))->not->toContain('display: none');
+    expect($html)->toMatch('/data-resource="sb-catalogues"[^>]*data-active="true"/')
+        ->toMatch('/data-resource="sb-catalogues"[^>]*aria-current="true"/')
+        ->not->toContain('aria-current="page"');
 });
 
 it('tints the child that is the page, and marks the parent above it only as the branch', function () {
@@ -278,26 +287,14 @@ it('tints the child that is the page, and marks the parent above it only as the 
         ->and(Str::afterLast(Str::before($html, 'aria-current="page"'), 'href="'))->toStartWith('/admin/sb-system/php-info');
 });
 
-it('shows the children of a page only while you are in it, and keeps them for the filter', function () {
+it('opens the group of the page you are on, and remembers how you left the others', function () {
     app(ResourceRegistry::class)->register(SbCatalogueResource::class);
-
-    $list = Str::before(Str::after(sbRender(), 'data-testid="admin-nav-children"'), '>');
-
-    // Elsewhere the list is folded by the server, not by a toggle of the user's:
-    // still in the markup, so a typed filter term can find a child and show it.
-    expect($list)->toContain('style="display: none;"')
-        ->toContain('x-show="$store.wireAdmin?.filtering"');
-});
-
-it('draws a parent with no page as a heading that always shows its children', function () {
-    app(ResourceRegistry::class)->register(SbHeadingResource::class);
 
     $html = sbRender();
 
-    expect(Str::afterLast(Str::before($html, 'data-resource="sb-headings"'), '<'))->toStartWith('button')
-        ->and(Str::before(Str::after($html, 'data-resource="sb-headings"'), '</button>'))->not->toContain('href=')
-        ->and(Str::before(Str::after($html, 'data-testid="admin-nav-children"'), '>'))->not->toContain('display: none')
-        ->and($html)->toContain('href="/admin/monthly"');
+    // Folded by the reader and kept in localStorage; a lit child wins over it.
+    expect($html)->toContain("key: 'wire-admin.sub.")
+        ->toContain('x-show="expanded || $store.wireAdmin?.filtering"');
 });
 
 it('lets an entry say for itself which pages it belongs to', function () {
@@ -358,11 +355,8 @@ it('draws a submenu under an entry that declares children', function () {
 
     expect($html)->toContain('data-testid="admin-nav-child"')
         ->and($html)->toContain('href="/admin/sb-catalogues?filter=archived"')
-        // The parent stays a link to its own page, and there is no disclosure
-        // to fold the children by hand — no chevron, no remembered state.
-        ->and(Str::afterLast(Str::before($html, 'data-resource="sb-catalogues"'), '<'))->toStartWith('a')
-        ->and($html)->not->toContain('aria-controls="wire-admin-sub-')
-        ->and($html)->not->toContain('wire-admin.sub.');
+        // No copy of the parent among its children: it is no page of the menu.
+        ->and($html)->not->toContain('href="/admin/sb-catalogues"');
 });
 
 it('gives an entry with a badge a second, smaller one for the rail', function () {

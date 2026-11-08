@@ -141,10 +141,9 @@ current user may see must not be decided once, at registration, for everybody.
 
 `hasChildren()` answers whether anything would be drawn under a row. Ask it
 rather than counting, because the children may still be a closure at that point.
-A parent is drawn the way Filament draws one: with a URL it is a link to its own
-page, and its children show under it while it or one of them is the page; with
-no URL it is a heading that always shows them. No row folds by hand — a group
-does. What a collapsed
+A parent is the heading of its group, never a page: it opens and folds its
+children, and a URL it carries — the index of its resource — is not drawn. A
+page that belongs in the menu is one of the children. What a collapsed
 [rail](../admin/sidebar.md#the-collapsed-menu) does with the difference — a
 tooltip for a leaf, a popover for a parent — is the shell's business, not this
 layer's.
@@ -203,11 +202,11 @@ that applies decides:
    and joins the parent's children, after any the parent wrote itself, in
    `sort()` order.
 
-**The parent keeps its own link.** A parent that is a page of its own — the
-products list — stays a link to it, with its children under it, so nothing is
-repeated among the children: a copy there would be the same page listed twice.
-While a child is the page, the parent is marked as the branch you are in, not as
-the page.
+**A parent is never a page of the menu.** A parent that is a page of its own —
+the products list — is drawn as the heading of its children all the same, and
+nothing is added among them on its behalf: list its page as a child, with
+`children()` or by putting it under the parent too, when it belongs in the menu.
+While a child is the page, the parent is marked as the branch you are in.
 
 **Every child keeps its key.** An entry carries the key it was registered under
 (`getKey()`), so a resource moved under another is still lit on its edit page,

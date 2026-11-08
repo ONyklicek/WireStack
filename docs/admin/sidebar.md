@@ -112,28 +112,23 @@ Two more things the shell settles for you, each of which was once wrong:
 
 ## Children Under A Row
 
-A row with children is drawn the way Filament draws a parent item:
+A row with children is the heading of its group, never a page: a button with an
+arrow that opens and folds the list under it — in the rail, the popover beside
+it. Even when its resource has a page, the row does not link there, here or in
+the popover; a page that belongs in the menu is one of the children.
 
-- **A parent that is a page** — it has a URL — is a link to that page, like any
-  other row. Its children show under it while it, or one of them, is the page
-  being shown: you are inside that section. Elsewhere they are folded away by
-  the server, not by a toggle of yours.
-- **A parent that is no page** is a heading over its children and always shows
-  them. In the rail it is the button that opens their popover.
-
-No row folds by hand — there is no arrow and no remembered state; a
-[collapsible group](../panels/navigation.md#groups) folds, a row does not. While a
-child is the page, the parent is marked as the branch you are in (bold, the edge
-mark, `aria-current="true"`), never tinted and never `page`, so one screen has
-one current row. Children folded away stay in the markup, which is how the
-filter below can still find them.
+The group of the page you are on opens by itself; the others keep how you left
+them (`localStorage`, per row). While a child is the page, the parent is marked
+as the branch you are in (bold, the edge mark, `aria-current="true"`), never
+tinted and never `page`, so one screen has one current row. A folded list stays
+in the markup, which is how the filter below can still find a child in it.
 
 ## Filtering The Menu
 
 Once a menu holds twelve rows or more, a field sits above it. Typing hides the
 rows whose label does not contain the term and keeps the structure around the
-ones that do: a matching child stays under its parent and shows even where
-its parent's children are folded away; a folded group holding a match opens while you filter; a group with nothing
+ones that do: a matching child stays under its parent, with the parent's list
+open; a folded group holding a match opens while you filter; a group with nothing
 left in it goes; and nothing matching says so rather than leaving an empty
 column. The number of matches is announced to a screen reader.
 
