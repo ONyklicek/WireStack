@@ -14,6 +14,7 @@ use NyonCode\WireAdmin\Install\BuildFrontend;
 use NyonCode\WireAdmin\Install\InstallOutcome;
 use NyonCode\WireAdmin\Install\InstallScaffold;
 use NyonCode\WireAdmin\Livewire\NavigationPins;
+use NyonCode\WireAdmin\Support\MenuMemory;
 use NyonCode\WireCore\Core\Plugin\Hooks\PageMountingPayload;
 use NyonCode\WireCore\Core\Plugin\PluginManager;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationMemory;
@@ -223,10 +224,12 @@ class WireAdminServiceProvider extends PackageServiceProvider
     {
         $this->app->make(PluginManager::class)->hook(Hook::PageMounting, function (PageMountingPayload $payload): PageMountingPayload {
             $key = $payload->target?->key;
-            $memory = $this->app->make(NavigationMemory::class);
+            $memory = new MenuMemory($this->app->make(NavigationMemory::class));
 
-            if ($key !== null && $memory->stores()) {
-                $memory->remember($key, $payload->zone);
+            // Not recorded at all while "Recent" is off: a list nobody is
+            // shown is a write per page view for nothing.
+            if ($key !== null && $memory->recent()) {
+                $memory->memory()->remember($key, $payload->zone);
             }
 
             return $payload;

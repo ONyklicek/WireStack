@@ -38,37 +38,32 @@
      copied into a second menu shape. `ActiveNavigation` owns all three now, and
      the entry that knows better says so with `activeWhen()`. --}}
 @php($isActive = $active->isActive($item, $itemKey ?? null))
-{{-- A parent with a page of its own is that page — but only while none of its
-     children is. Its key matches on every page of a resource whose pages are
-     its children, and tinted like the page it read as a second current row
-     above the one that is: "System" and "PHP Info" both lit on PHP Info. So a
-     lit child makes the parent the branch, and the tint stays with the child.
-     A parent with no page is never the page: its own match is the branch. --}}
-@php($hasActiveChild = $children && ($active->hasActiveChild($item) || ($isActive && ! $url)))
-@php($isActive = $isActive && ! $hasActiveChild)
-{{-- Where the children are drawn, the way Filament draws them: a parent with
-     no page is a heading and always shows them; a parent that is a page is a
-     link and shows them while it, or one of them, is the page — the reader is
-     inside that section. There is no disclosure to fold them by hand: a
-     group folds, a row does not. Still in the markup when hidden, so the menu
-     filter can find a child and show it while a term is typed. --}}
-@php($showChildren = $children && (! $url || $isActive || $hasActiveChild))
+@php($hasActiveChild = ! $isChild && $active->hasActiveChild($item))
+{{-- A row with children is never the page itself, only the branch it sits
+     in — even when its own key matches, which is every page of a resource whose
+     pages are its children. Tinted like the page it read as a second current
+     row above the one that is: "System" and "PHP Info" both lit on PHP Info.
+     So its own match counts as the branch, and the tint stays with the child. --}}
+@php($hasActiveChild = $hasActiveChild || ($children && $isActive))
+@php($isActive = $isActive && ! $children)
 {{-- Whether this row carries a pin, decided before the row is drawn: the pin
      and the badge share the end of the row. At rest the badge is there; while
      the row is pointed at or holds the focus, the badge gives way and the pin
      takes its place. Laid over the badge it hid the count, and a slot kept free
      for it was an empty gap on every row — so the two take turns instead. --}}
 @php($pinKey = $itemKey ?? $item->getKey())
-{{-- Only a row that is a page: a pinned copy is a link, and a heading with no
-     page of its own would be a link to nowhere. --}}
-@php($pinnable = ($pins ?? false) && $pinKey !== null && $url && ! ($inFlyout ?? false))
-{{-- `page` only for the row that is the page; a parent whose child is the
-     page says only that it is the branch you are in. --}}
-@php($ariaCurrent = $hasActiveChild ? 'true' : ($isActive ? $active->ariaCurrent($item, $itemKey ?? null) : null))
-{{-- A link when there is a page, a button only for a parent with none: in
-     the rail that button is what opens its popover, and a heading that cannot
-     take focus could not be opened from the keyboard. --}}
-@php($tag = ! $url && $children ? 'button' : 'a')
+{{-- Only on a row that is a page. A row with children is the heading of its
+     group — a disclosure that opens the list, never a page of its own, even
+     when its resource has one — so its pinned copy would be a link standing
+     for a list; and a row with no URL has nowhere to go. --}}
+@php($pinnable = ($pins ?? false) && $pinKey !== null && $url && ! $children && ! ($inFlyout ?? false))
+@php($ariaCurrent = $active->ariaCurrent($item, $itemKey ?? null))
+{{-- A row with children is a disclosure button, not a link — the heading of
+     its group, never a page, even when its resource has one: a page that
+     should be in the menu is listed as one of the children. `page` on the
+     button would claim that pressing it takes you where you already are, so
+     the branch says only that it is the branch you are in. --}}
+@php($ariaCurrent = $children && $ariaCurrent === 'page' ? 'true' : $ariaCurrent)
 {{-- Resolved once, for both places a badge is drawn — the pill beside the label,
      and the dot on the icon when there is no label to sit beside. Written twice
      it drifted the moment the dot fell back to `primary` and the pill to `gray`:
@@ -81,6 +76,22 @@
     data-nav-row
     @if ($isChild) data-nav-child @endif
     data-nav-label="{{ mb_strtolower($item->getLabel() ?? '') }}"
+    @if ($children)
+        x-data="{
+            expanded: {{ $hasActiveChild ? 'true' : 'false' }},
+            key: 'wire-admin.sub.{{ md5($item->getLabel() ?? '') }}',
+            init() {
+                const stored = window.localStorage?.getItem(this.key);
+
+                // A child of this branch being the current page wins over what
+                // was stored: a menu that folds away the page you are on is a
+                // menu that has lost track of where you are.
+                if (stored !== null && ! {{ $hasActiveChild ? 'true' : 'false' }}) this.expanded = stored === '1';
+
+                this.$watch('expanded', (value) => window.localStorage?.setItem(this.key, value ? '1' : '0'));
+            },
+        }"
+    @endif
 >
     {{-- Top-level rows only. A child is drawn inside the popover or inside the
          expanded submenu, and neither has a width problem of its own. --}}
@@ -114,18 +125,25 @@
         @endif
         class="group/row relative"
     >
-    <{{ $tag }}
+    <{{ $children ? 'button' : 'a' }}
         data-nav-focus
         @if (! $isChild) x-ref="trigger" @endif
-        @if ($tag === 'button')
+        @if ($children)
             type="button"
-            {{-- Only the rail has something to open: in the wide menu the
-                 children are already drawn under the heading. What it must not
-                 do is re-open the entire menu, which answered "show me what is
-                 under this" by undoing the collapse the user had just asked for. --}}
-            x-on:click="$store.wireAdmin?.railed && (toggle(), open && $event.detail === 0 && $nextTick(() => $refs.panel?.querySelector('a')?.focus()))"
-            x-bind:aria-expanded="$store.wireAdmin?.railed ? (open ? 'true' : 'false') : null"
-            x-bind:aria-controls="$store.wireAdmin?.railed ? '{{ $panelId }}' : null"
+            {{-- In the rail the click owns the popover; in the wide menu it owns
+                 the disclosure. What it must not do is what it used to: re-open
+                 the entire menu, which answered "show me what is under this" by
+                 undoing the collapse the user had just asked for. --}}
+            x-on:click="$store.wireAdmin?.railed
+                ? (toggle(), open && $event.detail === 0 && $nextTick(() => $refs.panel?.querySelector('a')?.focus()))
+                : (expanded = ! expanded)"
+            x-bind:aria-expanded="$store.wireAdmin?.railed ? (open ? 'true' : 'false') : (expanded ? 'true' : 'false')"
+            {{-- Written twice on purpose: the static value is what the document
+                 ships with and is right for the menu as rendered, and the binding
+                 re-points it at the popover the moment the same button starts
+                 opening that instead. --}}
+            aria-controls="wire-admin-sub-{{ md5($item->getLabel() ?? '') }}"
+            x-bind:aria-controls="$store.wireAdmin?.railed ? '{{ $panelId }}' : 'wire-admin-sub-{{ md5($item->getLabel() ?? '') }}'"
         @elseif ($url)
             href="{{ $url }}"
             @wireNavigate($url)
@@ -159,7 +177,6 @@
             'font-medium text-gray-900 dark:text-gray-100' => $hasActiveChild && ! $isActive,
             'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white' => ! $isActive,
             'cursor-default opacity-60 hover:bg-transparent' => ! $url && ! $children,
-            'cursor-default lg:hover:bg-transparent' => $tag === 'button',
         ])
     >
         {{-- "You are here", against the column's own edge rather than inside the
@@ -239,7 +256,14 @@
             </span>
         @endif
 
-    </{{ $tag }}>
+        @if ($children)
+            <span
+                data-rail-hide
+                x-bind:class="expanded || '-rotate-90'"
+                class="text-gray-500 dark:text-gray-400 transition"
+            >{!! icon('outline:chevron-down', 'h-4 w-4 rtl:-scale-x-100') !!}</span>
+        @endif
+    </{{ $children ? 'button' : 'a' }}>
 
     {{-- The pin, beside the row rather than inside it: a button inside a link
          is not a thing HTML allows. Only on a row with a key to keep — a
@@ -274,7 +298,7 @@
                 // Where the badge is, which gives way to it. Shown only while the
                 // row is pointed at or focused — whether a row is pinned is what
                 // the Pinned section above says, not an icon on every row.
-                'absolute top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 opacity-0 transition group-hover/row:opacity-100 group-focus-within/row:opacity-100 hover:bg-gray-900/5 hover:text-gray-700 focus-visible:opacity-100 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-gray-200 end-1.5',
+                'absolute end-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 opacity-0 transition group-hover/row:opacity-100 group-focus-within/row:opacity-100 hover:bg-gray-900/5 hover:text-gray-700 focus-visible:opacity-100 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-gray-200',
             ])
         >
             <span data-pin-icon="pin" x-show="! pinned" @if ($isPinned) style="display: none;" @endif>{!! icon('outline:bookmark', 'h-4 w-4') !!}</span>
@@ -333,24 +357,18 @@
                              two inches away. --}}
                         <div class="max-w-72 min-w-52 rounded-xl bg-white p-1.5 shadow-xl ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10">
                             {{-- The parent's own name, as the heading of its list
-                                 rather than as a row you might click by accident.
-                                 It links only when the parent is itself a page. --}}
-                            <{{ $url ? 'a' : 'p' }}
-                                @if ($url)
-                                    href="{{ $url }}"
-                                    @wireNavigate($url)
-                                    x-on:click="close()"
-                                @endif
+                                 rather than as a row you might click by accident —
+                                 never a link: a parent is a heading, not a page. --}}
+                            <p
                                 data-testid="admin-nav-flyout-label" @wireEl('admin-nav-flyout-label')
                                 @class([
                                     'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold tracking-wider uppercase',
                                     'text-gray-500 dark:text-gray-400' => ! $isActive && ! $hasActiveChild,
                                     'text-primary-600 dark:text-primary-400' => $isActive || $hasActiveChild,
-                                    'transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700/70 dark:hover:text-gray-300' => (bool) $url,
                                 ])
                             >
                                 <span class="flex-1 truncate">{{ $item->getLabel() }}</span>
-                            </{{ $url ? 'a' : 'p' }}>
+                            </p>
 
                             {{-- The children, drawn by the same partial that draws
                                  them under the parent in the wide menu. A second
@@ -385,20 +403,23 @@
 
     @if ($children)
         <ul
-            data-testid="admin-nav-children" @wireEl('admin-nav-children')
-            {{-- Two questions, two owners. Whether the children are shown is
-                 the server's, from where the reader is ($showChildren), with
-                 the filter as the one runtime exception; whether the menu is a
-                 rail is CSS's, from `<html data-rail>`, like every other thing
-                 the width hides. A list that asked the store about the rail too
-                 could disagree with the media query, and a disagreement drew it
-                 inside the 64-pixel column as a stray vertical rule. --}}
+            id="wire-admin-sub-{{ md5($item->getLabel() ?? '') }}"
+            {{-- Plain `x-show`, no `x-collapse`. Collapse animates a height and
+                 only then hides, so folding the rail left the first child row
+                 showing as a stray sliver under the icon for the length of the
+                 animation — and that is exactly the moment the menu is being
+                 looked at. --}}
+            {{-- Two questions, two owners. Whether this branch is *folded* is
+                 runtime and Alpine's; whether the menu is a rail is CSS's, from
+                 `<html data-rail>`, like every other thing the width hides. It
+                 used to ask the store for both, and the store's answer is a
+                 second statement of the media query rather than the same one —
+                 so the two could disagree, and a disagreement rendered this list
+                 inside the 64-pixel column, where `overflow-x-hidden` showed it
+                 as a stray vertical rule and a sliver of a highlighted row. --}}
             data-rail-hide
-            @unless ($showChildren)
-                x-show="$store.wireAdmin?.filtering"
-                x-cloak
-                style="display: none;"
-            @endunless
+            x-show="expanded || $store.wireAdmin?.filtering"
+            x-cloak
             class="ms-[1.4rem] mt-0.5 space-y-0.5 border-s border-gray-200 ps-2 dark:border-gray-800"
         >
             @foreach ($children as $sub)

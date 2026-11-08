@@ -108,27 +108,23 @@ Další dvě věci, které shell řeší za vás a které kdysi fungovaly špatn
 
 ## Podřádky
 
-Řádek s potomky se kreslí tak, jak rodičovskou položku kreslí Filament:
+Řádek s potomky je nadpis své skupiny, nikdy stránka: tlačítko se šipkou, které
+seznam pod sebou rozbalí a sbalí — v liště popover vedle sebe. Ani když má jeho
+resource stránku, řádek na ni nevede, tady ani v popoveru; stránka, která do
+menu patří, je jedním z potomků.
 
-- **Rodič, který je stránkou** — má URL — je odkaz na tu stránku jako každý
-  jiný řádek. Potomci jsou vidět pod ním, když je zobrazenou stránkou on nebo
-  některý z nich: jste uvnitř té sekce. Jinde je složí server, ne vaše kliknutí.
-- **Rodič, který stránkou není,** je nadpis nad svými potomky a ukazuje je vždy.
-  V liště je to tlačítko, které otevře jejich popover.
-
-Ručně se nesbaluje žádný řádek — žádná šipka ani zapamatovaný stav; sbalit jde
-[skupina](../panels/navigation.md#skupiny), ne řádek. Když je stránkou některý
-potomek, rodič je označený jako větev, ve které jste (tučně, značka u hrany,
+Skupina stránky, na které jste, se otevře sama; ostatní zůstanou, jak jste je
+nechali (`localStorage`, pro každý řádek). Když je stránkou některý potomek,
+rodič je označený jako větev, ve které jste (tučně, značka u hrany,
 `aria-current="true"`), nikdy podbarvený a nikdy `page`, takže jedna obrazovka má
-jeden aktuální řádek. Složení potomci v markupu zůstávají, a proto je filtr níž
-pořád najde.
+jeden aktuální řádek. Sbalený seznam v markupu zůstává, a proto v něm filtr níž
+dítě pořád najde.
 
 ## Filtrování menu
 
 Jakmile má menu dvanáct řádků nebo víc, sedí nad ním pole. Psaní skryje řádky,
 jejichž popisek hledaný text neobsahuje, a strukturu kolem těch, které ano,
-zachová: odpovídající dítě zůstane pod rodičem a ukáže se, i když jsou jeho
-potomci jinak složení, sbalená
+zachová: odpovídající dítě zůstane pod rodičem s otevřeným seznamem, sbalená
 skupina se shodou se při filtrování otevře, skupina, ve které nic nezbylo,
 zmizí, a když neodpovídá nic, řekne to, místo aby nechala prázdný sloupec. Počet
 shod se ohlásí čtečce obrazovky.
@@ -184,6 +180,23 @@ se nevykreslí ani špendlíky, ani sekce. Zvolte ho v `config/wire-core.php`:
     'guest' => 'session',
 ],
 ```
+
+**Každou polovinu zapnete zvlášť**, v `config/wire-admin.php`:
+
+```php
+'navigation' => [
+    'pins' => env('WIRE_ADMIN_NAV_PINS', true),     // záložka na řádcích + „Připnuté“
+    'recent' => env('WIRE_ADMIN_NAV_RECENT', true), // „Nedávné“
+],
+```
+
+Vypnuté znamená vypnuté všude, ne jen na obrazovce: s vypnutým `pins` nemá žádný
+řádek špendlík, sekce nekreslí „Připnuté“ ani tlačítko pro připnutí vedle
+nedávné položky a podvržené `wire-admin-pin` nic nezapíše; s vypnutým `recent`
+sekce nekreslí „Nedávné“ a mount stránky žádnou návštěvu nezaznamená — seznam,
+který nikdo nevidí, nemá stát zápis při každém zobrazení stránky. S oběma
+vypnutými se sekce vůbec nemountuje. Obojí dál potřebuje driver, který něco
+uchová; přepínač může jen ubrat.
 
 Zbytek je rozhodnutý za vás:
 

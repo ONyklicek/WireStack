@@ -138,10 +138,10 @@ které závisejí na tom, co smí vidět přihlášený uživatel, se nesmějí 
 jednou, při registraci, a zapamatovat pro všechny.
 
 `hasChildren()` odpoví, jestli se pod položkou vůbec něco vykreslí. Ptejte se jím
-místo počítání, protože děti můžou být v tu chvíli ještě closure. Rodič se kreslí
-tak, jak ho kreslí Filament: s URL je odkazem na svou stránku a děti ukáže pod
-sebou, když je stránkou on nebo některé z nich; bez URL je nadpisem, který je
-ukazuje vždy. Ručně se nesbaluje žádný řádek — jen skupina. Co s tím rozdílem udělá zúžená
+místo počítání, protože děti můžou být v tu chvíli ještě closure. Rodič je nadpis
+své skupiny, nikdy stránka: rozbaluje a sbaluje své děti a URL, kterou nese —
+index svého resource —, se nekreslí. Stránka, která do menu patří, je jedním z
+dětí. Co s tím rozdílem udělá zúžená
 [lišta](../admin/sidebar.md#sbalene-menu) — tooltip pro list, popover pro rodiče —
 je věc shellu, ne téhle vrstvy.
 
@@ -199,10 +199,11 @@ neosiří. [`Page`](pages.md#registrace) řekne totéž vlastností
 4. Jinak položka opustí svou skupinu — její vlastní `group()` už neplatí —
    a přidá se k dětem rodiče, za ty, které napsal sám, v pořadí `sort()`.
 
-**Rodič si nechá svůj odkaz.** Rodič, který je sám stránkou — seznam produktů —
-zůstane odkazem na ni a děti má pod sebou, takže se mezi dětmi nic neopakuje:
-kopie by tam byla tatáž stránka podruhé. Když je stránkou některé dítě, rodič je
-označený jako větev, ve které jste, ne jako stránka.
+**Rodič nikdy není stránkou menu.** Rodič, který je sám stránkou — seznam
+produktů —, se i tak kreslí jako nadpis svých dětí a nic se mezi ně za něj
+nepřidává: když jeho stránka do menu patří, uveďte ji jako dítě, přes
+`children()` nebo tím, že ji pod rodiče dáte také. Když je stránkou některé
+dítě, rodič je označený jako větev, ve které jste.
 
 **Každé dítě si nechá svůj klíč.** Položka nese klíč, pod kterým byla
 registrovaná (`getKey()`), takže resource přesunutý pod jiný svítí i na své

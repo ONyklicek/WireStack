@@ -106,10 +106,10 @@ it('moves an entry under the parent it names, by class or by key', function () {
         ->and(npChildLabels($shop->getItems()['np-products']))->toBe(['Np Brands', 'Np Categories']);
 });
 
-it('keeps a parent that is a page as the link to it, and adds no copy of it among its children', function () {
-    // The way Filament nests: the parent row is a link to its own page and its
-    // children sit under it. A copy of the parent as its first child would be
-    // the same page listed twice.
+it('adds no copy of a parent that is a page among its children', function () {
+    // A parent is the heading of its children, never a page of the menu: the
+    // shell draws it as a disclosure, and an application that wants its page
+    // in the menu lists it as a child.
     NpResource::$parents = [NpCategoryResource::class => NpProductResource::class];
 
     $parent = npWorkspace()->navigation()['shop']->getItems()['np-products'];

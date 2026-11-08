@@ -2,6 +2,28 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.10]
+
+### Changed
+
+- **A row with children is the heading of its group again, never a page.** 2.9.9 drew a parent that carried a URL
+  — the index of its resource, filled in for every routed entry — as a link, with its children shown only inside
+  the section and no way to fold them; a group heading became a link to a page and lost its disclosure. The row is
+  a disclosure `<button>` with its arrow and remembered fold state once more, in the sidebar, the rail's popover
+  (whose heading no longer links either) and the top bar's panels. What 2.9.9 dropped stays dropped: a parent is
+  not repeated as its own first child — list its page as a child when it belongs in the menu — and a group row
+  carries no pin.
+
+### Added
+
+- **Pins and recent pages switch on their own: `wire-admin.navigation.pins` and `wire-admin.navigation.recent`**
+  (`WIRE_ADMIN_NAV_PINS`, `WIRE_ADMIN_NAV_RECENT`, both `true` by default). Before, the only way to hide either was
+  to bind `NavigationMemory` to the `null` driver, which took both away together. Off means off on the server too:
+  with `pins` off no row carries a pin, no "Pinned" section and no pin button beside a recent entry are drawn, and
+  `NavigationPins::toggle()` writes nothing; with `recent` off the section draws no "Recent" and `page.mounting`
+  records no visit. With both off the section is not mounted. `Support\MenuMemory` is the one place that answers
+  both questions — the switch and a driver that keeps something.
+
 ## [2.9.9]
 
 ### Changed

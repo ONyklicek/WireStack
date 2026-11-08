@@ -6,6 +6,7 @@ namespace NyonCode\WireAdmin\Livewire;
 
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use NyonCode\WireAdmin\Support\MenuMemory;
 use NyonCode\WireCore\Core\Resources\Navigation\ActiveNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationMemory;
@@ -22,8 +23,9 @@ use NyonCode\WireCore\Core\Resources\Workspace;
  * pinned entry here is a **copy** of its row, named apart
  * (`admin-nav-pinned-item`) — the row stays in its group.
  *
- * Drawn only where something is kept: the sidebar asks
- * {@see NavigationMemory::stores()} before mounting this at all.
+ * Drawn only where something is kept and the application wants it: the
+ * sidebar asks {@see MenuMemory} before mounting this at all, and each half
+ * (`wire-admin.navigation.pins`, `.recent`) is switched on its own.
  */
 class NavigationPins extends Component
 {
@@ -37,7 +39,13 @@ class NavigationPins extends Component
 
     public function toggle(string $key): void
     {
-        $memory = app(NavigationMemory::class);
+        $settings = MenuMemory::make();
+        $memory = $settings->memory();
+
+        // Switched off, a forged `wire-admin-pin` writes nothing either.
+        if (! $settings->pins()) {
+            return;
+        }
 
         // Only what the menu offers a pin on. The key arrives from the browser,
         // and a heading with no page — or a key the menu no longer has — would
@@ -55,12 +63,15 @@ class NavigationPins extends Component
 
     public function render(): View
     {
-        $memory = app(NavigationMemory::class);
+        $settings = MenuMemory::make();
+        $memory = $settings->memory();
         $items = $this->pinnable();
 
         return view('wire-admin::livewire.navigation-pins', [
-            'pinned' => $memory->pinnedEntries($items, $this->zone),
-            'recent' => $memory->recentEntries($items, $this->zone, $this->current),
+            'pinned' => $settings->pins() ? $memory->pinnedEntries($items, $this->zone) : [],
+            'recent' => $settings->recent() ? $memory->recentEntries($items, $this->zone, $this->current) : [],
+            // A recent entry offers to pin it only where pins are on.
+            'canPin' => $settings->pins(),
             // The page's own reading was taken when it rendered; on a round
             // trip the route is `livewire.update`, so only the key is carried.
             'active' => new ActiveNavigation(key: $this->current),
@@ -74,9 +85,10 @@ class NavigationPins extends Component
      * `Workspace::items()`: a child adopted through `parent()` sits under its
      * parent only there, and a hand-written child is in neither list on its
      * own. A row is pinnable when it is a page — it has a URL — and a key to be
-     * kept by: a parent that is a page too, a parent with no page (a heading)
-     * never, since its pinned copy would be a link to nowhere. A key stored
-     * before that held is not drawn. The first row under a key wins.
+     * kept by. A row with children never is: it is the heading of its group,
+     * a disclosure rather than a page, even when its resource has a URL, so its
+     * pinned copy would be a link standing for a list. A key stored before
+     * that held is not drawn. The first row under a key wins.
      *
      * @return array<string, NavigationItem>
      */
@@ -86,7 +98,7 @@ class NavigationPins extends Component
 
         foreach (app(Workspace::class)->navigation($this->zone, $this->linkedOnly) as $group) {
             foreach ($group->getItems() as $key => $item) {
-                if ($item->getUrl() !== null) {
+                if ($item->getUrl() !== null && ! $item->hasChildren()) {
                     $items[$key] ??= $item;
                 }
 

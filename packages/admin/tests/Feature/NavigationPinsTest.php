@@ -132,31 +132,34 @@ it('offers a pin on a child that names a key, and draws it once pinned', functio
         ->assertSeeHtml('data-resource="system.server"');
 });
 
-it('pins a parent that is a page, and never a heading', function (string $parent, int $pins, Closure $register) {
+it('never pins the row that opens a group, whether or not its resource has a page', function (string $parent, int $pins, Closure $register) {
     npStoring();
     app(PluginManager::class)->hook(Hook::NavigationBuilding, $register);
 
     $html = Blade::render('<x-wire-admin::sidebar />');
 
-    // A parent that is a page is a link like any other row and carries its
-    // pin; a heading with no page has nothing to pin.
-    expect(preg_match_all('/data-testid="admin-nav-pin"[^>]*data-resource="'.$parent.'"/', $html))->toBe($pins);
+    // A parent is the heading of its group, never a page, so its pinned copy
+    // would be a link standing for a list. Its children are drawn, and pinnable.
+    expect($html)->toContain('data-testid="admin-nav-child"')
+        ->and(preg_match_all('/data-testid="admin-nav-pin"[^>]*data-resource="'.$parent.'"/', $html))->toBe($pins);
 })->with([
-    'own children' => ['system', 0, fn () => function (NavigationBuildingPayload $payload) {
+    // The hook itself, not a factory: Pest hands a `Closure` parameter the
+    // dataset value as it is, without calling it.
+    'own children' => ['system', 0, function (NavigationBuildingPayload $payload) {
         $payload->items['system'] = NavigationItem::make('System')->children([
             NavigationItem::make('Server')->url('/system/server')->key('system.server'),
         ]);
 
         return $payload;
     }],
-    'adopted child, parent is a page' => ['orders', 1, fn () => function (NavigationBuildingPayload $payload) {
+    'adopted child, parent has a page' => ['orders', 0, function (NavigationBuildingPayload $payload) {
         $payload->items['returns'] = NavigationItem::make('Returns')->url('/returns')->parent('orders');
 
         return $payload;
     }],
 ]);
 
-it('refuses to pin a heading, and does not draw one pinned before', function () {
+it('refuses to pin a group, and does not draw one pinned before', function () {
     npStoring();
     app(PluginManager::class)->hook(Hook::NavigationBuilding, function (NavigationBuildingPayload $payload) {
         $payload->items['system'] = NavigationItem::make('System')->children([
@@ -236,3 +239,52 @@ it('unpins from the Pinned section and pins from Recent', function () {
         ->call('toggle', 'invoices')
         ->assertDispatched('wire-admin-pinned', keys: ['invoices']);
 });
+
+it('switches pins and recent pages on their own', function (bool $pins, bool $recent) {
+    npStoring();
+    config()->set('wire-admin.navigation.pins', $pins);
+    config()->set('wire-admin.navigation.recent', $recent);
+
+    app(NavigationMemory::class)->pin('orders');
+    app(NavigationMemory::class)->remember('invoices');
+
+    $html = Blade::render('<x-wire-admin::sidebar />');
+
+    expect(str_contains($html, 'data-testid="admin-nav-pin"'))->toBe($pins)
+        ->and(str_contains($html, 'data-testid="admin-nav-pinned-item"'))->toBe($pins)
+        ->and(str_contains($html, 'data-testid="admin-nav-recent-item"'))->toBe($recent)
+        // A recent entry offers to pin it only where pins are on.
+        ->and(str_contains($html, 'data-testid="admin-nav-recent-toggle"'))->toBe($pins && $recent)
+        ->and(str_contains($html, 'data-testid="admin-nav-memory"'))->toBe($pins || $recent);
+})->with([
+    'both' => [true, true],
+    'pins only' => [true, false],
+    'recent only' => [false, true],
+    'neither' => [false, false],
+]);
+
+it('writes no pin while pins are off, even from a forged event', function () {
+    npStoring();
+    config()->set('wire-admin.navigation.pins', false);
+
+    Livewire::test(NavigationPins::class)
+        ->call('toggle', 'orders')
+        ->assertNotDispatched('wire-admin-pinned');
+
+    expect(app(NavigationMemory::class)->pinned())->toBe([]);
+});
+
+it('records no visit while recent pages are off', function (bool $recent, array $expected) {
+    npStoring();
+    config()->set('wire-admin.navigation.recent', $recent);
+
+    HookDispatch::typed(Hook::PageMounting, fn () => new PageMountingPayload(
+        page: new stdClass,
+        target: new HookTarget(surface: 'page', key: 'orders'),
+    ));
+
+    expect(app(NavigationMemory::class)->recent())->toBe($expected);
+})->with([
+    'on' => [true, ['orders']],
+    'off' => [false, []],
+]);
