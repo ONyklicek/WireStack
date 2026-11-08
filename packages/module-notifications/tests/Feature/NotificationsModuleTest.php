@@ -16,6 +16,7 @@ use NyonCode\WireModuleNotifications\Exceptions\NotificationsModuleException;
 use NyonCode\WireModuleNotifications\Pages\ListNotifications;
 use NyonCode\WireModuleNotifications\Pages\ViewNotification;
 use NyonCode\WireModuleNotifications\Resources\NotificationResource;
+use NyonCode\WireModuleNotifications\WireModuleNotificationsServiceProvider;
 use NyonCode\WireTable\Table;
 
 /*
@@ -460,3 +461,13 @@ it('scopes "own" to the recipient the application binds, as the bell does', func
         ->assertSee('Invoice paid 2')
         ->assertDontSee('Invoice paid 1');
 });
+
+it('says in php artisan about whether notifications are stored', function (string|array $drivers, string $stored) {
+    config()->set('wire-core.notifications.default', $drivers);
+
+    expect((new WireModuleNotificationsServiceProvider(app()))->aboutData())
+        ->toBe(['Stored notifications' => $stored]);
+})->with([
+    'database among the drivers' => [['session', 'database'], 'on'],
+    'transient only' => ['session', 'off'],
+]);

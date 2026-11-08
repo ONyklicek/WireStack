@@ -2,6 +2,33 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.9]
+
+### Changed
+
+- **A parent in the menu is drawn the way Filament draws one.** A parent with a URL is a link to its own page,
+  and its children show under it while it or one of them is the page; a parent with no URL is a heading that
+  always shows them. The disclosure button, its arrow and the remembered fold state (`wire-admin.sub.*` in
+  `localStorage`) are gone — a group folds, a row does not. `NestNavigationEntries` no longer repeats a parent
+  that is a page as its own first child, which listed the same page twice. While a child is the page, the parent
+  is marked as the branch (`aria-current="true"`), never tinted and never `page`. Folded children stay in the
+  markup, so the menu filter still finds them. An application whose parent and first child pointed at the same
+  page now lists it twice and should drop the child.
+
+### Fixed
+
+- **A heading in the menu can no longer be pinned.** The pin was offered on every row with a key, a row that only
+  opened its children included, and its pinned copy was a link standing for a list. A pin now goes only on a row
+  that is a page; `NavigationPins::toggle()` refuses any other key, since the key arrives from the browser, and a
+  heading pinned earlier is not drawn. The section reads the grouped menu, so a child adopted through `parent()`
+  is pinnable as the sidebar draws it.
+- **A validation message no longer widens a `TextInputColumn`, nor moves its input.** The cell is
+  `whitespace-nowrap`, so the error under the input was one line as wide as its text and the column jumped the
+  moment validation failed; and in the flow it grew the cell, so a cell aligned to the middle of its row moved the
+  input up under the caret. The error is now laid right under the input, out of the flow (`top-full`), as wide as
+  the input and wrapping inside it; the helper text wraps the same way and goes invisible rather than away while an
+  error shows, so the cell keeps its height.
+
 ## [2.9.8]
 
 ### Fixed

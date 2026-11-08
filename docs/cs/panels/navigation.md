@@ -137,9 +137,11 @@ Closure se vyhodnocuje při každém čtení ze stejného důvodu jako badge —
 které závisejí na tom, co smí vidět přihlášený uživatel, se nesmějí rozhodnout
 jednou, při registraci, a zapamatovat pro všechny.
 
-`hasChildren()` odpoví, jestli se pod položkou vůbec něco vykreslí, a to rozhoduje,
-jestli je řádek odkaz, nebo rozbalovátko. Ptejte se jím místo počítání, protože
-děti můžou být v tu chvíli ještě closure. Co s tím rozdílem udělá zúžená
+`hasChildren()` odpoví, jestli se pod položkou vůbec něco vykreslí. Ptejte se jím
+místo počítání, protože děti můžou být v tu chvíli ještě closure. Rodič se kreslí
+tak, jak ho kreslí Filament: s URL je odkazem na svou stránku a děti ukáže pod
+sebou, když je stránkou on nebo některé z nich; bez URL je nadpisem, který je
+ukazuje vždy. Ručně se nesbaluje žádný řádek — jen skupina. Co s tím rozdílem udělá zúžená
 [lišta](../admin/sidebar.md#sbalene-menu) — tooltip pro list, popover pro rodiče —
 je věc shellu, ne téhle vrstvy.
 
@@ -197,11 +199,10 @@ neosiří. [`Page`](pages.md#registrace) řekne totéž vlastností
 4. Jinak položka opustí svou skupinu — její vlastní `group()` už neplatí —
    a přidá se k dětem rodiče, za ty, které napsal sám, v pořadí `sort()`.
 
-**Rodič zůstane dosažitelný.** Větev je rozbalovátko, ne odkaz, takže rodič,
-který je sám stránkou — seznam produktů — by ve chvíli, kdy se pod něj něco
-přesune, ztratil cestu dovnitř. Proto se zopakuje jako své první dítě, se
-stejným popiskem, ikonou, URL a klíčem. Rodič bez URL, holý nadpis, žádnou
-kopii nedostane.
+**Rodič si nechá svůj odkaz.** Rodič, který je sám stránkou — seznam produktů —
+zůstane odkazem na ni a děti má pod sebou, takže se mezi dětmi nic neopakuje:
+kopie by tam byla tatáž stránka podruhé. Když je stránkou některé dítě, rodič je
+označený jako větev, ve které jste, ne jako stránka.
 
 **Každé dítě si nechá svůj klíč.** Položka nese klíč, pod kterým byla
 registrovaná (`getKey()`), takže resource přesunutý pod jiný svítí i na své
@@ -456,7 +457,7 @@ vlastní stav nedrží. To výše je pro aplikaci, která si kreslí vlastní r�
 | `getParent(): ?string` | `string\|null` | Klíč rodiče, třída už na něj převedená |
 | `getKey(): ?string` | `string\|null` | Registrovaný klíč, nebo `null` u ručně psaného dítěte |
 | `getChildren(): array` | `array<int, NavigationItem>` | Viditelné děti v pořadí `sort()` |
-| `hasChildren(): bool` | `bool` | Jestli je řádek rozbalovátko místo obyčejného odkazu |
+| `hasChildren(): bool` | `bool` | Jestli se pod řádkem něco vykreslí |
 | `isActiveWhen(ActiveNavigation $active): ?bool` | `bool\|null` | Vlastní odpověď položky, nebo `null`, když žádnou nedeklarovala — trojhodnotové, aby deklarované „ne“ nepropadlo do konvencí |
 | `isVisible(): bool` / `isHidden(): bool` | `bool` | Vyhodnocená viditelnost |
 

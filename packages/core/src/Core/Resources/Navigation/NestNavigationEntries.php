@@ -35,10 +35,10 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\BelongsToCluster;
  * 4. Otherwise the entry leaves its group and joins the parent's children,
  *    after any the parent wrote itself, ordered by `sort()` among them.
  *
- * A branch is a disclosure in the menu, not a link, so a parent that is a page
- * of its own would stop being reachable the moment something moved under it.
- * It is therefore repeated as its own first child — same label, same URL, same
- * key, so it is lit on its own pages the way the row was.
+ * A parent that is a page of its own stays a link to it, with its children
+ * under it — the way Filament draws a parent item — so nothing is repeated
+ * here: a copy of the parent among its children would be the same page listed
+ * twice.
  */
 final class NestNavigationEntries
 {
@@ -89,10 +89,7 @@ final class NestNavigationEntries
         }
 
         foreach ($adopted as $parent => $children) {
-            $items[$parent] = $items[$parent]->withAdoptedChildren([
-                ...$this->itself($items[$parent], $parent),
-                ...$children,
-            ]);
+            $items[$parent] = $items[$parent]->withAdoptedChildren($children);
         }
 
         return $items;
@@ -121,27 +118,5 @@ final class NestNavigationEntries
         }
 
         return $clustered;
-    }
-
-    /**
-     * The parent's own destination, as the first of its children.
-     *
-     * @return array<int, NavigationItem>
-     */
-    private function itself(NavigationItem $parent, string $key): array
-    {
-        $url = $parent->getUrl();
-
-        if ($url === null) {
-            return [];
-        }
-
-        return [
-            NavigationItem::make($parent->getLabel())
-                ->icon($parent->getIcon())
-                ->url($url)
-                ->key($key)
-                ->sort(PHP_INT_MIN),
-        ];
     }
 }

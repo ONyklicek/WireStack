@@ -39,6 +39,13 @@ class NavigationPins extends Component
     {
         $memory = app(NavigationMemory::class);
 
+        // Only what the menu offers a pin on. The key arrives from the browser,
+        // and a heading with no page — or a key the menu no longer has — would
+        // be stored and never drawn.
+        if (! isset($this->pinnable()[$key])) {
+            return;
+        }
+
         $memory->isPinned($key, $this->zone)
             ? $memory->unpin($key, $this->zone)
             : $memory->pin($key, $this->zone);
@@ -49,7 +56,7 @@ class NavigationPins extends Component
     public function render(): View
     {
         $memory = app(NavigationMemory::class);
-        $items = $this->pinnable(app(Workspace::class)->items($this->zone, $this->linkedOnly));
+        $items = $this->pinnable();
 
         return view('wire-admin::livewire.navigation-pins', [
             'pinned' => $memory->pinnedEntries($items, $this->zone),
@@ -61,24 +68,34 @@ class NavigationPins extends Component
     }
 
     /**
-     * The menu's entries and every child that names a key of its own.
+     * Every row the sidebar offers a pin on, keyed as the pin names it.
      *
-     * `Workspace::items()` is the flat list of registered entries, so a child
-     * the sidebar offers a pin on — a hand-written one given a `key()` — is
-     * not in it, and its pin would be stored and never drawn. An adopted child
-     * is registered and already there; the first entry under a key wins.
+     * Read off the grouped menu, the one the sidebar draws, not the flat
+     * `Workspace::items()`: a child adopted through `parent()` sits under its
+     * parent only there, and a hand-written child is in neither list on its
+     * own. A row is pinnable when it is a page — it has a URL — and a key to be
+     * kept by: a parent that is a page too, a parent with no page (a heading)
+     * never, since its pinned copy would be a link to nowhere. A key stored
+     * before that held is not drawn. The first row under a key wins.
      *
-     * @param  array<string, NavigationItem>  $items
      * @return array<string, NavigationItem>
      */
-    private function pinnable(array $items): array
+    private function pinnable(): array
     {
-        foreach ($items as $item) {
-            foreach ($item->getChildren() as $child) {
-                $key = $child->getKey();
+        $items = [];
 
-                if ($key !== null && ! isset($items[$key])) {
-                    $items[$key] = $child;
+        foreach (app(Workspace::class)->navigation($this->zone, $this->linkedOnly) as $group) {
+            foreach ($group->getItems() as $key => $item) {
+                if ($item->getUrl() !== null) {
+                    $items[$key] ??= $item;
+                }
+
+                foreach ($item->getChildren() as $child) {
+                    $childKey = $child->getKey();
+
+                    if ($childKey !== null && $child->getUrl() !== null) {
+                        $items[$childKey] ??= $child;
+                    }
                 }
             }
         }

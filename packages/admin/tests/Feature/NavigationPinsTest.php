@@ -120,9 +120,9 @@ it('offers a pin on a child that names a key, and draws it once pinned', functio
 
     $html = Blade::render('<x-wire-admin::sidebar />');
 
-    // Orders, Invoices, System and the keyed child — the keyless one has
-    // nothing to be kept by.
-    expect(substr_count($html, 'data-testid="admin-nav-pin"'))->toBe(4)
+    // Orders, Invoices and the keyed child — System opens a group, and the
+    // keyless child has nothing to be kept by.
+    expect(substr_count($html, 'data-testid="admin-nav-pin"'))->toBe(3)
         ->and($html)->toContain('data-resource="system.server"');
 
     Livewire::test(NavigationPins::class)
@@ -130,6 +130,50 @@ it('offers a pin on a child that names a key, and draws it once pinned', functio
         ->assertDispatched('wire-admin-pinned', keys: ['system.server'])
         ->assertSeeHtml('data-testid="admin-nav-pinned-item"')
         ->assertSeeHtml('data-resource="system.server"');
+});
+
+it('pins a parent that is a page, and never a heading', function (string $parent, int $pins, Closure $register) {
+    npStoring();
+    app(PluginManager::class)->hook(Hook::NavigationBuilding, $register);
+
+    $html = Blade::render('<x-wire-admin::sidebar />');
+
+    // A parent that is a page is a link like any other row and carries its
+    // pin; a heading with no page has nothing to pin.
+    expect(preg_match_all('/data-testid="admin-nav-pin"[^>]*data-resource="'.$parent.'"/', $html))->toBe($pins);
+})->with([
+    'own children' => ['system', 0, fn () => function (NavigationBuildingPayload $payload) {
+        $payload->items['system'] = NavigationItem::make('System')->children([
+            NavigationItem::make('Server')->url('/system/server')->key('system.server'),
+        ]);
+
+        return $payload;
+    }],
+    'adopted child, parent is a page' => ['orders', 1, fn () => function (NavigationBuildingPayload $payload) {
+        $payload->items['returns'] = NavigationItem::make('Returns')->url('/returns')->parent('orders');
+
+        return $payload;
+    }],
+]);
+
+it('refuses to pin a heading, and does not draw one pinned before', function () {
+    npStoring();
+    app(PluginManager::class)->hook(Hook::NavigationBuilding, function (NavigationBuildingPayload $payload) {
+        $payload->items['system'] = NavigationItem::make('System')->children([
+            NavigationItem::make('Server')->url('/system/server')->key('system.server'),
+        ]);
+
+        return $payload;
+    });
+    app(NavigationMemory::class)->pin('system');
+
+    Livewire::test(NavigationPins::class)
+        ->assertDontSeeHtml('data-resource="system"')
+        ->call('toggle', 'invoices')
+        ->assertDispatched('wire-admin-pinned')
+        ->call('toggle', 'system');
+
+    expect(app(NavigationMemory::class)->pinned())->toBe(['system', 'invoices']);
 });
 
 it('shows the icon of what pressing the pin does', function (bool $pinned, string $shown, string $hidden) {

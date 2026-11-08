@@ -387,3 +387,30 @@ class TicGateOnlyUser extends Authenticatable
 
     protected $guarded = [];
 }
+
+function editableCell(): string
+{
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 1, 'name' => 'Alice']);
+
+    return (string) TextInputColumn::make('name')->helperText('Nápověda')->renderCell($record);
+}
+
+it('draws the validation message under the input, out of the flow, so the input does not move', function () {
+    $html = editableCell();
+    $error = substr($html, strpos($html, 'data-testid="table-editable-error"'));
+    $error = substr($error, 0, strpos($error, '>'));
+
+    // Inside the input's own wrapper, after the input: `top-full` is right under it.
+    expect(strpos($html, 'x-ref="input"'))->toBeLessThan(strpos($html, 'data-testid="table-editable-error"'))
+        ->and($error)->toContain('absolute inset-x-0 top-full')
+        ->toContain('whitespace-normal break-words');
+});
+
+it('keeps the helper text wrapping in the input and its space while an error shows', function () {
+    expect(editableCell())->toMatch('/<p :class="error && \'invisible\'" class="[^"]*w-0 min-w-full whitespace-normal break-words/')
+        ->not->toContain('x-show="!error"');
+});

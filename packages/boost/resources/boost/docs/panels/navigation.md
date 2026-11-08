@@ -139,9 +139,12 @@ that draws a submenu agrees about what is in it. That is the same reason
 resolved per read for the reason a badge is — children that depend on what the
 current user may see must not be decided once, at registration, for everybody.
 
-`hasChildren()` answers whether anything would be drawn, which is what decides
-whether a row is a link or a disclosure. Ask it rather than counting, because the
-children may still be a closure at that point. What a collapsed
+`hasChildren()` answers whether anything would be drawn under a row. Ask it
+rather than counting, because the children may still be a closure at that point.
+A parent is drawn the way Filament draws one: with a URL it is a link to its own
+page, and its children show under it while it or one of them is the page; with
+no URL it is a heading that always shows them. No row folds by hand — a group
+does. What a collapsed
 [rail](../admin/sidebar.md#the-collapsed-menu) does with the difference — a
 tooltip for a leaf, a popover for a parent — is the shell's business, not this
 layer's.
@@ -200,11 +203,11 @@ that applies decides:
    and joins the parent's children, after any the parent wrote itself, in
    `sort()` order.
 
-**The parent stays reachable.** A branch is a disclosure, not a link, so a
-parent that is a page of its own — the products list — would lose its way in the
-moment something moved under it. It is repeated as its own first child, with the
-same label, icon, URL and key. A parent with no URL, a bare heading, gets no
-copy.
+**The parent keeps its own link.** A parent that is a page of its own — the
+products list — stays a link to it, with its children under it, so nothing is
+repeated among the children: a copy there would be the same page listed twice.
+While a child is the page, the parent is marked as the branch you are in, not as
+the page.
 
 **Every child keeps its key.** An entry carries the key it was registered under
 (`getKey()`), so a resource moved under another is still lit on its edit page,
@@ -464,7 +467,7 @@ is above is for an application rendering its own frame.
 | `getParent(): ?string` | `string\|null` | The parent's key, a class already reduced to it |
 | `getKey(): ?string` | `string\|null` | The registered key, or `null` for a hand-written child |
 | `getChildren(): array` | `array<int, NavigationItem>` | The visible children, in `sort()` order |
-| `hasChildren(): bool` | `bool` | Whether a row is a disclosure rather than a plain link |
+| `hasChildren(): bool` | `bool` | Whether anything is drawn under the row |
 | `isActiveWhen(ActiveNavigation $active): ?bool` | `bool\|null` | The entry's own answer, or `null` when it declared none — three-valued, so a declared “no” cannot fall through to the conventions |
 | `isVisible(): bool` / `isHidden(): bool` | `bool` | The resolved visibility |
 

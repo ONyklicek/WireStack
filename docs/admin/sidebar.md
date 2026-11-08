@@ -50,7 +50,7 @@ editor the same chord is bold.
 | --- | --- |
 | The label, beside the icon | The row's `aria-label`, and a tooltip on hover |
 | A badge, as a pill after the label | A dot on the corner of the icon, in the same colour |
-| Children, as a folded list under their parent | A popover beside the row |
+| Children, as a list under their parent ([when shown](#children-under-a-row)) | A popover beside the row |
 | A group heading | A divider between groups |
 | The active entry, tinted | The same tint, plus a mark against the column's edge — a tint is the same shape as a hover, and a rail is nine identical squares |
 
@@ -110,12 +110,30 @@ Two more things the shell settles for you, each of which was once wrong:
 - The rail is a **desktop** shape. Below `lg` the same element is a drawer, so a
   rail collapsed on a laptop does not follow the menu onto a phone.
 
+## Children Under A Row
+
+A row with children is drawn the way Filament draws a parent item:
+
+- **A parent that is a page** — it has a URL — is a link to that page, like any
+  other row. Its children show under it while it, or one of them, is the page
+  being shown: you are inside that section. Elsewhere they are folded away by
+  the server, not by a toggle of yours.
+- **A parent that is no page** is a heading over its children and always shows
+  them. In the rail it is the button that opens their popover.
+
+No row folds by hand — there is no arrow and no remembered state; a
+[collapsible group](../panels/navigation.md#groups) folds, a row does not. While a
+child is the page, the parent is marked as the branch you are in (bold, the edge
+mark, `aria-current="true"`), never tinted and never `page`, so one screen has
+one current row. Children folded away stay in the markup, which is how the
+filter below can still find them.
+
 ## Filtering The Menu
 
 Once a menu holds twelve rows or more, a field sits above it. Typing hides the
 rows whose label does not contain the term and keeps the structure around the
-ones that do: a matching child stays under its parent, with the parent's submenu
-open; a folded group holding a match opens while you filter; a group with nothing
+ones that do: a matching child stays under its parent and shows even where
+its parent's children are folded away; a folded group holding a match opens while you filter; a group with nothing
 left in it goes; and nothing matching says so rather than leaving an empty
 column. The number of matches is announced to a screen reader.
 
@@ -136,7 +154,8 @@ leaves it looking like itself.
 
 ## Pinned And Recent
 
-Every top-level row carries a pin, shown while the row is pointed at or
+Every top-level row that is a page carries a pin — a parent with a URL
+included — shown while the row is pointed at or
 focused — a bookmark to pin, a struck-out bookmark to unpin. It takes the
 badge's place at the end of the row, the badge giving way meanwhile, so a row
 at rest shows nothing extra: what is pinned is what the section above says. An
@@ -157,7 +176,10 @@ NavigationItem::make('System')->children([
 ]);
 ```
 
-A child without a key has nothing to be kept by and gets no pin.
+A child without a key has nothing to be kept by and gets no pin, and neither
+does a heading with no page of its own: its pinned copy would be a link to
+nowhere, so the section refuses such a key and does not draw one stored
+earlier.
 
 **Only where something keeps them.** Pins and recent pages are stored through
 the same preference driver a table's columns use, one bag per person per
@@ -206,7 +228,7 @@ order and a screen reader keeps calling them links:
 | --- | --- |
 | ↓ / ↑ | the next / previous row that is drawn, across groups and the pinned rows |
 | Home / End | the first / last row |
-| → / ← | open / close a row's submenu — in the rail, its popover; ← on a child goes back to its parent |
+| → / ← | in the rail, open / close a row's popover; ← on a child goes back to its parent |
 | a letter | the next row whose label starts with what was typed within half a second |
 | ↓ in the filter | the first row that is left |
 

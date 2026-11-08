@@ -59,8 +59,9 @@ user menu, or deciding where a new screen renders.
 - **Zone and active key are read at page render, in the component constructor**, never re-derived per render.
   Inside a Livewire update `Route::currentRouteName()` is `livewire.update`, so a re-derived answer is right
   once and null for ever after — while rendering perfectly.
-- **`aria-current` is `page` for the page, `true` for the branch**, never both on one screen. A row with
-  children renders as a disclosure `<button>` and never says `page`; the child that links there does.
+- **`aria-current` is `page` for the page, `true` for the branch**, never both on one screen. A parent
+  with a URL is a link to its page and shows its children while it or one of them is the page; one
+  without is a heading that always shows them. While a child is the page, the parent never says `page`.
 - **An unrouted entry keeps its row and loses its link** (`aria-disabled`) — the honest picture of a
   half-routed catalogue. `:linked-only="true"` drops those rows instead.
 - **The mobile handle listens to the media query, not to `resize`** — the same query the `lg:` classes match

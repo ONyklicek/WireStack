@@ -11,6 +11,7 @@ use NyonCode\WireModuleAudit\Support\AuditLog;
 use NyonCode\WireModuleAudit\Tests\Fixtures\Invoice;
 use NyonCode\WireModuleAudit\Tests\Fixtures\UnreachableAuditEntry;
 use NyonCode\WireModuleAudit\Tests\Fixtures\User;
+use NyonCode\WireModuleAudit\WireModuleAuditServiceProvider;
 
 /*
  * The log asked about itself, and the actor behind a key.
@@ -207,3 +208,15 @@ it('answers "nothing to read" for a database it cannot reach at all', function (
     expect(AuditLog::available())->toBeFalse()
         ->and(AuditLog::recordTypes())->toBe([]);
 });
+
+it('says in php artisan about whether it records and whether the log table is there', function (bool $enabled, string $recording) {
+    config()->set('wire-core.audit.enabled', $enabled);
+
+    $about = (new WireModuleAuditServiceProvider(app()))->aboutData();
+
+    expect($about['Recording'])->toBe($recording)
+        ->and($about['Log table'])->toBe(AuditLog::available() ? 'ready' : 'missing');
+})->with([
+    'recording' => [true, 'on'],
+    'switched off' => [false, 'off'],
+]);

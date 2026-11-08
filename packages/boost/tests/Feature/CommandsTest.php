@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Laravel\Mcp\Facades\Mcp;
 use NyonCode\WireBoost\Console\McpCommand;
 use NyonCode\WireBoost\Install\AgentRegistry;
+use NyonCode\WireBoost\WireBoostServiceProvider;
 
 beforeEach(function () {
     $this->base = sys_get_temp_dir().'/wire-boost-cmd-'.uniqid();
@@ -95,3 +96,18 @@ it('delegates the mcp command to mcp:start', function () {
 it('registers the wire-boost mcp server', function () {
     expect(Mcp::getLocalServer('wire-boost'))->not->toBeNull();
 });
+
+it('names its server and the database tool in php artisan about', function (bool $query, string $state) {
+    config()->set('wire-boost.server.name', 'Acme Boost');
+    config()->set('wire-boost.tools.database_query', $query);
+
+    $about = array_map(
+        static fn (string|Closure $value): string => $value instanceof Closure ? $value() : $value,
+        (new WireBoostServiceProvider(app()))->aboutData(),
+    );
+
+    expect($about)->toBe(['MCP server' => 'Acme Boost', 'Database query tool' => $state]);
+})->with([
+    'enabled' => [true, 'enabled'],
+    'disabled' => [false, 'disabled'],
+]);

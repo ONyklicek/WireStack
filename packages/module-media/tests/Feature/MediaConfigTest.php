@@ -17,6 +17,7 @@ use NyonCode\WireModuleMedia\Models\MediaFolder;
 use NyonCode\WireModuleMedia\Pages\CreateMedia;
 use NyonCode\WireModuleMedia\Support\Thumbnails;
 use NyonCode\WireModuleMedia\Support\UploadLimits;
+use NyonCode\WireModuleMedia\WireModuleMediaServiceProvider;
 
 /*
  * What `config/wire-module-media.php` promises, held on every path a file takes.
@@ -244,4 +245,11 @@ it('records a row for a stored path that is gone without throwing', function () 
     expect($media->name)->toBe('missing.png')
         ->and($media->size)->toBe(0)
         ->and($media->mime_type)->toBeNull();
+});
+
+it('names the disk it stores on in php artisan about', function () {
+    config()->set('wire-module-media.disk', 'media');
+
+    expect((new WireModuleMediaServiceProvider(app()))->aboutData())
+        ->toBe(['Media disk' => 'media']);
 });
