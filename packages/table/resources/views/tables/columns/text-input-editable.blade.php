@@ -86,15 +86,15 @@
         {{-- The error, always right under the input and out of the flow. In the
              flow it grew the cell, and a cell aligned to the middle of its row
              moved the input up the moment validation failed — under the caret.
-             Laid over what is below instead, as wide as the input and wrapping
-             inside it (absolute, so it adds nothing to the column's width), on
-             a surface of its own so the row underneath does not show through.
-             Above the input where below would be clipped — the last row, in
-             the table's scroll box (`placeError()` in wireEditableCell). --}}
-        <p x-show="error" x-cloak x-text="error" x-ref="error"
-           :class="errorAbove ? 'bottom-full mb-1' : 'top-full mt-1'"
-           data-testid="table-editable-error"
-           class="absolute inset-x-0 z-10 whitespace-normal break-words rounded-md bg-white px-1.5 py-0.5 text-xs text-red-600 shadow-sm ring-1 ring-red-200 dark:bg-gray-900 dark:text-red-400 dark:ring-red-900/60"></p>
+             Teleported to <body> and pinned under the input by the floating
+             primitive (`showError()` in wireEditableCell), because inside the
+             cell the table's scroll box clipped it on the last row. As wide as
+             the input, wrapping inside it, on a surface of its own. --}}
+        <template x-teleport="body">
+            <p x-show="error" x-cloak x-text="error" x-ref="error"
+               data-testid="table-editable-error"
+               class="absolute top-0 left-0 z-50 whitespace-normal break-words rounded-md bg-white px-1.5 py-0.5 text-xs text-red-600 shadow-sm ring-1 ring-red-200 dark:bg-gray-900 dark:text-red-400 dark:ring-red-900/60"></p>
+        </template>
     </div>
 
     {{-- Helper text wraps inside the input's width instead of widening the

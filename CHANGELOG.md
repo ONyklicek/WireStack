@@ -2,6 +2,17 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.12]
+
+### Fixed
+
+- **A cell's validation message is teleported to `<body>` and pinned under the input.** 2.9.11 kept it inside the
+  cell and moved it *above* the input on the last row, where the table's scroll box clipped it — a message that
+  jumps sides depending on the row. It now goes through the canonical floating primitive every panel uses
+  (`floatingAnchor`, from `showError()` in `wireEditableCell`): under the input and as wide as it on every row, out
+  of reach of any ancestor's overflow, kept in place through scroll and morphs, and flipped only where the window
+  itself has no room below. `errorAbove` and `placeError()` are gone.
+
 ## [2.9.11]
 
 ### Fixed

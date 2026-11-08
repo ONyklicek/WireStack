@@ -399,18 +399,18 @@ function editableCell(): string
     return (string) TextInputColumn::make('name')->helperText('Nápověda')->renderCell($record);
 }
 
-it('draws the validation message under the input, out of the flow, so the input does not move', function () {
+it('teleports the validation message out of the table and pins it under the input', function () {
     $html = editableCell();
-    $error = substr($html, strpos($html, 'data-testid="table-editable-error"'));
-    $error = substr($error, 0, strpos($error, '>'));
+    $teleport = substr($html, strpos($html, '<template x-teleport="body">'));
+    $teleport = substr($teleport, 0, strpos($teleport, '</template>'));
 
-    // Inside the input's own wrapper, after the input: `top-full` is right under it.
-    expect(strpos($html, 'x-ref="input"'))->toBeLessThan(strpos($html, 'data-testid="table-editable-error"'))
-        ->and($error)->toContain('absolute inset-x-0')
+    // Out of the cell, so the table's scroll box cannot clip it on the last row;
+    // placed under the input by the floating primitive (wireEditableCell's
+    // showError()), which the browser driver checks.
+    expect($teleport)->toContain('x-ref="error"')
+        ->toContain('data-testid="table-editable-error"')
         ->toContain('whitespace-normal break-words')
-        // Under the input, or above it where below is clipped (the last row):
-        // wireEditableCell's placeError() decides, the browser driver checks.
-        ->and($html)->toContain('x-ref="error"'."\n".'           :class="errorAbove ? \'bottom-full mb-1\' : \'top-full mt-1\'"');
+        ->and(strpos($html, 'x-ref="input"'))->toBeLessThan(strpos($html, 'x-teleport="body"'));
 });
 
 it('keeps the helper text wrapping in the input and its space while an error shows', function () {
