@@ -43,6 +43,11 @@ final class SummaryRenderer
     /** The `<tfoot>` under the desktop table. */
     public function desktop(): string
     {
+        return TablePartials::region($this->table, fn (): string => $this->desktopFooter());
+    }
+
+    private function desktopFooter(): string
+    {
         $columns = $this->plan->columns();
         $actions = $this->plan->actions();
         $layout = $this->plan->layout();
@@ -65,11 +70,11 @@ final class SummaryRenderer
     /** The same totals under the stacked card list. */
     public function mobile(): string
     {
-        return view('wire-table::tables.partials.summary-footer-mobile', [
+        return TablePartials::region($this->table, fn (): string => view('wire-table::tables.partials.summary-footer-mobile', [
             ...$this->shared(),
             'partialAnchor' => $this->anchor('summary-mobile'),
             'visibleColumns' => $this->plan->columns()->visible,
-        ])->render();
+        ])->render());
     }
 
     /**
@@ -105,27 +110,7 @@ final class SummaryRenderer
      */
     public function group(mixed $groupValue): array
     {
-        $summaries = $this->component->computeGroupSummaries($groupValue);
-        $name = self::groupPartialName($groupValue);
-        $columns = $this->plan->columns();
-        $actions = $this->plan->actions();
-        $layout = $this->plan->layout();
-
-        $html = view('wire-table::tables.partials.group-subtotal', [
-            'table' => $this->table,
-            'component' => $this->component,
-            'groupSummaries' => $summaries,
-            'visibleColumns' => $columns->visible,
-            'colSpan' => $columns->colSpan,
-            'cellPadding' => $layout->cellPadding,
-            'isBordered' => $layout->isBordered,
-            'isSelectable' => $this->plan->row()->isSelectable,
-            'hasActions' => $actions->hasAny,
-            'actionsPosition' => $actions->position,
-            'stickyCellClass' => $actions->stickyCellClass,
-            'stickyLayers' => $actions->stickyLayers,
-            'partialAnchors' => $this->groupAnchors($groupValue),
-        ])->render();
+        $html = $this->groupRows($groupValue);
 
         // The partial emits every subtotal row in one string; each is its own
         // region, so they are split back apart on the anchor that opens them.
@@ -141,6 +126,38 @@ final class SummaryRenderer
         }
 
         return $rows;
+    }
+
+    /**
+     * One group's subtotal rows, as the page and a partial both draw them.
+     */
+    public function groupRows(mixed $groupValue): string
+    {
+        return TablePartials::region($this->table, fn (): string => $this->groupSubtotal($groupValue));
+    }
+
+    private function groupSubtotal(mixed $groupValue): string
+    {
+        $summaries = $this->component->computeGroupSummaries($groupValue);
+        $columns = $this->plan->columns();
+        $actions = $this->plan->actions();
+        $layout = $this->plan->layout();
+
+        return view('wire-table::tables.partials.group-subtotal', [
+            'table' => $this->table,
+            'component' => $this->component,
+            'groupSummaries' => $summaries,
+            'visibleColumns' => $columns->visible,
+            'colSpan' => $columns->colSpan,
+            'cellPadding' => $layout->cellPadding,
+            'isBordered' => $layout->isBordered,
+            'isSelectable' => $this->plan->row()->isSelectable,
+            'hasActions' => $actions->hasAny,
+            'actionsPosition' => $actions->position,
+            'stickyCellClass' => $actions->stickyCellClass,
+            'stickyLayers' => $actions->stickyLayers,
+            'partialAnchors' => $this->groupAnchors($groupValue),
+        ])->render();
     }
 
     /**

@@ -144,4 +144,47 @@ final class IslandViewScope
             $revertErrors();
         }
     }
+
+    /**
+     * Render as a partial is rendered, even from inside Livewire's own pass.
+     *
+     * The other direction from {@see asLivewireRender()}, for a region that is
+     * cheaper without morph markers and must therefore come out of a full render
+     * exactly as it comes out of a partial: `PartialRenderHook` renders after
+     * Livewire's pass has ended, so a full render that kept the flag on would
+     * leave `[if BLOCK]` comments on the page that the partial does not carry.
+     * The partial morph pairs children by position, so one comment meeting an
+     * element is enough for the element to be *swapped* instead of patched — an
+     * `<input>` replaced under the user's cursor, who loses the focus the moment
+     * the neighbouring cell's save comes back.
+     *
+     * Stripping the comments from the rendered string afterwards cannot do the
+     * same job: the view engine left-trims every view's output, and a view that
+     * starts with a marker keeps the whitespace after it, so the two renders
+     * would still differ by a text node.
+     *
+     * The component stays in the view scope Livewire already shared; only the
+     * flag is suspended, so `$this` is unbound exactly as in a partial — a view
+     * that needs it could not be sent as one either.
+     *
+     * @param  Closure(): string  $render
+     */
+    public static function outsideLivewireRender(Closure $render): string
+    {
+        $blade = app(ExtendBlade::class);
+        $suspended = [];
+
+        while (ExtendBlade::isRenderingLivewireComponent()) {
+            $suspended[] = ExtendBlade::currentRendering();
+            $blade->endLivewireRendering();
+        }
+
+        try {
+            return $render();
+        } finally {
+            foreach (array_reverse($suspended) as $component) {
+                $blade->startLivewireRendering($component);
+            }
+        }
+    }
 }

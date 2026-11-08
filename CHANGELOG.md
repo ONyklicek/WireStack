@@ -2,6 +2,21 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.8]
+
+### Fixed
+
+- **Moving on to the next cell no longer loses the focus, or what was typed into it, when the previous one saves.** With `rowPartials()`,
+  the full render drew a row inside Livewire's own pass, where every block `@if` of a cell view emits
+  `[if BLOCK]` comments, and the partial after it, where none do. The partial morph pairs children by position,
+  so a comment met the next input's wrapper and the wrapper was swapped for a new one — the focus fell to
+  `<body>` the moment the save came back, on the first edit of every row after a full render. The row, the card,
+  the totals and the group subtotals are now rendered outside the pass on both paths
+  (`TablePartials::region()`, over `IslandViewScope::outsideLivewireRender()`), so they are one render rather
+  than two kept in step; the group subtotal is drawn by `SummaryRenderer::groupRows()` on the page too, instead
+  of an `@include` beside it. A table without `rowPartials()` renders as before. The read-only input cell draws
+  one span either way and emits no markers at all.
+
 ## [2.9.7]
 
 ### Fixed

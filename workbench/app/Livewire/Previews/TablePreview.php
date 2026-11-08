@@ -608,6 +608,16 @@ class TablePreview extends Component
                     $column->summarizeCount('Rows');
                 }
             }
+
+            // A second text input in the row, after the first: the control the
+            // focus moves to while the first cell's save is out. Its wrapper sits
+            // behind the view's prefix `@if`, which is where a full render and a
+            // partial used to disagree by a pair of morph-marker comments — and
+            // the morph swapped the wrapper, focus and all.
+            $table->columns([
+                ...$table->getColumns(),
+                TextInputColumn::make('bio')->label('Bio'),
+            ]);
         }
 
         if ($this->variant === 'editable-fill-paged') {

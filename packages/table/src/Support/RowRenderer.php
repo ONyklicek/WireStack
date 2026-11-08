@@ -59,6 +59,11 @@ final class RowRenderer
      */
     public function render(Model $record, int $rowIndex): string
     {
+        return TablePartials::region($this->table, fn (): string => $this->row($record, $rowIndex));
+    }
+
+    private function row(Model $record, int $rowIndex): string
+    {
         $row = $this->plan->row();
         $columns = $this->plan->columns();
         $actions = $this->plan->actions();
