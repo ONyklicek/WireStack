@@ -48,7 +48,7 @@ kombinace tučné písmo.
 | --- | --- |
 | Popisek vedle ikony | `aria-label` řádku a tooltip po najetí |
 | Odznak jako pilulka za popiskem | Tečka v rohu ikony, ve stejné barvě |
-| Potomci jako složený seznam pod rodičem | Popover vedle řádku |
+| Potomci jako seznam pod rodičem ([kdy jsou vidět](#podradky)) | Popover vedle řádku |
 | Nadpis skupiny | Oddělovač mezi skupinami |
 | Aktivní položka podbarvením | Totéž podbarvení plus značka u hrany sloupce — podbarvení má stejný tvar jako hover a lišta je devět stejných čtverců |
 
@@ -106,11 +106,29 @@ Další dvě věci, které shell řeší za vás a které kdysi fungovaly špatn
 - Lišta je **desktopový** tvar. Pod `lg` je tentýž prvek zásuvka, takže lišta
   sbalená na notebooku menu na telefon nenásleduje.
 
+## Podřádky
+
+Řádek s potomky se kreslí tak, jak rodičovskou položku kreslí Filament:
+
+- **Rodič, který je stránkou** — má URL — je odkaz na tu stránku jako každý
+  jiný řádek. Potomci jsou vidět pod ním, když je zobrazenou stránkou on nebo
+  některý z nich: jste uvnitř té sekce. Jinde je složí server, ne vaše kliknutí.
+- **Rodič, který stránkou není,** je nadpis nad svými potomky a ukazuje je vždy.
+  V liště je to tlačítko, které otevře jejich popover.
+
+Ručně se nesbaluje žádný řádek — žádná šipka ani zapamatovaný stav; sbalit jde
+[skupina](../panels/navigation.md#skupiny), ne řádek. Když je stránkou některý
+potomek, rodič je označený jako větev, ve které jste (tučně, značka u hrany,
+`aria-current="true"`), nikdy podbarvený a nikdy `page`, takže jedna obrazovka má
+jeden aktuální řádek. Složení potomci v markupu zůstávají, a proto je filtr níž
+pořád najde.
+
 ## Filtrování menu
 
 Jakmile má menu dvanáct řádků nebo víc, sedí nad ním pole. Psaní skryje řádky,
 jejichž popisek hledaný text neobsahuje, a strukturu kolem těch, které ano,
-zachová: odpovídající dítě zůstane pod rodičem s otevřeným submenu, sbalená
+zachová: odpovídající dítě zůstane pod rodičem a ukáže se, i když jsou jeho
+potomci jinak složení, sbalená
 skupina se shodou se při filtrování otevře, skupina, ve které nic nezbylo,
 zmizí, a když neodpovídá nic, řekne to, místo aby nechala prázdný sloupec. Počet
 shod se ohlásí čtečce obrazovky.
@@ -129,7 +147,8 @@ zužuje seznam, na který už se díváte, a nechává ho vypadat jako on sám.
 
 ## Připnuté a nedávné
 
-Každý řádek nejvyšší úrovně nese špendlík, vidět při najetí myší nebo fokusu —
+Každý řádek nejvyšší úrovně, který je stránkou — včetně rodiče s URL —, nese
+špendlík, vidět při najetí myší nebo fokusu —
 záložka pro připnutí, přeškrtnutá záložka pro odepnutí. Zaujme místo badge na
 konci řádku, badge mezitím ustoupí, takže řádek v klidu neukazuje nic navíc: co
 je připnuté, říká sekce nahoře. Položka v té sekci stejně nabídne odepnutí a
@@ -149,7 +168,9 @@ NavigationItem::make('System')->children([
 ]);
 ```
 
-Podřádek bez klíče nemá podle čeho být uchován a špendlík nedostane.
+Podřádek bez klíče nemá podle čeho být uchován a špendlík nedostane, stejně
+jako nadpis bez vlastní stránky: jeho připnutá kopie by byla odkazem nikam, takže
+sekce takový klíč odmítne a dřív uložený nevykreslí.
 
 **Jen tam, kde je něco uchová.** Připnuté a nedávné se ukládají přes stejný
 driver preferencí jako sloupce tabulky, jeden pytlík na člověka a
@@ -197,7 +218,7 @@ a čtečka obrazovky jim dál říká odkazy:
 | --- | --- |
 | ↓ / ↑ | další / předchozí vykreslený řádek, přes skupiny i připnuté řádky |
 | Home / End | první / poslední řádek |
-| → / ← | otevře / zavře submenu řádku — v liště jeho popover; ← na dítěti vede zpět na rodiče |
+| → / ← | v liště otevře / zavře popover řádku; ← na dítěti vede zpět na rodiče |
 | písmeno | další řádek, jehož popisek začíná tím, co bylo napsáno do půl sekundy |
 | ↓ ve filtru | první řádek, který zbyl |
 

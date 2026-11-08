@@ -25,7 +25,7 @@ use NyonCode\WireCore\Foundation\Routing\Contracts\ResolvesPageUrls;
  *
  * What is worth pinning is where each entry ends up in the grouped menu, and
  * that nothing is lost on the way: the flat list still holds every entry, a
- * parent that is a page stays reachable, and a parent the user cannot see does
+ * parent that is a page keeps its own link, and a parent the user cannot see does
  * not take a page they can see with it.
  */
 abstract class NpResource implements DescribesResource, ProvidesNavigation
@@ -103,20 +103,20 @@ it('moves an entry under the parent it names, by class or by key', function () {
     $shop = npWorkspace()->navigation()['shop'];
 
     expect(array_keys($shop->getItems()))->toBe(['np-products'])
-        ->and(npChildLabels($shop->getItems()['np-products']))->toBe(['Np Products', 'Np Brands', 'Np Categories']);
+        ->and(npChildLabels($shop->getItems()['np-products']))->toBe(['Np Brands', 'Np Categories']);
 });
 
-it('repeats a parent that is a page as its own first child, keyed like its row', function () {
-    // A branch is a disclosure rather than a link, so without the copy the
-    // products list would have no way in from the menu at all.
+it('keeps a parent that is a page as the link to it, and adds no copy of it among its children', function () {
+    // The way Filament nests: the parent row is a link to its own page and its
+    // children sit under it. A copy of the parent as its first child would be
+    // the same page listed twice.
     NpResource::$parents = [NpCategoryResource::class => NpProductResource::class];
 
-    $children = npWorkspace()->navigation()['shop']->getItems()['np-products']->getChildren();
+    $parent = npWorkspace()->navigation()['shop']->getItems()['np-products'];
 
-    expect($children[0]->getUrl())->toBe('/admin/np-products')
-        ->and($children[0]->getKey())->toBe('np-products')
-        ->and($children[0]->getIcon())->toBe('outline:cube')
-        ->and($children[0]->hasChildren())->toBeFalse();
+    expect($parent->getUrl())->toBe('/admin/np-products')
+        ->and(npChildLabels($parent))->toBe(['Np Categories'])
+        ->and(array_map(static fn (NavigationItem $child): ?string => $child->getKey(), $parent->getChildren()))->toBe(['np-categories']);
 });
 
 it('adds no copy of a parent that is not a page', function () {
@@ -198,8 +198,8 @@ it('keeps an adopted entry lit on every page of its resource', function () {
     $onCategoryEdit = new ActiveNavigation(key: 'np-categories', page: 'edit', url: 'http://localhost/admin/np-categories/3/edit');
 
     expect($onCategoryEdit->hasActiveChild($parent))->toBeTrue()
-        ->and($onCategoryEdit->isActive($parent->getChildren()[1]))->toBeTrue()
-        ->and($onCategoryEdit->isActive($parent->getChildren()[0]))->toBeFalse();
+        ->and($onCategoryEdit->isActive($parent->getChildren()[0]))->toBeTrue()
+        ->and($onCategoryEdit->isActive($parent))->toBeFalse();
 });
 
 it('carries the registered key on every entry, without overriding one already set', function () {

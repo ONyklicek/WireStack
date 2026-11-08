@@ -105,6 +105,24 @@ class SbCatalogueResource implements DescribesResource, ProvidesNavigation
     }
 }
 
+/** A parent with no page of its own: a heading over its children. */
+class SbHeadingResource implements DescribesResource, ProvidesNavigation
+{
+    use DescribesRecords;
+
+    public static function modelClass(): ?string
+    {
+        return null;
+    }
+
+    public static function navigation(): NavigationItem
+    {
+        return NavigationItem::make('Reports hub')->group('billing')->children([
+            NavigationItem::make('Monthly')->url('/admin/monthly'),
+        ]);
+    }
+}
+
 /** Answers a URL for one key and null for everything else. */
 final class SbUrls implements ResolvesPageUrls
 {
@@ -112,8 +130,8 @@ final class SbUrls implements ResolvesPageUrls
     {
         return match ($key) {
             'sb-invoices' => '/admin/sb-invoices',
-            // Routed *and* carrying a submenu, which is the pair the disclosure
-            // rule needs: a row with children renders as a button.
+            // Routed *and* carrying a submenu: a parent that is a page, drawn
+            // as a link with its children under it.
             'sb-catalogues' => '/admin/sb-catalogues',
             default => null,
         };
@@ -205,26 +223,9 @@ it('stays marked on a page of that resource without claiming to be it', function
         ->not->toContain('aria-current="page"');
 });
 
-it('does not call a disclosure button the current page', function () {
-    // The row is a `<button>` — it opens the submenu rather than going anywhere,
-    // and the row that does go there is the child underneath it. `page` on the
-    // button would be a claim that pressing it lands you where you already are.
-    app(ResourceRegistry::class)->register(SbCatalogueResource::class);
-
-    Route::get('/admin/sb-catalogues', fn () => sbRender())->name('wire.sb-catalogues.index');
-
-    $html = $this->get('/admin/sb-catalogues')->getContent();
-
-    expect($html)->toMatch('/data-resource="sb-catalogues"[^>]*data-active="true"/')
-        ->toMatch('/data-resource="sb-catalogues"[^>]*aria-current="true"/')
-        ->not->toContain('aria-current="page"');
-});
-
-it('tints the page under a branch, not the branch as well', function () {
-    // A resource whose pages are its children matches its own key on every one
-    // of them. Tinted like a page, the branch read as a second current row
-    // above the child that is — both "System" and "PHP Info" lit on PHP Info.
-    // It is the branch you are in: marked, bold, never tinted.
+it('draws a parent that is a page as a link, and as the page while you are on it', function () {
+    // The way Filament draws a parent item: a link to its own page, never a
+    // disclosure, and its children shown under it while you are in there.
     app(ResourceRegistry::class)->register(SbCatalogueResource::class);
 
     Route::get('/admin/sb-catalogues', fn () => sbRender())->name('wire.sb-catalogues.index');
@@ -232,13 +233,71 @@ it('tints the page under a branch, not the branch as well', function () {
     $html = $this->get('/admin/sb-catalogues')->getContent();
 
     // Up to the row's class list; the tag's own `=>` in Alpine rules out `[^>]*`.
-    preg_match('/data-testid="admin-nav-item"[^<]*?data-resource="sb-catalogues".*?class="[^"]*"/s', $html, $branch);
+    preg_match('/<(\w+)[^<]*?data-resource="sb-catalogues".*?class="[^"]*"/s', $html, $row);
+
+    expect($row)->not->toBeEmpty()
+        ->and($row[1])->toBe('a')
+        ->and($row[0])->toContain('href="/admin/sb-catalogues"')
+        ->toContain('aria-current="page"')
+        ->toContain('bg-primary-50')
+        ->and(Str::before(Str::after($html, 'data-testid="admin-nav-children"'), '>'))->not->toContain('display: none');
+});
+
+it('tints the child that is the page, and marks the parent above it only as the branch', function () {
+    // A resource whose pages are its children matches its own key on every one
+    // of them. Tinted like a page, the parent read as a second current row
+    // above the child that is. It is the branch you are in: marked, bold,
+    // never tinted, and never `page`.
+    app(PluginManager::class)->hook(
+        Hook::NavigationBuilding,
+        function (NavigationBuildingPayload $payload) {
+            $payload->items['sb-system'] = NavigationItem::make('System')->group('billing')->url('/admin/sb-system')->children([
+                NavigationItem::make('PHP Info')->url('/admin/sb-system/php-info'),
+            ]);
+
+            return $payload;
+        },
+    );
+
+    // The child's page is a page of the parent's key, so the key matches there.
+    Route::get('/admin/sb-system/php-info', fn () => sbRender())->name('wire.sb-system.php-info');
+
+    $html = $this->get('/admin/sb-system/php-info')->getContent();
+
+    preg_match('/data-testid="admin-nav-item"[^<]*?data-resource="sb-system".*?class="[^"]*"/s', $html, $branch);
 
     expect($branch)->not->toBeEmpty()
         ->and($branch[0])->toContain('data-active="true"')
+        ->toContain('aria-current="true"')
         ->toContain('font-medium text-gray-900')
         ->not->toContain('bg-primary-50')
-        ->and($html)->toContain('data-testid="admin-nav-active-mark"');
+        ->and($html)->toContain('data-testid="admin-nav-active-mark"')
+        // Only the child says `page` — once under the parent, once in the
+        // rail's popover, which draws the same child row.
+        ->and(substr_count($html, 'aria-current="page"'))->toBe(2)
+        ->and(Str::afterLast(Str::before($html, 'aria-current="page"'), 'href="'))->toStartWith('/admin/sb-system/php-info');
+});
+
+it('shows the children of a page only while you are in it, and keeps them for the filter', function () {
+    app(ResourceRegistry::class)->register(SbCatalogueResource::class);
+
+    $list = Str::before(Str::after(sbRender(), 'data-testid="admin-nav-children"'), '>');
+
+    // Elsewhere the list is folded by the server, not by a toggle of the user's:
+    // still in the markup, so a typed filter term can find a child and show it.
+    expect($list)->toContain('style="display: none;"')
+        ->toContain('x-show="$store.wireAdmin?.filtering"');
+});
+
+it('draws a parent with no page as a heading that always shows its children', function () {
+    app(ResourceRegistry::class)->register(SbHeadingResource::class);
+
+    $html = sbRender();
+
+    expect(Str::afterLast(Str::before($html, 'data-resource="sb-headings"'), '<'))->toStartWith('button')
+        ->and(Str::before(Str::after($html, 'data-resource="sb-headings"'), '</button>'))->not->toContain('href=')
+        ->and(Str::before(Str::after($html, 'data-testid="admin-nav-children"'), '>'))->not->toContain('display: none')
+        ->and($html)->toContain('href="/admin/monthly"');
 });
 
 it('lets an entry say for itself which pages it belongs to', function () {
@@ -299,14 +358,11 @@ it('draws a submenu under an entry that declares children', function () {
 
     expect($html)->toContain('data-testid="admin-nav-child"')
         ->and($html)->toContain('href="/admin/sb-catalogues?filter=archived"')
-        // The parent stops being a link and becomes the disclosure for its own
-        // list: two things to click in one row is what makes a nested menu
-        // impossible to hit.
-        // Which tag the row is, found by walking back to the one that opened
-        // it rather than by a regex: the attributes between the two now include
-        // an arrow function, and `[^>]*` stops at its `=>`.
-        ->and(Str::afterLast(Str::before($html, 'data-resource="sb-catalogues"'), '<'))->toStartWith('button')
-        ->and($html)->toContain('aria-controls="wire-admin-sub-');
+        // The parent stays a link to its own page, and there is no disclosure
+        // to fold the children by hand — no chevron, no remembered state.
+        ->and(Str::afterLast(Str::before($html, 'data-resource="sb-catalogues"'), '<'))->toStartWith('a')
+        ->and($html)->not->toContain('aria-controls="wire-admin-sub-')
+        ->and($html)->not->toContain('wire-admin.sub.');
 });
 
 it('gives an entry with a badge a second, smaller one for the rail', function () {
@@ -386,8 +442,6 @@ it('opens the popover from a parent row instead of re-expanding the whole menu',
 
     expect($html)->toContain('wireFlyout(')
         ->and($html)->toContain('x-teleport="body"')
-        ->and($html)->toContain('toggle()')
-        ->and($html)->toContain('expanded = ! expanded')
         // Escape has to dismiss rather than close: focus goes back to a row that
         // opens on focus, so a plain close is a close and an immediate reopen.
         ->and($html)->toContain('dismiss()')

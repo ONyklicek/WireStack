@@ -82,14 +82,25 @@
                 {{ $column->getInputSuffix() }}
             </span>
         @endif
+
+        {{-- The error, always right under the input and out of the flow. In the
+             flow it grew the cell, and a cell aligned to the middle of its row
+             moved the input up the moment validation failed — under the caret.
+             Laid over what is below instead, as wide as the input and wrapping
+             inside it (absolute, so it adds nothing to the column's width), on
+             a surface of its own so the row underneath does not show through. --}}
+        <p x-show="error" x-cloak x-text="error"
+           data-testid="table-editable-error"
+           class="absolute inset-x-0 top-full z-10 mt-1 whitespace-normal break-words rounded-md bg-white px-1.5 py-0.5 text-xs text-red-600 shadow-sm ring-1 ring-red-200 dark:bg-gray-900 dark:text-red-400 dark:ring-red-900/60"></p>
     </div>
 
-    {{-- Error message --}}
-    <p x-show="error" x-cloak x-text="error" class="mt-1 text-xs text-red-600 dark:text-red-400"></p>
-
-    {{-- Helper text --}}
+    {{-- Helper text wraps inside the input's width instead of widening the
+         column: the cell is `whitespace-nowrap` by default, `w-0` takes the text
+         out of the cell's intrinsic width and `min-w-full` gives the input's
+         width back. It goes invisible rather than away while an error shows, so
+         the cell keeps its height. --}}
     @if($column->getHelperText())
-        <p x-show="!error" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        <p :class="error && 'invisible'" class="mt-1 w-0 min-w-full whitespace-normal break-words text-xs text-gray-500 dark:text-gray-400">
             {{ $column->getHelperText() }}
         </p>
     @endif
