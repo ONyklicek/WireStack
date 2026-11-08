@@ -460,3 +460,13 @@ it('scopes "own" to the recipient the application binds, as the bell does', func
         ->assertSee('Invoice paid 2')
         ->assertDontSee('Invoice paid 1');
 });
+
+it('says in php artisan about whether notifications are stored', function (string|array $drivers, string $stored) {
+    config()->set('wire-core.notifications.default', $drivers);
+
+    expect((new NyonCode\WireModuleNotifications\WireModuleNotificationsServiceProvider(app()))->aboutData())
+        ->toBe(['Stored notifications' => $stored]);
+})->with([
+    'database among the drivers' => [['session', 'database'], 'on'],
+    'transient only' => ['session', 'off'],
+]);

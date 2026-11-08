@@ -152,6 +152,14 @@ it('writes without generated fields when the model does not exist yet', function
     expect(File::get(app_path('Resources/NothingResource.php')))->toContain("// TextInput::make('name')->required(),");
 });
 
+it('writes without generated fields when the model is not an Eloquent model', function () {
+    $this->artisan('make:wire-resource', ['name' => 'Plain', '--model' => stdClass::class, '--generate' => true])
+        ->expectsOutputToContain('is not an Eloquent model')
+        ->assertSuccessful();
+
+    expect(File::get(app_path('Resources/PlainResource.php')))->toContain("// TextInput::make('name')->required(),");
+});
+
 it('never overwrites a file without --force', function () {
     $this->artisan('make:wire-resource', ['name' => 'Order'])->assertSuccessful();
     File::put(app_path('Resources/OrderResource.php'), '<?php // mine');

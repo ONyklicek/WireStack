@@ -245,3 +245,10 @@ it('records a row for a stored path that is gone without throwing', function () 
         ->and($media->size)->toBe(0)
         ->and($media->mime_type)->toBeNull();
 });
+
+it('names the disk it stores on in php artisan about', function () {
+    config()->set('wire-module-media.disk', 'media');
+
+    expect((new NyonCode\WireModuleMedia\WireModuleMediaServiceProvider(app()))->aboutData())
+        ->toBe(['Media disk' => 'media']);
+});

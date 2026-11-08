@@ -208,10 +208,15 @@ it('draws the diff as one table, not a card per field repeating its headings', f
 
     $html = Livewire::test(ViewAuditEntry::class, ['record' => 2])->assertOk()->html();
 
+    // Counted as the text of a heading cell, never as a bare substring: "Old"
+    // and "New" turn up inside the random `wire:id` Livewire repeats across the
+    // markup often enough to fail a run now and then.
+    $headings = static fn (string $label): int => preg_match_all('/<th[^>]*>\s*'.preg_quote($label, '/').'\s*<\/th>/', $html);
+
     expect($html)->toContain('status')->toContain('total')->toContain('note')
-        ->and(substr_count($html, __('wire-core::audit.field')))->toBe(1)
-        ->and(substr_count($html, __('wire-core::audit.old_value')))->toBe(1)
-        ->and(substr_count($html, __('wire-core::audit.new_value')))->toBe(1);
+        ->and($headings(__('wire-core::audit.field')))->toBe(1)
+        ->and($headings(__('wire-core::audit.old_value')))->toBe(1)
+        ->and($headings(__('wire-core::audit.new_value')))->toBe(1);
 });
 
 it('reads top to bottom: what happened, what moved, where from', function () {
