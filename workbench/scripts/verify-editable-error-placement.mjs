@@ -12,7 +12,8 @@ import { openPage, checker } from './lib/cdp.mjs';
  * browser can say what is clipped.
  *
  * Asserted on the first and the last row:
- *   - the message shows, under the input, as wide as it
+ *   - the message shows, under the input, exactly as wide as it — also after a
+ *     re-render, which strips the inline style a one-off width lived in
  *   - nothing covers or clips it: the point at its centre is the message
  *   - the input itself did not move when the message appeared
  *
@@ -42,6 +43,14 @@ const fail = (which) => eval_(`(async () => {
   await new Promise((r) => setTimeout(r, 1500));
 
   const message = window.Alpine.$data(cell).$refs.error;
+  const widthBefore = message.getBoundingClientRect().width;
+
+  // A re-render morphs the teleported message and strips its inline style;
+  // the width must come back with the coordinates, not spread to the text.
+  const host = cell.closest('[wire\\\\:id]');
+  await window.Livewire.find(host.getAttribute('wire:id')).$refresh();
+  await new Promise((r) => setTimeout(r, 800));
+
   const m = message.getBoundingClientRect();
   const i = input.getBoundingClientRect();
   const hit = document.elementFromPoint(m.left + m.width / 2, m.top + m.height / 2);
@@ -51,7 +60,8 @@ const fail = (which) => eval_(`(async () => {
     shown: getComputedStyle(message).display !== 'none' && message.textContent.trim() !== '',
     teleported: ! cell.contains(message),
     below: m.top >= i.bottom - 0.5,
-    wide: Math.abs(m.width - i.width) <= 1,
+    wide: Math.abs(m.width - i.width) <= 1 && Math.abs(widthBefore - i.width) <= 1,
+    widths: [Math.round(widthBefore), Math.round(m.width), Math.round(i.width)],
     visible: hit === message || message.contains(hit),
     moved: Math.abs(i.top - before) > 0.5,
   });
