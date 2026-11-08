@@ -704,6 +704,9 @@ const wireEditableCell = (config = {}) => ({
     // authoritative version, so nothing else may set one meanwhile.
     inFlight: false,
     error: null,
+    // The message is drawn over what is below the input; where that is the
+    // clipped bottom of the table's scroll box (the last row), it goes above.
+    errorAbove: false,
     success: false,
     focused: false,
 
@@ -735,6 +738,33 @@ const wireEditableCell = (config = {}) => ({
 
     parse(raw) {
         return config.parse ? config.parse(raw) : raw
+    },
+
+    /**
+     * Above the input when the message would be cut off below it. The table
+     * scrolls sideways in a box that clips on both axes (`overflow-x: auto`
+     * computes `overflow-y` to `auto` too), so on the last row a message laid
+     * under the input fell outside the box and was hidden. Whichever side has
+     * more room inside the nearest clipping ancestor — or the window — wins.
+     */
+    placeError() {
+        const message = this.$refs.error
+        if (! message || ! this.error || message.offsetParent === null) return
+
+        let clip = this.$el.parentElement
+        while (clip && clip !== document.body) {
+            const style = getComputedStyle(clip)
+            if (style.overflowY !== 'visible' || style.overflowX !== 'visible') break
+            clip = clip.parentElement
+        }
+
+        const box = clip && clip !== document.body ? clip.getBoundingClientRect() : { top: 0, bottom: window.innerHeight }
+        const top = Math.max(box.top, 0)
+        const bottom = Math.min(box.bottom, window.innerHeight)
+        const anchor = message.offsetParent?.getBoundingClientRect() ?? this.$el.getBoundingClientRect()
+        const below = message.getBoundingClientRect().bottom
+
+        this.errorAbove = below > bottom && anchor.top - top > bottom - anchor.bottom
     },
 
     messages: {},
@@ -770,6 +800,15 @@ const wireEditableCell = (config = {}) => ({
         // queue behind each other — so a check is never sent for a value that
         // is already being written (the write validates it anyway), and one
         // still waiting is cancelled the moment a write starts (commit()).
+        // Placed when it appears, measured where it would land below the input
+        // — on the next frame, not the next tick: `x-show` displays it in an
+        // effect of its own, and measured before that it is a 0×0 box that
+        // fits anywhere, so the last row kept the clipped placement now and then.
+        this.$watch('error', (error) => {
+            this.errorAbove = false
+            if (error) requestAnimationFrame(() => this.placeError())
+        })
+
         if (config.liveValidation) {
             this.$watch('value', () => {
                 clearTimeout(this._validateTimer)
