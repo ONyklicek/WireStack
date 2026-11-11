@@ -40,6 +40,7 @@
      data-msg-error="{{ __('wire-table::messages.error') }}"
      data-msg-save-failed="{{ __('wire-table::messages.save_failed') }}"
      data-msg-invalid="{{ __('wire-table::messages.invalid') }}"
+     :data-error-lines="errorLines || null"
      class="relative"
 >
     {!! $syncHtml !!}
@@ -83,18 +84,21 @@
             </span>
         @endif
 
-        {{-- The error, always right under the input and out of the flow. In the
-             flow it grew the cell, and a cell aligned to the middle of its row
-             moved the input up the moment validation failed — under the caret.
-             Teleported to <body> and pinned under the input by the floating
-             primitive (`showError()` in wireEditableCell), because inside the
-             cell the table's scroll box clipped it on the last row. As wide as
-             the input, wrapping inside it, on a surface of its own. --}}
-        <template x-teleport="body">
-            <p x-show="error" x-cloak x-text="error" x-ref="error"
-               data-testid="table-editable-error"
-               class="absolute top-0 left-0 z-50 whitespace-normal break-words rounded-md bg-white px-1.5 py-0.5 text-xs text-red-600 shadow-sm ring-1 ring-red-200 dark:bg-gray-900 dark:text-red-400 dark:ring-red-900/60"></p>
-        </template>
+        {{-- The error: plain text under the input, as wide as it and wrapping
+             inside it — the cell is `whitespace-nowrap`, so `w-0` takes the text
+             out of the column's intrinsic width and `min-w-full` gives the
+             input's width back. On a card it is simply in the flow. In a table
+             row that would move things: a cell is aligned to the middle of its
+             row, so a row grown by one cell shifts every other cell's content
+             down by half of it, and its own input up where the row was already
+             taller. There it is laid out of the flow instead and the ROW makes
+             the room, the same in every cell, so nothing in it moves — see
+             `tables.partials.cell-error-styles` and `data-error-lines` on the
+             root, which says how much room. --}}
+        <p x-show="error" x-cloak x-text="error" x-ref="error"
+           data-cell-error
+           data-testid="table-editable-error"
+           class="mt-1 w-0 min-w-full whitespace-normal break-words text-xs text-red-600 dark:text-red-400"></p>
     </div>
 
     {{-- Helper text wraps inside the input's width instead of widening the

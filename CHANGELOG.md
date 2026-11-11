@@ -15,6 +15,17 @@ All notable changes to the Wire ecosystem will be documented in this file.
   the focus. It moves only a cell that is out of place now, which outside a header drag is none.
   `verify-grid-typing` drives it on both answers a write can get (row partial, data region).
 
+### Changed
+
+- **A cell's validation message is plain text under the input again — and moves nothing.** No panel, no surface,
+  no teleport: red text exactly as wide as the input, wrapping inside it, never widening the column. The row grows
+  to hold it, and grows the same in every cell (`tables.partials.cell-error-styles`, a spacer behind each cell's
+  content keyed on the line count `wireEditableCell` measures into `data-error-lines`) — a cell is aligned to the
+  middle of its row, so a message added to one cell alone shifted its neighbours down and, in a taller row, its own
+  input up. A row that grows is not clipped by the table's scroll box, which is what the floating panel was for.
+  On a stacked card the message is simply in the flow. Needs `:has()`; without it the message lies over the row
+  below. `showError()` is gone from `wireEditableCell`.
+
 ## [2.9.13]
 
 ### Fixed
