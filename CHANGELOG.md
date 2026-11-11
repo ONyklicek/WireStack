@@ -2,6 +2,19 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.14]
+
+### Fixed
+
+- **Saving one cell no longer takes the focus from the cell being typed into.** On a table with draggable headers
+  (`columnReorderable()`) and `rowPartials()`, every cell save blurred whichever input the user had moved on to —
+  in the same row or any other — which saved it mid-word and locked it until the server answered: a grid had to be
+  filled in one cell at a time. It was not the morph. After a row partial the drag controller puts the replaced
+  row's cells back into the headers' order, and `reorderBodyColumns()` re-inserted every column cell of every row;
+  inserting a node where it already stands still takes it out of the document, and a focused input inside it loses
+  the focus. It moves only a cell that is out of place now, which outside a header drag is none.
+  `verify-grid-typing` drives it on both answers a write can get (row partial, data region).
+
 ## [2.9.13]
 
 ### Fixed

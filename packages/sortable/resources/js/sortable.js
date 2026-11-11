@@ -164,7 +164,8 @@ export function wireSortable(config = {}) {
          *
          * `reorderBodyColumns()` only moves cells carrying `data-column`, so the
          * drag handle and any leading/trailing cell stay where they are, and it
-         * is a no-op once the two orders agree.
+         * touches no cell that already stands where the headers put it — which,
+         * outside that window, is all of them.
          */
         reorderPartialColumns() {
             if (!this.config.columnReorderable) return;
@@ -588,16 +589,31 @@ export function wireSortable(config = {}) {
 
                     if (cells.size === 0) return;
 
-                    // Re-insert the column cells in header order ahead of
-                    // whatever followed the block, so a trailing actions
-                    // cell stays trailing (and a leading one, leading).
+                    // Where the column cells belong: the ones the header does
+                    // not name first, as they stand, then the named ones in
+                    // header order — ahead of whatever followed the block, so
+                    // a trailing actions cell stays trailing (and a leading
+                    // one, leading).
                     const ordered = Array.from(cells.values());
-                    const anchor = ordered[ordered.length - 1].nextSibling;
+                    const named = columnOrder.map((name) => cells.get(name)).filter(Boolean);
+                    const target = [...ordered.filter((cell) => ! named.includes(cell)), ...named];
 
-                    columnOrder.forEach((name) => {
-                        const cell = cells.get(name);
-                        if (cell) tr.insertBefore(cell, anchor);
-                    });
+                    // Only a cell that is out of place is moved. Inserting a
+                    // node where it already stands is not a no-op to the
+                    // browser: it takes the node out and puts it back, and a
+                    // control inside it loses the focus on the way. This runs
+                    // after every row partial, over every row — so each cell
+                    // save blurred whichever input the user had moved on to,
+                    // in any row, which saved it mid-word and locked it.
+                    let next = ordered[ordered.length - 1].nextElementSibling;
+
+                    for (let i = target.length - 1; i >= 0; i--) {
+                        const cell = target[i];
+
+                        if (cell.nextElementSibling !== next) tr.insertBefore(cell, next);
+
+                        next = cell;
+                    }
                 });
         },
 

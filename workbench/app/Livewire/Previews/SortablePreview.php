@@ -65,6 +65,10 @@ class SortablePreview extends Component
             return $this->partialsTable($table);
         }
 
+        if (in_array($this->variant, ['grid-partials', 'grid-region'], true)) {
+            return $this->gridTable($table);
+        }
+
         $status = BadgeColumn::make('status')
             ->label('Status')
             ->colors([
@@ -153,6 +157,37 @@ class SortablePreview extends Component
             ])
             ->defaultSort('sort_order')
             ->paginated(false);
+    }
+
+    /**
+     * Draggable headers over a grid somebody fills in cell by cell.
+     *
+     * Two text inputs a row, because the case is the second one: the user
+     * leaves the first, which saves, and is typing into the next when the
+     * answer lands. The drag controller repairs the column order of whatever
+     * that answer replaced — and has to do it without touching a cell that is
+     * already where the headers put it, or the input being typed into is taken
+     * out of the document and put back, and loses the focus.
+     *
+     * `grid-partials` answers with the row, `grid-region` with the data
+     * region: the two paths reach the controller through different doors (the
+     * `wire:partials-applied` announcement, Livewire's morph hooks), and the
+     * focus has to survive both.
+     */
+    private function gridTable(Table $table): Table
+    {
+        $table
+            ->model(Task::class)
+            ->columnReorderable()
+            ->columns([
+                TextInputColumn::make('title')->label('Task'),
+                TextInputColumn::make('owner_name')->label('Owner'),
+                TextColumn::make('status')->label('Status'),
+            ])
+            ->defaultSort('sort_order')
+            ->paginated(false);
+
+        return $this->variant === 'grid-partials' ? $table->rowPartials() : $table;
     }
 
     /**
