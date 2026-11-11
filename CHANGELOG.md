@@ -2,6 +2,30 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.9.14]
+
+### Fixed
+
+- **Saving one cell no longer takes the focus from the cell being typed into.** On a table with draggable headers
+  (`columnReorderable()`) and `rowPartials()`, every cell save blurred whichever input the user had moved on to —
+  in the same row or any other — which saved it mid-word and locked it until the server answered: a grid had to be
+  filled in one cell at a time. It was not the morph. After a row partial the drag controller puts the replaced
+  row's cells back into the headers' order, and `reorderBodyColumns()` re-inserted every column cell of every row;
+  inserting a node where it already stands still takes it out of the document, and a focused input inside it loses
+  the focus. It moves only a cell that is out of place now, which outside a header drag is none.
+  `verify-grid-typing` drives it on both answers a write can get (row partial, data region).
+
+### Changed
+
+- **A cell's validation message is plain text under the input again — and moves nothing.** No panel, no surface,
+  no teleport: red text exactly as wide as the input, wrapping inside it, never widening the column. The row grows
+  to hold it, and grows the same in every cell (`tables.partials.cell-error-styles`, a spacer behind each cell's
+  content keyed on the line count `wireEditableCell` measures into `data-error-lines`) — a cell is aligned to the
+  middle of its row, so a message added to one cell alone shifted its neighbours down and, in a taller row, its own
+  input up. A row that grows is not clipped by the table's scroll box, which is what the floating panel was for.
+  On a stacked card the message is simply in the flow. Needs `:has()`; without it the message lies over the row
+  below. `showError()` is gone from `wireEditableCell`.
+
 ## [2.9.13]
 
 ### Fixed

@@ -179,9 +179,10 @@ class TablePreview extends Component
 
         if ($this->variant === 'editable-errors') {
             // A cell whose rule fails on purpose, with a message long enough to
-            // wrap: where it lands — under the input, or above it on the last
-            // row, where the table's scroll box would clip it — is a browser
-            // fact, so verify-editable-error-placement.mjs drives it.
+            // wrap: where it lands — under the input, as wide as it, with the
+            // row grown around it and nothing in the row moved — is a browser
+            // fact, so verify-editable-error-placement.mjs drives it. The second
+            // input is the neighbour that must stay where it is.
             return $table
                 ->model(User::class)
                 ->columns([
@@ -190,6 +191,7 @@ class TablePreview extends Component
                         ->rules(['numeric'])
                         ->liveValidation()
                         ->validationMessages(['numeric' => 'Enter a year (2026), a month and year (4.2026) or a valid date (15.03.2026).']),
+                    TextInputColumn::make('bio')->label('Bio'),
                 ])
                 ->searchable(false)
                 ->paginated(false);

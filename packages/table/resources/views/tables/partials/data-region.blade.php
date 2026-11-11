@@ -513,6 +513,8 @@
                                 @endif
                             </table>
 
+                            @include('wire-table::tables.partials.cell-error-styles')
+
                             @if($isFillEnabled)
                                 @include('wire-table::tables.partials.fill-handle', [
                                     'fillColumns' => $fillColumns,

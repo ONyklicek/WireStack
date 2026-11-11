@@ -719,8 +719,9 @@ const wireEditableCell = (config = {}) => ({
     // authoritative version, so nothing else may set one meanwhile.
     inFlight: false,
     error: null,
-    // Stops the floating anchor of the validation message (see showError()).
-    _errorFloat: null,
+    // Lines the validation message takes (see measureError()); 0 with none up.
+    errorLines: 0,
+    _errorSize: null,
     success: false,
     focused: false,
 
@@ -755,32 +756,42 @@ const wireEditableCell = (config = {}) => ({
     },
 
     /**
-     * The validation message, teleported to <body> and pinned under the input.
+     * How many lines the validation message takes, for the row to make room.
      *
-     * In the cell it was clipped: the table scrolls sideways in an
-     * `overflow-x: auto` box, which clips vertically too, so on the last row a
-     * message laid under the input was in the DOM, shown, and invisible. It goes
-     * through the canonical floating primitive every panel uses instead — under
-     * the input and exactly as wide as it (`sameWidth`, re-applied after every
-     * morph: a width written once was stripped by the next render and the
-     * message spread to its text's width), kept there through scroll, and flipped
-     * only where the window itself has no room below. Anchored on the next frame:
-     * `x-show` displays it in an effect of its own, and the primitive wants a
-     * panel that is already visible.
+     * The message of a table cell lies out of the flow, under the input, so
+     * that showing it moves nothing; the row then grows by exactly its height
+     * in every cell at once (`tables.partials.cell-error-styles` in wire-table,
+     * keyed on the `data-error-lines` this feeds). A count rather than a
+     * height, because the row can only be told through a selector, and a
+     * selector matches values, not measurements. Capped where the stylesheet
+     * stops; a message longer than that runs over what is below it.
+     *
+     * Measured, not derived from the text: the message wraps inside the input,
+     * so the same sentence is one line in a wide column and three in a narrow.
      */
-    showError(error) {
-        this._errorFloat?.()
-        this._errorFloat = null
+    measureError() {
+        const message = this.$refs.error
+        if (! this.error || ! message || message.offsetHeight === 0) {
+            this.errorLines = 0
 
-        if (! error) return
+            return
+        }
 
-        requestAnimationFrame(() => {
-            const message = this.$refs.error
-            const input = this.$refs.input
-            if (! this.error || ! message || ! input || message.style.display === 'none') return
+        const line = parseFloat(getComputedStyle(message).lineHeight) || 16
+        this.errorLines = Math.max(1, Math.min(6, Math.round(message.offsetHeight / line)))
+    },
 
-            this._errorFloat = floatingAnchor(input, message, { placement: 'bottom-start', offset: 4, sameWidth: true })
-        })
+    /**
+     * Keep the count current while the message is up: the column can be
+     * resized, toggled or re-rendered under it. Started on the first error,
+     * because in init() the message is not a ref yet — a component's init()
+     * runs before its children are walked.
+     */
+    watchErrorSize() {
+        if (this._errorSize || ! this.$refs.error || ! window.ResizeObserver) return
+
+        this._errorSize = new ResizeObserver(() => this.measureError())
+        this._errorSize.observe(this.$refs.error)
     },
 
     messages: {},
@@ -816,7 +827,10 @@ const wireEditableCell = (config = {}) => ({
         // queue behind each other — so a check is never sent for a value that
         // is already being written (the write validates it anyway), and one
         // still waiting is cancelled the moment a write starts (commit()).
-        this.$watch('error', (error) => this.showError(error))
+        this.$watch('error', () => this.$nextTick(() => {
+            this.watchErrorSize()
+            this.measureError()
+        }))
 
         if (config.liveValidation) {
             this.$watch('value', () => {
@@ -892,7 +906,7 @@ const wireEditableCell = (config = {}) => ({
     },
 
     destroy() {
-        this._errorFloat?.()
+        this._errorSize?.disconnect()
         this._observer?.disconnect()
         window.removeEventListener('wire-editable-committed', this._onSiblingCommit)
         this._unguard?.()

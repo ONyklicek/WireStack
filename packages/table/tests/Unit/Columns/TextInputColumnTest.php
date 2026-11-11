@@ -399,18 +399,25 @@ function editableCell(): string
     return (string) TextInputColumn::make('name')->helperText('Nápověda')->renderCell($record);
 }
 
-it('teleports the validation message out of the table and pins it under the input', function () {
+it('lays the validation message under the input as plain text, no wider than it', function () {
     $html = editableCell();
-    $teleport = substr($html, strpos($html, '<template x-teleport="body">'));
-    $teleport = substr($teleport, 0, strpos($teleport, '</template>'));
 
-    // Out of the cell, so the table's scroll box cannot clip it on the last row;
-    // placed under the input by the floating primitive (wireEditableCell's
-    // showError()), which the browser driver checks.
-    expect($teleport)->toContain('x-ref="error"')
+    preg_match('/<p[^>]*x-ref="error"[^>]*>/', $html, $message);
+
+    // In the cell, so the row can grow around it; `w-0 min-w-full` is what keeps
+    // a long message from widening the column. What the row does with it — and
+    // that nothing in the row moves — is a browser fact the driver checks.
+    expect($message[0] ?? '')->toContain('data-cell-error')
         ->toContain('data-testid="table-editable-error"')
-        ->toContain('whitespace-normal break-words')
-        ->and(strpos($html, 'x-ref="input"'))->toBeLessThan(strpos($html, 'x-teleport="body"'));
+        ->toContain('w-0 min-w-full whitespace-normal break-words')
+        ->not->toContain('shadow')
+        ->not->toContain('bg-')
+        ->and($html)->not->toContain('x-teleport')
+        ->and(strpos($html, 'x-ref="input"'))->toBeLessThan(strpos($html, 'x-ref="error"'));
+});
+
+it('tells the row how many lines the message takes', function () {
+    expect(editableCell())->toContain(':data-error-lines="errorLines || null"');
 });
 
 it('keeps the helper text wrapping in the input and its space while an error shows', function () {
