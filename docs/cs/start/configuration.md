@@ -270,6 +270,7 @@ Hodnoty šířky modalu jsou size tokeny ve stylu Tailwindu jako `sm`, `md`, `lg
     'slide_over_width' => 'xl',
     'close_on_click_away' => false,
     'close_on_escape' => true,
+    'mobile' => 'sheet', // 'sheet' | 'full-screen' | 'dialog'
 ],
 ```
 

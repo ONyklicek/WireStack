@@ -267,6 +267,7 @@ Modal width values are Tailwind-style size tokens such as `sm`, `md`, `lg`, `xl`
     'slide_over_width' => 'xl',
     'close_on_click_away' => false,
     'close_on_escape' => true,
+    'mobile' => 'sheet', // 'sheet' | 'full-screen' | 'dialog'
 ],
 ```
 

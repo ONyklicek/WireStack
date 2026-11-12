@@ -40,9 +40,27 @@ Action::make('edit')
     ->modalWidth('2xl')              // sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl
     ->closeModalOnClickAway()
     ->closeModalOnEscape()
-    ->slideOverOnMobile()            // slide-over na mobilu, modal na desktopu
+    ->slideOverOnMobile()            // spodní sheet na mobilu, modal na desktopu (výchozí)
     ->fullScreenOnMobile();          // celá obrazovka na mobilu
 ```
+
+Na telefonu je dialog **ve výchozím stavu spodní sheet** — zavře se stažením
+dolů nebo švihnutím — podle `wire-core.modals.mobile` (`'sheet'`,
+`'full-screen'` nebo `'dialog'`). `->dialogOnMobile()` ponechá dialog jedné akce
+plovoucí kartou:
+
+```php
+Action::make('rename')
+    ->form([TextInput::make('name')->required()])
+    ->dialogOnMobile()               // dialog s jedním polem zůstane na telefonu kartou
+    ->action(fn ($record, array $data) => $record->update($data));
+```
+
+Slide-over se stane sheetem, jen když o to požádá přes `->slideOverOnMobile()`.
+Stránka za každým modalem má zamčené scrollování, první fokus přeskočí zavírací
+tlačítko (potvrzení se otevře na *Zrušit*) a Escape stisknutý v otevřeném selectu
+zavře select, ne dialog. Podrobnosti a pořadí, ve kterém se mobilní podoba
+určuje, jsou v [Modaly → Na telefonu](../modals.md#na-telefonu).
 
 ## Modal s formulářem
 

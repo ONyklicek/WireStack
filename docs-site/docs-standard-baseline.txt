@@ -13,7 +13,6 @@ docs/core/infolists/entries.md#1d61be29
 docs/core/infolists/index.md#8dc2d811
 docs/core/infolists/index.md#eca06823
 docs/core/infolists/index.md#a9f687ca
-docs/core/modals.md#8792abb5
 docs/core/modals.md#5f13db85
 docs/core/modals.md#9301959e
 docs/core/modals.md#a900bb09

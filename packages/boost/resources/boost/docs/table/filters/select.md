@@ -1,6 +1,6 @@
 ---
 order: 31
-summary: A dropdown over predefined options — the filter most tables reach for first.
+summary: A dropdown over predefined options or the column's own values, with record counts and "is none of" when you ask — the filter most tables reach for first.
 ---
 
 # SelectFilter
@@ -14,6 +14,43 @@ looks identical to an open form select. Opt into a browser-native `<select>` wit
 ```php
 use NyonCode\WireTable\Filters\SelectFilter;
 ```
+
+## How It Works
+
+**Where the options come from**, in order:
+
+1. `->options()` — an array, a closure (evaluated on render) or an enum class.
+2. When there are none and `->optionsFromColumn()` is on, the column's own
+   distinct values, read from the data — most common first, capped at `$limit`,
+   `NULL` left out, each labelled by itself (or by its enum's label).
+3. For a column cast to an enum, the enum's cases.
+
+**How it matches.** Without an operator picker a single value is `=` and a
+`->multiple()` value is `whereIn`, through `whereHas` for a dotted (relation)
+name. With `->operators()` the filter speaks membership: *is any of* (`IN`, one
+planner clause), *is none of* (`IS NULL OR NOT IN` — rows with no value are kept),
+*is empty* and *is not empty* (`IS NULL` / `IS NOT NULL`). Across a relation *is
+none of* is `whereDoesntHave` with `IN`: a post tagged both `php` and `go` is not
+"none of php". The value is treated as a list once the picker is on, even
+without `->multiple()`.
+
+**Counts.** `->withCounts()` prints beside each option how many records picking
+it would leave — `Admin (3)`. A count is taken under **every other filter and the
+search, but not this filter's own value**: counting *Role* under "Role is Admin"
+would say every other role has nothing, and talk the user out of changing their
+mind. Each counting filter costs one grouped query per render (`GROUP BY column`,
+ordered by count), built by the same query service as the rows, so a count never
+disagrees with what picking it shows. An option the data does not hold shows
+`(0)`. The chip keeps the plain label — `Role: Admin`, not `Role: Admin (3)`.
+
+**Not counted** — the options still work, just without numbers and without a
+list read from the data:
+
+- a dotted (relation) name — there is no single column to group by;
+- a table on a custom [data source](../data-sources.md) — only Eloquent is counted;
+- a column header filter whose column hides its cell on some records with
+  `visibleForRecord()` — a value list would print the values those cells keep
+  out of sight.
 
 ## Basic Usage
 
@@ -113,6 +150,48 @@ SelectFilter::make('status')->options(OrderStatus::class)
 > auto-populates its options from the enum even without calling `->options()`. This shorthand
 > is for the cases where you set the filter up explicitly.
 
+## Record Counts
+
+```php
+SelectFilter::make('status')
+    ->options(['paid' => 'Paid', 'pending' => 'Pending', 'overdue' => 'Overdue'])
+    ->multiple()
+    ->withCounts()                   // Paid (12), Pending (3), Overdue (0)
+```
+
+## Options From The Data
+
+When the values are open-ended — a country, a tag, a supplier — let the column
+supply its own list:
+
+```php
+SelectFilter::make('country')
+    ->optionsFromColumn(limit: 50)   // the 50 most common values, read from the rows
+    ->withCounts()
+    ->searchable()
+    ->multiple()
+```
+
+Only values that occur under the other filters are listed, so the list narrows as
+the user narrows the table. A value beyond the limit cannot be picked; raise the
+limit, or give `->options()` for a closed set.
+
+## Is None Of
+
+```php
+use NyonCode\WireTable\Enums\FilterOperator;
+
+SelectFilter::make('role')
+    ->options(['admin' => 'Admin', 'editor' => 'Editor', 'viewer' => 'Viewer'])
+    ->multiple()
+    ->operators()                                    // is any of, is none of, is empty, is not empty
+    ->defaultOperator(FilterOperator::NotIn)
+```
+
+The operators a select can offer are *is any of*, *is none of*, *is empty* and
+*is not empty*; any other in the list is dropped. The chip says the comparison —
+`Role: is none of Admin, Editor`.
+
 ## Custom Query
 
 ```php
@@ -127,6 +206,62 @@ SelectFilter::make('has_avatar')
     })
 ```
 
+## Extended Example
+
+An orders list where the status filter shows what each choice would leave, and
+the customer's country is picked from the countries that actually occur.
+
+```php
+<?php
+
+namespace App\Livewire;
+
+use App\Enums\OrderStatus;
+use App\Models\Order;
+use Livewire\Component;
+use NyonCode\WireTable\Columns\BadgeColumn;
+use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireTable\Table;
+
+class ListOrders extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(Order::class)
+            ->columns([
+                TextColumn::make('number')->sortable(),
+                BadgeColumn::make('status'),
+                TextColumn::make('country'),
+            ])
+            ->filters([
+                SelectFilter::make('status') // [tl! focus:start]
+                    ->options(OrderStatus::class)
+                    ->multiple()
+                    ->operators()
+                    ->withCounts(),
+                SelectFilter::make('country')
+                    ->optionsFromColumn(limit: 50)
+                    ->withCounts()
+                    ->searchable()
+                    ->multiple(), // [tl! focus:end]
+            ]);
+    }
+
+    public function render()
+    {
+        return view('livewire.list-orders');
+    }
+}
+```
+
+Picking *Country is any of CZ* re-counts *Status* under it; the *Country* counts
+themselves ignore the country picked, so the other countries keep their numbers.
+
 ## SelectFilter API
 
 ```php
@@ -136,4 +271,16 @@ SelectFilter::make('has_avatar')
 ->native(bool $native = true)        // opt into a browser-native <select> (default: false)
 ->nativeOnMobile(bool $condition = true) // native <select> below the mobile breakpoint only (default: config wire-core.mobile.native)
 ->touchOnMobile(bool $condition = true)  // full-height touch list below the mobile breakpoint (default: config wire-core.mobile.touch)
+->withCounts(bool $condition = true) // print each option's record count, under the other filters — default false
+->optionsFromColumn(bool $condition = true, int $limit = 100) // options = the column's distinct values, most common first, capped at $limit
+->operators(array|bool $operators = true) // inherited — 'in'|'not_in'|'is_empty'|'is_not_empty'; true = all four
+->defaultOperator(FilterOperator|string $operator) // inherited — default 'in'
+->getOptions(): array                // value => label, without counts
+->getDisplayOptions(): array         // value => label as drawn, with " (n)" when counting
 ```
+
+## Related
+
+- [Filters](index.md#operators) — the operator vocabulary every filter shares
+- [Column-Level Filters](column-level.md#counts-and-value-lists) — `->filterWithCounts()` and `->filterAsValueList()` on a column
+- [QueryBuilderFilter](query-builder.md) — a select as one condition among several

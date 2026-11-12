@@ -40,9 +40,26 @@ Action::make('edit')
     ->modalWidth('2xl')              // sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl
     ->closeModalOnClickAway()
     ->closeModalOnEscape()
-    ->slideOverOnMobile()            // slide-over on mobile, modal on desktop
+    ->slideOverOnMobile()            // bottom sheet on mobile, modal on desktop (the default)
     ->fullScreenOnMobile();          // full screen on mobile
 ```
+
+On a phone a dialog is a **bottom sheet by default** — pulled down or flicked to
+close — set by `wire-core.modals.mobile` (`'sheet'`, `'full-screen'` or
+`'dialog'`). `->dialogOnMobile()` keeps one action's dialog a floating card:
+
+```php
+Action::make('rename')
+    ->form([TextInput::make('name')->required()])
+    ->dialogOnMobile()               // a one-field dialog stays a card on a phone
+    ->action(fn ($record, array $data) => $record->update($data));
+```
+
+A slide-over becomes a sheet only when it asks with `->slideOverOnMobile()`. The
+page behind every modal is scroll-locked, the first focus skips the close
+button (a confirmation opens on *Cancel*), and Escape pressed inside an open
+select closes the select, not the dialog. The details, and the order the mobile
+presentation is resolved in, are in [Modals → On A Phone](../modals.md#on-a-phone).
 
 ## Form Modal
 

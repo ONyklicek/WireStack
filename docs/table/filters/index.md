@@ -1,30 +1,32 @@
 ---
 order: 30
-summary: Every built-in filter, the shared API they have in common, and where their state lives between requests.
+summary: Every built-in filter, the operators they share, the filter panel's layouts and Apply button, and where filter state lives between requests.
 ---
 
 # Filters
 
-Wire Table provides **6 built-in filter types** plus the ability to build custom
-filters. Filters live in the filter bar above the table and persist in Livewire
-state via `$tableFilters`. This page covers the flow and the shared API; each
-type has its own page.
+Wire Table provides **7 built-in filter types** plus the ability to build custom
+filters. Filters live in the filter panel — behind the toolbar's *Filters*
+button, or laid out above the rows — and persist in Livewire state via
+`$tableFilters`. This page covers the flow, the operators every filter shares,
+the panel, and the shared API; each type has its own page.
 
 ## Filter Types
 
 | Filter | Use for |
 |--------|---------|
-| [TextFilter](text.md) | Free-text match with an operator (`like`, `starts_with`, …) |
-| [SelectFilter](select.md) | Single/multi choice from options, relations, or enums |
-| [DateFilter](date.md) | Single date, date range, or month + year |
+| [TextFilter](text.md) | Free text — contains, is, starts with, their negatives, is empty |
+| [SelectFilter](select.md) | Single/multi choice from options, enums or the column's own values, with counts |
+| [DateFilter](date.md) | Single date (before / after / on), a range with presets, or month + year |
 | [NumberRangeFilter](number-range.md) | Min/max numeric range |
 | [TernaryFilter](ternary.md) | Three-state boolean (all / true / false) |
 | [TrashedFilter](trashed.md) | Soft deletes: live / deleted / all records |
+| [QueryBuilderFilter](query-builder.md) | Conditions the user combines with AND / OR, one level of groups |
 
 ## More
 
 - [Relationship & Sub-Row Filters](relationships.md) — filter by related models and sub-row values
-- [Column-Level Filters](column-level.md) — inline filter inputs in a column header
+- [Column-Level Filters](column-level.md) — a filter row or a funnel per column header, counts, presets, "Only this value"
 - [Custom Filter Class](custom.md) — build your own filter component
 - [Patterns & Recipes](patterns.md) — full example filter bars
 
@@ -37,15 +39,170 @@ Table::filters([...])
 │   └── Each filter renders its own Blade view
 │
 ├── State: $tableFilters array ['name' => 'value', ...]
+│   ├── {value, operator} for a filter with an operator picker
 │   └── Persisted in Livewire component state
 │
-└── Apply: When state changes
+└── Apply: When state changes (or on Apply, with ->deferFilters())
     ├── Each filter's apply() or query() callback is called
     ├── Conditions added to Eloquent Builder
     └── Table re-queries with filters applied
 ```
 
 Filter application flows through the Core `ApplyFilters` pipe in the QueryExecutor pipeline.
+
+## Operators
+
+A filter compares one way by default — a text filter *contains*, a select *is*.
+`->operators()` lets the user choose instead: a picker appears beside the value,
+and the filter's state becomes `{value, operator}`. One vocabulary,
+`FilterOperator`, serves every filter, and each case owns its label, whether it
+needs a value, and its SQL:
+
+| `FilterOperator` | Value | Label | SQL on a column |
+|---|---|---|---|
+| `Contains` | `contains` | contains | `LIKE '%v%'` |
+| `NotContains` | `not_contains` | does not contain | `IS NULL OR NOT LIKE '%v%'` |
+| `Equals` | `equals` | is | `= v` |
+| `NotEquals` | `not_equals` | is not | `IS NULL OR != v` |
+| `StartsWith` | `starts_with` | starts with | `LIKE 'v%'` |
+| `EndsWith` | `ends_with` | ends with | `LIKE '%v'` |
+| `In` | `in` | is any of | `IN (…)` |
+| `NotIn` | `not_in` | is none of | `IS NULL OR NOT IN (…)` |
+| `GreaterThan` / `GreaterThanOrEqual` | `gt` / `gte` | is greater than / is at least | `>` / `>=` |
+| `LessThan` / `LessThanOrEqual` | `lt` / `lte` | is less than / is at most | `<` / `<=` |
+| `IsEmpty` | `is_empty` | is empty | `IS NULL` (text: `OR = ''`) |
+| `IsNotEmpty` | `is_not_empty` | is not empty | `IS NOT NULL` (text: `AND != ''`) |
+
+Which a filter can offer depends on its type — `->operators(true)` offers all of
+these, a list offers those, and anything the type cannot apply is dropped:
+
+| Filter | Operators |
+|---|---|
+| `TextFilter` | contains, does not contain, is, is not, starts with, ends with, is empty, is not empty |
+| `SelectFilter` | is any of, is none of, is empty, is not empty |
+| `DateFilter` (single date) | is on, is not on, is before, is on or before, is after, is on or after, is empty, is not empty — date wording for the comparisons |
+| `NumberRangeFilter`, `TernaryFilter`, `TrashedFilter`, a date range or month | none |
+
+**How the operator in force is chosen:** the one the state names, *if the filter
+offers it* — a crafted URL or a stale saved view naming another one is ignored —
+then `->defaultOperator()`, then the filter's own comparison, then the first one
+offered.
+
+**What the semantics guarantee:**
+
+- **Negatives keep `NULL` rows.** *Does not contain gmail* includes the
+  customers with no email; a bare `NOT LIKE` would drop them.
+- **Across a relation a negative means "no related record matches"** —
+  `whereDoesntHave` with the positive comparison, never `whereHas` with the
+  negative one, which would keep a customer with one gmail address and one other.
+  *Is empty* across a relation is "has no related record with a value".
+- **"Is empty" needs no value.** A filter set to *is empty* or *is not empty* is
+  active with the value box empty, and its chip reads `Phone: is empty`.
+- **On text, "is empty" also matches `''`**; on numbers and dates it is `IS
+  NULL` only (PostgreSQL refuses to compare those columns with a string).
+- **One planner clause where possible.** *contains*, *is*, *is any of* and the
+  comparisons plan through the `QueryPlanner` like any filter; the negatives and
+  the emptiness checks constrain the query through the filter's `apply()`.
+
+```php
+use NyonCode\WireTable\Enums\FilterOperator;
+use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireTable\Filters\TextFilter;
+
+TextFilter::make('email')
+    ->operators(['contains', 'not_contains', 'is_empty']) // [tl! focus:start]
+    ->defaultOperator(FilterOperator::NotContains) // [tl! focus:end]
+
+SelectFilter::make('status')
+    ->options(['paid' => 'Paid', 'pending' => 'Pending'])
+    ->multiple()
+    ->operators()                      // is any of, is none of, is empty, is not empty [tl! focus]
+```
+
+With `Table::queryString()` the operator travels beside the value under the same
+parameter with an `_op` suffix — `?filter_email=gmail&filter_email_op=not_contains`
+— and a header filter's as `col_<column>_op`. A column filter takes the same
+choice with [`->filterOperators()`](column-level.md#operators-on-a-column).
+
+## The Filter Panel
+
+Three table settings decide how the panel behaves and where it sits:
+
+- **`->deferFilters()`** — the panel's controls stop applying on every change
+  and an **Apply** button appears beside *Reset*: one query for "pick three
+  things", not three. The values bind without `.live` and travel with the Apply
+  request (`applyTableFilters()`), which also returns the table to page one.
+  Column header filters stay live.
+- **`->filtersLayout()`** — `FiltersLayout::Dropdown` (default) keeps the panel
+  behind the toolbar's *Filters* button, a bottom sheet on a phone.
+  `FiltersLayout::AboveContent` lays the filters out above the rows, always
+  open — right for a list people narrow constantly.
+  `FiltersLayout::AboveContentCollapsible` is the same behind a toggle, closed
+  until wanted; open or closed is remembered per browser.
+- **`->filtersFormColumns(int)`** — the filters in 1–4 columns from the `sm`
+  breakpoint up (always one on a phone); the dropdown widens to fit. A
+  [`QueryBuilderFilter`](query-builder.md) always takes a whole row.
+
+Each resolves the per-table call first, then config, then the default:
+
+```php
+// config/wire-table.php
+'defaults' => [
+    'filters_layout' => env('WIRE_TABLE_FILTERS_LAYOUT', 'dropdown'), // 'dropdown' | 'above' | 'above_collapsible'
+    'defer_filters' => env('WIRE_TABLE_DEFER_FILTERS', false),
+],
+```
+
+`filtersFormColumns()` has no config key; it defaults to `1`.
+
+```php
+<?php
+
+namespace App\Livewire;
+
+use App\Models\Invoice;
+use Livewire\Component;
+use NyonCode\WireTable\Columns\TextColumn;
+use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Enums\FiltersLayout;
+use NyonCode\WireTable\Filters\DateFilter;
+use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireTable\Filters\TextFilter;
+use NyonCode\WireTable\Table;
+
+class ListInvoices extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(Invoice::class)
+            ->columns([
+                TextColumn::make('number'),
+                TextColumn::make('customer'),
+                TextColumn::make('status'),
+            ])
+            ->filters([
+                TextFilter::make('customer')->operators(),
+                SelectFilter::make('status')->multiple()
+                    ->options(['paid' => 'Paid', 'pending' => 'Pending', 'overdue' => 'Overdue'])
+                    ->withCounts(),
+                DateFilter::make('issued_at')->presets(),
+            ])
+            ->filtersLayout(FiltersLayout::AboveContentCollapsible) // [tl! focus:start]
+            ->filtersFormColumns(3)
+            ->deferFilters(); // [tl! focus:end]
+    }
+
+    public function render()
+    {
+        return view('livewire.list-invoices');
+    }
+}
+```
+
+The panel opens above the rows in three columns; nothing queries until *Apply*.
 
 ---
 
@@ -151,6 +308,20 @@ SelectFilter::make('status')
     ->default('active')              // "active" pre-selected
 ```
 
+### Operator Picker
+
+```php
+->operators(array|bool $operators = true)          // true = every operator the type supports, a list<FilterOperator|string>, false = no picker
+->defaultOperator(FilterOperator|string $operator)  // what a fresh filter starts on
+->getOperators(): array                             // list<FilterOperator> on the picker — [] without one
+->hasOperatorPicker(): bool                         // more than one operator offered
+->getDefaultOperator(): FilterOperator              // the default, constrained to what is offered
+->getActiveOperator(): FilterOperator               // the operator in force for the current state
+->operatorLabel(FilterOperator $operator): string   // the filter's wording — a date filter says "is before"
+```
+
+See [Operators](#operators) above for the vocabulary and the semantics.
+
 ### Multiple Selection
 
 ```php
@@ -169,6 +340,30 @@ There is no fluent `->view()` setter. Customize a filter's UI in one of two ways
 ```bash
 php artisan vendor:publish --tag=wire-table::views
 ```
+
+### For Filter Authors
+
+The hooks a [custom filter](custom.md) overrides, and the ones the table calls on
+every filter. You rarely call them yourself:
+
+```php
+->supportedOperators(): array                      // list<FilterOperator> the type can apply — [] in the base Filter
+->operatorFromState(mixed $raw): FilterOperator    // the operator the state names, if offered; else the default
+->forState(mixed $raw): static                     // a copy carrying the state's operator — the stored filter is never mutated
+->emptyState(): mixed                              // what the filter is cleared back to: [] (multiple), null, or a keyed shape like {from, to}
+->stateForCellValue(mixed $value, bool $exclude = false): mixed // the header state "Only / Exclude this value" writes; null = cannot say it
+->canExcludeCellValue(): bool                      // whether "Exclude this value" is offered (a negative operator is on the picker)
+->builderInput(): string                           // the value control in a query-builder condition: 'text'|'select'|'date'|'boolean'
+->spansFullWidth(): bool                           // whether the panel gives the filter a whole grid row
+->deferred(bool $deferred = true)                  // set by the table from Table::deferFilters()
+->isDeferred(): bool
+->wireModelDirective(int $debounce = 0): string    // 'wire:model' when deferred, else 'wire:model.live' (debounced when > 0)
+```
+
+A custom filter that supports operators returns them from
+`supportedOperators()` and reads `getActiveOperator()` in its `apply()`; the
+picker, the `{value, operator}` state, the `_op` URL parameter and the chip
+wording come with it.
 
 ---
 
@@ -190,6 +385,9 @@ Default labels are generated per filter type:
 | `DateFilter` | `Created: 2026-06-11` |
 | `DateFilter` + `range()` | `Created: 2026-06-01 – 2026-06-30` |
 | `DateFilter` + `month()` | `Billed: May 2026` (translated month name) |
+| `DateFilter` + `presets()` | `Created: Last 7 days` (while a preset is picked) |
+| any filter with an operator picker | `Email: does not contain gmail`, `Phone: is empty` |
+| `QueryBuilderFilter` | `Customer contains Acme and Status is any of Paid` |
 | base `Filter` | `Label: value` |
 
 ### Customizing the Chip
