@@ -134,6 +134,8 @@ class SelectFilter extends Filter
     /**
      * Hand the filter this render's counts. Set by the host before it draws.
      *
+     * @docs-ignore internal: the table calls it on every render
+     *
      * @param  array<string, int>|null  $counts
      */
     public function facets(?array $counts): static

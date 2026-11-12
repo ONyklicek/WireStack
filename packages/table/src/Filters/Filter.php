@@ -193,7 +193,15 @@ class Filter implements Htmlable
      */
     public function getOperators(): array
     {
-        return $this->operators ?? [];
+        // Read against what the filter supports NOW, not when operators() was
+        // called: `DateFilter::make()->operators()->range()` must not keep a
+        // picker a range has no use for.
+        $supported = $this->supportedOperators();
+
+        return array_values(array_filter(
+            $this->operators ?? [],
+            static fn (FilterOperator $operator): bool => in_array($operator, $supported, true),
+        ));
     }
 
     /** Whether the panel gives this filter a whole row of its grid. */
@@ -824,15 +832,12 @@ class Filter implements Htmlable
             return null;
         }
 
-        $wanted = $this->multiple
-            ? ($exclude ? FilterOperator::NotIn : FilterOperator::In)
-            : ($exclude ? FilterOperator::NotEquals : FilterOperator::Equals);
         $stored = $this->multiple ? [(string) $value] : (string) $value;
 
         if ($this->hasOperatorPicker()) {
-            return in_array($wanted, $this->getOperators(), true)
-                ? ['value' => $stored, 'operator' => $wanted->value]
-                : null;
+            $wanted = $this->cellValueOperator($exclude);
+
+            return $wanted === null ? null : ['value' => $stored, 'operator' => $wanted->value];
         }
 
         // Without a picker a filter can only keep a value, never drop it.
@@ -842,7 +847,41 @@ class Filter implements Htmlable
     /** Whether "Exclude this value" can be offered: a negative operator is on the menu. */
     public function canExcludeCellValue(): bool
     {
-        return in_array($this->multiple ? FilterOperator::NotIn : FilterOperator::NotEquals, $this->getOperators(), true);
+        return $this->cellValueOperator(exclude: true) !== null;
+    }
+
+    /**
+     * Whether "Only this value" can be offered: without a picker always; with
+     * one, only when it offers an exact match ("is" or "is any of") — a text
+     * filter limited to "contains" cannot say "exactly this".
+     */
+    public function canFilterByCellValue(): bool
+    {
+        return ! $this->hasOperatorPicker() || $this->cellValueOperator(exclude: false) !== null;
+    }
+
+    /**
+     * The offered operator that keeps (or drops) exactly one value: "is" / "is
+     * not", or "is any of" / "is none of" — a single-choice select offers only
+     * the latter pair and must still answer.
+     */
+    protected function cellValueOperator(bool $exclude): ?FilterOperator
+    {
+        $candidates = $exclude
+            ? [FilterOperator::NotEquals, FilterOperator::NotIn]
+            : [FilterOperator::Equals, FilterOperator::In];
+
+        if ($this->multiple) {
+            $candidates = array_reverse($candidates);
+        }
+
+        foreach ($candidates as $candidate) {
+            if (in_array($candidate, $this->getOperators(), true)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**

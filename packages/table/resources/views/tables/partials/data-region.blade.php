@@ -330,7 +330,7 @@
                                                 class="{{ $headerPadding }} {{ $hm['alignment'] }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $hm['responsive'] }}"
                                                 @if($hm['widthStyles']) style="{{ $hm['widthStyles'] }}" @endif
                                                 @if($hm['extraHeader']) {!! $hm['extraHeader'] !!} @endif
-                                                @if($cellFilterMenu && $column->isFilterable()) data-cell-filter="{{ $column->getFilter()->canExcludeCellValue() ? 'exclude' : 'only' }}" @endif
+                                                @if($cellFilterMenu && $column->isFilterable() && $column->getFilter()->canFilterByCellValue()) data-cell-filter="{{ $column->getFilter()->canExcludeCellValue() ? 'exclude' : 'only' }}" @endif
                                         >
                                             @if($column->isSortable() && $table->isSortable())
                                                 <button

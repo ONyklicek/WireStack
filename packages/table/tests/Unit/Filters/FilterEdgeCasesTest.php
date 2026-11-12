@@ -104,3 +104,18 @@ it('keeps a large-breakpoint sheet footer above the home indicator', function ()
     expect((new ModalStyle(slideOverOnMobile: true, breakpoint: 'lg'))->footerSafeAreaClass())
         ->toBe('max-lg:pb-[calc(1rem_+_env(safe-area-inset-bottom))]');
 });
+
+it('answers the cell menu on a single-choice select with "is any of", and on text only with an exact match', function () {
+    $select = SelectFilter::make('kind')->options(['a' => 'A'])->operators();
+
+    expect($select->stateForCellValue('a'))->toBe(['value' => 'a', 'operator' => 'in'])
+        ->and($select->stateForCellValue('a', exclude: true))->toBe(['value' => 'a', 'operator' => 'not_in'])
+        ->and($select->canFilterByCellValue())->toBeTrue()
+        ->and(TextFilter::make('t')->operators(['contains', 'starts_with'])->canFilterByCellValue())->toBeFalse()
+        ->and(TextFilter::make('t')->canFilterByCellValue())->toBeTrue();
+});
+
+it('drops a picker the filter no longer supports, whatever the call order', function () {
+    expect(DateFilter::make('d')->operators()->range()->hasOperatorPicker())->toBeFalse()
+        ->and(DateFilter::make('d')->operators()->presets()->getOperators())->toBe([]);
+});
