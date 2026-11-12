@@ -241,10 +241,8 @@ QueryBuilderFilter::make(string $name)
 ->label(?string $label)                // inherited — the label above the conditions
 ->indicator(string|Closure|null $indicator) // inherited — replaces the one-sentence chip; fn ($tree, Filter $filter)
 ->query(Closure $callback)             // inherited — replaces the whole builder; fn (Builder $query, array $tree): Builder
-->getConstraints(): array              // array<string, Filter> keyed by name
-->getFirstConstraint(): ?Filter        // where a new condition starts
 ->hasActiveRule(mixed $state): bool    // whether any condition would narrow the rows
-->getConstraint(?string $field): ?Filter
+->getConstraints(): array              // array<string, Filter> keyed by name
 ```
 
 Component actions the builder's buttons call (from `WithTable`):

@@ -240,10 +240,8 @@ QueryBuilderFilter::make(string $name)
 ->label(?string $label)                // zděděno — popisek nad podmínkami
 ->indicator(string|Closure|null $indicator) // zděděno — nahradí jednovětý chip; fn ($tree, Filter $filter)
 ->query(Closure $callback)             // zděděno — nahradí celý builder; fn (Builder $query, array $tree): Builder
-->getConstraints(): array              // array<string, Filter> podle názvu
-->getFirstConstraint(): ?Filter        // kde začíná nová podmínka
 ->hasActiveRule(mixed $state): bool    // zda by nějaká podmínka zúžila řádky
-->getConstraint(?string $field): ?Filter
+->getConstraints(): array              // array<string, Filter> podle názvu
 ```
 
 Akce komponenty, které volají tlačítka builderu (z `WithTable`):
