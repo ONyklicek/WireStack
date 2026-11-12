@@ -9,7 +9,7 @@
 <div class="{{ $table->getFiltersGridClass() }}">
     @foreach($filters as $filter)
         @if($filter->canView())
-            <div @class(['col-span-full' => $filter->spansFullWidth()])>{!! $filter->render($tableFilters[$filter->getName()] ?? null) !!}</div>
+            <div @class(['min-w-0', 'col-span-full' => $filter->spansFullWidth()])>{!! $filter->render($tableFilters[$filter->getName()] ?? null) !!}</div>
         @endif
     @endforeach
 </div>
