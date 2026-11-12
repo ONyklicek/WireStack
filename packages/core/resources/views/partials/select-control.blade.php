@@ -209,6 +209,7 @@
                     x-transition:leave-start="opacity-100"
                     x-transition:leave-end="opacity-0"
                     @click="open = false; activeIndex = -1"
+                    data-sheet-backdrop
                     class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70 {{ $sheetBackdrop }}"
                 ></div>
             @endif
@@ -259,7 +260,9 @@
             </div>
             @endif
 
-            <ul class="py-1" role="listbox" :aria-activedescendant="$data.activeDescendant" @if($multiple) aria-multiselectable="true" @endif>
+            {{-- In a sheet the rows are inset from the screen's edges, so a highlighted
+                 row never runs into a phone's rounded corners. --}}
+            <ul @class(['py-1', \NyonCode\WireCore\Foundation\Support\MobileSheet::listInset($mobileBreakpoint) => $sheetOnMobile]) role="listbox" :aria-activedescendant="$data.activeDescendant" @if($multiple) aria-multiselectable="true" @endif>
                 @if($placeholder !== null && $placeholder !== '')
                     <li role="option" aria-selected="false">
                         <button

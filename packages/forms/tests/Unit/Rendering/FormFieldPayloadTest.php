@@ -100,8 +100,10 @@ it('keeps a field within its per-instance byte budget', function (string $type, 
     // one controller.
     'time' => ['time', 17_000],
     // The trigger label truncates and an option label wraps, so neither pushes a
-    // phone-width form sideways.
-    'select' => ['select', 8_300],
+    // phone-width form sideways. In a sheet the rows are inset from the screen's
+    // rounded corners and the grabber stays pinned while the list scrolls
+    // (~180 bytes, the classes that say so).
+    'select' => ['select', 8_600],
     'tags' => ['tags', 8_800],
     'rating' => ['rating', 10_400],
     // The shipped toolbar draws its two heading buttons (h2, h3) since the

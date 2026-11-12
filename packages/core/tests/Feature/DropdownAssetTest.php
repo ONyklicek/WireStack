@@ -182,7 +182,7 @@ test('the source registers unconditionally so the bundle survives a wire:navigat
         ->toContain("data('wireTabs'")
         ->toContain("data('wireWizard'")
         ->toContain("data('wireEditableCell'")
-        ->toContain('registerSheetDismiss(window.Alpine)')
+        ->toContain('registerSheetGesture(window.Alpine)')
         ->toContain('registerFocusTrap(window.Alpine)');
 });
 

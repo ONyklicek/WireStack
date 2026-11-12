@@ -104,7 +104,7 @@ it('takes the column filter layout as the enum too', function () {
 
 it('keeps a large-breakpoint sheet footer above the home indicator', function () {
     expect((new ModalStyle(slideOverOnMobile: true, breakpoint: 'lg'))->footerSafeAreaClass())
-        ->toBe('max-lg:pb-[calc(1rem_+_env(safe-area-inset-bottom))]');
+        ->toBe('max-lg:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]');
 });
 
 it('answers the cell menu on a single-choice select with "is any of", and on text only with an exact match', function () {

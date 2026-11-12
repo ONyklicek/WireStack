@@ -15,14 +15,14 @@ it('defaults to the sm breakpoint', function () {
         ->and(MobileSheet::panel())->toContain('max-sm:fixed')
         ->and(MobileSheet::backdropHide())->toBe('sm:hidden')
         ->and(MobileSheet::grabberShow())->toBe('hidden max-sm:flex')
-        ->and(MobileSheet::scrollArea())->toBe('max-sm:w-full max-sm:max-h-[60vh]');
+        ->and(MobileSheet::scrollArea())->toBe('max-sm:w-full max-sm:max-h-[calc(var(--wire-sheet-h,85dvh)_-_6rem)]');
 });
 
 it('sizes an inner scroll region for a sheet at every breakpoint', function () {
-    expect(MobileSheet::scrollArea())->toBe('max-sm:w-full max-sm:max-h-[60vh]')
-        ->and(MobileSheet::scrollArea('md'))->toBe('max-md:w-full max-md:max-h-[60vh]')
-        ->and(MobileSheet::scrollArea('lg'))->toBe('max-lg:w-full max-lg:max-h-[60vh]')
-        ->and(MobileSheet::scrollArea('nonsense'))->toBe('max-sm:w-full max-sm:max-h-[60vh]');
+    expect(MobileSheet::scrollArea())->toBe('max-sm:w-full max-sm:max-h-[calc(var(--wire-sheet-h,85dvh)_-_6rem)]')
+        ->and(MobileSheet::scrollArea('md'))->toBe('max-md:w-full max-md:max-h-[calc(var(--wire-sheet-h,85dvh)_-_6rem)]')
+        ->and(MobileSheet::scrollArea('lg'))->toBe('max-lg:w-full max-lg:max-h-[calc(var(--wire-sheet-h,85dvh)_-_6rem)]')
+        ->and(MobileSheet::scrollArea('nonsense'))->toBe('max-sm:w-full max-sm:max-h-[calc(var(--wire-sheet-h,85dvh)_-_6rem)]');
 });
 
 it('keeps a cap on the inner scroll region rather than removing it', function () {
@@ -37,7 +37,7 @@ it('switches every class to the configured breakpoint (md for tablets)', functio
 
     expect(MobileSheet::px())->toBe(767.98)
         ->and(MobileSheet::panel())->toContain('max-md:fixed')->not->toContain('max-sm:')
-        ->and(MobileSheet::panelPadded())->toContain('max-md:pb-[calc(1rem_+_env(safe-area-inset-bottom))]')
+        ->and(MobileSheet::panelPadded())->toContain('max-md:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]')
         ->and(MobileSheet::motion())->toBe('max-md:scale-100 max-md:translate-y-full')
         ->and(MobileSheet::backdropHide())->toBe('md:hidden')
         ->and(MobileSheet::grabberShow())->toBe('hidden max-md:flex');
@@ -47,7 +47,7 @@ it('supports lg and falls back to sm for unknown values', function () {
     config(['wire-core.mobile.breakpoint' => 'lg']);
     expect(MobileSheet::px())->toBe(1023.98)
         ->and(MobileSheet::panel())->toContain('max-lg:fixed')
-        ->and(MobileSheet::panelPadded())->toContain('max-lg:pb-[calc(1rem_+_env(safe-area-inset-bottom))]')
+        ->and(MobileSheet::panelPadded())->toContain('max-lg:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]')
         ->and(MobileSheet::motion())->toBe('max-lg:scale-100 max-lg:translate-y-full')
         ->and(MobileSheet::grabberShow())->toBe('hidden max-lg:flex')
         ->and(MobileSheet::backdropHide())->toBe('lg:hidden');
@@ -71,4 +71,10 @@ it('splits a control pair at the breakpoint, one side each', function () {
         ->and(MobileSheet::hideBelow('md'))->toBe('max-md:hidden')
         ->and(MobileSheet::showBelow('lg'))->toBe('hidden max-lg:block')
         ->and(MobileSheet::hideBelow('lg'))->toBe('max-lg:hidden');
+});
+
+it('insets a sheet list from the screen edges, with rounded rows', function () {
+    expect(MobileSheet::listInset())->toBe('max-sm:px-2 max-sm:[&>li]:rounded-lg max-sm:[&>li>*]:rounded-lg')
+        ->and(MobileSheet::listInset('md'))->toStartWith('max-md:px-2')
+        ->and(MobileSheet::listInset('lg'))->toStartWith('max-lg:px-2');
 });

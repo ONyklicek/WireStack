@@ -108,7 +108,7 @@ final class ModalStyle
         };
 
         return match ($this->mobileVariant()) {
-            'bottom-sheet' => 'flex max-h-[92dvh] flex-col rounded-t-2xl rounded-b-none '.$inline.' '.$maxHReset,
+            'bottom-sheet' => 'flex max-h-[var(--wire-sheet-h,92dvh)] flex-col rounded-t-2xl rounded-b-none '.$inline.' '.$maxHReset,
             'full-screen' => 'flex min-h-[100dvh] flex-col rounded-none '.$topInset.' '.$inline,
             default => 'rounded-2xl '.$myOnly,
         };
@@ -223,9 +223,9 @@ final class ModalStyle
         }
 
         return match ($this->bp()) {
-            'md' => 'max-md:pb-[calc(1rem_+_env(safe-area-inset-bottom))]',
-            'lg' => 'max-lg:pb-[calc(1rem_+_env(safe-area-inset-bottom))]',
-            default => 'max-sm:pb-[calc(1rem_+_env(safe-area-inset-bottom))]',
+            'md' => 'max-md:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]',
+            'lg' => 'max-lg:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]',
+            default => 'max-sm:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]',
         };
     }
 

@@ -1,5 +1,6 @@
 import { computePosition, autoUpdate, flip, shift, offset, size } from '@floating-ui/dom'
 import { registerScrollLock } from './scroll-lock.js'
+import { registerSheetGesture } from './sheet.js'
 
 import { syncNodeOf } from './editable/sync'
 import { laneKey, runInLane } from './editable/lanes'
@@ -506,68 +507,6 @@ const wireFlyout = (config = {}) => {
     }
 }
 
-/**
- * `x-sheet-dismiss="<closeExpression>"` — drag-to-dismiss for a mobile bottom
- * sheet. Placed on the sheet's grabber handle; dragging the panel down past a
- * threshold runs the expression (the component's own close). Only active below
- * the sm breakpoint (the panel is a sheet); a no-op on desktop and for anything
- * but a downward drag, so it never fights the list's own scrolling.
- */
-const registerSheetDismiss = (Alpine) => {
-    Alpine.directive('sheet-dismiss', (el, { expression }, { evaluateLater, cleanup }) => {
-        const runClose = evaluateLater(expression)
-        // The grabber is the first child of the sheet panel; drag that panel.
-        const panel = () => el.parentElement
-        // Sheet breakpoint (px) is injected via data-sheet-bp; default 640 (sm).
-        const isMobile = () => window.matchMedia(`(max-width: ${parseFloat(el.dataset.sheetBp) || 639.98}px)`).matches
-
-        let startY = 0
-        let startAt = 0
-        let delta = 0
-        let dragging = false
-
-        const onStart = (e) => {
-            if (! isMobile()) return
-            dragging = true
-            delta = 0
-            startY = e.touches[0].clientY
-            startAt = e.timeStamp
-            const p = panel()
-            if (p) p.style.transition = 'none'
-        }
-        const onMove = (e) => {
-            if (! dragging) return
-            delta = Math.max(0, e.touches[0].clientY - startY)
-            const p = panel()
-            if (p) p.style.transform = `translateY(${delta}px)`
-        }
-        const onEnd = (e) => {
-            if (! dragging) return
-            dragging = false
-            // A flick counts as much as a long pull: 40px at more than half a
-            // pixel per millisecond is a throw, the way a native sheet reads it.
-            const speed = delta / Math.max(1, (e?.timeStamp ?? startAt) - startAt)
-            const p = panel()
-            if (p) {
-                p.style.transition = ''
-                p.style.transform = ''
-            }
-            // Past ~90px of pull-down, or a flick → dismiss; otherwise it snaps back.
-            if (delta > 90 || (delta > 40 && speed > 0.5)) runClose(() => {})
-        }
-
-        el.addEventListener('touchstart', onStart, { passive: true })
-        el.addEventListener('touchmove', onMove, { passive: true })
-        el.addEventListener('touchend', onEnd)
-        el.addEventListener('touchcancel', onEnd)
-        cleanup(() => {
-            el.removeEventListener('touchstart', onStart)
-            el.removeEventListener('touchmove', onMove)
-            el.removeEventListener('touchend', onEnd)
-            el.removeEventListener('touchcancel', onEnd)
-        })
-    })
-}
 
 /**
  * `x-focus-trap="<openExpression>"` — accessibility for a mobile bottom sheet.
@@ -1186,7 +1125,7 @@ const registerWireCoreDropdown = () => {
     // The searchable-select combobox is core's because seven surfaces across
     // forms and table include `wire-core::partials.searchable-select`.
     window.Alpine.data('wireSearchableSelect', wireSearchableSelect)
-    registerSheetDismiss(window.Alpine)
+    registerSheetGesture(window.Alpine)
     registerFocusTrap(window.Alpine)
     registerScrollLock(window.Alpine)
 }

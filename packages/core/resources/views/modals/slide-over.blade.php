@@ -57,7 +57,7 @@
         x-transition:leave="ease-in duration-200"
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
-        class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
+        data-sheet-backdrop class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
         @if($closeOnClickAway) @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
     ></div>
 
@@ -75,7 +75,7 @@
         >
             <div class="flex flex-col bg-white dark:bg-gray-800 shadow-xl {{ $style->panelClasses() }}">
                 @if($style->hasGrabber())
-                    @include('wire-core::partials.sheet-grabber', ['dismiss' => 'show = false; '.($closeAction ? '$wire.'.$closeAction.'()' : ''), 'breakpoint' => $style->breakpoint(), 'class' => 'shrink-0'])
+                    @include('wire-core::partials.sheet-grabber', ['dismiss' => 'show = false; '.($closeAction ? '$wire.'.$closeAction.'()' : ''), 'breakpoint' => $style->breakpoint(), 'detents' => 'large', 'class' => 'shrink-0'])
                 @endif
                 {{-- Header --}}
                 <div @class([

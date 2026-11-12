@@ -60,7 +60,7 @@
             x-transition:leave="ease-in duration-200"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
+            data-sheet-backdrop class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
             @if($closeOnClickAway) @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
         ></div>
 
@@ -84,7 +84,7 @@
             ])
         >
             @if($style->hasGrabber())
-                @include('wire-core::partials.sheet-grabber', ['dismiss' => 'show = false; '.($closeAction ? '$wire.'.$closeAction.'()' : ''), 'breakpoint' => $style->breakpoint(), 'class' => '-mt-3 mb-1'])
+                @include('wire-core::partials.sheet-grabber', ['dismiss' => 'show = false; '.($closeAction ? '$wire.'.$closeAction.'()' : ''), 'breakpoint' => $style->breakpoint(), 'detents' => 'large', 'class' => '-mt-3 mb-1'])
             @endif
             <div class="sm:flex sm:items-start">
                 {{-- Icon --}}

@@ -31,6 +31,12 @@ All notable changes to the Wire ecosystem will be documented in this file.
   presets as chips) — in the header, the column popover and the filter panel alike, instead of the browser's
   date inputs. `DateRangePicker::rememberPreset()` writes the picked preset's key beside the two ends, which
   is how a filter keeps "last 7 days" relative.
+- **Sheets move like iOS sheets.** One gesture for every sheet (`x-sheet-dismiss`, now `sheet.js`): grabbed
+  anywhere in its top 56px; a list taller than half the screen opens at a medium height and is pulled up to
+  92 % (`data-sheet-detents`), settling back on medium before it closes; a drag down on a list scrolled to
+  its top moves the sheet; it rubber-bands past its largest height, the backdrop fades with the pull, and
+  it rises above the iOS keyboard. A sheet keeps at least 1rem below its last row, and a list in one is
+  inset from the screen's rounded corners.
 - **A select in a column popover opens the touch list on a phone** — full height, with search — instead of
   a dropdown floating over the sheet it was opened from.
 - **Filter from a cell.** `Table::cellFilterMenu()`: right-click a cell of a filterable column for "Only

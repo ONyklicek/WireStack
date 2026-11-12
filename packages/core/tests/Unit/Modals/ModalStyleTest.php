@@ -111,8 +111,8 @@ it('gives a bottom sheet a grabber, a safe-area footer and a dynamic-viewport ca
 
     expect($s->hasGrabber())->toBeTrue()
         ->and($s->breakpoint())->toBe('md')
-        ->and($s->footerSafeAreaClass())->toBe('max-md:pb-[calc(1rem_+_env(safe-area-inset-bottom))]')
-        ->and($s->panelVariantClasses())->toContain('max-h-[92dvh]')->not->toContain('85vh');
+        ->and($s->footerSafeAreaClass())->toBe('max-md:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]')
+        ->and($s->panelVariantClasses())->toContain('max-h-[var(--wire-sheet-h,92dvh)]')->not->toContain('85vh');
 });
 
 it('keeps a full-screen panel clear of the status bar', function () {
@@ -120,5 +120,5 @@ it('keeps a full-screen panel clear of the status bar', function () {
 
     expect($s->panelVariantClasses())->toContain('max-sm:pt-[env(safe-area-inset-top)]')->toContain('min-h-[100dvh]')
         ->and($s->hasGrabber())->toBeFalse()
-        ->and($s->footerSafeAreaClass())->toBe('max-sm:pb-[calc(1rem_+_env(safe-area-inset-bottom))]');
+        ->and($s->footerSafeAreaClass())->toBe('max-sm:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]');
 });

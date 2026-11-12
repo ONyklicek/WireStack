@@ -119,9 +119,22 @@ The breakpoint is `->mobileBreakpoint()`, else `wire-core.mobile.breakpoint`
 **What the sheet and the full screen do:**
 
 - **The body scrolls inside the panel**, so the footer buttons stay on screen.
-- **A sheet carries a grabber** and closes when pulled down past ~90px, or
-  flicked — 40px at more than half a pixel per millisecond — the way a native
-  sheet reads a throw. A shorter, slower pull snaps back.
+- **A sheet moves like an iOS sheet.** Every sheet — a dialog, a select, a
+  picker, a filter panel — shares one gesture (`x-sheet-dismiss`):
+  - it is grabbed by the grabber *or* anywhere in its top 56px;
+  - pulled down past ~90px, or flicked (40px at more than half a pixel per
+    millisecond), it closes; a shorter, slower pull springs back;
+  - a list opens at the **medium** height (about 56 % of the screen) when it is
+    taller than that, and is pulled up to the **large** one (92 %); pulled down
+    from large it settles on medium first. A dialog has the large height only;
+  - on a list scrolled to its top, a drag down moves the sheet instead of the
+    list — the hand-off iOS does;
+  - past the largest height it rubber-bands, and the backdrop fades as the
+    sheet goes down;
+  - with the keyboard up, the sheet is lifted above it (`visualViewport`).
+- **Nothing sits in the rounded corners.** A sheet keeps at least 1rem below its
+  last row even where the safe area is zero, and a list inside one is inset from
+  the screen edges with rounded rows.
 - **Heights use `dvh`**, not `vh`: on a phone `vh` is the viewport with the
   browser's toolbars hidden, and a `85vh` sheet put its own footer under
   Safari's bottom bar. A sheet is at most `92dvh` high.

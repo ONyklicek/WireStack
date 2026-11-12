@@ -118,9 +118,21 @@ Breakpoint je `->mobileBreakpoint()`, jinak `wire-core.mobile.breakpoint`
 
 - **Tělo se scrolluje uvnitř panelu**, takže tlačítka patičky zůstanou na
   obrazovce.
-- **Sheet nese úchyt** a zavře se, když ho stáhnete dolů o víc než ~90px, nebo
-  švihnete — 40px rychlostí přes půl pixelu za milisekundu — tak, jak hod čte
-  nativní sheet. Kratší, pomalejší tah se vrátí zpět.
+- **Sheet se chová jako sheet v iOS.** Všechny sheety — dialog, select, picker,
+  panel filtrů — sdílí jedno gesto (`x-sheet-dismiss`):
+  - chytá se za úchyt *nebo* kdekoli v horních 56px;
+  - stažený dolů o víc než ~90px, nebo švihnutý (40px rychlostí přes půl pixelu
+    za milisekundu), se zavře; kratší, pomalejší tah se vrátí zpět;
+  - seznam vyšší než střední výška se otevře na **střední** výšce (asi 56 %
+    obrazovky) a tahem nahoru se roztáhne na **velkou** (92 %); stažený
+    z velké se nejdřív zastaví na střední. Dialog má jen velkou výšku;
+  - u seznamu odrolovaného úplně nahoru tah dolů pohne sheetem místo seznamu —
+    stejné předání jako v iOS;
+  - nad největší výškou pruží a pozadí s tahem dolů bledne;
+  - s otevřenou klávesnicí se sheet zvedne nad ni (`visualViewport`).
+- **Nic nezapadne do kulatých rohů.** Sheet drží pod posledním řádkem nejméně
+  1rem i tam, kde je bezpečná oblast nulová, a seznam v něm je odsazený od
+  okrajů obrazovky se zaoblenými řádky.
 - **Výšky používají `dvh`**, ne `vh`: na telefonu je `vh` viewport se skrytými
   lištami prohlížeče a sheet s `85vh` dal svou patičku pod spodní lištu Safari.
   Sheet je vysoký nejvýše `92dvh`.
