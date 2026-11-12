@@ -21,6 +21,11 @@
  *   top moves the sheet instead, as on iOS.
  * - **Rubber band** past the largest detent, and the backdrop
  *   (`[data-sheet-backdrop]` beside the panel) fades as the sheet goes down.
+ * - **A search keeps the sheet still.** A sheet holding a search field
+ *   (`[data-sheet-search]`) opens at the large height and keeps it — fixed,
+ *   not "up to" — so the list does not jump as the results narrow, and there
+ *   is room for them above the keyboard the search brings up. The field stays
+ *   pinned under the grabber while the list scrolls.
  * - **Keyboard.** iOS Safari lays the keyboard over the page; while a sheet is
  *   open it is lifted by the part of the layout viewport the keyboard covers
  *   (`visualViewport`), so a search field at its top stays visible.
@@ -37,7 +42,10 @@ export const registerSheetGesture = (Alpine) => {
         const panel = el.parentElement
         if (! panel) return
 
-        const detents = (el.dataset.sheetDetents || 'medium,large').split(',').map((d) => d.trim())
+        const declared = (el.dataset.sheetDetents || 'medium,large').split(',').map((d) => d.trim())
+        const hasSearch = () => !! panel.querySelector('[data-sheet-search]')
+        // A searchable list has the large height only; see the header comment.
+        let detents = declared
         const isMobile = () => window.matchMedia(`(max-width: ${parseFloat(el.dataset.sheetBp) || 639.98}px)`).matches
         const backdrop = () => panel.parentElement?.querySelector(':scope > [data-sheet-backdrop]')
             ?? panel.closest('[data-sheet-root]')?.querySelector('[data-sheet-backdrop]')
@@ -57,7 +65,10 @@ export const registerSheetGesture = (Alpine) => {
             if (! isMobile()) return
             panel.style.transform = ''
             panel.style.transition = ''
+            detents = hasSearch() ? ['large'] : declared
             applyDetent(detents[0])
+            // Fixed rather than capped: a narrowing search must not shrink it.
+            panel.style.height = hasSearch() ? 'var(--wire-sheet-h)' : ''
         }
         const shown = new MutationObserver(() => {
             if (getComputedStyle(panel).display !== 'none' && ! panel._wireSheetShown) {
@@ -67,6 +78,7 @@ export const registerSheetGesture = (Alpine) => {
             } else if (getComputedStyle(panel).display === 'none') {
                 panel._wireSheetShown = false
                 panel.style.bottom = ''
+                panel.style.height = ''
             }
         })
         shown.observe(panel, { attributes: true, attributeFilter: ['style', 'class'] })

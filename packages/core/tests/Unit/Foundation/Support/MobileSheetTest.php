@@ -78,3 +78,9 @@ it('insets a sheet list from the screen edges, with rounded rows', function () {
         ->and(MobileSheet::listInset('md'))->toStartWith('max-md:px-2')
         ->and(MobileSheet::listInset('lg'))->toStartWith('max-lg:px-2');
 });
+
+it('pins a sheet\'s search under the grabber', function () {
+    expect(MobileSheet::stickySearch())->toBe('max-sm:sticky max-sm:top-5 max-sm:z-10 max-sm:bg-inherit')
+        ->and(MobileSheet::stickySearch('md'))->toStartWith('max-md:sticky')
+        ->and(MobileSheet::stickySearch('lg'))->toStartWith('max-lg:sticky');
+});

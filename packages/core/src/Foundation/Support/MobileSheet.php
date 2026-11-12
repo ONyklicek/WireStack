@@ -131,6 +131,19 @@ final class MobileSheet
     }
 
     /**
+     * A search field inside a sheet, pinned under the grabber (which is itself
+     * pinned at the top) while the list below it scrolls.
+     */
+    public static function stickySearch(?string $breakpoint = null): string
+    {
+        return match (self::breakpoint($breakpoint)) {
+            'md' => 'max-md:sticky max-md:top-5 max-md:z-10 max-md:bg-inherit',
+            'lg' => 'max-lg:sticky max-lg:top-5 max-lg:z-10 max-lg:bg-inherit',
+            default => 'max-sm:sticky max-sm:top-5 max-sm:z-10 max-sm:bg-inherit',
+        };
+    }
+
+    /**
      * A list inside a sheet, inset from the screen edges with rounded rows — a
      * full-bleed highlight runs into a phone's rounded corners at the bottom.
      */

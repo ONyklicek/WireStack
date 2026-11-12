@@ -85,6 +85,39 @@ const drag = async (page, x, from, to, { steps = 12, pause = 25 } = {}) => {
   }
 }
 
+// ── A list with a search ──────────────────────────────────────────────────
+{
+  const p = await openPage({ url: `${origin}/previews/field-select-long-search`, shotPrefix: 'sheet-detents-search', width: 390, height: 844, mobile: true });
+  const { eval_, waitFor } = p;
+  const panel = `[...document.querySelectorAll('[x-sheet-dismiss]')].map((g) => g.parentElement).find((e) => getComputedStyle(e).display !== 'none')`;
+  const height = `Math.round((${panel}).getBoundingClientRect().height)`;
+
+  try {
+    await eval_(`[...document.querySelectorAll('[data-testid=select-trigger]')].find((e) => e.offsetParent).click()`);
+    await waitFor(`!! (${panel})`);
+    await sleep(500);
+    const opened = await eval_(height);
+    check('a searchable list opens at the large height', opened > 844 * 0.88, `${opened}px`);
+
+    await eval_(`(() => { const i = (${panel}).querySelector('[data-sheet-search] input'); i.value = 'an'; i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await sleep(800);
+    check('and keeps it as the results narrow', (await eval_(height)) === opened, `${await eval_(height)}px`);
+
+    await eval_(`(() => { const i = (${panel}).querySelector('[data-sheet-search] input'); i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await sleep(800);
+    await eval_(`(${panel}).scrollTop = 400`);
+    await sleep(300);
+    const pinned = await eval_(`Math.round((${panel}).querySelector('[data-sheet-search]').getBoundingClientRect().top - (${panel}).getBoundingClientRect().top)`);
+    check('the search stays pinned under the grabber while the list scrolls', pinned > 0 && pinned < 40, `${pinned}px from the top`);
+  } catch (error) {
+    check('search pass ran to completion', false, error.message);
+  } finally {
+    errors.push(...p.consoleErrors);
+    bad.push(...p.badResponses);
+    await p.close();
+  }
+}
+
 // ── A dialog sheet ────────────────────────────────────────────────────────
 {
   const p = await openPage({ url: `${origin}/previews/table-modal-form`, shotPrefix: 'sheet-detents-dialog', width: 390, height: 844, mobile: true });

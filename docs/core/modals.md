@@ -131,7 +131,9 @@ The breakpoint is `->mobileBreakpoint()`, else `wire-core.mobile.breakpoint`
     list — the hand-off iOS does;
   - past the largest height it rubber-bands, and the backdrop fades as the
     sheet goes down;
-  - with the keyboard up, the sheet is lifted above it (`visualViewport`).
+  - with the keyboard up, the sheet is lifted above it (`visualViewport`);
+  - a sheet with a search opens at the large height and keeps it while the
+    results narrow, with the search pinned under the grabber.
 - **Nothing sits in the rounded corners.** A sheet keeps at least 1rem below its
   last row even where the safe area is zero, and a list inside one is inset from
   the screen edges with rounded rows.

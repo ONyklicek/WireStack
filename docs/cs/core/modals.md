@@ -129,7 +129,9 @@ Breakpoint je `->mobileBreakpoint()`, jinak `wire-core.mobile.breakpoint`
   - u seznamu odrolovaného úplně nahoru tah dolů pohne sheetem místo seznamu —
     stejné předání jako v iOS;
   - nad největší výškou pruží a pozadí s tahem dolů bledne;
-  - s otevřenou klávesnicí se sheet zvedne nad ni (`visualViewport`).
+  - s otevřenou klávesnicí se sheet zvedne nad ni (`visualViewport`);
+  - sheet s hledáním se otevře na velké výšce a drží ji, i když se výsledky
+    zužují; hledání zůstává připnuté pod úchytem.
 - **Nic nezapadne do kulatých rohů.** Sheet drží pod posledním řádkem nejméně
   1rem i tam, kde je bezpečná oblast nulová, a seznam v něm je odsazený od
   okrajů obrazovky se zaoblenými řádky.

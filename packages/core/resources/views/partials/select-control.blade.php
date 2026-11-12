@@ -242,7 +242,10 @@
             {{-- 16px below sm, as on the native twin: the input takes focus as the
                  list opens, and iOS Safari zooms the page into any control under
                  16px — on a phone the whole form looks pushed off the edge. --}}
-            <div class="p-2">
+            {{-- In a sheet the search stays pinned under the grabber while the list
+                 scrolls, and marks the sheet as searchable: it opens at the large
+                 height and keeps it as the results narrow (sheet.js). --}}
+            <div @if($sheetOnMobile) data-sheet-search @endif @class(['p-2', \NyonCode\WireCore\Foundation\Support\MobileSheet::stickySearch($mobileBreakpoint) => $sheetOnMobile])>
                 <input
                     type="text"
                     autocomplete="off"

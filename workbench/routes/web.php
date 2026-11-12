@@ -175,6 +175,7 @@ $fieldPreviews = [
     'markdown-editor' => 'Markdown Editor',
     'select' => 'Select',
     'select-long' => 'Select · a long list in a sheet (detents)',
+    'select-long-search' => 'Select · a long list with a search in a sheet',
     'select-floating' => 'Select · floating on mobile (opt-out)',
     'select-bp-lg' => 'Select · per-component breakpoint lg',
     'native-on-mobile' => 'Native control on a phone only',
