@@ -228,11 +228,10 @@ class QueryBuilderFilter extends Filter
      */
     protected function applyRule(Builder $query, array $rule): void
     {
+        // applyGroup() only hands over active rules, and a rule is active only
+        // on a field this user may see — the constraint is always there.
         $constraint = $this->getConstraint($rule['field']);
-
-        if ($constraint === null) {
-            return;
-        }
+        assert($constraint !== null);
 
         $state = ['value' => $rule['value'], 'operator' => $rule['operator']];
         $filter = $constraint->forState($state);

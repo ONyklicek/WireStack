@@ -422,9 +422,13 @@ class DateFilter extends Filter
             return parent::emptyState();
         }
 
-        return $this->hasPresets()
-            ? ['from' => null, 'to' => null, 'preset' => null]
-            : ['from' => null, 'to' => null];
+        $state = ['from' => null, 'to' => null];
+
+        if ($this->hasPresets()) {
+            $state['preset'] = null;
+        }
+
+        return $state;
     }
 
     public function wrapValue(mixed $value): mixed
