@@ -140,6 +140,18 @@ class TernaryFilter extends Filter
         ];
     }
 
+    /** "Only this value" on a yes/no cell is the matching option; there is nothing to exclude to. */
+    public function stateForCellValue(mixed $value, bool $exclude = false): mixed
+    {
+        $bool = $this->normalizeValue(is_bool($value) ? $value : (is_numeric($value) ? (int) $value : $value));
+
+        if ($exclude || ! is_bool($bool)) {
+            return null;
+        }
+
+        return $bool ? 'true' : 'false';
+    }
+
     public function inlineView(): string
     {
         return 'tables.columns.partials.filter-boolean';

@@ -47,6 +47,7 @@ use NyonCode\WireTable\Support\TableShortcutLegend;
 class Table implements Htmlable
 {
     use Concerns\CollapsesActionsOnMobile;
+    use Concerns\HasColumnFilterLayout;
     use Concerns\HasDataSource;
     use Concerns\HasGestures;
     use Concerns\HasGrouping;

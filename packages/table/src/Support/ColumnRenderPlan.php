@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Support;
 use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Contracts\ShowsTableColumns;
+use NyonCode\WireTable\Enums\ColumnFilterLayout;
 use NyonCode\WireTable\Table;
 
 /**
@@ -56,6 +57,10 @@ final class ColumnRenderPlan
         public readonly int $colSpan,
         public readonly array $toggleable,
         public readonly int $visibleToggleableCount,
+        // Whether the filterable columns carry a funnel that opens their filter
+        // in a popover (ColumnFilterLayout::Popover) — in which case there is no
+        // filter row, and $hasFilters is false.
+        public readonly bool $hasFilterPopovers,
         public readonly bool $hasToggles,
         public readonly array $mobileSortable,
         public readonly bool $hasMobileSort,
@@ -111,7 +116,9 @@ final class ColumnRenderPlan
             fillable: $fillable,
             isFillEnabled: $table->isFillHandleEnabled() && $fillable !== [],
             filterable: $filterable,
-            hasFilters: count($filterable) > 0,
+            // The filter ROW: absent when the filters open from the header instead.
+            hasFilters: count($filterable) > 0 && $table->getColumnFilterLayout() === ColumnFilterLayout::Row,
+            hasFilterPopovers: count($filterable) > 0 && $table->getColumnFilterLayout() === ColumnFilterLayout::Popover,
             subRow: $subRow,
             visibleSubRow: $visibleSubRow,
             // Whether any cell renders a copy button, and so whether the delegated

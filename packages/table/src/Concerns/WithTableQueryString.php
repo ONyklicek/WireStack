@@ -107,7 +107,9 @@ trait WithTableQueryString
         foreach ($this->queryStringableColumnFilters($table) as [$name, $filter]) {
             foreach ($filter->getQueryStringFields() as $field => $suffix) {
                 $entries[] = [
-                    'path' => $field === 'value' ? "columnFilters.{$name}" : "columnFilters.{$name}.{$field}",
+                    // …unless the filter offers operators: then the state is
+                    // {value, operator} and both live under their own keys.
+                    'path' => $field === 'value' && ! $filter->hasOperatorPicker() ? "columnFilters.{$name}" : "columnFilters.{$name}.{$field}",
                     'param' => $prefix.'col_'.$name.$suffix,
                     'except' => '',
                 ];
@@ -201,7 +203,7 @@ trait WithTableQueryString
                 }
 
                 // Single "value" field lives at the unwrapped root; ranges nest.
-                if ($field === 'value') {
+                if ($field === 'value' && ! $filter->hasOperatorPicker()) {
                     $columnFilters[$name] = $value;
                 } else {
                     $columnFilters[$name][$field] = $value;

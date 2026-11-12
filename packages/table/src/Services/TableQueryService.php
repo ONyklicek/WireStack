@@ -167,6 +167,8 @@ final class TableQueryService
                 continue;
             }
 
+            // The operator the user picked travels on a copy of the filter.
+            $filter = $filter->forState($raw);
             $value = $filter->extractValue($raw);
             if ($value === null || $value === '' || $value === []) {
                 continue;
@@ -178,7 +180,11 @@ final class TableQueryService
                 $subRowScopedFilters[] = ['filter' => $filter, 'value' => $value];
             } elseif ($filter->getQueryCallback() !== null
                 || $filter->bypassesPlanner()
-                || (is_array($value) && ! $filter->isMultiple())) {
+                || (is_array($value) && ! $filter->isMultiple())
+                // A comparison one planner clause cannot say ("does not
+                // contain" keeps NULLs, "is empty" has no value) — the filter
+                // constrains the query itself.
+                || $filter->toPlannerDefinitions($value) === []) {
                 // A custom ->query() callback, a multi-field filter (NumberRange,
                 // DateFilter range) or a constraint the planner can't express.
                 // All route through the filter's own apply(), the single owner of
@@ -372,16 +378,18 @@ final class TableQueryService
             if (! $column->isFilterable()) {
                 continue;
             }
-            $value = $columnFilterValues[$column->getName()] ?? null;
+            $raw = $columnFilterValues[$column->getName()] ?? null;
+            $filter = $column->getFilter()?->forState($raw);
+            $value = $filter?->extractValue($raw);
             if ($value === null || $value === '' || $value === []) {
                 continue;
             }
             // Skip filters already expressed in the plan.
-            if ($column->getFilter()?->toPlannerDefinitions($value) !== []) {
+            if ($filter?->toPlannerDefinitions($value) !== []) {
                 continue;
             }
 
-            $query = $column->applyFilter($query, $value);
+            $query = $column->applyFilter($query, $raw);
         }
 
         // ── 5.9 Give the ordering a tiebreaker ──
@@ -457,6 +465,7 @@ final class TableQueryService
             // Emptiness is asked of the extracted value, not the raw state: a
             // DateFilter's untouched state is ['from' => null, 'to' => null],
             // and a filter nobody set must cost nothing, whatever it maps to.
+            $filter = $filter->forState($raw);
             $value = $filter->extractValue($raw);
 
             if ($value === null || $value === '' || $value === [] || (is_array($value) && array_filter($value, static fn ($v): bool => $v !== null && $v !== '') === [])) {
@@ -706,6 +715,7 @@ final class TableQueryService
                 continue;
             }
 
+            $filter = $filter->forState($raw);
             $value = $filter->extractValue($raw);
             if ($value === null || $value === '' || $value === []) {
                 continue;
@@ -746,7 +756,9 @@ final class TableQueryService
                 continue;
             }
 
-            $value = $columnFilterValues[$column->getName()] ?? null;
+            $raw = $columnFilterValues[$column->getName()] ?? null;
+            $filter = $filter->forState($raw);
+            $value = $filter->extractValue($raw);
             if ($value === null || $value === '' || $value === []) {
                 continue;
             }

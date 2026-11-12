@@ -167,6 +167,18 @@ class NumberRangeFilter extends Filter
         return $value;
     }
 
+    /** "Only this value" on a number cell is a range of one number. */
+    public function stateForCellValue(mixed $value, bool $exclude = false): mixed
+    {
+        return $exclude || ! is_numeric($value) ? null : ['min' => (string) $value, 'max' => (string) $value];
+    }
+
+    /** Both bounds exist from the start: the controls bind into them. */
+    public function emptyState(): mixed
+    {
+        return ['min' => null, 'max' => null];
+    }
+
     public function getQueryStringFields(): array
     {
         return ['min' => '_min', 'max' => '_max'];

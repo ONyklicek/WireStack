@@ -5,10 +5,23 @@
 @php
     $name = $filter->getName();
     $label = $filter->getLabel();
+    // With a choice of comparison the operator sits above the value, and an
+    // operator that takes none ("is empty") leaves the value out entirely.
+    $hasPicker = $filter->hasOperatorPicker();
+    $showsValue = ! $hasPicker || $filter->operatorFromState($value)->requiresValue();
 @endphp
 
 <div class="flex flex-col gap-1">
     <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $label }}</span>
+    @if($hasPicker)
+        @include('wire-table::tables.filters.partials.operator-select', [
+            'raw' => $value,
+            'statePath' => 'tableState.filters.'.$name,
+            'controlId' => 'filter-'.$name.'-operator',
+            'label' => $label,
+        ])
+    @endif
+    @if($showsValue)
     <div class="flex gap-2">
         @foreach ($filter->getFormFields() as $field)
             @php
@@ -36,4 +49,5 @@
             </div>
         @endforeach
     </div>
+    @endif
 </div>

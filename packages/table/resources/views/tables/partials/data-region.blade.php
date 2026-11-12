@@ -130,6 +130,15 @@
     $isFillEnabled = $plan->columns()->isFillEnabled;
     $filterableColumns = $plan->columns()->filterable;
     $hasColumnFilters = $plan->columns()->hasFilters;
+    $hasFilterPopovers = $plan->columns()->hasFilterPopovers;
+    $cellFilterMenu = $table->hasCellFilterMenu() && $plan->columns()->filterable !== [];
+    // The popovers are sheets on a phone, like every other floating panel.
+    $sheetOnMobile = $plan->layout()->sheetOnMobile;
+    $sheetBp = $plan->layout()->sheetBreakpoint;
+    $sheetBpPx = $plan->layout()->sheetBreakpointPx;
+    $sheetPanel = $plan->layout()->sheetPanel;
+    $sheetMotion = $plan->layout()->sheetMotion;
+    $sheetBackdrop = $plan->layout()->sheetBackdrop;
     $subRowColumns = $plan->columns()->subRow;
     $visibleSubRowColumns = $plan->columns()->visibleSubRow;
     $colSpan = $plan->columns()->colSpan;
@@ -233,6 +242,9 @@
                              data-fill-max="{{ $table->getFillMaxRecords() }}"
                          @endif
                     >
+                        @if($hasVisibleColumns && $cellFilterMenu)
+                            @include('wire-table::tables.partials.cell-filter-menu')
+                        @endif
                         @if($hasVisibleColumns)
                             <table
                                     @if($tableRole)
@@ -318,6 +330,7 @@
                                                 class="{{ $headerPadding }} {{ $hm['alignment'] }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $hm['responsive'] }}"
                                                 @if($hm['widthStyles']) style="{{ $hm['widthStyles'] }}" @endif
                                                 @if($hm['extraHeader']) {!! $hm['extraHeader'] !!} @endif
+                                                @if($cellFilterMenu && $column->isFilterable()) data-cell-filter="{{ $column->getFilter()->canExcludeCellValue() ? 'exclude' : 'only' }}" @endif
                                         >
                                             @if($column->isSortable() && $table->isSortable())
                                                 <button
@@ -347,6 +360,13 @@
                                                 </button>
                                             @else
                                                 {{ $column->getLabel() }}
+                                            @endif
+                                            @if($hasFilterPopovers && $column->isFilterable())
+                                                @include('wire-table::tables.partials.column-filter-popover', [
+                                                    'column' => $column,
+                                                    'value' => $columnFilterValues[$column->getName()] ?? null,
+                                                    'isFiltered' => array_key_exists($column->getName(), $activeColumnFilters),
+                                                ])
                                             @endif
                                         </th>
                                     @endforeach

@@ -66,6 +66,16 @@ return [
         | over this.
         */
         'inactive_rows' => null,
+
+        /*
+        | Where a column's header filter lives. 'row' (the default) draws a
+        | second header row with every filter always open; 'popover' puts a
+        | funnel beside each filterable column's label that opens the filter —
+        | the operator picker, the value and "Clear" — in a panel of its own (a
+        | bottom sheet on a phone), and marks the column while it is filtered.
+        | Per table: Table::columnFilterLayout(ColumnFilterLayout::Popover).
+        */
+        'column_filter_layout' => env('WIRE_TABLE_COLUMN_FILTER_LAYOUT', 'row'),
     ],
 
     /*

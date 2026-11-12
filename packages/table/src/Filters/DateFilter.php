@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Filters;
 
+use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,7 @@ use Illuminate\Support\Carbon;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Support\DateBoundary;
 use NyonCode\WireForms\Components\DateTimePicker;
+use NyonCode\WireTable\Enums\DatePreset;
 
 class DateFilter extends Filter
 {
@@ -25,6 +27,16 @@ class DateFilter extends Filter
     protected ?string $fromLabel = null;
 
     protected ?string $toLabel = null;
+
+    /**
+     * The named ranges offered beside the dates; empty for none.
+     *
+     * @var list<DatePreset>
+     */
+    protected array $presets = [];
+
+    /** The timezone "today" is read in; null is the application's. */
+    protected ?string $timezone = null;
 
     /** Filter by a from/to date range instead of a single date. */
     public function range(bool $range = true): static
@@ -141,6 +153,75 @@ class DateFilter extends Filter
      * @param  Builder<Model>  $query
      * @return Builder<Model>
      */
+    /**
+     * Offer named ranges — today, last 7 days, this month… — beside the dates
+     * (range mode only; turns range on). `true` offers them all, a list offers
+     * those. What is stored is the name, so a saved view stays relative.
+     *
+     * @param  array<int, DatePreset|string>|bool  $presets
+     */
+    public function presets(array|bool $presets = true): static
+    {
+        $this->presets = match (true) {
+            $presets === true => DatePreset::cases(),
+            $presets === false => [],
+            default => array_values(array_filter(array_map(
+                static fn (DatePreset|string $preset): ?DatePreset => $preset instanceof DatePreset ? $preset : DatePreset::tryFrom($preset),
+                $presets,
+            ))),
+        };
+
+        if ($this->presets !== []) {
+            $this->range = true;
+        }
+
+        return $this;
+    }
+
+    /** @return list<DatePreset> */
+    public function getPresets(): array
+    {
+        return $this->presets;
+    }
+
+    public function hasPresets(): bool
+    {
+        return $this->presets !== [];
+    }
+
+    /** The timezone a preset's "today" is read in (defaults to the application's). */
+    public function timezone(?string $timezone): static
+    {
+        $this->timezone = $timezone;
+
+        return $this;
+    }
+
+    /** The preset the state names, if this filter offers it. */
+    public function presetFromState(mixed $value): ?DatePreset
+    {
+        $preset = is_array($value) && is_string($value['preset'] ?? null) ? DatePreset::tryFrom($value['preset']) : null;
+
+        return $preset !== null && in_array($preset, $this->presets, true) ? $preset : null;
+    }
+
+    /**
+     * The dates a range state covers: a preset's, worked out now, or the
+     * from/to typed in.
+     *
+     * @return array{from: mixed, to: mixed}
+     */
+    public function resolveRange(mixed $value): array
+    {
+        $preset = $this->presetFromState($value);
+
+        if ($preset !== null) {
+            return $preset->range(CarbonImmutable::now($this->timezone ?? config('app.timezone')));
+        }
+
+        return ['from' => $value['from'] ?? null, 'to' => $value['to'] ?? null];
+    }
+
     public function apply(Builder $query, mixed $value): Builder
     {
         if ($value === null || $value === '' || $value === []) {
@@ -158,11 +239,13 @@ class DateFilter extends Filter
         }
 
         if ($this->range && is_array($value)) {
-            if (! empty($value['from'])) {
-                $query->whereDate($column, '>=', $value['from']);
+            $range = $this->resolveRange($value);
+
+            if (! empty($range['from'])) {
+                $query->whereDate($column, '>=', $range['from']);
             }
-            if (! empty($value['to'])) {
-                $query->whereDate($column, '<=', $value['to']);
+            if (! empty($range['to'])) {
+                $query->whereDate($column, '<=', $range['to']);
             }
 
             return $query;
@@ -200,6 +283,12 @@ class DateFilter extends Filter
     public function toPlannerDefinitions(mixed $value): array
     {
         return [];
+    }
+
+    /** A range with presets draws the preset picker in the panel as well as in the header. */
+    protected function filterView(): string
+    {
+        return $this->range && $this->hasPresets() ? 'tables.filters.date-range' : parent::filterView();
     }
 
     public function inlineView(): string
@@ -243,6 +332,36 @@ class DateFilter extends Filter
         ];
     }
 
+    /** "Only this value" on a date cell is that day; a day cannot be excluded. */
+    public function stateForCellValue(mixed $value, bool $exclude = false): mixed
+    {
+        if ($exclude || $value === null || $value === '' || $this->monthMode) {
+            return null;
+        }
+
+        try {
+            $day = Carbon::parse($value instanceof DateTimeInterface ? $value->format('Y-m-d H:i:s') : (string) $value)->format('Y-m-d');
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $this->range
+            ? array_merge((array) $this->emptyState(), ['from' => $day, 'to' => $day])
+            : $day;
+    }
+
+    /** A range binds from/to (and preset), so all of them exist from the start. */
+    public function emptyState(): mixed
+    {
+        if (! $this->range || $this->monthMode) {
+            return parent::emptyState();
+        }
+
+        return $this->hasPresets()
+            ? ['from' => null, 'to' => null, 'preset' => null]
+            : ['from' => null, 'to' => null];
+    }
+
     public function wrapValue(mixed $value): mixed
     {
         if ($this->range) {
@@ -255,7 +374,9 @@ class DateFilter extends Filter
     public function getQueryStringFields(): array
     {
         if ($this->range) {
-            return ['from' => '_from', 'to' => '_to'];
+            return $this->hasPresets()
+                ? ['from' => '_from', 'to' => '_to', 'preset' => '_preset']
+                : ['from' => '_from', 'to' => '_to'];
         }
 
         return parent::getQueryStringFields();
@@ -267,6 +388,10 @@ class DateFilter extends Filter
      */
     protected function getIndicatorValueLabel(mixed $value): ?string
     {
+        if ($this->range && is_array($value) && ($preset = $this->presetFromState($value)) !== null) {
+            return $preset->label();
+        }
+
         if ($this->range && is_array($value)) {
             $from = ! empty($value['from']) ? (string) $value['from'] : null;
             $to = ! empty($value['to']) ? (string) $value['to'] : null;

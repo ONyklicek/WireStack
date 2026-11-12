@@ -30,6 +30,7 @@ use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Columns\ToggleColumn;
 use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Enums\ColumnFilterLayout;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Filters\TrashedFilter;
 use NyonCode\WireTable\Support\InactiveRow;
@@ -151,6 +152,10 @@ class TablePreview extends Component
 
         if ($this->variant === 'column-filters') {
             return $this->columnFiltersTable($table);
+        }
+
+        if ($this->variant === 'column-filters-popover') {
+            return $this->columnFiltersPopoverTable($table);
         }
 
         if ($this->variant === 'split-columns') {
@@ -469,6 +474,46 @@ class TablePreview extends Component
             ])
             ->searchable(false)
             ->paginated(false);
+    }
+
+    /**
+     * ColumnFilterLayout::Popover: a funnel per filterable column, the filter in
+     * a panel of its own, with the operator picker on the text and role filters.
+     */
+    private function columnFiltersPopoverTable(Table $table): Table
+    {
+        return $this->columnFiltersTable($table)
+            ->columnFilterLayout(ColumnFilterLayout::Popover)
+            ->cellFilterMenu()
+            ->columns([
+                TextColumn::make('name')->label('Name')->sortable()
+                    ->filterable()
+                    ->filterOperators(),
+                TextColumn::make('email')->label('Email')
+                    ->filterable()
+                    ->filterOperators(['contains', 'not_contains', 'ends_with', 'is_empty', 'is_not_empty']),
+                BadgeColumn::make('role')
+                    ->label('Role')
+                    ->colors([
+                        'admin' => 'primary',
+                        'manager' => 'info',
+                        'editor' => 'warning',
+                        'viewer' => 'gray',
+                    ])
+                    ->filterAsMultiSelect([
+                        'admin' => 'Administrator',
+                        'manager' => 'Manager',
+                        'editor' => 'Editor',
+                        'viewer' => 'Viewer',
+                    ], 'Any role')
+                    ->filterOperators()
+                    ->filterWithCounts(),
+                BooleanColumn::make('is_active')->label('Active')
+                    ->filterAsBoolean('Active', 'Inactive'),
+                TextColumn::make('created_at')->label('Joined')
+                    ->date()
+                    ->filterPresets(),
+            ]);
     }
 
     private function columnFiltersTable(Table $table): Table

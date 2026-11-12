@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Support;
 
+use NyonCode\WireTable\Enums\FilterOperator;
 use NyonCode\WireTable\Table;
 
 /**
@@ -78,6 +79,16 @@ final class TableQueryState
      */
     private static function holdsValue(mixed $value): bool
     {
+        // A filter with an operator picker always carries its operator; that
+        // alone is a setting, not a filter. Only "is empty" / "is not empty"
+        // narrow the rows with no value beside them.
+        if (is_array($value) && is_string($value['operator'] ?? null)) {
+            $operator = FilterOperator::resolve($value['operator']);
+
+            return ($operator !== null && ! $operator->requiresValue())
+                || self::holdsValue($value['value'] ?? null);
+        }
+
         if (is_array($value)) {
             foreach ($value as $inner) {
                 if (self::holdsValue($inner)) {

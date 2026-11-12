@@ -91,7 +91,7 @@ final class TableStateSchema
             Arr::set(
                 $state,
                 'columnFilters.'.$column->getName(),
-                $column->filterExpectsArray() ? [] : null,
+                $column->initialFilterState(),
             );
         }
 
@@ -107,7 +107,7 @@ final class TableStateSchema
                 Arr::set(
                     $state,
                     'rows.subRowFilters.'.$column->getName(),
-                    $column->filterExpectsArray() ? [] : null,
+                    $column->initialFilterState(),
                 );
             }
         }

@@ -24,11 +24,20 @@
     {{-- Combobox, native <select>, or both split at the mobile breakpoint —
          the canonical core owner, shared with the forms Select. Non-searchable
          filters use the same combobox without the search input. --}}
+    @if($filter->hasOperatorPicker())
+        @include('wire-table::tables.filters.partials.operator-select', [
+            'raw' => $value,
+            'statePath' => 'tableState.filters.'.$name,
+            'controlId' => 'filter-'.$name.'-operator',
+            'label' => $label,
+        ])
+    @endif
+    @if(! $filter->hasOperatorPicker() || $filter->operatorFromState($value)->requiresValue())
     @include('wire-core::partials.select-control', [
         'nativeMode' => $filter->getNativeControlMode(),
         'selectId' => 'filter-' . $name,
         'statePath' => 'tableState.filters.' . $name . '.value',
-        'options' => $filter->getOptions(),
+        'options' => $filter->getDisplayOptions(),
         'placeholder' => $filter->getPlaceholder(),
         'multiple' => $filter->isMultiple(),
         'searchable' => $filter->isSearchable(),
@@ -44,4 +53,5 @@
         'ariaLabel' => $label,
         'testId' => 'filter-' . $name,
     ])
+    @endif
 </div>

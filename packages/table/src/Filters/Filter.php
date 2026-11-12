@@ -15,6 +15,7 @@ use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireTable\Enums\FilterOperator;
 
 /** @phpstan-consistent-constructor */
 class Filter implements Htmlable
@@ -79,6 +80,20 @@ class Filter implements Htmlable
      */
     protected bool $inline = false;
 
+    /**
+     * The comparisons the user may pick between, or null for none — the filter
+     * then compares the one way it always has. See {@see operators()}.
+     *
+     * @var list<FilterOperator>|null
+     */
+    protected ?array $operators = null;
+
+    /** The comparison a fresh filter starts on; null asks {@see defaultOperator()} of the subclass. */
+    protected ?FilterOperator $initialOperator = null;
+
+    /** The comparison read from the current state by {@see forState()}; null outside a query. */
+    protected ?FilterOperator $activeOperator = null;
+
     public function __construct(string $name)
     {
         $this->name = $name;
@@ -120,6 +135,120 @@ class Filter implements Htmlable
         $this->queryCallback = $callback;
 
         return $this;
+    }
+
+    /**
+     * Let the user choose how this filter compares: `true` offers every operator
+     * the filter type supports, a list offers those (enum cases or their values).
+     */
+    public function operators(array|bool $operators = true): static
+    {
+        if ($operators === false) {
+            $this->operators = null;
+
+            return $this;
+        }
+
+        $supported = $this->supportedOperators();
+        $wanted = $operators === true
+            ? $supported
+            : array_values(array_filter(array_map(FilterOperator::resolve(...), $operators)));
+
+        // Only what this filter type can actually do survives: a select filter
+        // asked for "starts with" has nothing to start with.
+        $this->operators = array_values(array_filter(
+            $wanted,
+            static fn (FilterOperator $operator): bool => in_array($operator, $supported, true),
+        ));
+
+        return $this;
+    }
+
+    /** The comparison the filter starts on before the user picks one. */
+    public function defaultOperator(FilterOperator|string $operator): static
+    {
+        $this->initialOperator = FilterOperator::resolve($operator);
+
+        return $this;
+    }
+
+    /**
+     * Every operator this filter type can apply. The base filter compares for
+     * equality only; the concrete filters widen it.
+     *
+     * @return list<FilterOperator>
+     */
+    public function supportedOperators(): array
+    {
+        return [];
+    }
+
+    /**
+     * The operators the user is offered — empty when the filter has no picker.
+     *
+     * @return list<FilterOperator>
+     */
+    public function getOperators(): array
+    {
+        return $this->operators ?? [];
+    }
+
+    /** Whether the filter draws an operator picker: there is more than one way to compare. */
+    public function hasOperatorPicker(): bool
+    {
+        return count($this->getOperators()) > 1;
+    }
+
+    /** The comparison used when the state names none (or one this filter does not offer). */
+    public function getDefaultOperator(): FilterOperator
+    {
+        $operator = $this->initialOperator ?? $this->baseOperator();
+        $offered = $this->getOperators();
+
+        return $offered === [] || in_array($operator, $offered, true) ? $operator : $offered[0];
+    }
+
+    /** The comparison a filter of this type makes when nobody chose one. */
+    protected function baseOperator(): FilterOperator
+    {
+        return $this->multiple ? FilterOperator::In : FilterOperator::Equals;
+    }
+
+    /**
+     * The operator the state asks for, if the filter offers it. A crafted URL or
+     * a stale saved view naming another one gets the default, never a comparison
+     * the developer did not offer.
+     */
+    public function operatorFromState(mixed $raw): FilterOperator
+    {
+        $requested = is_array($raw) ? FilterOperator::resolve(is_string($raw['operator'] ?? null) ? $raw['operator'] : null) : null;
+
+        return $requested !== null && in_array($requested, $this->getOperators(), true)
+            ? $requested
+            : $this->getDefaultOperator();
+    }
+
+    /**
+     * This filter as the given state configures it — a copy carrying the chosen
+     * operator, so the stored filter (shared by render and planning) is never
+     * changed by one request's state.
+     */
+    public function forState(mixed $raw): static
+    {
+        if (! $this->hasOperatorPicker()) {
+            return $this;
+        }
+
+        $copy = clone $this;
+        $copy->activeOperator = $this->operatorFromState($raw);
+
+        return $copy;
+    }
+
+    /** The comparison in force: the one {@see forState()} read, else the default. */
+    public function getActiveOperator(): FilterOperator
+    {
+        return $this->activeOperator ?? $this->getDefaultOperator();
     }
 
     /**
@@ -217,7 +346,10 @@ class Filter implements Htmlable
     public function getIndicator(mixed $raw): ?string
     {
         $value = $this->extractValue($raw);
-        $valueLabel = $this->getIndicatorValueLabel($value);
+        $operator = $this->hasOperatorPicker() ? $this->operatorFromState($raw) : null;
+        $valueLabel = $operator !== null && ! $operator->requiresValue()
+            ? ''
+            : $this->getIndicatorValueLabel($value);
 
         if ($valueLabel === null) {
             return null;
@@ -231,6 +363,12 @@ class Filter implements Htmlable
 
         if (is_string($this->indicator)) {
             return $this->indicator;
+        }
+
+        // With a picker the chip says how it compares — "Email: does not contain
+        // gmail", "Phone: is empty" — since "Email: gmail" would read as a match.
+        if ($operator !== null) {
+            return trim($this->getLabel().': '.$operator->label().' '.$valueLabel);
         }
 
         return $this->getLabel().': '.$valueLabel;
@@ -269,7 +407,9 @@ class Filter implements Htmlable
      */
     public function getQueryStringFields(): array
     {
-        return ['value' => ''];
+        return $this->hasOperatorPicker()
+            ? ['value' => '', 'operator' => '_op']
+            : ['value' => ''];
     }
 
     /**
@@ -440,6 +580,37 @@ class Filter implements Htmlable
     }
 
     /**
+     * Constrain the query by one comparison on this filter's column — the one
+     * place an operator meets a column, a relation or neither. Across a relation
+     * a negative operator means "no related record matches": `whereDoesntHave`
+     * with the positive comparison, never `whereHas` with the negative one,
+     * which keeps a parent that has one matching child and one other.
+     *
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
+    protected function applyOperator(Builder $query, FilterOperator $operator, mixed $value, bool $blankIsEmpty = false): Builder
+    {
+        if ($this->relation !== null) {
+            $attribute = (string) $this->getRelationshipAttribute();
+
+            if ($operator === FilterOperator::IsEmpty) {
+                return $query->whereDoesntHave($this->relation, static fn (Builder $q) => FilterOperator::IsNotEmpty->constrain($q, $attribute, null, $blankIsEmpty));
+            }
+
+            if ($operator->isNegative()) {
+                return $query->whereDoesntHave($this->relation, static fn (Builder $q) => $operator->positive()->constrain($q, $attribute, $value, $blankIsEmpty));
+            }
+
+            return $query->whereHas($this->relation, static fn (Builder $q) => $operator->constrain($q, $attribute, $value, $blankIsEmpty));
+        }
+
+        $operator->constrain($query, $this->getColumn(), $value, $blankIsEmpty);
+
+        return $query;
+    }
+
+    /**
      * @param  Builder<Model>  $query
      * @return Builder<Model>
      */
@@ -535,6 +706,13 @@ class Filter implements Htmlable
      */
     public function extractValue(mixed $raw): mixed
     {
+        // "is empty" / "is not empty" are complete without a value: the filter
+        // is on, and `true` is what says so to every emptiness check downstream.
+        if ($this->hasOperatorPicker() && is_array($raw) && array_key_exists('operator', $raw)
+            && ! $this->operatorFromState($raw)->requiresValue()) {
+            return true;
+        }
+
         if (is_array($raw) && array_key_exists('value', $raw)) {
             return $raw['value'];
         }
@@ -579,17 +757,71 @@ class Filter implements Htmlable
     }
 
     /**
+     * The header-filter state that keeps — or, with `$exclude`, drops — the
+     * records holding exactly `$value`: what "Only this value" / "Exclude this
+     * value" on a cell write. Null when this filter cannot say it (exclusion
+     * needs a negative operator on offer).
+     */
+    public function stateForCellValue(mixed $value, bool $exclude = false): mixed
+    {
+        if ($value === null || $value === '' || is_array($value)) {
+            return null;
+        }
+
+        $value = $value instanceof \BackedEnum ? $value->value : $value;
+
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $wanted = $this->multiple
+            ? ($exclude ? FilterOperator::NotIn : FilterOperator::In)
+            : ($exclude ? FilterOperator::NotEquals : FilterOperator::Equals);
+        $stored = $this->multiple ? [(string) $value] : (string) $value;
+
+        if ($this->hasOperatorPicker()) {
+            return in_array($wanted, $this->getOperators(), true)
+                ? ['value' => $stored, 'operator' => $wanted->value]
+                : null;
+        }
+
+        // Without a picker a filter can only keep a value, never drop it.
+        return $exclude ? null : $stored;
+    }
+
+    /** Whether "Exclude this value" can be offered: a negative operator is on the menu. */
+    public function canExcludeCellValue(): bool
+    {
+        return in_array($this->multiple ? FilterOperator::NotIn : FilterOperator::NotEquals, $this->getOperators(), true);
+    }
+
+    /**
+     * The state a header filter starts from and is cleared back to: `[]` for a
+     * multiple choice, null for one value. A filter whose control binds several
+     * keys (a range's from/to) answers with those keys present, because a
+     * binding into a key of null throws in the browser.
+     */
+    public function emptyState(): mixed
+    {
+        return $this->multiple ? [] : null;
+    }
+
+    /**
      * Inverse of extractValue(): wrap a default/programmatic value into the
      * state shape used by the form-field wire:model paths. Multi-field filters
      * override this since their state is already a keyed array.
      */
     public function wrapValue(mixed $value): mixed
     {
-        if (is_array($value) && array_key_exists('value', $value)) {
-            return $value;
+        $wrapped = is_array($value) && array_key_exists('value', $value) ? $value : ['value' => $value];
+
+        // A filter with a picker binds the operator beside the value, and the
+        // slot has to exist before the first render for the binding to hold.
+        if ($this->hasOperatorPicker() && ! array_key_exists('operator', $wrapped)) {
+            $wrapped['operator'] = $this->getDefaultOperator()->value;
         }
 
-        return ['value' => $value];
+        return $wrapped;
     }
 
     /**
