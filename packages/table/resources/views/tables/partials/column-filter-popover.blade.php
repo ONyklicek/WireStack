@@ -101,6 +101,7 @@
                 </div>
 
                 <div class="px-4 pb-4 pt-3">
+                    @php $column->getFilter()?->insideSheet($sheetOnMobile); @endphp
                     {!! $column->renderFilter($value) !!}
                 </div>
 

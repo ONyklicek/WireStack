@@ -147,6 +147,21 @@ Vlastní sada nahradí vestavěnou. Každá hodnota je cokoli, co umí naparsova
 Carbon. Na desktopu jsou období seznam vedle kalendáře s označeným platným, na
 telefonu čipy nad oběma pickery.
 
+Dvě data jsou pevné období; „posledních 7 dní“ ne. Aby se zachovalo, které období
+bylo vybráno, dejte každé předvolbě klíč jako třetí prvek a zavolejte
+`rememberPreset()`: klíč se zapíše do sousedního klíče stavu (výchozí `preset`)
+vedle obou konců a znovu se vymaže, když uživatel vybere dny ručně. Hostitel,
+který musí zachovat význam — uložený pohled tabulky, sdílený odkaz —, klíč přečte
+a data si znovu dopočítá. Takto je postavené `DateFilter::presets()` v tabulce.
+
+```php
+DateRangePicker::make('period')
+    ->from('from')
+    ->until('to')
+    ->presets(['Posledních 7 dní' => [now()->subDays(6), now(), 'last_7_days']])
+    ->rememberPreset()         // zapíše 'last_7_days' do sousedního klíče `preset`
+```
+
 ## Přístup k pickerům
 
 ```php
@@ -219,7 +234,8 @@ na to přes `configurePickers()`.
 ->minTime(string|Closure|null $time)        // denní okno, 'H:i' — oba konce, každý den
 ->maxTime(string|Closure|null $time)
 ->required(bool $condition = true)          // vyžaduje oba konce
-->presets(array $presets = [])              // ['popisek' => [od, do], …]; prázdné = vestavěná sada
+->presets(array $presets = [])              // ['popisek' => [od, do, ?klíč], …]; prázdné = vestavěná sada
+->rememberPreset(?string $name = 'preset')  // zapíše klíč vybrané předvolby do tohoto sousedního klíče stavu; null = nezapisuje
 ->configurePickers(?Closure $callback)      // fn (DateTimePicker $picker) => …, jednou za konec
 ```
 

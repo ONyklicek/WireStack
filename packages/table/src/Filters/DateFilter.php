@@ -9,8 +9,10 @@ use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\ViewErrorBag;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Support\DateBoundary;
+use NyonCode\WireForms\Components\DateRangePicker;
 use NyonCode\WireForms\Components\DateTimePicker;
 use NyonCode\WireTable\Enums\DatePreset;
 use NyonCode\WireTable\Enums\FilterOperator;
@@ -242,6 +244,82 @@ class DateFilter extends Filter
         return 'date';
     }
 
+    /**
+     * The calendar a single date is picked with — the forms DateTimePicker, the
+     * same control a form draws, bound straight to the filter's state path.
+     */
+    public function dateControl(string $statePath): DateTimePicker
+    {
+        $split = (int) strrpos($statePath, '.');
+
+        $picker = DateTimePicker::make(substr($statePath, $split + 1))
+            ->asDate()
+            ->label($this->getLabel())
+            ->hiddenLabel()
+            ->placeholder($this->getPlaceholder())
+            ->minDate($this->minDate)
+            ->maxDate($this->maxDate)
+            ->statePath(substr($statePath, 0, $split))
+            ->live();
+
+        $livewire = app('livewire')->current();
+        if ($livewire !== null) {
+            $picker->livewire($livewire);
+        }
+
+        return $picker;
+    }
+
+    /**
+     * The calendar a range is picked with — the forms DateRangePicker: one box,
+     * two months side by side, the presets beside them; on a phone the two
+     * pickers with the presets as chips. Bound to `{from, to}` under the
+     * filter's state path, and — with ->presets() — writing the preset's NAME
+     * to `preset` too, so the range stays relative (DatePreset).
+     */
+    public function rangeControl(string $statePath): DateRangePicker
+    {
+        $range = DateRangePicker::make($this->name)
+            ->from('from')
+            ->until('to')
+            ->label($this->getLabel())
+            ->hiddenLabel()
+            ->fromLabel($this->getFromLabel())
+            ->untilLabel($this->getToLabel())
+            ->minDate($this->minDate)
+            ->maxDate($this->maxDate);
+
+        if ($this->hasPresets()) {
+            $now = CarbonImmutable::now($this->timezone ?? config('app.timezone'));
+            $presets = [];
+
+            foreach ($this->presets as $preset) {
+                $dates = $preset->range($now);
+                $presets[$preset->label()] = [$dates['from'], $dates['to'], $preset->value];
+            }
+
+            $range->presets($presets)->rememberPreset('preset');
+        }
+
+        $range->prepareChildren($statePath, live: true, livewire: app('livewire')->current());
+
+        return $range;
+    }
+
+    /**
+     * A forms picker as markup. The forms views read `$errors`, which the web
+     * middleware shares on a page; a filter drawn outside one (a test, a
+     * partial render) gets an empty bag rather than an undefined variable.
+     */
+    public function controlHtml(DateTimePicker|DateRangePicker $control): string
+    {
+        if (! view()->shared('errors')) {
+            view()->share('errors', new ViewErrorBag);
+        }
+
+        return $control->toHtml();
+    }
+
     /** Days are before and after, not less and greater. */
     public function operatorLabel(FilterOperator $operator): string
     {
@@ -350,10 +428,17 @@ class DateFilter extends Filter
         return [];
     }
 
-    /** A range with presets draws the preset picker in the panel as well as in the header. */
+    /**
+     * The panel draws a range and a single date with the forms pickers, as the
+     * header does; a month keeps the plain month input of the shared template.
+     */
     protected function filterView(): string
     {
-        return $this->range && $this->hasPresets() ? 'tables.filters.date-range' : parent::filterView();
+        return match (true) {
+            $this->monthMode => parent::filterView(),
+            $this->range => 'tables.filters.date-range',
+            default => 'tables.filters.date',
+        };
     }
 
     public function inlineView(): string
@@ -433,8 +518,10 @@ class DateFilter extends Filter
 
     public function wrapValue(mixed $value): mixed
     {
+        // A range's state is its keys, from the start: the picker binds into
+        // `.from` / `.to`, and a binding into a key of null throws.
         if ($this->range) {
-            return $value;
+            return $value ?? $this->emptyState();
         }
 
         return parent::wrapValue($value);

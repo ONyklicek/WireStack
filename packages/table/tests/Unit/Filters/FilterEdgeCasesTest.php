@@ -13,8 +13,10 @@ use NyonCode\WireCore\Modals\Support\ModalStyle;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Enums\ColumnFilterLayout;
+use NyonCode\WireTable\Enums\DatePreset;
 use NyonCode\WireTable\Enums\FilterOperator;
 use NyonCode\WireTable\Filters\DateFilter;
+use NyonCode\WireTable\Filters\NumberRangeFilter;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Filters\TextFilter;
 use NyonCode\WireTable\Table;
@@ -118,4 +120,19 @@ it('answers the cell menu on a single-choice select with "is any of", and on tex
 it('drops a picker the filter no longer supports, whatever the call order', function () {
     expect(DateFilter::make('d')->operators()->range()->hasOperatorPicker())->toBeFalse()
         ->and(DateFilter::make('d')->operators()->presets()->getOperators())->toBe([]);
+});
+
+it('draws its dates with the forms pickers, bound to the filter state', function () {
+    $single = DateFilter::make('due_on')->dateControl('tableState.columnFilters.due_on');
+    $range = DateFilter::make('due_on')->presets([DatePreset::Today])->rangeControl('tableState.columnFilters.due_on');
+
+    expect($single->getStatePath())->toBe('tableState.columnFilters.due_on')
+        ->and($single->isLabelHidden())->toBeTrue()
+        ->and($range->getFromPicker()->getStatePath())->toBe('tableState.columnFilters.due_on.from')
+        ->and($range->getUntilPicker()->getStatePath())->toBe('tableState.columnFilters.due_on.to')
+        ->and($range->getPresetStatePath())->toBe('tableState.columnFilters.due_on.preset')
+        ->and($range->getPresetKey('Today'))->toBe('today')
+        ->and(DateFilter::make('d')->range()->rangeControl('x.d')->hasPresets())->toBeFalse()
+        ->and(DateFilter::make('d')->range()->wrapValue(null))->toBe(['from' => null, 'to' => null])
+        ->and(NumberRangeFilter::make('n')->wrapValue(null))->toBe(['min' => null, 'max' => null]);
 });

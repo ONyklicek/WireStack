@@ -40,7 +40,16 @@ view or a shared URL of *Last 7 days* still means the last seven days next week;
 two stored dates would have quietly become a fixed week in the past. The dates
 are worked out on every query, with "today" read in `->timezone()` (default:
 `app.timezone`). Weeks start on Monday. When a preset is set it wins over the
-typed from/to; *Custom dates* clears it and the two inputs apply.
+from/to beside it, and before every render the table writes today's dates for it
+into from/to, so the picker shows the period the name stands for now. Picking
+days by hand clears the name.
+
+**The controls are the forms pickers.** A single date is drawn with the forms
+`DateTimePicker`, a range with the forms `DateRangePicker` — one box, two months
+side by side with the presets beside them; on a phone the two pickers with the
+presets as chips — in the header, in a column popover and in the filter panel
+alike (`dateControl()` / `rangeControl()`). Only `month()` keeps the browser's
+month input.
 
 **Defaults.** Single date, no operator picker, no presets. `->presets()` turns
 range mode on by itself.
@@ -75,13 +84,14 @@ DateFilter::make('due_at')
 
 ## Date Range
 
-Call `range()` to render two date inputs ("from" and "to"). The user can fill
-either side, so open-ended ranges work without extra configuration.
+Call `range()` to pick a period with the forms `DateRangePicker` ("from" and
+"to"). Either side may stay empty, so open-ended ranges work without extra
+configuration.
 
 ```php
 DateFilter::make('created_at')
     ->range()
-// Renders two date inputs.
+// Renders the DateRangePicker.
 // Both set:  WHERE DATE(created_at) >= from AND <= to
 // Only from: WHERE DATE(created_at) >= from
 // Only to:   WHERE DATE(created_at) <= to
@@ -229,7 +239,7 @@ class ListInvoices extends Component
 ## DateFilter API
 
 ```php
-->range(bool $range = true)         // two inputs (from/to) instead of one
+->range(bool $range = true)         // a from/to period (the DateRangePicker) instead of one date
 ->month(bool $month = true)         // month picker, matches whole month
 ->fromLabel(?string $label)         // "from" placeholder (default: 'From')
 ->toLabel(?string $label)           // "to" placeholder (default: 'To')

@@ -270,6 +270,15 @@ class SelectFilter extends Filter
         )];
     }
 
+    /**
+     * Inside a phone's bottom sheet (a column popover) the touch list is the
+     * default: a dropdown would float over the very sheet it opened from.
+     */
+    protected function defaultTouchOnMobile(): bool
+    {
+        return $this->insideSheet || (bool) config('wire-core.mobile.touch', false);
+    }
+
     public function inlineView(): string
     {
         return $this->multiple

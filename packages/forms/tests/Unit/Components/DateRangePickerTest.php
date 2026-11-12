@@ -156,3 +156,17 @@ test('a range offers no presets until it is asked to', function () {
     expect(DateRangePicker::make('period')->hasPresets())->toBeFalse()
         ->and(DateRangePicker::make('period')->getPresets())->toBe([]);
 });
+
+test('rememberPreset writes the picked preset\'s key beside the two ends', function () {
+    $range = DateRangePicker::make('period')->from('from')->until('to')
+        ->presets(['Last week' => ['2026-11-02', '2026-11-08', 'last_week'], 'Unkeyed' => ['2026-01-01', '2026-01-31']])
+        ->rememberPreset();
+    $range->prepareChildren('tableState.columnFilters.joined');
+
+    expect($range->getPresetStatePath())->toBe('tableState.columnFilters.joined.preset')
+        ->and($range->getPresetKey('Last week'))->toBe('last_week')
+        ->and($range->getPresetKey('Unkeyed'))->toBeNull()
+        ->and($range->getPresets()['Last week'])->toBe(['2026-11-02', '2026-11-08'])
+        ->and(DateRangePicker::make('p')->getPresetStatePath())->toBeNull()
+        ->and(DateRangePicker::make('p')->from('a')->until('b')->rememberPreset('which')->getPresetStatePath())->toBe('which');
+});

@@ -48,9 +48,12 @@ const setSelect = (selector, value) => `(() => { const s = document.querySelecto
 
     await eval_(setSelect('#colfilter-email-operator', 'not_contains'));
     await waitFor(`!! document.querySelector('[data-testid=column-filter-panel-email] input[type=text]')`);
-    await eval_(`(() => { const i = document.querySelector('[data-testid=column-filter-panel-email] input[type=text]'); i.value = 'focus'; i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    // The first row's own address, so the check does not depend on the seed:
+    // "does not contain <it>" must drop at least that row.
+    const needle = await eval_(`document.querySelector('tbody tr[data-row-key]').children[1].textContent.trim()`);
+    await eval_(`(() => { const i = document.querySelector('[data-testid=column-filter-panel-email] input[type=text]'); i.value = ${JSON.stringify(needle)}; i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
     await waitFor(`${rows} < ${total}`).catch(() => {});
-    check('typing narrows the rows ("does not contain focus")', (await eval_(rows)) < total, `${await eval_(rows)} of ${total}`);
+    check('typing narrows the rows ("does not contain <the first address>")', (await eval_(rows)) < total, `${await eval_(rows)} of ${total}`);
     check('the panel stays open through the roundtrip', await eval_(panelOpen('email')));
     check('the funnel is marked while the column is filtered', await eval_(marked('email')));
     await shot('01-email-not-contains');
@@ -66,13 +69,17 @@ const setSelect = (selector, value) => `(() => { const s = document.querySelecto
     check('Clear brings every row back and unmarks the funnel', (await eval_(rows)) === total && ! (await eval_(marked('email'))));
     await eval_(`document.body.click()`);
 
-    // Date preset
+    // Date range: the forms DateRangePicker, its preset written by NAME.
     await eval_(`document.querySelector('[data-testid=column-filter-trigger-created_at]').click()`);
     await waitFor(panelOpen('created_at'));
-    await eval_(setSelect('[data-testid=column-filter-panel-created_at] select', 'last_30_days'));
-    await waitFor(`!! document.querySelector('[data-testid=column-filter-panel-created_at] [data-testid$=-range]')`).catch(() => {});
-    check('a date preset shows the range it resolved to', /\d{4}-\d{2}-\d{2} – \d{4}-\d{2}-\d{2}/.test(await eval_(`document.querySelector('[data-testid=column-filter-panel-created_at] [data-testid$=-range]')?.textContent ?? ''`)));
-    check('and marks the column', await eval_(marked('created_at')));
+    await eval_(`document.querySelector('[data-testid=column-filter-panel-created_at] [data-testid$=-trigger]').click()`);
+    await waitFor(`[...document.querySelectorAll('button')].some((b) => b.offsetParent && b.textContent.trim() === 'Last 30 days')`);
+    await eval_(`[...document.querySelectorAll('button')].find((b) => b.offsetParent && b.textContent.trim() === 'Last 30 days').click()`);
+    const stateOf = `JSON.stringify(Livewire.all().map((c) => c.$wire).find((w) => w.tableState !== undefined).tableState.columnFilters.created_at)`;
+    await waitFor(`JSON.parse(${stateOf}).preset === 'last_30_days'`).catch(() => {});
+    const range = JSON.parse(await eval_(stateOf));
+    check('a range preset is kept by name, with the dates it stands for', range.preset === 'last_30_days' && /^\d{4}-\d{2}-\d{2}$/.test(range.from ?? ''), JSON.stringify(range));
+    check('and marks the column', await waitFor(marked('created_at')).then(() => true, () => false));
     await shot('02-date-preset');
     await eval_(`document.querySelector('[data-testid=column-filter-clear-created_at]').click()`);
     await waitFor(`! ${marked('created_at')}`).catch(() => {});

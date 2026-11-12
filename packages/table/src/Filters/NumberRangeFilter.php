@@ -164,7 +164,7 @@ class NumberRangeFilter extends Filter
 
     public function wrapValue(mixed $value): mixed
     {
-        return $value;
+        return $value ?? $this->emptyState();
     }
 
     /** "Only this value" on a number cell is a range of one number. */

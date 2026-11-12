@@ -97,6 +97,9 @@ class Filter implements Htmlable
     /** Whether the control binds without `.live` — the panel applies on Apply (Table::deferFilters()). */
     protected bool $deferred = false;
 
+    /** Whether the control is drawn inside a phone's bottom sheet (a column popover). */
+    protected bool $insideSheet = false;
+
     public function __construct(string $name)
     {
         $this->name = $name;
@@ -283,6 +286,20 @@ class Filter implements Htmlable
     public function getActiveOperator(): FilterOperator
     {
         return $this->activeOperator ?? $this->getDefaultOperator();
+    }
+
+    /**
+     * Mark the control as drawn inside a bottom sheet on a phone — set by the
+     * column popover. A select there opens the full-height touch list rather
+     * than a dropdown floating over the sheet it was opened from.
+     *
+     * @docs-ignore plumbing: the column popover sets it
+     */
+    public function insideSheet(bool $insideSheet = true): static
+    {
+        $this->insideSheet = $insideSheet;
+
+        return $this;
     }
 
     /** Bind the control without `.live`; set by the table from Table::deferFilters(). */

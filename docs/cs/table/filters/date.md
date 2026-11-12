@@ -37,8 +37,15 @@ vybírat, ať jsou volání v jakémkoli pořadí. *není dne* ponechá řádky 
 sdílená URL s *Posledních 7 dní* znamená posledních sedm dní i příští týden; dvě
 uložená data by se potichu stala pevným týdnem v minulosti. Data se počítají při
 každém dotazu, s „dneškem“ čteným v `->timezone()` (výchozí: `app.timezone`).
-Týden začíná pondělím. Když je předvolba nastavená, vyhrává nad zadanými od/do;
-*Vlastní data* ji vymažou a použijí se oba vstupy.
+Týden začíná pondělím. Když je předvolba nastavená, vyhrává nad od/do vedle ní a
+tabulka před každým vykreslením zapíše do od/do dnešní data, takže picker ukazuje
+období, které název právě znamená. Ruční výběr dnů název vymaže.
+
+**Ovládání jsou pickery z formulářů.** Jedno datum kreslí `DateTimePicker`
+z formulářů, rozsah `DateRangePicker` — jedno pole, dva měsíce vedle sebe
+s předvolbami po straně; na telefonu oba pickery s předvolbami jako čipy —
+v hlavičce, v popoveru sloupce i v panelu filtrů (`dateControl()` /
+`rangeControl()`). Jen `month()` si ponechá měsíční vstup prohlížeče.
 
 **Výchozí stav.** Jedno datum, bez výběru operátoru, bez předvoleb.
 `->presets()` sám zapne režim rozsahu.
@@ -73,13 +80,14 @@ DateFilter::make('due_at')
 
 ## Rozsah dat
 
-Zavolejte `range()` pro vykreslení dvou date inputů („from“ a „to“). Uživatel může
-vyplnit kteroukoli stranu, takže otevřené rozsahy fungují bez extra konfigurace.
+Zavolejte `range()` pro výběr období přes `DateRangePicker` z formulářů („from“
+a „to“). Kterákoli strana může zůstat prázdná, takže otevřené rozsahy fungují bez
+extra konfigurace.
 
 ```php
 DateFilter::make('created_at')
     ->range()
-// Vykreslí dva date inputy.
+// Vykreslí DateRangePicker.
 // Oba nastavené:  WHERE DATE(created_at) >= from AND <= to
 // Jen from:       WHERE DATE(created_at) >= from
 // Jen to:         WHERE DATE(created_at) <= to
@@ -227,7 +235,7 @@ class ListInvoices extends Component
 ## API DateFilter
 
 ```php
-->range(bool $range = true)         // dva inputy (from/to) místo jednoho
+->range(bool $range = true)         // období od/do (DateRangePicker) místo jednoho data
 ->month(bool $month = true)         // výběr měsíce, shoduje se s celým měsícem
 ->fromLabel(?string $label)         // placeholder "from" (výchozí: 'From')
 ->toLabel(?string $label)           // placeholder "to" (výchozí: 'To')

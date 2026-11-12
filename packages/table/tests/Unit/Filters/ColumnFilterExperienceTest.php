@@ -212,7 +212,8 @@ it('hides the value box for an operator that takes none, and shows the preset ra
         ->set('tableState.columnFilters.name', ['value' => null, 'operator' => 'is_empty'])
         ->assertSeeHtml('data-filter-operator="is_empty"')
         ->set('tableState.columnFilters.joined_on', ['from' => null, 'to' => null, 'preset' => 'last_7_days'])
-        ->assertSeeHtml('2026-11-06 – 2026-11-12');
+        // The name is kept; the picker gets the dates it stands for today.
+        ->assertSet('tableState.columnFilters.joined_on', ['from' => '2026-11-06', 'to' => '2026-11-12', 'preset' => 'last_7_days']);
 });
 
 it('sets a header filter from a cell, reading the value from the record', function () {

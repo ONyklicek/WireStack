@@ -52,6 +52,7 @@ use NyonCode\WireTable\Export\ExportAction;
 use NyonCode\WireTable\Export\ExportFormat;
 use NyonCode\WireTable\Export\Jobs\RunExportJob;
 use NyonCode\WireTable\Export\TableExport;
+use NyonCode\WireTable\Filters\DateFilter;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Import\ImportAction;
@@ -893,6 +894,7 @@ trait WithTable
         // which returns a fresh empty collection each call — value-identical, so
         // the plan agrees with the view either way.
         if ($this->renderPlan === null) {
+            $this->resolveDatePresets();
             $this->countFilterOptions();
         }
 
@@ -901,6 +903,44 @@ trait WithTable
             $this,
             $this->getTableRecords(),
         );
+    }
+
+    /**
+     * Write today's dates for every date range that holds a preset name.
+     *
+     * The name is what is kept (a saved view, a link: "last 7 days" stays
+     * relative), but the picker shows — and the user edits — the two dates. A
+     * state that arrives with the name alone, or with yesterday's dates, gets
+     * them worked out again here, before the render the picker draws.
+     */
+    protected function resolveDatePresets(): void
+    {
+        $table = $this->getTable();
+
+        foreach (['filters' => $table->getFilters(), 'columnFilters' => array_filter(array_map(fn ($column) => $column->getFilter(), $table->getColumns()))] as $key => $filters) {
+            $state = $this->tableState->get($key, []);
+            $changed = false;
+
+            foreach ($filters as $name => $filter) {
+                $stateKey = $key === 'columnFilters' ? $table->getColumns()[$name]->getName() : $filter->getName();
+                $value = $state[$stateKey] ?? null;
+
+                if (! $filter instanceof DateFilter || $filter->presetFromState($value) === null) {
+                    continue;
+                }
+
+                $range = $filter->resolveRange($value);
+
+                if (($value['from'] ?? null) !== $range['from'] || ($value['to'] ?? null) !== $range['to']) {
+                    $state[$stateKey] = array_merge($value, $range);
+                    $changed = true;
+                }
+            }
+
+            if ($changed) {
+                $this->tableState->set($key, $state);
+            }
+        }
     }
 
     /**

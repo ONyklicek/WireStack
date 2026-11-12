@@ -26,6 +26,13 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **Date presets.** `DateFilter::presets()` / `->filterPresets()`: today, yesterday, last 7 / 30 days, this /
   last week, month, quarter and year. The state stores the preset's name, so a saved view or a shared link
   of "last 7 days" stays relative; the dates are worked out when the query runs, in `->timezone()`.
+- **Date filters use the forms pickers.** A single date is the forms `DateTimePicker`, a range the
+  `DateRangePicker` (one box, two months, the presets beside them; on a phone the two pickers with the
+  presets as chips) — in the header, the column popover and the filter panel alike, instead of the browser's
+  date inputs. `DateRangePicker::rememberPreset()` writes the picked preset's key beside the two ends, which
+  is how a filter keeps "last 7 days" relative.
+- **A select in a column popover opens the touch list on a phone** — full height, with search — instead of
+  a dropdown floating over the sheet it was opened from.
 - **Filter from a cell.** `Table::cellFilterMenu()`: right-click a cell of a filterable column for "Only
   this value" and, where the filter can exclude, "Exclude this value". The value is read from the record on
   the server, not from the formatted cell. A row with its own context menu keeps it.
