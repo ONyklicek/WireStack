@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Livewire\Component;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Core\State\StateContainer;
+use NyonCode\WireCore\Modals\Modal;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
 
@@ -369,6 +370,6 @@ it('follows a config that keeps the dialog', function () {
 it('leaves the default alone for a modal object that did not ask for full screen', function () {
     config(['wire-core.modals.mobile' => 'sheet']);
 
-    expect(Action::make('a')->modal(\NyonCode\WireCore\Modals\Modal::make())->isSlideOverOnMobile())->toBeTrue()
-        ->and(Action::make('a')->modal(\NyonCode\WireCore\Modals\Modal::make()->fullScreenOnMobile())->isFullScreenOnMobile())->toBeTrue();
+    expect(Action::make('a')->modal(Modal::make())->isSlideOverOnMobile())->toBeTrue()
+        ->and(Action::make('a')->modal(Modal::make()->fullScreenOnMobile())->isFullScreenOnMobile())->toBeTrue();
 });
