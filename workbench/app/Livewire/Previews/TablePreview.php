@@ -162,6 +162,19 @@ class TablePreview extends Component
             return $this->columnFiltersPopoverTable($table);
         }
 
+        if ($this->variant === 'column-filters-row-operators') {
+            return $this->columnFiltersPopoverTable($table)->columnFilterLayout(ColumnFilterLayout::Row);
+        }
+
+        if ($this->variant === 'column-filters-value-list') {
+            return $this->columnFiltersTable($table)
+                ->columnFilterLayout(ColumnFilterLayout::Popover)
+                ->columns([
+                    TextColumn::make('name')->label('Name')->filterable()->filterOperators(),
+                    BadgeColumn::make('role')->label('Role')->filterAsValueList(),
+                ]);
+        }
+
         if ($this->variant === 'filters-above') {
             return $this->filtersAboveTable($table);
         }
