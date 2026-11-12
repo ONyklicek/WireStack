@@ -362,6 +362,13 @@ return [
         'slide_over_width' => 'md',
         'close_on_click_away' => true,
         'close_on_escape' => true,
+
+        // How a dialog presents below the mobile breakpoint when the action or
+        // modal does not say: 'sheet' (a bottom sheet that is pulled down to
+        // close), 'full-screen', or 'dialog' (the floating card a desktop gets).
+        // Per instance: ->slideOverOnMobile(), ->fullScreenOnMobile(),
+        // ->dialogOnMobile().
+        'mobile' => env('WIRE_MODAL_MOBILE', 'sheet'),
     ],
 
     /*

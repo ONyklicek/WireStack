@@ -14,7 +14,7 @@
       data-shape="{{ \NyonCode\WireCore\Foundation\Enums\Shape::configured()->value }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>{{ $title ?? config('app.name') }}</title>
 
     {{-- First in the head, before the application's own assets: the theme
@@ -130,7 +130,12 @@
 
                 openMobile() {
                     this.mobile = true;
-                    document.body.classList.add('overflow-hidden', 'lg:overflow-auto');
+                    // The one page scroll lock (wire-core): `overflow-hidden` on
+                    // <body> is ignored by iOS Safari, so the page went on
+                    // scrolling under the drawer.
+                    window.wireScrollLock
+                        ? window.wireScrollLock.lock(document.getElementById('wire-admin-nav'))
+                        : document.body.classList.add('overflow-hidden', 'lg:overflow-auto');
 
                     // Onto the first row of the menu, once the trap on the
                     // drawer is active — it activates on a 15ms timer of its own,
@@ -141,7 +146,9 @@
 
                 closeMobile() {
                     this.mobile = false;
-                    document.body.classList.remove('overflow-hidden', 'lg:overflow-auto');
+                    window.wireScrollLock
+                        ? window.wireScrollLock.unlock(document.getElementById('wire-admin-nav'))
+                        : document.body.classList.remove('overflow-hidden', 'lg:overflow-auto');
                 },
 
                 toggleRail() {
@@ -163,7 +170,7 @@
         });
     </script>
 </head>
-<body class="min-h-full bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
+<body class="min-h-full bg-gray-50 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
     {{-- Keyboard users reach the page without walking the whole menu first. --}}
     <a
         href="#wire-admin-main"

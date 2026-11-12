@@ -9,14 +9,17 @@
      *
      * @var string      $dismiss     Alpine expression that closes the panel.
      * @var string|null $breakpoint  Sheet breakpoint override (sm|md|lg).
+     * @var string      $class       Extra classes — a panel with its own padding
+     *                               pulls the handle up into it.
      */
     $dismiss ??= 'close()';
     $breakpoint ??= null;
+    $class ??= '';
 @endphp
 <div
     x-sheet-dismiss="{{ $dismiss }}"
     data-sheet-bp="{{ MobileSheet::px($breakpoint) }}"
-    class="{{ MobileSheet::grabberShow($breakpoint) }} justify-center pt-2.5 pb-1 touch-none select-none"
+    class="{{ MobileSheet::grabberShow($breakpoint) }} justify-center pt-2.5 pb-1 touch-none select-none {{ $class }}"
     aria-hidden="true"
 >
     <span class="h-1.5 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></span>

@@ -62,7 +62,7 @@ class ConfirmationObjectHost extends Component
 it('renders as a dialog with forwarded wire bindings, body and buttons — no <x-*>', function () {
     Livewire::test(ConfirmationObjectHost::class)
         ->assertSeeHtml('role="dialog"')
-        ->assertSeeHtml('id="confirmation-modal-title"')
+        ->assertSeeHtml('id="confirmation-modal-title-')
         ->assertSeeHtml('Delete record?')
         ->assertSeeHtml('wire:click="submit"')             // $wireClick forwarded onto the submit button
         ->assertSeeHtml('$wire.close()')                    // closeAction on cancel/escape

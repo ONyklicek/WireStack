@@ -4,7 +4,7 @@
 <div
     @wireEl('dropdown')
     x-data="wireDropdown({ placement: '{{ $position }}'{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.MobileSheet::px($breakpoint) : '' }} })"
-    @keydown.escape.window="close()"
+    @keydown.escape.window="open && $event.preventDefault(); close()"
     class="relative inline-block text-left"
     {{ $attributes }}
 >

@@ -141,13 +141,13 @@ it('ignores openOn when a wire:model binding owns the show state', function () {
 it('renders both as dialogs with body/footer and wire bindings — no <x-*>', function () {
     Livewire::test(ModalHtmlHost::class)
         // Modal
-        ->assertSeeHtml('id="modal-title"')
+        ->assertSeeHtml('id="modal-title-')
         ->assertSeeHtml('Edit record')
         ->assertSeeHtml('id="modal-body-marker"')      // pre-rendered $body rendered raw
         ->assertSeeHtml('id="modal-footer-marker"')    // pre-rendered $footer rendered raw
         ->assertSeeHtml('$wire.closeModal()')          // closeAction wired
         // Slide-over
-        ->assertSeeHtml('id="slide-over-title"')
+        ->assertSeeHtml('id="slide-over-title-')
         ->assertSeeHtml('Details panel')
         ->assertSeeHtml('id="slideover-body-marker"')
         ->assertSeeHtml('$wire.closePanel()')

@@ -57,7 +57,7 @@ try {
     await sleep(2600);
     const info = await eval_(`JSON.stringify({
       dialog: !!document.querySelector('[role="dialog"]'),
-      heading: (document.querySelector('#modal-title, #slide-over-title')||{}).innerText || null,
+      heading: (document.querySelector('[id^="modal-title-"], [id^="slide-over-title-"]')||{}).innerText || null,
       panel: (() => {
         const p = document.querySelector('[role="dialog"] .shadow-xl');
         if (!p) return null;

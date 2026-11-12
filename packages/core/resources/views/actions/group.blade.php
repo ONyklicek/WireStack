@@ -27,7 +27,7 @@
     <div
         class="relative inline-block text-left"
         x-data="wireDropdown(@js($group->getDropdownConfig()), @js($lazyMenuItems))"
-        @keydown.escape.window="close()"
+        @keydown.escape.window="open && $event.preventDefault(); close()"
     >
         <button
             type="button"

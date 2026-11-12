@@ -171,7 +171,7 @@
         @keydown.arrow-down.prevent="onArrowDown()"
         @keydown.arrow-up.prevent="onArrowUp()"
         @keydown.enter.prevent="onEnter()"
-        @keydown.escape="open = false; activeIndex = -1"
+        @keydown.escape="open && $event.preventDefault(); open = false; activeIndex = -1"
         aria-haspopup="listbox"
         :aria-expanded="$data.open"
         :aria-activedescendant="$data.activeDescendant"
@@ -249,7 +249,7 @@
                     @keydown.arrow-down.prevent="onArrowDown()"
                     @keydown.arrow-up.prevent="onArrowUp()"
                     @keydown.enter.prevent="onEnter()"
-                    @keydown.escape="open = false; activeIndex = -1"
+                    @keydown.escape="open && $event.preventDefault(); open = false; activeIndex = -1"
                     placeholder="{{ $searchPrompt }}"
                     aria-label="{{ $searchPrompt }}"
                     data-testid="select-search" @wireEl('select-search')

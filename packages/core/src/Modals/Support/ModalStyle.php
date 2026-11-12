@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Modals\Support;
 use NyonCode\WireCore\Foundation\Concerns\HasColor;
 use NyonCode\WireCore\Foundation\Concerns\HasModalProperties;
 use NyonCode\WireCore\Foundation\Support\MobileSheet;
+use NyonCode\WireCore\Foundation\Support\ModalDefaults;
 
 /**
  * Presentation/layout resolver for the modal shell.
@@ -24,8 +25,8 @@ final class ModalStyle
     public function __construct(
         private readonly string $width = 'md',
         private readonly ?string $maxHeight = null,
-        private readonly bool $fullScreenOnMobile = false,
-        private readonly bool $slideOverOnMobile = false,
+        private readonly ?bool $fullScreenOnMobile = null,
+        private readonly ?bool $slideOverOnMobile = null,
         private readonly string $iconColor = 'gray',
         private readonly ?string $breakpoint = null,
     ) {}
@@ -43,17 +44,15 @@ final class ModalStyle
     }
 
     /**
-     * The mobile (< sm) presentation variant: 'bottom-sheet', 'full-screen', or
-     * null for the default centered dialog. Bottom-sheet wins over full-screen
-     * when both flags are set. Desktop rendering is identical for every variant.
+     * The mobile (< breakpoint) presentation variant: 'bottom-sheet',
+     * 'full-screen', or null for the floating dialog. Bottom-sheet wins over
+     * full-screen when both flags are set; a modal that set neither follows
+     * `wire-core.modals.mobile` ({@see ModalDefaults::mobileVariant()}). Desktop
+     * rendering is identical for every variant.
      */
     public function mobileVariant(): ?string
     {
-        return match (true) {
-            $this->slideOverOnMobile => 'bottom-sheet',
-            $this->fullScreenOnMobile => 'full-screen',
-            default => null,
-        };
+        return ModalDefaults::mobileVariant($this->slideOverOnMobile, $this->fullScreenOnMobile);
     }
 
     /**
@@ -69,9 +68,9 @@ final class ModalStyle
         };
 
         return match ($this->mobileVariant()) {
-            'bottom-sheet' => 'flex min-h-screen items-end justify-center text-center '.$reset,
-            'full-screen' => 'flex min-h-screen items-stretch justify-center text-center '.$reset,
-            default => 'flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center '.$reset,
+            'bottom-sheet' => 'flex min-h-[100dvh] items-end justify-center text-center '.$reset,
+            'full-screen' => 'flex min-h-[100dvh] items-stretch justify-center text-center '.$reset,
+            default => 'flex min-h-[100dvh] items-end justify-center px-4 pt-4 pb-20 text-center '.$reset,
         };
     }
 
@@ -99,9 +98,18 @@ final class ModalStyle
             default => 'sm:my-8',
         };
 
+        // dvh, not vh: on a phone `vh` is the viewport with the browser's toolbars
+        // hidden, so an 85vh sheet put its own footer under Safari's bottom bar.
+        // The full-screen panel keeps clear of the notch / status bar itself.
+        $topInset = match ($bp) {
+            'md' => 'max-md:pt-[env(safe-area-inset-top)]',
+            'lg' => 'max-lg:pt-[env(safe-area-inset-top)]',
+            default => 'max-sm:pt-[env(safe-area-inset-top)]',
+        };
+
         return match ($this->mobileVariant()) {
-            'bottom-sheet' => 'flex max-h-[85vh] flex-col rounded-t-2xl rounded-b-none '.$inline.' '.$maxHReset,
-            'full-screen' => 'flex flex-col rounded-none '.$inline,
+            'bottom-sheet' => 'flex max-h-[92dvh] flex-col rounded-t-2xl rounded-b-none '.$inline.' '.$maxHReset,
+            'full-screen' => 'flex min-h-[100dvh] flex-col rounded-none '.$topInset.' '.$inline,
             default => 'rounded-2xl '.$myOnly,
         };
     }
@@ -186,6 +194,39 @@ final class ModalStyle
         return $this->maxHeight
             ? 'flex-1 overflow-y-auto overscroll-contain '.$flexNone
             : 'flex-1 overflow-y-auto overscroll-contain '.$flexNone.' '.$overflowVisible;
+    }
+
+    /**
+     * Whether the panel carries a drag handle: a bottom sheet does, below its
+     * breakpoint, so it can be pulled down to close like every other sheet.
+     */
+    public function hasGrabber(): bool
+    {
+        return $this->mobileVariant() === 'bottom-sheet';
+    }
+
+    /** The breakpoint token the grabber and its drag directive switch at. */
+    public function breakpoint(): string
+    {
+        return $this->bp();
+    }
+
+    /**
+     * Footer bottom padding that keeps the buttons above the home indicator. Only
+     * the edge-to-edge variants reach the bottom of the screen; the floating
+     * dialog never touches it.
+     */
+    public function footerSafeAreaClass(): string
+    {
+        if ($this->mobileVariant() === null) {
+            return '';
+        }
+
+        return match ($this->bp()) {
+            'md' => 'max-md:pb-[calc(1rem_+_env(safe-area-inset-bottom))]',
+            'lg' => 'max-lg:pb-[calc(1rem_+_env(safe-area-inset-bottom))]',
+            default => 'max-sm:pb-[calc(1rem_+_env(safe-area-inset-bottom))]',
+        };
     }
 
     public function iconBgClass(): string

@@ -104,7 +104,7 @@
                         @click="open = true"
                         @keydown.down.prevent="openWithKeyboard()"
                     @endunless
-                    @keydown.escape="cancelTyped(); open = false"
+                    @keydown.escape="open && $event.preventDefault(); cancelTyped(); open = false"
                     @unless($typeable) readonly @endunless
                     @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
                     @if($field->isDisabled()) disabled @endif
@@ -171,7 +171,7 @@
                     $sheetPanel => $sheetOnMobile,
                 ])
                 @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
-                @keydown.escape="closeToTrigger()"
+                @keydown.escape="$event.preventDefault(); closeToTrigger()"
                 x-cloak
                 style="display: none;"
         >

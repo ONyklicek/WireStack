@@ -1,4 +1,5 @@
 import { computePosition, autoUpdate, flip, shift, offset, size } from '@floating-ui/dom'
+import { registerScrollLock } from './scroll-lock.js'
 
 import { syncNodeOf } from './editable/sync'
 import { laneKey, runInLane } from './editable/lanes'
@@ -521,6 +522,7 @@ const registerSheetDismiss = (Alpine) => {
         const isMobile = () => window.matchMedia(`(max-width: ${parseFloat(el.dataset.sheetBp) || 639.98}px)`).matches
 
         let startY = 0
+        let startAt = 0
         let delta = 0
         let dragging = false
 
@@ -529,6 +531,7 @@ const registerSheetDismiss = (Alpine) => {
             dragging = true
             delta = 0
             startY = e.touches[0].clientY
+            startAt = e.timeStamp
             const p = panel()
             if (p) p.style.transition = 'none'
         }
@@ -538,25 +541,30 @@ const registerSheetDismiss = (Alpine) => {
             const p = panel()
             if (p) p.style.transform = `translateY(${delta}px)`
         }
-        const onEnd = () => {
+        const onEnd = (e) => {
             if (! dragging) return
             dragging = false
+            // A flick counts as much as a long pull: 40px at more than half a
+            // pixel per millisecond is a throw, the way a native sheet reads it.
+            const speed = delta / Math.max(1, (e?.timeStamp ?? startAt) - startAt)
             const p = panel()
             if (p) {
                 p.style.transition = ''
                 p.style.transform = ''
             }
-            // Past ~90px of pull-down → dismiss; otherwise it snaps back.
-            if (delta > 90) runClose(() => {})
+            // Past ~90px of pull-down, or a flick → dismiss; otherwise it snaps back.
+            if (delta > 90 || (delta > 40 && speed > 0.5)) runClose(() => {})
         }
 
         el.addEventListener('touchstart', onStart, { passive: true })
         el.addEventListener('touchmove', onMove, { passive: true })
         el.addEventListener('touchend', onEnd)
+        el.addEventListener('touchcancel', onEnd)
         cleanup(() => {
             el.removeEventListener('touchstart', onStart)
             el.removeEventListener('touchmove', onMove)
             el.removeEventListener('touchend', onEnd)
+            el.removeEventListener('touchcancel', onEnd)
         })
     })
 }
@@ -1180,6 +1188,7 @@ const registerWireCoreDropdown = () => {
     window.Alpine.data('wireSearchableSelect', wireSearchableSelect)
     registerSheetDismiss(window.Alpine)
     registerFocusTrap(window.Alpine)
+    registerScrollLock(window.Alpine)
 }
 
 if (window.Alpine) {

@@ -70,9 +70,21 @@ x-init="
     $el._wireFocusable = () => [...$el.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')]
         .filter((el) => ! el.disabled && el.tabIndex >= 0 && el.getClientRects().length > 0);
 
+    {{-- Where the focus lands: an [autofocus] field if the dialog names one;
+         on a touch screen the dialog itself, because focusing a field there
+         raises the keyboard over a sheet the user has not read yet; otherwise
+         the first control that is not the close button — a ring drawn round
+         the X is the first thing every dialog showed, and Enter on it threw
+         the dialog away. The close button is still the fallback. --}}
     $el._wireFocusIn = () => {
         if ($el.contains(document.activeElement)) return;
-        const target = $el.querySelector('[autofocus]') || $el._wireFocusable()[0] || $el;
+        const items = $el._wireFocusable();
+        const coarse = window.matchMedia('(pointer: coarse)').matches;
+        const target = $el.querySelector('[autofocus]')
+            || (coarse ? $el : null)
+            || items.find((item) => ! item.hasAttribute('data-focus-skip'))
+            || items[0]
+            || $el;
         target.focus({ preventScroll: true });
     }
 "
