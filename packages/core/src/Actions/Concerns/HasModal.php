@@ -247,8 +247,11 @@ trait HasModal
     /** On small screens, keep the floating dialog instead of the configured sheet / full-screen default. */
     public function dialogOnMobile(bool $dialog = true): static
     {
-        $this->slideOverOnMobile = $dialog ? false : null;
-        $this->fullScreenOnMobile = $dialog ? false : null;
+        // Both flags false is the action speaking for itself (the floating
+        // card); both null hands the choice back to the config.
+        $explicit = $dialog ? false : null;
+        $this->slideOverOnMobile = $explicit;
+        $this->fullScreenOnMobile = $explicit;
 
         return $this;
     }

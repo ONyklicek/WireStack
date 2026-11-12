@@ -64,6 +64,7 @@ additive: each surface still includes its own asset partial as a fallback, and t
 ## Rules
 
 - A filter's query callback must return the query Builder.
+- To let users choose how a filter compares, call `->operators()` (or `->filterOperators()` on a column) — never write a second filter per comparison. AND/OR conditions are a `QueryBuilderFilter` over existing filters; header filters can live in a popover (`Table::columnFilterLayout(ColumnFilterLayout::Popover)`).
 - A custom filter class that overrides `apply()` must return `true` from `bypassesPlanner()` — otherwise a single scalar value is answered by the query planner as `column = value` and `apply()` never runs. `make:wire-filter` writes it that way; keep it.
 - A custom column overrides `renderCell()` and sets its view on `protected ?string $view`, so `->view('…')` still overrides it per table. Never edit the generated view's name to one under `tables.columns.*` that wire-table ships.
 - Badge/icon color & icon: use `->color('success')` for one fixed color, `->colors([state => color])` for a static map, `->colorUsing(fn ($state) => …)` for a per-row value, or nothing when the state enum implements `HasColor`. `->color()` takes `string|Color|null` — never a Closure (that is `->colorUsing()`). Icons mirror this: `->icon()` / `->icons([...])` / `->iconUsing()` / enum `HasIcon`.

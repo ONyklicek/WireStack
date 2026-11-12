@@ -61,21 +61,29 @@ class QueryBuilderFilter extends Filter
         return $this;
     }
 
-    /** @return array<string, Filter> */
+    /**
+     * The fields this user may build conditions on. A constraint that is hidden
+     * or not authorized is left out everywhere — the field list, the query and
+     * the chip — so a crafted state naming it narrows nothing.
+     *
+     * @return array<string, Filter>
+     */
     public function getConstraints(): array
     {
-        return $this->constraints;
+        return array_filter($this->constraints, static fn (Filter $filter): bool => $filter->canView());
     }
 
     public function getConstraint(?string $field): ?Filter
     {
-        return $field === null ? null : ($this->constraints[$field] ?? null);
+        return $field === null ? null : ($this->getConstraints()[$field] ?? null);
     }
 
     /** The field a new condition starts on: the first one offered. */
     public function getFirstConstraint(): ?Filter
     {
-        return $this->constraints === [] ? null : $this->constraints[array_key_first($this->constraints)];
+        $constraints = $this->getConstraints();
+
+        return $constraints === [] ? null : $constraints[array_key_first($constraints)];
     }
 
     /** A row of conditions needs the panel's full width. */

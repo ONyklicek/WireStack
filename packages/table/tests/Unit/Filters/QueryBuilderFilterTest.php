@@ -280,3 +280,18 @@ it('draws the filters above the rows, collapsible or always open', function () {
     expect(Table::make()->getFiltersLayout())->toBe(FiltersLayout::AboveContent)
         ->and(Table::make()->hasDeferredFilters())->toBeTrue();
 });
+
+it('leaves out a constraint the user may not see — from the fields, the query and the chip', function () {
+    $filter = QueryBuilderFilter::make('conditions')->constraints([
+        TextFilter::make('customer')->hidden(),
+        SelectFilter::make('status')->options(['paid' => 'Paid']),
+    ]);
+    $state = ['combinator' => 'and', 'rules' => [qbRule('customer', 'equals', 'Beta')]];
+
+    expect(array_keys($filter->getConstraints()))->toBe(['status'])
+        ->and($filter->getFirstConstraint()->getName())->toBe('status')
+        ->and($filter->getConstraint('customer'))->toBeNull()
+        ->and($filter->hasActiveRule($state))->toBeFalse()
+        ->and($filter->getIndicator($state))->toBeNull()
+        ->and($filter->apply(QbInvoice::query(), $state)->count())->toBe(4);
+});
