@@ -330,6 +330,14 @@ const wireRecordActions = (config = {}) => ({
         this.$el.addEventListener('pointercancel', this._onPressEnd)
     },
 
+    // A menu item's own `@click="close()"` (actions/dropdown-item) lands here.
+    // The row menu is teleported out of any dropdown, so this controller is the
+    // nearest scope; without it Alpine falls through to `window.close()`, which
+    // Safari on iPadOS honours — choosing an item closed the whole tab.
+    close() {
+        hideRecordMenu(openRecordMenu)
+    },
+
     cancelPress() {
         clearTimeout(this._pressTimer)
         this._pressTimer = null

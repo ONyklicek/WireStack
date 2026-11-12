@@ -60,7 +60,9 @@
     <button
             type="button"
             wire:click{{ $wireModifiers }}="{{ $wireClick }}"
-            @click="close()"
+            {{-- The host's close(), never the window's: in a host without one the
+                 name resolves to window.close(), and Safari closes the tab. --}}
+            @click="close !== window.close && close()"
             @if($shortcutAlpine)
                 x-on:keydown.{{ $shortcutAlpine }}.window.prevent="$el.click()"
             @endif

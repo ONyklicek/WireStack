@@ -71,6 +71,10 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Fixed
 
+- **Choosing an item from a row's context menu no longer closes the browser tab in Safari.** The menu
+  item called `close()`, and inside the row menu, which has no dropdown around it, that name resolved
+  to `window.close()`. Chrome ignores it; Safari on iPadOS closed the tab. The row controller now has
+  its own `close()`, and a menu item never calls the window's.
 - **A panel filter the query planner cannot express is applied.** It was silently dropped unless it also
   had a query callback or a range shape.
 - **A range header filter starts with its keys.** Its state began as `null`, and binding into `.from` of
