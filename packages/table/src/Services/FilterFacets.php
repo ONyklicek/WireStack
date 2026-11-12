@@ -25,6 +25,10 @@ use NyonCode\WireTable\Table;
  * as the rows, so a count can never disagree with what picking it shows. Only an
  * Eloquent source over a plain column is counted; a relation path or a custom
  * data source has no single column to group by and is left uncounted.
+ *
+ * The host does not ask for a header filter whose column hides its cell on some
+ * records ({@see \NyonCode\WireTable\Columns\Column::visibleForRecord()}):
+ * a value list would print the values those cells keep out of sight.
  */
 final class FilterFacets
 {

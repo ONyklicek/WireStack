@@ -41,15 +41,23 @@ class CfxTable extends Component
 
     public string $layout = 'popover';
 
+    public bool $redactCity = false;
+
     public function table(Table $table): Table
     {
+        $city = TextColumn::make('city')->filterAsValueList();
+
+        if ($this->redactCity) {
+            $city->visibleForRecord(fn ($record) => $record->id !== 2);
+        }
+
         return $table
             ->model(CfxPerson::class)
             ->columnFilterLayout($this->layout)
             ->cellFilterMenu()
             ->columns([
                 TextColumn::make('name')->filterable()->filterOperators(),
-                TextColumn::make('city')->filterAsValueList(),
+                $city,
                 TextColumn::make('role')->filterAsMultiSelect(['admin' => 'Admin', 'editor' => 'Editor'])->filterOperators()->filterWithCounts(),
                 BooleanColumn::make('active')->filterAsBoolean(),
                 TextColumn::make('joined_on')->filterPresets([DatePreset::Last7Days, 'this_year', 'nonsense']),
@@ -262,4 +270,16 @@ it('restores the empty slots when filters are cleared', function () {
 
     $component->call('resetColumnFilters');
     expect($component->get('tableState.columnFilters.joined_on'))->toBe(['from' => null, 'to' => null, 'preset' => null]);
+});
+
+it('lists no values and filters by no hidden cell for a column that hides some cells', function () {
+    $component = Livewire::test(CfxTable::class, ['redactCity' => true])
+        ->assertDontSeeHtml('Brno (1)')
+        ->assertDontSeeHtml('Praha (2)');
+
+    $component->call('filterByCellValue', '2', 'city');
+    expect($component->get('tableState.columnFilters.city'))->toBe([]);
+
+    $component->call('filterByCellValue', '1', 'city');
+    expect($component->get('tableState.columnFilters.city'))->toBe(['Praha']);
 });

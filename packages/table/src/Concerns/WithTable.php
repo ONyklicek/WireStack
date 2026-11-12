@@ -930,7 +930,9 @@ trait WithTable
         foreach ($table->getColumns() as $column) {
             $filter = $column->getFilter();
 
-            if ($filter instanceof SelectFilter && $filter->wantsFacets() && $filter->canView() && $column->canView()) {
+            // A column that hides its cell on some records would have those
+            // values listed (and counted) here for anyone to read — no facets.
+            if ($filter instanceof SelectFilter && $filter->wantsFacets() && $filter->canView() && $column->canView() && ! $column->hasRecordVisibility()) {
                 $facets ??= app(FilterFacets::class);
                 $filter->facets($facets->count($table, $filter, $filterValues, $columnFilterValues, $search, $column->getName(), isColumnFilter: true));
             }
@@ -1542,6 +1544,16 @@ trait WithTable
     }
 
     /**
+     * Apply a deferred filter panel (Table::deferFilters()). The values it holds
+     * arrive with this very request — the controls bind without `.live` — so
+     * all that is left is to start again from the first page.
+     */
+    public function applyTableFilters(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
      * Reset column filters only
      */
     public function resetColumnFilters(): void
@@ -1695,7 +1707,8 @@ trait WithTable
 
         $record = $this->getTable()->getQuery()->whereKey($recordKey)->first();
 
-        if ($record === null) {
+        // A cell the user cannot see is not a value they may filter by.
+        if ($record === null || ! $columnObject->isVisibleForRecord($record)) {
             return;
         }
 

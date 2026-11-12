@@ -521,6 +521,12 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         return $this;
     }
 
+    /** Whether some records may hide this column's cell ({@see visibleForRecord()}). */
+    public function hasRecordVisibility(): bool
+    {
+        return $this->visibleForRecordCallback !== null;
+    }
+
     /**
      * Whether this column's cell is visible for the given record. Structural
      * visibility ({@see canView()}) is checked separately by renderCell.
