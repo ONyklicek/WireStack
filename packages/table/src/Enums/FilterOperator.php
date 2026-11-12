@@ -50,19 +50,31 @@ enum FilterOperator: string
     case IsEmpty = 'is_empty';
     case IsNotEmpty = 'is_not_empty';
 
-    /** The operators a text filter offers when it is told to offer them all. */
+    /**
+     * The operators a text filter offers when it is told to offer them all.
+     *
+     * @return list<self>
+     */
     public static function forText(): array
     {
         return [self::Contains, self::NotContains, self::Equals, self::NotEquals, self::StartsWith, self::EndsWith, self::IsEmpty, self::IsNotEmpty];
     }
 
-    /** The operators a select filter offers when it is told to offer them all. */
+    /**
+     * The operators a select filter offers when it is told to offer them all.
+     *
+     * @return list<self>
+     */
     public static function forSelect(): array
     {
         return [self::In, self::NotIn, self::IsEmpty, self::IsNotEmpty];
     }
 
-    /** The operators a number filter offers when it is told to offer them all. */
+    /**
+     * The operators a number filter offers when it is told to offer them all.
+     *
+     * @return list<self>
+     */
     public static function forNumber(): array
     {
         return [self::Equals, self::NotEquals, self::GreaterThan, self::GreaterThanOrEqual, self::LessThan, self::LessThanOrEqual, self::IsEmpty, self::IsNotEmpty];

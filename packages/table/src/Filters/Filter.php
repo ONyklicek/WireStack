@@ -143,6 +143,8 @@ class Filter implements Htmlable
     /**
      * Let the user choose how this filter compares: `true` offers every operator
      * the filter type supports, a list offers those (enum cases or their values).
+     *
+     * @param  array<int, FilterOperator|string>|bool  $operators
      */
     public function operators(array|bool $operators = true): static
     {

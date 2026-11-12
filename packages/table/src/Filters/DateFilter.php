@@ -290,13 +290,6 @@ class DateFilter extends Filter
     }
 
     /**
-     * Apply a "YYYY-MM" month value as whereYear + whereMonth.
-     * Malformed values are ignored rather than producing a broken constraint.
-     *
-     * @param  Builder<Model>  $query
-     * @return Builder<Model>
-     */
-    /**
      * One day comparison. Compared by DATE, not by the stored value: on a
      * datetime column "on 3 March" has to match 3 March at 14:00.
      *
@@ -327,6 +320,13 @@ class DateFilter extends Filter
         };
     }
 
+    /**
+     * Apply a "YYYY-MM" month value as whereYear + whereMonth.
+     * Malformed values are ignored rather than producing a broken constraint.
+     *
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
     protected function applyMonth(Builder $query, string $column, mixed $value): Builder
     {
         if (! is_string($value) || ! preg_match('/^(\d{4})-(\d{1,2})$/', $value, $matches)) {

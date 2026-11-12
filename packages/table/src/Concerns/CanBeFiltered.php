@@ -175,7 +175,7 @@ trait CanBeFiltered
         $filter = $this->filter;
 
         if (! $filter instanceof DateFilter) {
-            $filter = $this->filterFactory()->date($this->name, range: true);
+            $filter = DateFilter::make($this->name)->range();
             $this->filter($filter);
         }
 

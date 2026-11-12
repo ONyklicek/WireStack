@@ -207,6 +207,7 @@ class QueryBuilderFilter extends Filter
             foreach ($rules as $rule) {
                 $inner->where(function (Builder $condition) use ($rule): void {
                     if (isset($rule['rules'])) {
+                        /** @var array{combinator: string, rules: list<array<string, mixed>>} $rule */
                         $this->applyGroup($condition, $rule);
 
                         return;
@@ -264,6 +265,7 @@ class QueryBuilderFilter extends Filter
 
         foreach ($group['rules'] as $rule) {
             if (isset($rule['rules'])) {
+                /** @var array{combinator: string, rules: list<array<string, mixed>>} $rule */
                 $inner = $this->describeGroup($rule);
                 if ($inner !== '') {
                     $parts[] = '('.$inner.')';

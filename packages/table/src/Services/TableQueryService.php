@@ -385,7 +385,7 @@ final class TableQueryService
                 continue;
             }
             // Skip filters already expressed in the plan.
-            if ($filter?->toPlannerDefinitions($value) !== []) {
+            if ($filter->toPlannerDefinitions($value) !== []) {
                 continue;
             }
 
