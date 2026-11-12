@@ -94,6 +94,9 @@ class Filter implements Htmlable
     /** The comparison read from the current state by {@see forState()}; null outside a query. */
     protected ?FilterOperator $activeOperator = null;
 
+    /** Whether the control binds without `.live` — the panel applies on Apply (Table::deferFilters()). */
+    protected bool $deferred = false;
+
     public function __construct(string $name)
     {
         $this->name = $name;
@@ -193,6 +196,27 @@ class Filter implements Htmlable
         return $this->operators ?? [];
     }
 
+    /** Whether the panel gives this filter a whole row of its grid. */
+    public function spansFullWidth(): bool
+    {
+        return false;
+    }
+
+    /**
+     * The value control a query-builder condition about this filter draws:
+     * 'text', 'select', 'date' or 'boolean'.
+     */
+    public function builderInput(): string
+    {
+        return 'text';
+    }
+
+    /** How this filter words an operator — a date filter says "is before", not "is less than". */
+    public function operatorLabel(FilterOperator $operator): string
+    {
+        return $operator->label();
+    }
+
     /** Whether the filter draws an operator picker: there is more than one way to compare. */
     public function hasOperatorPicker(): bool
     {
@@ -249,6 +273,32 @@ class Filter implements Htmlable
     public function getActiveOperator(): FilterOperator
     {
         return $this->activeOperator ?? $this->getDefaultOperator();
+    }
+
+    /** Bind the control without `.live`; set by the table from Table::deferFilters(). */
+    public function deferred(bool $deferred = true): static
+    {
+        $this->deferred = $deferred;
+
+        return $this;
+    }
+
+    public function isDeferred(): bool
+    {
+        return $this->deferred;
+    }
+
+    /**
+     * The `wire:model` attribute name the control binds with: live (debounced
+     * for typing) unless the panel is deferred, when the value waits for Apply.
+     */
+    public function wireModelDirective(int $debounce = 0): string
+    {
+        if ($this->deferred) {
+            return 'wire:model';
+        }
+
+        return $debounce > 0 ? 'wire:model.live.debounce.'.$debounce.'ms' : 'wire:model.live';
     }
 
     /**
@@ -368,7 +418,7 @@ class Filter implements Htmlable
         // With a picker the chip says how it compares — "Email: does not contain
         // gmail", "Phone: is empty" — since "Email: gmail" would read as a match.
         if ($operator !== null) {
-            return trim($this->getLabel().': '.$operator->label().' '.$valueLabel);
+            return trim($this->getLabel().': '.$this->operatorLabel($operator).' '.$valueLabel);
         }
 
         return $this->getLabel().': '.$valueLabel;

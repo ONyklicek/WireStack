@@ -13,6 +13,7 @@ use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Support\DateBoundary;
 use NyonCode\WireForms\Components\DateTimePicker;
 use NyonCode\WireTable\Enums\DatePreset;
+use NyonCode\WireTable\Enums\FilterOperator;
 
 class DateFilter extends Filter
 {
@@ -222,6 +223,35 @@ class DateFilter extends Filter
         return ['from' => $value['from'] ?? null, 'to' => $value['to'] ?? null];
     }
 
+    /**
+     * A single date compares by day: on, not on, before, after, and emptiness.
+     * (A range has its own from/to and does not offer operators.)
+     */
+    public function supportedOperators(): array
+    {
+        if ($this->range || $this->monthMode) {
+            return [];
+        }
+
+        return [FilterOperator::Equals, FilterOperator::NotEquals, FilterOperator::LessThan, FilterOperator::LessThanOrEqual, FilterOperator::GreaterThan, FilterOperator::GreaterThanOrEqual, FilterOperator::IsEmpty, FilterOperator::IsNotEmpty];
+    }
+
+    /** A condition about a date picks a day. */
+    public function builderInput(): string
+    {
+        return 'date';
+    }
+
+    /** Days are before and after, not less and greater. */
+    public function operatorLabel(FilterOperator $operator): string
+    {
+        return match ($operator) {
+            FilterOperator::Equals, FilterOperator::NotEquals, FilterOperator::LessThan, FilterOperator::LessThanOrEqual,
+            FilterOperator::GreaterThan, FilterOperator::GreaterThanOrEqual => Trans::get('wire-table::messages.date_operator_'.$operator->value),
+            default => $operator->label(),
+        };
+    }
+
     public function apply(Builder $query, mixed $value): Builder
     {
         if ($value === null || $value === '' || $value === []) {
@@ -230,6 +260,10 @@ class DateFilter extends Filter
 
         if ($this->queryCallback) {
             return $this->applyQueryCallback($query, $this->normalizeValue($value), $value);
+        }
+
+        if ($this->hasOperatorPicker()) {
+            return $this->applyDateOperator($query, $this->getActiveOperator(), $value);
         }
 
         $column = $this->getColumn();
@@ -262,6 +296,37 @@ class DateFilter extends Filter
      * @param  Builder<Model>  $query
      * @return Builder<Model>
      */
+    /**
+     * One day comparison. Compared by DATE, not by the stored value: on a
+     * datetime column "on 3 March" has to match 3 March at 14:00.
+     *
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
+    protected function applyDateOperator(Builder $query, FilterOperator $operator, mixed $value): Builder
+    {
+        $column = $this->getColumn();
+
+        if (! $operator->requiresValue()) {
+            $operator->constrain($query, $column, null);
+
+            return $query;
+        }
+
+        if (! is_string($value) || $value === '') {
+            return $query;
+        }
+
+        return match ($operator) {
+            FilterOperator::NotEquals => $query->where(static fn (Builder $q) => $q->whereNull($column)->orWhereDate($column, '!=', $value)),
+            FilterOperator::LessThan => $query->whereDate($column, '<', $value),
+            FilterOperator::LessThanOrEqual => $query->whereDate($column, '<=', $value),
+            FilterOperator::GreaterThan => $query->whereDate($column, '>', $value),
+            FilterOperator::GreaterThanOrEqual => $query->whereDate($column, '>=', $value),
+            default => $query->whereDate($column, $value),
+        };
+    }
+
     protected function applyMonth(Builder $query, string $column, mixed $value): Builder
     {
         if (! is_string($value) || ! preg_match('/^(\d{4})-(\d{1,2})$/', $value, $matches)) {

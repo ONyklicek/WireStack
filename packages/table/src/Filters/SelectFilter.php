@@ -226,6 +226,12 @@ class SelectFilter extends Filter
         return $query->whereIn($this->getColumn(), $value);
     }
 
+    /** A condition about a select picks from its options. */
+    public function builderInput(): string
+    {
+        return 'select';
+    }
+
     /** "Is any of", "is none of" and emptiness: what a list of options can be asked. */
     public function supportedOperators(): array
     {

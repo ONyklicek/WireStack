@@ -92,7 +92,6 @@ trait WithTable
     use CanSelectRecords;
     use DispatchesStateUpdates;
     use HasSqlDebug;
-
     // Shared, form-agnostic action engine (wire-core) + the form-hosting bridge
     // (wire-forms). WithTable keeps thin, record-scoped wrappers on top; the
     // bridge overrides the engine's form extension points.
@@ -113,13 +112,15 @@ trait WithTable
         InteractsWithTableActions::resolveActionRecordIds insteadof InteractsWithActions;
         InteractsWithTableActions::sendActionNotification insteadof InteractsWithActions;
     }
+
     use InteractsWithFieldActions;
     use InteractsWithFileUploads;
-
     // Lets a write render the regions it touched instead of the whole table. The
     // engine is here; the table's own anchors and the flag that turns them on are
     // the next slice — nothing calls renderPartial() yet.
     use InteractsWithPartials;
+
+    use InteractsWithQueryBuilderFilters;
     use InteractsWithRepeaters;
     use InteractsWithSelectCreation;
     use InteractsWithTableModals;
@@ -1604,6 +1605,10 @@ trait WithTable
         foreach ($this->getTable()->getFilters() as $filter) {
             if ($filter->hasOperatorPicker()) {
                 Arr::set($slots, $filter->getName(), $filter->wrapValue(null));
+            } elseif (! $filter->isMultiple() && is_array($filter->emptyState())) {
+                // A keyed shape the controls bind into — a range's bounds, a
+                // query builder's {combinator, rules}.
+                Arr::set($slots, $filter->getName(), $filter->emptyState());
             }
         }
 

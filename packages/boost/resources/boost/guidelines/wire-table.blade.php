@@ -122,6 +122,26 @@ searchable combobox** (the same `searchable-select` used by wire-forms `Select` 
 fall back to `Filter::apply()`), and inherit authorization, **indicator chips** (removable, alongside panel
 chips), and **query-string persistence** (`Table::queryString()`, under a `col_<column>` URL parameter).
 
+**Operators.** `->operators()` on a filter (or `->filterOperators()` on a column) lets the user pick the
+comparison from `Enums\FilterOperator` (contains, not_contains, equals, not_equals, starts_with, ends_with,
+in, not_in, gt/gte/lt/lte, is_empty, is_not_empty — only those the filter type supports survive). The state
+becomes `{value, operator}`; read it through `$filter->forState($raw)` (a copy, never mutate the stored
+filter) and `extractValue()`. Negatives keep NULL rows and cross a relation as `whereDoesntHave`. Header
+state for a column with operators is `{value, operator}`, without them the bare value — seed it with
+`Column::initialFilterState()`, never by hand.
+
+**Layouts.** `Table::columnFilterLayout(ColumnFilterLayout::Popover)` replaces the header filter row with a
+funnel per column (config `wire-table.defaults.column_filter_layout`, default `row`).
+`Table::filtersLayout(FiltersLayout::AboveContent|AboveContentCollapsible)` moves the panel above the rows;
+`->filtersFormColumns(1–4)`; `->deferFilters()` binds without `.live` and adds Apply.
+
+**More.** `SelectFilter::withCounts()` / `->filterWithCounts()` (counts under every other filter, via
+`Services\FilterFacets`; not for relation columns, custom data sources or `visibleForRecord()` columns),
+`->optionsFromColumn()` / `->filterAsValueList()`, `DateFilter::presets()` / `->filterPresets()` (stored by
+name, resolved per query in `->timezone()`), `Table::cellFilterMenu()` ("Only / Exclude this value", value
+read from the record), and `QueryBuilderFilter::make()->constraints([...filters])` for AND/OR conditions
+(state `{combinator, rules}`, one level of groups, not in the URL).
+
 ### Search syntax
 
 `Table::searchable()` splits the term into words **by default** (`tokenize()` is on): every word must

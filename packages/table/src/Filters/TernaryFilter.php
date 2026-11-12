@@ -140,6 +140,12 @@ class TernaryFilter extends Filter
         ];
     }
 
+    /** A condition about a yes/no field picks one of the two. */
+    public function builderInput(): string
+    {
+        return 'boolean';
+    }
+
     /** "Only this value" on a yes/no cell is the matching option; there is nothing to exclude to. */
     public function stateForCellValue(mixed $value, bool $exclude = false): mixed
     {

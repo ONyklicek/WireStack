@@ -6,6 +6,7 @@ namespace NyonCode\WireTable\Services;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Data\EloquentDataSource;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Table;
@@ -27,7 +28,7 @@ use NyonCode\WireTable\Table;
  * data source has no single column to group by and is left uncounted.
  *
  * The host does not ask for a header filter whose column hides its cell on some
- * records ({@see \NyonCode\WireTable\Columns\Column::visibleForRecord()}):
+ * records ({@see Column::visibleForRecord()}):
  * a value list would print the values those cells keep out of sight.
  */
 final class FilterFacets

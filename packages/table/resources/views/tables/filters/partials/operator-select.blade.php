@@ -11,12 +11,12 @@
 <label for="{{ $controlId }}" class="sr-only">{{ __('wire-table::messages.operator_label', ['filter' => $label]) }}</label>
 <select
     id="{{ $controlId }}"
-    wire:model.live="{{ $statePath }}.operator"
+    {{ $filter->wireModelDirective() }}="{{ $statePath }}.operator"
     data-testid="{{ $controlId }}"
     @wireEl('filter-operator')
     class="{{ \NyonCode\WireTable\Support\FilterControl::classes() }} pr-8"
 >
     @foreach($filter->getOperators() as $operator)
-        <option value="{{ $operator->value }}" @selected($operator === $current)>{{ $operator->label() }}</option>
+        <option value="{{ $operator->value }}" @selected($operator === $current)>{{ $filter->operatorLabel($operator) }}</option>
     @endforeach
 </select>

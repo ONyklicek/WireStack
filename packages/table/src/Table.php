@@ -49,6 +49,7 @@ class Table implements Htmlable
     use Concerns\CollapsesActionsOnMobile;
     use Concerns\HasColumnFilterLayout;
     use Concerns\HasDataSource;
+    use Concerns\HasFiltersPanel;
     use Concerns\HasGestures;
     use Concerns\HasGrouping;
     use Concerns\HasInactiveRecords;
@@ -483,6 +484,14 @@ class Table implements Htmlable
      */
     public function getFilters(): array
     {
+        // A filter draws its own control, so it has to know whether the panel
+        // applies on Apply or on every change; the table is what decides.
+        $deferred = $this->hasDeferredFilters();
+
+        foreach ($this->filters as $filter) {
+            $filter->deferred($deferred);
+        }
+
         return $this->filters;
     }
 

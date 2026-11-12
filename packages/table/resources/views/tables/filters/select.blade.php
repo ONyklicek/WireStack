@@ -48,7 +48,7 @@
         'sheetTitle' => $label,
         'mobileBreakpoint' => $filter->getMobileBreakpoint(),
         // Filters apply immediately, whichever control draws them.
-        'live' => true,
+        'live' => ! $filter->isDeferred(),
         'selectedValues' => $selectedValues,
         'ariaLabel' => $label,
         'testId' => 'filter-' . $name,

@@ -37,7 +37,7 @@
         'touch' => $filter->usesTouchOnMobile(),
         'sheetTitle' => $label,
         'mobileBreakpoint' => $filter->getMobileBreakpoint(),
-        'live' => true,
+        'live' => ! $filter->isDeferred(),
         'selectedValues' => $selectedValue === null ? [] : [$selectedValue],
         'ariaLabel' => $label,
         'testId' => 'filter-' . $name,

@@ -27,6 +27,10 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
   `->navigate(false)` on `Action`, `HeaderAction` and any table column; `Table::recordUrl($url, navigate: false)`;
   @verbatim`<x-wire::menu-item :navigate="false">`@endverbatim.
 - Actions can open modals via `->modal(...)` and multi-step wizards via `->steps([...])`.
+- Below the mobile breakpoint a dialog is a bottom sheet by default (`wire-core.modals.mobile`: `sheet` | `full-screen` | `dialog`);
+  per action `->slideOverOnMobile()`, `->fullScreenOnMobile()`, `->dialogOnMobile()`. Overlays lock page scroll with
+  `x-scroll-lock="open"` (or `window.wireScrollLock.lock(el)` / `.unlock(el)`) — never `overflow-hidden` on `<body>`, which iOS ignores.
+  A control inside a dialog that consumes Escape must call `$event.preventDefault()` so the dialog stays open.
 - A wizard step's `->schema(fn (array $data) => [...])` Closure builds its fields from data entered in
   earlier steps; the bag is live even for header actions (no record), so later steps can branch on it.
 - An action with a form (`->form([...])`) self-seeds each field from its `->default()` (or a

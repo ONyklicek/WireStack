@@ -31,7 +31,11 @@ use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Columns\ToggleColumn;
 use NyonCode\WireTable\Concerns\WithTable;
 use NyonCode\WireTable\Enums\ColumnFilterLayout;
+use NyonCode\WireTable\Enums\FiltersLayout;
+use NyonCode\WireTable\Filters\DateFilter;
+use NyonCode\WireTable\Filters\QueryBuilderFilter;
 use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireTable\Filters\TextFilter;
 use NyonCode\WireTable\Filters\TrashedFilter;
 use NyonCode\WireTable\Support\InactiveRow;
 use NyonCode\WireTable\Support\RecordAction;
@@ -156,6 +160,10 @@ class TablePreview extends Component
 
         if ($this->variant === 'column-filters-popover') {
             return $this->columnFiltersPopoverTable($table);
+        }
+
+        if ($this->variant === 'filters-above') {
+            return $this->filtersAboveTable($table);
         }
 
         if ($this->variant === 'split-columns') {
@@ -473,6 +481,44 @@ class TablePreview extends Component
                 BadgeColumn::make('role')->label('Role'),
             ])
             ->searchable(false)
+            ->paginated(false);
+    }
+
+    /**
+     * The filter panel above the rows (collapsible), in two columns, deferred
+     * behind Apply — with an operator picker, a counted status list and date
+     * presets inside it.
+     */
+    private function filtersAboveTable(Table $table): Table
+    {
+        return $table
+            ->model(Invoice::class)
+            ->columns([
+                TextColumn::make('number')->label('Invoice')->sortable(),
+                TextColumn::make('customer')->label('Customer'),
+                BadgeColumn::make('status')->label('Status')->colors($this->statusColors()),
+                TextColumn::make('issued_at')->label('Issued')->date(),
+            ])
+            ->filters([
+                TextFilter::make('customer')->label('Customer')->operators(),
+                SelectFilter::make('status')->label('Status')->multiple()
+                    ->options(['paid' => 'Paid', 'pending' => 'Pending', 'overdue' => 'Overdue'])
+                    ->operators()
+                    ->withCounts(),
+                DateFilter::make('issued_at')->label('Issued')->presets(),
+                QueryBuilderFilter::make('conditions')->label('Conditions')->constraints([
+                    TextFilter::make('customer')->label('Customer'),
+                    TextFilter::make('number')->label('Invoice'),
+                    SelectFilter::make('status')->label('Status')
+                        ->options(['paid' => 'Paid', 'pending' => 'Pending', 'overdue' => 'Overdue']),
+                    DateFilter::make('issued_at')->label('Issued'),
+                ]),
+            ])
+            ->filtersLayout(FiltersLayout::AboveContentCollapsible)
+            ->filtersFormColumns(3)
+            ->deferFilters()
+            ->defaultSort('number', 'asc')
+            ->searchable()
             ->paginated(false);
     }
 

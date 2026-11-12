@@ -578,20 +578,32 @@ Base:
 
 Filters:
 
-- `SelectFilter`
-- `DateFilter`
+- `TextFilter`
+- `SelectFilter` (`withCounts()`, `optionsFromColumn()`)
+- `DateFilter` (`presets()`, `timezone()`, operators on a single date)
 - `NumberRangeFilter`
 - `TernaryFilter`
 - `TrashedFilter` (soft-delete scope, not a column constraint)
+- `QueryBuilderFilter` — AND/OR conditions over other filters (`Support\QueryBuilderState`, `Concerns\InteractsWithQueryBuilderFilters`)
+
+Shared vocabulary and owners:
+
+- `Enums\FilterOperator` — every comparison a filter can offer (`->operators()`), its label, planner clause and query constraint
+- `Enums\DatePreset` — named relative ranges, stored by name
+- `Enums\ColumnFilterLayout` (row | popover) via `Concerns\HasColumnFilterLayout`, which also owns `cellFilterMenu()`
+- `Enums\FiltersLayout` (dropdown | above | above_collapsible) via `Concerns\HasFiltersPanel` (`deferFilters()`, `filtersFormColumns()`)
+- `Services\FilterFacets` — option counts / value lists under the other filters
 
 Filter views:
 
+- `packages/table/resources/views/tables/filters/form-field.blade.php` (text, number range, single date)
 - `packages/table/resources/views/tables/filters/select.blade.php`
-- `packages/table/resources/views/tables/filters/date.blade.php`
-- `packages/table/resources/views/tables/filters/number-range.blade.php`
 - `packages/table/resources/views/tables/filters/ternary.blade.php`
-- `packages/table/resources/views/tables/filters/text.blade.php`
-- `packages/table/resources/views/tables/filters/form-field.blade.php`
+- `packages/table/resources/views/tables/filters/date-range.blade.php` (a range with presets)
+- `packages/table/resources/views/tables/filters/query-builder.blade.php` (+ `partials/query-builder-{rule,combinator}`)
+- `packages/table/resources/views/tables/filters/partials/{operator-select,date-preset-select}.blade.php`
+- `packages/table/resources/views/tables/partials/{filters-panel-body,column-filter-popover,cell-filter-menu}.blade.php`
+- `packages/table/resources/views/tables/columns/partials/filter-with-operator.blade.php`
 
 ## Table Runtime
 

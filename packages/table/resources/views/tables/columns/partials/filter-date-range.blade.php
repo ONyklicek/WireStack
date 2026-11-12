@@ -25,7 +25,7 @@
     <div class="flex gap-1">
         <input
             type="date"
-            wire:model.live="{{ $statePath }}.from"
+            {{ $filter->wireModelDirective() }}="{{ $statePath }}.from"
             @if($minDate) min="{{ $minDate }}" @endif
             @if($maxDate) max="{{ $maxDate }}" @endif
             placeholder="{{ __('wire-table::messages.from') }}"
@@ -34,7 +34,7 @@
         >
         <input
             type="date"
-            wire:model.live="{{ $statePath }}.to"
+            {{ $filter->wireModelDirective() }}="{{ $statePath }}.to"
             @if($minDate) min="{{ $minDate }}" @endif
             @if($maxDate) max="{{ $maxDate }}" @endif
             placeholder="{{ __('wire-table::messages.to') }}"

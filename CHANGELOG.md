@@ -2,6 +2,75 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.10.0]
+
+### Added
+
+- **Column filters you can ask more than one question.** A filter can offer a choice of comparison —
+  `->operators()` on any filter, `->filterOperators()` on a column: contains, does not contain, is, is not,
+  starts with, ends with, is any of, is none of, greater / less than, is empty, is not empty — from one
+  vocabulary, `FilterOperator`. The state becomes `{value, operator}`, goes into the URL (`…_op`) and saved
+  views, and the chip says how it compares ("Email: does not contain gmail"). The negatives keep rows with
+  no value, and across a relation they mean "no related record matches" (`whereDoesntHave`), never "has one
+  that does not". "Is empty" on text also matches `''`. A single-date filter compares by day: is on, is
+  before, is after.
+- **Header filters in a popover.** `Table::columnFilterLayout(ColumnFilterLayout::Popover)` (or
+  `wire-table.defaults.column_filter_layout`) puts a funnel beside each filterable column's label instead of
+  the always-open filter row. It is marked while the column is filtered and opens that one filter —
+  operator, value, Clear — in a panel sized for the filter, a bottom sheet on a phone. The row stays the
+  default.
+- **Counts and value lists.** `SelectFilter::withCounts()` / `->filterWithCounts()` shows how many records
+  each option would leave ("Admin (3)"), counted under every other filter and the search but never under
+  its own. `optionsFromColumn()` / `->filterAsValueList()` takes the options from the column's own distinct
+  values, most common first.
+- **Date presets.** `DateFilter::presets()` / `->filterPresets()`: today, yesterday, last 7 / 30 days, this /
+  last week, month, quarter and year. The state stores the preset's name, so a saved view or a shared link
+  of "last 7 days" stays relative; the dates are worked out when the query runs, in `->timezone()`.
+- **Filter from a cell.** `Table::cellFilterMenu()`: right-click a cell of a filterable column for "Only
+  this value" and, where the filter can exclude, "Exclude this value". The value is read from the record on
+  the server, not from the formatted cell. A row with its own context menu keeps it.
+- **Conditions with AND / OR.** `QueryBuilderFilter::make()->constraints([...])`: conditions combined with
+  "all of" / "any of", and groups of them one level deep. Every condition is one of the filters you list,
+  so it compares exactly as that filter does anywhere else.
+- **A deferred filter panel, and where it sits.** `Table::deferFilters()` applies the panel on an Apply
+  button instead of on every change. `Table::filtersLayout()` draws it in the toolbar dropdown (default),
+  above the rows, or above the rows behind a toggle (remembered per browser); `filtersFormColumns()` lays
+  it out in up to four columns.
+- **Dialogs are bottom sheets on a phone.** `wire-core.modals.mobile` (`'sheet'` by default,
+  `'full-screen'`, `'dialog'`) decides how a dialog presents below the mobile breakpoint when the action
+  does not say; `->dialogOnMobile()` keeps the floating card. A sheet carries the grabber and is pulled
+  down, or flicked, to close. A desktop slide-over still becomes a sheet only when asked.
+
+### Changed
+
+- **The page behind a dialog no longer scrolls.** One counted page lock (`x-scroll-lock`,
+  `window.wireScrollLock`) for every overlay, released when the server's re-render removes the dialog; the
+  admin drawer uses it instead of `overflow-hidden` on `<body>`, which iOS Safari ignores.
+- **Dialogs fit a phone's real screen.** `dvh` instead of `vh` (an `85vh` sheet put its own footer under
+  Safari's toolbar), safe-area padding on edge-to-edge footers, and `viewport-fit=cover` in the admin
+  layouts so the safe-area insets are no longer always zero.
+- **Where the focus lands when a dialog opens.** Not on the close button: a field (desktop), the dialog
+  itself (touch — no keyboard over a sheet nobody has read), and Cancel in a confirmation, so an Enter out
+  of habit does not run the thing being confirmed. The close button's ring shows for keyboard focus only.
+- **On a phone the bulk-action bar rides the bottom edge**, above the home indicator, where the thumb is.
+- **"Does not equal" keeps rows with no value.** `TextFilter::operator('!=')` was one `!=` clause, which
+  drops NULLs.
+
+### Fixed
+
+- **A panel filter the query planner cannot express is applied.** It was silently dropped unless it also
+  had a query callback or a range shape.
+- **A range header filter starts with its keys.** Its state began as `null`, and binding into `.from` of
+  `null` threw in the browser. Clearing a filter restores its empty slot instead of removing it.
+- **Escape that a control inside a dialog consumed** — closing a select, a dropdown, a date picker — no
+  longer closes the dialog too.
+- **Two stacked dialogs no longer share a title id**; each has its own, plus `aria-describedby`.
+
+### Security
+
+- **A column that hides its cell on some records (`visibleForRecord()`) gets no value list or counts,** and
+  the cell menu ignores a cell the user cannot see — either would have shown the hidden values.
+
 ## [2.9.14]
 
 ### Fixed

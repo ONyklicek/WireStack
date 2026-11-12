@@ -10,7 +10,7 @@
 <label for="{{ $controlId }}" class="sr-only">{{ __('wire-table::messages.date_preset_label', ['filter' => $label]) }}</label>
 <select
     id="{{ $controlId }}"
-    wire:model.live="{{ $statePath }}.preset"
+    {{ $filter->wireModelDirective() }}="{{ $statePath }}.preset"
     data-testid="{{ $controlId }}"
     @wireEl('filter-date-preset')
     class="{{ \NyonCode\WireTable\Support\FilterControl::classes() }} pr-8"
