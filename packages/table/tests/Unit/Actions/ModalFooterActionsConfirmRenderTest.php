@@ -64,3 +64,32 @@ it('names each footer action for browser tests, as the action modal host does', 
         ->toContain('data-testid="modal-footer-action-preview"')
         ->toContain('aria-label="Preview"');
 });
+
+dataset('footer action views', [
+    'table' => [fn (ModalFooterAction $action) => renderModalFooterActions([$action])],
+    'core' => [fn (ModalFooterAction $action) => view('wire-core::actions.partials.modal-host-footer-action', [
+        'footerAction' => $action->toArray(),
+    ])->render()],
+]);
+
+it('draws an outlined footer action in its own colour', function (Closure $render) {
+    // outlined() used to ignore the colour and draw the neutral grey button
+    // whatever the action asked for.
+    $html = $render(ModalFooterAction::make('skip')->color('yellow')->outlined());
+
+    expect($html)->toContain('border-yellow-700')
+        ->toContain('text-yellow-700')
+        ->not->toContain('text-gray-700');
+})->with('footer action views');
+
+it('keeps the neutral outlined footer action exactly as it was', function (Closure $render) {
+    $html = $render(ModalFooterAction::make('skip')->outlined());
+
+    expect($html)->toContain('border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600');
+})->with('footer action views');
+
+it('fills a footer action that is not outlined', function (Closure $render) {
+    $html = $render(ModalFooterAction::make('skip')->color('yellow'));
+
+    expect($html)->toContain('bg-yellow-400');
+})->with('footer action views');

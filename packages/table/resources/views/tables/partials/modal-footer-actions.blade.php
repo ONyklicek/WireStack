@@ -15,9 +15,8 @@
         $footerClick = "callModalFooterAction('".addslashes((string) $footerAction['name'])."')";
         $color = $footerAction['color'] ?? 'gray';
         $outlined = (bool) ($footerAction['outlined'] ?? false);
-        $buttonClasses = $outlined
-            ? 'rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600'
-            : 'rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm '.HasColor::getModalSubmitButtonClasses($color);
+        $buttonClasses = 'rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm '
+            .HasColor::getModalFooterActionClasses($color, $outlined);
     @endphp
     <button
         type="button"

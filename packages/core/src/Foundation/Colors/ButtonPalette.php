@@ -65,6 +65,27 @@ final class ButtonPalette
         };
     }
 
+    /**
+     * A custom modal footer button (`ModalFooterAction`): filled like the
+     * submit button, or `outlined()` in its own colour on the panel's surface.
+     *
+     * An outlined button used to ignore its colour and draw the neutral grey
+     * one whatever was asked for. The neutral case keeps that exact look —
+     * it is the one every footer had — and only a hue changes it.
+     */
+    public static function modalFooterAction(string $color, bool $outlined): string
+    {
+        if (! $outlined) {
+            return 'text-white '.self::modalSubmit($color);
+        }
+
+        $border = self::outlined($color);
+
+        return $border === self::outlined('gray')
+            ? 'border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+            : 'bg-white dark:bg-gray-700 '.$border;
+    }
+
     public static function modalSubmit(string $color): string
     {
         $color = SemanticPalette::hue($color);
