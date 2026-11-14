@@ -226,4 +226,21 @@ return [
     'export_queued' => 'The export is being prepared in the background.',
     'export_ready' => 'Your export is ready: :file',
     'unsaved_edits' => 'Some changes have not been saved yet. Leave anyway?',
+
+    // BulkEditAction
+    'bulk_edit_label' => 'Edit selected',
+    'bulk_edit_heading' => 'Edit the selected records',
+    'bulk_edit_submit' => 'Apply',
+    'bulk_edit_change' => 'Change :field',
+    'bulk_edit_done' => '{0} Nothing was changed.|{1} :count record updated.|[2,*] :count records updated.',
+    'bulk_edit_skipped' => '{1} :count was left alone: you may not edit it.|[2,*] :count were left alone: you may not edit them.',
+
+    // Shared views (Table::shareViews())
+    'shared_view' => 'Shared with everyone',
+    'save_shared_view' => 'Save for everyone',
+
+    // Undo (BaseAction::undoable())
+    'undo' => 'Undo',
+    'undo_deleted' => '{1} :count record deleted.|[2,*] :count records deleted.',
+    'undo_restored' => '{0} Nothing to restore.|{1} :count record restored.|[2,*] :count records restored.',
 ];
