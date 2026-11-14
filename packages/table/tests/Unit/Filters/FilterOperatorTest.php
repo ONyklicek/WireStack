@@ -136,6 +136,7 @@ it('maps to a single planner clause only where one clause says it', function () 
     expect(FilterOperator::Contains->toPlannerClause('x'))->toBe(['LIKE', '%x%'])
         ->and(FilterOperator::StartsWith->toPlannerClause('x'))->toBe(['LIKE', 'x%'])
         ->and(FilterOperator::EndsWith->toPlannerClause('x'))->toBe(['LIKE', '%x'])
+        ->and(FilterOperator::Contains->toPlannerClause('50%_!'))->toBe(['LIKE', '%50!%!_!!%'])
         ->and(FilterOperator::Equals->toPlannerClause('x'))->toBe(['=', 'x'])
         ->and(FilterOperator::GreaterThan->toPlannerClause(3))->toBe(['>', 3])
         ->and(FilterOperator::GreaterThanOrEqual->toPlannerClause(3))->toBe(['>=', 3])
@@ -186,6 +187,31 @@ it('applies every text operator, keeping NULLs for the negatives and matching bl
     'is empty (no value needed)' => ['is_empty', null, ['Cy', 'Di']],
     'is not empty' => ['is_not_empty', null, ['Ada', 'Bo']],
 ]);
+
+it('matches % and _ literally, in the planner and in constrain() alike', function (string $operator, string $value, array $expected) {
+    FoContact::create(['id' => 5, 'name' => 'Pct', 'email' => '50%off@shop.cz', 'role' => 'a_b', 'score' => 1]);
+    FoContact::create(['id' => 6, 'name' => 'Und', 'email' => '50xoff@shop.cz', 'role' => 'axb', 'score' => 1]);
+
+    // email goes through the planner clause; role (with ->query() absent but a
+    // negative operator) through constrain().
+    expect(foPanel(TextFilter::make('email')->operators(), ['value' => $value, 'operator' => $operator]))->toBe($expected);
+})->with([
+    'contains a per cent' => ['contains', '50%', ['Pct']],
+    'starts with a per cent' => ['starts_with', '50%', ['Pct']],
+    'ends with an underscore-free tail' => ['ends_with', '%off@shop.cz', ['Pct']],
+    'does not contain a per cent' => ['not_contains', '50%', ['Ada', 'Bo', 'Cy', 'Di', 'Und']],
+]);
+
+it('matches an underscore literally through constrain()', function () {
+    FoContact::create(['id' => 5, 'name' => 'Pct', 'email' => null, 'role' => 'a_b', 'score' => 1]);
+    FoContact::create(['id' => 6, 'name' => 'Und', 'email' => null, 'role' => 'axb', 'score' => 1]);
+
+    $query = FoContact::query();
+    FilterOperator::Contains->constrain($query, 'role', 'a_b');
+
+    expect($query->pluck('name')->all())->toBe(['Pct'])
+        ->and(foPanel(TextFilter::make('role')->operators(), ['value' => 'A_B', 'operator' => 'contains']))->toBe(['Pct']);
+});
 
 it('falls back to the default for an operator the filter does not offer', function () {
     $filter = TextFilter::make('email')->operators(['contains', 'not_contains']);

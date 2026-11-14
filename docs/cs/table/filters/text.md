@@ -45,6 +45,11 @@ e-mailu — a u textu *je prázdné* najde i `''`. Přes relaci (tečkový náze
 negace `whereDoesntHave` s pozitivním porovnáním: zákazník s jednou adresou na
 gmailu a jednou jinou je vyloučen.
 
+**Co uživatel napíše, se hledá doslova.** `%` a `_` se před vložením do vzoru
+escapují, takže *obsahuje* `50%` najde „50% sleva“, ne každý řádek s číslem 50.
+Shoda ignoruje velikost písmen na každém enginu — na PostgreSQL je to `ILIKE`,
+stejně jako u vyhledávání.
+
 **Výchozí stav.** Bez seznamu operátorů není výběr: filtr porovnává tak, jak říká
 `->operator()`, a jeho stav je prostá hodnota. Operátor, který nepotřebuje
 hodnotu (*je prázdné*, *není prázdné*), udělá filtr aktivním i s prázdným

@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Query\Contracts\QueryPipe;
 use NyonCode\WireCore\Core\Query\FilterClause;
 use NyonCode\WireCore\Core\Query\QueryPlan;
+use NyonCode\WireCore\Core\Query\Search\LikePredicate;
 use NyonCode\WireCore\Core\Support\SqlSafety;
 
 /**
@@ -231,7 +232,16 @@ final class ApplyFilters implements QueryPipe
             return;
         }
 
-        // Direct comparison (=, !=, <, >, LIKE, …). The operator was normalised to
+        // A pattern match. The filters hand over a pattern LikePattern escaped,
+        // so it is matched with the escape clause that makes `!%` a literal per
+        // cent — and case-insensitively on every engine, as the search box is.
+        if ($operator === 'LIKE' || $operator === 'NOT LIKE') {
+            LikePredicate::whereMatches($builder, $column, (string) $value, not: $operator === 'NOT LIKE', boolean: $boolean);
+
+            return;
+        }
+
+        // Direct comparison (=, !=, <, >, …). The operator was normalised to
         // upper case above; SQL treats these tokens case-insensitively.
         $builder->where($column, $operator, $value, $boolean);
     }

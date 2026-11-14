@@ -11,6 +11,7 @@ use NyonCode\WireCore\Core\Query\AggregateClause;
 use NyonCode\WireCore\Core\Query\FilterClause;
 use NyonCode\WireCore\Core\Query\JoinClause;
 use NyonCode\WireCore\Core\Query\QueryPlan;
+use NyonCode\WireCore\Core\Query\Search\LikePattern;
 use NyonCode\WireCore\Core\Query\Search\SearchConfig;
 use NyonCode\WireCore\Core\Query\Search\SearchTermParser;
 use NyonCode\WireCore\Core\Query\SearchClause;
@@ -226,6 +227,22 @@ it('reads the operators the way the filters write them, in any case', function (
         ->and($of(new FilterClause('name', 'like', 'A_a')))->toBe(['Ada'])
         ->and($of(new FilterClause('name', 'NOT LIKE', '%a%')))->toBe([])
         ->and($of(new FilterClause('id', 'NOT IN', [1, 3])))->toBe(['Grace']);
+});
+
+it('honours the escape character the filters write, so % and _ can be literal', function () {
+    $rows = new CollectionDataSource(collect([
+        ['id' => 1, 'name' => '50% off'],
+        ['id' => 2, 'name' => '50 cents'],
+        ['id' => 3, 'name' => 'a_b'],
+        ['id' => 4, 'name' => 'axb'],
+        ['id' => 5, 'name' => 'wow!'],
+    ]));
+    $of = fn (string $pattern): array => $rows->get(new QueryPlan(filters: [new FilterClause('name', 'LIKE', $pattern)]))->pluck('name')->all();
+
+    expect($of(LikePattern::contains('50%')))->toBe(['50% off'])
+        ->and($of(LikePattern::contains('a_b')))->toBe(['a_b'])
+        ->and($of(LikePattern::endsWith('!')))->toBe(['wow!'])
+        ->and($of('%a_b%'))->toBe(['a_b', 'axb']);
 });
 
 it('takes a range with either end open', function () {

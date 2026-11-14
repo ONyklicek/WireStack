@@ -6,6 +6,8 @@ namespace NyonCode\WireTable\Enums;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use NyonCode\WireCore\Core\Query\Search\LikePattern;
+use NyonCode\WireCore\Core\Query\Search\LikePredicate;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireTable\Filters\Filter;
 
@@ -140,9 +142,11 @@ enum FilterOperator: string
     {
         return match ($this) {
             self::IsNotEmpty => ['IS NOT NULL', null],
-            self::Contains => is_scalar($value) ? ['LIKE', '%'.$value.'%'] : null,
-            self::StartsWith => is_scalar($value) ? ['LIKE', $value.'%'] : null,
-            self::EndsWith => is_scalar($value) ? ['LIKE', '%'.$value] : null,
+            // Patterns go out escaped (LikePattern): a `50%` typed by the user
+            // is a literal per cent, not "anything starting with 50".
+            self::Contains => is_scalar($value) ? ['LIKE', LikePattern::contains((string) $value)] : null,
+            self::StartsWith => is_scalar($value) ? ['LIKE', LikePattern::startsWith((string) $value)] : null,
+            self::EndsWith => is_scalar($value) ? ['LIKE', LikePattern::endsWith((string) $value)] : null,
             self::Equals => is_scalar($value) ? ['=', $value] : null,
             self::GreaterThan => is_scalar($value) ? ['>', $value] : null,
             self::GreaterThanOrEqual => is_scalar($value) ? ['>=', $value] : null,
@@ -169,10 +173,13 @@ enum FilterOperator: string
     public function constrain(Builder $query, string $column, mixed $value, bool $blankIsEmpty = false): void
     {
         match ($this) {
-            self::Contains => $query->where($column, 'like', '%'.$value.'%'),
-            self::NotContains => $query->where(static fn (Builder $q) => $q->whereNull($column)->orWhere($column, 'not like', '%'.$value.'%')),
-            self::StartsWith => $query->where($column, 'like', $value.'%'),
-            self::EndsWith => $query->where($column, 'like', '%'.$value),
+            self::Contains => LikePredicate::whereMatches($query, $column, LikePattern::contains((string) $value)),
+            self::NotContains => $query->where(static function (Builder $q) use ($column, $value): void {
+                $q->whereNull($column);
+                LikePredicate::whereMatches($q, $column, LikePattern::contains((string) $value), not: true, boolean: 'or');
+            }),
+            self::StartsWith => LikePredicate::whereMatches($query, $column, LikePattern::startsWith((string) $value)),
+            self::EndsWith => LikePredicate::whereMatches($query, $column, LikePattern::endsWith((string) $value)),
             self::Equals => $query->where($column, $value),
             self::NotEquals => $query->where(static fn (Builder $q) => $q->whereNull($column)->orWhere($column, '!=', $value)),
             self::In => $query->whereIn($column, array_values((array) $value)),

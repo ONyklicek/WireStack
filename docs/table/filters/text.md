@@ -44,6 +44,11 @@ customers with no email — and on text *is empty* also matches `''`. Across a
 relation (a dotted name) a negative is `whereDoesntHave` with the positive
 comparison: a customer with one gmail address and one other is excluded.
 
+**What the user types is matched literally.** `%` and `_` are escaped before
+they reach the pattern, so *contains* `50%` finds "50% off" and not every row
+that has a 50 in it. The match ignores case on every engine — on PostgreSQL it
+is `ILIKE`, the way the search box matches there.
+
 **Defaults.** No operator list means no picker: the filter compares the one way
 `->operator()` says, and its state is the plain value. An operator that needs no
 value (*is empty*, *is not empty*) makes the filter active with the text box
