@@ -121,7 +121,7 @@ A select of named ranges appears beside the two dates. Offer only some, as
 `DatePreset` cases or their values:
 
 ```php
-use NyonCode\WireTable\Enums\DatePreset;
+use NyonCode\WireCore\Foundation\Enums\DatePreset;
 
 DateFilter::make('created_at')
     ->presets([DatePreset::Today, DatePreset::Last7Days, DatePreset::ThisMonth, 'last_month'])
@@ -207,7 +207,7 @@ use App\Models\Invoice;
 use Livewire\Component;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Concerns\WithTable;
-use NyonCode\WireTable\Enums\DatePreset;
+use NyonCode\WireCore\Foundation\Enums\DatePreset;
 use NyonCode\WireTable\Enums\FilterOperator;
 use NyonCode\WireTable\Filters\DateFilter;
 use NyonCode\WireTable\Table;

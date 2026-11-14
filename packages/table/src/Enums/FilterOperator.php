@@ -109,6 +109,23 @@ enum FilterOperator: string
         return Trans::get('wire-table::messages.operator_'.$this->value);
     }
 
+    /**
+     * The label over dates, where a comparison reads as time: "before", "on or
+     * after". The rest read the same over any value.
+     */
+    public function dateLabel(): string
+    {
+        return $this->isComparison()
+            ? Trans::get('wire-table::messages.date_operator_'.$this->value)
+            : $this->label();
+    }
+
+    /** Whether it compares order or identity: =, ≠, <, ≤, >, ≥. */
+    public function isComparison(): bool
+    {
+        return in_array($this, [self::Equals, self::NotEquals, self::LessThan, self::LessThanOrEqual, self::GreaterThan, self::GreaterThanOrEqual], true);
+    }
+
     /** Whether the user has to type or pick a value for the filter to mean anything. */
     public function requiresValue(): bool
     {

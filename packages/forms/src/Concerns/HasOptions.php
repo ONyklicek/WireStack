@@ -47,13 +47,17 @@ trait HasOptions
     }
 
     /**
-     * Implicit `in:` constraint derived from enum-sourced options (Filament-style).
+     * Implicit `in:` constraint when the valid value set is known (Filament-style).
      *
-     * When the options come from a PHP enum class the valid value set is known, so the field
-     * is constrained to those keys automatically. Skipped for non-enum options (the set may be
-     * dynamic and the owner may not want a strict constraint) and for multi-value fields, whose
-     * array state cannot be expressed as a single `in:` rule here. Satisfies
-     * {@see ProvidesImplicitValidationRules}.
+     * Known means the options are an enum class or a literal array: a forged
+     * request could otherwise store any value in a field that only ever offered
+     * a few. A closure is left alone (its set may depend on state the owner
+     * did not mean to freeze), as is a field that accepts values beyond its
+     * list ({@see acceptsValuesOutsideOptions()}: a remote search, a "create
+     * option" form) and a multi-value field, whose array state cannot be
+     * expressed as a single `in:` rule here. Satisfies
+     * {@see ProvidesImplicitValidationRules}; an owner rule of its own (`in:`,
+     * `Rule::in()`, `Rule::enum()`) replaces it.
      *
      * An optional field is paired with `nullable`, because clearing the canonical combobox
      * writes `null` (not `''`) and Laravel fails a bare `in:` on null — an owner who never
@@ -63,7 +67,9 @@ trait HasOptions
      */
     public function implicitValidationRules(): array
     {
-        if (! EnumResolver::isEnumClass($this->evaluate($this->options))) {
+        $known = is_array($this->options) || EnumResolver::isEnumClass($this->evaluate($this->options));
+
+        if (! $known || $this->acceptsValuesOutsideOptions()) {
             return [];
         }
 
@@ -80,5 +86,15 @@ trait HasOptions
         return $this->isRequired()
             ? [Rule::in($keys)]
             : ['nullable', Rule::in($keys)];
+    }
+
+    /**
+     * Whether a value outside the declared options is legitimate — a choice
+     * field that searches the server or creates options says so, and keeps no
+     * implicit `in:` rule.
+     */
+    protected function acceptsValuesOutsideOptions(): bool
+    {
+        return false;
     }
 }

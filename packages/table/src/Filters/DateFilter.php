@@ -11,10 +11,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\ViewErrorBag;
 use NyonCode\WireCore\Core\Support\Trans;
+use NyonCode\WireCore\Foundation\Enums\DatePreset;
 use NyonCode\WireCore\Foundation\Support\DateBoundary;
 use NyonCode\WireForms\Components\DateRangePicker;
 use NyonCode\WireForms\Components\DateTimePicker;
-use NyonCode\WireTable\Enums\DatePreset;
 use NyonCode\WireTable\Enums\FilterOperator;
 
 class DateFilter extends Filter
@@ -327,11 +327,7 @@ class DateFilter extends Filter
     /** Days are before and after, not less and greater. */
     public function operatorLabel(FilterOperator $operator): string
     {
-        return match ($operator) {
-            FilterOperator::Equals, FilterOperator::NotEquals, FilterOperator::LessThan, FilterOperator::LessThanOrEqual,
-            FilterOperator::GreaterThan, FilterOperator::GreaterThanOrEqual => Trans::get('wire-table::messages.date_operator_'.$operator->value),
-            default => $operator->label(),
-        };
+        return $operator->dateLabel();
     }
 
     public function apply(Builder $query, mixed $value): Builder

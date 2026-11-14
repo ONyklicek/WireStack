@@ -8,7 +8,7 @@ use Closure;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use NyonCode\WireCore\Core\Capabilities\Capability;
-use NyonCode\WireTable\Enums\DatePreset;
+use NyonCode\WireCore\Foundation\Enums\DatePreset;
 use NyonCode\WireTable\Enums\FilterOperator;
 use NyonCode\WireTable\Filters\DateFilter;
 use NyonCode\WireTable\Filters\Filter;

@@ -114,4 +114,17 @@ return [
     'tour_later' => 'Maybe later',
     'tour_replay' => 'Replay the tour',
     'unsaved_edits' => 'Some changes have not been saved yet. Leave anyway?',
+
+    // Named date ranges (Foundation\Enums\DatePreset).
+    'date_preset_today' => 'Today',
+    'date_preset_yesterday' => 'Yesterday',
+    'date_preset_last_7_days' => 'Last 7 days',
+    'date_preset_last_30_days' => 'Last 30 days',
+    'date_preset_this_week' => 'This week',
+    'date_preset_last_week' => 'Last week',
+    'date_preset_this_month' => 'This month',
+    'date_preset_last_month' => 'Last month',
+    'date_preset_this_quarter' => 'This quarter',
+    'date_preset_this_year' => 'This year',
+    'date_preset_last_year' => 'Last year',
 ];

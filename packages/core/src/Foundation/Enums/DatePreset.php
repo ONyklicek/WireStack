@@ -2,16 +2,15 @@
 
 declare(strict_types=1);
 
-namespace NyonCode\WireTable\Enums;
+namespace NyonCode\WireCore\Foundation\Enums;
 
 use Carbon\CarbonImmutable;
-use NyonCode\WireCore\Core\Support\Trans;
-use NyonCode\WireTable\Filters\DateFilter;
 
 /**
  * A date range named by what it means rather than by its dates — "last 7 days",
- * "this month" — offered by a range {@see DateFilter}
- * with ->presets().
+ * "this month". Owned here, below every package, because a range is not a
+ * table's idea: the table's range DateFilter offers these with ->presets(), and
+ * a date field or a widget can name the same ranges without its own list.
  *
  * What the state stores is the name, never the dates it stood for on the day it
  * was picked. That is the point: a saved view or a shared URL of "last 7 days"
@@ -37,7 +36,7 @@ enum DatePreset: string
 
     public function label(): string
     {
-        return Trans::get('wire-table::messages.date_preset_'.$this->value);
+        return (string) __('wire-core::messages.date_preset_'.$this->value);
     }
 
     /**

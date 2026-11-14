@@ -97,6 +97,14 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Changed
 
+- **A filter's `visible()` / `hidden()` and an action's are one implementation**, `Foundation\Concerns\HasContextualVisibility`,
+  instead of two copies. `Filter::isHidden()` takes the same optional context as an action's, and the filter's
+  `$hidden` / `$hiddenCallback` properties are protected now, as an action's always were — set them through
+  `hidden()` / `visible()`.
+- **`DateFilter`'s "before / after" wording comes from `FilterOperator::dateLabel()`**, the operator vocabulary's
+  own, rather than a map inside the filter. The render plans' host is described by a `HostsTableShell` contract.
+- **`DatePreset` lives in wire-core**, as `NyonCode\WireCore\Foundation\Enums\DatePreset` (it was added to
+  wire-table earlier in this release), so a date field or a widget can name the same ranges.
 - **A PDF export reads its rows in chunks and stops at `wire-table.export.pdf_max_rows` (5000)** with an
   `ExportException` that says to use CSV, instead of loading every model at once and running out of memory.
   CSV and spreadsheets still stream any size.
@@ -148,6 +156,10 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Security
 
+- **A forms `Select` or `Radio` with a literal array of options only accepts those options.** The implicit
+  `in:` rule covered enum options alone, so a forged submission could store any value in a field that offered
+  three. It now covers a literal array as well; options from a closure, a remote search and a
+  `createOptionForm()` stay unconstrained, and a rule of your own still replaces it.
 - **An inline `SelectColumn` write must be one of the options.** The server took whatever value the browser
   sent; a forged `updateTableCell()` could store anything in the attribute. It now refuses a value that is not
   an option (and an empty one unless `->selectablePlaceholder()`), the cell rolling back with the message.

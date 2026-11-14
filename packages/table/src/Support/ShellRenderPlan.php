@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Support;
 
+use NyonCode\WireTable\Contracts\HostsTableShell;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Table;
 
@@ -74,6 +75,11 @@ final class ShellRenderPlan
         public readonly bool $canShareViews = false,
     ) {}
 
+    /**
+     * @param  HostsTableShell|mixed  $component  The host. Typed `mixed` so a
+     *                                            consumer's component needs no `implements`; the contract is what it must
+     *                                            be able to answer, and what a test double implements.
+     */
     public static function resolve(Table $table, mixed $component, bool $hasColumnToggles): self
     {
         $filters = $table->getFilters();

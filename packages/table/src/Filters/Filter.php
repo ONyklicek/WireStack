@@ -13,6 +13,7 @@ use Illuminate\Support\Traits\Macroable;
 use NyonCode\WireCore\Core\Query\FilterDefinition;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
+use NyonCode\WireCore\Foundation\Concerns\HasContextualVisibility;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireTable\Enums\FilterOperator;
@@ -21,6 +22,10 @@ use NyonCode\WireTable\Enums\FilterOperator;
 class Filter implements Htmlable
 {
     use HasAuthorization;
+
+    // visible() / hidden(): a filter has no row, so its Closure is `fn (): bool`
+    // and one that wants an argument falls back to the static answer.
+    use HasContextualVisibility;
 
     /**
      * Macroable, for the reason `Table` and `BaseAction` already are: an
@@ -40,17 +45,6 @@ class Filter implements Htmlable
     public ?Closure $queryCallback = null;
 
     public mixed $default = null;
-
-    public bool $hidden = false;
-
-    public ?Closure $hiddenCallback = null;
-
-    /**
-     * True when {@see $hiddenCallback} came from {@see visible()} and its result
-     * must be inverted. Tracked separately instead of coercing the closure so a
-     * `visible(Closure)` condition is actually honoured (see {@see visible()}).
-     */
-    protected bool $hiddenCallbackInverts = false;
 
     public ?string $placeholder = null;
 
@@ -345,38 +339,6 @@ class Filter implements Htmlable
     public function default(mixed $default): static
     {
         $this->default = $default;
-
-        return $this;
-    }
-
-    /** Show the filter only when the condition is true (a bool or a Closure). */
-    public function visible(bool|Closure $visible = true): static
-    {
-        if ($visible instanceof Closure) {
-            // Store and invert on read — `! $visible` would coerce the Closure to
-            // a bool (always false) and silently discard the condition.
-            $this->hiddenCallback = $visible;
-            $this->hiddenCallbackInverts = true;
-
-            return $this;
-        }
-
-        return $this->hidden(! $visible);
-    }
-
-    /** Hide the filter when the condition is true — the inverse of `visible()`. */
-    public function hidden(bool|Closure $hidden = true): static
-    {
-        if ($hidden instanceof Closure) {
-            $this->hiddenCallback = $hidden;
-            $this->hiddenCallbackInverts = false;
-        } else {
-            // A literal state supersedes any previously registered closure so the
-            // last call wins predictably.
-            $this->hidden = $hidden;
-            $this->hiddenCallback = null;
-            $this->hiddenCallbackInverts = false;
-        }
 
         return $this;
     }
@@ -972,22 +934,6 @@ class Filter implements Htmlable
         }
 
         return $this->isAuthorized();
-    }
-
-    public function isHidden(): bool
-    {
-        // Filters are table-level controls with no per-record context, so their
-        // visibility Closure is `fn (): bool`. A closure that (mistakenly) requires
-        // an argument degrades to the static default instead of fataling — there is
-        // nothing to pass it. Mirrors the guarded resolution in the action layer.
-        if ($this->hiddenCallback !== null
-            && (new \ReflectionFunction($this->hiddenCallback))->getNumberOfRequiredParameters() === 0) {
-            $result = (bool) ($this->hiddenCallback)();
-
-            return $this->hiddenCallbackInverts ? ! $result : $result;
-        }
-
-        return $this->hidden;
     }
 
     public function getName(): string

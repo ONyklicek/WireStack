@@ -65,10 +65,13 @@ Select::make('status')->options(Status::class)
 An enum without `HasLabel` still works — the case name is headlined for the label
 (`LowPriority` → `Low Priority`). A closure returning an enum class is expanded too.
 
-**Automatic validation.** A single-value `Select` (or [`Radio`](radio.md)) whose options come
-from an enum is automatically constrained to those values with an `in:` rule — a submission
-outside the enum is rejected without you restating it. It is skipped for `multiple()` selects
-(array state) and when you declare your own `in:` / `Rule::in()` / `Rule::enum()` rule.
+**Automatic validation.** A single-value `Select` (or [`Radio`](radio.md)) whose options are an
+enum or a literal array is automatically constrained to those values with an `in:` rule — a
+submission outside them is rejected without you restating it, so a forged request cannot store
+a value the field never offered. It is skipped for options from a closure (the set may depend
+on other state), for a remote search or a `createOptionForm()` (both bring values the list
+does not hold), for `multiple()` selects (array state), and when you declare your own `in:` /
+`Rule::in()` / `Rule::enum()` rule.
 
 > The same `->options(Enum::class)` shorthand works on [`Radio`](radio.md),
 > [`CheckboxList`](checkbox-list.md), table `SelectColumn`, and the table

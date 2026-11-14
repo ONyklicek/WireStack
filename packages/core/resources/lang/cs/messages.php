@@ -113,4 +113,17 @@ return [
     'tour_later' => 'Třeba později',
     'tour_replay' => 'Spustit průvodce znovu',
     'unsaved_edits' => 'Některé změny ještě nejsou uložené. Opravdu odejít?',
+
+    // Named date ranges (Foundation\Enums\DatePreset).
+    'date_preset_today' => 'Dnes',
+    'date_preset_yesterday' => 'Včera',
+    'date_preset_last_7_days' => 'Posledních 7 dní',
+    'date_preset_last_30_days' => 'Posledních 30 dní',
+    'date_preset_this_week' => 'Tento týden',
+    'date_preset_last_week' => 'Minulý týden',
+    'date_preset_this_month' => 'Tento měsíc',
+    'date_preset_last_month' => 'Minulý měsíc',
+    'date_preset_this_quarter' => 'Toto čtvrtletí',
+    'date_preset_this_year' => 'Tento rok',
+    'date_preset_last_year' => 'Minulý rok',
 ];
