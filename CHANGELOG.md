@@ -2,6 +2,16 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.10.2]
+
+### Fixed
+
+- **An outlined modal footer button takes its colour.** `ModalFooterAction::make()->color('yellow')->outlined()`
+  drew the neutral grey button whatever colour was asked for — in a table's action modal and in the
+  `WithActions` modal host alike. It now has the border and text of `HasColor::getOutlinedClasses()` on the
+  panel's surface; the neutral outlined button looks exactly as before. Both views read the classes from one
+  owner, `ButtonPalette::modalFooterAction()` (`HasColor::getModalFooterActionClasses()`).
+
 ## [2.10.1]
 
 ### Fixed

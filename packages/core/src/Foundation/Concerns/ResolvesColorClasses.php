@@ -72,6 +72,12 @@ trait ResolvesColorClasses
         return ButtonPalette::modalSubmit($color);
     }
 
+    /** @see ButtonPalette::modalFooterAction() */
+    public static function getModalFooterActionClasses(string $color, bool $outlined = false): string
+    {
+        return ButtonPalette::modalFooterAction($color, $outlined);
+    }
+
     /** @see TextPalette::text() */
     public static function getTextColorClasses(string $color): string
     {
