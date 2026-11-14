@@ -946,6 +946,8 @@ trait WithTable
         $facets = null;
         $scope = $this->queryCacheScope($table);
         $ttl = $table->getQueryCacheTtl() ?? (int) config('wire-table.defaults.facet_cache_ttl', 60);
+        // Kept for this component instance only — see FilterFacets.
+        $owner = $this instanceof Component ? static::class.':'.$this->getId() : null;
         $filterValues = $this->tableState->get('filters', []);
         $columnFilterValues = $this->tableState->get('columnFilters', []);
         $search = $this->tableState->get('search');
@@ -953,7 +955,7 @@ trait WithTable
         foreach ($table->getFilters() as $filter) {
             if ($filter instanceof SelectFilter && $filter->wantsFacets() && $filter->canView()) {
                 $facets ??= app(FilterFacets::class);
-                $filter->facets($facets->count($table, $filter, $filterValues, $columnFilterValues, $search, $filter->getName(), isColumnFilter: false, cacheScope: $scope, ttl: $ttl));
+                $filter->facets($facets->count($table, $filter, $filterValues, $columnFilterValues, $search, $filter->getName(), isColumnFilter: false, cacheScope: $scope, ttl: $ttl, cacheOwner: $owner));
             }
         }
 
@@ -964,7 +966,7 @@ trait WithTable
             // values listed (and counted) here for anyone to read — no facets.
             if ($filter instanceof SelectFilter && $filter->wantsFacets() && $filter->canView() && $column->canView() && ! $column->hasRecordVisibility()) {
                 $facets ??= app(FilterFacets::class);
-                $filter->facets($facets->count($table, $filter, $filterValues, $columnFilterValues, $search, $column->getName(), isColumnFilter: true, cacheScope: $scope, ttl: $ttl));
+                $filter->facets($facets->count($table, $filter, $filterValues, $columnFilterValues, $search, $column->getName(), isColumnFilter: true, cacheScope: $scope, ttl: $ttl, cacheOwner: $owner));
             }
         }
     }

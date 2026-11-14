@@ -50,7 +50,11 @@ is another entry) and by the table's write generation, so an inline edit or an
 action through the table retires them at once. What the table cannot see — a
 write made somewhere else — shows within `wire-table.defaults.facet_cache_ttl`
 seconds (60 by default; `0` counts on every request). A table with
-[`cacheQuery()`](../advanced.md) keeps them as long as its rows.
+[`cacheQuery()`](../advanced.md) keeps them as long as its rows. The cache
+belongs to **one viewer's component on one database** and is never shared:
+equal SQL is not equal data when tenants live on their own database or schema,
+and an option list read from the data would otherwise show one tenant another's
+values.
 
 **Not counted** — the options still work, just without numbers and without a
 list read from the data:

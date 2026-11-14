@@ -161,7 +161,7 @@ it('counts each option under the other filters, never under its own', function (
 it('keeps the counts until the table writes, and counts afresh with no scope', function () {
     $table = Table::make()->model(CfxPerson::class);
     $role = SelectFilter::make('role')->withCounts();
-    $count = fn (?string $scope, int $ttl = 60): ?array => app(FilterFacets::class)->count($table, $role, [], [], null, 'role', false, cacheScope: $scope, ttl: $ttl);
+    $count = fn (?string $scope, int $ttl = 60, ?string $owner = 'component-a'): ?array => app(FilterFacets::class)->count($table, $role, [], [], null, 'role', false, cacheScope: $scope, ttl: $ttl, cacheOwner: $owner);
 
     expect($count(CfxPerson::class))->toBe(['editor' => 2, 'admin' => 1]);
 
@@ -170,7 +170,11 @@ it('keeps the counts until the table writes, and counts afresh with no scope', f
     expect($count(CfxPerson::class))->toBe(['editor' => 2, 'admin' => 1])
         // … unless nothing is kept at all.
         ->and($count(null))->toEqual(['admin' => 2, 'editor' => 2])
-        ->and($count(CfxPerson::class, ttl: 0))->toEqual(['admin' => 2, 'editor' => 2]);
+        ->and($count(CfxPerson::class, ttl: 0))->toEqual(['admin' => 2, 'editor' => 2])
+        // … and never another viewer's: equal SQL is not equal data (a tenant
+        // on its own database or schema), so nothing is shared between owners.
+        ->and($count(CfxPerson::class, owner: 'component-b'))->toEqual(['admin' => 2, 'editor' => 2])
+        ->and($count(CfxPerson::class, owner: null))->toEqual(['admin' => 2, 'editor' => 2]);
 
     // A write through the table moves the generation and retires them.
     app(WriteGeneration::class)->bump(CfxPerson::class);

@@ -51,7 +51,10 @@ a podle generace zápisů tabulky, takže inline úprava nebo akce přes tabulku
 okamžitě zneplatní. Co tabulka nevidí — zápis provedený jinde — se ukáže do
 `wire-table.defaults.facet_cache_ttl` sekund (výchozí 60; `0` počítá při každém
 requestu). Tabulka s [`cacheQuery()`](../advanced.md) je drží stejně dlouho jako
-své řádky.
+své řádky. Cache patří **komponentě jednoho uživatele na jedné databázi** a nikdy
+se nesdílí: stejné SQL neznamená stejná data, když mají tenanti vlastní databázi
+nebo schéma, a seznam možností načtený z dat by jinak jednomu tenantovi ukázal
+hodnoty jiného.
 
 **Nepočítá se** — možnosti fungují dál, jen bez čísel a bez seznamu načteného z
 dat:

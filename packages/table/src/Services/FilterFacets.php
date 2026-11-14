@@ -34,6 +34,14 @@ use NyonCode\WireTable\Table;
  * {@see WriteGeneration}, so a write through the table retires them at once.
  * The TTL bounds only what the table cannot see: a write made somewhere else.
  *
+ * **Never shared between viewers.** The key is owned by one component instance
+ * (`$cacheOwner`, the Livewire id) on one database. Equal SQL is not equal data:
+ * a tenant on its own database or schema, a scope applied outside the query, a
+ * `generateQueryCacheKey()` override — two users with the same grouped query can
+ * be looking at different rows, and an option list read from the data
+ * ({@see SelectFilter::optionsFromColumn()}) would hand one of them the other's
+ * values. What is saved is one user's repeated requests, which is the cost.
+ *
  * Only an
  * Eloquent source over a plain column is counted; a relation path or a custom
  * data source has no single column to group by and is left uncounted.
@@ -52,6 +60,8 @@ final class FilterFacets
      * @param  string  $stateKey  where this filter's own state lives, to leave it out
      * @param  string|null  $cacheScope  the table's write scope ({@see WriteGeneration});
      *                                   null counts afresh
+     * @param  string|null  $cacheOwner  who the cached counts belong to — one
+     *                                   component instance; null counts afresh
      * @return array<string, int>|null null when the filter cannot be counted
      */
     public function count(
@@ -64,6 +74,7 @@ final class FilterFacets
         bool $isColumnFilter,
         ?string $cacheScope = null,
         int $ttl = 0,
+        ?string $cacheOwner = null,
     ): ?array {
         if (! $table->getDataSource() instanceof EloquentDataSource
             || $filter->getRelation() !== null
@@ -98,12 +109,13 @@ final class FilterFacets
             ->orderByDesc('wire_facet_count')
             ->limit($filter->getFacetLimit());
 
-        if ($cacheScope === null || $ttl <= 0) {
+        if ($cacheScope === null || $cacheOwner === null || $ttl <= 0) {
             return $this->tally($grouped->get());
         }
 
-        $key = 'wire_table_facets:'
-            .md5((($query->getModel()->getConnectionName() ?? 'default').$grouped->toSql().serialize($grouped->getBindings())))
+        $connection = DB::connection($query->getModel()->getConnectionName());
+        $key = 'wire_table_facets:'.$cacheOwner.':'
+            .md5($connection->getName().'|'.$connection->getDatabaseName().'|'.$grouped->toSql().serialize($grouped->getBindings()))
             .':g'.app(WriteGeneration::class)->current($cacheScope);
 
         return Cache::remember($key, $ttl, fn (): array => $this->tally($grouped->get()));
