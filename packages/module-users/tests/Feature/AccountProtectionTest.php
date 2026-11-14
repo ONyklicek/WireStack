@@ -293,3 +293,15 @@ it('takes nothing from an account where the application has no roles', function 
     expect(app(Accounts::class)->revoke($this->mia, 'ops-support'))->toBeFalse()
         ->and(app(Accounts::class)->revokeGlobal($this->ada, 'admin'))->toBeFalse();
 });
+
+it('lets a team member change the address they sign in with themselves', function () {
+    // "Manages one team" is true of everybody without the global ability, so
+    // the manager rule used to lock every member out of their own address —
+    // and the profile said it had saved.
+    $this->be($this->mia->fresh());
+
+    expect(AccountGuard::mayChangeCredentials($this->mia->fresh()))->toBeTrue()
+        ->and(AccountGuard::mayChangeCredentials($this->mia->fresh(), $this->mia->fresh()))->toBeTrue()
+        // Still not somebody else's.
+        ->and(AccountGuard::mayChangeCredentials($this->olga->fresh()))->toBeFalse();
+});

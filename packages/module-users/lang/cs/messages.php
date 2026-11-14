@@ -102,4 +102,10 @@ return [
     'browser_sessions_logout' => 'Odhlásit ostatní relace prohlížeče',
     'browser_sessions_confirm' => 'Zadejte heslo pro potvrzení, že se chcete odhlásit z ostatních relací prohlížeče na všech svých zařízeních.',
     'browser_sessions_logged_out' => 'Ostatní relace prohlížeče byly odhlášeny.',
+
+    // Impersonation
+    'impersonate' => 'Přihlásit se jako',
+    'impersonate_confirm' => 'Uvidíte aplikaci tak, jak ji vidí :name, dokud nezvolíte Zpět na můj účet.',
+    'impersonating' => 'Přihlášen jako :name',
+    'impersonation_stop' => 'Zpět na můj účet',
 ];

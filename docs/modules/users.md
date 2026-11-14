@@ -342,6 +342,36 @@ Turn it off where an application clears the flag in its own way:
 'reverify_on_email_change' => false, // [tl! focus]
 ```
 
+### Signing In As Somebody Else
+
+Support staff often need to see the application exactly as one customer sees it.
+*Sign in as* on the users list does that, and a bar in the top bar — *Signed in
+as Customer · Back to my account* — leads back. It is off until you turn it on,
+and then only for people holding the ability:
+
+```php
+// config/wire-module-users.php
+'impersonation' => [
+    'enabled' => true,                    // WIRE_USERS_IMPERSONATION [tl! focus]
+    'permission' => 'users.impersonate',  // null: nobody
+    'return_to' => '/',                   // where both steps land
+],
+```
+
+**How it works.** `Support\Impersonation::start()` keeps the person who started
+it in the session (never a cookie or the URL) and signs in as the account with
+the guard's own `login()`. *Back to my account* signs the original person in the
+same way. So the session id is regenerated at each step, and everything Laravel
+ties to a login moves with it. The account rules above still apply:
+
+- nobody signs in as themselves;
+- a super-admin's account is only a super-admin's to sign in as;
+- an impersonation never starts another, so the way back is always one step;
+- `start()` checks all of this again however it was reached, and answers 403.
+
+Each step dispatches `Events\ImpersonationStarted` / `ImpersonationStopped`
+(the impersonator and the impersonated account) for your audit trail to record.
+
 ## Adapting The Screens
 
 `fields` maps three **column names**, and nothing more. It is there for a users

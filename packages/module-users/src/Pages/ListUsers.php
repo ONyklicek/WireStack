@@ -14,6 +14,7 @@ use NyonCode\WireCore\Actions\ViewAction;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireModuleUsers\Resources\UserResource;
 use NyonCode\WireModuleUsers\Support\AccountGuard;
+use NyonCode\WireModuleUsers\Support\Impersonation;
 use NyonCode\WireModuleUsers\Support\Teams;
 use NyonCode\WirePanels\Resources\Concerns\BelongsToResource;
 use NyonCode\WirePanels\Resources\Pages\ListPage;
@@ -61,6 +62,21 @@ class ListUsers extends ListPage
                     ->url(fn (Model $record): ?string => $this->pageUrl('edit', $record))
                     ->permission($this->pagePermission('edit'))
                     ->visible(fn (Model $record): bool => $this->pageUrl('edit', $record) !== null && AccountGuard::mayEdit($record)),
+
+                // Sign in as this account (Support\Impersonation): off unless the
+                // application turned it on, and re-checked in start() however the
+                // action was reached.
+                Action::make('impersonate')
+                    ->label(__('wire-module-users::messages.impersonate'))
+                    ->icon('outline:arrow-right-end-on-rectangle')
+                    ->visible(fn (Model $record): bool => Impersonation::mayImpersonate($record))
+                    ->requiresConfirmation()
+                    ->modalDescription(fn (Model $record): string => __('wire-module-users::messages.impersonate_confirm', ['name' => (string) ($record->getAttribute('name') ?? $record->getKey())]))
+                    ->action(function (Model $record) {
+                        Impersonation::start($record);
+
+                        return $this->redirect((string) config('wire-module-users.impersonation.return_to', '/'));
+                    }),
 
                 Action::make('sendPasswordReset')
                     ->label(__('wire-module-users::messages.send_password_reset'))

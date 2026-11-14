@@ -52,10 +52,30 @@ final class AccountGuard
 
     /**
      * Whether the person may change the e-mail address and password this account signs in with.
+     *
+     * Their own, always: the team rule is about a manager changing *somebody
+     * else's* sign-in, and "manages one team" is true of every account without
+     * the global ability — so without this case nobody in a team could change
+     * their own address, and the profile said it had saved.
      */
     public static function mayChangeCredentials(Model $account, mixed $actor = null): bool
     {
+        $actor ??= Auth::user();
+
+        if (self::isSelf($account, $actor)) {
+            return true;
+        }
+
         return self::mayEdit($account, $actor) && ! self::managesOneTeam($actor);
+    }
+
+    /** Whether the person is this account. */
+    private static function isSelf(Model $account, mixed $actor): bool
+    {
+        return $actor instanceof Model
+            && $actor->getMorphClass() === $account->getMorphClass()
+            && $actor->getKey() !== null
+            && $actor->getKey() === $account->getKey();
     }
 
     /**

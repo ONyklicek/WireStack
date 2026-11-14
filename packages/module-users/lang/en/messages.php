@@ -102,4 +102,10 @@ return [
     'browser_sessions_logout' => 'Log out other browser sessions',
     'browser_sessions_confirm' => 'Enter your password to confirm you would like to log out of your other browser sessions across all of your devices.',
     'browser_sessions_logged_out' => 'Your other browser sessions have been logged out.',
+
+    // Impersonation
+    'impersonate' => 'Sign in as',
+    'impersonate_confirm' => 'You will see the application as :name sees it, until you choose Back to my account.',
+    'impersonating' => 'Signed in as :name',
+    'impersonation_stop' => 'Back to my account',
 ];

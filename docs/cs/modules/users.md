@@ -333,6 +333,36 @@ Vypněte tam, kde si aplikace ten příznak řeší po svém:
 'reverify_on_email_change' => false, // [tl! focus]
 ```
 
+### Přihlášení za někoho jiného
+
+Podpora často potřebuje vidět aplikaci přesně tak, jak ji vidí jeden zákazník.
+To dělá *Přihlásit se jako* v seznamu uživatelů a lišta v horní liště —
+*Přihlášen jako Zákazník · Zpět na můj účet* — vede zpátky. Je vypnuté, dokud ho
+nezapnete, a pak jen pro ty, kdo mají oprávnění:
+
+```php
+// config/wire-module-users.php
+'impersonation' => [
+    'enabled' => true,                    // WIRE_USERS_IMPERSONATION [tl! focus]
+    'permission' => 'users.impersonate',  // null: nikdo
+    'return_to' => '/',                   // kam vedou oba kroky
+],
+```
+
+**Jak to funguje.** `Support\Impersonation::start()` si toho, kdo ji spustil,
+uloží do session (nikdy do cookie ani do URL) a přihlásí se za účet vlastním
+`login()` guardu. *Zpět na můj účet* stejným způsobem přihlásí původního
+člověka. Id session se tak při každém kroku obnoví a všechno, co Laravel na
+přihlášení váže, se přesune s ním. Pravidla pro účty výše platí dál:
+
+- nikdo se nepřihlásí sám za sebe;
+- za účet super-admina se smí přihlásit jen super-admin;
+- jedna impersonace nikdy nespustí další, takže cesta zpět je vždy jeden krok;
+- `start()` tohle všechno ověří znovu, ať se k němu došlo jakkoli, a odpoví 403.
+
+Každý krok vyšle `Events\ImpersonationStarted` / `ImpersonationStopped`
+(kdo impersonuje a za koho) pro vaši auditní stopu.
+
 ## Úpravy obrazovek
 
 `fields` mapuje tři **jména sloupců**, nic víc. Je tu pro tabulku uživatelů,
