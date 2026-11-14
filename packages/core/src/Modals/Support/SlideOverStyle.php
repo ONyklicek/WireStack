@@ -97,14 +97,14 @@ final class SlideOverStyle
 
             return match ($this->bp()) {
                 'md' => $left
-                    ? 'translate-y-full md:translate-y-0 md:-translate-x-full'
-                    : 'translate-y-full md:translate-y-0 md:translate-x-full',
+                    ? 'translate-y-full motion-reduce:translate-y-0 md:translate-y-0 md:-translate-x-full'
+                    : 'translate-y-full motion-reduce:translate-y-0 md:translate-y-0 md:translate-x-full',
                 'lg' => $left
-                    ? 'translate-y-full lg:translate-y-0 lg:-translate-x-full'
-                    : 'translate-y-full lg:translate-y-0 lg:translate-x-full',
+                    ? 'translate-y-full motion-reduce:translate-y-0 lg:translate-y-0 lg:-translate-x-full'
+                    : 'translate-y-full motion-reduce:translate-y-0 lg:translate-y-0 lg:translate-x-full',
                 default => $left
-                    ? 'translate-y-full sm:translate-y-0 sm:-translate-x-full'
-                    : 'translate-y-full sm:translate-y-0 sm:translate-x-full',
+                    ? 'translate-y-full motion-reduce:translate-y-0 sm:translate-y-0 sm:-translate-x-full'
+                    : 'translate-y-full motion-reduce:translate-y-0 sm:translate-y-0 sm:translate-x-full',
             };
         }
 

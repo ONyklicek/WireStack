@@ -28,7 +28,13 @@
  *   pinned under the grabber while the list scrolls.
  * - **Keyboard.** iOS Safari lays the keyboard over the page; while a sheet is
  *   open it is lifted by the part of the layout viewport the keyboard covers
- *   (`visualViewport`), so a search field at its top stays visible.
+ *   (`visualViewport`), and its height is worked out again from what is left
+ *   visible — lifted at the height it opened with, a sheet taller than the
+ *   space above the keyboard would push its own search field off the top.
+ *   iOS also scrolls the visual viewport when it brings the keyboard up, so
+ *   both `resize` and `scroll` move it.
+ * - **Reduce motion.** With the setting on, a release snaps to its detent
+ *   instead of springing there.
  */
 const MEDIUM = 0.56
 const LARGE = 0.92
@@ -89,8 +95,12 @@ export const registerSheetGesture = (Alpine) => {
             if (! isMobile() || ! window.visualViewport || getComputedStyle(panel).position !== 'fixed') return
             const covered = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop
             panel.style.bottom = covered > 1 ? `${Math.round(covered)}px` : ''
+            // heightFor() reads the visual viewport, so this is the detent
+            // measured against what the keyboard leaves visible.
+            if (panel._wireSheetShown) applyDetent(detent)
         }
         window.visualViewport?.addEventListener('resize', liftAboveKeyboard)
+        window.visualViewport?.addEventListener('scroll', liftAboveKeyboard)
 
         // ── The drag ───────────────────────────────────────────────────
         let start = null
@@ -160,7 +170,9 @@ export const registerSheetGesture = (Alpine) => {
             if (! dragging) return
 
             const speed = dy / Math.max(1, (e?.timeStamp ?? at) - at)
-            panel.style.transition = 'transform 260ms cubic-bezier(.2,.9,.3,1), max-height 260ms cubic-bezier(.2,.9,.3,1)'
+            panel.style.transition = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                ? 'none'
+                : 'transform 260ms cubic-bezier(.2,.9,.3,1), max-height 260ms cubic-bezier(.2,.9,.3,1)'
             panel.style.transform = ''
             const fade = backdrop()
             if (fade) fade.style.opacity = ''
@@ -188,6 +200,7 @@ export const registerSheetGesture = (Alpine) => {
         cleanup(() => {
             shown.disconnect()
             window.visualViewport?.removeEventListener('resize', liftAboveKeyboard)
+            window.visualViewport?.removeEventListener('scroll', liftAboveKeyboard)
             panel.removeEventListener('touchstart', onStart)
             panel.removeEventListener('touchmove', onMove)
             panel.removeEventListener('touchend', onEnd)

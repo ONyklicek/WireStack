@@ -37,11 +37,11 @@
     @if($sheetTitle) aria-label="{{ $sheetTitle }}" @endif
     @keydown.escape="open && $event.preventDefault(); open = false; activeIndex = -1"
     x-transition:enter="transition ease-out duration-200"
-    x-transition:enter-start="translate-y-full"
+    x-transition:enter-start="translate-y-full motion-reduce:translate-y-0"
     x-transition:enter-end="translate-y-0"
     x-transition:leave="transition ease-in duration-150"
     x-transition:leave-start="translate-y-0"
-    x-transition:leave-end="translate-y-full"
+    x-transition:leave-end="translate-y-full motion-reduce:translate-y-0"
     {{-- A searchable list takes the full height, so it does not jump as the
          search narrows it; a short list sits at the height of its rows, the
          way an iOS sheet rests at its content. --}}

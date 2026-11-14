@@ -32,7 +32,7 @@ it('resolves the bottom-sheet variant (slideOverOnMobile)', function () {
         ->and($s->containerClasses())->toContain('items-end')
         ->and($s->panelVariantClasses())->toContain('rounded-t-2xl')
         ->and($s->bodyVariantClasses())->toContain('flex-1 overflow-y-auto')
-        ->and($s->transitionClasses()['enterStart'])->toContain('translate-y-full');
+        ->and($s->transitionClasses()['enterStart'])->toContain('translate-y-full')->toContain('motion-reduce:translate-y-0');
 });
 
 it('resolves the full-screen variant', function () {

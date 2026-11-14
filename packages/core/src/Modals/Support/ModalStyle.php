@@ -127,22 +127,22 @@ final class ModalStyle
         if ($this->mobileVariant() !== null) {
             return match ($bp) {
                 'md' => [
-                    'enterStart' => 'translate-y-full md:translate-y-0 md:opacity-0 md:scale-95',
+                    'enterStart' => 'translate-y-full motion-reduce:translate-y-0 md:translate-y-0 md:opacity-0 md:scale-95',
                     'enterEnd' => 'translate-y-0 md:opacity-100 md:scale-100',
                     'leaveStart' => 'translate-y-0 md:opacity-100 md:scale-100',
-                    'leaveEnd' => 'translate-y-full md:translate-y-0 md:opacity-0 md:scale-95',
+                    'leaveEnd' => 'translate-y-full motion-reduce:translate-y-0 md:translate-y-0 md:opacity-0 md:scale-95',
                 ],
                 'lg' => [
-                    'enterStart' => 'translate-y-full lg:translate-y-0 lg:opacity-0 lg:scale-95',
+                    'enterStart' => 'translate-y-full motion-reduce:translate-y-0 lg:translate-y-0 lg:opacity-0 lg:scale-95',
                     'enterEnd' => 'translate-y-0 lg:opacity-100 lg:scale-100',
                     'leaveStart' => 'translate-y-0 lg:opacity-100 lg:scale-100',
-                    'leaveEnd' => 'translate-y-full lg:translate-y-0 lg:opacity-0 lg:scale-95',
+                    'leaveEnd' => 'translate-y-full motion-reduce:translate-y-0 lg:translate-y-0 lg:opacity-0 lg:scale-95',
                 ],
                 default => [
-                    'enterStart' => 'translate-y-full sm:translate-y-0 sm:opacity-0 sm:scale-95',
+                    'enterStart' => 'translate-y-full motion-reduce:translate-y-0 sm:translate-y-0 sm:opacity-0 sm:scale-95',
                     'enterEnd' => 'translate-y-0 sm:opacity-100 sm:scale-100',
                     'leaveStart' => 'translate-y-0 sm:opacity-100 sm:scale-100',
-                    'leaveEnd' => 'translate-y-full sm:translate-y-0 sm:opacity-0 sm:scale-95',
+                    'leaveEnd' => 'translate-y-full motion-reduce:translate-y-0 sm:translate-y-0 sm:opacity-0 sm:scale-95',
                 ],
             };
         }

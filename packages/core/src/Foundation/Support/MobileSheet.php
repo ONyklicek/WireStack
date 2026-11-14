@@ -80,14 +80,15 @@ final class MobileSheet
 
     /**
      * Enter-start / leave-end transform for the slide-up (added to the base
-     * desktop scale transition).
+     * desktop scale transition). With "reduce motion" set the sheet does not
+     * travel up the screen; it fades in where it rests.
      */
     public static function motion(?string $breakpoint = null): string
     {
         return match (self::breakpoint($breakpoint)) {
-            'md' => 'max-md:scale-100 max-md:translate-y-full',
-            'lg' => 'max-lg:scale-100 max-lg:translate-y-full',
-            default => 'max-sm:scale-100 max-sm:translate-y-full',
+            'md' => 'max-md:scale-100 max-md:translate-y-full motion-reduce:translate-y-0',
+            'lg' => 'max-lg:scale-100 max-lg:translate-y-full motion-reduce:translate-y-0',
+            default => 'max-sm:scale-100 max-sm:translate-y-full motion-reduce:translate-y-0',
         };
     }
 

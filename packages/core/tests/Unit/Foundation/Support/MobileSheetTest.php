@@ -38,7 +38,7 @@ it('switches every class to the configured breakpoint (md for tablets)', functio
     expect(MobileSheet::px())->toBe(767.98)
         ->and(MobileSheet::panel())->toContain('max-md:fixed')->not->toContain('max-sm:')
         ->and(MobileSheet::panelPadded())->toContain('max-md:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]')
-        ->and(MobileSheet::motion())->toBe('max-md:scale-100 max-md:translate-y-full')
+        ->and(MobileSheet::motion())->toBe('max-md:scale-100 max-md:translate-y-full motion-reduce:translate-y-0')
         ->and(MobileSheet::backdropHide())->toBe('md:hidden')
         ->and(MobileSheet::grabberShow())->toBe('hidden max-md:flex');
 });
@@ -48,7 +48,7 @@ it('supports lg and falls back to sm for unknown values', function () {
     expect(MobileSheet::px())->toBe(1023.98)
         ->and(MobileSheet::panel())->toContain('max-lg:fixed')
         ->and(MobileSheet::panelPadded())->toContain('max-lg:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]')
-        ->and(MobileSheet::motion())->toBe('max-lg:scale-100 max-lg:translate-y-full')
+        ->and(MobileSheet::motion())->toBe('max-lg:scale-100 max-lg:translate-y-full motion-reduce:translate-y-0')
         ->and(MobileSheet::grabberShow())->toBe('hidden max-lg:flex')
         ->and(MobileSheet::backdropHide())->toBe('lg:hidden');
 

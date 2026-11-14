@@ -186,7 +186,7 @@ class ModalMobileVariantComponent extends Component
 it('renders the mobile bottom-sheet variant (bottom-pinned container, slide-up transition, scrolling body)', function () {
     Livewire::test(ModalMobileVariantComponent::class, ['mode' => 'bottom-sheet'])
         ->assertSeeHtml('items-end justify-center')
-        ->assertSeeHtml('translate-y-full sm:translate-y-0')
+        ->assertSeeHtml('translate-y-full motion-reduce:translate-y-0 sm:translate-y-0')
         ->assertSeeHtml('rounded-t-2xl')
         ->assertSeeHtml('flex-1 overflow-y-auto')
         ->assertDontSeeHtml('translate-x-full');
@@ -195,7 +195,7 @@ it('renders the mobile bottom-sheet variant (bottom-pinned container, slide-up t
 it('renders the mobile full-screen variant (edge-to-edge panel with scrolling body)', function () {
     Livewire::test(ModalMobileVariantComponent::class, ['mode' => 'full-screen'])
         ->assertSeeHtml('items-stretch justify-center')
-        ->assertSeeHtml('translate-y-full sm:translate-y-0')
+        ->assertSeeHtml('translate-y-full motion-reduce:translate-y-0 sm:translate-y-0')
         ->assertSeeHtml('rounded-none')
         ->assertSeeHtml('flex-1 overflow-y-auto');
 });
@@ -227,7 +227,7 @@ it('renders the slide-over as a mobile bottom-sheet (full-width tray, slide-up) 
     Livewire::test(SlideOverBottomSheetComponent::class)
         ->assertSeeHtml('inset-x-0 bottom-0 sm:inset-x-auto sm:top-0 sm:bottom-0 sm:right-0 sm:pl-10')
         ->assertSeeHtml('w-full sm:w-screen')
-        ->assertSeeHtml('translate-y-full sm:translate-y-0 sm:translate-x-full')
+        ->assertSeeHtml('translate-y-full motion-reduce:translate-y-0 sm:translate-y-0 sm:translate-x-full')
         ->assertSeeHtml('max-h-[var(--wire-sheet-h,92dvh)] overflow-hidden rounded-t-2xl sm:h-full sm:max-h-none sm:overflow-visible sm:rounded-none')
         // Width caps at ≥sm so the mobile tray is full-width.
         ->assertSeeHtml('sm:max-w-md');

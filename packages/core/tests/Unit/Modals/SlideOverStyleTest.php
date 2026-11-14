@@ -36,7 +36,7 @@ it('resolves the bottom-sheet-on-mobile variant (default sm breakpoint)', functi
         ->and($s->panelClasses())->toContain('max-h-[var(--wire-sheet-h,92dvh)]')->toContain('sm:h-full')
         // The rounding only shows where the panel clips its own children.
         ->and($s->panelClasses())->toContain('overflow-hidden')->toContain('sm:overflow-visible')
-        ->and($s->translateEnterStart())->toContain('translate-y-full')->toContain('sm:translate-x-full')
+        ->and($s->translateEnterStart())->toContain('translate-y-full')->toContain('motion-reduce:translate-y-0')->toContain('sm:translate-x-full')
         ->and($s->translateEnterEnd())->toBe('translate-y-0 sm:translate-x-0');
 });
 
