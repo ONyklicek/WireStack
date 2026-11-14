@@ -15,6 +15,7 @@ use NyonCode\WireModuleUsers\Pages\ListUsers;
 use NyonCode\WireModuleUsers\Resources\UserResource;
 use NyonCode\WireModuleUsers\Support\AccountGuard;
 use NyonCode\WireModuleUsers\Support\Accounts;
+use NyonCode\WireModuleUsers\Support\Impersonation;
 use NyonCode\WireModuleUsers\Tests\Fixtures\Team;
 use NyonCode\WireModuleUsers\Tests\Fixtures\TeamAdmin;
 use NyonCode\WireModuleUsers\Tests\Support\Access;
@@ -310,16 +311,16 @@ it('lets a team manager sign in only as a member of their team', function () {
     config()->set('wire-module-users.impersonation.enabled', true);
     $this->be($this->mia->fresh());
 
-    expect(NyonCode\WireModuleUsers\Support\Impersonation::mayImpersonate($this->olga->fresh()))->toBeTrue()
+    expect(Impersonation::mayImpersonate($this->olga->fresh()))->toBeTrue()
         // Ada is in no team of Mia's.
-        ->and(NyonCode\WireModuleUsers\Support\Impersonation::mayImpersonate($this->ada->fresh()))->toBeFalse();
+        ->and(Impersonation::mayImpersonate($this->ada->fresh()))->toBeFalse();
 });
 
 it('changes nobody\'s sign-in while somebody is signed in as them', function () {
     // The person at the keyboard is not the account owner: a new address or
     // password would outlive the impersonation as a way back in.
     $this->be($this->mia->fresh());
-    session()->put(NyonCode\WireModuleUsers\Support\Impersonation::SESSION_KEY, ['id' => $this->root->getKey(), 'guard' => 'web']);
+    session()->put(Impersonation::SESSION_KEY, ['id' => $this->root->getKey(), 'guard' => 'web']);
 
     expect(AccountGuard::mayChangeCredentials($this->mia->fresh()))->toBeFalse();
 });
