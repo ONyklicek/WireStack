@@ -190,7 +190,7 @@ trait InteractsWithTableModals
         $action = match (true) {
             $isHeader => $this->findHeaderAction((string) $name),
             $isBulk => $this->findBulkAction((string) $name),
-            default => $this->findAction((string) $name),
+            default => $this->findRowAction((string) $name, $recordKey === null ? null : (string) $recordKey),
         };
 
         if ($action === null) {
@@ -255,9 +255,7 @@ trait InteractsWithTableModals
             return null;
         }
 
-        $table = $this->getTable();
-
-        return $table->findRecord($key);
+        return $this->resolveRowActionRecord(is_int($key) ? $key : (string) $key);
     }
 
     // ==========================================
@@ -332,14 +330,13 @@ trait InteractsWithTableModals
         array $data = [],
         bool $confirmed = false,
     ): void {
-        $action = $this->findAction($actionName);
+        $action = $this->findRowAction($actionName, $recordKey);
 
         if (! $action) {
             return;
         }
 
-        $table = $this->getTable();
-        $record = $table->findRecord($recordKey);
+        $record = $this->resolveRowActionRecord($recordKey);
 
         if (! $record || ! $action->canExecute($record)) {
             return;

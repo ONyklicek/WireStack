@@ -21,6 +21,7 @@ use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationAction;
 use NyonCode\WireCore\Notifications\NotificationManager;
 use NyonCode\WireTable\Columns\SelectColumn;
+use NyonCode\WireTable\Support\SubRowKey;
 
 /**
  * Backing the shared action engine with the table's state container.
@@ -344,7 +345,7 @@ trait InteractsWithTableActions
      */
     public function openActionModal(string $recordKey, string $actionName, array $arguments = []): void
     {
-        $action = $this->findAction($actionName);
+        $action = $this->findRowAction($actionName, $recordKey);
 
         if (! $action || ! $action->hasModal()) {
             // No modal, execute directly
@@ -353,16 +354,15 @@ trait InteractsWithTableActions
             return;
         }
 
-        $table = $this->getTable();
         // Through the source, like executeTableAction(): one lookup rule for a
         // row whether its action runs at once or asks first — which is also
         // what finds a trashed row a TrashedFilter brought into the list.
-        $record = $table->findRecord($recordKey);
+        $record = $this->resolveRowActionRecord($recordKey);
 
         // An inactive record whose state withholds its actions refuses the modal
         // too: the inert action cell is a client fact, and a modal opened from a
         // forged mount would run the action at the end of it.
-        if (! $record || $table->isRecordActionLocked($record)) {
+        if (! $record || $this->isRowActionLocked($recordKey, $record)) {
             return;
         }
 
@@ -391,6 +391,75 @@ trait InteractsWithTableActions
 
         $this->actionModalConfigCache = $action->getModalConfig($record);
         $this->actionModalFormInstance = $this->buildModalActionFormInstance($action, $record);
+    }
+
+    /**
+     * The action a row-scoped call names, by the kind of key it carries: a
+     * {@see SubRowKey} is answered from `subRowActions()` only and any other key
+     * from the row actions only, so one name used on both surfaces runs the
+     * action of the surface that was clicked.
+     */
+    protected function findRowAction(string $name, ?string $recordKey): ?Action
+    {
+        if (SubRowKey::decode($recordKey) === null) {
+            return $this->findAction($name);
+        }
+
+        foreach ($this->getTable()->getSubRowActions() as $action) {
+            $candidates = $action instanceof ActionGroup ? $action->getActions() : [$action];
+
+            foreach ($candidates as $candidate) {
+                if (! $candidate instanceof Action) {
+                    continue;
+                }
+
+                $found = $this->matchRegisteredAction($candidate, $name);
+
+                if ($found instanceof Action) {
+                    return $found;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The record a row-scoped call is about: a row by the table's own lookup,
+     * a sub-row through its parent ({@see Table::findSubRowRecord()}).
+     */
+    protected function resolveRowActionRecord(int|string|null $recordKey): ?Model
+    {
+        if ($recordKey === null || $recordKey === '') {
+            return null;
+        }
+
+        $table = $this->getTable();
+        $subRow = SubRowKey::decode($recordKey);
+
+        return $subRow === null
+            ? $table->findRecord($recordKey)
+            : $table->findSubRowRecord(...$subRow);
+    }
+
+    /**
+     * Whether the row a call is about withholds its actions
+     * ({@see Support\InactiveRow::actions()}). A sub-row belongs to its parent's
+     * row, so the parent is asked — the rowInactive() closure is written for the
+     * table's model and is never handed a child.
+     */
+    protected function isRowActionLocked(string $recordKey, Model $record): bool
+    {
+        $table = $this->getTable();
+        $subRow = SubRowKey::decode($recordKey);
+
+        if ($subRow === null) {
+            return $table->isRecordActionLocked($record);
+        }
+
+        $parent = $table->findRecord($subRow[0]);
+
+        return $parent === null || $table->isRecordActionLocked($parent);
     }
 
     /**
@@ -478,23 +547,22 @@ trait InteractsWithTableActions
      */
     public function executeTableAction(string $recordKey, string $actionName, bool $confirmed = false): void
     {
-        $action = $this->findAction($actionName);
+        $action = $this->findRowAction($actionName, $recordKey);
 
         if (! $action) {
             return;
         }
 
-        $table = $this->getTable();
         // Through the source, and unwrapped straight away: the framework
         // resolves by contract so a custom source is asked too, and hands
         // user code a Model, which is what every action closure expects
         // (ADR 0019 invariant 3, as amended).
-        $record = $table->findRecord($recordKey);
+        $record = $this->resolveRowActionRecord($recordKey);
 
         // The server's half of Support\InactiveRow::actions(false) — see
         // openActionModal(). A bulk action is deliberately not covered: it acts
         // on a selection, which is governed by selectable() instead.
-        if (! $record || $table->isRecordActionLocked($record) || ! $action->canExecute($record)) {
+        if (! $record || $this->isRowActionLocked($recordKey, $record) || ! $action->canExecute($record)) {
             return;
         }
 

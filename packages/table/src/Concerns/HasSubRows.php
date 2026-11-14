@@ -544,6 +544,30 @@ trait HasSubRows
     }
 
     /**
+     * One child, found through its parent: the parent by the table's own lookup
+     * ({@see findRecord()} — the table's query, its scopes and tenant), the child
+     * among that parent's sub-rows ({@see getSubRowsQuery()} — the relation and
+     * `subRowQuery()`, no limit). A key outside either answers null, so a sub-row
+     * action cannot reach a child the viewer's table would never draw.
+     */
+    public function findSubRowRecord(int|string $parentKey, int|string $childKey): ?Model
+    {
+        if ($this->subRowRelation === null) {
+            return null;
+        }
+
+        $parent = $this->findRecord($parentKey);
+
+        if ($parent === null) {
+            return null;
+        }
+
+        $query = $this->getSubRowsQuery($parent, applyLimit: false);
+
+        return $query->whereKey($childKey)->first();
+    }
+
+    /**
      * Whether a given sub-row column name may be sorted.
      * Guards against ordering by arbitrary user-supplied strings.
      */
