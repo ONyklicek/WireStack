@@ -376,19 +376,29 @@ class DateFilter extends Filter
      */
     protected function applyDateOperator(Builder $query, FilterOperator $operator, mixed $value): Builder
     {
-        $column = $this->getColumn();
-
-        if (! $operator->requiresValue()) {
-            $operator->constrain($query, $column, null);
-
+        if ($operator->requiresValue() && (! is_string($value) || $value === '')) {
             return $query;
         }
 
-        if (! is_string($value) || $value === '') {
-            return $query;
-        }
+        // Through applyComparison() so a dotted name ("customer.created_at")
+        // goes through the relation, and "is not on" / "is empty" across it are
+        // "no related record is on that day", like every other filter's.
+        return $this->applyComparison(
+            $query,
+            $operator,
+            static fn (FilterOperator $op, Builder $q, string $column) => self::constrainDate($op, $q, $column, $value),
+        );
+    }
 
-        return match ($operator) {
+    /**
+     * One date comparison on one column, by day.
+     *
+     * @param  Builder<Model>  $query
+     */
+    private static function constrainDate(FilterOperator $operator, Builder $query, string $column, mixed $value): void
+    {
+        match ($operator) {
+            FilterOperator::IsEmpty, FilterOperator::IsNotEmpty => $operator->constrain($query, $column, null),
             FilterOperator::NotEquals => $query->where(static fn (Builder $q) => $q->whereNull($column)->orWhereDate($column, '!=', $value)),
             FilterOperator::LessThan => $query->whereDate($column, '<', $value),
             FilterOperator::LessThanOrEqual => $query->whereDate($column, '<=', $value),

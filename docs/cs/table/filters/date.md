@@ -31,6 +31,10 @@ nikdy neplánuje `QueryPlanner` — každý režim běží přes vlastní `apply
 
 `->operators()` u rozsahu nebo měsíce nenabídne nic — tyto režimy nemají z čeho
 vybírat, ať jsou volání v jakémkoli pořadí. *není dne* ponechá řádky bez data; *je prázdné* je `IS NULL`.
+Přes relaci (`DateFilter::make('notes.created_at')`) se den porovná uvnitř
+`whereHas` a *není dne* a *je prázdné* znamenají „žádný související záznam není
+toho dne“ / „nemá žádný záznam s datem“ — `whereDoesntHave`, jako u každého
+jiného filtru.
 
 **Předvolby se vyhodnotí při spuštění dotazu.** Předvolba se ukládá **názvem**
 (`last_7_days`), nikdy daty, která pokrývala v den výběru. Uložený pohled nebo

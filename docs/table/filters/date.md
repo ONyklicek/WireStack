@@ -32,7 +32,10 @@ filter is never planned by the `QueryPlanner` — every mode runs through its ow
 
 `->operators()` on a range or a month offers nothing — those modes have no
 operators to choose from, whichever order the calls come in. *is not on* keeps rows with no date; *is empty* is
-`IS NULL`.
+`IS NULL`. Across a relation (`DateFilter::make('notes.created_at')`) a day is
+compared inside `whereHas`, and *is not on* and *is empty* mean "no related
+record is on that day" / "has no dated record" — `whereDoesntHave`, as for every
+other filter.
 
 **Presets resolve when the query runs.** A preset is stored by its **name**
 (`last_7_days`), never by the dates it covered on the day it was picked. A saved

@@ -668,21 +668,40 @@ class Filter implements Htmlable
      */
     protected function applyOperator(Builder $query, FilterOperator $operator, mixed $value, bool $blankIsEmpty = false): Builder
     {
+        return $this->applyComparison(
+            $query,
+            $operator,
+            static fn (FilterOperator $op, Builder $q, string $column) => $op->constrain($q, $column, $value, $blankIsEmpty),
+        );
+    }
+
+    /**
+     * {@see applyOperator()} for a filter that compares its own way — a date
+     * compares by day, not by value — and still needs the relation rules: the
+     * same `whereHas`, the same `whereDoesntHave` with the positive comparison
+     * for a negative operator and for "is empty".
+     *
+     * @param  Builder<Model>  $query
+     * @param  Closure(FilterOperator, Builder<Model>, string): mixed  $constrain  fn ($operator, $q, $column)
+     * @return Builder<Model>
+     */
+    protected function applyComparison(Builder $query, FilterOperator $operator, Closure $constrain): Builder
+    {
         if ($this->relation !== null) {
             $attribute = (string) $this->getRelationshipAttribute();
 
             if ($operator === FilterOperator::IsEmpty) {
-                return $query->whereDoesntHave($this->relation, static fn (Builder $q) => FilterOperator::IsNotEmpty->constrain($q, $attribute, null, $blankIsEmpty));
+                return $query->whereDoesntHave($this->relation, static fn (Builder $q) => $constrain(FilterOperator::IsNotEmpty, $q, $attribute));
             }
 
             if ($operator->isNegative()) {
-                return $query->whereDoesntHave($this->relation, static fn (Builder $q) => $operator->positive()->constrain($q, $attribute, $value, $blankIsEmpty));
+                return $query->whereDoesntHave($this->relation, static fn (Builder $q) => $constrain($operator->positive(), $q, $attribute));
             }
 
-            return $query->whereHas($this->relation, static fn (Builder $q) => $operator->constrain($q, $attribute, $value, $blankIsEmpty));
+            return $query->whereHas($this->relation, static fn (Builder $q) => $constrain($operator, $q, $attribute));
         }
 
-        $operator->constrain($query, $this->getColumn(), $value, $blankIsEmpty);
+        $constrain($operator, $query, $this->getColumn());
 
         return $query;
     }

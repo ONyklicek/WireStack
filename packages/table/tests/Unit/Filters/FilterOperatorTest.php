@@ -11,6 +11,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Enums\FilterOperator;
+use NyonCode\WireTable\Filters\DateFilter;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Filters\TextFilter;
@@ -255,6 +256,23 @@ it('leaves the stored filter alone: forState() hands back a copy', function () {
         ->and($filter->getActiveOperator())->toBe(FilterOperator::Contains)
         ->and(TextFilter::make('email')->forState(['operator' => 'x']))->toBeInstanceOf(TextFilter::class);
 });
+
+it('compares a date across a relation, and excludes with whereDoesntHave', function (string $operator, ?string $value, array $expected) {
+    FoNote::query()->where('body', 'urgent call')->update(['created_at' => '2026-03-01 09:00:00']);
+    FoNote::query()->where('body', 'follow up')->update(['created_at' => '2026-03-05 18:30:00']);
+    FoNote::create(['contact_id' => 4, 'body' => 'undated'])->forceFill(['created_at' => null])->save();
+
+    $filter = DateFilter::make('notes.created_at')->operators();
+
+    expect(foPanel($filter, ['value' => $value, 'operator' => $operator]))->toBe($expected);
+})->with([
+    'is on (Ada has a note that day)' => ['equals', '2026-03-01', ['Ada']],
+    'is not on keeps those with no note that day' => ['not_equals', '2026-03-01', ['Bo', 'Cy', 'Di']],
+    'after' => ['gt', '2026-03-02', ['Ada', 'Bo']],
+    'on or before' => ['lte', '2026-03-01', ['Ada']],
+    'is empty: no note with a date (Di has one, undated)' => ['is_empty', null, ['Cy', 'Di']],
+    'is not empty' => ['is_not_empty', null, ['Ada', 'Bo']],
+]);
 
 // ─── SelectFilter with a picker ──────────────────────────────────────────
 
