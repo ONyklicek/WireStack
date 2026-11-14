@@ -60,6 +60,30 @@ class QbTable extends Component
     }
 }
 
+class QbFacetTable extends Component
+{
+    use WithTable;
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->model(QbInvoice::class)
+            ->columns([TextColumn::make('customer')])
+            ->filters([
+                TextFilter::make('customer'),
+                QueryBuilderFilter::make('conditions')->constraints([
+                    SelectFilter::make('status')->optionsFromColumn(),
+                ]),
+            ])
+            ->paginated(false);
+    }
+
+    public function render(): string
+    {
+        return '<div>{{ $this->table }}</div>';
+    }
+}
+
 function qbBuilder(): QueryBuilderFilter
 {
     return QueryBuilderFilter::make('conditions')->constraints([
@@ -384,4 +408,18 @@ it('leaves out a constraint the user may not see — from the fields, the query 
         ->and($filter->hasActiveRule($state))->toBeFalse()
         ->and($filter->getIndicator($state))->toBeNull()
         ->and($filter->apply(QbInvoice::query(), $state)->count())->toBe(4);
+});
+
+it('lists and counts a builder field that takes its options from the data', function () {
+    $component = Livewire::test(QbFacetTable::class)
+        ->set('tableState.filters.customer', 'Acme')
+        ->call('queryBuilderAddRule', 'conditions')
+        ->set('tableState.filters.conditions.rules.0.field', 'status');
+
+    // Counted under the other filters (customer contains Acme), not the builder's own rules.
+    $status = $component->instance()->getTable()->getFilters()[1]->getConstraint('status');
+    expect($status->getFacets())->toEqual(['paid' => 1, 'overdue' => 1]);
+    // The values the data holds are the options; Beta's "pending" is not among them.
+    $component->assertSeeHtml('[\\u0022paid\\u0022,\\u0022paid\\u0022],[\\u0022overdue\\u0022,\\u0022overdue\\u0022]')
+        ->assertDontSeeHtml('\\u0022pending\\u0022');
 });

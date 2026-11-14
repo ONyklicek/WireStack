@@ -54,6 +54,7 @@ use NyonCode\WireTable\Export\Jobs\RunExportJob;
 use NyonCode\WireTable\Export\TableExport;
 use NyonCode\WireTable\Filters\DateFilter;
 use NyonCode\WireTable\Filters\Filter;
+use NyonCode\WireTable\Filters\QueryBuilderFilter;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Import\ImportAction;
 use NyonCode\WireTable\Import\ImportColumn;
@@ -956,6 +957,18 @@ trait WithTable
             if ($filter instanceof SelectFilter && $filter->wantsFacets() && $filter->canView()) {
                 $facets ??= app(FilterFacets::class);
                 $filter->facets($facets->count($table, $filter, $filterValues, $columnFilterValues, $search, $filter->getName(), isColumnFilter: false, cacheScope: $scope, ttl: $ttl, cacheOwner: $owner));
+            }
+
+            // A query builder's select fields list and count their values too —
+            // over the table as everything but the builder narrows it, the same
+            // rule a panel filter is counted by.
+            if ($filter instanceof QueryBuilderFilter && $filter->canView()) {
+                foreach ($filter->getConstraints() as $constraint) {
+                    if ($constraint instanceof SelectFilter && $constraint->wantsFacets()) {
+                        $facets ??= app(FilterFacets::class);
+                        $constraint->facets($facets->count($table, $constraint, $filterValues, $columnFilterValues, $search, $filter->getName(), isColumnFilter: false, cacheScope: $scope, ttl: $ttl, cacheOwner: $owner));
+                    }
+                }
             }
         }
 

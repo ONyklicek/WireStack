@@ -32,7 +32,13 @@ same code doing it.
 1. A `SelectFilter` is made `->multiple()`, so its condition reads *is any of*.
 2. A filter with no operator list gets `->operators()` — every operator its type
    supports. A list you set yourself is kept.
-3. Its state path is moved under the builder (`tableState.filters.<builder>`).
+3. Its state path is moved under the builder (`tableState.filters.<builder>`,
+   or the draft of a deferred panel).
+
+A select field that reads its options from the data
+([`optionsFromColumn()`](select.md)) or counts them (`withCounts()`) is counted
+like a panel filter: over the table as the other filters and the search narrow
+it, never by the builder's own conditions.
 
 The filters are changed in place — build fresh instances for the builder rather
 than passing the same object you also list in `Table::filters()`.

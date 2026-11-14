@@ -31,7 +31,12 @@ přesně jako hlavičkový filtr — protože to dělá tentýž kód.
 1. Z `SelectFilter` udělá `->multiple()`, takže jeho podmínka zní *je jedním z*.
 2. Filtr bez seznamu operátorů dostane `->operators()` — všechny operátory,
    které jeho typ podporuje. Seznam, který nastavíte sami, zůstane.
-3. Jeho cesta ve stavu se přesune pod builder (`tableState.filters.<builder>`).
+3. Jeho cesta ve stavu se přesune pod builder (`tableState.filters.<builder>`,
+   nebo koncept odloženého panelu).
+
+Select pole, které čte možnosti z dat ([`optionsFromColumn()`](select.md)) nebo
+je počítá (`withCounts()`), se počítá jako filtr panelu: nad tabulkou zúženou
+ostatními filtry a vyhledáváním, nikdy vlastními podmínkami builderu.
 
 Filtry se mění na místě — pro builder vytvořte nové instance, nepředávejte
 stejný objekt, který máte i v `Table::filters()`.
