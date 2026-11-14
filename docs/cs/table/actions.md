@@ -166,8 +166,10 @@ která na každém vybraném záznamu nastaví pole na stejnou hodnotu.
 **Jak to funguje.** Každé pole, které uvedete, se vykreslí za přepínačem —
 *Změnit Stav* — a zapíšou se jen pole se zapnutým přepínačem. Hromadná úprava,
 která by zapsala každé zobrazené pole, by vymazala všechno, co chtěl uživatel
-nechat být. Klíč, který formulář pošle a vy jste ho neuvedli, se ignoruje.
-Záznamy se ukládají jeden po druhém přes Eloquent, takže casty, observery,
+nechat být. Klíč, který formulář pošle a vy jste ho neuvedli, se ignoruje, stejně
+jako zakázané pole, a hodnoty se před zápisem ověří pravidly každého pole a — u
+selectu — jeho množinou voleb. Záznamy se ukládají jeden po druhém přes
+`fill()` v Eloquentu (platí `$fillable` / `$guarded` modelu), takže casty, observery,
 auditní stopa i `optimisticLock()` vidí obyčejné uložení. Když má model policy
 s metodou `update`, záznam, který odmítne, se přeskočí a započítá, nikdy nezapíše;
 bez takové policy se zapíše každý vybraný záznam. Oznámení o úspěchu řekne, kolik

@@ -305,3 +305,21 @@ it('lets a team member change the address they sign in with themselves', functio
         // Still not somebody else's.
         ->and(AccountGuard::mayChangeCredentials($this->olga->fresh()))->toBeFalse();
 });
+
+it('lets a team manager sign in only as a member of their team', function () {
+    config()->set('wire-module-users.impersonation.enabled', true);
+    $this->be($this->mia->fresh());
+
+    expect(NyonCode\WireModuleUsers\Support\Impersonation::mayImpersonate($this->olga->fresh()))->toBeTrue()
+        // Ada is in no team of Mia's.
+        ->and(NyonCode\WireModuleUsers\Support\Impersonation::mayImpersonate($this->ada->fresh()))->toBeFalse();
+});
+
+it('changes nobody\'s sign-in while somebody is signed in as them', function () {
+    // The person at the keyboard is not the account owner: a new address or
+    // password would outlive the impersonation as a way back in.
+    $this->be($this->mia->fresh());
+    session()->put(NyonCode\WireModuleUsers\Support\Impersonation::SESSION_KEY, ['id' => $this->root->getKey(), 'guard' => 'web']);
+
+    expect(AccountGuard::mayChangeCredentials($this->mia->fresh()))->toBeFalse();
+});

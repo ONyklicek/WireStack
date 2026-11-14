@@ -1434,8 +1434,8 @@ closure dostane uživatele a odpoví. Kdo smí zveřejňovat, dostane druhé tla
 použít. Každý endpoint to na serveru ověří znovu. Sdílení potřebuje úložiště, které
 má „všechny“ — driver implementující `SharesViews`, což databázový driver dělá.
 Nad session driverem je řádek bez uživatele aktuální session, takže sdílení zůstane
-vypnuté. Vlastní pohledy hosta už jsou řádky bez uživatele, takže host oddělený
-seznam sdílených nevidí.
+vypnuté. Nad úložištěm, které sdílí, host vlastní pohledy nemá: jeho řádek by byl
+bez uživatele, a řádek bez uživatele *je* sdílený pohled.
 
 Sdílený pohled jde také připravit bez UI, zápisem přes driver:
 

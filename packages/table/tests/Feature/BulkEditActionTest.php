@@ -139,3 +139,29 @@ it('reports a single record in the singular', function () {
 
     expect($action->getSuccessNotificationMessage())->toBe('1 record updated.');
 });
+
+it('refuses a value the field would refuse, however the data arrived', function () {
+    $action = BulkEditAction::make()->fields([
+        Select::make('status')->options(['open' => 'Open', 'closed' => 'Closed']),
+    ]);
+
+    expect(fn () => $action->applyTo(BeaTicket::all(), ['__change_status' => true, 'status' => 'hacked']))
+        ->toThrow(Illuminate\Validation\ValidationException::class)
+        ->and(BeaTicket::query()->where('status', 'hacked')->exists())->toBeFalse();
+});
+
+it('writes nothing through a disabled field, and respects the model\'s guarded attributes', function () {
+    $action = BulkEditAction::make()->fields([TextInput::make('assignee')->disabled()]);
+
+    expect($action->changesFrom(['__change_assignee' => true, 'assignee' => 'X']))->toBe([]);
+
+    $guarded = new class extends BeaTicket
+    {
+        protected $guarded = ['assignee'];
+    };
+
+    BulkEditAction::make()->fields([TextInput::make('assignee')])
+        ->applyTo($guarded::query()->whereKey(1)->get(), ['__change_assignee' => true, 'assignee' => 'Nope']);
+
+    expect(BeaTicket::find(1)->assignee)->toBe('Eva');
+});

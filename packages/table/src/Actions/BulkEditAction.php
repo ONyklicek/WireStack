@@ -7,6 +7,9 @@ namespace NyonCode\WireTable\Actions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireForms\Components\Field;
@@ -107,12 +110,59 @@ class BulkEditAction extends BulkAction
         foreach ($this->editableFields as $field) {
             $name = $field->getName();
 
+            // A disabled field is shown, not offered: nothing is written through it.
+            if ($field->isDisabled()) {
+                continue;
+            }
+
             if (($data[self::switchFor($name)] ?? false) && array_key_exists($name, $data)) {
                 $changes[$name] = $data[$name];
             }
         }
 
         return $changes;
+    }
+
+    /**
+     * Check the changes against each field's own rules — its `rules()`, its
+     * `required()`, and the option set a select implies — here, not only in the
+     * modal: the endpoint that runs this takes its data from the request, and a
+     * value the form would refuse must not reach a record by another way.
+     *
+     * @param  array<string, mixed>  $changes
+     *
+     * @throws ValidationException
+     */
+    protected function validateChanges(array $changes): void
+    {
+        $rules = [];
+
+        foreach ($this->editableFields as $field) {
+            $name = $field->getName();
+
+            if (! array_key_exists($name, $changes)) {
+                continue;
+            }
+
+            $rules[$name] = $field->getValidationRules();
+
+            // A field with a fixed option set accepts only those keys. A select
+            // does not say so in its own rules, and a bulk write is the last
+            // place to find out a crafted value was not one of them.
+            if (method_exists($field, 'getOptions') && is_array($options = $field->getOptions()) && $options !== []) {
+                $multiple = method_exists($field, 'isMultiple') && $field->isMultiple();
+                $allowed = Rule::in(array_map('strval', array_keys($options)));
+
+                if ($multiple) {
+                    $rules[$name][] = 'array';
+                    $rules[$name.'.*'] = [$allowed];
+                } else {
+                    $rules[$name][] = $allowed;
+                }
+            }
+        }
+
+        Validator::make($changes, $rules)->validate();
     }
 
     /**
@@ -132,6 +182,8 @@ class BulkEditAction extends BulkAction
             return ['updated' => 0, 'skipped' => 0];
         }
 
+        $this->validateChanges($changes);
+
         foreach ($records as $record) {
             if (! $record instanceof Model || ! self::mayUpdate($record)) {
                 $skipped++;
@@ -139,7 +191,9 @@ class BulkEditAction extends BulkAction
                 continue;
             }
 
-            $record->forceFill($changes)->save();
+            // fill(), not forceFill(): the model's own $fillable / $guarded have
+            // the last word on which attributes a request may write.
+            $record->fill($changes)->save();
             $updated++;
         }
 

@@ -1432,8 +1432,9 @@ control, *Save for everyone*, and a delete control on each shared view; everybod
 else can only apply them. Each endpoint checks this again on the server. Sharing
 needs a store with an "everyone" — a driver implementing `SharesViews`, which the
 database driver does. Over the session driver, a user-less row is the current
-session, so sharing stays off. A guest's own views are user-less rows already, so
-a guest is shown no separate shared list.
+session, so sharing stays off. Over a store that shares, a guest keeps no views of
+their own: a guest's row would have no user, and a row with no user *is* the
+shared view.
 
 A shared view can also be seeded without the UI, written through the driver:
 

@@ -137,6 +137,28 @@ BulkAction::make('archive')
 `selectedRecordsQuery()` hands you the same selection as a query builder, for a
 mass update or an export that streams.
 
+### Taking A Delete Back — `undoable()`
+
+`->undoable(int $seconds = 10)` on a row or bulk action turns its success notice
+into *Deleted 2 records · Undo* for that many seconds.
+
+**How it works.** After the action runs, the table looks at the records it was
+given and keeps those the action left **soft-deleted**. A model without
+`SoftDeletes`, or one deleted for good, has nothing to restore, so the ordinary
+notice goes out instead. The keys never travel to the browser: they sit in the
+cache under a random token for the undo window, bound to this table instance and
+this user, and the toast's button carries only the token. *Undo* restores each
+record — asking the policy's `restore` where the model has one — and refreshes
+the table. A token is good for one use.
+
+```php
+->bulkActions([
+    DeleteBulkAction::make()
+        ->undoable() // [tl! focus]
+        ->action(fn ($records) => $records->each->delete()),
+])
+```
+
 ### Editing Many Records At Once — `BulkEditAction`
 
 "Move these 40 invoices to Paid", "assign these tickets to Eva": one action that
@@ -145,7 +167,10 @@ sets fields to the same value on every selected record.
 **How it works.** Each field you list is drawn behind a switch — *Change Status*
 — and only the switched-on fields are written. A bulk edit that wrote every field
 it showed would blank whatever the user meant to leave alone. A key the form sends
-that you did not list is ignored. Records are saved one by one through Eloquent,
+that you did not list is ignored, so is a disabled field, and the values are
+validated against each field's rules and — for a select — its option set before
+anything is written. Records are saved one by one through Eloquent's `fill()`
+(the model's `$fillable` / `$guarded` apply),
 so casts, observers, the audit trail and `optimisticLock()` see an ordinary save.
 Where the model has a policy with an `update` method, a record it refuses is
 skipped and counted, never written; with no such policy every selected record is

@@ -970,3 +970,19 @@ it('shares nothing for a guest, over a store with no "everyone", or when the tab
     Gate::define('views.share', fn () => throw new RuntimeException('no guard'));
     expect(Table::make()->rememberColumns('x')->savedViews()->shareViews('views.share')->mayShareViews($editor))->toBeFalse();
 });
+
+it('keeps a guest from writing a user-less row, which is the shared view', function () {
+    sharedViewWorld();
+
+    $guest = sharedViewComponent();
+    $guest->tableState->set('search', 'mine');
+    $guest->saveTableView('Guest view');
+
+    (new DatabasePreferenceDriver)->save('orders-index', null, ['search' => 'x'], 'Team');
+    $guest->deleteTableView('Team');
+    $guest->applyTableView('Team');
+
+    expect((new DatabasePreferenceDriver)->views('orders-index', null))->toBe(['Team'])
+        ->and($guest->getTableViews())->toBe([])
+        ->and($guest->tableState->get('search'))->toBe('mine');
+});

@@ -62,6 +62,14 @@ final class AccountGuard
     {
         $actor ??= Auth::user();
 
+        // Never while somebody is signed in as this account: "their own" is
+        // the person being impersonated, not the one at the keyboard, and a
+        // changed address or password would outlive the impersonation as a way
+        // back in.
+        if (Impersonation::active()) {
+            return false;
+        }
+
         if (self::isSelf($account, $actor)) {
             return true;
         }
@@ -137,7 +145,7 @@ final class AccountGuard
     /**
      * Whether the person manages the current team only, rather than every team.
      */
-    private static function managesOneTeam(mixed $actor): bool
+    public static function managesOneTeam(mixed $actor): bool
     {
         return Teams::enabled() && ! Teams::seesEveryTeam(Permissions::for('users', 'update'), $actor);
     }

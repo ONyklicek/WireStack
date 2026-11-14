@@ -66,6 +66,16 @@ final class Impersonation
             return false;
         }
 
+        // A team's manager signs in as a member of the team they manage, never
+        // as anybody else in the installation.
+        if (AccountGuard::managesOneTeam($actor)) {
+            $team = Teams::currentId($actor);
+
+            if ($team === null || ! Teams::isMember($team, $target)) {
+                return false;
+            }
+        }
+
         try {
             return Gate::forUser($actor)->allows($permission, $target);
         } catch (Throwable) {

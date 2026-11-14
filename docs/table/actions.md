@@ -167,7 +167,10 @@ sets fields to the same value on every selected record.
 **How it works.** Each field you list is drawn behind a switch — *Change Status*
 — and only the switched-on fields are written. A bulk edit that wrote every field
 it showed would blank whatever the user meant to leave alone. A key the form sends
-that you did not list is ignored. Records are saved one by one through Eloquent,
+that you did not list is ignored, so is a disabled field, and the values are
+validated against each field's rules and — for a select — its option set before
+anything is written. Records are saved one by one through Eloquent's `fill()`
+(the model's `$fillable` / `$guarded` apply),
 so casts, observers, the audit trail and `optimisticLock()` see an ordinary save.
 Where the model has a policy with an `update` method, a record it refuses is
 skipped and counted, never written; with no such policy every selected record is

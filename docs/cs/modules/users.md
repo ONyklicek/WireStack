@@ -358,6 +358,8 @@ přihlášení váže, se přesune s ním. Pravidla pro účty výše platí dá
 - nikdo se nepřihlásí sám za sebe;
 - za účet super-admina se smí přihlásit jen super-admin;
 - jedna impersonace nikdy nespustí další, takže cesta zpět je vždy jeden krok;
+- manažer týmu se smí přihlásit jen za člena týmu, který spravuje;
+- dokud je za účet někdo přihlášený, nejde změnit jeho adresu ani heslo;
 - `start()` tohle všechno ověří znovu, ať se k němu došlo jakkoli, a odpoví 403.
 
 Každý krok vyšle `Events\ImpersonationStarted` / `ImpersonationStopped`

@@ -367,6 +367,8 @@ ties to a login moves with it. The account rules above still apply:
 - nobody signs in as themselves;
 - a super-admin's account is only a super-admin's to sign in as;
 - an impersonation never starts another, so the way back is always one step;
+- a team's manager signs in only as a member of the team they manage;
+- nobody's address or password can be changed while somebody is signed in as them;
 - `start()` checks all of this again however it was reached, and answers 403.
 
 Each step dispatches `Events\ImpersonationStarted` / `ImpersonationStopped`

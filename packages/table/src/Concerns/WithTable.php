@@ -2300,7 +2300,7 @@ trait WithTable
 
         // A shared view is a row with no user, which everyone reads — so it is
         // written only by someone the table lets publish one.
-        if ($shared && ! $this->canShareTableViews()) {
+        if ($shared ? ! $this->canShareTableViews() : ! $this->hasOwnTableViews()) {
             return;
         }
 
@@ -2310,6 +2310,19 @@ trait WithTable
             TableViewPayload::capture($this->tableState),
             $name,
         );
+    }
+
+    /**
+     * Whether this user has views of their own to keep. Not a guest over a
+     * store that has an "everyone" ({@see SharesViews}): a guest's row has no
+     * user, and a row with no user IS the shared view — saving "my view" there
+     * would publish it to every user of the table, and deleting one would take
+     * a shared view down.
+     */
+    protected function hasOwnTableViews(): bool
+    {
+        return $this->preferenceUser() !== null
+            || ! $this->resolvePreferenceDriver($this->getTable()) instanceof SharesViews;
     }
 
     /**
@@ -2357,7 +2370,7 @@ trait WithTable
             return;
         }
 
-        if ($shared && ! in_array($name, $this->getSharedTableViews(), true)) {
+        if ($shared ? ! in_array($name, $this->getSharedTableViews(), true) : ! $this->hasOwnTableViews()) {
             return;
         }
 
@@ -2391,7 +2404,7 @@ trait WithTable
             return;
         }
 
-        if ($shared && ! $this->canShareTableViews()) {
+        if ($shared ? ! $this->canShareTableViews() : ! $this->hasOwnTableViews()) {
             return;
         }
 
@@ -2407,7 +2420,7 @@ trait WithTable
     {
         $key = $this->getTable()->getSavedViewsKey();
 
-        if ($key === null) {
+        if ($key === null || ! $this->hasOwnTableViews()) {
             return [];
         }
 
