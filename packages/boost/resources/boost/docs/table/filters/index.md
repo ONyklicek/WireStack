@@ -130,9 +130,13 @@ Three table settings decide how the panel behaves and where it sits:
 
 - **`->deferFilters()`** — the panel's controls stop applying on every change
   and an **Apply** button appears beside *Reset*: one query for "pick three
-  things", not three. The values bind without `.live` and travel with the Apply
-  request (`applyTableFilters()`), which also returns the table to page one.
-  Column header filters stay live.
+  things", not three. The controls write to a draft — `tableState.filterDraft`
+  instead of `tableState.filters` — so no other request (a page, a sort, a poll,
+  a row action) narrows the rows with a half-made choice. *Apply*
+  (`applyTableFilters()`) copies the draft into the filters and returns the
+  table to page one. Anything else that rewrites the filters — *Reset*, a chip's
+  remove, a saved view — starts the draft over from them. Column header filters
+  stay live.
 - **`->filtersLayout()`** — `FiltersLayout::Dropdown` (default) keeps the panel
   behind the toolbar's *Filters* button, a bottom sheet on a phone.
   `FiltersLayout::AboveContent` lays the filters out above the rows, always
@@ -150,6 +154,7 @@ Each resolves the per-table call first, then config, then the default:
 'defaults' => [
     'filters_layout' => env('WIRE_TABLE_FILTERS_LAYOUT', 'dropdown'), // 'dropdown' | 'above' | 'above_collapsible'
     'defer_filters' => env('WIRE_TABLE_DEFER_FILTERS', false),
+    'facet_cache_ttl' => env('WIRE_TABLE_FACET_CACHE_TTL', 60), // seconds an option count is kept; 0 = every request
 ],
 ```
 

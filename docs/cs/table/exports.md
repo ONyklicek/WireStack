@@ -191,6 +191,14 @@ composer require barryvdh/laravel-dompdf
 
 Pokud DomPDF není nainstalován, Wire spadne zpět na CSV výstup.
 
+**PDF má limit velikosti, CSV a tabulky ne.** Layout PDF potřebuje všechny řádky
+najednou, takže na rozdíl od zapisovačů CSV a tabulek nemůže streamovat. Řádky se
+čtou po dávkách po 500 a drží se jako text, ne jako modely. Nad
+`wire-table.export.pdf_max_rows` (výchozí 5000, `WIRE_TABLE_PDF_MAX_ROWS`) export
+vyhodí `ExportException::tooManyRowsForPdf()` a nastavení pojmenuje, místo aby
+v půlce vyčerpal paměť. Máte-li paměť, limit zvyšte, nebo pro velké sady nabídněte
+CSV.
+
 ## Data PDF pohledu
 
 Při použití vlastního PDF pohledu ho navrhněte jako běžnou Blade export šablonu. Exportér předá pohledu `headings`, `rows`, `columns` a `summaryRows` (předformátované řádky součtů, prázdné když jsou souhrny vypnuté).

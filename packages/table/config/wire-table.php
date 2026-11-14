@@ -125,6 +125,20 @@ return [
     |   - \NyonCode\WireCore\Notifications\Drivers\FlasherDriver::class
     |
     */
+    /*
+    |--------------------------------------------------------------------------
+    | Export
+    |--------------------------------------------------------------------------
+    |
+    | The most rows a PDF export renders. A PDF cannot stream — its layout
+    | needs every row at once — so past this the export refuses and says to
+    | use CSV or a spreadsheet, which stream any size.
+    |
+    */
+    'export' => [
+        'pdf_max_rows' => env('WIRE_TABLE_PDF_MAX_ROWS', 5000),
+    ],
+
     'notification_driver' => null, // null = the driver wire-core.notifications.default names
 
     /*

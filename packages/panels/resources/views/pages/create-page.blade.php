@@ -12,6 +12,8 @@
         class="space-y-4 sm:space-y-6"
         @if($unsavedChanges) x-data="wireUnsavedChanges(@js($unsavedChanges))" @endif
     >
+        @include('wire-panels::pages.partials.draft-banner')
+
         {{ $this->form }}
 
         @include('wire-panels::pages.partials.form-actions')

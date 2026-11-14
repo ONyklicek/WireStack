@@ -137,6 +137,46 @@ BulkAction::make('archive')
 `selectedRecordsQuery()` hands you the same selection as a query builder, for a
 mass update or an export that streams.
 
+### Editing Many Records At Once — `BulkEditAction`
+
+"Move these 40 invoices to Paid", "assign these tickets to Eva": one action that
+sets fields to the same value on every selected record.
+
+**How it works.** Each field you list is drawn behind a switch — *Change Status*
+— and only the switched-on fields are written. A bulk edit that wrote every field
+it showed would blank whatever the user meant to leave alone. A key the form sends
+that you did not list is ignored. Records are saved one by one through Eloquent,
+so casts, observers, the audit trail and `optimisticLock()` see an ordinary save.
+Where the model has a policy with an `update` method, a record it refuses is
+skipped and counted, never written; with no such policy every selected record is
+written. The success notification says how many changed and how many were left
+alone. The selection is the table's capped collection (`bulkMaxRecords()` above).
+
+```php
+use NyonCode\WireForms\Components\Select;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireTable\Actions\BulkEditAction;
+
+->bulkActions([
+    BulkEditAction::make()->fields([ // [tl! focus:start]
+        Select::make('status')->options(['open' => 'Open', 'closed' => 'Closed']),
+        TextInput::make('assignee'),
+    ]), // [tl! focus:end]
+])
+```
+
+```php
+BulkEditAction::make(string $name = 'bulkEdit')
+->fields(array $fields)                    // list<Field> — each drawn behind its own "Change …" switch
+->getEditableFields(): array               // the fields as given
+->getFormSchema(): array                   // the switches and fields the modal draws, in order
+->changesFrom(array $data): array          // the attributes a submitted form asks to change
+->applyTo(Collection $records, array $data): array // writes them; ['updated' => int, 'skipped' => int]
+```
+
+Every other bulk-action method (`label()`, `icon()`, `visible()`,
+`deselectRecordsAfterCompletion()` …) works as on `BulkAction`.
+
 ### Sorting on a Phone
 
 The stacked card layout hides the header row, and with it every sort button. A

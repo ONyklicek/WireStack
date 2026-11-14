@@ -18,6 +18,7 @@ use NyonCode\WireTable\Livewire\TableStateSynthesizer;
 use NyonCode\WireTable\Support\ClientViewport;
 use NyonCode\WireTable\Support\Icons\TableIconSet;
 use NyonCode\WireTable\Support\RecordAction;
+use NyonCode\WireTable\Testing\TableTestingMacros;
 
 class WireTableServiceProvider extends PackageServiceProvider
 {
@@ -46,6 +47,10 @@ class WireTableServiceProvider extends PackageServiceProvider
                 app(LivewireManager::class)->propertySynthesizer(TableStateSynthesizer::class);
 
                 $this->registerRecordActionMacros();
+
+                // Test helpers on Livewire::test() — a no-op where Livewire's
+                // testing layer is not loaded.
+                TableTestingMacros::register();
 
                 // The browser writes this one (wire-table-viewport.js), so it
                 // carries no signature to decrypt — encrypted, Laravel would

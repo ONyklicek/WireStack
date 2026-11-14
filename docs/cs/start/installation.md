@@ -62,10 +62,11 @@ zobrazovala vícekrát a pokaždé pod jiným označením.
 
 **Instalátor položí nejvýše dvě otázky.** Nejprve vyberete základní části:
 formuláře, tabulky, řazení, resources a administraci. Potom můžete zvolit hotové
-moduly — pouze pokud je součástí instalace také administrace. Moduly totiž
-zobrazují své stránky uvnitř ní; bez administrace by je uživatelé neměli kde
-otevřít. Pokud administraci nevyberete, instalátor moduly označí jako
-`LEFT ALONE` a sám je nenainstaluje.
+moduly — pouze pokud jsou součástí instalace panely, tedy resources nebo
+administrace. Moduly totiž zobrazují své stránky uvnitř panelu; bez něj by je
+uživatelé neměli kde otevřít. Administrace potřeba není: aplikace, která nad
+panely kreslí vlastní layout, moduly nabídnuté dostane. Pokud nevyberete ani
+jedno, instalátor moduly označí jako `LEFT ALONE` a sám je nenainstaluje.
 
 **Kroky se počítají, neslibují.** Každá fáze na začátku vypíše `Step N — …` a
 číslo odpovídá tomu, kolik fází tento běh opravdu má: `--all` se na nic neptá,

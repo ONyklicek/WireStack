@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
@@ -106,4 +107,47 @@ it('lets a page turn the warning off', function () {
 
     expect(Livewire::test(UcQuietEditNote::class, ['record' => $note->getKey()])->html())
         ->not->toContain('wireUnsavedChanges');
+});
+
+class UcDraftEditNote extends EditPage
+{
+    protected static ?string $resource = UcNoteResource::class;
+
+    protected function remembersDraft(): bool
+    {
+        return true;
+    }
+}
+
+class UcDraftCreateNote extends CreatePage
+{
+    protected static ?string $resource = UcNoteResource::class;
+
+    protected function remembersDraft(): bool
+    {
+        return true;
+    }
+}
+
+it('keeps no draft unless the page asks for one', function () {
+    $note = UcNote::query()->create(['body' => 'Draft']);
+
+    $config = (fn () => $this->unsavedChangesConfig())->call(Livewire::test(UcEditNote::class, ['record' => $note->getKey()])->instance());
+
+    expect($config)->not->toHaveKey('draftKey')
+        ->and(Livewire::test(UcEditNote::class, ['record' => $note->getKey()])->html())->not->toContain('form-draft-banner');
+});
+
+it('keys a draft by page, record and user, and offers it back', function () {
+    $note = UcNote::query()->create(['body' => 'Draft']);
+    $this->be(tap(new User)->forceFill(['id' => 7]));
+
+    $edit = Livewire::test(UcDraftEditNote::class, ['record' => $note->getKey()]);
+    $config = (fn () => $this->unsavedChangesConfig())->call($edit->instance());
+    $create = (fn () => $this->unsavedChangesConfig())->call(Livewire::test(UcDraftCreateNote::class)->instance());
+
+    expect($config['draftKey'])->toBe('wire-draft:'.UcDraftEditNote::class.':'.$note->getKey().':7')
+        ->and($create['draftKey'])->toBe('wire-draft:'.UcDraftCreateNote::class.':new:7')
+        ->and($edit->html())->toContain('data-testid="form-draft-banner"')
+        ->and($edit->html())->toContain('restoreDraft()');
 });

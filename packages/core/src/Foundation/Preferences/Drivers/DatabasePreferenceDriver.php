@@ -6,6 +6,7 @@ namespace NyonCode\WireCore\Foundation\Preferences\Drivers;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver;
+use NyonCode\WireCore\Foundation\Preferences\Contracts\SharesViews;
 use NyonCode\WireCore\Foundation\Preferences\Models\Preference;
 
 /**
@@ -20,7 +21,7 @@ use NyonCode\WireCore\Foundation\Preferences\Models\Preference;
  * Guests (no identifier) collapse onto a shared `null` user_id row, so for
  * per-guest memory keep the guest driver on `session` (the default).
  */
-class DatabasePreferenceDriver implements PreferenceDriver
+class DatabasePreferenceDriver implements PreferenceDriver, SharesViews
 {
     /** The stored spelling of "no name": see {@see viewName()}. */
     private const CURRENT_LAYOUT = '';

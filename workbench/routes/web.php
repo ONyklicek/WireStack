@@ -29,6 +29,7 @@ use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
 use Workbench\App\Livewire\Resources\CreateInvoice;
 use Workbench\App\Livewire\Resources\EditInvoice;
+use Workbench\App\Livewire\Resources\EditInvoiceWithDraft;
 use Workbench\App\Livewire\Resources\ListDocuments;
 use Workbench\App\Livewire\Resources\ListInvoices;
 use Workbench\App\Livewire\Resources\ListTasks;
@@ -231,6 +232,7 @@ $resourcePages = [
     'resource-list' => ['Invoices (list)', 'A resource\'s ListPage: columns, search and sort declared once on the resource.', ListInvoices::class, []],
     'resource-create' => ['Invoice (create)', 'CreatePage over the same form() the edit page uses.', CreateInvoice::class, []],
     'resource-edit' => ['Invoice (edit)', 'EditPage seeded from the record, with the line-items relation manager embedded.', EditInvoice::class, ['record' => 1]],
+    'resource-edit-draft' => ['Invoice (edit, draft kept)', 'The same EditPage with remembersDraft(): unsaved input is offered back after a reload.', EditInvoiceWithDraft::class, ['record' => 1]],
     'resource-view' => ['Invoice (view)', 'ViewPage: a read-only infolist plus the same relation manager.', ViewInvoice::class, ['record' => 1]],
     'resource-manage' => ['Teams (manage)', 'ManagePage: the list, with create and edit in modals over it.', ManageTeams::class, []],
     'task-board' => ['Tasks (board)', 'A Page composing WithBoard: the tasks in lanes by status, dragged between them.', TaskBoard::class, []],

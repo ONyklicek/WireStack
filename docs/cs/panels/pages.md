@@ -227,6 +227,31 @@ protected function warnsAboutUnsavedChanges(): bool
 }
 ```
 
+### Uchování konceptu
+
+Stránka může neuložený vstup uchovat i v prohlížeči, aby ho zavřená záložka, pád
+nebo vypršelá session neztratily. Dokud se formulář liší od posledního uložení,
+jeho stav se zapisuje do `localStorage` každých pár sekund a při odchodu ze
+stránky. Stránka, která při načtení najde koncept odlišný od toho, co načetla,
+ukáže *Máte změny z dřívější návštěvy, které se neuložily* s tlačítky *Obnovit je*
+a *Zahodit*. Úspěšné uložení koncept zahodí.
+
+Klíčem je třída stránky, klíč záznamu (`new` na stránce vytváření) a id
+přihlášeného uživatele, takže dva lidé na jednom počítači nikdy nedostanou
+koncept toho druhého. Je to **ve výchozím stavu vypnuté**, protože se uchovává
+stav formuláře v obyčejném úložišti prohlížeče — správné pro článek, špatné pro
+formulář s tajemstvím:
+
+```php
+protected function remembersDraft(): bool
+{
+    return true; // [tl! focus]
+}
+```
+
+Jiný klíč dá přepsání `draftKey(): string`. Úložiště, které odmítne — anonymní
+okno, plná kvóta — znamená, že koncept není, ne chybu.
+
 ## Záložky seznamu
 
 Seznam může být několika seznamy týchž záznamů — všechny faktury, otevřené,

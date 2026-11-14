@@ -22,7 +22,10 @@ All notable changes to the Wire ecosystem will be documented in this file.
 - **Counts and value lists.** `SelectFilter::withCounts()` / `->filterWithCounts()` shows how many records
   each option would leave ("Admin (3)"), counted under every other filter and the search but never under
   its own. `optionsFromColumn()` / `->filterAsValueList()` takes the options from the column's own distinct
-  values, most common first.
+  values, most common first — in the panel, the header and a query builder's fields alike. The counts are
+  kept between requests for one viewer on one database, under the table's write generation, so a write
+  through the table retires them at once and `wire-table.defaults.facet_cache_ttl` (60 s) bounds a write
+  made elsewhere; ticking a row or saving a cell no longer runs a GROUP BY per counting filter.
 - **Date presets.** `DateFilter::presets()` / `->filterPresets()`: today, yesterday, last 7 / 30 days, this /
   last week, month, quarter and year. The state stores the preset's name, so a saved view or a shared link
   of "last 7 days" stays relative; the dates are worked out when the query runs, in `->timezone()`.
@@ -44,11 +47,33 @@ All notable changes to the Wire ecosystem will be documented in this file.
   the server, not from the formatted cell. A row with its own context menu keeps it.
 - **Conditions with AND / OR.** `QueryBuilderFilter::make()->constraints([...])`: conditions combined with
   "all of" / "any of", and groups of them one level deep. Every condition is one of the filters you list,
-  so it compares exactly as that filter does anywhere else.
+  so it compares exactly as that filter does anywhere else. A tree holds at most 50 conditions, with text
+  values cut to 1000 characters and multiple choices to 100.
 - **A deferred filter panel, and where it sits.** `Table::deferFilters()` applies the panel on an Apply
-  button instead of on every change. `Table::filtersLayout()` draws it in the toolbar dropdown (default),
+  button instead of on every change: its controls — the query builder's fields and groups included — edit a
+  draft (`tableState.filterDraft`), so a page, a sort or a poll in between narrows nothing. `Table::filtersLayout()` draws it in the toolbar dropdown (default),
   above the rows, or above the rows behind a toggle (remembered per browser); `filtersFormColumns()` lays
   it out in up to four columns.
+- **Take a delete back.** `->undoable(int $seconds = 10)` on an action turns its notice into *Deleted 2 records ·
+  Undo* when the records were soft-deleted; Undo restores them (asking the `restore` policy) for the table and
+  user that deleted them, through a one-use token — the keys never reach the browser.
+- **Edit many records at once.** `BulkEditAction::make()->fields([...])` sets the same value on every selected
+  record. Each field sits behind its own *Change …* switch, and only the switched-on fields are written; records
+  are saved one by one through Eloquent, and a record a policy's `update` refuses is skipped and counted in the
+  notification.
+- **Shared saved views.** `Table::shareViews()` lists views published for everyone beside a user's own,
+  marked with a group icon; the argument says who may publish and delete them (`true`, an ability, or a
+  closure). Each endpoint checks this again on the server. It needs a store with an "everyone" — the database
+  preference driver (`SharesViews`).
+- **Sign in as somebody else.** `wire-module-users.impersonation`: *Sign in as* on the users list and *Back to my
+  account* in the top bar, for holders of `users.impersonate`. Off by default; never as yourself, a super-admin
+  only by a super-admin, never chained; `ImpersonationStarted` / `ImpersonationStopped` events for an audit trail.
+- **Drafts of unsaved form input.** A panel form page that returns `true` from `remembersDraft()` keeps unsaved
+  input in the browser (per page, record and user) and offers it back after a reload or a crash. Off by
+  default, because it is plain browser storage.
+- **Table helpers for tests.** `Livewire::test()` gains `searchTable()`, `sortTable()`, `filterTable()`,
+  `resetTableFilters()`, `selectTableRecords()`, `callTableAction()`, `callTableBulkAction()`,
+  `assertCanSeeTableRecords()`, `assertCanNotSeeTableRecords()` and `assertCountTableRecords()`.
 - **Dialogs are bottom sheets on a phone.** `wire-core.modals.mobile` (`'sheet'` by default,
   `'full-screen'`, `'dialog'`) decides how a dialog presents below the mobile breakpoint when the action
   does not say; `->dialogOnMobile()` keeps the floating card. A sheet carries the grabber and is pulled
@@ -56,6 +81,9 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Changed
 
+- **A PDF export reads its rows in chunks and stops at `wire-table.export.pdf_max_rows` (5000)** with an
+  `ExportException` that says to use CSV, instead of loading every model at once and running out of memory.
+  CSV and spreadsheets still stream any size.
 - **The page behind a dialog no longer scrolls.** One counted page lock (`x-scroll-lock`,
   `window.wireScrollLock`) for every overlay, released when the server's re-render removes the dialog; the
   admin drawer uses it instead of `overflow-hidden` on `<body>`, which iOS Safari ignores.
@@ -71,6 +99,25 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Fixed
 
+- **Shared saved views were never shown.** The documented "row with no user" was neither listed nor loaded for
+  anybody signed in; `Table::shareViews()` now lists and applies them.
+- **A team member can change the e-mail address they sign in with.** The rule that keeps a team's manager
+  off somebody else's credentials applied to everyone without the global ability — their own included —
+  and the profile reported a save it had dropped.
+- **Listing an installed module in `wire-core.plugins` no longer stops the application booting**; the same
+  class under the same id is taken as already registered. Another class claiming the id is still refused.
+- **A date filter compares across a relation** — `DateFilter::make('customer.created_at')->operators()`
+  used the dotted name as a column; "is not on" and "is empty" across it are `whereDoesntHave`.
+- **A day read in another timezone than the stored one** (`->timezone('Europe/Prague')` over UTC
+  timestamps) is the range of that day's moments, not `DATE()` of the UTC value, so a row from 23:30 lands
+  on the right day.
+- **One Escape closes one panel.** A sheet opened from a column's filter (the touch list) and the filter
+  itself closed together; every dropdown now leaves itself open when something inside it took the key, and
+  returns focus to its trigger when it closes.
+- **A sheet fits above the iOS keyboard** — its height is taken again from what the keyboard leaves
+  visible, so a search at its top stays on screen. With "reduce motion" on, sheets fade in place instead of
+  sliding.
+
 - **Choosing an item from a row's context menu no longer closes the browser tab in Safari.** The menu
   item called `close()`, and inside the row menu, which has no dropdown around it, that name resolved
   to `window.close()`. Chrome ignores it; Safari on iPadOS closed the tab. The row controller now has
@@ -85,6 +132,18 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Security
 
+- **Uploaded files cannot run on the application's origin.** The media route sends
+  `X-Content-Type-Options: nosniff` on every file, serves a type a browser would run (SVG, HTML, XML,
+  JavaScript) as a sandboxed download, and encodes the file name per RFC 6266 instead of `addslashes()`.
+- **`scope => 'all'` on the notifications screen needs an ability.** `wire-module-notifications.permission`
+  names it; without one, or for a viewer who lacks it, the screen is the viewer's own inbox — reading,
+  marking and deleting included. Set the permission if you rely on the administrative view.
+- **Resending a sign-in code no longer tells whether the address has an account.** The "wait a moment"
+  answer is decided by the address alone.
+- **The settings screen checks its ability on every save,** not only on the route, so a page mounted
+  without one is covered too.
+- **Text filters match `%` and `_` literally** (escaped through `LikePattern`), case-insensitively on every
+  engine; `50%` no longer matches every row with a 50 in it.
 - **A column that hides its cell on some records (`visibleForRecord()`) gets no value list or counts,** and
   the cell menu ignores a cell the user cannot see — either would have shown the hidden values.
 

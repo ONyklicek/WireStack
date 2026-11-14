@@ -1411,10 +1411,31 @@ A user then filters to `paid`, sorts by total, hides two columns, and saves it a
 
 ### Storage and sharing
 
-The driver keys a view on the triple **(table, user, view name)**, which makes
-two things fall out for free. A user's views are their own, like their column
-layout. And a **shared view** — one a whole team sees — is a row with no user, so
-sharing needs no second mechanism: write one through the driver directly.
+The driver keys a view on the triple **(table, user, view name)**. A user's views
+are their own, like their column layout. A **shared view** — one everybody using
+the table sees — is the same row with no user.
+
+`->shareViews()` turns the sharing on. Everybody then sees the shared views in the
+menu, marked with a group icon and listed after their own. The argument says who
+may **publish** one, and delete it again:
+
+```php
+$table
+    ->rememberColumns('orders-index')
+    ->savedViews()
+    ->shareViews('orders.share-views'); // [tl! focus]
+```
+
+`true` lets any signed-in user publish, a string is an ability asked of the Gate,
+and a closure receives the user and answers. A publisher gets a second save
+control, *Save for everyone*, and a delete control on each shared view; everybody
+else can only apply them. Each endpoint checks this again on the server. Sharing
+needs a store with an "everyone" — a driver implementing `SharesViews`, which the
+database driver does. Over the session driver, a user-less row is the current
+session, so sharing stays off. A guest's own views are user-less rows already, so
+a guest is shown no separate shared list.
+
+A shared view can also be seeded without the UI, written through the driver:
 
 ```php
 app(DatabasePreferenceDriver::class)->save(
@@ -1435,15 +1456,20 @@ layout, so accepting `''` would let "Save" overwrite the layout with itself, and
 ```php
 ->savedViews(?string $key = null)     // null reuses the rememberColumns() key; off without one
 ->getSavedViewsKey(): ?string         // null when saved views are off
+->shareViews(Closure|string|bool $who = true) // who may publish shared views: anyone signed in, an ability, or fn ($user): bool; false turns it off
+->sharesViews(): bool                 // whether the table offers shared views
+->mayShareViews(mixed $user): bool    // whether this user may publish and delete them
 ```
 
 The component endpoints, for a custom view or a test:
 
 ```php
-$this->saveTableView(string $name): void      // capture the current view under a name
-$this->applyTableView(string $name): void     // restore it, and reset the page
-$this->deleteTableView(string $name): void    // drop it; the live layout is untouched
-$this->getTableViews(): array                 // the names, for a switcher
+$this->saveTableView(string $name, bool $shared = false): void   // capture the current view under a name; shared: for everyone
+$this->applyTableView(string $name, bool $shared = false): void  // restore it, and reset the page
+$this->deleteTableView(string $name, bool $shared = false): void // drop it; the live layout is untouched
+$this->getTableViews(): array                 // this user's names, for a switcher
+$this->getSharedTableViews(): array           // the names shared with everyone
+$this->canShareTableViews(): bool             // whether this user may publish and delete them
 ```
 
 ---

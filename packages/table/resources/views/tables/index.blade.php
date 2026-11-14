@@ -42,6 +42,8 @@
     $hasViewMenu = $plan->shell()->hasViewMenu;
     $hasSavedViews = $plan->shell()->hasSavedViews;
     $savedViews = $plan->shell()->savedViews;
+    $sharedViews = $plan->shell()->sharedViews;
+    $canShareViews = $plan->shell()->canShareViews;
     $viewMenuLabel = $plan->shell()->viewMenuLabel;
 
     // Table state. Which filters count as ACTIVE is a rule with a sharp edge (see
@@ -543,6 +545,37 @@
                                                             >{!! icon('outline:trash', 'h-4 w-4') !!}</button>
                                                         </div>
                                                     @endforeach
+                                                    {{-- Shared views (Table::shareViews()): listed for everyone,
+                                                         marked so a user can tell theirs from the team's, and
+                                                         deletable only by someone who may publish them. --}}
+                                                    @foreach($sharedViews as $sharedView)
+                                                        <div class="flex items-center gap-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50" data-shared-view>
+                                                            <button
+                                                                    type="button"
+                                                                    wire:click="applyTableView(@js($sharedView), true)"
+                                                                    wire:loading.attr="disabled"
+                                                                    wire:target="applyTableView(@js($sharedView), true)"
+                                                                    data-testid="table-shared-view-{{ $sharedView }}"
+                                                                    class="flex flex-1 min-w-0 items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300"
+                                                            >
+                                                                {!! icon('outline:user-group', 'h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400') !!}
+                                                                <span class="truncate">{{ $sharedView }}</span>
+                                                                <span class="sr-only">({{ __('wire-table::messages.shared_view') }})</span>
+                                                            </button>
+                                                            @if($canShareViews)
+                                                                <button
+                                                                        type="button"
+                                                                        wire:click="deleteTableView(@js($sharedView), true)"
+                                                                        wire:loading.attr="disabled"
+                                                                        wire:target="deleteTableView(@js($sharedView), true)"
+                                                                        data-testid="table-shared-view-delete-{{ $sharedView }}"
+                                                                        title="{{ __('wire-table::messages.delete_view') }}"
+                                                                        aria-label="{{ __('wire-table::messages.delete_view') }}"
+                                                                        class="shrink-0 rounded-md p-1.5 mr-1 text-gray-500 hover:text-red-600 dark:hover:text-red-400"
+                                                                >{!! icon('outline:trash', 'h-4 w-4') !!}</button>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
                                                     {{-- The name is asked for in the browser rather than with a
                                                          field in this panel: the panel is teleported to <body>
                                                          and closes on click-outside, so an input in it would
@@ -553,12 +586,23 @@
                                                             data-testid="table-view-save" @wireEl('table-view-save')
                                                             @class([
                                                                 'mt-1 flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg',
-                                                                'border-t border-gray-100 dark:border-gray-700' => $savedViews !== [],
+                                                                'border-t border-gray-100 dark:border-gray-700' => $savedViews !== [] || $sharedViews !== [],
                                                             ])
                                                     >
                                                         {!! icon('outline:bookmark', 'h-4 w-4') !!}
                                                         {{ __('wire-table::messages.save_current_view') }}
                                                     </button>
+                                                    @if($canShareViews)
+                                                        <button
+                                                                type="button"
+                                                                x-on:click="$wire.saveTableView(window.prompt(@js(__('wire-table::messages.save_view_prompt'))) ?? '', true)"
+                                                                data-testid="table-view-share" @wireEl('table-view-share')
+                                                                class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg"
+                                                        >
+                                                            {!! icon('outline:user-group', 'h-4 w-4') !!}
+                                                            {{ __('wire-table::messages.save_shared_view') }}
+                                                        </button>
+                                                    @endif
                                                 @endif
                                                 @if($hasColumnToggles)
                                                 <div

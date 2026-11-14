@@ -196,6 +196,42 @@ actions that open a modal go through `openActionModal()` then
 `submitActionModal()`. If an assertion does not match, dump the component with
 `->dump()` to inspect the live `tableState`.
 
+### Table helpers on `Livewire::test()`
+
+`wire-table` adds helpers to Livewire's test object so a test says what it means
+rather than which state path it lives under. Each one drives the component through
+the endpoint the browser uses — a `tableState` write, `sortTable()`,
+`executeTableAction()` — so a passing test is evidence about the real request.
+Records are compared by key and may be models, keys, or a mix. "Can see" means
+the page the table would render now: the page size and the current page apply,
+as they do for a user.
+
+```php
+it('finds the unpaid invoices', function () {
+    [$paid, $draft] = [Invoice::factory()->paid()->create(), Invoice::factory()->create()];
+
+    Livewire::test(InvoicesTable::class)
+        ->filterTable('status', ['value' => 'draft']) // [tl! focus:start]
+        ->assertCanSeeTableRecords([$draft])
+        ->assertCanNotSeeTableRecords([$paid])
+        ->callTableAction('pay', $draft)              // [tl! focus:end]
+        ->assertCountTableRecords(0);
+});
+```
+
+```php
+->searchTable(?string $term)                                   // tableState.search
+->sortTable(string $column, ?string $direction = null)         // sortTable(); reaches the direction if given
+->filterTable(string $filter, mixed $value)                    // tableState.filters.<filter>
+->resetTableFilters()
+->selectTableRecords(iterable $records)                        // toggles each one
+->callTableAction(string $action, mixed $record, array $data = [])      // confirmed; with a form when $data is given
+->callTableBulkAction(string $action, iterable $records, array $data = [])
+->assertCanSeeTableRecords(iterable $records, bool $inOrder = false)
+->assertCanNotSeeTableRecords(iterable $records)
+->assertCountTableRecords(int $count)                           // every match, not only the page
+```
+
 ---
 
 ## Unit-Testing a Custom Field

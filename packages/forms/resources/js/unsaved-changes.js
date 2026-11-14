@@ -19,6 +19,13 @@
  * Livewire processes that redirect before the action resolves — so a save in
  * flight holds the warning off, and settles the question when it finishes:
  * success moves the baseline, a validation failure leaves the warning armed.
+ *
+ * **A draft, when the page asks for one** (`draftKey`). Unsaved input is also
+ * written to `localStorage` under that key — every few seconds while the form is
+ * dirty, and as the page goes away — and a page that arrives to find one that
+ * differs from what it loaded offers it back (`draftAvailable`, `restoreDraft()`,
+ * `discardDraft()`). A successful save throws it away. Storage that throws — a
+ * private window, a full quota — is not an error: there is simply no draft.
  */
 const wireUnsavedChanges = (config = {}) => ({
     path: config.path ?? 'data',
@@ -26,15 +33,25 @@ const wireUnsavedChanges = (config = {}) => ({
     message: config.message ?? 'You have unsaved changes. Leave anyway?',
     baseline: null,
     saving: false,
+    draftKey: config.draftKey ?? null,
+    draftAvailable: false,
 
     init() {
         this.baseline = this.snapshot()
+
+        const stored = this.readDraft()
+        this.draftAvailable = stored !== null && stored !== this.baseline
+
+        if (this.draftKey) {
+            this.draftTimer = setInterval(() => this.keepDraft(), 4000)
+        }
 
         this.stopIntercepting = this.$wire.$intercept(this.method, ({ onSuccess, onFinish }) => {
             this.saving = true
 
             onSuccess(() => {
                 this.baseline = this.snapshot()
+                this.discardDraft()
             })
 
             onFinish(() => {
@@ -43,6 +60,8 @@ const wireUnsavedChanges = (config = {}) => ({
         })
 
         this.onBeforeUnload = (event) => {
+            this.keepDraft()
+
             if (! this.isDirty()) return
 
             event.preventDefault()
@@ -69,6 +88,7 @@ const wireUnsavedChanges = (config = {}) => ({
     },
 
     destroy() {
+        clearInterval(this.draftTimer)
         window.removeEventListener('beforeunload', this.onBeforeUnload)
         document.removeEventListener('livewire:navigate', this.onNavigate)
         this.stopIntercepting?.()
@@ -81,6 +101,45 @@ const wireUnsavedChanges = (config = {}) => ({
 
     isDirty() {
         return ! this.saving && this.snapshot() !== this.baseline
+    },
+
+    /** Write the unsaved state under the draft key; a clean form keeps none. */
+    keepDraft() {
+        if (! this.draftKey || this.draftAvailable) return
+
+        try {
+            this.isDirty()
+                ? window.localStorage.setItem(this.draftKey, this.snapshot())
+                : window.localStorage.removeItem(this.draftKey)
+        } catch (e) {}
+    },
+
+    readDraft() {
+        if (! this.draftKey) return null
+
+        try {
+            return window.localStorage.getItem(this.draftKey)
+        } catch (e) {
+            return null
+        }
+    },
+
+    /** Put the kept draft back into the form. The baseline stays: it is still unsaved. */
+    restoreDraft() {
+        const stored = this.readDraft()
+        this.draftAvailable = false
+
+        if (stored !== null) {
+            this.$wire.$set(this.path, JSON.parse(stored))
+        }
+    },
+
+    discardDraft() {
+        this.draftAvailable = false
+
+        try {
+            if (this.draftKey) window.localStorage.removeItem(this.draftKey)
+        } catch (e) {}
     },
 })
 

@@ -108,9 +108,11 @@ class PdfExporter implements Exporter
      * Build the document.
      *
      * Unlike the other two this one cannot stream: a PDF's layout depends on the
-     * whole set, so the rows are collected before anything is rendered. That is
-     * the reason a large PDF export belongs on a queue rather than in a request,
-     * and why the memory cost is stated here rather than discovered.
+     * whole set, so the rows are collected before anything is rendered. They are
+     * read in chunks and held as strings, and past
+     * `wire-table.export.pdf_max_rows` the export refuses
+     * ({@see ExportException::tooManyRowsForPdf()}) rather than running out of
+     * memory halfway.
      *
      * @param  Builder<Model>  $query
      * @param  array<int, Column>  $columns
@@ -118,20 +120,30 @@ class PdfExporter implements Exporter
      */
     protected function render(Builder $query, array $columns, array $summaryRows): PDF
     {
-        $records = $query->get();
-
         $headings = $this->withHeadings
             ? array_map(fn (Column $col) => $col->getLabel(), $columns)
             : [];
 
-        $rows = $records->map(function (Model $record) use ($columns) {
+        // Read in chunks and kept as strings: the document needs every row, but
+        // not every model — a few hundred hydrated at a time, then let go. The
+        // cap is checked while reading, so a table that grew past it fails on
+        // its first row too many rather than after rendering what it could.
+        $limit = max(1, (int) config('wire-table.export.pdf_max_rows', 5000));
+        $rows = [];
+
+        foreach ($query->lazy(500) as $record) {
+            if (count($rows) >= $limit) {
+                throw ExportException::tooManyRowsForPdf($limit);
+            }
+
             $row = [];
+
             foreach ($columns as $column) {
                 $row[] = $this->resolveColumnValue($column, $record);
             }
 
-            return $row;
-        })->all();
+            $rows[] = $row;
+        }
 
         $viewName = $this->view ?? 'wire-table::export.pdf';
 

@@ -46,6 +46,8 @@ final class ShellRenderPlan
      * @param  ?string  $liveChannel  The broadcast channel to listen on, or null without `live(broadcast: true)`.
      * @param  array<int, Filter>  $filters  The table-level filters (column filters live on the columns group).
      * @param  array<int, string>  $savedViews  Names of this user's saved views, empty when the feature is off.
+     * @param  array<int, string>  $sharedViews  Names of the views shared with everyone (Table::shareViews()).
+     * @param  bool  $canShareViews  Whether this user may publish and delete shared views.
      * @param  string  $viewMenuLabel  Narrows to "toggle columns" when that is all the menu holds.
      */
     private function __construct(
@@ -67,6 +69,9 @@ final class ShellRenderPlan
         public readonly array $savedViews,
         public readonly bool $hasViewMenu,
         public readonly string $viewMenuLabel,
+        /** @var array<int, string> */
+        public readonly array $sharedViews = [],
+        public readonly bool $canShareViews = false,
     ) {}
 
     public static function resolve(Table $table, mixed $component, bool $hasColumnToggles): self
@@ -93,6 +98,8 @@ final class ShellRenderPlan
             hasGroupSummaries: $hasGrouping && $component->tableHasGroupSummaries(),
             hasSavedViews: $hasSavedViews,
             savedViews: $hasSavedViews ? $component->getTableViews() : [],
+            sharedViews: $hasSavedViews ? $component->getSharedTableViews() : [],
+            canShareViews: $hasSavedViews && $component->canShareTableViews(),
             hasViewMenu: $hasColumnToggles || $isSubRowsExpandable || $hasSavedViews,
             viewMenuLabel: $hasColumnToggles && ! $isSubRowsExpandable && ! $hasSavedViews
                 ? __('wire-table::messages.toggle_columns')

@@ -34,6 +34,7 @@ use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithPartials;
 use NyonCode\WireCore\Foundation\Enums\Hook;
 use NyonCode\WireCore\Foundation\Preferences\Contracts\PreferenceDriver;
+use NyonCode\WireCore\Foundation\Preferences\Contracts\SharesViews;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireForms\Concerns\DispatchesStateUpdates;
 use NyonCode\WireForms\Concerns\InteractsWithActionForms;
@@ -114,6 +115,7 @@ trait WithTable
         InteractsWithTableActions::afterActionExecuted insteadof InteractsWithActions;
         InteractsWithTableActions::resolveActionRecordIds insteadof InteractsWithActions;
         InteractsWithTableActions::sendActionNotification insteadof InteractsWithActions;
+        InteractsWithTableActions::offerActionUndo insteadof InteractsWithActions;
     }
     use InteractsWithFieldActions;
     use InteractsWithFileUploads;
@@ -2284,7 +2286,7 @@ trait WithTable
      * has to be one answer shared with {@see applyTableView()}, or a view would
      * restore something other than what was saved.
      */
-    public function saveTableView(string $name): void
+    public function saveTableView(string $name, bool $shared = false): void
     {
         $name = trim($name);
         $key = $this->getTable()->getSavedViewsKey();
@@ -2296,18 +2298,57 @@ trait WithTable
             return;
         }
 
+        // A shared view is a row with no user, which everyone reads — so it is
+        // written only by someone the table lets publish one.
+        if ($shared && ! $this->canShareTableViews()) {
+            return;
+        }
+
         $this->resolvePreferenceDriver($this->getTable())->save(
             $key,
-            $this->preferenceUser(),
+            $shared ? null : $this->preferenceUser(),
             TableViewPayload::capture($this->tableState),
             $name,
         );
     }
 
     /**
+     * Whether this user may publish and delete views everyone sees
+     * ({@see Table::shareViews()}) — through a store that has an "everyone".
+     */
+    public function canShareTableViews(): bool
+    {
+        $table = $this->getTable();
+
+        return $table->mayShareViews($this->preferenceUser())
+            && $this->resolvePreferenceDriver($table) instanceof SharesViews;
+    }
+
+    /**
+     * The names of the views shared with every user of this table.
+     *
+     * @return array<int, string>
+     */
+    public function getSharedTableViews(): array
+    {
+        $table = $this->getTable();
+        $key = $table->getSavedViewsKey();
+
+        // A guest's own views are the user-less rows already: listing them
+        // again as "shared" would show each one twice.
+        if ($key === null || ! $table->sharesViews() || $this->preferenceUser() === null) {
+            return [];
+        }
+
+        $driver = $this->resolvePreferenceDriver($table);
+
+        return $driver instanceof SharesViews ? $driver->views($key, null) : [];
+    }
+
+    /**
      * Restore a saved view onto the current table state.
      */
-    public function applyTableView(string $name): void
+    public function applyTableView(string $name, bool $shared = false): void
     {
         $table = $this->getTable();
         $key = $table->getSavedViewsKey();
@@ -2316,7 +2357,11 @@ trait WithTable
             return;
         }
 
-        $payload = $this->resolvePreferenceDriver($table)->load($key, $this->preferenceUser(), $name);
+        if ($shared && ! in_array($name, $this->getSharedTableViews(), true)) {
+            return;
+        }
+
+        $payload = $this->resolvePreferenceDriver($table)->load($key, $shared ? null : $this->preferenceUser(), $name);
 
         if ($payload === []) {
             return;
@@ -2338,7 +2383,7 @@ trait WithTable
     /**
      * Delete a saved view. The current layout is untouched.
      */
-    public function deleteTableView(string $name): void
+    public function deleteTableView(string $name, bool $shared = false): void
     {
         $key = $this->getTable()->getSavedViewsKey();
 
@@ -2346,7 +2391,11 @@ trait WithTable
             return;
         }
 
-        $this->resolvePreferenceDriver($this->getTable())->forget($key, $this->preferenceUser(), $name);
+        if ($shared && ! $this->canShareTableViews()) {
+            return;
+        }
+
+        $this->resolvePreferenceDriver($this->getTable())->forget($key, $shared ? null : $this->preferenceUser(), $name);
     }
 
     /**

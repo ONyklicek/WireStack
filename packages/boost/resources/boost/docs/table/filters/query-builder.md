@@ -32,7 +32,13 @@ same code doing it.
 1. A `SelectFilter` is made `->multiple()`, so its condition reads *is any of*.
 2. A filter with no operator list gets `->operators()` — every operator its type
    supports. A list you set yourself is kept.
-3. Its state path is moved under the builder (`tableState.filters.<builder>`).
+3. Its state path is moved under the builder (`tableState.filters.<builder>`,
+   or the draft of a deferred panel).
+
+A select field that reads its options from the data
+([`optionsFromColumn()`](select.md)) or counts them (`withCounts()`) is counted
+like a panel filter: over the table as the other filters and the search narrow
+it, never by the builder's own conditions.
 
 The filters are changed in place — build fresh instances for the builder rather
 than passing the same object you also list in `Table::filters()`.
@@ -71,10 +77,11 @@ by the `QueryPlanner` — it always runs through its own `apply()`.
 
 **Where it runs.** Adding a condition, adding a group and removing one are
 Livewire actions on the `WithTable` component — `queryBuilderAddRule()`,
-`queryBuilderAddGroup()`, `queryBuilderRemove()` — and each returns the table to
-page one. The field and operator selects are always live, because they decide
-which value control is drawn. The values follow the panel: live, or held until
-Apply when the table [defers its filters](index.md#the-filter-panel).
+`queryBuilderAddGroup()`, `queryBuilderRemove()` — and in a live panel each
+returns the table to page one. The field and operator selects are always live, because they decide
+which value control is drawn. When the table [defers its filters](index.md#the-filter-panel)
+all of it — values, fields, groups, the *all/any* switch — edits the panel's
+draft, and nothing narrows the rows until *Apply*.
 
 **Persistence.** The tree is too nested for a query string, so it is **not**
 written to the URL with `Table::queryString()`; a saved view keeps it. The chip
@@ -148,6 +155,13 @@ An operator that needs no value (*is empty*) draws no value control.
 *Add group* appends a group holding one empty condition, with the combinator
 opposite to the top level's. Removing a group's last condition removes the group.
 There is no group inside a group.
+
+**Limits.** A tree holds at most `QueryBuilderState::MAX_RULES` (50) conditions,
+groups included — at the cap *Add condition* and *Add group* do nothing. A text
+value keeps `MAX_VALUE_LENGTH` (1000) characters and a multiple choice
+`MAX_VALUES` (100) entries. The tree travels in the Livewire snapshot and every
+condition is a constraint the query authorizes and applies, so the same limits
+cut a crafted payload down before anything runs.
 
 ## Fields Across A Relation
 
@@ -243,6 +257,7 @@ QueryBuilderFilter::make(string $name)
 ->query(Closure $callback)             // inherited — replaces the whole builder; fn (Builder $query, array $tree): Builder
 ->hasActiveRule(mixed $state): bool    // whether any condition would narrow the rows
 ->getConstraints(): array              // array<string, Filter> keyed by name
+->statePathPrefix(string $prefix)      // set by the table — the filters, or the deferred panel's draft; moves the constraints with it
 ```
 
 Component actions the builder's buttons call (from `WithTable`):

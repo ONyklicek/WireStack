@@ -28,4 +28,9 @@ return [
     'record_pages' => 'Record pages',
     'no_tenant' => 'You do not belong to any company yet.',
     'switch_tenant' => 'Switch company',
+
+    // A kept draft (InteractsWithUnsavedChanges::remembersDraft())
+    'draft_available' => 'You have changes from an earlier visit that were never saved.',
+    'draft_restore' => 'Restore them',
+    'draft_discard' => 'Discard',
 ];

@@ -42,6 +42,7 @@ use NyonCode\WireTable\Preferences\TableViewPayload;
 use NyonCode\WireTable\Services\TableIntrospector;
 use NyonCode\WireTable\Support\ColumnSet;
 use NyonCode\WireTable\Support\TableShortcutLegend;
+use Throwable;
 
 /** @phpstan-consistent-constructor */
 #[\AllowDynamicProperties]
@@ -1521,6 +1522,54 @@ class Table implements Htmlable
     public function getSavedViewsKey(): ?string
     {
         return ($this->savedViewsKey ?? '') === '' ? null : $this->savedViewsKey;
+    }
+
+    /** Who may publish and delete views everyone sees; null when nobody may. */
+    protected Closure|string|bool|null $shareViewsWith = null;
+
+    /**
+     * Let views be shared: saved once, listed for every user of the table.
+     *
+     * The argument says who may *publish* (and delete) one — everybody sees
+     * them. `true` lets any signed-in user, a string is an ability asked of the
+     * Gate (`'orders.share-views'`), a closure receives the user and answers.
+     * Sharing needs a store that has an "everyone" — the database preference
+     * driver; over the session driver it stays off.
+     */
+    public function shareViews(Closure|string|bool $who = true): static
+    {
+        $this->shareViewsWith = $who === false ? null : $who;
+
+        return $this;
+    }
+
+    /** Whether this user may publish and delete shared views. */
+    public function mayShareViews(mixed $user): bool
+    {
+        $who = $this->shareViewsWith;
+
+        if ($who === null || $user === null || $this->getSavedViewsKey() === null) {
+            return false;
+        }
+
+        if ($who === true) {
+            return true;
+        }
+
+        if (is_string($who)) {
+            try {
+                return Gate::forUser($user)->allows($who);
+            } catch (Throwable) {
+                return false;
+            }
+        }
+
+        return $who instanceof Closure && (bool) $who($user);
+    }
+
+    public function sharesViews(): bool
+    {
+        return $this->shareViewsWith !== null && $this->getSavedViewsKey() !== null;
     }
 
     /**

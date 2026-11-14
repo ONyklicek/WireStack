@@ -62,11 +62,12 @@ of them three times in three different vocabularies.
 
 **Two questions, and the second only when it means something.** The stack comes
 first — forms, tables, sortable, resources, the shell. The ready-made areas come
-second, and only once the admin shell is part of the answer, either ticked now or
-already set up from an earlier run: a module renders *inside* the panel, and
-offering a users area to somebody who has not taken a panel is offering them a
-screen with nowhere to appear. Untick the shell and the modules are listed as
-`LEFT ALONE` rather than installed behind your back.
+second, and only once panels are part of the answer — resources or the admin
+shell, ticked now or already set up from an earlier run: a module renders
+*inside* a panel, and offering a users area to somebody who has none is offering
+them a screen with nowhere to appear. The shell is not required: an application
+that draws its own layout over panels is still offered the areas. Untick both and
+the modules are listed as `LEFT ALONE` rather than installed behind your back.
 
 **The steps are counted, not promised.** Each stage prints `Step N — …` as it
 starts, and the number is however many stages this run actually has: `--all`

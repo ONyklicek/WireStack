@@ -808,6 +808,30 @@ it('asks about the modules when the shell was set up by an earlier run', functio
     });
 });
 
+it('asks about the modules over panels without the shell', function () {
+    // The shell is the optional layout above panels: an application drawing
+    // its own still wants the ready-made areas, and used to be offered none.
+    wiCatalogue(
+        new Component(
+            package: 'nyoncode/wire-panels',
+            label: 'Panels',
+            description: 'Resources, pages and routing.',
+            marker: 'NyonCode\\WireCore\\WireCoreServiceProvider',
+            command: 'about',
+        ),
+        wiModule('nyoncode/wire-module-users', 'Users', 'about'),
+    );
+
+    $this->artisan('wire:install --dry-run')
+        ->expectsChoice('Which parts of the stack?', ['about'], [
+            'about' => 'Panels — Resources, pages and routing.',
+        ])
+        ->expectsChoice('Which of these should the panel have?', ['about'], [
+            'about' => 'Users — A ready-made area.',
+        ])
+        ->assertSuccessful();
+});
+
 it('asks once where the shell is the whole of what is left', function () {
     wiCatalogue(wiShell());
 
