@@ -7,6 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Livewire;
 use NyonCode\WireForms\Components\Select;
@@ -146,7 +147,7 @@ it('refuses a value the field would refuse, however the data arrived', function 
     ]);
 
     expect(fn () => $action->applyTo(BeaTicket::all(), ['__change_status' => true, 'status' => 'hacked']))
-        ->toThrow(Illuminate\Validation\ValidationException::class)
+        ->toThrow(ValidationException::class)
         ->and(BeaTicket::query()->where('status', 'hacked')->exists())->toBeFalse();
 });
 

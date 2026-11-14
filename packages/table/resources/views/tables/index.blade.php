@@ -104,6 +104,8 @@
     $mobileSortableColumns = $plan->columns()->mobileSortable;
     $hasMobileSort = $plan->columns()->hasMobileSort;
     $hasCopyableColumn = $plan->columns()->hasCopyable;
+    $pinnedColumnNames = $plan->columns()->pinnedNames;
+    $pinnableColumns = $plan->columns()->visible;
 
     // The size of the whole result set, for the selection strip's "n of N".
     $recordCount = $plan->paging()->recordCount;
@@ -632,6 +634,30 @@
                                                                 class="text-sm text-gray-700 dark:text-gray-300">{{ $column->getLabel() }}</span>
                                                     </label>
                                                 @endforeach
+                                                {{-- Pinned columns (Table::pinnableColumns()): every column on
+                                                     screen, pinned or not; one the developer pinned stays so. --}}
+                                                @if($table->hasPinnableColumns())
+                                                    <div class="px-3 py-2 mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-t border-gray-100 dark:border-gray-700">
+                                                        {{ __('wire-table::messages.pinned_columns') }}
+                                                    </div>
+                                                    @foreach($pinnableColumns as $column)
+                                                        @php $isPinned = in_array($column->getName(), $pinnedColumnNames, true); @endphp
+                                                        <button
+                                                                type="button"
+                                                                @unless($column->isPinned()) wire:click="toggleColumnPin(@js($column->getName()))" @endunless
+                                                                @disabled($column->isPinned())
+                                                                aria-pressed="{{ $isPinned ? 'true' : 'false' }}"
+                                                                data-testid="table-column-pin-{{ $column->getName() }}" @wireEl('table-column-pin')
+                                                                class="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                        >
+                                                            <span @class(['flex h-5 w-5 shrink-0 items-center justify-center', 'text-primary-600 dark:text-primary-400' => $isPinned, 'text-gray-400 dark:text-gray-500' => ! $isPinned])>
+                                                                {!! icon($isPinned ? 'solid:map-pin' : 'outline:map-pin', 'h-4 w-4') !!}
+                                                            </span>
+                                                            <span class="truncate">{{ $column->getLabel() }}</span>
+                                                            <span class="sr-only">— {{ __('wire-table::messages.pin_column') }}</span>
+                                                        </button>
+                                                    @endforeach
+                                                @endif
                                                 {{-- Sub-row expansion: the baseline that survives paging,
                                                      and the only bulk expand/collapse a phone gets. --}}
                                                 @if($isSubRowsExpandable)

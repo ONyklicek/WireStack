@@ -100,7 +100,7 @@ final class ShellRenderPlan
             savedViews: $hasSavedViews ? $component->getTableViews() : [],
             sharedViews: $hasSavedViews ? $component->getSharedTableViews() : [],
             canShareViews: $hasSavedViews && $component->canShareTableViews(),
-            hasViewMenu: $hasColumnToggles || $isSubRowsExpandable || $hasSavedViews,
+            hasViewMenu: $hasColumnToggles || $isSubRowsExpandable || $hasSavedViews || $table->hasPinnableColumns(),
             viewMenuLabel: $hasColumnToggles && ! $isSubRowsExpandable && ! $hasSavedViews
                 ? __('wire-table::messages.toggle_columns')
                 : __('wire-table::messages.view_options'),

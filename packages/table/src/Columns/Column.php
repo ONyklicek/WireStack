@@ -35,6 +35,7 @@ use NyonCode\WireCore\Foundation\View\ExtraAttributes;
 use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireTable\Concerns\CanBeEdited;
 use NyonCode\WireTable\Concerns\CanBeFiltered;
+use NyonCode\WireTable\Concerns\CanBePinned;
 use NyonCode\WireTable\Concerns\CanBeSearchable;
 use NyonCode\WireTable\Concerns\CanBeSorted;
 use NyonCode\WireTable\Concerns\CanBeSummarized;
@@ -59,6 +60,7 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     use CanBeCopyable;
     use CanBeEdited;
     use CanBeFiltered;
+    use CanBePinned;
     use CanBeSearchable;
     use CanBeSorted;
     use CanBeSummarized;

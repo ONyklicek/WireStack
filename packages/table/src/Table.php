@@ -50,6 +50,7 @@ class Table implements Htmlable
 {
     use Concerns\CollapsesActionsOnMobile;
     use Concerns\HasColumnFilterLayout;
+    use Concerns\HasColumnLayout;
     use Concerns\HasDataSource;
     use Concerns\HasFiltersPanel;
     use Concerns\HasGestures;

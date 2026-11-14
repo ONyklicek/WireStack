@@ -57,7 +57,7 @@ it('emits each bundle exactly once', function () {
     //
     //   core    dropdown (every shared Alpine controller), copy, chart, notifications
     //   forms   image, fields (the date/time pickers, tags, rating, the editors)
-    //   table   records, selection, live, fill, viewport, sticky
+    //   table   records, selection, live, fill, viewport, sticky, columns
     //
     // Chart and notifications are the two that look like optional heavy bodies
     // and are not: 671 bytes and 1.2 kB of Alpine registrar around `window.Chart`
@@ -87,6 +87,7 @@ it('emits each bundle exactly once', function () {
         'wire-core-notifications.js',
         'wire-forms-fields.js',
         'wire-forms-image.js',
+        'wire-table-columns.js',
         'wire-table-fill.js',
         'wire-table-live.js',
         'wire-table-records.js',

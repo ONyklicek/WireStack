@@ -126,6 +126,11 @@
     $visibleColumns = $plan->columns()->visible;
     $hasVisibleColumns = $plan->columns()->hasVisible;
     $columnMeta = $plan->columns()->meta;
+    // Column widths the user drags, and columns pinned to the start
+    // (wire-table-columns.js measures the offsets).
+    $hasPinnedColumns = $plan->columns()->hasPinned;
+    $resizableColumns = $plan->columns()->isResizable;
+    $pinnedHeader = $hasPinnedColumns ? \NyonCode\WireTable\Support\StickyColumn::on('start') : null;
     $fillColumns = $plan->columns()->fillable;
     $isFillEnabled = $plan->columns()->isFillEnabled;
     $filterableColumns = $plan->columns()->filterable;
@@ -226,6 +231,9 @@
                         @if($stickyHeaderFollowsPage)
                             @include('wire-table::tables.partials.sticky-header-assets')
                         @endif
+                        @if($hasPinnedColumns || $resizableColumns)
+                            @include('wire-table::tables.partials.column-layout-assets')
+                        @endif
                     <div class="relative overflow-x-auto wire-scroller {{ $tableHiddenClass }} {{ $stickyLayerClass }}"
                          @if($scrollRegionStyle) style="{{ $scrollRegionStyle }}" @endif
                          @if($isFillEnabled)
@@ -247,6 +255,7 @@
                         @endif
                         @if($hasVisibleColumns)
                             <table
+                                    @if($hasPinnedColumns) data-wire-pinned @endif
                                     @if($tableRole)
                                         role="{{ $tableRole }}"
                                         {{-- Counts the whole result set plus the header rows, not
@@ -327,7 +336,8 @@
                                         <th
                                                 scope="col"
                                                 data-column="{{ $column->getName() }}"
-                                                class="{{ $headerPadding }} {{ $hm['alignment'] }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $hm['responsive'] }}"
+                                                @if($hm['pinned'] ?? false) data-pinned="{{ $column->getName() }}" @endif
+                                                class="{{ $headerPadding }} {{ $hm['alignment'] }} font-semibold {{ $isBordered ? 'border border-gray-200 dark:border-gray-700' : '' }} {{ $hm['responsive'] }} {{ ($hm['pinned'] ?? false) ? $pinnedHeader->headerCellClass : '' }} {{ $resizableColumns ? 'relative' : '' }}"
                                                 @if($hm['widthStyles']) style="{{ $hm['widthStyles'] }}" @endif
                                                 @if($hm['extraHeader']) {!! $hm['extraHeader'] !!} @endif
                                                 @if($cellFilterMenu && $column->isFilterable() && $column->getFilter()->canFilterByCellValue()) data-cell-filter="{{ $column->getFilter()->canExcludeCellValue() ? 'exclude' : 'only' }}" @endif
@@ -367,6 +377,9 @@
                                                     'value' => $columnFilterValues[$column->getName()] ?? null,
                                                     'isFiltered' => array_key_exists($column->getName(), $activeColumnFilters),
                                                 ])
+                                            @endif
+                                            @if($resizableColumns)
+                                                @include('wire-table::tables.partials.column-resize-grip', ['column' => $column])
                                             @endif
                                         </th>
                                     @endforeach

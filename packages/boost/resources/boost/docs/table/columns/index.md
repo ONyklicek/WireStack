@@ -326,6 +326,42 @@ TextColumn::make('subtitle')
 ->alignRight(): static
 ->getAlignment(): string
 ->hasAlignment(): bool                // false while the column falls back to 'left'
+->pinned(bool $pinned = true): static // stay at the start while the table scrolls sideways
+->isPinned(): bool
+```
+
+### Widths The User Drags, Columns Pinned To The Start
+
+`Table::resizableColumns()` puts a grip on each header's edge: drag it to make
+the column wider or narrower (48–1200px), double-click it to put the column back
+to its own width, or focus it and use ←/→ for 16px steps. The width follows the
+pointer on the header while dragging, so nothing round-trips; on release the one
+value goes to `resizeTableColumn()` and is kept in the table state
+(`columns.widths`).
+
+`Column::pinned()` keeps a column at the start of the table while the rest
+scrolls sideways — the record's name beside forty columns of figures.
+`Table::pinnableColumns()` lets users pin and unpin columns of their own from the
+view menu (`toggleColumnPin()`, state `columns.pinned`); a column the developer
+pinned stays pinned. Pinned columns are drawn first, in their declared order, and
+the selection checkboxes stick with them. Each one's offset is the sum of the
+widths before it, so it is measured in the browser (`wire-table-columns.js`)
+after load, after every morph and whenever the table changes size.
+
+Both settings travel with the remembered layout (`rememberColumns()`) and with
+saved views. A stored width or pin is read against the table as it is declared
+now, so a column that was renamed or is no longer resizable is ignored.
+
+```php
+$table
+    ->rememberColumns('orders-index')
+    ->resizableColumns() // [tl! focus:start]
+    ->pinnableColumns()  // [tl! focus:end]
+    ->columns([
+        TextColumn::make('number')->pinned(), // [tl! focus]
+        TextColumn::make('customer'),
+        TextColumn::make('total'),
+    ]);
 ```
 
 The three width values are optional and independent. `width()` sets the preferred

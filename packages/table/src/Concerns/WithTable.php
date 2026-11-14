@@ -74,6 +74,7 @@ use NyonCode\WireTable\Services\TableQueryEvents;
 use NyonCode\WireTable\Services\TableQueryService;
 use NyonCode\WireTable\Services\WriteGeneration;
 use NyonCode\WireTable\Support\CellEditOutcome;
+use NyonCode\WireTable\Support\ColumnLayout;
 use NyonCode\WireTable\Support\PollCommit;
 use NyonCode\WireTable\Support\RowRenderer;
 use NyonCode\WireTable\Support\RowStamps;
@@ -117,6 +118,7 @@ trait WithTable
         InteractsWithTableActions::sendActionNotification insteadof InteractsWithActions;
         InteractsWithTableActions::offerActionUndo insteadof InteractsWithActions;
     }
+    use InteractsWithColumnLayout;
     use InteractsWithFieldActions;
     use InteractsWithFileUploads;
 
@@ -2473,6 +2475,9 @@ trait WithTable
             'columns.hidden',
             array_values(array_intersect($storedHidden, $toggleable)),
         );
+
+        $this->tableState->set('columns.widths', ColumnLayout::widths($preferences['columns']['widths'] ?? [], $table));
+        $this->tableState->set('columns.pinned', ColumnLayout::pins($preferences['columns']['pinned'] ?? [], $table));
     }
 
     /**
@@ -2490,6 +2495,8 @@ trait WithTable
         $this->resolvePreferenceDriver($table)->save($key, $this->preferenceUser(), [
             'columns' => [
                 'hidden' => array_values($this->tableState->get('columns.hidden', [])),
+                'widths' => $this->tableColumnWidths(),
+                'pinned' => $this->userPinnedColumns(),
             ],
             'rows' => [
                 'expandAll' => $this->tableState->get('rows.expandAll'),

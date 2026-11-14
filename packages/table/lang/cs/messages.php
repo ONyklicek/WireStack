@@ -243,4 +243,9 @@ return [
     'undo' => 'Zpět',
     'undo_deleted' => '{1} Smazán :count záznam.|[2,4] Smazány :count záznamy.|[5,*] Smazáno :count záznamů.',
     'undo_restored' => '{0} Nebylo co obnovit.|{1} Obnoven :count záznam.|[2,4] Obnoveny :count záznamy.|[5,*] Obnoveno :count záznamů.',
+
+    // Column layout (Table::resizableColumns(), Table::pinnableColumns())
+    'resize_column' => 'Změnit šířku sloupce :column',
+    'pin_column' => 'Připnout na začátek',
+    'pinned_columns' => 'Připnuté sloupce',
 ];

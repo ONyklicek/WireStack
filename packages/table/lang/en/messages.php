@@ -243,4 +243,9 @@ return [
     'undo' => 'Undo',
     'undo_deleted' => '{1} :count record deleted.|[2,*] :count records deleted.',
     'undo_restored' => '{0} Nothing to restore.|{1} :count record restored.|[2,*] :count records restored.',
+
+    // Column layout (Table::resizableColumns(), Table::pinnableColumns())
+    'resize_column' => 'Resize the :column column',
+    'pin_column' => 'Pin to the start',
+    'pinned_columns' => 'Pinned columns',
 ];

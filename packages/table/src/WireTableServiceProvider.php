@@ -94,6 +94,8 @@ class WireTableServiceProvider extends PackageServiceProvider
                 Bundle::make('wire-table-viewport.js'),
                 // Moves a page-pinned `<thead>` with the page scroll.
                 Bundle::make('wire-table-sticky.js'),
+                // Column widths the user drags, and the offsets of pinned columns.
+                Bundle::make('wire-table-columns.js'),
             ])
             ->hasAssetFallback(Bundle::servedByRoute('wire-table'))
             // No `hasMigrations()`: this package has no tables of its own any

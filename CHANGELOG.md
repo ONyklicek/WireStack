@@ -54,6 +54,10 @@ All notable changes to the Wire ecosystem will be documented in this file.
   draft (`tableState.filterDraft`), so a page, a sort or a poll in between narrows nothing. `Table::filtersLayout()` draws it in the toolbar dropdown (default),
   above the rows, or above the rows behind a toggle (remembered per browser); `filtersFormColumns()` lays
   it out in up to four columns.
+- **Resize and pin columns.** `Table::resizableColumns()` puts a grip on each header edge (drag, double-click to
+  reset, ←/→); `Column::pinned()` and the user's own pins through `Table::pinnableColumns()` keep columns — and
+  the selection checkboxes — at the start while the table scrolls sideways. Widths and pins (`columns.widths`,
+  `columns.pinned`) travel with the remembered layout and saved views.
 - **Paste a block from a spreadsheet, copy rows out.** With `fillHandle()`, tab-separated cells pasted into an
   editable cell land down the rows and across the fillable columns in one `fillTableCells()` request, every
   cell meeting the same server rules as a fill. In a keyboard-driven table, Ctrl/⌘+C copies the selected rows

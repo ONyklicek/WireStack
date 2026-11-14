@@ -227,6 +227,26 @@ class TablePreview extends Component
             return $this->inactiveRowsTable($table);
         }
 
+        if ($this->variant === 'column-layout') {
+            // Wider than the page on purpose, so pinning has something to scroll
+            // past: drag a header's edge, pin a column from the view menu.
+            return $table
+                ->model(User::class)
+                ->selectable()
+                ->columns([
+                    TextColumn::make('name')->label('Name')->pinned(),
+                    TextColumn::make('email')->label('Email')->width('320px'),
+                    TextColumn::make('role')->label('Role')->width('260px'),
+                    TextColumn::make('bio')->label('Bio')->width('480px'),
+                    TextColumn::make('created_at')->label('Joined')->width('260px'),
+                ])
+                ->rememberColumns('preview-column-layout')
+                ->resizableColumns()
+                ->pinnableColumns()
+                ->searchable(false)
+                ->paginated(false);
+        }
+
         if (in_array($this->variant, ['column-surfaces', 'trashed-filter'], true)) {
             return $this->documentsTable($table);
         }

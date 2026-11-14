@@ -155,6 +155,10 @@ final class TableStateSchema
             ],
             'columns' => [
                 'hidden' => [],
+                // Pixel widths by column name (Table::resizableColumns()), and
+                // the columns the user pinned (Table::pinnableColumns()).
+                'widths' => [],
+                'pinned' => [],
             ],
             'rows' => [
                 // Rows whose expansion *differs* from the baseline below, so a
