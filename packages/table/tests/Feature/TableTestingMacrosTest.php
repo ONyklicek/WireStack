@@ -125,3 +125,28 @@ it('fails when a record is missing, or out of order', function () {
         ->and(fn () => Livewire::test(TtmTable::class)->assertCanSeeTableRecords([2, 1], inOrder: true))
         ->toThrow(AssertionFailedError::class, 'not in the expected order');
 });
+
+class TtmUnpagedTable extends TtmTable
+{
+    public function table(Table $table): Table
+    {
+        return parent::table($table)->paginated(false);
+    }
+}
+
+class TtmNotATable extends Component
+{
+    public function render()
+    {
+        return '<div></div>';
+    }
+}
+
+it('reads an unpaginated table, and refuses a component that is no table', function () {
+    Livewire::test(TtmUnpagedTable::class)
+        ->assertCanSeeTableRecords([1, 2, 3])
+        ->assertCountTableRecords(3);
+
+    expect(fn () => Livewire::test(TtmNotATable::class)->assertCanSeeTableRecords([1]))
+        ->toThrow(AssertionFailedError::class, 'is not a table');
+});

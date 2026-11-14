@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
+use NyonCode\WireCore\Foundation\View\PageChrome;
 use NyonCode\WireModuleUsers\Events\ImpersonationStarted;
 use NyonCode\WireModuleUsers\Events\ImpersonationStopped;
 use NyonCode\WireModuleUsers\Livewire\ImpersonationBanner;
@@ -14,6 +15,7 @@ use NyonCode\WireModuleUsers\Pages\ListUsers;
 use NyonCode\WireModuleUsers\Support\Impersonation;
 use NyonCode\WireModuleUsers\Tests\Fixtures\User;
 use NyonCode\WireModuleUsers\Tests\Support\Tables;
+use NyonCode\WireModuleUsers\WireModuleUsersServiceProvider;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /*
@@ -125,4 +127,19 @@ it('puts the way back in the top bar only where impersonation is on', function (
 
     Impersonation::stop();
     expect(trim(view('wire-module-users::impersonation-banner')->render()))->toBe('');
+});
+
+it('puts the way back into the top bar only where impersonation is on', function () {
+    $chrome = app(PageChrome::class);
+    $boot = new ReflectionMethod(WireModuleUsersServiceProvider::class, 'bootImpersonation');
+    $provider = new WireModuleUsersServiceProvider(app());
+
+    $before = count($chrome->views(PageChrome::TOPBAR));
+    config()->set('wire-module-users.impersonation.enabled', false);
+    $boot->invoke($provider);
+    expect(count($chrome->views(PageChrome::TOPBAR)))->toBe($before);
+
+    config()->set('wire-module-users.impersonation.enabled', true);
+    $boot->invoke($provider);
+    expect($chrome->views(PageChrome::TOPBAR))->toContain('wire-module-users::impersonation-banner');
 });

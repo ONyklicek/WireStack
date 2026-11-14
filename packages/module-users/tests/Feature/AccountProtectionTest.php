@@ -324,3 +324,10 @@ it('changes nobody\'s sign-in while somebody is signed in as them', function () 
 
     expect(AccountGuard::mayChangeCredentials($this->mia->fresh()))->toBeFalse();
 });
+
+it('never lets an administrator sign in as a super-admin', function () {
+    config()->set('wire-module-users.impersonation.enabled', true);
+    $this->be($this->ada->fresh());
+
+    expect(Impersonation::mayImpersonate($this->root->fresh()))->toBeFalse();
+});

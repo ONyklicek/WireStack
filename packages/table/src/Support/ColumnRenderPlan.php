@@ -230,10 +230,6 @@ final class ColumnRenderPlan
                     'name' => $name,
                     'extraAttributes' => $entry['extraCell'],
                     'pinned' => $entry['pinned'] ? $sticky : null,
-                    // Strings, not an @if around the content: a block directive
-                    // there would put morph markers into every cell of every row.
-                    'pinnedBefore' => $entry['pinned'] ? $sticky->layers().'<span class="relative">' : '',
-                    'pinnedAfter' => $entry['pinned'] ? '</span>' : '',
                     'content' => Skeleton::slot('content'),
                 ])->render(),
                 'content',

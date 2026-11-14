@@ -166,3 +166,12 @@ it('writes nothing through a disabled field, and respects the model\'s guarded a
 
     expect(BeaTicket::find(1)->assignee)->toBe('Eva');
 });
+
+it('checks every value of a multiple choice against the options', function () {
+    $action = BulkEditAction::make()->fields([
+        Select::make('assignee')->multiple()->options(['Eva' => 'Eva', 'Petr' => 'Petr']),
+    ]);
+
+    expect(fn () => $action->applyTo(BeaTicket::all(), ['__change_assignee' => true, 'assignee' => ['Eva', 'Mallory']]))
+        ->toThrow(ValidationException::class);
+});

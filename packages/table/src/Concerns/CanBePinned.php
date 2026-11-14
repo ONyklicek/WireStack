@@ -18,6 +18,7 @@ trait CanBePinned
 {
     protected bool $pinned = false;
 
+    /** Keep the column at the start of the table while the rest scrolls sideways. */
     public function pinned(bool $pinned = true): static
     {
         $this->pinned = $pinned;

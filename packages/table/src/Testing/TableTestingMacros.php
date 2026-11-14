@@ -30,10 +30,6 @@ final class TableTestingMacros
 {
     public static function register(): void
     {
-        if (! class_exists(Testable::class)) {
-            return;
-        }
-
         Testable::macro('searchTable', function (?string $term): Testable {
             /** @var Testable<Component> $this */
             return $this->set('tableState.search', $term);
@@ -175,7 +171,6 @@ final class TableTestingMacros
         return match (true) {
             $records instanceof Paginator, $records instanceof CursorPaginator => array_values($records->items()),
             $records instanceof \Traversable => array_values(iterator_to_array($records)),
-            is_array($records) => array_values($records),
             default => [],
         };
     }

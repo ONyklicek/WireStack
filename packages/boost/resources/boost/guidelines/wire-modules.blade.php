@@ -95,8 +95,16 @@ palette find the area without being told.
   Resolve a role by name through `Accounts` (global or the team's own), never a bare `firstOrCreate`.
 - **Whose account may be touched: `Support\AccountGuard`.** `mayEdit()` (never a super-admin's, unless
   you are one), `mayDelete()` (never the last super-admin; not a team's manager), `mayRemoveFromTeam()`,
-  `mayChangeCredentials()` (not a team's manager). A new action on an account asks it; taking a role
-  away is `wire:revoke-role`, which refuses the last super-admin without `--force`.
+  `mayChangeCredentials()` (your own always; not a team's manager for anyone else; nobody's while
+  impersonating). A new action on an account asks it; taking a role away is `wire:revoke-role`,
+  which refuses the last super-admin without `--force`.
+- **Signing in as somebody else: `Support\Impersonation`** (`wire-module-users.impersonation`, off by
+  default, ability `users.impersonate`). `mayImpersonate()` refuses yourself, a super-admin unless you are
+  one, a member outside a team manager's team, and any chain; `start()` re-checks and answers 403;
+  `stop()` returns. Events `ImpersonationStarted` / `ImpersonationStopped`. The way back is a topbar view
+  (`PageChrome::TOPBAR`), registered only when on.
+- **Notifications `scope => 'all'`** needs `wire-module-notifications.permission`; without it, or for a
+  viewer who lacks it, `NotificationResource::seesEveryone()` is false and the screen is their own inbox.
 - **Nobody hands out more than they hold: `Support\RoleGrants`.** Any screen or action that writes a
   role's permissions or an account's roles offers `RoleGrants::mayGrantPermission()` /
   `mayGrantRole()` and writes `clampPermissions()` / `clampRoles()` — narrowing, not refusing, so

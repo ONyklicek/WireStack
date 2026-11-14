@@ -52,6 +52,8 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
   Deep nesting works (capped at `Modals\ModalStack::MAX_DEPTH` as a runaway guard); only the top takes focus/Escape.
   `->requiresConfirmation()` asks before running (native `wire:confirm`, translated default message);
   `->confirm('Really reset?')` sets a custom message.
+  `->undoable(int $seconds = 10)` asks the host to offer an Undo: a table restores what the action left
+  soft-deleted (`offerActionUndo()` / `undoTableAction()` with a one-use cache token); elsewhere it is a no-op.
 - Color, icon and visibility come from the shared `HasColor`, `HasIcons`, `HasVisibility` concerns.
 - On actions, `->label()`, `->icon()`, `->color()`, `->tooltip()` and `->size()` each accept `string|Closure|null`,
   so they can be computed per row — the Closure receives the record: `->color(fn ($record) => $record->isPaid() ? 'success' : 'danger')`.

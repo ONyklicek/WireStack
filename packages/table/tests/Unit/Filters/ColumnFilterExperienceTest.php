@@ -364,3 +364,8 @@ it('lists no values and filters by no hidden cell for a column that hides some c
     $component->call('filterByCellValue', '1', 'city');
     expect($component->get('tableState.columnFilters.city'))->toBe(['Praha']);
 });
+
+it('lists the presets it offers', function () {
+    expect(DateFilter::make('joined_on')->presets([DatePreset::Today])->getPresets())->toBe([DatePreset::Today])
+        ->and(DateFilter::make('joined_on')->getPresets())->toBe([]);
+});
