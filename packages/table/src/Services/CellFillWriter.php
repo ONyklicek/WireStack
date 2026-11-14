@@ -59,8 +59,11 @@ final class CellFillWriter
         $pending = [];
 
         DB::transaction(function () use ($table, $fills, $hostId, &$outcomes, &$pending): void {
+            // Merged, not assigned: a paste sends one entry per cell, so the same
+            // column arrives once per row, and assigning kept only the last row's
+            // outcomes — the client then rolled back cells the server had written.
             foreach ($fills as $fill) {
-                $outcomes[$fill->column] = $this->fillColumn($table, $fill, $hostId, $pending);
+                $outcomes[$fill->column] = ($outcomes[$fill->column] ?? []) + $this->fillColumn($table, $fill, $hostId, $pending);
             }
         });
 

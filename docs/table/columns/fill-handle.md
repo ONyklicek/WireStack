@@ -98,12 +98,35 @@ Every filled cell fires `CellUpdating` and `CellUpdated` exactly as a single
 inline edit does, so an audit listener needs no change to see fills. There is no
 separate bulk event.
 
+## Pasting A Block From A Spreadsheet
+
+With `fillHandle()` on, a block of cells pasted into an editable cell — copied
+from Excel, Numbers, Google Sheets or this table — lands the way a spreadsheet
+pastes it: row by row over the rows below, cell by cell over the **fillable**
+columns to the right. Text with no tab and no line break is one value for one
+cell, and is left to the input, as typing is.
+
+The block goes out as **one** `fillTableCells()` request, one entry per cell, so
+every rule a fill meets applies to each pasted cell on the server: the column's
+validation, its permission, the record's `canEdit()`, `fillable(false)` and the
+lock version. Locked and non-editable cells are skipped, and anything past the
+last row or column is dropped. A toggle takes `1`, `true`, `yes` (and `ano`, `x`,
+`✓`) as on and anything else as off. Cells keep the pasted value while the
+request is in flight, and each one the server refuses goes back to its value.
+
+**Copying out.** In a table the keyboard drives row by row (`selectable()` or
+record actions), <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>C</kbd> on a focused row copies
+the selected rows on the page as tab-separated text, or that row alone when none
+is selected. A spreadsheet pastes it as a block, and it pastes back into the
+table the same way. Each cell is copied as it reads, an editable cell as its
+input's value; the selection and action columns are left out.
+
 ## Scope
 
-The first version fills **vertically only** — one column, downwards or upwards
-from the source cell. Horizontal fill, rectangular selections, clipboard support
-and pattern recognition (1, 2, 3 …) are not implemented; the value is duplicated,
-never extrapolated.
+The drag fills **vertically only** — one column, downwards or upwards from the
+source cell. Horizontal drag-fill, rectangular cell selections and pattern
+recognition (1, 2, 3 …) are not implemented; a dragged value is duplicated,
+never extrapolated. A pasted block covers rows and columns.
 
 ## Notes
 

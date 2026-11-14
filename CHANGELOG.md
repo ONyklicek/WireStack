@@ -54,6 +54,10 @@ All notable changes to the Wire ecosystem will be documented in this file.
   draft (`tableState.filterDraft`), so a page, a sort or a poll in between narrows nothing. `Table::filtersLayout()` draws it in the toolbar dropdown (default),
   above the rows, or above the rows behind a toggle (remembered per browser); `filtersFormColumns()` lays
   it out in up to four columns.
+- **Paste a block from a spreadsheet, copy rows out.** With `fillHandle()`, tab-separated cells pasted into an
+  editable cell land down the rows and across the fillable columns in one `fillTableCells()` request, every
+  cell meeting the same server rules as a fill. In a keyboard-driven table, Ctrl/⌘+C copies the selected rows
+  (or the focused one) as a block. A fill with several entries for one column now reports every row.
 - **Take a delete back.** `->undoable(int $seconds = 10)` on an action turns its notice into *Deleted 2 records ·
   Undo* when the records were soft-deleted; Undo restores them (asking the `restore` policy) for the table and
   user that deleted them, through a one-use token — the keys never reach the browser.

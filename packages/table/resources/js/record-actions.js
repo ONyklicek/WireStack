@@ -43,6 +43,7 @@ const INTERACTIVE = [
 
 import { createAutoScroller } from '../../../core/resources/js/support/autoscroll'
 import { rowAtY } from '../../../core/resources/js/support/rows'
+import { toTsv } from './fill/clipboard'
 
 // Module-level handle to the single open context-menu panel, so opening one (or
 // right-clicking another row) always closes any other first.
@@ -529,6 +530,20 @@ const wireRecordActions = (config = {}) => ({
             return this.selection()?.selectPage()
         }
 
+        // Ctrl/⌘+C → the selected rows on this page (or the focused row when
+        // none is) as tab-separated text, which a spreadsheet pastes as a block
+        // and which pastes back into this table's editable cells the same way.
+        if ((event.ctrlKey || event.metaKey) && ! event.shiftKey && ! event.altKey && event.key.toLowerCase() === 'c') {
+            const text = this.rowsAsText(rows, this.row(event))
+
+            if (text !== null) {
+                event.preventDefault()
+                navigator.clipboard?.writeText(text).catch(() => {})
+            }
+
+            return
+        }
+
         const idx = rows.findIndex((row) => row.dataset.rowKey === this.activeKey)
         const mod = event.ctrlKey || event.metaKey
 
@@ -668,6 +683,33 @@ const wireRecordActions = (config = {}) => ({
     // ── Selection bridge: reach the one selection component (the checkboxes and
     // bulk bar use it too), so keyboard selection stays a single source of truth
     // and stays optimistic (no per-keystroke roundtrip). ──────────────────────
+
+    /**
+     * The rows a copy takes, as tab-separated text: the selected rows on this
+     * page in the order they are drawn, else the row the key was pressed on. Each cell is
+     * what it shows — an editable cell its input's value — and the selection
+     * and action columns are left out.
+     */
+    rowsAsText(rows, focused) {
+        const sel = this.selection()
+        let picked = sel ? rows.filter((row) => sel.isSelected(row.dataset.rowKey)) : []
+
+        if (picked.length === 0 && focused) {
+            picked = [focused]
+        }
+
+        if (picked.length === 0) return null
+
+        return toTsv(picked.map((row) => [...row.querySelectorAll(':scope > td[data-column]')].map((td) => {
+            const field = td.querySelector('input:not([type=checkbox]):not([type=hidden]), select, textarea')
+
+            if (field) return field.value
+
+            const toggle = td.querySelector('input[type=checkbox]')
+
+            return toggle ? (toggle.checked ? '1' : '0') : td.innerText.trim()
+        })))
+    },
 
     selection() {
         const root = this.$el.closest('[data-selection-root]')

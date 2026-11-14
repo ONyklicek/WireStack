@@ -584,3 +584,19 @@ it('rejects an entry that names no records', function () {
     expect($result['success'])->toBeFalse()
         ->and($result['message'])->toContain('names no records');
 });
+
+// ─── A pasted block ──────────────────────────────────────────────────────────
+
+it('writes a pasted block — one entry per cell, the same column on many rows — and reports every row', function () {
+    // A spreadsheet paste sends a different value for each cell, so one column
+    // arrives once per row. The results used to keep only the last row's.
+    $result = fhComponent()->fillTableCells([
+        ['column' => 'status', 'value' => 'done', 'records' => ['1' => null]],
+        ['column' => 'status', 'value' => 'blocked', 'records' => ['2' => null]],
+        ['column' => 'status', 'value' => 'review', 'records' => ['3' => null]],
+    ]);
+
+    expect($result['success'])->toBeTrue()
+        ->and(array_keys($result['results']['status']))->toEqualCanonicalizing(['1', '2', '3'])
+        ->and(fhStatuses())->toBe([1 => 'done', 2 => 'blocked', 3 => 'review', 9 => 'open']);
+});
