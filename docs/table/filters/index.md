@@ -154,6 +154,7 @@ Each resolves the per-table call first, then config, then the default:
 'defaults' => [
     'filters_layout' => env('WIRE_TABLE_FILTERS_LAYOUT', 'dropdown'), // 'dropdown' | 'above' | 'above_collapsible'
     'defer_filters' => env('WIRE_TABLE_DEFER_FILTERS', false),
+    'facet_cache_ttl' => env('WIRE_TABLE_FACET_CACHE_TTL', 60), // seconds an option count is kept; 0 = every request
 ],
 ```
 

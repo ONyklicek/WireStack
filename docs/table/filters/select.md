@@ -38,10 +38,19 @@ without `->multiple()`.
 it would leave — `Admin (3)`. A count is taken under **every other filter and the
 search, but not this filter's own value**: counting *Role* under "Role is Admin"
 would say every other role has nothing, and talk the user out of changing their
-mind. Each counting filter costs one grouped query per render (`GROUP BY column`,
-ordered by count), built by the same query service as the rows, so a count never
-disagrees with what picking it shows. An option the data does not hold shows
-`(0)`. The chip keeps the plain label — `Role: Admin`, not `Role: Admin (3)`.
+mind. Each counting filter is one grouped query (`GROUP BY column`, ordered by
+count), built by the same query service as the rows, so a count never disagrees
+with what picking it shows. An option the data does not hold shows `(0)`. The
+chip keeps the plain label — `Role: Admin`, not `Role: Admin (3)`.
+
+**Kept between requests.** The grouped query is the most expensive thing a
+render does, and ticking a row or opening a modal does not change its answer, so
+the counts are cached — keyed by the query itself (another filter or search term
+is another entry) and by the table's write generation, so an inline edit or an
+action through the table retires them at once. What the table cannot see — a
+write made somewhere else — shows within `wire-table.defaults.facet_cache_ttl`
+seconds (60 by default; `0` counts on every request). A table with
+[`cacheQuery()`](../advanced.md) keeps them as long as its rows.
 
 **Not counted** — the options still work, just without numbers and without a
 list read from the data:

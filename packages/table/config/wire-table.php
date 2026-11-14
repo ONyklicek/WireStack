@@ -90,6 +90,15 @@ return [
         | every change. Per table: Table::deferFilters().
         */
         'defer_filters' => env('WIRE_TABLE_DEFER_FILTERS', false),
+
+        /*
+        | How long a select filter's option counts (SelectFilter::withCounts(),
+        | optionsFromColumn()) are kept, in seconds. A write through the table —
+        | an inline edit, an action — retires them at once; this bounds how long
+        | a write made anywhere else goes unseen. 0 counts on every request.
+        | A table with cacheQuery() keeps them as long as its rows.
+        */
+        'facet_cache_ttl' => env('WIRE_TABLE_FACET_CACHE_TTL', 60),
     ],
 
     /*

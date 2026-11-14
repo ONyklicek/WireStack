@@ -944,6 +944,8 @@ trait WithTable
         }
 
         $facets = null;
+        $scope = $this->queryCacheScope($table);
+        $ttl = $table->getQueryCacheTtl() ?? (int) config('wire-table.defaults.facet_cache_ttl', 60);
         $filterValues = $this->tableState->get('filters', []);
         $columnFilterValues = $this->tableState->get('columnFilters', []);
         $search = $this->tableState->get('search');
@@ -951,7 +953,7 @@ trait WithTable
         foreach ($table->getFilters() as $filter) {
             if ($filter instanceof SelectFilter && $filter->wantsFacets() && $filter->canView()) {
                 $facets ??= app(FilterFacets::class);
-                $filter->facets($facets->count($table, $filter, $filterValues, $columnFilterValues, $search, $filter->getName(), isColumnFilter: false));
+                $filter->facets($facets->count($table, $filter, $filterValues, $columnFilterValues, $search, $filter->getName(), isColumnFilter: false, cacheScope: $scope, ttl: $ttl));
             }
         }
 
@@ -962,7 +964,7 @@ trait WithTable
             // values listed (and counted) here for anyone to read — no facets.
             if ($filter instanceof SelectFilter && $filter->wantsFacets() && $filter->canView() && $column->canView() && ! $column->hasRecordVisibility()) {
                 $facets ??= app(FilterFacets::class);
-                $filter->facets($facets->count($table, $filter, $filterValues, $columnFilterValues, $search, $column->getName(), isColumnFilter: true));
+                $filter->facets($facets->count($table, $filter, $filterValues, $columnFilterValues, $search, $column->getName(), isColumnFilter: true, cacheScope: $scope, ttl: $ttl));
             }
         }
     }
@@ -1404,9 +1406,10 @@ trait WithTable
     {
         $table = $this->getTable();
 
-        // Only the two readers care, and a bump is a write to the shared cache
-        // store: a table that neither caches nor polls has nobody to tell.
-        if (! $table->isQueryCached() && ! $table->isPolling()) {
+        // Only the readers care, and a bump is a write to the shared cache
+        // store: a table that neither caches, polls nor counts filter options
+        // has nobody to tell.
+        if (! $table->isQueryCached() && ! $table->isPolling() && ! $table->hasFilterFacets()) {
             return;
         }
 

@@ -7,6 +7,7 @@ namespace NyonCode\WireTable\Tests\Unit\Filters;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\Livewire;
@@ -24,6 +25,7 @@ use NyonCode\WireTable\Filters\TernaryFilter;
 use NyonCode\WireTable\Filters\TextFilter;
 use NyonCode\WireTable\Services\FilterFacets;
 use NyonCode\WireTable\Services\TableQueryService;
+use NyonCode\WireTable\Services\WriteGeneration;
 use NyonCode\WireTable\Table;
 
 class CfxPerson extends Model
@@ -154,6 +156,50 @@ it('counts each option under the other filters, never under its own', function (
         ->and($role->facets($all)->getDisplayOptions())->toBe(['admin' => 'Admin (1)', 'editor' => 'Editor (2)', 'viewer' => 'Viewer (0)'])
         // The chip keeps the plain label.
         ->and($role->getIndicator(['value' => ['admin']]))->toBe('Role: Admin');
+});
+
+it('keeps the counts until the table writes, and counts afresh with no scope', function () {
+    $table = Table::make()->model(CfxPerson::class);
+    $role = SelectFilter::make('role')->withCounts();
+    $count = fn (?string $scope, int $ttl = 60): ?array => app(FilterFacets::class)->count($table, $role, [], [], null, 'role', false, cacheScope: $scope, ttl: $ttl);
+
+    expect($count(CfxPerson::class))->toBe(['editor' => 2, 'admin' => 1]);
+
+    // A write the table did not make goes unseen until the TTL …
+    CfxPerson::create(['id' => 4, 'name' => 'Di', 'role' => 'admin']);
+    expect($count(CfxPerson::class))->toBe(['editor' => 2, 'admin' => 1])
+        // … unless nothing is kept at all.
+        ->and($count(null))->toEqual(['admin' => 2, 'editor' => 2])
+        ->and($count(CfxPerson::class, ttl: 0))->toEqual(['admin' => 2, 'editor' => 2]);
+
+    // A write through the table moves the generation and retires them.
+    app(WriteGeneration::class)->bump(CfxPerson::class);
+    expect($count(CfxPerson::class))->toEqual(['admin' => 2, 'editor' => 2]);
+});
+
+it('runs the grouped count once, not on every request, until the table writes', function () {
+    $grouped = 0;
+    DB::listen(function ($query) use (&$grouped): void {
+        if (str_contains($query->sql, 'wire_facet_count')) {
+            $grouped++;
+        }
+    });
+
+    $component = Livewire::test(CfxTable::class);
+    $first = $grouped;
+
+    $component->call('$refresh')->call('$refresh');
+    expect($first)->toBeGreaterThan(0)
+        ->and($grouped)->toBe($first);
+
+    $component->call('invalidateTable');
+    expect($grouped)->toBeGreaterThan($first);
+});
+
+it('knows whether any of its select filters counts', function () {
+    expect(Table::make()->filters([SelectFilter::make('role')->withCounts()])->hasFilterFacets())->toBeTrue()
+        ->and(Table::make()->columns([TextColumn::make('city')->filterAsValueList()])->hasFilterFacets())->toBeTrue()
+        ->and(Table::make()->filters([SelectFilter::make('role')])->columns([TextColumn::make('city')->filterable()])->hasFilterFacets())->toBeFalse();
 });
 
 it('does not count a relation, a dotted column or a custom data source', function () {

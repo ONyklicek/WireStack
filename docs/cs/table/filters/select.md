@@ -38,11 +38,20 @@ z php“. Jakmile je výběr zapnutý, hodnota se bere jako seznam, i bez
 výběru zůstalo — `Admin (3)`. Počet se bere pod **všemi ostatními filtry a
 vyhledáváním, ale ne pod vlastní hodnotou tohoto filtru**: počítat *Roli* pod
 „Role je Admin“ by tvrdilo, že každá jiná role nemá nic, a odradilo by uživatele
-od změny názoru. Každý počítající filtr stojí jeden seskupený dotaz na render
-(`GROUP BY column`, seřazený podle počtu), sestavený stejnou query službou jako
-řádky, takže se počet nikdy nerozchází s tím, co výběr ukáže. Možnost, kterou
-data nemají, ukáže `(0)`. Chip si nechá prostý popisek — `Role: Admin`, ne
+od změny názoru. Každý počítající filtr je jeden seskupený dotaz (`GROUP BY
+column`, seřazený podle počtu), sestavený stejnou query službou jako řádky, takže
+se počet nikdy nerozchází s tím, co výběr ukáže. Možnost, kterou data nemají,
+ukáže `(0)`. Chip si nechá prostý popisek — `Role: Admin`, ne
 `Role: Admin (3)`.
+
+**Drží se mezi requesty.** Seskupený dotaz je to nejdražší, co render dělá, a
+zaškrtnutí řádku ani otevření modalu jeho odpověď nezmění, takže se počty
+cachují — podle samotného dotazu (jiný filtr nebo hledaný výraz je jiný záznam)
+a podle generace zápisů tabulky, takže inline úprava nebo akce přes tabulku je
+okamžitě zneplatní. Co tabulka nevidí — zápis provedený jinde — se ukáže do
+`wire-table.defaults.facet_cache_ttl` sekund (výchozí 60; `0` počítá při každém
+requestu). Tabulka s [`cacheQuery()`](../advanced.md) je drží stejně dlouho jako
+své řádky.
 
 **Nepočítá se** — možnosti fungují dál, jen bez čísel a bez seznamu načteného z
 dat:

@@ -37,6 +37,7 @@ use NyonCode\WireTable\Exceptions\TableConfigurationException;
 use NyonCode\WireTable\Exceptions\TableHasNoHostException;
 use NyonCode\WireTable\Exceptions\TableIntrospectionException;
 use NyonCode\WireTable\Filters\Filter;
+use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Preferences\TableViewPayload;
 use NyonCode\WireTable\Services\TableIntrospector;
 use NyonCode\WireTable\Support\ColumnSet;
@@ -497,6 +498,30 @@ class Table implements Htmlable
         }
 
         return $this->filters;
+    }
+
+    /**
+     * Whether any select filter — in the panel or a column header — counts its
+     * options. Those counts are cached, so a write through this table has
+     * someone to tell (see WithTable::recordTableWrite()).
+     */
+    public function hasFilterFacets(): bool
+    {
+        foreach ($this->filters as $filter) {
+            if ($filter instanceof SelectFilter && $filter->wantsFacets()) {
+                return true;
+            }
+        }
+
+        foreach ($this->getColumns() as $column) {
+            $filter = $column->getFilter();
+
+            if ($filter instanceof SelectFilter && $filter->wantsFacets()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

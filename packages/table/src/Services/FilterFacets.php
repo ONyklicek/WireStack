@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Services;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use NyonCode\WireTable\Columns\Column;
 use NyonCode\WireTable\Data\EloquentDataSource;
@@ -23,7 +24,17 @@ use NyonCode\WireTable\Table;
  * That is the rule spreadsheets and faceted search settled on.
  *
  * One grouped query per counting filter, built by the same {@see TableQueryService}
- * as the rows, so a count can never disagree with what picking it shows. Only an
+ * as the rows, so a count can never disagree with what picking it shows.
+ *
+ * **Kept, not re-counted on every request.** A GROUP BY over the whole filtered
+ * table is the most expensive thing a render does, and almost no request changes
+ * its answer: ticking a row, opening a modal, saving a cell elsewhere. The
+ * counts are cached under the grouped query itself — its SQL carries every
+ * filter and the search, so another view is another entry — and the table's
+ * {@see WriteGeneration}, so a write through the table retires them at once.
+ * The TTL bounds only what the table cannot see: a write made somewhere else.
+ *
+ * Only an
  * Eloquent source over a plain column is counted; a relation path or a custom
  * data source has no single column to group by and is left uncounted.
  *
@@ -39,6 +50,8 @@ final class FilterFacets
      * @param  array<string, mixed>  $filterValues  the panel filter state
      * @param  array<string, mixed>  $columnFilterValues  the header filter state
      * @param  string  $stateKey  where this filter's own state lives, to leave it out
+     * @param  string|null  $cacheScope  the table's write scope ({@see WriteGeneration});
+     *                                   null counts afresh
      * @return array<string, int>|null null when the filter cannot be counted
      */
     public function count(
@@ -49,6 +62,8 @@ final class FilterFacets
         ?string $search,
         string $stateKey,
         bool $isColumnFilter,
+        ?string $cacheScope = null,
+        int $ttl = 0,
     ): ?array {
         if (! $table->getDataSource() instanceof EloquentDataSource
             || $filter->getRelation() !== null
@@ -74,16 +89,32 @@ final class FilterFacets
 
         $column = $query->qualifyColumn($filter->getColumn());
 
-        $rows = $query->toBase()
+        $grouped = $query->toBase()
             ->cloneWithout(['columns', 'orders', 'limit', 'offset', 'unionOrders', 'unionLimit', 'unionOffset'])
             ->cloneWithoutBindings(['select', 'order'])
             ->select([$column.' as wire_facet', DB::raw('count(*) as wire_facet_count')])
             ->whereNotNull($column)
             ->groupBy($column)
             ->orderByDesc('wire_facet_count')
-            ->limit($filter->getFacetLimit())
-            ->get();
+            ->limit($filter->getFacetLimit());
 
+        if ($cacheScope === null || $ttl <= 0) {
+            return $this->tally($grouped->get());
+        }
+
+        $key = 'wire_table_facets:'
+            .md5((($query->getModel()->getConnectionName() ?? 'default').$grouped->toSql().serialize($grouped->getBindings())))
+            .':g'.app(WriteGeneration::class)->current($cacheScope);
+
+        return Cache::remember($key, $ttl, fn (): array => $this->tally($grouped->get()));
+    }
+
+    /**
+     * @param  iterable<\stdClass>  $rows
+     * @return array<string, int>
+     */
+    private function tally(iterable $rows): array
+    {
         $counts = [];
 
         foreach ($rows as $row) {
