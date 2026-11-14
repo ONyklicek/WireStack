@@ -101,7 +101,8 @@ beforeEach(function () {
         $table->string('name');
     });
 
-    ScxTag::insert([['id' => 1, 'name' => 'Urgent'], ['id' => 2, 'name' => 'Later']]);
+    // No explicit ids: Postgres would leave the sequence behind and the created option would collide.
+    ScxTag::insert([['name' => 'Urgent'], ['name' => 'Later']]);
 
     foreach (range(1, 5) as $id) {
         ScxRow::create(['id' => $id, 'status' => 'open', 'tags' => ['1']]);
