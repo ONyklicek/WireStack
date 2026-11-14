@@ -6,6 +6,7 @@ namespace NyonCode\WireTable\Support;
 
 use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireTable\Columns\Column;
+use NyonCode\WireTable\Contracts\RendersCellPanel;
 use NyonCode\WireTable\Contracts\ShowsTableColumns;
 use NyonCode\WireTable\Enums\ColumnFilterLayout;
 use NyonCode\WireTable\Table;
@@ -71,6 +72,8 @@ final class ColumnRenderPlan
         public readonly bool $isResizable = false,
         /** @var list<string> Names of the pinned columns, in the order they are drawn. */
         public readonly array $pinnedNames = [],
+        /** @var list<RendersCellPanel> Visible columns whose cells share markup drawn once. */
+        public readonly array $cellPanels = [],
     ) {}
 
     /**
@@ -159,6 +162,7 @@ final class ColumnRenderPlan
             hasPinned: $pinned !== [],
             isResizable: $table->hasResizableColumns(),
             pinnedNames: array_values(array_map(fn ($c) => $c->getName(), $pinned)),
+            cellPanels: array_values(array_filter($visible, fn ($c) => $c instanceof RendersCellPanel)),
         );
     }
 

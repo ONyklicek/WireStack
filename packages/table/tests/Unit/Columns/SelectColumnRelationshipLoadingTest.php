@@ -69,11 +69,11 @@ it('loads relationship options from the related model', function () {
 it('fills the options automatically on the first render', function () {
     $record = SelectColumnRelationshipPost::create(['category_id' => 1]);
 
-    $html = SelectColumn::make('category_id')
-        ->relationship('category', 'name')
-        ->renderCell($record);
+    $column = SelectColumn::make('category_id')->relationship('category', 'name');
+    $column->renderCell($record);
 
-    expect($html)
+    // The list is drawn once per table, beside the rows.
+    expect($column->renderCellPanel())
         ->toContain('News')
         ->toContain('Docs');
 });

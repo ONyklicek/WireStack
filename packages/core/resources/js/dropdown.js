@@ -652,6 +652,17 @@ const wireWizard = (initial = 0) => ({
  * cells layer save-on-blur/enter, escape-to-revert, dirty tracking and live
  * validation on top via config flags.
  */
+// A multiple select's value is a list, and two lists are never `===`: compared
+// by reference the cell would read as unsaved forever (and the leave guard would
+// stop every navigation) and every render would count as a change from the server.
+const sameCellValue = (a, b) => {
+    if (Array.isArray(a) && Array.isArray(b)) {
+        return a.length === b.length && a.every((v, i) => String(v) === String(b[i]))
+    }
+
+    return a === b
+}
+
 const wireEditableCell = (config = {}) => ({
     value: config.value,
     serverValue: config.value,
@@ -711,7 +722,7 @@ const wireEditableCell = (config = {}) => ({
     _validateSeq: 0,
 
     get dirty() {
-        return this.value !== this.serverValue
+        return ! sameCellValue(this.value, this.serverValue)
     },
 
     parse(raw) {
@@ -813,7 +824,7 @@ const wireEditableCell = (config = {}) => ({
             for (const m of mutations) {
                 if (m.attributeName === 'data-server-value' || m.attributeName === 'data-record-version') {
                     const next = this.parse(this._sync.dataset.serverValue)
-                    if (next !== this.serverValue) {
+                    if (! sameCellValue(next, this.serverValue)) {
                         this.syncFromServer(next, this._sync.dataset.recordVersion)
 
                         continue

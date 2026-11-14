@@ -96,7 +96,7 @@ try {
       .filter((el) => el.matches('tr[data-row-key]'));
     window.cell = (i, col) => rows()[i].querySelector(':scope > td[data-column="' + col + '"]');
     window.painted = (col) => rows().map((_, i) => cell(i, col).classList.contains('wire-fill-target'));
-    window.roleOf = (i) => cell(i, 'role').querySelector('select').value;
+    window.roleOf = (i) => window.Alpine.$data(cell(i, 'role').querySelector('[data-column-name]')).value;
     window.activeOf = (i) => cell(i, 'is_active').querySelector('button').getAttribute('aria-checked');
 
     // Count Livewire round-trips so "no request while dragging" is measured, not assumed.
@@ -140,7 +140,7 @@ try {
   check('handle stays hidden until an editable cell is focused', hiddenAtRest === true);
 
   const placed = await eval_(`(() => {
-    cell(0, 'role').querySelector('select').focus();
+    cell(0, 'role').querySelector('[aria-haspopup=listbox]').focus();
     if (handle().hidden) return 'still hidden';
     return anchoredIn(cell(0, 'role'));
   })()`);
@@ -165,7 +165,7 @@ try {
 
   // The handle must not wander off a cell someone is typing in.
   const stayedOnFocused = await eval_(`(() => {
-    cell(0, 'role').querySelector('select').focus();
+    cell(0, 'role').querySelector('[aria-haspopup=listbox]').focus();
     const other = cell(3, 'role');
     const p = centre(other);
     other.dispatchEvent(new PointerEvent('pointerover', { pointerId: 1, pointerType: 'mouse', bubbles: true, clientX: p.x, clientY: p.y }));
@@ -208,7 +208,7 @@ try {
 
   // ── 2. Dragging paints, and touches neither data nor the wire ─────────
   const drag = await eval_(`(() => {
-    cell(0, 'role').querySelector('select').focus();
+    cell(0, 'role').querySelector('[aria-haspopup=listbox]').focus();
     const before = { calls: __calls, roles: [0,1,2,3].map(roleOf) };
     grab();
     dragOver(cell(1, 'role'));
@@ -251,13 +251,13 @@ try {
   // ── 4. Release sends exactly one request and writes the range ─────────
   const filled = await eval_(`(async () => {
     // Make the source distinct from the rows below, so the fill is observable.
-    const src = cell(0, 'role').querySelector('select');
-    src.value = src.value === 'admin' ? 'viewer' : 'admin';
-    src.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise((r) => setTimeout(r, 1200));
+    // Through the cell's own write, as a pick from its list makes it.
+    const src = Alpine.\$data(cell(0, 'role').querySelector('[data-column-name]'));
+    await src.change(src.value === 'admin' ? 'viewer' : 'admin');
+    await new Promise((r) => setTimeout(r, 300));
 
     const want = src.value;
-    src.focus();
+    cell(0, 'role').querySelector('[aria-haspopup=listbox]').focus();
     const callsBefore = __calls;
     grab();
     dragOver(cell(1, 'role'));

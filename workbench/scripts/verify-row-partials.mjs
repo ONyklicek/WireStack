@@ -190,7 +190,7 @@ try {
   // typed into it meanwhile.
   for (const [label, row, target] of [
     ['the next input of the same row', 1, `window.$rows()[1].querySelector('[data-column-name="bio"] input')`],
-    ['a select of the same row', 2, `window.$rows()[2].querySelector('[data-column-name="role"] select')`],
+    ['a select of the same row', 2, `window.$rows()[2].querySelector('[data-column-name="role"] [aria-haspopup=listbox]')`],
     ['a cell of another row', 3, `window.$cellIn(window.$rows()[0])`],
   ]) {
     const moved = await eval_(`(async () => {

@@ -700,14 +700,29 @@ const wireRecordActions = (config = {}) => ({
 
         if (picked.length === 0) return null
 
+        // What the cell shows, which is also what a paste reads back: a
+        // select's label (a SelectColumn takes a label for its option), a
+        // switch as 1/0, an input its value.
+        const shown = (el) => el.getClientRects().length > 0
+
         return toTsv(picked.map((row) => [...row.querySelectorAll(':scope > td[data-column]')].map((td) => {
-            const field = td.querySelector('input:not([type=checkbox]):not([type=hidden]), select, textarea')
+            const trigger = [...td.querySelectorAll('[aria-haspopup=listbox]')].find(shown)
+
+            if (trigger) return String(window.Alpine?.$data(trigger)?.selectedLabel ?? trigger.innerText.trim())
+
+            const select = [...td.querySelectorAll('select')].find(shown)
+
+            if (select) return [...select.selectedOptions].filter((o) => o.value !== '').map((o) => o.text.trim()).join(', ')
+
+            const field = td.querySelector('input:not([type=checkbox]):not([type=hidden]), textarea')
 
             if (field) return field.value
 
-            const toggle = td.querySelector('input[type=checkbox]')
+            const toggle = td.querySelector('input[type=checkbox], [role=switch]')
 
-            return toggle ? (toggle.checked ? '1' : '0') : td.innerText.trim()
+            if (toggle) return (toggle.checked ?? toggle.getAttribute('aria-checked') === 'true') ? '1' : '0'
+
+            return td.innerText.trim()
         })))
     },
 

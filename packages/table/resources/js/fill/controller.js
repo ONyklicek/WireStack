@@ -592,11 +592,16 @@ const wireFillHandle = () => ({
 
     /**
      * The attribute form of a value, matching what the cell partials render:
-     * a toggle writes '1'/'0', everything else its string.
+     * a toggle writes '1'/'0', a multiple select its list as JSON, everything
+     * else its string.
      */
     serialize(value) {
         if (typeof value === 'boolean') {
             return value ? '1' : '0'
+        }
+
+        if (Array.isArray(value)) {
+            return JSON.stringify(value.map(String))
         }
 
         return value === null || value === undefined ? '' : String(value)

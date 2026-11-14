@@ -87,6 +87,14 @@ All notable changes to the Wire ecosystem will be documented in this file.
   does not say; `->dialogOnMobile()` keeps the floating card. A sheet carries the grabber and is pulled
   down, or flicked, to close. A desktop slide-over still becomes a sheet only when asked.
 
+- **`SelectColumn` is the same control as a form's Select.** The cell draws the shared combobox, bound to the
+  cell's own write (every pick still goes through `updateTableCell()`), with `->searchableOptions()`,
+  `->multiple()` (written once, as the list closes), `->createOptionForm()` / `->createOptionUsing()` (the new
+  option lands in the row it was created from), `->selectablePlaceholder()`, and the shared `->native()`,
+  `->nativeOnMobile()` and `->touchOnMobile()`. The list is drawn once per table and cloned by the first cell
+  opened, and the cell is a skeleton filled per row, so a column of selects costs no view render per row. A
+  pasted label is read as its option, and copied rows carry the labels.
+
 ### Changed
 
 - **A PDF export reads its rows in chunks and stops at `wire-table.export.pdf_max_rows` (5000)** with an
@@ -140,6 +148,9 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Security
 
+- **An inline `SelectColumn` write must be one of the options.** The server took whatever value the browser
+  sent; a forged `updateTableCell()` could store anything in the attribute. It now refuses a value that is not
+  an option (and an empty one unless `->selectablePlaceholder()`), the cell rolling back with the message.
 - **Uploaded files cannot run on the application's origin.** The media route sends
   `X-Content-Type-Options: nosniff` on every file, serves a type a browser would run (SVG, HTML, XML,
   JavaScript) as a sandboxed download, and encodes the file name per RFC 6266 instead of `addslashes()`.

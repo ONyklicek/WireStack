@@ -20,6 +20,7 @@ use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Notifications\Notification;
 use NyonCode\WireCore\Notifications\NotificationAction;
 use NyonCode\WireCore\Notifications\NotificationManager;
+use NyonCode\WireTable\Columns\SelectColumn;
 
 /**
  * Backing the shared action engine with the table's state container.
@@ -420,6 +421,11 @@ trait InteractsWithTableActions
             }
         }
 
+        // A SelectColumn's "create option" row opens a modal action of its own.
+        if (str_starts_with($name, 'select-column-create-option:')) {
+            return $this->findSelectColumnCreateAction($name);
+        }
+
         // Fall back to actions a record action carries in its own right — a
         // behaviour-only record action (its own callback, no toolbar button) is
         // not in getActions(), yet its whole-row trigger must still execute it.
@@ -429,6 +435,39 @@ trait InteractsWithTableActions
             if ($found instanceof Action) {
                 return $found;
             }
+        }
+
+        return null;
+    }
+
+    /**
+     * The create-option action of the SelectColumn it is named after. The new
+     * key is written into the row's cell through updateTableCell() — the same
+     * guard, validation and hooks as a pick from the list — and announced, so
+     * every trigger of the column can show it at once.
+     */
+    private function findSelectColumnCreateAction(string $name): ?Action
+    {
+        foreach ($this->getTable()->getColumns() as $column) {
+            if (! $column instanceof SelectColumn || $column->getCreateOptionActionName() !== $name || ! $column->canView()) {
+                continue;
+            }
+
+            return $column->getCreateOptionAction(function (Model $record, mixed $value) use ($column): void {
+                $result = $this->updateTableCell($record->getKey(), $column->getName(), $value);
+
+                if (! $result['success']) {
+                    $this->sendNotification(Notification::make()->title($result['message'] ?? __('wire-table::messages.save_failed'))->danger());
+
+                    return;
+                }
+
+                $options = $column->getOptions();
+
+                foreach ((array) $value as $key) {
+                    $this->dispatch('select-option-created', statePath: $column->getCellPanelKey(), value: $key, label: $options[(string) $key] ?? (string) $key);
+                }
+            });
         }
 
         return null;

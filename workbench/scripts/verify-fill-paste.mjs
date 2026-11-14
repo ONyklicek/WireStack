@@ -15,8 +15,8 @@ const url = process.env.PREVIEW_URL ?? `${process.env.PREVIEW_ORIGIN ?? 'http://
 const { page, eval_, waitFor, shot, shotDir, consoleErrors, badResponses, close } = await openPage({ url, shotPrefix: 'fill-paste', width: 1300, height: 900 });
 const { check, finish } = checker();
 
-const ready = `document.querySelectorAll('tbody tr[data-row-key] td[data-column=role] select').length > 2`;
-const roles = `[...document.querySelectorAll('tbody tr[data-row-key] td[data-column=role] select')].slice(0, 3).map((s) => s.value)`;
+const ready = `document.querySelectorAll('tbody tr[data-row-key] td[data-column=role] [aria-haspopup=listbox]').length > 2`;
+const roles = `[...document.querySelectorAll('tbody tr[data-row-key] td[data-column=role] [data-column-name]')].slice(0, 3).map((c) => window.Alpine.$data(c).value)`;
 const actives = `[...document.querySelectorAll('tbody tr[data-row-key] td[data-column=is_active] input[type=checkbox], tbody tr[data-row-key] td[data-column=is_active] [role=switch]')].slice(0, 3).map((t) => t.checked ?? t.getAttribute('aria-checked') === 'true')`;
 const paste = (selector, text) => eval_(`(() => {
   const target = document.querySelector(${JSON.stringify(selector)});
@@ -44,7 +44,7 @@ try {
     window.fetch = (...args) => { if (String(args[1]?.body ?? '').includes('fillTableCells')) window.__fills++; return original(...args); };
   })()`);
 
-  const first = 'tbody tr[data-row-key] td[data-column=role] select';
+  const first = 'tbody tr[data-row-key] td[data-column=role] [aria-haspopup=listbox]';
   const block = 'viewer\tno\neditor\tyes\nadmin\tno\n';
   check('a block pasted into a cell is taken by the table', await paste(first, block));
   await waitFor(`JSON.stringify(${roles}) === JSON.stringify(['viewer', 'editor', 'admin'])`).catch(() => {});
@@ -80,7 +80,7 @@ try {
   })()`);
   await waitFor('window.__copied !== null').catch(() => {});
   const copied = await eval_('window.__copied');
-  check('Ctrl/⌘+C copies the selected rows as tab-separated lines', typeof copied === 'string' && copied.split('\n').length === 2 && copied.includes('\t') && copied.includes('viewer'), JSON.stringify(copied));
+  check('Ctrl/⌘+C copies the selected rows as tab-separated lines', typeof copied === 'string' && copied.split('\n').length === 2 && copied.includes('\t') && copied.includes('Viewer') && /\t[01](\n|$)/.test(copied), JSON.stringify(copied));
   await page('Page.navigate', { url: back });
   await waitFor(ready);
 

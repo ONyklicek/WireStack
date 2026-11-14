@@ -18,6 +18,8 @@ return [
     'fill_partial' => ':filled of :total rows saved',
     'fill_handle' => 'Drag to fill the rows below',
     'select_placeholder' => 'Select...',
+    'select_invalid_option' => 'Choose one of the options.',
+    'select_required' => 'Choose an option.',
     'from' => 'From',
     'to' => 'To',
     'confirm_heading' => 'Confirm action',

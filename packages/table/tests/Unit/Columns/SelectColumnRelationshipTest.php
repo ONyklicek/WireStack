@@ -97,10 +97,9 @@ test('loadRelationshipOptions returns self for non-existent method', function ()
         ->and($column->getOptions())->toBe([]);
 });
 
-// The editable cell commits through wireEditableCell (x-model + commit-on-change),
-// which the shared combobox has no binding for — so unlike every other select-like
-// surface this one is always a browser-native <select>.
-test('the cell renders a native select', function () {
+// The cell is the shared combobox, bound to the cell's own write: a trigger per
+// row, no teleported list of its own (the list is drawn once per table).
+test('the cell renders the shared combobox trigger, not a list of its own', function () {
     $record = new class extends Model
     {
         protected $guarded = [];
@@ -111,15 +110,29 @@ test('the cell renders a native select', function () {
         ->options(['active' => 'Active', 'archived' => 'Archived']);
 
     expect($column->renderCell($record))
-        ->toContain('<select')
+        ->toContain('wireSearchableSelect')
         ->toContain('wireEditableCell')
-        ->not->toContain('x-teleport');
+        ->not->toContain('<select')
+        ->not->toContain('x-teleport')
+        ->not->toContain('Archived');
 });
 
-// Because that choice does not exist, the API must not pretend it does: a
-// native()/isNative() pair here could only ever be a no-op that reads like a real
-// switch. Guards against someone reflexively adding HasNativeControl back.
-test('exposes no native() toggle to pretend the choice exists', function () {
-    expect(method_exists(SelectColumn::class, 'native'))->toBeFalse()
-        ->and(method_exists(SelectColumn::class, 'isNative'))->toBeFalse();
+test('native() draws the browser select, with the row\'s value selected on first paint', function () {
+    $record = new class extends Model
+    {
+        protected $guarded = [];
+    };
+    $record->forceFill(['id' => 3, 'status' => 'archived']);
+
+    $html = SelectColumn::make('status')
+        ->options(['active' => 'Active', 'archived' => 'Archived'])
+        ->native()
+        ->renderCell($record);
+
+    expect($html)
+        ->toContain('<select')
+        ->toContain('x-model="value"')
+        ->toContain('<option value="archived" selected')
+        ->not->toContain('<option value="active" selected')
+        ->not->toContain('wireSearchableSelect');
 });

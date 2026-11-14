@@ -136,7 +136,7 @@ try {
     window.ctrl = () => Alpine.$data($q('tbody[x-data^="wireRecordActions"]'));
     window.fireKey = (el, k, o) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...(o||{}) }));
     window.cancelModal = () => $qa('button').find(b => ['Cancel','Zrušit'].includes(b.innerText.trim()))?.click();
-    window.statusOf = (i) => cell(i, 'status').querySelector('select').value;
+    window.statusOf = (i) => Alpine.$data(cell(i, 'status').querySelector('[data-column-name]')).value;
 
     window.pointer = (type, x, y, target) => (target ?? window).dispatchEvent(new PointerEvent(type, {
       pointerId: 1, pointerType: 'mouse', isPrimary: true,
@@ -353,10 +353,9 @@ try {
 
   // 2. the fill handle
   const filled = await probe(`(() => {
-    const src = cell(0, 'status').querySelector('select');
-    src.value = src.value === 'active' ? 'paused' : 'active';
-    src.dispatchEvent(new Event('change', { bubbles: true }));
-    src.focus();
+    const src = Alpine.$data(cell(0, 'status').querySelector('[data-column-name]'));
+    src.change(src.value === 'active' ? 'paused' : 'active');
+    cell(0, 'status').querySelector('[aria-haspopup=listbox]').focus();
     if (! handle() || handle().hidden) return 'no handle';
     grab();
     dragOver(cell(1, 'status'));
@@ -439,10 +438,9 @@ try {
   await sleep(400);
 
   const coldFill = await probe(`(() => {
-    const src = cell(0, 'status').querySelector('select');
-    src.value = src.value === 'active' ? 'paused' : 'active';
-    src.dispatchEvent(new Event('change', { bubbles: true }));
-    src.focus();
+    const src = Alpine.$data(cell(0, 'status').querySelector('[data-column-name]'));
+    src.change(src.value === 'active' ? 'paused' : 'active');
+    cell(0, 'status').querySelector('[aria-haspopup=listbox]').focus();
     if (! handle() || handle().hidden) return 'no handle';
     grab(); dragOver(cell(1, 'status')); dragOver(cell(2, 'status')); release(cell(2, 'status'));
     return src.value;

@@ -10,7 +10,7 @@ class Task extends Model
 {
     // A property rather than `#[Fillable]`: that attribute is Laravel 13's, and
     // these packages support 12, where it is not read at all.
-    protected $fillable = ['title', 'status', 'priority', 'owner_name', 'sort_order', 'completed', 'due_at'];
+    protected $fillable = ['title', 'status', 'priority', 'owner_name', 'sort_order', 'completed', 'due_at', 'labels'];
 
     /**
      * @return array<string, string>
@@ -20,6 +20,7 @@ class Task extends Model
         return [
             'completed' => 'boolean',
             'due_at' => 'datetime',
+            'labels' => 'array',
         ];
     }
 }

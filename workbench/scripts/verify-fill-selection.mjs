@@ -107,7 +107,7 @@ try {
       .filter((el) => el.matches('tr[data-row-key]'));
     window.cell = (i, col) => rows()[i].querySelector(':scope > td[data-column="' + col + '"]');
     window.selectCell = (i) => rows()[i].querySelector(':scope > td[data-select-cell]');
-    window.roleOf = (i) => cell(i, 'role').querySelector('select').value;
+    window.roleOf = (i) => window.Alpine.$data(cell(i, 'role').querySelector('[data-column-name]')).value;
 
     /* The selection as the USER can see it: what each row's checkbox reports,
        not what the component thinks. A getter reading the wrong root returns a
@@ -249,7 +249,7 @@ try {
   // The grid locates cells by data-column, never by position — the checkbox <td>
   // shifts every index by one, and an index-based grid would fill the wrong one.
   const handlePlaced = await eval_(`(() => {
-    cell(0, 'role').querySelector('select').focus();
+    cell(0, 'role').querySelector('[aria-haspopup=listbox]').focus();
     if (handle().hidden) return 'hidden';
     const h = handle().getBoundingClientRect(), c = cell(0, 'role').getBoundingClientRect();
     const hx = h.left + h.width / 2, hy = h.top + h.height / 2;
@@ -276,7 +276,7 @@ try {
     await new Promise((r) => setTimeout(r, 700));
     const before = checked();
 
-    cell(0, 'role').querySelector('select').focus();
+    cell(0, 'role').querySelector('[aria-haspopup=listbox]').focus();
     grab();
     dragOver(cell(1, 'role'));
     dragOver(cell(2, 'role'));
@@ -396,11 +396,11 @@ try {
     // Force a REAL commit: setting a select to the value it already holds is
     // not dirty, so nothing is sent and the version never moves — which is
     // exactly what made this reproduce only on some runs.
-    const box = () => cell(1, 'role').querySelector('select');
+    // Through the cell's own write, as a pick from its list makes it.
+    const box = () => Alpine.\$data(cell(1, 'role').querySelector('[data-column-name]'));
     const want = box().value === 'viewer' ? 'editor' : 'viewer';
-    box().value = want;
-    box().dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise((r) => setTimeout(r, 1400));
+    await box().change(want);
+    await new Promise((r) => setTimeout(r, 400));
 
     const el = cell(1, 'role').querySelector('[data-record-key]');
 
@@ -432,11 +432,10 @@ try {
     const want = 'admin';
     const baseline = 'editor';
     const setRole = async (i, value) => {
-      const box = cell(i, 'role').querySelector('select');
+      const box = Alpine.\$data(cell(i, 'role').querySelector('[data-column-name]'));
       if (box.value === value) return;   // not dirty, nothing would be sent
-      box.value = value;
-      box.dispatchEvent(new Event('change', { bubbles: true }));
-      await new Promise((r) => setTimeout(r, 1000));
+      await box.change(value);
+      await new Promise((r) => setTimeout(r, 200));
     };
     // Through a third value, so every row really commits at least once no
     // matter what the last run left in the database.
@@ -450,7 +449,7 @@ try {
     const selectionBefore = checked();
 
     const rolesBefore = [0, 1, 2, 3].map(roleOf);
-    const src = cell(0, 'role').querySelector('select');
+    const src = cell(0, 'role').querySelector('[aria-haspopup=listbox]');
     src.focus();
     const calls = __calls;
     const ctrl = Alpine.\$data(fillRoot());

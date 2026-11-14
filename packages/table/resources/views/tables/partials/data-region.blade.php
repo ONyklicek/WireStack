@@ -703,6 +703,13 @@
                         </div>
                     @endif
 
+                    {{-- Lists the cells of a column share (a SelectColumn's options),
+                         once per table rather than once per row. After the rows, so
+                         a list read from a relation has had a record to read it by. --}}
+                    @foreach($plan->columns()->cellPanels as $panelColumn)
+                        {!! $panelColumn->renderCellPanel() !!}
+                    @endforeach
+
                     {{-- Footer / Pagination --}}
                     @if($isPaginated && $hasVisibleColumns)
                         @php

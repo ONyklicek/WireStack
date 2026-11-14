@@ -60,6 +60,25 @@
                                                    (44px+ rows, 16px, swipe down to close)
                                                    instead of the floating panel. Default false.
        $sheetTitle       string|null               the touch sheet's heading (the label)
+
+     Bound to an enclosing Alpine component instead of a Livewire property (an
+     editable table cell, which owns its own write):
+       $stateExpression  string|null               JS expression read for the selection
+                                                   instead of `$wire.entangle($statePath)`
+       $commitExpression string|null               JS function expression called with the
+                                                   new selection — a single select as it
+                                                   is picked, a multiple one as its list
+                                                   closes. The native control commits
+                                                   through its own attributes.
+       $part             'trigger'|'panel'|null    null (default) draws the whole combobox.
+                                                   'trigger' draws one instance without its
+                                                   list, which it borrows from the 'panel'
+                                                   drawn once elsewhere — a <template> the
+                                                   controller clones on first open, with
+                                                   the options as data. So a hundred rows
+                                                   of one column carry one list, not a
+                                                   hundred.
+       $panelId          string|null               the shared panel's DOM id (both parts)
 --}}
 @php
     $selectId ??= 'searchable-select';
@@ -109,9 +128,21 @@
     $sheetBackdrop = \NyonCode\WireCore\Foundation\Support\MobileSheet::backdropHide($mobileBreakpoint);
     // Remote search cannot work without the input; force it on in that mode.
     $showSearch = $searchable || $remoteSearch;
+    $part ??= null;
+    $panelId ??= null;
+    // The shared list belongs to no one property; its triggers carry the binding.
+    $statePath ??= '';
+    $stateExpression ??= null;
+    $commitExpression ??= null;
+    // Where the selection lives: a Livewire property by default, or an
+    // enclosing Alpine component that writes it itself. Built here because a
+    // directive inside an attribute value is not something to lean on.
+    $stateConfig = $stateExpression !== null
+        ? 'state: '.$stateExpression.', commit: '.($commitExpression ?? 'null').', stateKey: '.\Illuminate\Support\Js::from($stateExpression).','
+        : 'state: $wire.entangle(\''.$statePath.'\')'.($live ? '.live' : '').',';
 @endphp
 
-@if($nativeMode->rendersNative())
+@if($nativeMode->rendersNative() && $part !== 'panel')
     {{-- In Mobile mode the <label for> points at the combobox trigger, so the
          twin takes its own id and carries its name itself; `required` would stop
          a form submitting on a desktop, where the twin is display:none. --}}
@@ -130,6 +161,11 @@
 @if($nativeMode->rendersCustom())
 @include('wire-core::partials.floating-assets')
 
+{{-- The $part branches below are raw `<?php if ?>`, not `@if`: Livewire wraps
+     every `@if` in a morph-marker pair, and these never change for a drawn
+     instance — a form's Select is always whole, a cell always a trigger — so
+     the markers would be bytes for nothing on every Select (FormFieldPayloadTest). --}}
+<?php if ($part !== 'panel'): ?>
 <div
     {{-- Body registered as `wireSearchableSelect` in core's dropdown bundle
          (packages/core/resources/js/select/controller.js) — it is core's because
@@ -137,9 +173,13 @@
          per-instance config is markup; `state` is built here because
          `$wire.entangle` is an Alpine magic, in scope only inside x-data. --}}
     x-data="wireSearchableSelect({
-        state: $wire.entangle('{{ $statePath }}'){!! $live ? '.live' : '' !!},
+        {!! $stateConfig !!}
         statePath: @js($statePath),
-        selectId: @js($selectId),
+        {!! $part === 'trigger' ? 'panel: '.\Illuminate\Support\Js::from($panelId).',' : '' !!}
+        {{-- A trigger reads its id off its own element: drawn as a skeleton,
+             its id carries a value spliced in per row, and that splice is an
+             HTML one, not a JavaScript one. --}}
+        selectId: @js($part === 'trigger' ? null : $selectId),
         multiple: @js($multiple),
         remote: @js($remoteSearch),
         initialOptions: @js($optionPairs),
@@ -195,7 +235,16 @@
 
     {{-- Floating listbox from sm up; bottom sheet on a phone (max-sm: classes,
          $float skips Floating UI) with a dimming backdrop. --}}
+<?php endif; ?>
+<?php if ($part === null): ?>
     <template x-teleport="body">
+<?php elseif ($part === 'panel'): ?>
+    {{-- The list a column's triggers share ($part above): cloned into <body> by
+         the first trigger opened, with that trigger's scope. The options travel
+         here, once, rather than in every trigger's x-data. --}}
+    <template data-select-panel="{{ $panelId }}" data-options="{{ json_encode($optionPairs, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE) }}" data-disabled-values="{{ json_encode($disabledValues) }}">
+<?php endif; ?>
+<?php if ($part !== 'trigger'): ?>
         <div>
             @if($sheetOnMobile)
                 {{-- Backdrop: mobile-only, taps to close. --}}
@@ -280,7 +329,7 @@
                 @endif
 
                 <template x-for="([value, label], index) in ($data.filteredOptions ?? [])" :key="value">
-                    <li role="option" :aria-selected="$data.isSelected?.(value)" :aria-disabled="$data.isOptionDisabled?.(value)" :id="'{{ $selectId }}-option-' + value">
+                    <li role="option" :aria-selected="$data.isSelected?.(value)" :aria-disabled="$data.isOptionDisabled?.(value)" :id="$data.selectId + '-option-' + value">
                         <button
                             type="button"
                             @click="select(value)"
@@ -321,5 +370,8 @@
             @endif
         </div>
     </template>
+<?php endif; ?>
+<?php if ($part !== 'panel'): ?>
 </div>
+<?php endif; ?>
 @endif

@@ -43,6 +43,7 @@ use NyonCode\WireTable\Table;
 use Workbench\App\Models\Document;
 use Workbench\App\Models\GestureRow;
 use Workbench\App\Models\Invoice;
+use Workbench\App\Models\Task;
 use Workbench\App\Models\User;
 
 class TablePreview extends Component
@@ -225,6 +226,10 @@ class TablePreview extends Component
 
         if ($this->variant === 'inactive-rows') {
             return $this->inactiveRowsTable($table);
+        }
+
+        if ($this->variant === 'select-cells') {
+            return $this->selectCellsTable($table);
         }
 
         if ($this->variant === 'column-layout') {
@@ -717,6 +722,42 @@ class TablePreview extends Component
         }
 
         return $table;
+    }
+
+    /**
+     * SelectColumn in each of its shapes: the searchable combobox (a touch list
+     * on a phone), the browser's own <select>, a list the user can add to, and
+     * a multiple one that writes as its list closes.
+     */
+    private function selectCellsTable(Table $table): Table
+    {
+        return $table
+            ->model(Task::class)
+            ->columns([
+                TextColumn::make('title')->label('Task'),
+                SelectColumn::make('status')
+                    ->label('Status')
+                    ->options(['todo' => 'To do', 'in_progress' => 'In progress', 'review' => 'Review', 'done' => 'Done', 'blocked' => 'Blocked'])
+                    ->searchableOptions()
+                    ->touchOnMobile(),
+                SelectColumn::make('priority')
+                    ->label('Priority (native)')
+                    ->options(['low' => 'Low', 'medium' => 'Medium', 'high' => 'High'])
+                    ->native(),
+                SelectColumn::make('owner_name')
+                    ->label('Owner')
+                    ->options(fn () => Task::query()->distinct()->orderBy('owner_name')->pluck('owner_name', 'owner_name')->all())
+                    ->searchableOptions()
+                    ->createOptionForm([TextInput::make('name')->label('Name')->required()->maxLength(60)])
+                    ->createOptionUsing(fn (array $data): string => trim($data['name'])),
+                SelectColumn::make('labels')
+                    ->label('Labels')
+                    ->multiple()
+                    ->selectablePlaceholder()
+                    ->options(['bug' => 'Bug', 'feature' => 'Feature', 'docs' => 'Docs', 'ops' => 'Ops']),
+            ])
+            ->searchable(false)
+            ->paginated(false);
     }
 
     private function editableFillTable(Table $table): Table

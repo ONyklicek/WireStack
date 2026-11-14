@@ -18,6 +18,8 @@ return [
     'fill_partial' => 'Uloženo :filled z :total řádků',
     'fill_handle' => 'Tažením vyplníte řádky níže',
     'select_placeholder' => 'Vyberte...',
+    'select_invalid_option' => 'Vyberte jednu z možností.',
+    'select_required' => 'Vyberte možnost.',
     'from' => 'Od',
     'to' => 'Do',
     'confirm_heading' => 'Potvrdit akci',
