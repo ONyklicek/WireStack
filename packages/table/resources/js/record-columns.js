@@ -46,6 +46,11 @@
             el.style.left = '0px'
         }
 
+        // The header row has its own tint; the checkbox header takes it from
+        // the pinned header beside it rather than the body's white.
+        const tinted = table.querySelector(':scope > thead > tr > th[data-pinned]')
+        if (head && tinted) head.style.backgroundColor = getComputedStyle(tinted).backgroundColor
+
         return head ? head.getBoundingClientRect().width : 0
     }
 
@@ -57,9 +62,13 @@
         let left = pinSelection(table)
         const offsets = new Map()
 
+        // Floored: widths are fractional, and an offset half a pixel too far
+        // leaves a hairline of the scrolling columns showing between two
+        // pinned ones. Overlapping by a fraction shows nothing.
         for (const th of head.querySelectorAll(':scope > th[data-pinned]')) {
-            offsets.set(th.dataset.pinned, left)
-            th.style.left = `${left}px`
+            const at = Math.floor(left)
+            offsets.set(th.dataset.pinned, at)
+            th.style.left = `${at}px`
             left += th.getBoundingClientRect().width
         }
 
