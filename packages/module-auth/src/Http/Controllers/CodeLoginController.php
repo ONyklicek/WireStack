@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\LoginResponse;
 use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
@@ -70,6 +71,7 @@ class CodeLoginController extends Controller
 
         $request->session()->put(self::SESSION_KEY, $identifier);
 
+        $this->holdResend($identifier);
         ($this->send)(CodePurpose::Login, $this->user($identifier), $identifier);
 
         return redirect()->route('wire-auth.login-code.challenge')
@@ -106,11 +108,29 @@ class CodeLoginController extends Controller
             return redirect()->route('wire-auth.login-code');
         }
 
-        $sent = ($this->send)(CodePurpose::Login, $this->user($identifier), $identifier);
+        // "Wait a moment" is decided by the address alone, never by whether a
+        // code went out: SendOneTimeCode answers false for an address with no
+        // account as well as for one asked too recently, and two different
+        // messages for those were a way to test which addresses have accounts.
+        if (RateLimiter::tooManyAttempts($this->resendKey($identifier), 1)) {
+            return back()->with('status', __('wire-module-auth::messages.code_sent_recently'));
+        }
 
-        return back()->with('status', __($sent
-            ? 'wire-module-auth::messages.code_sent'
-            : 'wire-module-auth::messages.code_sent_recently'));
+        $this->holdResend($identifier);
+        ($this->send)(CodePurpose::Login, $this->user($identifier), $identifier);
+
+        return back()->with('status', __('wire-module-auth::messages.code_sent'));
+    }
+
+    /** Start the resend wait for this address, account or not. */
+    private function holdResend(string $identifier): void
+    {
+        RateLimiter::hit($this->resendKey($identifier), max(1, (int) config('wire-module-auth.codes.resend_after', 60)));
+    }
+
+    private function resendKey(string $identifier): string
+    {
+        return 'wire-auth:login-code-resend:'.hash('sha256', $identifier);
     }
 
     /**

@@ -4,7 +4,7 @@
 <div
     @wireEl('dropdown')
     x-data="wireDropdown({ placement: '{{ $position }}'{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.MobileSheet::px($breakpoint) : '' }} })"
-    @keydown.escape.window="close()"
+    @keydown.escape.window="dismiss($event)"
     class="relative inline-block text-left"
     {{ $attributes }}
 >
@@ -29,6 +29,7 @@
                     x-transition:leave-start="opacity-100"
                     x-transition:leave-end="opacity-0"
                     @click="close()"
+                    data-sheet-backdrop
                     class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70 {{ MobileSheet::backdropHide($breakpoint) }}"
                 ></div>
             @endif

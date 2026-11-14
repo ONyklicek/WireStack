@@ -66,10 +66,13 @@ Select::make('status')->options(Status::class)
 Enum bez `HasLabel` stále funguje — z názvu case se udělá headline pro popisek
 (`LowPriority` → `Low Priority`). Closura vracející třídu enumu se rozvine také.
 
-**Automatická validace.** Jednohodnotový `Select` (nebo [`Radio`](radio.md)), jehož možnosti pocházejí
-z enumu, je automaticky omezen na tyto hodnoty pravidlem `in:` — odeslání
-mimo enum je odmítnuto, aniž byste ho museli znovu uvádět. Přeskočí se pro `multiple()` selecty
-(stav pole) a když deklarujete vlastní pravidlo `in:` / `Rule::in()` / `Rule::enum()`.
+**Automatická validace.** Jednohodnotový `Select` (nebo [`Radio`](radio.md)), jehož možnosti jsou
+enum nebo pevné pole, je automaticky omezen na tyto hodnoty pravidlem `in:` — odeslání
+mimo ně je odmítnuto, aniž byste ho museli znovu uvádět, takže podvržený požadavek neuloží
+hodnotu, kterou pole nikdy nenabídlo. Přeskočí se pro možnosti z closure (sada může záviset
+na jiném stavu), pro vzdálené vyhledávání nebo `createOptionForm()` (obojí přináší hodnoty mimo
+seznam), pro `multiple()` selecty (stav pole) a když deklarujete vlastní pravidlo `in:` /
+`Rule::in()` / `Rule::enum()`.
 
 > Stejná zkratka `->options(Enum::class)` funguje na [`Radio`](radio.md),
 > [`CheckboxList`](checkbox-list.md), table `SelectColumn` a table

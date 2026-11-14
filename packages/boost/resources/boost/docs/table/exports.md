@@ -191,6 +191,14 @@ composer require barryvdh/laravel-dompdf
 
 If DomPDF is not installed, Wire falls back to CSV output.
 
+**A PDF has a size limit; CSV and spreadsheets do not.** A PDF's layout needs
+every row at once, so unlike the CSV and spreadsheet writers it cannot stream.
+The rows are read in chunks of 500 and held as text rather than as models. Past
+`wire-table.export.pdf_max_rows` (5000 by default, `WIRE_TABLE_PDF_MAX_ROWS`) the
+export throws `ExportException::tooManyRowsForPdf()` and names the setting,
+instead of running out of memory halfway through. Raise the limit if you have
+the memory, or offer CSV for large sets.
+
 ## PDF View Data
 
 When using a custom PDF view, design it as a regular Blade export template. The exporter passes `headings`, `rows`, `columns`, and `summaryRows` (pre-formatted total rows, empty when summaries are disabled) to the view.

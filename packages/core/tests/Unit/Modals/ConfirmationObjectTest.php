@@ -62,7 +62,7 @@ class ConfirmationObjectHost extends Component
 it('renders as a dialog with forwarded wire bindings, body and buttons — no <x-*>', function () {
     Livewire::test(ConfirmationObjectHost::class)
         ->assertSeeHtml('role="dialog"')
-        ->assertSeeHtml('id="confirmation-modal-title"')
+        ->assertSeeHtml('id="confirmation-modal-title-')
         ->assertSeeHtml('Delete record?')
         ->assertSeeHtml('wire:click="submit"')             // $wireClick forwarded onto the submit button
         ->assertSeeHtml('$wire.close()')                    // closeAction on cancel/escape
@@ -140,14 +140,14 @@ it('renders a centered dialog by default (no mobile sheet)', function () {
 
 it('renders a bottom-sheet on mobile when slideOverOnMobile is set (regression: the confirmation shell ignored the flag)', function () {
     Livewire::test(ConfirmationVariantHost::class, ['variant' => 'sheet'])
-        ->assertSeeHtml('translate-y-full sm:translate-y-0')  // slides up from the bottom edge
+        ->assertSeeHtml('translate-y-full motion-reduce:translate-y-0 sm:translate-y-0')  // slides up from the bottom edge
         ->assertSeeHtml('rounded-t-2xl')                       // sheet rounding
         ->assertSeeHtml('items-end');                         // pinned to the bottom
 });
 
 it('renders full-screen on mobile when fullScreenOnMobile is set', function () {
     Livewire::test(ConfirmationVariantHost::class, ['variant' => 'full'])
-        ->assertSeeHtml('translate-y-full sm:translate-y-0')
+        ->assertSeeHtml('translate-y-full motion-reduce:translate-y-0 sm:translate-y-0')
         ->assertSeeHtml('items-stretch');
 });
 

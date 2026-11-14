@@ -143,7 +143,7 @@
                         @click="open = true"
                         @keydown.down.prevent="open ? (wide && hasDate ? focusGrid() : null) : openWithKeyboard()"
                     @endunless
-                    @keydown.escape="cancelTyped(); open = false"
+                    @keydown.escape="open && $event.preventDefault(); cancelTyped(); open = false"
                     @unless($typeable) readonly @endunless
                     @if($field->getPlaceholder()) placeholder="{{ $field->getPlaceholder() }}" @endif
                     @if($field->isDisabled()) disabled @endif
@@ -194,6 +194,7 @@
                         x-transition:leave-start="opacity-100"
                         x-transition:leave-end="opacity-0"
                         @click="open = false"
+                        data-sheet-backdrop
                         class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70 {{ $sheetBackdrop }}"
                 ></div>
             @endif
@@ -217,7 +218,7 @@
                     $sheetPanel => $sheetOnMobile,
                 ])
                 @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
-                @keydown.escape="wide ? closeToTrigger() : (open = false)"
+                @keydown.escape="$event.preventDefault(); wide ? closeToTrigger() : (open = false)"
                 x-cloak
                 style="display: none;"
         >

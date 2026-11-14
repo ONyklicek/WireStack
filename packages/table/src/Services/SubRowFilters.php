@@ -50,6 +50,7 @@ final class SubRowFilters
                 continue;
             }
 
+            $filter = $filter->forState($raw);
             $value = $filter->extractValue($raw);
             if (! self::isActiveValue($value)) {
                 continue;

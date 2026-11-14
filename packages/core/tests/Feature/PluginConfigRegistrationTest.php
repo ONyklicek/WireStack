@@ -86,3 +86,35 @@ it('refuses a config value that is not a list at all', function () {
     expect(fn () => pcrResolveWith('not-an-array'))
         ->toThrow(PluginRegistrationException::class, 'must be an array');
 });
+
+final class PcrImpostorPlugin implements Plugin
+{
+    public function getId(): string
+    {
+        return 'pcr-counting';
+    }
+
+    public function register(PluginManager $manager): void {}
+
+    public function boot(PluginManager $manager): void {}
+}
+
+it('takes a listed plugin that already registered itself as done, not as a clash', function () {
+    // An installed module registers itself; listing it in the config as well
+    // used to take the whole application down at boot.
+    app()->resolving(PluginManager::class, function (PluginManager $manager): void {
+        if (! $manager->has('pcr-counting')) {
+            $manager->register(new PcrCountingPlugin);
+        }
+    });
+
+    $manager = pcrResolveWith([PcrCountingPlugin::class]);
+
+    expect($manager->has('pcr-counting'))->toBeTrue()
+        ->and(PcrCountingPlugin::$registered)->toBe(1);
+});
+
+it('still refuses another class claiming the same id', function () {
+    expect(fn () => pcrResolveWith([PcrCountingPlugin::class, PcrImpostorPlugin::class]))
+        ->toThrow(PluginRegistrationException::class);
+});

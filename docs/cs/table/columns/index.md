@@ -324,6 +324,41 @@ TextColumn::make('subtitle')
 ->alignRight(): static
 ->getAlignment(): string
 ->hasAlignment(): bool                // false, dokud sloupec padá na výchozí 'left'
+->pinned(bool $pinned = true): static // zůstane na začátku, když tabulka roluje do stran
+->isPinned(): bool
+```
+
+### Šířky, které uživatel táhne, a sloupce připnuté na začátek
+
+`Table::resizableColumns()` dá na okraj každé hlavičky úchyt: tažením se sloupec
+rozšíří nebo zúží (48–1200 px), dvojklik vrátí sloupci jeho vlastní šířku a s
+focusem na úchytu posouvají šipky ←/→ po 16 px. Šířka během tažení sleduje ukazatel
+přímo na hlavičce, takže se nic neposílá; po puštění odejde jediná hodnota do
+`resizeTableColumn()` a uloží se do stavu tabulky (`columns.widths`).
+
+`Column::pinned()` drží sloupec na začátku tabulky, zatímco zbytek roluje do stran
+— jméno záznamu vedle čtyřiceti sloupců čísel. `Table::pinnableColumns()` dovolí
+uživatelům připínat a odepínat vlastní sloupce z nabídky zobrazení
+(`toggleColumnPin()`, stav `columns.pinned`); sloupec připnutý vývojářem zůstává
+připnutý. Připnuté sloupce se vykreslí jako první, v deklarovaném pořadí, a
+zaškrtávátka výběru zůstávají s nimi. Odsazení každého je součet šířek před ním,
+takže se měří v prohlížeči (`wire-table-columns.js`) po načtení, po každém morphu a
+při každé změně velikosti tabulky.
+
+Obojí cestuje s pamatovaným layoutem (`rememberColumns()`) i s uloženými pohledy.
+Uložená šířka nebo připnutí se čte proti tabulce tak, jak je deklarovaná teď, takže
+přejmenovaný sloupec nebo sloupec, který už nejde měnit, se ignoruje.
+
+```php
+$table
+    ->rememberColumns('orders-index')
+    ->resizableColumns() // [tl! focus:start]
+    ->pinnableColumns()  // [tl! focus:end]
+    ->columns([
+        TextColumn::make('number')->pinned(), // [tl! focus]
+        TextColumn::make('customer'),
+        TextColumn::make('total'),
+    ]);
 ```
 
 Všechny tři hodnoty šířky jsou volitelné a nezávislé. `width()` nastavuje

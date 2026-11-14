@@ -22,6 +22,12 @@
     if ($openEvent !== null && ! preg_match('/^[a-zA-Z][a-zA-Z0-9_-]*$/', $openEvent)) {
         $openEvent = null;
     }
+    // Ids per dialog, not per shell: two stacked dialogs used to both label
+    // themselves `#confirmation-modal-title`, and a screen reader read the parent's heading for
+    // the child. Derived, not random, so a re-render keeps the same ids.
+    $dialogKey = substr(md5(($id ?? '').'|'.($zIndex ?? '').'|'.($heading ?? '')), 0, 8);
+    $titleId = 'confirmation-modal-title-'.$dialogKey;
+    $descriptionId = 'confirmation-modal-description-'.$dialogKey;
 @endphp
 <template x-teleport="body" wire:key="wire-modal-confirmation{{ $id ? '-'.$id : '' }}">
 <div
@@ -32,13 +38,15 @@
     @if($openEvent) x-on:{{ $openEvent }}.window="show = true" @endif
     @endif
     @include('wire-core::modals.partials.focus-trap')
+    x-scroll-lock="show"
     x-show="show"
     x-cloak
     style="display: none;@if($zIndex !== null) z-index: {{ $zIndex }};@endif"
-    @if($closeOnEscape) x-on:keydown.escape.window="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
+    @if($closeOnEscape) x-on:keydown.escape.window="setTimeout(() => $event.defaultPrevented || ! show || (show = false, {{ $closeAction ? "\$wire.{$closeAction}()" : 'null' }}))" @endif
     class="fixed inset-0 z-50 overflow-y-auto"
     @if($id) id="{{ $id }}" @endif
-    aria-labelledby="confirmation-modal-title"
+    aria-labelledby="{{ $titleId }}"
+    @if($description ?? null) aria-describedby="{{ $descriptionId }}" @endif
     role="dialog"
     aria-modal="true"
 >
@@ -52,7 +60,7 @@
             x-transition:leave="ease-in duration-200"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
+            data-sheet-backdrop class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
             @if($closeOnClickAway) @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
         ></div>
 
@@ -72,8 +80,12 @@
                 'relative inline-block transform overflow-hidden bg-white dark:bg-gray-800 px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:p-6 sm:align-middle',
                 $style->panelWidthClass(),
                 $style->panelVariantClasses(),
+                $style->footerSafeAreaClass(),
             ])
         >
+            @if($style->hasGrabber())
+                @include('wire-core::partials.sheet-grabber', ['dismiss' => 'show = false; '.($closeAction ? '$wire.'.$closeAction.'()' : ''), 'breakpoint' => $style->breakpoint(), 'detents' => 'large', 'class' => '-mt-3 mb-1'])
+            @endif
             <div class="sm:flex sm:items-start">
                 {{-- Icon --}}
                 @if($icon)
@@ -84,14 +96,14 @@
 
                 <div class="mt-3 text-center sm:mt-0 {{ $icon ? 'sm:ml-4' : '' }} sm:text-left flex-1">
                     @if($heading)
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="confirmation-modal-title">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="{{ $titleId }}">
                             {{ $heading }}
                         </h3>
                     @endif
 
                     @if($description)
                         <div class="mt-2">
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                            <p class="text-sm text-gray-500 dark:text-gray-400" id="{{ $descriptionId }}">
                                 {{ $description }}
                             </p>
                         </div>
@@ -137,12 +149,14 @@
                     @endif
                 @endforeach
 
-                {{-- Submit button (hidden for informative dialogs) --}}
+                {{-- Submit button (hidden for informative dialogs). Skipped by the
+                     initial focus: a confirmation opens on Cancel, so an Enter
+                     pressed out of habit never runs the thing being confirmed. --}}
                 @unless($isInformative)
                     <button
                         type="button"
                         @if($confirmClick) wire:click="{{ $confirmClick }}" @endif
-                        data-testid="confirmation-confirm" @wireEl('confirmation-confirm')
+                        data-testid="confirmation-confirm" data-focus-skip @wireEl('confirmation-confirm')
                         class="{{ $style->submitButtonClasses() }}"
                     >
                         {{ $submitLabel }}
@@ -154,7 +168,7 @@
                     type="button"
                     @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}"
                     data-testid="confirmation-cancel" @wireEl('confirmation-cancel')
-                    class="mt-3 inline-flex w-full justify-center rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 sm:mt-0 sm:w-auto"
+                    class="mt-3 inline-flex w-full justify-center rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 sm:mt-0 sm:w-auto"
                 >
                     {{ $cancelLabel }}
                 </button>

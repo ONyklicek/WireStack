@@ -97,7 +97,7 @@
                     closeOnClickAway: $modalData['closeOnClickAway'] ?? true,
                     closeOnEscape: $modalData['closeOnEscape'] ?? true,
                     zIndex: $activeZIndex,
-                    bottomSheetOnMobile: $isSlideOverOnMobile,
+                    bottomSheetOnMobile: $modalData['slideOverBottomSheetOnMobile'] ?? false,
                     breakpoint: $modalData['mobileBreakpoint'] ?? null,
                     position: $modalData['slideOverPosition'] ?? 'right',
                     stickyHeader: $modalData['stickyHeader'] ?? false,

@@ -14,7 +14,7 @@
       data-shape="{{ \NyonCode\WireCore\Foundation\Enums\Shape::configured()->value }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>{{ $title ?? config('app.name') }}</title>
 
     {{-- First in the head, before the application's own assets: the theme
@@ -130,7 +130,12 @@
 
                 openMobile() {
                     this.mobile = true;
-                    document.body.classList.add('overflow-hidden', 'lg:overflow-auto');
+                    // The one page scroll lock (wire-core): `overflow-hidden` on
+                    // <body> is ignored by iOS Safari, so the page went on
+                    // scrolling under the drawer.
+                    window.wireScrollLock
+                        ? window.wireScrollLock.lock(document.getElementById('wire-admin-nav'))
+                        : document.body.classList.add('overflow-hidden', 'lg:overflow-auto');
 
                     // Onto the first row of the menu, once the trap on the
                     // drawer is active — it activates on a 15ms timer of its own,
@@ -141,7 +146,9 @@
 
                 closeMobile() {
                     this.mobile = false;
-                    document.body.classList.remove('overflow-hidden', 'lg:overflow-auto');
+                    window.wireScrollLock
+                        ? window.wireScrollLock.unlock(document.getElementById('wire-admin-nav'))
+                        : document.body.classList.remove('overflow-hidden', 'lg:overflow-auto');
                 },
 
                 toggleRail() {
@@ -163,18 +170,49 @@
         });
     </script>
 </head>
-<body class="min-h-full bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
+<body class="min-h-full bg-gray-50 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
     {{-- Keyboard users reach the page without walking the whole menu first. --}}
     <a
         href="#wire-admin-main"
         class="sr-only focus:not-sr-only focus:absolute focus:m-3 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-sm dark:focus:bg-gray-900"
     >{{ __('wire-admin::messages.skip_to_content') }}</a>
 
+    {{-- ⌘B collapses the menu, wherever its button sits — so it is bound once,
+         here, and not on the button: on the button it would depend on where the
+         button was placed, and with two placements it could be bound twice.
+         Bound on the window (a shortcut you must first focus a control to use
+         is not a shortcut), declined while the caret is in a field — in a
+         rich-text editor the same chord is bold — and not bound under the bar
+         shape, which has no column to collapse. --}}
+    @unless ($navigationShape() === \NyonCode\WireAdmin\Enums\NavigationShape::Top)
+        <span
+            hidden
+            x-data
+            data-rail-shortcut
+            x-on:keydown.window="
+                ($event.metaKey || $event.ctrlKey)
+                    && ! $event.altKey
+                    && $event.key?.toLowerCase() === 'b'
+                    && ! $event.target?.closest?.('input, textarea, select, [contenteditable]')
+                    && ($event.preventDefault(), $store.wireAdmin.toggleRail())
+            "
+        ></span>
+    @endunless
+
     <div class="lg:flex">
         {{-- In the bar shape the column is only the phone's drawer; from `lg` up
              the menu is the bar under the header, below. --}}
         @php($barShape = $navigationShape() === \NyonCode\WireAdmin\Enums\NavigationShape::Top)
-        <x-wire-admin::sidebar :linked-only="$linkedOnly" :drawer-only="$barShape" />
+        @php($userSlot = $userSlot())
+        @php($railToggleSlot = $railToggleSlot())
+        <x-wire-admin::sidebar
+            :linked-only="$linkedOnly"
+            :drawer-only="$barShape"
+            :user-place="$userSlot->value"
+            :rail-toggle-place="$barShape ? 'topbar' : $railToggleSlot->value"
+            :user="$user ?? null"
+            :user-menu="$userMenu ?? null"
+        />
 
         {{-- `--wire-sticky-top` is the top bar's height, so a table header pinned
              to the page (`stickyHeader()`) stops below the bar, not under it. --}}
@@ -205,47 +243,10 @@
                     </div>
                 @endif
 
-                {{-- Not drawn in the bar shape: there is no column to collapse, and
-                     a shortcut that toggles nothing is a key that seems broken.
-
-                     Says which way it goes, rather than naming one direction for
-                     both states: a handle labelled "collapse the menu" while the
-                     menu is already collapsed is the control people press twice
-                     to find out what it does.
-
-                     The keyboard reaches it too, on the binding every editor and
-                     admin has settled on for this one control. Bound on the
-                     window rather than the button — a shortcut you must first
-                     focus the control to use is not a shortcut — and declined
-                     while the caret is in a field, because in a rich-text editor
-                     the same chord is bold. --}}
-                @unless ($barShape)
-                <button
-                    type="button"
-                    x-data
-                    x-on:click="$store.wireAdmin.toggleRail()"
-                    x-on:keydown.window="
-                        ($event.metaKey || $event.ctrlKey)
-                            && ! $event.altKey
-                            && $event.key?.toLowerCase() === 'b'
-                            && ! $event.target?.closest?.('input, textarea, select, [contenteditable]')
-                            && ($event.preventDefault(), $store.wireAdmin.toggleRail())
-                    "
-                    x-bind:aria-pressed="$store.wireAdmin.rail ? 'true' : 'false'"
-                    x-bind:aria-keyshortcuts="$store.wireAdmin.modKey === '⌘' ? 'Meta+B' : 'Control+B'"
-                    x-bind:title="($store.wireAdmin.rail
-                        ? '{{ __('wire-admin::messages.expand_menu') }}'
-                        : '{{ __('wire-admin::messages.collapse_menu') }}') + ' (' + $store.wireAdmin.modKey + 'B)'"
-                    data-testid="admin-rail-toggle" @wireEl('admin-rail-toggle')
-                    title="{{ __('wire-admin::messages.collapse_menu') }}"
-                    class="-ms-1 hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 lg:inline-flex dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-                >
-                    <span class="sr-only" x-show="! $store.wireAdmin.rail">{{ __('wire-admin::messages.collapse_menu') }}</span>
-                    <span class="sr-only" x-show="$store.wireAdmin.rail" x-cloak>{{ __('wire-admin::messages.expand_menu') }}</span>
-                    <span x-show="! $store.wireAdmin.rail">{!! icon('outline:bars-3', 'h-5 w-5') !!}</span>
-                    <span x-show="$store.wireAdmin.rail" x-cloak>{!! icon('outline:chevron-double-right', 'h-5 w-5 rtl:rotate-180') !!}</span>
-                </button>
-                @endunless
+                {{-- Not drawn in the bar shape: there is no column to collapse. --}}
+                @if (! $barShape && ! $railToggleSlot->isSidebar())
+                    @include('wire-admin::partials.rail-toggle', ['place' => 'topbar'])
+                @endif
 
                 {{-- The brand moved into the sidebar header, where a logo belongs
                      and where the rail can shrink it to a square. What stays here
@@ -319,60 +320,17 @@
                      the identity is the one of them that is not a setting. Kept
                      off the phone, where the switches are in the drawer and the
                      rule would be dividing a row of two. --}}
-                @if (isset($user) || auth()->check())
+                @if (! $userSlot->isSidebar() && (isset($user) || auth()->check()))
                     <span aria-hidden="true" class="mx-1 hidden h-6 w-px shrink-0 bg-gray-200 sm:block dark:bg-gray-700"></span>
                 @endif
 
                 {{-- The application's own menu, and a name when it has not written
                      one: an admin whose top bar cannot say who is signed in reads
-                     as unfinished, and this is the smallest honest default. --}}
-                @if (isset($user))
-                    {{ $user }}
-                @elseif (auth()->check())
-                    {{-- The canonical dropdown from wire-core, not a second one
-                         written here: it already owns the floating placement, the
-                         outside click, the escape key and the phone bottom sheet,
-                         and a menu in the chrome is exactly what those were for. --}}
-                    <x-wire::dropdown position="bottom-end" width="w-56" sheet-on-mobile>
-                        <x-slot:trigger>
-                            <button
-                                type="button"
-                                data-testid="admin-user" @wireEl('admin-user')
-                                class="flex h-9 items-center gap-2 rounded-full p-1 pe-1.5 transition hover:bg-gray-100 dark:hover:bg-gray-800"
-                            >
-                                <x-wire-admin::avatar :user="auth()->user()" class="h-7 w-7" />
-                                <span class="hidden max-w-32 truncate text-sm text-gray-700 sm:block dark:text-gray-200">
-                                    {{ auth()->user()->name ?? auth()->user()->email ?? '' }}
-                                </span>
-                                {!! icon('outline:chevron-down', 'h-4 w-4 text-gray-500 dark:text-gray-400') !!}
-                            </button>
-                        </x-slot:trigger>
-
-                        <div class="flex items-center gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-                            <x-wire-admin::avatar :user="auth()->user()" class="h-9 w-9" />
-
-                            <div class="min-w-0">
-                                <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ auth()->user()->name ?? '' }}</p>
-                                <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ auth()->user()->email ?? '' }}</p>
-                            </div>
-                        </div>
-
-                        {{-- Whatever the application puts in the menu, first: an
-                             application's own entries are not a module's to sort
-                             around. The shell itself still ships no profile page
-                             and no sign-out route, because it owns neither. --}}
-                        {{ $userMenu ?? '' }}
-
-                        {{-- And what the installed packages put there. Same
-                             registry as the top bar and the end of the body, same
-                             reason: the profile page belongs to the users module
-                             and the way out belongs to the auth module, and the
-                             shell can name neither. --}}
-                        @foreach (app(\NyonCode\WireCore\Foundation\View\PageChrome::class)->views(\NyonCode\WireCore\Foundation\View\PageChrome::USER_MENU) as $userMenuView)
-                            @include($userMenuView)
-                        @endforeach
-                    </x-wire::dropdown>
-                @endif
+                     as unfinished, and this is the smallest honest default. Or at
+                     the foot of the menu, with `wire-admin.layout.user => 'sidebar'`. --}}
+                @unless ($userSlot->isSidebar())
+                    @include('wire-admin::partials.user-menu', ['place' => 'topbar', 'user' => $user ?? null, 'userMenu' => $userMenu ?? null])
+                @endunless
                 @wireRenderHook('admin.topbar.end')
             </header>
 

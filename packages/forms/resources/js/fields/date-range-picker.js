@@ -43,6 +43,12 @@ const wireDateRangePicker = (config = {}) => mix(typing(), calendar(), clockDial
     typedFormat: config.typedFormat ?? null,
     typeable: config.typeable ?? false,
     presets: config.presets ?? [],
+    // rememberPreset(): the state path the picked preset's key is written to,
+    // beside from/to; picking days by hand clears it. Written through $wire
+    // rather than entangled: the picker's x-data carries its bounds, so a
+    // roundtrip that moves them re-initialises it, and an entangled value set
+    // in the same tick was lost with the old instance.
+    presetPath: config.presetPath ?? null,
 
     currentMonth: null,
     currentYear: null,
@@ -184,6 +190,7 @@ const wireDateRangePicker = (config = {}) => mix(typing(), calendar(), clockDial
         this.anchor = null
         this.hoverDay = null
         this.commitRange(a, b)
+        if (this.presetPath) this.$wire.set(this.presetPath, null)
 
         if (! this.withTime) this.closeToTrigger()
     },
@@ -209,11 +216,13 @@ const wireDateRangePicker = (config = {}) => mix(typing(), calendar(), clockDial
         this.hoverDay = null
         this.view = 'days'
         this.commitRange(preset.from, preset.to)
+        if (this.presetPath) this.$wire.set(this.presetPath, preset.key ?? null)
         this.showMonthOf(preset.from)
         if (! this.withTime) this.closeToTrigger()
     },
 
     isActivePreset(preset) {
+        if (this.presetPath && preset.key) return ! this.anchor && this.$wire.get(this.presetPath) === preset.key
         return ! this.anchor && this.dayOf(this.from) === preset.from && this.dayOf(this.to) === preset.to
     },
 

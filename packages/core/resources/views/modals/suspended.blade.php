@@ -85,7 +85,7 @@
                 </div>
             </div>
         @else
-            <div class="flex min-h-screen items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div class="flex min-h-[100dvh] items-end justify-center p-4 text-center sm:items-center sm:p-0">
                 <div
                     class="relative inline-block w-full transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 text-left align-bottom shadow-xl sm:align-middle opacity-70 {{ $widthClass }}"
                     style="transform: translateY(-{{ $lift }}px) scale({{ $scale }});"

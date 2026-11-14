@@ -373,6 +373,12 @@ class Select extends Field implements DehydratesState, ProvidesImplicitValidatio
      * Whether the dropdown searches on the server rather than filtering a
      * preloaded list client-side. Native selects never search remotely.
      */
+    /** A remote search or a "create option" form brings values the static list does not hold. */
+    protected function acceptsValuesOutsideOptions(): bool
+    {
+        return $this->isRemoteSearch() || $this->hasCreateOptionForm();
+    }
+
     public function isRemoteSearch(): bool
     {
         return $this->hasSearchResultsCallback() && $this->isSearchable() && ! $this->isNative();

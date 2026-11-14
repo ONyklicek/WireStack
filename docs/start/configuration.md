@@ -267,6 +267,7 @@ Modal width values are Tailwind-style size tokens such as `sm`, `md`, `lg`, `xl`
     'slide_over_width' => 'xl',
     'close_on_click_away' => false,
     'close_on_escape' => true,
+    'mobile' => 'sheet', // 'sheet' | 'full-screen' | 'dialog'
 ],
 ```
 
@@ -659,6 +660,8 @@ is not a second search: [The Sidebar](../admin/sidebar.md#filtering-the-menu).
 // config/wire-admin.php
 'layout' => [
     'navigation' => 'sidebar', // 'sidebar' | 'top' — see The Layout § The Menu As A Bar
+    'user' => 'topbar',        // 'topbar' | 'sidebar' — where the account menu sits
+    'rail_toggle' => 'topbar', // 'topbar' | 'sidebar' — where the collapse button sits
 ],
 'navigation' => [
     'filter' => 'auto',        // 'auto' | 'always' | 'never'

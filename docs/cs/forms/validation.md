@@ -58,8 +58,8 @@ předřadí `required`, a [`->unique()`](#unikatni-hodnoty). Některá pole nav�
 zkontrolovat nejde: [`MoneyInput`](fields/money-input.md) validuje částku za
 formátovaným textem, [`PhoneInput`](fields/phone-input.md) číslo za předvolbou,
 [`FileUpload`](fields/file-upload.md) nakonfigurované mime typy a velikosti a pole
-s `options()` omezení `in:` nad vlastními klíči voleb (pokud jste si žádné
-nedeklaroval).
+s `options()` z enumu nebo pevného pole omezení `in:` nad vlastními klíči voleb
+(pokud jste si žádné nedeklaroval).
 
 > **Vyprázdněné číselné pole nepotřebuje pravidlo, aby bylo bezpečné.** `<input
 > type=number>` po vymazání odešle `''` a `TextInput` z toho cestou k záznamu

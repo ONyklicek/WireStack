@@ -7,6 +7,7 @@ use Illuminate\Validation\Rules\In;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
 use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 use NyonCode\WireCore\Modals\Modal;
+use NyonCode\WireForms\Components\Radio;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
@@ -115,10 +116,18 @@ test('a required enum select rejects null through required, not nullable', funct
         ->and(validator(['status' => 'draft'], ['status' => $rules])->passes())->toBeTrue();
 });
 
-test('plain array options add no implicit validation rule', function () {
-    $field = Select::make('role')->options(['admin' => 'Admin', 'user' => 'User']);
+test('plain array options constrain the value to them, still optional', function () {
+    $rules = Select::make('role')->options(['admin' => 'Admin', 'user' => 'User'])->getValidationRules();
 
-    expect($field->getValidationRules())->toBe([]);
+    expect(validator(['role' => 'admin'], ['role' => $rules])->passes())->toBeTrue()
+        ->and(validator(['role' => null], ['role' => $rules])->passes())->toBeTrue()
+        ->and(validator(['role' => 'root'], ['role' => $rules])->passes())->toBeFalse();
+});
+
+test('options from a closure, a remote search or a create form add no implicit rule', function () {
+    expect(Select::make('a')->options(fn () => ['x' => 'X'])->getValidationRules())->toBe([])
+        ->and(Select::make('b')->options(['x' => 'X'])->getSearchResultsUsing(fn () => [])->getValidationRules())->toBe([])
+        ->and(Select::make('c')->options(['x' => 'X'])->createOptionForm([])->getValidationRules())->toBe([]);
 });
 
 test('multiple select does not add an implicit in: rule (array state)', function () {
@@ -759,4 +768,11 @@ test('touchOnMobile() renders the touch sheet and keeps remote search and create
         ->and(renderSelect($remote))
         ->toContain('select-touch-sheet')
         ->toContain('remote: true');
+});
+
+test('a radio with a literal array of options is held to them too', function () {
+    $rules = Radio::make('size')->options(['s' => 'S', 'm' => 'M'])->getValidationRules();
+
+    expect(validator(['size' => 'xl'], ['size' => $rules])->passes())->toBeFalse()
+        ->and(validator(['size' => 'm'], ['size' => $rules])->passes())->toBeTrue();
 });

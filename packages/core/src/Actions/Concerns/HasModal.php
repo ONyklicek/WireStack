@@ -93,9 +93,9 @@ trait HasModal
 
     protected string $slideOverPosition = 'right';
 
-    protected bool $slideOverOnMobile = false;
+    protected ?bool $slideOverOnMobile = null;
 
-    protected bool $fullScreenOnMobile = false;
+    protected ?bool $fullScreenOnMobile = null;
 
     protected ?string $mobileModalWidth = null;
 
@@ -244,6 +244,18 @@ trait HasModal
         return $this;
     }
 
+    /** On small screens, keep the floating dialog instead of the configured sheet / full-screen default. */
+    public function dialogOnMobile(bool $dialog = true): static
+    {
+        // Both flags false is the action speaking for itself (the floating
+        // card); both null hands the choice back to the config.
+        $explicit = $dialog ? false : null;
+        $this->slideOverOnMobile = $explicit;
+        $this->fullScreenOnMobile = $explicit;
+
+        return $this;
+    }
+
     /** Set the modal width used on small screens. */
     public function mobileModalWidth(string $width): static
     {
@@ -372,7 +384,11 @@ trait HasModal
 
     protected function applyPlainModalOptions(Modal $modal): void
     {
-        $this->fullScreenOnMobile = $modal->isFullScreenOnMobile();
+        // Only a modal object that asked for full screen says anything here; one
+        // that did not must leave the action (and the config default) alone.
+        if ($modal->isFullScreenOnMobile()) {
+            $this->fullScreenOnMobile = true;
+        }
         $this->mobileModalWidth = $modal->getMobileWidth();
     }
 
@@ -542,14 +558,16 @@ trait HasModal
         return $this->slideOverPosition;
     }
 
+    /** Whether the modal is a bottom sheet below its breakpoint — set on the action, or `wire-core.modals.mobile`. */
     public function isSlideOverOnMobile(): bool
     {
-        return $this->slideOverOnMobile;
+        return ModalDefaults::mobileVariant($this->slideOverOnMobile, $this->fullScreenOnMobile) === 'bottom-sheet';
     }
 
+    /** Whether the modal fills the screen below its breakpoint — set on the action, or `wire-core.modals.mobile`. */
     public function isFullScreenOnMobile(): bool
     {
-        return $this->fullScreenOnMobile;
+        return ModalDefaults::mobileVariant($this->slideOverOnMobile, $this->fullScreenOnMobile) === 'full-screen';
     }
 
     public function getMobileModalWidth(): ?string
@@ -872,6 +890,10 @@ trait HasModal
             'slideOver' => $this->isSlideOver(),
             'slideOverPosition' => $this->getSlideOverPosition(),
             'slideOverOnMobile' => $this->isSlideOverOnMobile(),
+            // A desktop slide-over becomes a bottom sheet only when asked: the
+            // config default is about dialogs, and a side panel on a phone is
+            // already edge-to-edge.
+            'slideOverBottomSheetOnMobile' => $this->slideOverOnMobile === true,
             'fullScreenOnMobile' => $this->isFullScreenOnMobile(),
             'mobileWidth' => $this->getMobileModalWidth(),
             'mobileBreakpoint' => $this->getMobileBreakpoint(),

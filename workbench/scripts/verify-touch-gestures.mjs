@@ -143,10 +143,19 @@ try {
   check('…and the lift that ends it runs nothing', (await eval_(`window.__calls.length`)) === 0, await eval_(`JSON.stringify(window.__calls)`));
   await shot('02-long-press');
 
-  // Choosing an item runs it against that row.
-  await eval_(`[...document.querySelectorAll('[data-record-menu]')].find((p) => p.style.display !== 'none').querySelector('[data-touch-menu] button, [data-touch-menu] [role="menuitem"]').click()`);
+  // Choosing an item runs it against that row — with a real tap. The item's
+  // `@click="close()"` once had no host scope here and fell through to
+  // window.close(): Chrome ignores it, Safari on iPadOS closed the tab.
+  await eval_(`(() => { window.__windowClosed = false; window.close = () => { window.__windowClosed = true; }; return true; })()`);
+  const item = await eval_(`(() => {
+    const b = [...document.querySelectorAll('[data-record-menu]')].find((p) => p.style.display !== 'none').querySelector('[data-touch-menu] button, [data-touch-menu] [role="menuitem"]');
+    const r = b.getBoundingClientRect();
+    return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+  })()`);
+  await tap(item);
   await waitFor(`window.__calls.includes('open')`, { timeout: 5000 }).catch(() => {});
   check('choosing a touch item runs that action', (await eval_(`JSON.stringify(window.__calls)`)) === '["open"]', await eval_(`JSON.stringify(window.__calls)`));
+  check('…closes the menu, and never the window', ! (await eval_(openMenu)) && (await eval_(`window.__windowClosed`)) === false, `windowClosed=${await eval_(`window.__windowClosed`)}`);
   await closeModal();
 
   // A press that drifts is a scroll, not a right click.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Support;
 
+use NyonCode\WireTable\Contracts\HostsTableShell;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Table;
 
@@ -46,6 +47,8 @@ final class ShellRenderPlan
      * @param  ?string  $liveChannel  The broadcast channel to listen on, or null without `live(broadcast: true)`.
      * @param  array<int, Filter>  $filters  The table-level filters (column filters live on the columns group).
      * @param  array<int, string>  $savedViews  Names of this user's saved views, empty when the feature is off.
+     * @param  array<int, string>  $sharedViews  Names of the views shared with everyone (Table::shareViews()).
+     * @param  bool  $canShareViews  Whether this user may publish and delete shared views.
      * @param  string  $viewMenuLabel  Narrows to "toggle columns" when that is all the menu holds.
      */
     private function __construct(
@@ -67,8 +70,16 @@ final class ShellRenderPlan
         public readonly array $savedViews,
         public readonly bool $hasViewMenu,
         public readonly string $viewMenuLabel,
+        /** @var array<int, string> */
+        public readonly array $sharedViews = [],
+        public readonly bool $canShareViews = false,
     ) {}
 
+    /**
+     * @param  HostsTableShell|mixed  $component  The host. Typed `mixed` so a
+     *                                            consumer's component needs no `implements`; the contract is what it must
+     *                                            be able to answer, and what a test double implements.
+     */
     public static function resolve(Table $table, mixed $component, bool $hasColumnToggles): self
     {
         $filters = $table->getFilters();
@@ -93,7 +104,9 @@ final class ShellRenderPlan
             hasGroupSummaries: $hasGrouping && $component->tableHasGroupSummaries(),
             hasSavedViews: $hasSavedViews,
             savedViews: $hasSavedViews ? $component->getTableViews() : [],
-            hasViewMenu: $hasColumnToggles || $isSubRowsExpandable || $hasSavedViews,
+            sharedViews: $hasSavedViews ? $component->getSharedTableViews() : [],
+            canShareViews: $hasSavedViews && $component->canShareTableViews(),
+            hasViewMenu: $hasColumnToggles || $isSubRowsExpandable || $hasSavedViews || $table->hasPinnableColumns(),
             viewMenuLabel: $hasColumnToggles && ! $isSubRowsExpandable && ! $hasSavedViews
                 ? __('wire-table::messages.toggle_columns')
                 : __('wire-table::messages.view_options'),

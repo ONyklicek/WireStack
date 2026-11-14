@@ -58,8 +58,8 @@ prepends `required`, and [`->unique()`](#unique-values). Some fields also carry
 any other way: [`MoneyInput`](fields/money-input.md) validates the amount behind
 its formatted text, [`PhoneInput`](fields/phone-input.md) the number behind its
 country prefix, [`FileUpload`](fields/file-upload.md) the mime types and sizes it
-was configured with, and a field with `options()` an `in:` constraint over its
-own option keys (unless you declared one yourself).
+was configured with, and a field whose `options()` are an enum or a literal array an `in:` constraint
+over its own option keys (unless you declared one yourself).
 
 > **A cleared numeric field does not need a rule to be safe.** A `<input
 > type=number>` submits `''` when it is emptied, and `TextInput` turns that into

@@ -151,6 +151,21 @@ A stated set replaces the built-in one. Each value is anything Carbon parses.
 On a desktop the periods are a list beside the calendar, the one in force
 marked; on a phone they are chips above the two pickers.
 
+Two dates are a fixed period; "last 7 days" is not. To keep which period was
+picked, give each preset a key as its third element and call `rememberPreset()`:
+the key is written to a sibling state key (`preset` by default) beside the two
+ends, and cleared again when the user picks days by hand. A host that has to
+keep the meaning — a table's saved view, a shared link — reads the key and works
+the dates out again. The table's `DateFilter::presets()` is built this way.
+
+```php
+DateRangePicker::make('period')
+    ->from('from')
+    ->until('to')
+    ->presets(['Last 7 days' => [now()->subDays(6), now(), 'last_7_days']])
+    ->rememberPreset()         // writes 'last_7_days' to …period's sibling `preset`
+```
+
 ## Reaching The Pickers
 
 ```php
@@ -224,7 +239,8 @@ fallback, the format, the disabled days — belongs to
 ->minTime(string|Closure|null $time)        // daily window, 'H:i' — both ends, every day
 ->maxTime(string|Closure|null $time)
 ->required(bool $condition = true)          // requires both ends
-->presets(array $presets = [])              // ['label' => [from, to], …]; empty = the built-in set
+->presets(array $presets = [])              // ['label' => [from, to, ?key], …]; empty = the built-in set
+->rememberPreset(?string $name = 'preset')  // write the picked preset's key to this sibling state key; null = do not
 ->configurePickers(?Closure $callback)      // fn (DateTimePicker $picker) => …, once per end
 ```
 

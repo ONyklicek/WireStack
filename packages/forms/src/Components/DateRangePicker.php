@@ -79,6 +79,12 @@ class DateRangePicker extends LayoutComponent
 
     protected ?Closure $configurePickers = null;
 
+    /** Sibling state key the picked preset's name is written to; null writes none. */
+    protected ?string $presetName = null;
+
+    /** @var array<string, string> preset label => the key written to {@see} */
+    protected array $presetKeys = [];
+
     /** @var array<int, DateTimePicker>|null */
     private ?array $pickers = null;
 
@@ -180,14 +186,58 @@ class DateRangePicker extends LayoutComponent
      * month, the last 30 days, this year). A map of `label => [from, to]` —
      * either date strings or anything Carbon parses — replaces it.
      *
-     * @param  array<string, array{0: mixed, 1: mixed}>  $presets
+     * A third element names the preset for {@see rememberPreset()}.
+     *
+     * @param  array<string, array{0: mixed, 1: mixed, 2?: string}>  $presets
      */
     public function presets(array $presets = []): static
     {
         $this->showPresets = true;
         $this->presets = $presets === [] ? null : self::normalizePresets($presets);
+        $this->presetKeys = [];
+
+        foreach ($presets as $label => $range) {
+            if (is_string($range[2] ?? null)) {
+                $this->presetKeys[$label] = $range[2];
+            }
+        }
 
         return $this;
+    }
+
+    /**
+     * Also write WHICH preset was picked, by its key, to the sibling state key
+     * `$name` — and clear it when the period is then picked by hand.
+     *
+     * Two dates are a fixed period; "last 7 days" is not. A host that has to
+     * keep the meaning — a saved table view, a shared link — reads the key and
+     * works the dates out again when it needs them. Keys come from the third
+     * element of each {@see presets()} entry: `label => [from, to, key]`.
+     */
+    public function rememberPreset(?string $name = 'preset'): static
+    {
+        $this->presetName = $name;
+
+        return $this;
+    }
+
+    /** The state path the picked preset's key is written to, or null. */
+    public function getPresetStatePath(): ?string
+    {
+        if ($this->presetName === null) {
+            return null;
+        }
+
+        $from = $this->getFromPicker()->getStatePath();
+        $parent = str_contains($from, '.') ? substr($from, 0, (int) strrpos($from, '.')) : '';
+
+        return $parent === '' ? $this->presetName : $parent.'.'.$this->presetName;
+    }
+
+    /** The key a preset is remembered by ({@see rememberPreset()}), or null. */
+    public function getPresetKey(string $label): ?string
+    {
+        return $this->presetKeys[$label] ?? null;
     }
 
     /**

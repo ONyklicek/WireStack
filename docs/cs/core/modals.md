@@ -55,21 +55,14 @@ Action::make('edit')
     ->closeModalOnEscape()
 
     // Mobilní adaptace
-    ->slideOverOnMobile()            // bottom-sheet na mobilu, dialog na desktopu
-    ->fullScreenOnMobile()           // celá obrazovka na mobilu
-    ->mobileBreakpoint('md');        // kde se sheet spustí (sm|md|lg)
+    ->slideOverOnMobile()            // spodní sheet pod breakpointem (výchozí pro dialogy) [tl! focus:start]
+    ->fullScreenOnMobile()           // celá obrazovka pod breakpointem
+    ->dialogOnMobile()               // ponechá plovoucí dialog i pod breakpointem [tl! focus:end]
+    ->mobileBreakpoint('md');        // kde se spustí mobilní podoba (sm|md|lg)
 ```
 
-Pod mobilním breakpointem `slideOverOnMobile()` vykreslí modal formuláře jako
-**bottom-sheet**, který se vysune od spodní hrany, a `fullScreenOnMobile()`
-vyplní viewport; oba scrollují tělo *uvnitř* panelu, takže tlačítka patičky
-zůstanou viditelná, a oba nechají vycentrovaný dialog na desktopu beze změny. Sheety přidávají
-safe-area padding, úchyt pro zavření tažením a focus trap automaticky.
-
-Breakpoint je ve výchozím stavu globální `wire-core.mobile.breakpoint` (`sm`, tj.
-`< 640px`) a lze ho zvýšit u jednotlivých akcí pomocí `->mobileBreakpoint('md')` (`< 768px`,
-zahrnuje malé tablety) nebo `'lg'` (`< 1024px`). Globální výchozí viz
-[Konfigurace → Mobil](../start/configuration.md#mobil).
+Jak se mobilní podoba volí a co každý dialog dělá se scrollováním, fokusem a
+Escape, popisuje [Na telefonu](#na-telefonu).
 
 Modal postavený přímo bere ještě jedno: `->mobileWidth(string $width)` nastaví
 šířku, kterou panel použije pod tím breakpointem — pro případ, kdy nechcete ani
@@ -78,6 +71,125 @@ sheet, ani celou obrazovku.
 **Potvrzení, kde není co potvrzovat** — hláška, kterou uživatel může jen vzít na
 vědomí — je `->informative()`: zahodí odesílací tlačítko a to zbylé přejmenuje na
 *Zavřít*, takže dialog, který se na nic neptá, ani nic nenabízí udělat.
+
+## Na telefonu
+
+Pod mobilním breakpointem dialog změní podobu; nad ním je každá varianta stejný
+vycentrovaný dialog.
+
+**Podoba se určí pro každý modal, v tomto pořadí:**
+
+1. **Modal to řekne.** `->slideOverOnMobile()` → spodní sheet;
+   `->fullScreenOnMobile()` → celá obrazovka; `->dialogOnMobile()` → plovoucí
+   karta, jakou je na desktopu. Nastavení kteréhokoli z příznaků, na `true` *i*
+   `false`, se počítá jako to, že modal mluví sám za sebe — `dialogOnMobile()`
+   nastaví oba na `false`. Když jsou zapnuté oba, vyhraje sheet.
+2. **Config.** Modal, který nenastavil ani jeden, se řídí
+   `wire-core.modals.mobile`: `'sheet'` (výchozí), `'full-screen'` nebo
+   `'dialog'`. Neznámá hodnota se čte jako `'sheet'`.
+
+Takže **každý dialog je na telefonu spodní sheet, pokud něco neřekne jinak** —
+včetně potvrzení. Výjimkou je desktopový **slide-over**: výchozí hodnota z
+configu se týká dialogů a boční panel je na telefonu už od okraje k okraji, takže
+se slide-over stane sheetem, jen když sám zavolá `->slideOverOnMobile()`.
+
+```php
+// config/wire-core.php
+'modals' => [
+    'mobile' => env('WIRE_MODAL_MOBILE', 'sheet'), // 'sheet' | 'full-screen' | 'dialog'
+],
+```
+
+```php
+Action::make('pickColour')
+    ->form([/* … */])
+    ->dialogOnMobile()               // malý dialog zůstane na telefonu kartou
+
+Action::make('composeEmail')
+    ->form([/* … */])
+    ->fullScreenOnMobile()           // dlouhý formulář zabere celou obrazovku
+```
+
+Breakpoint je `->mobileBreakpoint()`, jinak `wire-core.mobile.breakpoint`
+(`sm`, `< 640px`); `'md'` (`< 768px`) a `'lg'` (`< 1024px`) ho rozšíří. Viz
+[Konfigurace → Mobil](../start/configuration.md#mobil).
+
+**Co dělá sheet a celá obrazovka:**
+
+- **Tělo se scrolluje uvnitř panelu**, takže tlačítka patičky zůstanou na
+  obrazovce.
+- **Sheet se chová jako sheet v iOS.** Všechny sheety — dialog, select, picker,
+  panel filtrů — sdílí jedno gesto (`x-sheet-dismiss`):
+  - chytá se za úchyt *nebo* kdekoli v horních 56px;
+  - stažený dolů o víc než ~90px, nebo švihnutý (40px rychlostí přes půl pixelu
+    za milisekundu), se zavře; kratší, pomalejší tah se vrátí zpět;
+  - seznam vyšší než střední výška se otevře na **střední** výšce (asi 56 %
+    obrazovky) a tahem nahoru se roztáhne na **velkou** (92 %); stažený
+    z velké se nejdřív zastaví na střední. Dialog má jen velkou výšku;
+  - u seznamu odrolovaného úplně nahoru tah dolů pohne sheetem místo seznamu —
+    stejné předání jako v iOS;
+  - nad největší výškou pruží a pozadí s tahem dolů bledne;
+  - s otevřenou klávesnicí se sheet zvedne nad ni (`visualViewport`);
+  - sheet s hledáním se otevře na velké výšce a drží ji, i když se výsledky
+    zužují; hledání zůstává připnuté pod úchytem.
+- **Nic nezapadne do kulatých rohů.** Sheet drží pod posledním řádkem nejméně
+  1rem i tam, kde je bezpečná oblast nulová, a seznam v něm je odsazený od
+  okrajů obrazovky se zaoblenými řádky.
+- **Výšky používají `dvh`**, ne `vh`: na telefonu je `vh` viewport se skrytými
+  lištami prohlížeče a sheet s `85vh` dal svou patičku pod spodní lištu Safari.
+  Sheet je vysoký nejvýše `92dvh`.
+- **Bezpečné oblasti dostanou odsazení.** Patička varianty od okraje k okraji
+  drží tlačítka nad home indikátorem (`env(safe-area-inset-bottom)`) a panel přes
+  celou obrazovku se vyhne výřezu. Admin layouty nastavují `viewport-fit=cover`,
+  aby tyto insety nebyly nulové; váš vlastní layout potřebuje
+  `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">`
+  pro stejný efekt.
+
+### Zámek scrollování
+
+Stránka za **každým** otevřeným modalem zůstane na místě — dialog, sheet,
+slide-over, potvrzení. Zámek sedí na `<html>` (iOS Safari ignoruje
+`overflow: hidden` na `<body>` a pod prstem dál scrolluje stránku) a šířka
+scrollbaru se vrátí jako padding, aby desktopová stránka neposkočila do strany.
+
+Zámky se **počítají podle vlastníka**: modal navrstvený na modalu nebo sheet nad
+dialogem uvolní stránku, až když se zavře ten poslední. Zámek se uvolní i ve
+chvíli, kdy jeho element opustí stránku — modal akce obvykle odstraní re-render
+ze serveru, ne zavření, a zámek čekající na `show = false` by ho přežil.
+
+Dva způsoby, jak stejný zámek použít pro vlastní overlay:
+
+```blade
+{{-- zamkne, dokud je výraz pravdivý, a když je element odstraněn --}}
+<div x-data="{ open: false }">
+    <div x-show="open" x-scroll-lock="open">…</div>
+</div>
+```
+
+```js
+// imperativně — takto ho používá admin drawer
+window.wireScrollLock.lock(drawerElement)
+window.wireScrollLock.unlock(drawerElement)
+```
+
+Direktiva se registruje s Alpine bundlem wire-core; atribut
+`data-wire-scroll-locked` je na `<html>`, dokud trvá jakýkoli zámek.
+
+### Fokus a klávesnice
+
+- **Kam padne fokus, když se dialog otevře:** na pole s `[autofocus]`, pokud ho
+  dialog má; na dotykové obrazovce na dialog samotný, protože fokus na poli tam
+  vytáhne klávesnici přes sheet, který uživatel ještě nečetl; jinak na první
+  prvek, který **není** zavírací tlačítko. Potvrzení se otevře na **Zrušit**,
+  takže Enter omylem nepotvrdí smazání. Fokus zůstává uvězněný v dialogu, dokud
+  je otevřený.
+- **Escape zavře dialog, jen když ho nic uvnitř nepoužilo.** Otevřený dropdown,
+  select nebo výběr data uvnitř dialogu převezme první Escape a zavře sám sebe;
+  dialog zůstane. Další Escape zavře dialog (s ohledem na
+  `->closeModalOnEscape()`).
+- **Popsané pro asistenční technologie.** Každý dialog má vlastní id titulku a
+  popisu, napojená na `aria-labelledby` a (má-li popis) `aria-describedby`, takže dva
+  navrstvené dialogy nikdy neukazují na titulek toho druhého.
 
 ## Modal config objekty
 

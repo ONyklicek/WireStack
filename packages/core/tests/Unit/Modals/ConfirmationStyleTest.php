@@ -32,8 +32,8 @@ it('builds the submit button classes off the action color, defaulting to primary
 
 // ─── Mobile-sheet variant (delegated to the canonical ModalStyle owner) ──────
 
-it('is a centered dialog by default (no mobile variant)', function () {
-    $s = new ConfirmationStyle;
+it('is a centered dialog when it opts out of the mobile variants', function () {
+    $s = new ConfirmationStyle(fullScreenOnMobile: false, slideOverOnMobile: false);
 
     expect($s->mobileVariant())->toBeNull()
         // The default panel keeps its historical shrink-to-content width — the
@@ -73,4 +73,14 @@ it('honours a custom mobile breakpoint for the sheet switch', function () {
 
     expect($s->widthClass())->toBe('lg:max-w-md')
         ->and($s->transitionClasses()['enterStart'])->toContain('lg:translate-y-0');
+});
+
+it('is a bottom sheet with a grabber by default on a phone', function () {
+    config(['wire-core.modals.mobile' => 'sheet']);
+    $s = new ConfirmationStyle;
+
+    expect($s->mobileVariant())->toBe('bottom-sheet')
+        ->and($s->hasGrabber())->toBeTrue()
+        ->and($s->breakpoint())->toBe('sm')
+        ->and($s->footerSafeAreaClass())->toContain('safe-area-inset-bottom');
 });

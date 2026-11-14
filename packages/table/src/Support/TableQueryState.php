@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NyonCode\WireTable\Support;
 
+use NyonCode\WireTable\Enums\FilterOperator;
 use NyonCode\WireTable\Table;
 
 /**
@@ -31,6 +32,10 @@ final class TableQueryState
      * @param  mixed  $sortColumn  Untyped for the same reason as `$search`.
      * @param  bool  $hasActiveFilters  Whether the user narrowed the set at all;
      *                                  a search on its own counts.
+     * @param  array<string, mixed>  $panelFilters  What the filter panel's
+     *                                              controls show: the filters, or
+     *                                              the unapplied draft of a
+     *                                              deferred panel.
      */
     private function __construct(
         public readonly mixed $search,
@@ -42,6 +47,7 @@ final class TableQueryState
         public readonly string $sortDirection,
         public readonly int $perPage,
         public readonly bool $hasActiveFilters,
+        public readonly array $panelFilters = [],
     ) {}
 
     public static function resolve(Table $table, mixed $component): self
@@ -49,6 +55,7 @@ final class TableQueryState
         $search = $component->tableState->get('search');
         $filters = $component->tableState->get('filters', []) ?? [];
         $columnFilters = $component->tableState->get('columnFilters', []) ?? [];
+        $draft = $table->hasDeferredFilters() ? $component->tableState->get('filterDraft') : null;
 
         $activeFilters = array_filter($filters, self::holdsValue(...));
         $activeColumnFilters = array_filter($columnFilters, self::holdsValue(...));
@@ -65,6 +72,7 @@ final class TableQueryState
             hasActiveFilters: ! empty($search)
                 || $activeFilters !== []
                 || $activeColumnFilters !== [],
+            panelFilters: is_array($draft) ? $draft : $filters,
         );
     }
 
@@ -78,6 +86,28 @@ final class TableQueryState
      */
     private static function holdsValue(mixed $value): bool
     {
+        // A query-builder tree: its combinator and each rule's field are always
+        // there; only a rule that compares something narrows the rows.
+        if (is_array($value) && array_key_exists('combinator', $value) && array_key_exists('rules', $value)) {
+            foreach ((array) $value['rules'] as $rule) {
+                if (is_array($rule) && self::holdsValue(array_key_exists('rules', $rule) ? $rule : ['operator' => $rule['operator'] ?? '', 'value' => $rule['value'] ?? null])) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // A filter with an operator picker always carries its operator; that
+        // alone is a setting, not a filter. Only "is empty" / "is not empty"
+        // narrow the rows with no value beside them.
+        if (is_array($value) && is_string($value['operator'] ?? null)) {
+            $operator = FilterOperator::resolve($value['operator']);
+
+            return ($operator !== null && ! $operator->requiresValue())
+                || self::holdsValue($value['value'] ?? null);
+        }
+
         if (is_array($value)) {
             foreach ($value as $inner) {
                 if (self::holdsValue($inner)) {

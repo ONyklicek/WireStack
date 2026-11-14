@@ -33,10 +33,10 @@ it('resolves the bottom-sheet-on-mobile variant (default sm breakpoint)', functi
 
     expect($s->positionClasses())->toContain('inset-x-0 bottom-0')->toContain('sm:right-0')
         ->and($s->widthWrapperClasses())->toBe('w-full sm:w-screen')
-        ->and($s->panelClasses())->toContain('max-h-[85vh]')->toContain('sm:h-full')
+        ->and($s->panelClasses())->toContain('max-h-[var(--wire-sheet-h,92dvh)]')->toContain('sm:h-full')
         // The rounding only shows where the panel clips its own children.
         ->and($s->panelClasses())->toContain('overflow-hidden')->toContain('sm:overflow-visible')
-        ->and($s->translateEnterStart())->toContain('translate-y-full')->toContain('sm:translate-x-full')
+        ->and($s->translateEnterStart())->toContain('translate-y-full')->toContain('motion-reduce:translate-y-0')->toContain('sm:translate-x-full')
         ->and($s->translateEnterEnd())->toBe('translate-y-0 sm:translate-x-0');
 });
 
@@ -72,4 +72,10 @@ it('resolves the width class responsively only for the bottom-sheet variant', fu
     // the bottom-sheet is full-width on mobile and caps above the breakpoint.
     expect((new SlideOverStyle(width: 'md'))->widthClass())->toBe('max-w-md')
         ->and((new SlideOverStyle(width: 'md', bottomSheetOnMobile: true))->widthClass())->toBe('sm:max-w-md');
+});
+
+it('carries a grabber only as a bottom sheet', function () {
+    expect((new SlideOverStyle(bottomSheetOnMobile: true, breakpoint: 'lg'))->hasGrabber())->toBeTrue()
+        ->and((new SlideOverStyle(bottomSheetOnMobile: true, breakpoint: 'lg'))->breakpoint())->toBe('lg')
+        ->and((new SlideOverStyle)->hasGrabber())->toBeFalse();
 });

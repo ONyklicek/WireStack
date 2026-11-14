@@ -21,10 +21,14 @@
     $typeable = $from->acceptsTypedInput();
     $hasError = $errors->has($fromPath) || $errors->has($untilPath);
     $controlId = $from->getId().'-range';
+    // Which preset was picked, kept by key beside the two dates (rememberPreset()).
+    $presetPath = $layout->getPresetStatePath();
 @endphp
 
 <div class="space-y-2">
-    @if($layout->getLabel())
+    {{-- hiddenLabel(): the surrounding surface already names the period (a
+         table filter's popover); the label stays as the trigger's aria-label. --}}
+    @if($layout->getLabel() && ! $layout->isLabelHidden())
         <label for="{{ $controlId }}" @class(['block text-sm font-medium text-gray-700 dark:text-gray-300', MobileSheet::hideBelow($breakpoint)])>
             {{ $layout->getLabel() }}
             @if($layout->isRequired())
@@ -48,6 +52,7 @@
             x-data="wireDateRangePicker({
                 from: $wire.entangle('{{ $from->getWireModelAttribute() }}').live,
                 to: $wire.entangle('{{ $until->getWireModelAttribute() }}').live,
+                presetPath: @js($presetPath),
                 firstDayOfWeek: @js($from->getFirstDayOfWeek()),
                 disabledDates: @js($from->getDisabledDates()),
                 minDay: @js(\NyonCode\WireCore\Foundation\Support\DateBoundary::datePart($minBound)),
@@ -62,7 +67,7 @@
                 displayFormat: @js($from->getDisplayFormat()),
                 typedFormat: @js($from->getTypedFormat()),
                 typeable: @js($typeable),
-                presets: @js(collect($presets)->map(fn (array $range, string $label): array => ['label' => $label, 'from' => $range[0], 'to' => $range[1]])->values()),
+                presets: @js(collect($presets)->map(fn (array $range, string $label): array => ['label' => $label, 'from' => $range[0], 'to' => $range[1], 'key' => $layout->getPresetKey($label)])->values()),
             })"
             class="relative"
         >
@@ -295,13 +300,14 @@
                 x-data="{
                     from: @entangle($fromPath).live,
                     to: @entangle($untilPath).live,
+                    @if($presetPath) preset: @entangle($presetPath).live, @endif
                 }"
                 class="flex flex-wrap gap-2"
             >
                 @foreach($presets as $label => $range)
                     <button
                         type="button"
-                        @click="from = @js($range[0]); to = @js($range[1])"
+                        @click="from = @js($range[0]); to = @js($range[1]);@if($presetPath) preset = @js($layout->getPresetKey($label));@endif"
                         data-testid="form-date-range-{{ $fromPath }}-preset-{{ $loop->index }}"
                         class="rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-600 hover:border-primary-500 hover:text-primary-600 dark:border-gray-600 dark:text-gray-300 dark:hover:text-primary-400"
                     >{{ $label }}</button>

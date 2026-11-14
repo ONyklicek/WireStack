@@ -35,6 +35,7 @@ use NyonCode\WireCore\Foundation\View\ExtraAttributes;
 use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireTable\Concerns\CanBeEdited;
 use NyonCode\WireTable\Concerns\CanBeFiltered;
+use NyonCode\WireTable\Concerns\CanBePinned;
 use NyonCode\WireTable\Concerns\CanBeSearchable;
 use NyonCode\WireTable\Concerns\CanBeSorted;
 use NyonCode\WireTable\Concerns\CanBeSummarized;
@@ -59,6 +60,7 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
     use CanBeCopyable;
     use CanBeEdited;
     use CanBeFiltered;
+    use CanBePinned;
     use CanBeSearchable;
     use CanBeSorted;
     use CanBeSummarized;
@@ -519,6 +521,12 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         $this->visibleForRecordCallback = $callback;
 
         return $this;
+    }
+
+    /** Whether some records may hide this column's cell ({@see visibleForRecord()}). */
+    public function hasRecordVisibility(): bool
+    {
+        return $this->visibleForRecordCallback !== null;
     }
 
     /**
@@ -1031,13 +1039,23 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
         $namespacedView = "wire-table::$viewName";
         $resolvedView = view()->exists($namespacedView) ? $namespacedView : $viewName;
 
-        return view($resolvedView, [
+        $data = [
             'column' => $this,
             'filter' => $filter,
             'value' => $value,
             'statePath' => $statePath ?? 'tableState.columnFilters.'.$this->getName(),
             'controlClasses' => FilterControl::classes(),
-        ])->render();
+        ];
+
+        // With a choice of comparison the state is {value, operator}: one
+        // wrapper draws the picker and hands the filter's own control `.value`.
+        if ($filter->hasOperatorPicker()) {
+            return view('wire-table::tables.columns.partials.filter-with-operator', $data + [
+                'valueView' => $resolvedView,
+            ])->render();
+        }
+
+        return view($resolvedView, $data)->render();
     }
 
     public function toHtml(): string

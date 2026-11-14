@@ -143,6 +143,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Signing In As Somebody Else
+    |--------------------------------------------------------------------------
+    |
+    | "Sign in as" on the users list, and a way back in the top bar. Off by
+    | default, and then only for a person holding `permission`: acting as any
+    | user is the most powerful thing these screens can hand out. A super-admin
+    | is only a super-admin's to sign in as, and nobody chains one impersonation
+    | into another. `return_to` is where both steps land.
+    |
+    */
+    'impersonation' => [
+        'enabled' => env('WIRE_USERS_IMPERSONATION', false),
+        'permission' => 'users.impersonate',
+        'return_to' => '/',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Avatars
     |--------------------------------------------------------------------------
     |

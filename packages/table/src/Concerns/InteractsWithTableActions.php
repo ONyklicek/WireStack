@@ -5,14 +5,22 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
+use Livewire\Attributes\On;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
 use NyonCode\WireCore\Core\Events\TableRefreshed;
+use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Support\RecordVersion;
 use NyonCode\WireCore\Notifications\Notification;
+use NyonCode\WireCore\Notifications\NotificationAction;
 use NyonCode\WireCore\Notifications\NotificationManager;
+use NyonCode\WireTable\Columns\SelectColumn;
 
 /**
  * Backing the shared action engine with the table's state container.
@@ -218,6 +226,105 @@ trait InteractsWithTableActions
     }
 
     /**
+     * After an `undoable()` action, offer to restore what it soft-deleted.
+     *
+     * What can be taken back is decided here, after the action, from the
+     * records themselves: those it left trashed. A model without soft deletes,
+     * or one the action deleted for good, has nothing to restore, and the
+     * ordinary notice goes out instead.
+     *
+     * The keys are not trusted to the browser. They sit in the cache under a
+     * random token for the undo window, bound to this component instance and
+     * this user, and the toast's button carries only the token.
+     */
+    protected function offerActionUndo(mixed $action, mixed $context): bool
+    {
+        $seconds = method_exists($action, 'getUndoSeconds') ? $action->getUndoSeconds() : null;
+
+        if ($seconds === null) {
+            return false;
+        }
+
+        $records = $context instanceof Model ? [$context] : (is_iterable($context) ? $context : []);
+        $trashed = [];
+        $model = null;
+
+        foreach ($records as $record) {
+            if ($record instanceof Model && method_exists($record, 'trashed') && $record->trashed()) {
+                $model ??= $record::class;
+
+                if ($record::class === $model) {
+                    $trashed[] = $record->getKey();
+                }
+            }
+        }
+
+        if ($trashed === []) {
+            return false;
+        }
+
+        $token = Str::random(40);
+
+        Cache::put('wire-table-undo:'.$token, [
+            'owner' => static::class.':'.$this->getId(),
+            'user' => Auth::id(),
+            'model' => $model,
+            'keys' => $trashed,
+        ], $seconds);
+
+        $message = method_exists($action, 'getSuccessNotificationMessage') ? $action->getSuccessNotificationMessage($context) : null;
+
+        $this->sendNotification(
+            Notification::make('success', $message ?: trans_choice('wire-table::messages.undo_deleted', count($trashed), ['count' => count($trashed)]))
+                ->duration($seconds * 1000)
+                ->action(NotificationAction::make(Trans::get('wire-table::messages.undo'), 'wire-table-undo')->payload(['token' => $token])),
+        );
+
+        return true;
+    }
+
+    /**
+     * Take an `undoable()` action back: restore the records it soft-deleted.
+     *
+     * Every table on the page hears the event; only the one that offered it,
+     * for the same user, within the window, acts. Each record is asked the
+     * policy's `restore` where the model has one.
+     */
+    #[On('wire-table-undo')]
+    public function undoTableAction(string $token): void
+    {
+        $offer = Cache::pull('wire-table-undo:'.$token);
+
+        if (! is_array($offer)
+            || ($offer['owner'] ?? null) !== static::class.':'.$this->getId()
+            || ($offer['user'] ?? null) !== Auth::id()
+            || ! is_string($offer['model'] ?? null)
+            || ! class_exists($offer['model'])) {
+            return;
+        }
+
+        /** @var class-string<Model> $model */
+        $model = $offer['model'];
+        $restored = 0;
+
+        foreach ($model::query()->withTrashed()->whereKey((array) ($offer['keys'] ?? []))->get() as $record) {
+            $policy = Gate::getPolicyFor($record);
+
+            if (! method_exists($record, 'trashed') || ! $record->trashed()
+                || ($policy !== null && method_exists($policy, 'restore') && ! Gate::allows('restore', $record))) {
+                continue;
+            }
+
+            $record->restore();
+            $restored++;
+        }
+
+        $this->afterActionExecuted();
+
+        $this->sendNotification(Notification::make('success', trans_choice('wire-table::messages.undo_restored', $restored, ['count' => $restored])));
+    }
+
+    /**
      * Refresh the cached table instance after a successful action.
      */
     protected function afterActionExecuted(): void
@@ -314,6 +421,11 @@ trait InteractsWithTableActions
             }
         }
 
+        // A SelectColumn's "create option" row opens a modal action of its own.
+        if (str_starts_with($name, 'select-column-create-option:')) {
+            return $this->findSelectColumnCreateAction($name);
+        }
+
         // Fall back to actions a record action carries in its own right — a
         // behaviour-only record action (its own callback, no toolbar button) is
         // not in getActions(), yet its whole-row trigger must still execute it.
@@ -323,6 +435,39 @@ trait InteractsWithTableActions
             if ($found instanceof Action) {
                 return $found;
             }
+        }
+
+        return null;
+    }
+
+    /**
+     * The create-option action of the SelectColumn it is named after. The new
+     * key is written into the row's cell through updateTableCell() — the same
+     * guard, validation and hooks as a pick from the list — and announced, so
+     * every trigger of the column can show it at once.
+     */
+    private function findSelectColumnCreateAction(string $name): ?Action
+    {
+        foreach ($this->getTable()->getColumns() as $column) {
+            if (! $column instanceof SelectColumn || $column->getCreateOptionActionName() !== $name || ! $column->canView()) {
+                continue;
+            }
+
+            return $column->getCreateOptionAction(function (Model $record, mixed $value) use ($column): void {
+                $result = $this->updateTableCell($record->getKey(), $column->getName(), $value);
+
+                if (! $result['success']) {
+                    $this->sendNotification(Notification::make('error', $result['message'] ?? __('wire-table::messages.save_failed')));
+
+                    return;
+                }
+
+                $options = $column->getOptions();
+
+                foreach ((array) $value as $key) {
+                    $this->dispatch('select-option-created', statePath: $column->getCellPanelKey(), value: $key, label: $options[(string) $key] ?? (string) $key);
+                }
+            });
         }
 
         return null;

@@ -1,4 +1,6 @@
 import { computePosition, autoUpdate, flip, shift, offset, size } from '@floating-ui/dom'
+import { registerScrollLock } from './scroll-lock.js'
+import { registerSheetGesture } from './sheet.js'
 
 import { syncNodeOf } from './editable/sync'
 import { laneKey, runInLane } from './editable/lanes'
@@ -332,6 +334,22 @@ const wireDropdown = (config = {}, items = null) => ({
         this.stop()
     },
 
+    // Escape, bound on the window (`@keydown.escape.window="dismiss($event)"`).
+    // A panel nested inside this one — a select's touch sheet, a picker — takes
+    // the key first, on its own element, and says so with preventDefault(); the
+    // window hears it afterwards and must leave this panel open, or one Escape
+    // shuts both. Focus goes back to the trigger the panel was opened from, so a
+    // keyboard user is not left on <body>.
+    dismiss(event) {
+        if (! this.open || event?.defaultPrevented) {
+            return
+        }
+
+        event?.preventDefault()
+        this.close()
+        this.$refs.trigger?.focus({ preventScroll: true })
+    },
+
     stop() {
         if (this._cleanup) {
             this._cleanup()
@@ -505,61 +523,6 @@ const wireFlyout = (config = {}) => {
     }
 }
 
-/**
- * `x-sheet-dismiss="<closeExpression>"` — drag-to-dismiss for a mobile bottom
- * sheet. Placed on the sheet's grabber handle; dragging the panel down past a
- * threshold runs the expression (the component's own close). Only active below
- * the sm breakpoint (the panel is a sheet); a no-op on desktop and for anything
- * but a downward drag, so it never fights the list's own scrolling.
- */
-const registerSheetDismiss = (Alpine) => {
-    Alpine.directive('sheet-dismiss', (el, { expression }, { evaluateLater, cleanup }) => {
-        const runClose = evaluateLater(expression)
-        // The grabber is the first child of the sheet panel; drag that panel.
-        const panel = () => el.parentElement
-        // Sheet breakpoint (px) is injected via data-sheet-bp; default 640 (sm).
-        const isMobile = () => window.matchMedia(`(max-width: ${parseFloat(el.dataset.sheetBp) || 639.98}px)`).matches
-
-        let startY = 0
-        let delta = 0
-        let dragging = false
-
-        const onStart = (e) => {
-            if (! isMobile()) return
-            dragging = true
-            delta = 0
-            startY = e.touches[0].clientY
-            const p = panel()
-            if (p) p.style.transition = 'none'
-        }
-        const onMove = (e) => {
-            if (! dragging) return
-            delta = Math.max(0, e.touches[0].clientY - startY)
-            const p = panel()
-            if (p) p.style.transform = `translateY(${delta}px)`
-        }
-        const onEnd = () => {
-            if (! dragging) return
-            dragging = false
-            const p = panel()
-            if (p) {
-                p.style.transition = ''
-                p.style.transform = ''
-            }
-            // Past ~90px of pull-down → dismiss; otherwise it snaps back.
-            if (delta > 90) runClose(() => {})
-        }
-
-        el.addEventListener('touchstart', onStart, { passive: true })
-        el.addEventListener('touchmove', onMove, { passive: true })
-        el.addEventListener('touchend', onEnd)
-        cleanup(() => {
-            el.removeEventListener('touchstart', onStart)
-            el.removeEventListener('touchmove', onMove)
-            el.removeEventListener('touchend', onEnd)
-        })
-    })
-}
 
 /**
  * `x-focus-trap="<openExpression>"` — accessibility for a mobile bottom sheet.
@@ -689,6 +652,17 @@ const wireWizard = (initial = 0) => ({
  * cells layer save-on-blur/enter, escape-to-revert, dirty tracking and live
  * validation on top via config flags.
  */
+// A multiple select's value is a list, and two lists are never `===`: compared
+// by reference the cell would read as unsaved forever (and the leave guard would
+// stop every navigation) and every render would count as a change from the server.
+const sameCellValue = (a, b) => {
+    if (Array.isArray(a) && Array.isArray(b)) {
+        return a.length === b.length && a.every((v, i) => String(v) === String(b[i]))
+    }
+
+    return a === b
+}
+
 const wireEditableCell = (config = {}) => ({
     value: config.value,
     serverValue: config.value,
@@ -748,7 +722,7 @@ const wireEditableCell = (config = {}) => ({
     _validateSeq: 0,
 
     get dirty() {
-        return this.value !== this.serverValue
+        return ! sameCellValue(this.value, this.serverValue)
     },
 
     parse(raw) {
@@ -850,7 +824,7 @@ const wireEditableCell = (config = {}) => ({
             for (const m of mutations) {
                 if (m.attributeName === 'data-server-value' || m.attributeName === 'data-record-version') {
                     const next = this.parse(this._sync.dataset.serverValue)
-                    if (next !== this.serverValue) {
+                    if (! sameCellValue(next, this.serverValue)) {
                         this.syncFromServer(next, this._sync.dataset.recordVersion)
 
                         continue
@@ -1178,8 +1152,9 @@ const registerWireCoreDropdown = () => {
     // The searchable-select combobox is core's because seven surfaces across
     // forms and table include `wire-core::partials.searchable-select`.
     window.Alpine.data('wireSearchableSelect', wireSearchableSelect)
-    registerSheetDismiss(window.Alpine)
+    registerSheetGesture(window.Alpine)
     registerFocusTrap(window.Alpine)
+    registerScrollLock(window.Alpine)
 }
 
 if (window.Alpine) {

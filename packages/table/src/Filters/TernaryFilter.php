@@ -140,6 +140,33 @@ class TernaryFilter extends Filter
         ];
     }
 
+    /** A condition about a yes/no field picks one of the two. */
+    public function builderInput(): string
+    {
+        return 'boolean';
+    }
+
+    /** "Only this value" on a yes/no cell is the matching option; there is nothing to exclude to. */
+    public function stateForCellValue(mixed $value, bool $exclude = false): mixed
+    {
+        $bool = $this->normalizeValue(is_bool($value) ? $value : (is_numeric($value) ? (int) $value : $value));
+
+        if ($exclude || ! is_bool($bool)) {
+            return null;
+        }
+
+        return $bool ? 'true' : 'false';
+    }
+
+    /**
+     * Inside a phone's bottom sheet (a column popover) the touch list is the
+     * default: a dropdown would float over the very sheet it opened from.
+     */
+    protected function defaultTouchOnMobile(): bool
+    {
+        return $this->insideSheet || (bool) config('wire-core.mobile.touch', false);
+    }
+
     public function inlineView(): string
     {
         return 'tables.columns.partials.filter-boolean';

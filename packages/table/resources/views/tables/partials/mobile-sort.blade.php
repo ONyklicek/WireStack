@@ -20,7 +20,7 @@
 <div class="{{ $visibleClass }}">
     <div
             x-data="wireDropdown({ placement: 'bottom-end'{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} })"
-            @keydown.escape.window="close()"
+            @keydown.escape.window="dismiss($event)"
             class="relative"
     >
         <button
@@ -55,6 +55,7 @@
                             x-transition:leave-start="opacity-100"
                             x-transition:leave-end="opacity-0"
                             @click="close()"
+                            data-sheet-backdrop
                             class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70 {{ $sheetBackdrop }}"
                     ></div>
                 @endif

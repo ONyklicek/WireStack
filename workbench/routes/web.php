@@ -29,6 +29,7 @@ use Workbench\App\Livewire\Previews\TablePreview;
 use Workbench\App\Livewire\Previews\WidgetPreview;
 use Workbench\App\Livewire\Resources\CreateInvoice;
 use Workbench\App\Livewire\Resources\EditInvoice;
+use Workbench\App\Livewire\Resources\EditInvoiceWithDraft;
 use Workbench\App\Livewire\Resources\ListDocuments;
 use Workbench\App\Livewire\Resources\ListInvoices;
 use Workbench\App\Livewire\Resources\ListTasks;
@@ -92,12 +93,18 @@ $screens = [
     'table-saved-views' => ['title' => 'Wire Table Saved Views', 'subtitle' => 'Save the current sort, search, filters and columns under a name, then switch between them.', 'component' => TablePreview::class, 'variant' => 'saved-views'],
     'table-split-columns' => ['title' => 'Wire Table Split Columns', 'subtitle' => 'A split registered under a group name: the header is sortable because a child is, so the click must order by that child and not by the group.', 'component' => TablePreview::class, 'variant' => 'split-columns'],
     'table-column-filters' => ['title' => 'Wire Table Column Filters', 'subtitle' => 'Per-column header filters: text, single-select, multi-select, and boolean.', 'component' => TablePreview::class, 'variant' => 'column-filters'],
+    'table-column-filters-popover' => ['title' => 'Wire Table Column Filters · popover', 'subtitle' => 'ColumnFilterLayout::Popover: a funnel beside each filterable label opens its filter — operator, value, Clear — and marks the column while it is filtered.', 'component' => TablePreview::class, 'variant' => 'column-filters-popover'],
+    'table-column-filters-row-operators' => ['title' => 'Wire Table Column Filters · row with operators', 'subtitle' => 'The filter row (the default layout) with operator pickers, counts and date presets in the header cells.', 'component' => TablePreview::class, 'variant' => 'column-filters-row-operators'],
+    'table-column-filters-value-list' => ['title' => 'Wire Table Column Filters · value list', 'subtitle' => 'filterAsValueList(): the role options read from the data, most common first, each with its count.', 'component' => TablePreview::class, 'variant' => 'column-filters-value-list'],
+    'table-filters-above' => ['title' => 'Wire Table Filters · above the rows', 'subtitle' => 'FiltersLayout::AboveContentCollapsible in three columns, deferred behind Apply: an operator picker, a counted status list and date presets.', 'component' => TablePreview::class, 'variant' => 'filters-above'],
     'table-empty-state' => ['title' => 'Wire Table Empty State', 'subtitle' => 'The empty state with a way out of it: a link action, and one that opens a modal form — record-less, and repeated in the stacked card layout.', 'component' => TablePreview::class, 'variant' => 'empty-state'],
     'table-column-surfaces' => ['title' => 'Wire Table Column Surfaces', 'subtitle' => 'ColorColumn (swatch, and a value it refuses to draw), RatingColumn with halves, TagsColumn with a "+N" overflow chip, and an inline-editable CheckboxColumn.', 'component' => TablePreview::class, 'variant' => 'column-surfaces'],
     'table-trashed-filter' => ['title' => 'Wire Table Trashed Filter', 'subtitle' => 'The soft-delete scope switch: live records, live + deleted, or deleted only.', 'component' => TablePreview::class, 'variant' => 'trashed-filter'],
     'table-image-gallery' => ['title' => 'Wire Table Image Gallery', 'subtitle' => 'ImageColumn: single image, an array as a gallery, and a stacked one capped with a "+N" chip.', 'component' => TablePreview::class, 'variant' => 'image-gallery'],
     'table-editable-errors' => ['title' => 'Wire Table Editable Errors', 'subtitle' => 'A TextInputColumn whose rule fails: the message lies under the input, and above it on the last row, where the scroll box would clip it.', 'component' => TablePreview::class, 'variant' => 'editable-errors'],
     'table-inactive-rows' => ['title' => 'Wire Table Inactive Rows', 'subtitle' => 'A deactivated user: the row is dimmed and struck through, every editable cell on it refuses to open, its checkbox is inert — and the action that reactivates it still works.', 'component' => TablePreview::class, 'variant' => 'inactive-rows'],
+    'table-select-cells' => ['title' => 'Wire Table Select Cells', 'subtitle' => 'SelectColumn as the shared combobox: a searchable status, a native priority, an owner with a create-option form, multiple labels. One list per column, cloned on first open.', 'component' => TablePreview::class, 'variant' => 'select-cells'],
+    'table-column-layout' => ['title' => 'Wire Table Column Layout', 'subtitle' => 'resizableColumns() and pinnableColumns(): drag a header edge, pin a column from the view menu; Name is pinned by the developer.', 'component' => TablePreview::class, 'variant' => 'column-layout'],
     'table-editable-fill' => ['title' => 'Wire Table Editable + Fill', 'subtitle' => 'Inline-editable text, select and toggle cells with the Excel-style fill handle. Email opts out via ->fillable(false).', 'component' => TablePreview::class, 'variant' => 'editable-fill'],
     'table-editable-fill-selectable' => ['title' => 'Wire Table Editable + Fill + Selection', 'subtitle' => 'The editable/fill table with selectable() on: the fill root nests inside the selection root and both gestures drag over the same rows.', 'component' => TablePreview::class, 'variant' => 'editable-fill-selectable'],
     'table-editable-fill-paged' => ['title' => 'Wire Table Editable + Fill + Pagination', 'subtitle' => 'Inline editing next to a page-size select: one Livewire commit carries both a cell edit (which skips the render) and the per-page change (which needs one).', 'component' => TablePreview::class, 'variant' => 'editable-fill-paged'],
@@ -170,6 +177,8 @@ $fieldPreviews = [
     'rich-editor' => 'Rich Editor',
     'markdown-editor' => 'Markdown Editor',
     'select' => 'Select',
+    'select-long' => 'Select · a long list in a sheet (detents)',
+    'select-long-search' => 'Select · a long list with a search in a sheet',
     'select-floating' => 'Select · floating on mobile (opt-out)',
     'select-bp-lg' => 'Select · per-component breakpoint lg',
     'native-on-mobile' => 'Native control on a phone only',
@@ -225,6 +234,7 @@ $resourcePages = [
     'resource-list' => ['Invoices (list)', 'A resource\'s ListPage: columns, search and sort declared once on the resource.', ListInvoices::class, []],
     'resource-create' => ['Invoice (create)', 'CreatePage over the same form() the edit page uses.', CreateInvoice::class, []],
     'resource-edit' => ['Invoice (edit)', 'EditPage seeded from the record, with the line-items relation manager embedded.', EditInvoice::class, ['record' => 1]],
+    'resource-edit-draft' => ['Invoice (edit, draft kept)', 'The same EditPage with remembersDraft(): unsaved input is offered back after a reload.', EditInvoiceWithDraft::class, ['record' => 1]],
     'resource-view' => ['Invoice (view)', 'ViewPage: a read-only infolist plus the same relation manager.', ViewInvoice::class, ['record' => 1]],
     'resource-manage' => ['Teams (manage)', 'ManagePage: the list, with create and edit in modals over it.', ManageTeams::class, []],
     'task-board' => ['Tasks (board)', 'A Page composing WithBoard: the tasks in lanes by status, dragged between them.', TaskBoard::class, []],

@@ -8,6 +8,9 @@ use Closure;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use NyonCode\WireCore\Core\Capabilities\Capability;
+use NyonCode\WireCore\Foundation\Enums\DatePreset;
+use NyonCode\WireTable\Enums\FilterOperator;
+use NyonCode\WireTable\Filters\DateFilter;
 use NyonCode\WireTable\Filters\Filter;
 use NyonCode\WireTable\Filters\SelectFilter;
 use NyonCode\WireTable\Filters\TextFilter;
@@ -117,6 +120,37 @@ trait CanBeFiltered
         return $this;
     }
 
+    /**
+     * Show beside each option of this column's select filter how many records
+     * picking it would leave, counted under the other filters.
+     */
+    public function filterWithCounts(bool $condition = true): static
+    {
+        $filter = $this->ensureFilter();
+
+        if ($filter instanceof SelectFilter) {
+            $filter->withCounts($condition);
+        }
+
+        return $this;
+    }
+
+    /**
+     * A multi-select header filter whose options are the column's own distinct
+     * values, read from the data with a count each — a spreadsheet's "set
+     * filter". Capped at `$limit` values, most common first.
+     */
+    public function filterAsValueList(int $limit = 100, bool $withCounts = true): static
+    {
+        $filter = $this->filterFactory()->select($this->name, [], null, multiple: true);
+
+        if ($filter instanceof SelectFilter) {
+            $filter->optionsFromColumn(true, $limit)->withCounts($withCounts)->searchable();
+        }
+
+        return $this->filter($filter);
+    }
+
     /** Add a single-date column header filter (optional min/max bounds). */
     public function filterAsDate(string|DateTimeInterface|null $minDate = null, string|DateTimeInterface|null $maxDate = null): static
     {
@@ -127,6 +161,27 @@ trait CanBeFiltered
     public function filterAsDateRange(string|DateTimeInterface|null $minDate = null, string|DateTimeInterface|null $maxDate = null): static
     {
         return $this->filter($this->filterFactory()->date($this->name, $minDate, $maxDate, range: true));
+    }
+
+    /**
+     * Offer named date ranges — today, last 7 days, this month… — on this
+     * column's date filter (turning it into a range). `true` for all of them,
+     * or a list of {@see DatePreset} cases / values.
+     *
+     * @param  array<int, DatePreset|string>|bool  $presets
+     */
+    public function filterPresets(array|bool $presets = true): static
+    {
+        $filter = $this->filter;
+
+        if (! $filter instanceof DateFilter) {
+            $filter = DateFilter::make($this->name)->range();
+            $this->filter($filter);
+        }
+
+        $filter->presets($presets);
+
+        return $this;
     }
 
     /** Configure as a number range column filter (min/max). */
@@ -182,6 +237,33 @@ trait CanBeFiltered
         return $this->filter !== null && $this->filter->isMultiple();
     }
 
+    /**
+     * The empty state slot this column's header filter binds to: `[]` for a
+     * multi-select, null for a single value, and `{value, operator}` once the
+     * filter offers a choice of comparison.
+     */
+    public function initialFilterState(): mixed
+    {
+        $empty = $this->filter?->emptyState();
+
+        return $this->filter?->hasOperatorPicker()
+            ? ['value' => $empty, 'operator' => $this->filter->getDefaultOperator()->value]
+            : $empty;
+    }
+
+    /**
+     * Let the user choose how this column's header filter compares — `true` for
+     * every operator the filter type supports, or a list of them.
+     *
+     * @param  array<int, FilterOperator|string>|bool  $operators
+     */
+    public function filterOperators(array|bool $operators = true): static
+    {
+        $this->ensureFilter()->operators($operators);
+
+        return $this;
+    }
+
     /** Set the placeholder for this column's header-filter control. */
     public function filterPlaceholder(?string $placeholder): static
     {
@@ -206,13 +288,17 @@ trait CanBeFiltered
      */
     public function applyFilter(mixed $query, mixed $value): mixed
     {
-        if ($value === null || $value === '' || $value === []) {
+        $filter = $this->resolveFilter()?->forState($value);
+
+        if ($filter === null || ! $filter->canView()) {
             return $query;
         }
 
-        $filter = $this->resolveFilter();
+        // The header state is the value itself, or {value, operator} once the
+        // filter offers a choice of comparison.
+        $value = $filter->extractValue($value);
 
-        if ($filter === null || ! $filter->canView()) {
+        if ($value === null || $value === '' || $value === []) {
             return $query;
         }
 

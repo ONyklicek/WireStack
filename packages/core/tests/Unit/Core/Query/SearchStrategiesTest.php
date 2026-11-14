@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use NyonCode\WireCore\Core\Query\Search\LikePattern;
+use NyonCode\WireCore\Core\Query\Search\LikePredicate;
 use NyonCode\WireCore\Core\Query\SearchClause;
 use NyonCode\WireCore\Core\Query\Strategies\MySqlSearchStrategy;
 use NyonCode\WireCore\Core\Query\Strategies\PostgresSearchStrategy;
@@ -238,4 +239,48 @@ it('falls back to LIKE for anything else', function () {
     // portable answer, and a driver this does not know is not a reason to fail.
     expect(strategyFor('sqlite'))->toBeInstanceOf(SqliteSearchStrategy::class)
         ->and(strategyFor('sqlsrv'))->toBeInstanceOf(SqliteSearchStrategy::class);
+});
+
+// ── The filter's predicate ───────────────────────────────────
+
+/*
+ * LikePredicate::whereMatches() is what a "contains" / "starts with" filter
+ * constrains with: AND-ed, optionally negated, and matched the way the search
+ * box matches on the same engine.
+ */
+function filterPredicateFor(string $driver, bool $not = false): string
+{
+    config()->set("database.connections.predicate_{$driver}", [
+        'driver' => $driver,
+        'host' => '127.0.0.1',
+        'database' => 'nothing',
+        'username' => 'nobody',
+        'password' => '',
+    ]);
+
+    $model = new class extends Model
+    {
+        protected $table = 'strategy_test_users';
+    };
+
+    $builder = $model->setConnection("predicate_{$driver}")->newQuery();
+    LikePredicate::whereMatches($builder, 'name', LikePattern::contains('50%'), not: $not);
+
+    return $builder->toSql();
+}
+
+it('matches a filter case-insensitively on postgres, with the escape clause', function () {
+    expect(filterPredicateFor('pgsql'))->toContain('CAST("name" AS TEXT) ILIKE ?'." ESCAPE '!'")
+        ->and(filterPredicateFor('pgsql', not: true))->toContain('NOT ILIKE');
+});
+
+it('matches a filter with LIKE elsewhere, with the escape clause', function () {
+    expect(filterPredicateFor('mysql'))->toContain('`name` LIKE ?'." ESCAPE '!'")
+        ->and(filterPredicateFor('mysql'))->not->toContain('ILIKE')
+        ->and(filterPredicateFor('sqlite', not: true))->toContain('"name" NOT LIKE ?');
+});
+
+it('escapes a literal per cent in the filter patterns', function () {
+    expect(LikePattern::startsWith('50%'))->toBe('50!%%')
+        ->and(LikePattern::endsWith('a_b'))->toBe('%a!_b');
 });

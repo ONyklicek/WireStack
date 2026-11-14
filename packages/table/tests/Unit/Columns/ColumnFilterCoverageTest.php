@@ -177,14 +177,14 @@ it('applies every text-filter operator', function () {
     $cases = [
         'equals' => '"title" =',
         '=' => '"title" =',
-        'starts_with' => 'like',
-        'ends_with' => 'like',
+        'starts_with' => "LIKE ? ESCAPE '!'",
+        'ends_with' => "LIKE ? ESCAPE '!'",
         '>' => '"title" >',
         '>=' => '"title" >=',
         '<' => '"title" <',
         '<=' => '"title" <=',
         '!=' => '"title" !=',
-        'like' => 'like', // default branch
+        'like' => "LIKE ? ESCAPE '!'", // default branch
     ];
 
     foreach ($cases as $operator => $fragment) {

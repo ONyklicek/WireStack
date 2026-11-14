@@ -37,7 +37,9 @@ it('runs a TextFilter query callback ahead of the operator match', function () {
 
 it('maps every TextFilter operator to a planner definition', function () {
     expect(TextFilter::make('t')->operator('ends_with')->toPlannerDefinitions('x')[0]->value)->toBe('%x')
-        ->and(TextFilter::make('t')->operator('!=')->toPlannerDefinitions('x')[0]->operator)->toBe('!=')
+        // "Does not equal" keeps NULL rows, which one `!=` clause drops — the
+        // filter constrains the query itself (see FilterOperatorTest).
+        ->and(TextFilter::make('t')->operator('!=')->toPlannerDefinitions('x'))->toBe([])
         ->and(TextFilter::make('t')->operator('>')->toPlannerDefinitions('5')[0]->operator)->toBe('>')
         ->and(TextFilter::make('t')->toPlannerDefinitions('')[0] ?? null)->toBeNull();
 });

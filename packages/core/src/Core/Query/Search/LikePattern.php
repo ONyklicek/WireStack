@@ -42,6 +42,18 @@ final class LikePattern
         return '%'.self::escape($term, $wildcards).'%';
     }
 
+    /** A "starts with" pattern, the term's metacharacters escaped. */
+    public static function startsWith(string $term): string
+    {
+        return self::escape($term).'%';
+    }
+
+    /** An "ends with" pattern, the term's metacharacters escaped. */
+    public static function endsWith(string $term): string
+    {
+        return '%'.self::escape($term);
+    }
+
     /**
      * Escape the LIKE metacharacters in a raw term.
      */

@@ -24,6 +24,7 @@
     x-cloak
     x-transition.opacity.duration.150ms
     @click="open = false; activeIndex = -1"
+    data-sheet-backdrop
     class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70 {{ MobileSheet::showBelow($mobileBreakpoint) }}"
 ></div>
 
@@ -34,13 +35,13 @@
     role="dialog"
     aria-modal="true"
     @if($sheetTitle) aria-label="{{ $sheetTitle }}" @endif
-    @keydown.escape="open = false; activeIndex = -1"
+    @keydown.escape="open && $event.preventDefault(); open = false; activeIndex = -1"
     x-transition:enter="transition ease-out duration-200"
-    x-transition:enter-start="translate-y-full"
+    x-transition:enter-start="translate-y-full motion-reduce:translate-y-0"
     x-transition:enter-end="translate-y-0"
     x-transition:leave="transition ease-in duration-150"
     x-transition:leave-start="translate-y-0"
-    x-transition:leave-end="translate-y-full"
+    x-transition:leave-end="translate-y-full motion-reduce:translate-y-0"
     {{-- A searchable list takes the full height, so it does not jump as the
          search narrows it; a short list sits at the height of its rows, the
          way an iOS sheet rests at its content. --}}
@@ -54,7 +55,9 @@
     style="display: none;"
 >
     <div @class(['flex flex-col', 'h-full' => $showSearch, 'max-h-[calc(100dvh-3rem)]' => ! $showSearch])>
-        @include('wire-core::partials.sheet-grabber', ['dismiss' => 'open = false; activeIndex = -1', 'breakpoint' => $mobileBreakpoint])
+        {{-- 'large': the touch list is a full sheet by design (a search would
+             otherwise make it jump as the list narrows). --}}
+        @include('wire-core::partials.sheet-grabber', ['dismiss' => 'open = false; activeIndex = -1', 'breakpoint' => $mobileBreakpoint, 'detents' => 'large'])
 
         <div class="flex items-center justify-between gap-3 px-4 pb-2">
             <div class="min-w-0">

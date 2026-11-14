@@ -1,6 +1,33 @@
 import { searchMatcher } from '../support/search'
 
 /**
+ * A shared panel's options, parsed once per version of its markup. Every
+ * trigger of a table column reads the same <template>; a morph that changes the
+ * list changes the attribute, and the next reader parses it again.
+ */
+const panelData = new WeakMap()
+
+const readPanel = (template) => {
+    const raw = template.dataset.options ?? '[]'
+    const disabled = template.dataset.disabledValues ?? '[]'
+    const cached = panelData.get(template)
+    if (cached && cached.raw === raw && cached.disabled === disabled) return cached
+
+    const parsed = { raw, disabled, pairs: JSON.parse(raw), disabledValues: JSON.parse(disabled).map(String) }
+    panelData.set(template, parsed)
+
+    return parsed
+}
+
+const sameSelection = (a, b) => {
+    if (Array.isArray(a) || Array.isArray(b)) {
+        return JSON.stringify((a ?? []).map(String)) === JSON.stringify((b ?? []).map(String))
+    }
+
+    return (a ?? null) === (b ?? null)
+}
+
+/**
  * The canonical searchable-select combobox (Teleport + Floating UI).
  *
  * One shared owner for the dropdown consumed by wire-forms (`Select`,
@@ -11,6 +38,17 @@ import { searchMatcher } from '../support/search'
  * `selected` comes in from the x-data expression: `$wire.entangle` is an Alpine
  * magic and magics are in scope only there. `statePath` is passed as config as
  * well, because `fetchRemote()` and `upsertOption()` need it as a plain string.
+ *
+ * Two configurations serve an editable table cell, which writes through its own
+ * component rather than a Livewire property:
+ *
+ *  - `commit` — called with the new selection (a single select as it is picked,
+ *    a multiple one as its list closes, if it changed). `state` is then the
+ *    enclosing component's value, and the selection follows it whenever it
+ *    moves — a rollback, a conflict, a poll.
+ *  - `panel` — the id of a list drawn once for the whole column. It is cloned
+ *    into <body> the first time this instance opens, under this instance's
+ *    scope, and its options are read from it rather than from `initialOptions`.
  */
 const wireSearchableSelect = (config = {}) => ({
     open: false,
@@ -35,6 +73,10 @@ const wireSearchableSelect = (config = {}) => ({
     placeholder: config.placeholder ?? '',
     selected: config.state,
     statePath: config.statePath,
+    panelId: config.panel ?? null,
+    _panel: null,
+    _panelRaw: null,
+    _opened: null,
     selectId: config.selectId ?? 'searchable-select',
     sheetOnMobile: config.sheetOnMobile ?? false,
     sheetBreakpoint: config.sheetBreakpoint ?? null,
@@ -49,13 +91,37 @@ const wireSearchableSelect = (config = {}) => ({
 
     init() {
         const pairs = Array.isArray(config.initialOptions) ? config.initialOptions : Object.entries(config.initialOptions ?? {})
-        this.order = pairs.map(([value]) => String(value))
-        this.initialOptions = Object.fromEntries(pairs)
-        this.options = this.initialOptions
+        this.seed(pairs)
+
+        if (this.panelId) {
+            // The trigger's own id, for aria-activedescendant: the shared list
+            // is the same markup for every row, so it reads it from here.
+            this.selectId = this.$el.querySelector('[aria-haspopup=listbox]')?.id ?? this.selectId
+            // A created option is announced for the column, not for one cell.
+            this.statePath = this.panelId
+            this.loadPanelOptions()
+        }
+
+        if (config.commit) {
+            // The enclosing component owns the value; follow it, whoever moved it.
+            this.$watch(config.stateKey, (next) => {
+                if (! sameSelection(next, this.selected)) this.selected = next
+            })
+        }
 
         // Teleport + Floating UI: pin the listbox to the trigger while open,
         // tearing the auto-updater down on close.
         this.$watch('open', (open) => {
+            if (config.commit && this.multiple) {
+                if (open) {
+                    this._opened = this.selected
+                } else if (! sameSelection(this._opened, this.selected)) {
+                    this.commitSelection(this.selected)
+                }
+            }
+
+            if (open && this.panelId) this.mountPanel()
+
             if (open) {
                 this.touchNow = this.touch && window.matchMedia(`(max-width: ${this.touchBreakpoint}px)`).matches
                 // The touch sheet is fixed full-height: nothing to anchor, and
@@ -85,6 +151,80 @@ const wireSearchableSelect = (config = {}) => ({
         if (this.remote) {
             this.$watch('search', (value) => this.fetchRemote(value))
         }
+    },
+
+    /**
+     * Hand a selection to the enclosing component, then show what it holds.
+     * A cell that refuses the change (its own write is still out) keeps the
+     * value it had, and an unchanged value wakes no watcher.
+     */
+    commitSelection(value) {
+        config.commit(value)
+
+        const held = window.Alpine.evaluate(this.$el, config.stateKey)
+        if (! sameSelection(held, this.selected)) this.selected = held
+    },
+
+    seed(pairs) {
+        this.order = pairs.map(([value]) => String(value))
+        this.initialOptions = Object.fromEntries(pairs)
+        this.options = this.initialOptions
+    },
+
+    /** The column's shared list, looked up inside this component only: two tables may share a column name. */
+    panelTemplate() {
+        const root = this.$el.closest('[wire\\:id]') ?? document
+        const name = this.panelId.replace(/["\\]/g, '\\$&')
+
+        return root.querySelector(`template[data-select-panel="${name}"]`)
+    },
+
+    /** Read the shared panel's options — again only when its markup changed. */
+    loadPanelOptions() {
+        const template = this.panelTemplate()
+        if (! template) return
+
+        const data = readPanel(template)
+        if (this._panelRaw === data.raw + data.disabled) return
+        this._panelRaw = data.raw + data.disabled
+
+        // Options a create brought in stay until the list itself has them.
+        const extra = Object.entries(this.options).filter(([value]) => ! data.pairs.some(([v]) => String(v) === value))
+        this.seed([...data.pairs, ...extra])
+        this.disabledValues = data.disabledValues
+    },
+
+    /**
+     * Clone the shared list into <body> under this instance's scope — what
+     * x-teleport does for a list of one's own, step for step.
+     */
+    mountPanel() {
+        this.loadPanelOptions()
+        if (this._panel?.isConnected) return
+
+        const template = this.panelTemplate()
+        const clone = template?.content?.firstElementChild?.cloneNode(true)
+        if (! clone) return
+
+        const anchor = this.$el.querySelector('[aria-haspopup=listbox]') ?? this.$el
+        clone._x_teleportBack = anchor
+        clone.setAttribute('data-teleport-target', true)
+        // The scope itself: _x_teleportBack only leads x-ref, $clickedInside and
+        // Livewire's $wire back; reading a name walks the data stack, which
+        // this hands over exactly as x-teleport does.
+        window.Alpine.addScopeToNode(clone, {}, anchor)
+        this._panel = clone
+        window.Alpine.mutateDom(() => {
+            document.body.appendChild(clone)
+            window.Alpine.initTree(clone)
+        })
+    },
+
+    destroy() {
+        if (! this._panel) return
+        window.Alpine.destroyTree?.(this._panel)
+        this._panel.remove()
+        this._panel = null
     },
 
     async fetchRemote(search) {
@@ -192,19 +332,23 @@ const wireSearchableSelect = (config = {}) => ({
             this.selected = list
             return
         }
+        const changed = ! sameSelection(this.selected, value)
         this.persistSelectedOption(value)
         this.selected = value
         this.open = false
         this.search = ''
         this.activeIndex = -1
+        if (changed) this.commitSelection(value)
     },
 
     clear() {
+        const changed = ! sameSelection(this.selected, this.multiple ? [] : null)
         this.selected = this.multiple ? [] : null
         this.search = ''
         this.activeIndex = -1
         if (! this.multiple) {
             this.open = false
+            if (changed) this.commitSelection(null)
         }
     },
 

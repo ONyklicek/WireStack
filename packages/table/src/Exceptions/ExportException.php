@@ -38,6 +38,20 @@ final class ExportException extends RuntimeException implements WireException
      * flattening it to a string: it names the sheet, the row or the encoding
      * step, and whoever handles this needs that, not only the path.
      */
+    /**
+     * A PDF of this many rows would not be produced inside a request's memory:
+     * the layout needs the whole set at once, so it cannot stream like the CSV
+     * and spreadsheet writers. Said up front rather than discovered as a fatal
+     * out-of-memory halfway through.
+     */
+    public static function tooManyRowsForPdf(int $limit): self
+    {
+        return new self(
+            "The PDF export stops at {$limit} rows (wire-table.export.pdf_max_rows). "
+            .'Export a CSV or a spreadsheet instead — they stream any size — or narrow the table first.'
+        );
+    }
+
     public static function destinationNotWritable(string $path, ?Throwable $previous = null): self
     {
         return new self("Could not open [{$path}] to write the export to.", 0, $previous);

@@ -32,6 +32,18 @@ final class SlideOverStyle
         return MobileSheet::breakpoint($this->breakpoint);
     }
 
+    /** Whether the panel carries a drag handle: only as a bottom sheet, below the breakpoint. */
+    public function hasGrabber(): bool
+    {
+        return $this->bottomSheetOnMobile;
+    }
+
+    /** The breakpoint token the grabber switches at. */
+    public function breakpoint(): string
+    {
+        return $this->bp();
+    }
+
     public function widthClass(): string
     {
         // A responsive width (mobile full-width, capped above the breakpoint) lets
@@ -85,14 +97,14 @@ final class SlideOverStyle
 
             return match ($this->bp()) {
                 'md' => $left
-                    ? 'translate-y-full md:translate-y-0 md:-translate-x-full'
-                    : 'translate-y-full md:translate-y-0 md:translate-x-full',
+                    ? 'translate-y-full motion-reduce:translate-y-0 md:translate-y-0 md:-translate-x-full'
+                    : 'translate-y-full motion-reduce:translate-y-0 md:translate-y-0 md:translate-x-full',
                 'lg' => $left
-                    ? 'translate-y-full lg:translate-y-0 lg:-translate-x-full'
-                    : 'translate-y-full lg:translate-y-0 lg:translate-x-full',
+                    ? 'translate-y-full motion-reduce:translate-y-0 lg:translate-y-0 lg:-translate-x-full'
+                    : 'translate-y-full motion-reduce:translate-y-0 lg:translate-y-0 lg:translate-x-full',
                 default => $left
-                    ? 'translate-y-full sm:translate-y-0 sm:-translate-x-full'
-                    : 'translate-y-full sm:translate-y-0 sm:translate-x-full',
+                    ? 'translate-y-full motion-reduce:translate-y-0 sm:translate-y-0 sm:-translate-x-full'
+                    : 'translate-y-full motion-reduce:translate-y-0 sm:translate-y-0 sm:translate-x-full',
             };
         }
 
@@ -153,9 +165,9 @@ final class SlideOverStyle
         // definition), and a square child corner over a rounded parent is simply
         // a square corner. It goes away again with the rounding.
         return match ($this->bp()) {
-            'md' => 'max-h-[85vh] overflow-hidden rounded-t-2xl md:h-full md:max-h-none md:overflow-visible md:rounded-none',
-            'lg' => 'max-h-[85vh] overflow-hidden rounded-t-2xl lg:h-full lg:max-h-none lg:overflow-visible lg:rounded-none',
-            default => 'max-h-[85vh] overflow-hidden rounded-t-2xl sm:h-full sm:max-h-none sm:overflow-visible sm:rounded-none',
+            'md' => 'max-h-[var(--wire-sheet-h,92dvh)] overflow-hidden rounded-t-2xl md:h-full md:max-h-none md:overflow-visible md:rounded-none',
+            'lg' => 'max-h-[var(--wire-sheet-h,92dvh)] overflow-hidden rounded-t-2xl lg:h-full lg:max-h-none lg:overflow-visible lg:rounded-none',
+            default => 'max-h-[var(--wire-sheet-h,92dvh)] overflow-hidden rounded-t-2xl sm:h-full sm:max-h-none sm:overflow-visible sm:rounded-none',
         };
     }
 }

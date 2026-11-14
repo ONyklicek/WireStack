@@ -43,6 +43,7 @@ const INTERACTIVE = [
 
 import { createAutoScroller } from '../../../core/resources/js/support/autoscroll'
 import { rowAtY } from '../../../core/resources/js/support/rows'
+import { toTsv } from './fill/clipboard'
 
 // Module-level handle to the single open context-menu panel, so opening one (or
 // right-clicking another row) always closes any other first.
@@ -330,6 +331,14 @@ const wireRecordActions = (config = {}) => ({
         this.$el.addEventListener('pointercancel', this._onPressEnd)
     },
 
+    // A menu item's own `@click="close()"` (actions/dropdown-item) lands here.
+    // The row menu is teleported out of any dropdown, so this controller is the
+    // nearest scope; without it Alpine falls through to `window.close()`, which
+    // Safari on iPadOS honours — choosing an item closed the whole tab.
+    close() {
+        hideRecordMenu(openRecordMenu)
+    },
+
     cancelPress() {
         clearTimeout(this._pressTimer)
         this._pressTimer = null
@@ -521,6 +530,20 @@ const wireRecordActions = (config = {}) => ({
             return this.selection()?.selectPage()
         }
 
+        // Ctrl/⌘+C → the selected rows on this page (or the focused row when
+        // none is) as tab-separated text, which a spreadsheet pastes as a block
+        // and which pastes back into this table's editable cells the same way.
+        if ((event.ctrlKey || event.metaKey) && ! event.shiftKey && ! event.altKey && event.key.toLowerCase() === 'c') {
+            const text = this.rowsAsText(rows, this.row(event))
+
+            if (text !== null) {
+                event.preventDefault()
+                navigator.clipboard?.writeText(text).catch(() => {})
+            }
+
+            return
+        }
+
         const idx = rows.findIndex((row) => row.dataset.rowKey === this.activeKey)
         const mod = event.ctrlKey || event.metaKey
 
@@ -660,6 +683,48 @@ const wireRecordActions = (config = {}) => ({
     // ── Selection bridge: reach the one selection component (the checkboxes and
     // bulk bar use it too), so keyboard selection stays a single source of truth
     // and stays optimistic (no per-keystroke roundtrip). ──────────────────────
+
+    /**
+     * The rows a copy takes, as tab-separated text: the selected rows on this
+     * page in the order they are drawn, else the row the key was pressed on. Each cell is
+     * what it shows — an editable cell its input's value — and the selection
+     * and action columns are left out.
+     */
+    rowsAsText(rows, focused) {
+        const sel = this.selection()
+        let picked = sel ? rows.filter((row) => sel.isSelected(row.dataset.rowKey)) : []
+
+        if (picked.length === 0 && focused) {
+            picked = [focused]
+        }
+
+        if (picked.length === 0) return null
+
+        // What the cell shows, which is also what a paste reads back: a
+        // select's label (a SelectColumn takes a label for its option), a
+        // switch as 1/0, an input its value.
+        const shown = (el) => el.getClientRects().length > 0
+
+        return toTsv(picked.map((row) => [...row.querySelectorAll(':scope > td[data-column]')].map((td) => {
+            const trigger = [...td.querySelectorAll('[aria-haspopup=listbox]')].find(shown)
+
+            if (trigger) return String(window.Alpine?.$data(trigger)?.selectedLabel ?? trigger.innerText.trim())
+
+            const select = [...td.querySelectorAll('select')].find(shown)
+
+            if (select) return [...select.selectedOptions].filter((o) => o.value !== '').map((o) => o.text.trim()).join(', ')
+
+            const field = td.querySelector('input:not([type=checkbox]):not([type=hidden]), textarea')
+
+            if (field) return field.value
+
+            const toggle = td.querySelector('input[type=checkbox], [role=switch]')
+
+            if (toggle) return (toggle.checked ?? toggle.getAttribute('aria-checked') === 'true') ? '1' : '0'
+
+            return td.innerText.trim()
+        })))
+    },
 
     selection() {
         const root = this.$el.closest('[data-selection-root]')

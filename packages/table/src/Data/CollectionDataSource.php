@@ -20,6 +20,7 @@ use NyonCode\WireCore\Core\Data\PagingRequest;
 use NyonCode\WireCore\Core\Data\RecordContract;
 use NyonCode\WireCore\Core\Query\FilterClause;
 use NyonCode\WireCore\Core\Query\QueryPlan;
+use NyonCode\WireCore\Core\Query\Search\LikePattern;
 use NyonCode\WireCore\Core\Query\Search\SearchTermParser;
 use NyonCode\WireCore\Core\Query\Search\SearchText;
 use NyonCode\WireCore\Exceptions\UnsupportedQueryAspectException;
@@ -270,8 +271,10 @@ final class CollectionDataSource implements DataSource
     }
 
     /**
-     * SQL's LIKE over a PHP value: `%` is any run, `_` one character, and the
-     * comparison ignores case, the way the default collations do.
+     * SQL's LIKE over a PHP value: `%` is any run, `_` one character, the
+     * escape character ({@see LikePattern::ESCAPE}) makes the next one
+     * literal, and the comparison ignores case, the way the default
+     * collations do.
      */
     private static function like(mixed $value, string $pattern): bool
     {
@@ -279,7 +282,25 @@ final class CollectionDataSource implements DataSource
             return false;
         }
 
-        $regex = '/^'.strtr(preg_quote($pattern, '/'), ['%' => '.*', '_' => '.']).'$/iu';
+        $regex = '';
+        $escaped = false;
+
+        foreach (mb_str_split($pattern) as $char) {
+            if (! $escaped && $char === LikePattern::ESCAPE) {
+                $escaped = true;
+
+                continue;
+            }
+
+            $regex .= match (true) {
+                ! $escaped && $char === '%' => '.*',
+                ! $escaped && $char === '_' => '.',
+                default => preg_quote($char, '/'),
+            };
+            $escaped = false;
+        }
+
+        $regex = '/^'.$regex.'$/isu';
 
         return preg_match($regex, self::text($value)) === 1;
     }

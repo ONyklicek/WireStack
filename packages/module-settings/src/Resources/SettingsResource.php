@@ -118,18 +118,31 @@ class SettingsResource implements DescribesResource, ProvidesNavigation, Provide
      */
     public static function authorized(): bool
     {
-        $permission = self::permission();
-
-        try {
-            if ($permission !== null && ! Gate::allows($permission)) {
-                return false;
-            }
-        } catch (Throwable) {
-            // Fail closed — a context with no resolvable guard authorizes nothing.
+        if (! self::passesAbility()) {
             return false;
         }
 
         return SettingsGroups::all() === [] || SettingsGroups::visible() !== [];
+    }
+
+    /**
+     * Whether the current user holds the screen's own ability
+     * (`wire-module-settings.permission`), or there is none.
+     *
+     * Asked by the route — and by every request the page answers, because a
+     * Livewire update does not go through the route's `can:` middleware: an
+     * ability withdrawn after the page was opened would otherwise still save.
+     */
+    public static function passesAbility(): bool
+    {
+        $permission = self::permission();
+
+        try {
+            return $permission === null || Gate::allows($permission);
+        } catch (Throwable) {
+            // Fail closed — a context with no resolvable guard authorizes nothing.
+            return false;
+        }
     }
 
     /**

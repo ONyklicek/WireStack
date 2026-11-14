@@ -91,7 +91,7 @@ final class TableStateSchema
             Arr::set(
                 $state,
                 'columnFilters.'.$column->getName(),
-                $column->filterExpectsArray() ? [] : null,
+                $column->initialFilterState(),
             );
         }
 
@@ -107,7 +107,7 @@ final class TableStateSchema
                 Arr::set(
                     $state,
                     'rows.subRowFilters.'.$column->getName(),
-                    $column->filterExpectsArray() ? [] : null,
+                    $column->initialFilterState(),
                 );
             }
         }
@@ -136,6 +136,14 @@ final class TableStateSchema
             ],
             'search' => null,
             'filters' => [],
+            // A deferred panel (Table::deferFilters()) edits a copy of 'filters'
+            // and Apply copies it back, so nothing a request carries before then
+            // narrows the rows. 'filterDraftOf' fingerprints the 'filters' the
+            // draft was taken from: when anything else rewrites them — Reset, a
+            // chip, a saved view — the draft is taken again. See
+            // WithTable::syncTableFilterDraft().
+            'filterDraft' => null,
+            'filterDraftOf' => null,
             'columnFilters' => [],
             'selection' => [
                 // 'keys' → the list below *is* the selection.
@@ -147,6 +155,10 @@ final class TableStateSchema
             ],
             'columns' => [
                 'hidden' => [],
+                // Pixel widths by column name (Table::resizableColumns()), and
+                // the columns the user pinned (Table::pinnableColumns()).
+                'widths' => [],
+                'pinned' => [],
             ],
             'rows' => [
                 // Rows whose expansion *differs* from the baseline below, so a

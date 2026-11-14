@@ -149,7 +149,7 @@ try {
   // A row's other cells are not locked by it.
   const role2 = (await snap('role')).serverValue === 'admin' ? 'editor' : 'admin';
   const roleFree = JSON.parse(await eval_(`JSON.stringify({ saving: $data('1', 'role').saving,
-    disabled: $cell('1', 'role').querySelector('select').disabled })`));
+    disabled: $cell('1', 'role').querySelector('[aria-haspopup=listbox]').disabled })`));
   await eval_(`$data('1', 'role').commit(${JSON.stringify(role2)}); true`);
   await settled('email', 'role');
   const after = JSON.parse(await eval_(`(() => { const input = $cell('1', 'email').querySelector('input');
@@ -169,19 +169,18 @@ try {
     `${JSON.stringify(two.email)} db=${db1('email')}`);
   await shot('02-locked');
 
-  // A select changed while its own write is out is put back.
+  // A select picked while its own write is out is put back.
   await eval_(`__net.writes = []; true`);
   const role3 = role2 === 'admin' ? 'viewer' : 'admin';
   const reverted = JSON.parse(await eval_(`(async () => {
     const root = $cell('1', 'role');
-    const select = root.querySelector('select');
+    const list = Alpine.$data(root.querySelector('[x-data^="wireSearchableSelect"]'));
     const cell = Alpine.$data(root);
     cell.change(${JSON.stringify(role3)});
     await new Promise((r) => setTimeout(r, 150));
-    select.value = 'editor' === ${JSON.stringify(role3)} ? 'viewer' : 'editor';
-    select.dispatchEvent(new Event('change', { bubbles: true }));
+    list.select('editor' === ${JSON.stringify(role3)} ? 'viewer' : 'editor');
     await new Promise((r) => setTimeout(r, 50));
-    return JSON.stringify({ shown: select.value, value: cell.value });
+    return JSON.stringify({ shown: list.selected, value: cell.value });
   })()`));
   await settled('role');
   check('a select changed during its own write is put back to the value being written',

@@ -24,6 +24,7 @@ use NyonCode\WireModuleUsers\Install\EnableRoles;
 use NyonCode\WireModuleUsers\Install\EnableTeams;
 use NyonCode\WireModuleUsers\Support\Avatars;
 use NyonCode\WireModuleUsers\Support\EmailVerification;
+use NyonCode\WireModuleUsers\Support\Impersonation;
 use NyonCode\WireModuleUsers\Support\Permissions;
 use NyonCode\WireModuleUsers\Support\Roles;
 use NyonCode\WireModuleUsers\Support\Teams;
@@ -75,6 +76,7 @@ class WireModuleUsersServiceProvider extends PackageServiceProvider
             ->hasTranslations()
             ->bootedPackage(function (): void {
                 $this->bootTeams();
+                $this->bootImpersonation();
                 $this->bootUserMenu();
                 $this->bootEmailVerification();
             })
@@ -144,6 +146,22 @@ class WireModuleUsersServiceProvider extends PackageServiceProvider
      * Both are skipped outright where teams are off, because a middleware on
      * every web request and a component in every top bar are not free.
      */
+    /**
+     * The way back from an impersonation, in the top bar — only where the
+     * application turned impersonation on (Support\Impersonation).
+     */
+    protected function bootImpersonation(): void
+    {
+        if (! Impersonation::enabled()) {
+            return;
+        }
+
+        $this->app->make(PageChrome::class)->add(
+            'wire-module-users::impersonation-banner',
+            PageChrome::TOPBAR,
+        );
+    }
+
     protected function bootTeams(): void
     {
         // A team belongs to a company (ADR 0040 §6), and the company is entered

@@ -195,6 +195,42 @@ které otevírají modal, jdou přes `openActionModal()` a pak `submitActionModa
 Pokud assert neodpovídá, vypište komponentu pomocí `->dump()` a zkontrolujte živý
 `tableState`.
 
+### Pomocníci pro tabulky na `Livewire::test()`
+
+`wire-table` přidává na testovací objekt Livewire pomocníky, aby test říkal, co
+myslí, a ne pod jakou cestou ve stavu to žije. Každý z nich řídí komponentu přes
+endpoint, který používá prohlížeč — zápis do `tableState`, `sortTable()`,
+`executeTableAction()` — takže procházející test vypovídá o skutečném requestu.
+Záznamy se porovnávají podle klíče a mohou to být modely, klíče nebo směs.
+„Vidí“ znamená stránku, kterou by tabulka teď vykreslila: platí velikost stránky
+i aktuální stránka, stejně jako pro uživatele.
+
+```php
+it('finds the unpaid invoices', function () {
+    [$paid, $draft] = [Invoice::factory()->paid()->create(), Invoice::factory()->create()];
+
+    Livewire::test(InvoicesTable::class)
+        ->filterTable('status', ['value' => 'draft']) // [tl! focus:start]
+        ->assertCanSeeTableRecords([$draft])
+        ->assertCanNotSeeTableRecords([$paid])
+        ->callTableAction('pay', $draft)              // [tl! focus:end]
+        ->assertCountTableRecords(0);
+});
+```
+
+```php
+->searchTable(?string $term)                                   // tableState.search
+->sortTable(string $column, ?string $direction = null)         // sortTable(); dojde na směr, je-li zadán
+->filterTable(string $filter, mixed $value)                    // tableState.filters.<filter>
+->resetTableFilters()
+->selectTableRecords(iterable $records)                        // každý přepne
+->callTableAction(string $action, mixed $record, array $data = [])      // potvrzeno; s formulářem, když je $data
+->callTableBulkAction(string $action, iterable $records, array $data = [])
+->assertCanSeeTableRecords(iterable $records, bool $inOrder = false)
+->assertCanNotSeeTableRecords(iterable $records)
+->assertCountTableRecords(int $count)                           // všechny shody, nejen stránka
+```
+
 ---
 
 ## Unit test vlastního pole

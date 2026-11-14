@@ -6,6 +6,7 @@ namespace NyonCode\WireTable\Preferences;
 
 use NyonCode\WireCore\Core\State\StateContainer;
 use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Support\ColumnLayout;
 use NyonCode\WireTable\Table;
 
 /**
@@ -45,6 +46,8 @@ final class TableViewPayload
         'filters',
         'columnFilters',
         'columns.hidden',
+        'columns.widths',
+        'columns.pinned',
         'rows.expandAll',
         'rows.collapsedGroups',
         'rows.subRowFilters',
@@ -99,6 +102,14 @@ final class TableViewPayload
 
             if ($path === 'columns.hidden') {
                 $value = self::sanitiseHidden(is_array($value) ? $value : [], $table);
+            }
+
+            if ($path === 'columns.widths') {
+                $value = ColumnLayout::widths($value, $table);
+            }
+
+            if ($path === 'columns.pinned') {
+                $value = ColumnLayout::pins($value, $table);
             }
 
             $state->set($path, $value);

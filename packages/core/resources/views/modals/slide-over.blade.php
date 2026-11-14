@@ -20,6 +20,12 @@
     if ($openEvent !== null && ! preg_match('/^[a-zA-Z][a-zA-Z0-9_-]*$/', $openEvent)) {
         $openEvent = null;
     }
+    // Ids per dialog, not per shell: two stacked dialogs used to both label
+    // themselves `#slide-over-title`, and a screen reader read the parent's heading for
+    // the child. Derived, not random, so a re-render keeps the same ids.
+    $dialogKey = substr(md5(($id ?? '').'|'.($zIndex ?? '').'|'.($heading ?? '')), 0, 8);
+    $titleId = 'slide-over-title-'.$dialogKey;
+    $descriptionId = 'slide-over-description-'.$dialogKey;
 @endphp
 <template x-teleport="body" wire:key="wire-modal-slideover{{ $id ? '-'.$id : '' }}">
 <div
@@ -30,13 +36,15 @@
     @if($openEvent) x-on:{{ $openEvent }}.window="show = true" @endif
     @endif
     @include('wire-core::modals.partials.focus-trap')
+    x-scroll-lock="show"
     x-show="show"
     x-cloak
     style="display: none;@if($zIndex !== null) z-index: {{ $zIndex }};@endif"
-    @if($closeOnEscape) x-on:keydown.escape.window="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
+    @if($closeOnEscape) x-on:keydown.escape.window="setTimeout(() => $event.defaultPrevented || ! show || (show = false, {{ $closeAction ? "\$wire.{$closeAction}()" : 'null' }}))" @endif
     class="fixed inset-0 z-50 overflow-hidden"
     @if($id) id="{{ $id }}" @endif
-    aria-labelledby="slide-over-title"
+    aria-labelledby="{{ $titleId }}"
+    @if($description ?? null) aria-describedby="{{ $descriptionId }}" @endif
     role="dialog"
     aria-modal="true"
 >
@@ -49,7 +57,7 @@
         x-transition:leave="ease-in duration-200"
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
-        class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
+        data-sheet-backdrop class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
         @if($closeOnClickAway) @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
     ></div>
 
@@ -66,6 +74,9 @@
             class="{{ $style->widthWrapperClasses() }} {{ $style->widthClass() }}"
         >
             <div class="flex flex-col bg-white dark:bg-gray-800 shadow-xl {{ $style->panelClasses() }}">
+                @if($style->hasGrabber())
+                    @include('wire-core::partials.sheet-grabber', ['dismiss' => 'show = false; '.($closeAction ? '$wire.'.$closeAction.'()' : ''), 'breakpoint' => $style->breakpoint(), 'detents' => 'large', 'class' => 'shrink-0'])
+                @endif
                 {{-- Header --}}
                 <div @class([
                     'px-4 py-6 sm:px-6',
@@ -74,13 +85,13 @@
                     <div class="flex items-start justify-between">
                         <div>
                             @if($heading)
-                                <h2 class="text-lg font-semibold text-gray-900 dark:text-white" id="slide-over-title">
+                                <h2 class="text-lg font-semibold text-gray-900 dark:text-white" id="{{ $titleId }}">
                                     {{ $heading }}
                                 </h2>
                             @endif
 
                             @if($description)
-                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400" id="{{ $descriptionId }}">
                                     {{ $description }}
                                 </p>
                             @endif
@@ -93,9 +104,9 @@
                             <button
                                 type="button"
                                 @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}"
-                                data-testid="slide-over-close" @wireEl('slide-over-close')
+                                data-testid="slide-over-close" data-focus-skip @wireEl('slide-over-close')
                                 aria-label="{{ __('Close') }}"
-                                class="-m-1.5 rounded-md p-1.5 text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 touch-manipulation"
+                                class="-m-1.5 rounded-md p-1.5 text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 touch-manipulation"
                             >
                                 <span class="sr-only">{{ __('Close') }}</span>
                                 {!! icon('outline:x-mark', 'h-6 w-6') !!}

@@ -96,12 +96,37 @@ Každá vyplněná buňka vyvolá `CellUpdating` a `CellUpdated` přesně jako j
 inline editace, takže auditní listener uvidí vyplnění bez jakékoli změny.
 Samostatná hromadná událost neexistuje.
 
+## Vložení bloku z tabulkového procesoru
+
+Se zapnutým `fillHandle()` se blok buněk vložený do editovatelné buňky —
+zkopírovaný z Excelu, Numbers, Google Sheets nebo z této tabulky — rozloží tak,
+jak ho vloží tabulkový procesor: řádek po řádku přes řádky pod ní, buňku po buňce
+přes **vyplnitelné** sloupce vpravo. Text bez tabulátoru a bez konce řádku je
+jedna hodnota pro jednu buňku a nechá se inputu, stejně jako psaní.
+
+Blok odejde jako **jeden** request `fillTableCells()`, jedna položka na buňku,
+takže každé pravidlo, které platí pro vyplnění, platí na serveru i pro každou
+vloženou buňku: validace sloupce, jeho oprávnění, `canEdit()` záznamu,
+`fillable(false)` i verze zámku. Zamčené a needitovatelné buňky se přeskočí a co
+přesahuje poslední řádek nebo sloupec, se zahodí. Přepínač bere `1`, `true`,
+`yes` (a `ano`, `x`, `✓`) jako zapnuto a cokoli jiného jako vypnuto. Buňky ukazují
+vloženou hodnotu, dokud request běží, a každá, kterou server odmítne, se vrátí na
+svou hodnotu.
+
+**Kopírování ven.** V tabulce, kterou klávesnice ovládá po řádcích
+(`selectable()` nebo record actions), <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>C</kbd> na
+řádku s focusem zkopíruje vybrané řádky stránky jako text oddělený tabulátory,
+nebo jen ten řádek, když žádný vybraný není. Tabulkový procesor ho vloží jako
+blok a stejně tak se dá vložit zpět do tabulky. Každá buňka se zkopíruje tak, jak
+se čte, editovatelná jako hodnota svého inputu; sloupce výběru a akcí se
+vynechají.
+
 ## Rozsah
 
-První verze vyplňuje **jen svisle** — jeden sloupec, dolů nebo nahoru od zdrojové
-buňky. Vodorovné vyplnění, obdélníkové výběry, podpora schránky a rozpoznávání
-posloupností (1, 2, 3 …) implementované nejsou; hodnota se duplikuje, nikdy
-neextrapoluje.
+Tažení vyplňuje **jen svisle** — jeden sloupec, dolů nebo nahoru od zdrojové
+buňky. Vodorovné tažení, obdélníkové výběry buněk a rozpoznávání posloupností
+(1, 2, 3 …) implementované nejsou; tažená hodnota se duplikuje, nikdy
+neextrapoluje. Vložený blok pokrývá řádky i sloupce.
 
 ## Poznámky
 

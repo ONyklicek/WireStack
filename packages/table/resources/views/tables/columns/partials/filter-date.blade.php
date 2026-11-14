@@ -1,15 +1,7 @@
-{{-- Column date filter (inline, in table header row) --}}
-{{-- Variables: $column, $filter, $value, $controlClasses --}}
-@php
-    $name = $column->getName();
-    $minDate = $filter->getMinDate();
-    $maxDate = $filter->getMaxDate();
-@endphp
-
-<input
-    type="date"
-    wire:model.live="{{ $statePath }}"
-    @if($minDate) min="{{ $minDate }}" @endif
-    @if($maxDate) max="{{ $maxDate }}" @endif
-    class="{{ $controlClasses }}"
->
+{{-- Single-date filter: the forms DateTimePicker (DateFilter::dateControl()),
+     the calendar a form draws — a bottom sheet on a phone — bound straight to
+     the filter's state path. --}}
+{{-- Variables: $filter, $value, $statePath --}}
+<div class="min-w-0">
+    {!! $filter->controlHtml($filter->dateControl($statePath)) !!}
+</div>

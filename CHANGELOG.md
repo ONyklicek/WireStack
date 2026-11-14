@@ -2,6 +2,189 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.10.0]
+
+### Added
+
+- **Column filters you can ask more than one question.** A filter can offer a choice of comparison —
+  `->operators()` on any filter, `->filterOperators()` on a column: contains, does not contain, is, is not,
+  starts with, ends with, is any of, is none of, greater / less than, is empty, is not empty — from one
+  vocabulary, `FilterOperator`. The state becomes `{value, operator}`, goes into the URL (`…_op`) and saved
+  views, and the chip says how it compares ("Email: does not contain gmail"). The negatives keep rows with
+  no value, and across a relation they mean "no related record matches" (`whereDoesntHave`), never "has one
+  that does not". "Is empty" on text also matches `''`. A single-date filter compares by day: is on, is
+  before, is after.
+- **Header filters in a popover.** `Table::columnFilterLayout(ColumnFilterLayout::Popover)` (or
+  `wire-table.defaults.column_filter_layout`) puts a funnel beside each filterable column's label instead of
+  the always-open filter row. It is marked while the column is filtered and opens that one filter —
+  operator, value, Clear — in a panel sized for the filter, a bottom sheet on a phone. The row stays the
+  default.
+- **Counts and value lists.** `SelectFilter::withCounts()` / `->filterWithCounts()` shows how many records
+  each option would leave ("Admin (3)"), counted under every other filter and the search but never under
+  its own. `optionsFromColumn()` / `->filterAsValueList()` takes the options from the column's own distinct
+  values, most common first — in the panel, the header and a query builder's fields alike. The counts are
+  kept between requests for one viewer on one database, under the table's write generation, so a write
+  through the table retires them at once and `wire-table.defaults.facet_cache_ttl` (60 s) bounds a write
+  made elsewhere; ticking a row or saving a cell no longer runs a GROUP BY per counting filter.
+- **Date presets.** `DateFilter::presets()` / `->filterPresets()`: today, yesterday, last 7 / 30 days, this /
+  last week, month, quarter and year. The state stores the preset's name, so a saved view or a shared link
+  of "last 7 days" stays relative; the dates are worked out when the query runs, in `->timezone()`.
+- **Date filters use the forms pickers.** A single date is the forms `DateTimePicker`, a range the
+  `DateRangePicker` (one box, two months, the presets beside them; on a phone the two pickers with the
+  presets as chips) — in the header, the column popover and the filter panel alike, instead of the browser's
+  date inputs. `DateRangePicker::rememberPreset()` writes the picked preset's key beside the two ends, which
+  is how a filter keeps "last 7 days" relative.
+- **Sheets move like iOS sheets.** One gesture for every sheet (`x-sheet-dismiss`, now `sheet.js`): grabbed
+  anywhere in its top 56px; a list taller than half the screen opens at a medium height and is pulled up to
+  92 % (`data-sheet-detents`), settling back on medium before it closes; a drag down on a list scrolled to
+  its top moves the sheet; it rubber-bands past its largest height, the backdrop fades with the pull, and
+  it rises above the iOS keyboard. A sheet with a search opens at the large height and keeps it as the results narrow, the search pinned under the grabber. A sheet keeps at least 1rem below its last row, and a list in one is
+  inset from the screen's rounded corners.
+- **A select in a column popover opens the touch list on a phone** — full height, with search — instead of
+  a dropdown floating over the sheet it was opened from.
+- **Filter from a cell.** `Table::cellFilterMenu()`: right-click a cell of a filterable column for "Only
+  this value" and, where the filter can exclude, "Exclude this value". The value is read from the record on
+  the server, not from the formatted cell. A row with its own context menu keeps it.
+- **Conditions with AND / OR.** `QueryBuilderFilter::make()->constraints([...])`: conditions combined with
+  "all of" / "any of", and groups of them one level deep. Every condition is one of the filters you list,
+  so it compares exactly as that filter does anywhere else. A tree holds at most 50 conditions, with text
+  values cut to 1000 characters and multiple choices to 100.
+- **A deferred filter panel, and where it sits.** `Table::deferFilters()` applies the panel on an Apply
+  button instead of on every change: its controls — the query builder's fields and groups included — edit a
+  draft (`tableState.filterDraft`), so a page, a sort or a poll in between narrows nothing. `Table::filtersLayout()` draws it in the toolbar dropdown (default),
+  above the rows, or above the rows behind a toggle (remembered per browser); `filtersFormColumns()` lays
+  it out in up to four columns.
+- **Resize and pin columns.** `Table::resizableColumns()` puts a grip on each header edge (drag, double-click to
+  reset, ←/→); `Column::pinned()` and the user's own pins through `Table::pinnableColumns()` keep columns — and
+  the selection checkboxes — at the start while the table scrolls sideways. Widths and pins (`columns.widths`,
+  `columns.pinned`) travel with the remembered layout and saved views.
+- **Paste a block from a spreadsheet, copy rows out.** With `fillHandle()`, tab-separated cells pasted into an
+  editable cell land down the rows and across the fillable columns in one `fillTableCells()` request, every
+  cell meeting the same server rules as a fill. In a keyboard-driven table, Ctrl/⌘+C copies the selected rows
+  (or the focused one) as a block. A fill with several entries for one column now reports every row.
+- **Take a delete back.** `->undoable(int $seconds = 10)` on an action turns its notice into *Deleted 2 records ·
+  Undo* when the records were soft-deleted; Undo restores them (asking the `restore` policy) for the table and
+  user that deleted them, through a one-use token — the keys never reach the browser.
+- **Edit many records at once.** `BulkEditAction::make()->fields([...])` sets the same value on every selected
+  record. Each field sits behind its own *Change …* switch, and only the switched-on fields are written; records
+  are saved one by one through Eloquent, and a record a policy's `update` refuses is skipped and counted in the
+  notification.
+- **Shared saved views.** `Table::shareViews()` lists views published for everyone beside a user's own,
+  marked with a group icon; the argument says who may publish and delete them (`true`, an ability, or a
+  closure). Each endpoint checks this again on the server. It needs a store with an "everyone" — the database
+  preference driver (`SharesViews`).
+- **Sign in as somebody else.** `wire-module-users.impersonation`: *Sign in as* on the users list and *Back to my
+  account* in the top bar, for holders of `users.impersonate`. Off by default; never as yourself, a super-admin
+  only by a super-admin, never chained; `ImpersonationStarted` / `ImpersonationStopped` events for an audit trail.
+- **Drafts of unsaved form input.** A panel form page that returns `true` from `remembersDraft()` keeps unsaved
+  input in the browser (per page, record and user) and offers it back after a reload or a crash. Off by
+  default, because it is plain browser storage.
+- **Table helpers for tests.** `Livewire::test()` gains `searchTable()`, `sortTable()`, `filterTable()`,
+  `resetTableFilters()`, `selectTableRecords()`, `callTableAction()`, `callTableBulkAction()`,
+  `assertCanSeeTableRecords()`, `assertCanNotSeeTableRecords()` and `assertCountTableRecords()`.
+- **Dialogs are bottom sheets on a phone.** `wire-core.modals.mobile` (`'sheet'` by default,
+  `'full-screen'`, `'dialog'`) decides how a dialog presents below the mobile breakpoint when the action
+  does not say; `->dialogOnMobile()` keeps the floating card. A sheet carries the grabber and is pulled
+  down, or flicked, to close. A desktop slide-over still becomes a sheet only when asked.
+
+- **`SelectColumn` is the same control as a form's Select.** The cell draws the shared combobox, bound to the
+  cell's own write (every pick still goes through `updateTableCell()`), with `->searchableOptions()`,
+  `->multiple()` (written once, as the list closes), `->createOptionForm()` / `->createOptionUsing()` (the new
+  option lands in the row it was created from), `->selectablePlaceholder()`, and the shared `->native()`,
+  `->nativeOnMobile()` and `->touchOnMobile()`. The list is drawn once per table and cloned by the first cell
+  opened, and the cell is a skeleton filled per row, so a column of selects costs no view render per row. A
+  pasted label is read as its option, and copied rows carry the labels.
+
+- **The account menu and the collapse button can sit at the foot of the admin menu.** `wire-admin.layout.user`
+  and `wire-admin.layout.rail_toggle` take `'topbar'` (today's place, the default) or `'sidebar'`, on their own,
+  or per layout with `user-placement` / `rail-toggle-placement`. The account menu opens upwards there and keeps
+  the application's entries and every package's (profile, sign-out); in the rail it is the avatar on the icons'
+  axis. ⌘B is bound once for the page, so it works wherever the button sits. An unknown value throws a
+  `ChromeSlotException`.
+
+### Changed
+
+- **A filter's `visible()` / `hidden()` and an action's are one implementation**, `Foundation\Concerns\HasContextualVisibility`,
+  instead of two copies. `Filter::isHidden()` takes the same optional context as an action's, and the filter's
+  `$hidden` / `$hiddenCallback` properties are protected now, as an action's always were — set them through
+  `hidden()` / `visible()`.
+- **`DateFilter`'s "before / after" wording comes from `FilterOperator::dateLabel()`**, the operator vocabulary's
+  own, rather than a map inside the filter. The render plans' host is described by a `HostsTableShell` contract.
+- **`DatePreset` lives in wire-core**, as `NyonCode\WireCore\Foundation\Enums\DatePreset` (it was added to
+  wire-table earlier in this release), so a date field or a widget can name the same ranges.
+- **A PDF export reads its rows in chunks and stops at `wire-table.export.pdf_max_rows` (5000)** with an
+  `ExportException` that says to use CSV, instead of loading every model at once and running out of memory.
+  CSV and spreadsheets still stream any size.
+- **The page behind a dialog no longer scrolls.** One counted page lock (`x-scroll-lock`,
+  `window.wireScrollLock`) for every overlay, released when the server's re-render removes the dialog; the
+  admin drawer uses it instead of `overflow-hidden` on `<body>`, which iOS Safari ignores.
+- **Dialogs fit a phone's real screen.** `dvh` instead of `vh` (an `85vh` sheet put its own footer under
+  Safari's toolbar), safe-area padding on edge-to-edge footers, and `viewport-fit=cover` in the admin
+  layouts so the safe-area insets are no longer always zero.
+- **Where the focus lands when a dialog opens.** Not on the close button: a field (desktop), the dialog
+  itself (touch — no keyboard over a sheet nobody has read), and Cancel in a confirmation, so an Enter out
+  of habit does not run the thing being confirmed. The close button's ring shows for keyboard focus only.
+- **On a phone the bulk-action bar rides the bottom edge**, above the home indicator, where the thumb is.
+- **"Does not equal" keeps rows with no value.** `TextFilter::operator('!=')` was one `!=` clause, which
+  drops NULLs.
+
+### Fixed
+
+- **Shared saved views were never shown.** The documented "row with no user" was neither listed nor loaded for
+  anybody signed in; `Table::shareViews()` now lists and applies them.
+- **A team member can change the e-mail address they sign in with.** The rule that keeps a team's manager
+  off somebody else's credentials applied to everyone without the global ability — their own included —
+  and the profile reported a save it had dropped.
+- **Listing an installed module in `wire-core.plugins` no longer stops the application booting**; the same
+  class under the same id is taken as already registered. Another class claiming the id is still refused.
+- **A date filter compares across a relation** — `DateFilter::make('customer.created_at')->operators()`
+  used the dotted name as a column; "is not on" and "is empty" across it are `whereDoesntHave`.
+- **A day read in another timezone than the stored one** (`->timezone('Europe/Prague')` over UTC
+  timestamps) is the range of that day's moments, not `DATE()` of the UTC value, so a row from 23:30 lands
+  on the right day.
+- **One Escape closes one panel.** A sheet opened from a column's filter (the touch list) and the filter
+  itself closed together; every dropdown now leaves itself open when something inside it took the key, and
+  returns focus to its trigger when it closes.
+- **A sheet fits above the iOS keyboard** — its height is taken again from what the keyboard leaves
+  visible, so a search at its top stays on screen. With "reduce motion" on, sheets fade in place instead of
+  sliding.
+
+- **Choosing an item from a row's context menu no longer closes the browser tab in Safari.** The menu
+  item called `close()`, and inside the row menu, which has no dropdown around it, that name resolved
+  to `window.close()`. Chrome ignores it; Safari on iPadOS closed the tab. The row controller now has
+  its own `close()`, and a menu item never calls the window's.
+- **A panel filter the query planner cannot express is applied.** It was silently dropped unless it also
+  had a query callback or a range shape.
+- **A range header filter starts with its keys.** Its state began as `null`, and binding into `.from` of
+  `null` threw in the browser. Clearing a filter restores its empty slot instead of removing it.
+- **Escape that a control inside a dialog consumed** — closing a select, a dropdown, a date picker — no
+  longer closes the dialog too.
+- **Two stacked dialogs no longer share a title id**; each has its own, plus `aria-describedby`.
+
+### Security
+
+- **A forms `Select` or `Radio` with a literal array of options only accepts those options.** The implicit
+  `in:` rule covered enum options alone, so a forged submission could store any value in a field that offered
+  three. It now covers a literal array as well; options from a closure, a remote search and a
+  `createOptionForm()` stay unconstrained, and a rule of your own still replaces it.
+- **An inline `SelectColumn` write must be one of the options.** The server took whatever value the browser
+  sent; a forged `updateTableCell()` could store anything in the attribute. It now refuses a value that is not
+  an option (and an empty one unless `->selectablePlaceholder()`), the cell rolling back with the message.
+- **Uploaded files cannot run on the application's origin.** The media route sends
+  `X-Content-Type-Options: nosniff` on every file, serves a type a browser would run (SVG, HTML, XML,
+  JavaScript) as a sandboxed download, and encodes the file name per RFC 6266 instead of `addslashes()`.
+- **`scope => 'all'` on the notifications screen needs an ability.** `wire-module-notifications.permission`
+  names it; without one, or for a viewer who lacks it, the screen is the viewer's own inbox — reading,
+  marking and deleting included. Set the permission if you rely on the administrative view.
+- **Resending a sign-in code no longer tells whether the address has an account.** The "wait a moment"
+  answer is decided by the address alone.
+- **The settings screen checks its ability on every save,** not only on the route, so a page mounted
+  without one is covered too.
+- **Text filters match `%` and `_` literally** (escaped through `LikePattern`), case-insensitively on every
+  engine; `50%` no longer matches every row with a 50 in it.
+- **A column that hides its cell on some records (`visibleForRecord()`) gets no value list or counts,** and
+  the cell menu ignores a cell the user cannot see — either would have shown the hidden values.
+
 ## [2.9.14]
 
 ### Fixed

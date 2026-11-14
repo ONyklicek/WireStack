@@ -160,6 +160,20 @@ it('writes a real pdf document', function () {
         ->and($bytes)->toContain('%%EOF');
 });
 
+it('refuses a pdf past its row limit, before rendering anything', function () {
+    // Two rows seeded; a limit of one is a table that outgrew the PDF.
+    config()->set('wire-table.export.pdf_max_rows', 1);
+
+    expect(fn () => (new PdfExporter)->writeTo(exporterLibraryTempPath('pdf'), ExporterLibraryRecord::query(), exporterLibraryColumns()))
+        ->toThrow(ExportException::class, 'The PDF export stops at 1 rows');
+
+    config()->set('wire-table.export.pdf_max_rows', 2);
+    $path = exporterLibraryTempPath('pdf');
+    (new PdfExporter)->writeTo($path, ExporterLibraryRecord::query(), exporterLibraryColumns());
+
+    expect(substr((string) file_get_contents($path), 0, 5))->toBe('%PDF-');
+});
+
 it('streams the pdf as the download, without falling back to csv', function () {
     $response = (new PdfExporter)
         ->export(ExporterLibraryRecord::query(), exporterLibraryColumns(), 'people.pdf');

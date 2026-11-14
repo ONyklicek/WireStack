@@ -2,7 +2,10 @@
     One body cell — compiled ONCE per column, then filled per record.
 
     Variables: $cellPadding, $wrapClass, $borderClass, $alignment, $responsive,
-    $name, $extraAttributes (raw, author-supplied), $content (the rendered cell).
+    $name, $extraAttributes (raw, author-supplied), $content (the rendered cell),
+    $pinned (a StickyColumn for a column pinned to the start, else null). Its
+    wrapper is written as echoes, not an @if around the content: a block
+    directive there would put morph markers into every cell of every row.
 
     Every attribute here is column-static; only what sits between the tags varies by
     record. So a 50×10 page used to re-emit the same ten opening tags five hundred
@@ -22,4 +25,4 @@
     The `@if` sits INSIDE the tag, where Livewire deliberately injects no morph
     markers — which is what keeps a cell free of them.
 --}}
-<td class="{{ $cellPadding }} {{ $wrapClass }} {{ $borderClass }} {{ $alignment }} dark:text-white {{ $responsive }}" data-testid="table-cell-{{ $name }}" data-column="{{ $name }}"@if($extraAttributes) {!! $extraAttributes !!}@endif>{!! $content !!}</td>
+<td class="{{ $cellPadding }} {{ $wrapClass }} {{ $borderClass }} {{ $alignment }} dark:text-white {{ $responsive }}@if($pinned ?? null) {{ $pinned->cellClass }}@endif" data-testid="table-cell-{{ $name }}" data-column="{{ $name }}"@if($pinned ?? null) data-pinned="{{ $name }}"@endif{{ '' }}@if($extraAttributes) {!! $extraAttributes !!}@endif>{!! ($pinned ?? null) ? $pinned->layers().'<span class="relative">' : '' !!}{!! $content !!}{!! ($pinned ?? null) ? '</span>' : '' !!}</td>

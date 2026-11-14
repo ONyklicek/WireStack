@@ -228,6 +228,31 @@ protected function warnsAboutUnsavedChanges(): bool
 }
 ```
 
+### Keeping A Draft
+
+A page can also keep its unsaved input in the browser, so a closed tab, a crash
+or an expired session does not lose it. While the form differs from what was
+last saved, its state is written to `localStorage` every few seconds and as the
+page goes away. A page that loads to find a draft different from what it loaded
+shows *You have changes from an earlier visit that were never saved* with
+*Restore them* and *Discard*. A successful save throws the draft away.
+
+The key is the page class, the record's key (`new` on a create page) and the
+signed-in user's id, so two people on one computer never get each other's
+drafts. It is **off by default**, because what is kept is the form's state in
+plain browser storage — right for an article, wrong for a form with a secret in
+it:
+
+```php
+protected function remembersDraft(): bool
+{
+    return true; // [tl! focus]
+}
+```
+
+Override `draftKey(): string` to key it differently. Storage that refuses — a
+private window, a full quota — means no draft, not an error.
+
 ## List Tabs
 
 A list can be several lists of the same records — all invoices, the open ones,

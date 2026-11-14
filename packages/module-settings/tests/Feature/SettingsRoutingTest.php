@@ -166,3 +166,27 @@ it('hides the menu entry when there is no guard to ask at all', function () {
 
     expect(SettingsResource::navigation()->isVisible())->toBeFalse();
 });
+
+it('refuses a save from someone who lost the screen\'s ability after opening it', function () {
+    // The route's `can:` middleware guards the GET; the save is a Livewire
+    // update that never passes through it.
+    config()->set('wire-module-settings.permission', 'settings.manage');
+    $allowed = true;
+    Gate::define('settings.manage', function () use (&$allowed): bool {
+        return $allowed;
+    });
+    $this->actingAs(new User);
+
+    $page = Livewire::test(SettingsPage::class, ['group' => 'mail']);
+
+    $allowed = false;
+    $page->set('data.from_address', 'evil@example.com')->call('save')->assertForbidden();
+});
+
+it('refuses a page mounted by hand without the screen\'s ability', function () {
+    config()->set('wire-module-settings.permission', 'settings.manage');
+    Gate::define('settings.manage', fn (): bool => false);
+    $this->actingAs(new User);
+
+    Livewire::test(SettingsPage::class, ['group' => 'mail'])->assertForbidden();
+});

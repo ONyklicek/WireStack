@@ -28,4 +28,9 @@ return [
     'record_pages' => 'Stránky záznamu',
     'no_tenant' => 'Zatím nepatříte do žádné firmy.',
     'switch_tenant' => 'Přepnout firmu',
+
+    // A kept draft (InteractsWithUnsavedChanges::remembersDraft())
+    'draft_available' => 'Máte změny z dřívější návštěvy, které se neuložily.',
+    'draft_restore' => 'Obnovit je',
+    'draft_discard' => 'Zahodit',
 ];

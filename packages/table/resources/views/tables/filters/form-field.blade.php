@@ -1,14 +1,28 @@
 {{-- Generic filter wrapper for filters with multi-field getFormFields().
-     Wire:model paths are built as: tableState.filters.{filterName}.{fieldName}.
+     Wire:model paths are built as: {Filter::getStatePath()}.{fieldName} —
+     tableState.filters.{name}, or tableState.filterDraft.{name} in a deferred panel.
      Used by NumberRangeFilter and DateFilter (range mode). --}}
 {{-- Variables: $filter, $value --}}
 @php
     $name = $filter->getName();
     $label = $filter->getLabel();
+    // With a choice of comparison the operator sits above the value, and an
+    // operator that takes none ("is empty") leaves the value out entirely.
+    $hasPicker = $filter->hasOperatorPicker();
+    $showsValue = ! $hasPicker || $filter->operatorFromState($value)->requiresValue();
 @endphp
 
 <div class="flex flex-col gap-1">
     <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $label }}</span>
+    @if($hasPicker)
+        @include('wire-table::tables.filters.partials.operator-select', [
+            'raw' => $value,
+            'statePath' => $filter->getStatePath(),
+            'controlId' => 'filter-'.$name.'-operator',
+            'label' => $label,
+        ])
+    @endif
+    @if($showsValue)
     <div class="flex gap-2">
         @foreach ($filter->getFormFields() as $field)
             @php
@@ -28,7 +42,7 @@
                 <input
                     type="{{ $type }}"
                     id="filter-{{ $name }}-{{ $fieldName }}"
-                    wire:model.live.debounce.500ms="tableState.filters.{{ $name }}.{{ $fieldName }}"
+                    {{ $filter->wireModelDirective(500) }}="{{ $filter->getStatePath() }}.{{ $fieldName }}"
                     value="{{ $currentValue }}"
                     placeholder="{{ $placeholder }}"
                     class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-base sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
@@ -36,4 +50,5 @@
             </div>
         @endforeach
     </div>
+    @endif
 </div>

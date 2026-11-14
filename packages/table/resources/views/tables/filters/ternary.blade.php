@@ -26,7 +26,7 @@
     @include('wire-core::partials.select-control', [
         'nativeMode' => $filter->getNativeControlMode(),
         'selectId' => 'filter-' . $name,
-        'statePath' => 'tableState.filters.' . $name . '.value',
+        'statePath' => $filter->getStatePath().'.value',
         'options' => $filter->getOptions(),
         'placeholder' => $filter->getAllLabel(),
         'multiple' => false,
@@ -37,7 +37,7 @@
         'touch' => $filter->usesTouchOnMobile(),
         'sheetTitle' => $label,
         'mobileBreakpoint' => $filter->getMobileBreakpoint(),
-        'live' => true,
+        'live' => ! $filter->isDeferred(),
         'selectedValues' => $selectedValue === null ? [] : [$selectedValue],
         'ariaLabel' => $label,
         'testId' => 'filter-' . $name,

@@ -1413,11 +1413,31 @@ zpátky z menu.
 
 ### Úložiště a sdílení
 
-Driver klíčuje pohled trojicí **(tabulka, uživatel, jméno pohledu)**, z čehož
-vypadnou dvě věci zadarmo. Pohledy uživatele jsou jeho vlastní, stejně jako jeho
-layout sloupců. A **sdílený pohled** — takový, který vidí celý tým — je řádek bez
-uživatele, takže sdílení nepotřebuje druhý mechanismus: zapište ho přes driver
-přímo.
+Driver klíčuje pohled trojicí **(tabulka, uživatel, jméno pohledu)**. Pohledy
+uživatele jsou jeho vlastní, stejně jako jeho layout sloupců. **Sdílený pohled** —
+takový, který vidí každý, kdo tabulku používá — je tentýž řádek bez uživatele.
+
+Sdílení zapne `->shareViews()`. Sdílené pohledy pak v menu vidí všichni, označené
+ikonou skupiny a uvedené za jejich vlastními. Argument říká, kdo smí pohled
+**zveřejnit** a znovu smazat:
+
+```php
+$table
+    ->rememberColumns('orders-index')
+    ->savedViews()
+    ->shareViews('orders.share-views'); // [tl! focus]
+```
+
+`true` pustí každého přihlášeného, řetězec je oprávnění, na které se ptá Gate, a
+closure dostane uživatele a odpoví. Kdo smí zveřejňovat, dostane druhé tlačítko,
+*Uložit pro všechny*, a mazání u každého sdíleného pohledu; ostatní je mohou jen
+použít. Každý endpoint to na serveru ověří znovu. Sdílení potřebuje úložiště, které
+má „všechny“ — driver implementující `SharesViews`, což databázový driver dělá.
+Nad session driverem je řádek bez uživatele aktuální session, takže sdílení zůstane
+vypnuté. Nad úložištěm, které sdílí, host vlastní pohledy nemá: jeho řádek by byl
+bez uživatele, a řádek bez uživatele *je* sdílený pohled.
+
+Sdílený pohled jde také připravit bez UI, zápisem přes driver:
 
 ```php
 app(DatabasePreferenceDriver::class)->save(
@@ -1438,15 +1458,20 @@ ho zahodit.
 ```php
 ->savedViews(?string $key = null)     // null použije klíč z rememberColumns(); bez něj vypnuto
 ->getSavedViewsKey(): ?string         // null, když jsou uložené pohledy vypnuté
+->shareViews(Closure|string|bool $who = true) // kdo smí zveřejňovat sdílené pohledy: kdokoli přihlášený, oprávnění, nebo fn ($user): bool; false vypne
+->sharesViews(): bool                 // zda tabulka nabízí sdílené pohledy
+->mayShareViews(mixed $user): bool    // zda je tento uživatel smí zveřejňovat a mazat
 ```
 
 Endpointy komponenty, pro vlastní view nebo pro test:
 
 ```php
-$this->saveTableView(string $name): void      // zachytí aktuální pohled pod jménem
-$this->applyTableView(string $name): void     // obnoví ho a resetuje stránku
-$this->deleteTableView(string $name): void    // smaže ho; živý layout zůstává
-$this->getTableViews(): array                 // jména, pro přepínač
+$this->saveTableView(string $name, bool $shared = false): void   // zachytí aktuální pohled pod jménem; shared: pro všechny
+$this->applyTableView(string $name, bool $shared = false): void  // obnoví ho a resetuje stránku
+$this->deleteTableView(string $name, bool $shared = false): void // smaže ho; živý layout zůstává
+$this->getTableViews(): array                 // jména tohoto uživatele, pro přepínač
+$this->getSharedTableViews(): array           // jména sdílená se všemi
+$this->canShareTableViews(): bool             // zda je tento uživatel smí zveřejňovat a mazat
 ```
 
 ---

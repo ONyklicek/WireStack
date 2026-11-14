@@ -15,6 +15,7 @@ use NyonCode\WireModuleUsers\Pages\ListUsers;
 use NyonCode\WireModuleUsers\Resources\UserResource;
 use NyonCode\WireModuleUsers\Support\AccountGuard;
 use NyonCode\WireModuleUsers\Support\Accounts;
+use NyonCode\WireModuleUsers\Support\Impersonation;
 use NyonCode\WireModuleUsers\Tests\Fixtures\Team;
 use NyonCode\WireModuleUsers\Tests\Fixtures\TeamAdmin;
 use NyonCode\WireModuleUsers\Tests\Support\Access;
@@ -292,4 +293,41 @@ it('takes nothing from an account where the application has no roles', function 
 
     expect(app(Accounts::class)->revoke($this->mia, 'ops-support'))->toBeFalse()
         ->and(app(Accounts::class)->revokeGlobal($this->ada, 'admin'))->toBeFalse();
+});
+
+it('lets a team member change the address they sign in with themselves', function () {
+    // "Manages one team" is true of everybody without the global ability, so
+    // the manager rule used to lock every member out of their own address —
+    // and the profile said it had saved.
+    $this->be($this->mia->fresh());
+
+    expect(AccountGuard::mayChangeCredentials($this->mia->fresh()))->toBeTrue()
+        ->and(AccountGuard::mayChangeCredentials($this->mia->fresh(), $this->mia->fresh()))->toBeTrue()
+        // Still not somebody else's.
+        ->and(AccountGuard::mayChangeCredentials($this->olga->fresh()))->toBeFalse();
+});
+
+it('lets a team manager sign in only as a member of their team', function () {
+    config()->set('wire-module-users.impersonation.enabled', true);
+    $this->be($this->mia->fresh());
+
+    expect(Impersonation::mayImpersonate($this->olga->fresh()))->toBeTrue()
+        // Ada is in no team of Mia's.
+        ->and(Impersonation::mayImpersonate($this->ada->fresh()))->toBeFalse();
+});
+
+it('changes nobody\'s sign-in while somebody is signed in as them', function () {
+    // The person at the keyboard is not the account owner: a new address or
+    // password would outlive the impersonation as a way back in.
+    $this->be($this->mia->fresh());
+    session()->put(Impersonation::SESSION_KEY, ['id' => $this->root->getKey(), 'guard' => 'web']);
+
+    expect(AccountGuard::mayChangeCredentials($this->mia->fresh()))->toBeFalse();
+});
+
+it('never lets an administrator sign in as a super-admin', function () {
+    config()->set('wire-module-users.impersonation.enabled', true);
+    $this->be($this->ada->fresh());
+
+    expect(Impersonation::mayImpersonate($this->root->fresh()))->toBeFalse();
 });

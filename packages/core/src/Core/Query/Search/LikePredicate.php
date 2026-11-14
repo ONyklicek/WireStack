@@ -7,6 +7,8 @@ namespace NyonCode\WireCore\Core\Query\Search;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Query\SearchClause;
+use NyonCode\WireCore\Core\Query\Strategies\PostgresSearchStrategy;
+use NyonCode\WireCore\Core\Support\DriverDetector;
 
 /**
  * The pattern-match predicate every search strategy OR-es into the query.
@@ -50,5 +52,36 @@ final class LikePredicate
         }
 
         $builder->orWhereRaw("{$operand} {$operator} ?".LikePattern::escapeClause(), [$pattern]);
+    }
+
+    /**
+     * Constrain a column to a prepared pattern — the filter's twin of
+     * {@see orWhereMatches()}: AND-ed (or with `$boolean`) rather than OR-ed
+     * into a search group, optionally negated, and matched the way the search
+     * box matches on the same engine — case-insensitively, which on PostgreSQL
+     * means `ILIKE` over the column cast to text (see
+     * {@see PostgresSearchStrategy}).
+     *
+     * @param  Builder<Model>  $builder
+     * @param  string  $column  an identifier; wrapped by the grammar, never spliced
+     * @param  string  $pattern  a LIKE pattern from {@see LikePattern}, not a raw term
+     */
+    public static function whereMatches(
+        Builder $builder,
+        string $column,
+        string $pattern,
+        bool $not = false,
+        string $boolean = 'and',
+    ): void {
+        $postgres = DriverDetector::isPostgres(DriverDetector::fromBuilder($builder));
+        $operand = $builder->getQuery()->getGrammar()->wrap($column);
+
+        if ($postgres) {
+            $operand = "CAST({$operand} AS TEXT)";
+        }
+
+        $operator = ($not ? 'NOT ' : '').($postgres ? 'ILIKE' : 'LIKE');
+
+        $builder->whereRaw("{$operand} {$operator} ?".LikePattern::escapeClause(), [$pattern], $boolean);
     }
 }

@@ -110,6 +110,11 @@ class SettingsPage extends Component implements IdentifiesHookTarget, ProvidesBr
         $this->breadcrumbZone = Zone::current();
         $this->pageUrl = url()->current();
 
+        // The route checks it too, but a page mounted by hand has no route.
+        if (! SettingsResource::passesAbility()) {
+            abort(403);
+        }
+
         // The route's own parameter first, then a page mounted by hand, then the
         // query a group link on a page of the application's own carries.
         $named = $this->named($record) ?? $this->named($group) ?? $this->named(request()->query('group'));
@@ -194,10 +199,12 @@ class SettingsPage extends Component implements IdentifiesHookTarget, ProvidesBr
         // Re-checked at the write rather than trusted from mount. The group is a
         // public property, so it rides in the snapshot and comes back from the
         // browser; a user who may open one group must not be able to save
-        // another by editing the value that travels.
+        // another by editing the value that travels. And the screen's own
+        // ability with it: this request is a Livewire update, which the
+        // route's `can:` middleware never sees.
         $class = $this->groupClass();
 
-        if ($class === null || ! SettingsGroups::authorized($class)) {
+        if (! SettingsResource::passesAbility() || $class === null || ! SettingsGroups::authorized($class)) {
             abort(403);
         }
 

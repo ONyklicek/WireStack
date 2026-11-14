@@ -2,6 +2,7 @@ import { syncNodeOf } from '../../../../core/resources/js/editable/sync'
 import { createAutoScroller } from '../../../../core/resources/js/support/autoscroll'
 import { createGrid, versionOf } from './grid'
 import { bounds, clampToColumn, isEmpty, makeRange, targets } from './range'
+import { isBlock, parseTsv } from './clipboard'
 
 /**
  * The fill handle: drag a value from one editable cell down over the rows below.
@@ -85,9 +86,11 @@ const wireFillHandle = () => ({
         this._onPointerOver = (e) => this.onHover(e)
         this._onPointerLeave = () => this.onLeave()
         this._onPointerDown = (e) => this.startDrag(e)
+        this._onPaste = (e) => this.onPaste(e)
         this._reposition = () => { if (this.active && ! this.dragging) this.place() }
 
         this.$el.addEventListener('focusin', this._onFocusIn)
+        this.$el.addEventListener('paste', this._onPaste)
         this.$el.addEventListener('pointerover', this._onPointerOver)
         this.$el.addEventListener('pointerleave', this._onPointerLeave)
         this.handle?.addEventListener('pointerdown', this._onPointerDown)
@@ -98,6 +101,7 @@ const wireFillHandle = () => ({
     destroy() {
         this.stopDrag()
         this.$el.removeEventListener('focusin', this._onFocusIn)
+        this.$el.removeEventListener('paste', this._onPaste)
         this.$el.removeEventListener('pointerover', this._onPointerOver)
         this.$el.removeEventListener('pointerleave', this._onPointerLeave)
         this.handle?.removeEventListener('pointerdown', this._onPointerDown)
@@ -359,6 +363,103 @@ const wireFillHandle = () => ({
         this.write(this.grid.columnAt(source.col), source, cells)
     },
 
+    // ── A block pasted from a spreadsheet ─────────────────────────────
+
+    /**
+     * A block of cells pasted into an editable cell — copied from Excel,
+     * Numbers, Google Sheets or this table — lands down and to the right of
+     * it, the way a spreadsheet pastes: row by row over the rows below, cell
+     * by cell over the fillable columns to the right.
+     *
+     * One value for one cell is left to the input, as typing is. A block goes
+     * out as ONE request through the same endpoint the drag uses, one entry
+     * per cell, so every rule a single edit meets — the column's validation,
+     * its permission, the record's canEdit(), the lock version — meets each
+     * pasted cell on the server. Cells that are locked or not rendered as
+     * editable are skipped; what falls past the last row or column is dropped.
+     */
+    onPaste(e) {
+        if (this.dragging) return
+
+        const text = e.clipboardData?.getData('text/plain') ?? ''
+        if (! isBlock(text)) return
+
+        const start = this.grid.locate(e.target)
+        if (! start || ! this.grid.describe(start.row, start.col)) return
+
+        e.preventDefault()
+
+        const entries = []
+
+        parseTsv(text).forEach((values, r) => {
+            values.forEach((raw, c) => {
+                const cell = this.grid.describe(start.row + r, start.col + c)
+
+                if (cell && ! this.isLocked(cell) && entries.length < this.max) {
+                    entries.push({ column: this.grid.columnAt(cell.col), value: this.parseInto(cell, raw), cells: [cell] })
+                }
+            })
+        })
+
+        if (entries.length > 0) this.writeMany(entries)
+    },
+
+    /** Text from the clipboard as the cell's own type — a toggle wants a boolean. */
+    parseInto(cell, raw) {
+        const current = this.liveValue(cell)
+
+        if (typeof current === 'boolean') {
+            return ['1', 'true', 'yes', 'ano', 'x', '✓'].includes(raw.trim().toLowerCase())
+        }
+
+        return raw
+    },
+
+    /**
+     * Several values for several cells in one request — a paste. The same
+     * optimistic paint, queue and per-cell reconcile as a drag.
+     *
+     * @param {Array<{column: string, value: *, cells: Array}>} entries
+     */
+    writeMany(entries) {
+        const previous = new Map()
+
+        for (const entry of entries) {
+            for (const cell of entry.cells) {
+                previous.set(`${entry.column}\u0000${cell.recordKey}`, { value: this.liveValue(cell), version: versionOf(cell.el) })
+                this.applyValue(cell.el, entry.value)
+            }
+        }
+
+        this._pending = (this._pending ?? Promise.resolve())
+            .catch(() => {})
+            .then(() => this.sendMany(entries, previous))
+
+        return this._pending
+    },
+
+    async sendMany(entries, previous) {
+        const payload = entries.map((entry) => ({
+            column: entry.column,
+            value: entry.value,
+            records: Object.fromEntries(entry.cells.map((cell) => [cell.recordKey, versionOf(cell.el)])),
+        }))
+
+        let response = null
+
+        try {
+            response = await this.$wire.fillTableCells(payload)
+        } catch (e) {
+            response = null
+        }
+
+        for (const entry of entries) {
+            for (const cell of entry.cells) {
+                this.reconcile(cell, entry.column, response?.results?.[entry.column]?.[cell.recordKey], previous.get(`${entry.column}\u0000${cell.recordKey}`))
+            }
+        }
+    },
+
     // ── The one request ───────────────────────────────────────────────
 
     write(column, source, cells) {
@@ -408,28 +509,29 @@ const wireFillHandle = () => ({
         const results = response?.results?.[column] ?? null
 
         for (const cell of cells) {
-            const result = results?.[cell.recordKey]
+            this.reconcile(cell, column, results?.[cell.recordKey], previous.get(cell.recordKey))
+        }
+    },
 
-            if (result?.success) {
-                this.applyVersion(cell.el, result.version)
-                this.announce(cell, column, result.version)
+    /** One cell after the server answered: keep it, adopt the winner, or put it back. */
+    reconcile(cell, column, result, before) {
+        if (result?.success) {
+            this.applyVersion(cell.el, result.version)
+            this.announce(cell, column, result.version)
 
-                continue
-            }
+            return
+        }
 
-            // Refused, or the whole call failed: put this cell back. A conflict
-            // hands back the winning value, so adopt that rather than the stale one.
-            const before = previous.get(cell.recordKey)
+        // Refused, or the whole call failed: put this cell back. A conflict
+        // hands back the winning value, so adopt that rather than the stale one.
+        if (result?.conflict) {
+            const state = this.stateOf(cell.el)
 
-            if (result?.conflict) {
-                const state = this.stateOf(cell.el)
-
-                this.applyValue(cell.el, state ? state.parse(result.currentValue) : result.currentValue)
-                this.applyVersion(cell.el, result.currentVersion)
-            } else {
-                this.applyValue(cell.el, before.value)
-                this.applyVersion(cell.el, before.version)
-            }
+            this.applyValue(cell.el, state ? state.parse(result.currentValue) : result.currentValue)
+            this.applyVersion(cell.el, result.currentVersion)
+        } else if (before) {
+            this.applyValue(cell.el, before.value)
+            this.applyVersion(cell.el, before.version)
         }
     },
 
@@ -490,11 +592,16 @@ const wireFillHandle = () => ({
 
     /**
      * The attribute form of a value, matching what the cell partials render:
-     * a toggle writes '1'/'0', everything else its string.
+     * a toggle writes '1'/'0', a multiple select its list as JSON, everything
+     * else its string.
      */
     serialize(value) {
         if (typeof value === 'boolean') {
             return value ? '1' : '0'
+        }
+
+        if (Array.isArray(value)) {
+            return JSON.stringify(value.map(String))
         }
 
         return value === null || value === undefined ? '' : String(value)

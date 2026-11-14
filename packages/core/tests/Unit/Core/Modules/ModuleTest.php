@@ -281,3 +281,46 @@ it('leaves a plugin that is not a module alone', function () {
         ->and(app(ResourceRegistry::class)->all())->toBe([])
         ->and(app(NavigationGroups::class)->all())->toBe([]);
 });
+
+final class DmSystemOneModule extends Module
+{
+    public function getId(): string
+    {
+        return 'dm-system-one';
+    }
+
+    public function navigation(): ?NavigationGroup
+    {
+        return NavigationGroup::make('dm-system')->label('System')->icon('outline:wrench-screwdriver')->sort(97);
+    }
+}
+
+final class DmSystemTwoModule extends Module
+{
+    public function getId(): string
+    {
+        return 'dm-system-two';
+    }
+
+    public function navigation(): ?NavigationGroup
+    {
+        return NavigationGroup::make('dm-system')->label('Other heading')->sort(95);
+    }
+}
+
+it('makes one group of a heading two modules both declare, whichever boots first', function () {
+    // Audit, notifications and settings all ship `system`; the last to boot used
+    // to replace the others, so the heading moved with provider order.
+    dmDistribute(new DmSystemOneModule, new DmSystemTwoModule);
+    $first = app(NavigationGroups::class)->find('dm-system');
+
+    app()->forgetInstance(NavigationGroups::class);
+    dmDistribute(new DmSystemTwoModule, new DmSystemOneModule);
+    $second = app(NavigationGroups::class)->find('dm-system');
+
+    expect($first->getSort())->toBe(95)
+        ->and($second->getSort())->toBe(95)
+        // The first declaration's heading stands.
+        ->and($first->getLabel())->toBe('System')
+        ->and($second->getLabel())->toBe('Other heading');
+});

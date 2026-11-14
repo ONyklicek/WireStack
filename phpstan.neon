@@ -67,6 +67,8 @@ parameters:
         - { identifier: trait.unused, path: packages/table/src/Concerns/InteractsWithTableActions.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/InteractsWithTableModals.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/CanSelectRecords.php }
+        - { identifier: trait.unused, path: packages/table/src/Concerns/InteractsWithQueryBuilderFilters.php }
+        - { identifier: trait.unused, path: packages/table/src/Concerns/InteractsWithColumnLayout.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTable.php }
         - { identifier: trait.unused, path: packages/table/src/Concerns/WithTableQueryString.php }
         # Both users are Livewire cards in wire-module-users, which is outside the

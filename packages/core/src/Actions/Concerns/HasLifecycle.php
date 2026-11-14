@@ -114,6 +114,28 @@ trait HasLifecycle
         return $this;
     }
 
+    /** Seconds the result can be taken back, or null when it cannot. */
+    protected ?int $undoSeconds = null;
+
+    /**
+     * Offer to take the result back for a few seconds — "Deleted 12 records ·
+     * Undo". What can be taken back is the host's to say: a table restores the
+     * soft-deleted records the action left behind (see the table's
+     * `offerActionUndo()`); a record deleted for good is gone either way, and
+     * then no Undo is offered.
+     */
+    public function undoable(bool|int $seconds = 10): static
+    {
+        $this->undoSeconds = $seconds === false ? null : ($seconds === true ? 10 : max(1, $seconds));
+
+        return $this;
+    }
+
+    public function getUndoSeconds(): ?int
+    {
+        return $this->undoSeconds;
+    }
+
     /**
      * Set success notification message (shown after successful execution).
      */

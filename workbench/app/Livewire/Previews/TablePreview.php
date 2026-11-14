@@ -30,7 +30,12 @@ use NyonCode\WireTable\Columns\TextColumn;
 use NyonCode\WireTable\Columns\TextInputColumn;
 use NyonCode\WireTable\Columns\ToggleColumn;
 use NyonCode\WireTable\Concerns\WithTable;
+use NyonCode\WireTable\Enums\ColumnFilterLayout;
+use NyonCode\WireTable\Enums\FiltersLayout;
+use NyonCode\WireTable\Filters\DateFilter;
+use NyonCode\WireTable\Filters\QueryBuilderFilter;
 use NyonCode\WireTable\Filters\SelectFilter;
+use NyonCode\WireTable\Filters\TextFilter;
 use NyonCode\WireTable\Filters\TrashedFilter;
 use NyonCode\WireTable\Support\InactiveRow;
 use NyonCode\WireTable\Support\RecordAction;
@@ -38,6 +43,7 @@ use NyonCode\WireTable\Table;
 use Workbench\App\Models\Document;
 use Workbench\App\Models\GestureRow;
 use Workbench\App\Models\Invoice;
+use Workbench\App\Models\Task;
 use Workbench\App\Models\User;
 
 class TablePreview extends Component
@@ -153,6 +159,27 @@ class TablePreview extends Component
             return $this->columnFiltersTable($table);
         }
 
+        if ($this->variant === 'column-filters-popover') {
+            return $this->columnFiltersPopoverTable($table);
+        }
+
+        if ($this->variant === 'column-filters-row-operators') {
+            return $this->columnFiltersPopoverTable($table)->columnFilterLayout(ColumnFilterLayout::Row);
+        }
+
+        if ($this->variant === 'column-filters-value-list') {
+            return $this->columnFiltersTable($table)
+                ->columnFilterLayout(ColumnFilterLayout::Popover)
+                ->columns([
+                    TextColumn::make('name')->label('Name')->filterable()->filterOperators(),
+                    BadgeColumn::make('role')->label('Role')->filterAsValueList(),
+                ]);
+        }
+
+        if ($this->variant === 'filters-above') {
+            return $this->filtersAboveTable($table);
+        }
+
         if ($this->variant === 'split-columns') {
             return $this->splitColumnsTable($table);
         }
@@ -199,6 +226,30 @@ class TablePreview extends Component
 
         if ($this->variant === 'inactive-rows') {
             return $this->inactiveRowsTable($table);
+        }
+
+        if ($this->variant === 'select-cells') {
+            return $this->selectCellsTable($table);
+        }
+
+        if ($this->variant === 'column-layout') {
+            // Wider than the page on purpose, so pinning has something to scroll
+            // past: drag a header's edge, pin a column from the view menu.
+            return $table
+                ->model(User::class)
+                ->selectable()
+                ->columns([
+                    TextColumn::make('name')->label('Name')->pinned(),
+                    TextColumn::make('email')->label('Email')->width('320px'),
+                    TextColumn::make('role')->label('Role')->width('260px'),
+                    TextColumn::make('bio')->label('Bio')->width('480px'),
+                    TextColumn::make('created_at')->label('Joined')->width('260px'),
+                ])
+                ->rememberColumns('preview-column-layout')
+                ->resizableColumns()
+                ->pinnableColumns()
+                ->searchable(false)
+                ->paginated(false);
         }
 
         if (in_array($this->variant, ['column-surfaces', 'trashed-filter'], true)) {
@@ -471,6 +522,84 @@ class TablePreview extends Component
             ->paginated(false);
     }
 
+    /**
+     * The filter panel above the rows (collapsible), in two columns, deferred
+     * behind Apply — with an operator picker, a counted status list and date
+     * presets inside it.
+     */
+    private function filtersAboveTable(Table $table): Table
+    {
+        return $table
+            ->model(Invoice::class)
+            ->columns([
+                TextColumn::make('number')->label('Invoice')->sortable(),
+                TextColumn::make('customer')->label('Customer'),
+                BadgeColumn::make('status')->label('Status')->colors($this->statusColors()),
+                TextColumn::make('issued_at')->label('Issued')->date(),
+            ])
+            ->filters([
+                TextFilter::make('customer')->label('Customer')->operators(),
+                SelectFilter::make('status')->label('Status')->multiple()
+                    ->options(['paid' => 'Paid', 'pending' => 'Pending', 'overdue' => 'Overdue'])
+                    ->operators()
+                    ->withCounts(),
+                DateFilter::make('issued_at')->label('Issued')->presets(),
+                QueryBuilderFilter::make('conditions')->label('Conditions')->constraints([
+                    TextFilter::make('customer')->label('Customer'),
+                    TextFilter::make('number')->label('Invoice'),
+                    SelectFilter::make('status')->label('Status')
+                        ->options(['paid' => 'Paid', 'pending' => 'Pending', 'overdue' => 'Overdue']),
+                    DateFilter::make('issued_at')->label('Issued'),
+                ]),
+            ])
+            ->filtersLayout(FiltersLayout::AboveContentCollapsible)
+            ->filtersFormColumns(3)
+            ->deferFilters()
+            ->defaultSort('number', 'asc')
+            ->searchable()
+            ->paginated(false);
+    }
+
+    /**
+     * ColumnFilterLayout::Popover: a funnel per filterable column, the filter in
+     * a panel of its own, with the operator picker on the text and role filters.
+     */
+    private function columnFiltersPopoverTable(Table $table): Table
+    {
+        return $this->columnFiltersTable($table)
+            ->columnFilterLayout(ColumnFilterLayout::Popover)
+            ->cellFilterMenu()
+            ->columns([
+                TextColumn::make('name')->label('Name')->sortable()
+                    ->filterable()
+                    ->filterOperators(),
+                TextColumn::make('email')->label('Email')
+                    ->filterable()
+                    ->filterOperators(['contains', 'not_contains', 'ends_with', 'is_empty', 'is_not_empty']),
+                BadgeColumn::make('role')
+                    ->label('Role')
+                    ->colors([
+                        'admin' => 'primary',
+                        'manager' => 'info',
+                        'editor' => 'warning',
+                        'viewer' => 'gray',
+                    ])
+                    ->filterAsMultiSelect([
+                        'admin' => 'Administrator',
+                        'manager' => 'Manager',
+                        'editor' => 'Editor',
+                        'viewer' => 'Viewer',
+                    ], 'Any role')
+                    ->filterOperators()
+                    ->filterWithCounts(),
+                BooleanColumn::make('is_active')->label('Active')
+                    ->filterAsBoolean('Active', 'Inactive'),
+                TextColumn::make('created_at')->label('Joined')
+                    ->date()
+                    ->filterPresets(),
+            ]);
+    }
+
     private function columnFiltersTable(Table $table): Table
     {
         return $table
@@ -593,6 +722,42 @@ class TablePreview extends Component
         }
 
         return $table;
+    }
+
+    /**
+     * SelectColumn in each of its shapes: the searchable combobox (a touch list
+     * on a phone), the browser's own <select>, a list the user can add to, and
+     * a multiple one that writes as its list closes.
+     */
+    private function selectCellsTable(Table $table): Table
+    {
+        return $table
+            ->model(Task::class)
+            ->columns([
+                TextColumn::make('title')->label('Task'),
+                SelectColumn::make('status')
+                    ->label('Status')
+                    ->options(['todo' => 'To do', 'in_progress' => 'In progress', 'review' => 'Review', 'done' => 'Done', 'blocked' => 'Blocked'])
+                    ->searchableOptions()
+                    ->touchOnMobile(),
+                SelectColumn::make('priority')
+                    ->label('Priority (native)')
+                    ->options(['low' => 'Low', 'medium' => 'Medium', 'high' => 'High'])
+                    ->native(),
+                SelectColumn::make('owner_name')
+                    ->label('Owner')
+                    ->options(fn () => Task::query()->distinct()->orderBy('owner_name')->pluck('owner_name', 'owner_name')->all())
+                    ->searchableOptions()
+                    ->createOptionForm([TextInput::make('name')->label('Name')->required()->maxLength(60)])
+                    ->createOptionUsing(fn (array $data): string => trim($data['name'])),
+                SelectColumn::make('labels')
+                    ->label('Labels')
+                    ->multiple()
+                    ->selectablePlaceholder()
+                    ->options(['bug' => 'Bug', 'feature' => 'Feature', 'docs' => 'Docs', 'ops' => 'Ops']),
+            ])
+            ->searchable(false)
+            ->paginated(false);
     }
 
     private function editableFillTable(Table $table): Table

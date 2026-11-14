@@ -9,11 +9,13 @@ use NyonCode\WireCore\Modals\Support\ModalStyle;
  * (Rule 5 framework-wide, Phase 0). It must reproduce the component's classes
  * verbatim so the modal shell can be rendered without the Blade component.
  */
-it('resolves the default centered-dialog layout', function () {
-    $s = new ModalStyle(width: 'md');
+it('resolves the centered-dialog layout when the modal opts out of the mobile variants', function () {
+    $s = new ModalStyle(width: 'md', fullScreenOnMobile: false, slideOverOnMobile: false);
 
     expect($s->mobileVariant())->toBeNull()
-        ->and($s->containerClasses())->toContain('flex min-h-screen items-end')->toContain('sm:block sm:p-0')
+        ->and($s->hasGrabber())->toBeFalse()
+        ->and($s->footerSafeAreaClass())->toBe('')
+        ->and($s->containerClasses())->toContain('flex min-h-[100dvh] items-end')->toContain('sm:block sm:p-0')
         ->and($s->panelVariantClasses())->toContain('rounded-2xl')->toContain('sm:my-8')
         ->and($s->bodyVariantClasses())->toBe('')
         ->and($s->widthClass())->not->toBe('');
@@ -30,7 +32,7 @@ it('resolves the bottom-sheet variant (slideOverOnMobile)', function () {
         ->and($s->containerClasses())->toContain('items-end')
         ->and($s->panelVariantClasses())->toContain('rounded-t-2xl')
         ->and($s->bodyVariantClasses())->toContain('flex-1 overflow-y-auto')
-        ->and($s->transitionClasses()['enterStart'])->toContain('translate-y-full');
+        ->and($s->transitionClasses()['enterStart'])->toContain('translate-y-full')->toContain('motion-reduce:translate-y-0');
 });
 
 it('resolves the full-screen variant', function () {
@@ -84,4 +86,39 @@ it('resolves the plain centered-dialog transitions per breakpoint', function () 
     // configured breakpoint.
     expect((new ModalStyle(breakpoint: 'md'))->transitionClasses()['enterStart'])->toContain('md:scale-95')
         ->and((new ModalStyle(breakpoint: 'lg'))->transitionClasses()['leaveEnd'])->toContain('lg:scale-95');
+});
+
+it('follows wire-core.modals.mobile when the modal says nothing', function (string $configured, ?string $variant) {
+    config(['wire-core.modals.mobile' => $configured]);
+
+    expect((new ModalStyle)->mobileVariant())->toBe($variant);
+})->with([
+    'sheet (the default)' => ['sheet', 'bottom-sheet'],
+    'full-screen' => ['full-screen', 'full-screen'],
+    'dialog' => ['dialog', null],
+    'anything else falls back to the sheet' => ['drawer', 'bottom-sheet'],
+]);
+
+it('lets either explicit flag outrank the config default', function () {
+    config(['wire-core.modals.mobile' => 'sheet']);
+
+    expect((new ModalStyle(fullScreenOnMobile: true))->mobileVariant())->toBe('full-screen')
+        ->and((new ModalStyle(slideOverOnMobile: false))->mobileVariant())->toBeNull();
+});
+
+it('gives a bottom sheet a grabber, a safe-area footer and a dynamic-viewport cap', function () {
+    $s = new ModalStyle(slideOverOnMobile: true, breakpoint: 'md');
+
+    expect($s->hasGrabber())->toBeTrue()
+        ->and($s->breakpoint())->toBe('md')
+        ->and($s->footerSafeAreaClass())->toBe('max-md:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]')
+        ->and($s->panelVariantClasses())->toContain('max-h-[var(--wire-sheet-h,92dvh)]')->not->toContain('85vh');
+});
+
+it('keeps a full-screen panel clear of the status bar', function () {
+    $s = new ModalStyle(fullScreenOnMobile: true);
+
+    expect($s->panelVariantClasses())->toContain('max-sm:pt-[env(safe-area-inset-top)]')->toContain('min-h-[100dvh]')
+        ->and($s->hasGrabber())->toBeFalse()
+        ->and($s->footerSafeAreaClass())->toBe('max-sm:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]');
 });

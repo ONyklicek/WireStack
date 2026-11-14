@@ -28,8 +28,8 @@ final class ConfirmationStyle
         private readonly string $width = 'md',
         private readonly string $iconColor = 'warning',
         private readonly ?string $color = null,
-        bool $fullScreenOnMobile = false,
-        bool $slideOverOnMobile = false,
+        ?bool $fullScreenOnMobile = null,
+        ?bool $slideOverOnMobile = null,
         ?string $breakpoint = null,
     ) {
         $this->layout = new ModalStyle(
@@ -53,6 +53,24 @@ final class ConfirmationStyle
     public function widthClass(): string
     {
         return $this->layout->widthClass();
+    }
+
+    /** Whether the panel carries a drag handle — see {@see ModalStyle::hasGrabber()}. */
+    public function hasGrabber(): bool
+    {
+        return $this->layout->hasGrabber();
+    }
+
+    /** The breakpoint token the grabber switches at. */
+    public function breakpoint(): string
+    {
+        return $this->layout->breakpoint();
+    }
+
+    /** Bottom padding that keeps the buttons above the home indicator — see {@see ModalStyle::footerSafeAreaClass()}. */
+    public function footerSafeAreaClass(): string
+    {
+        return $this->layout->footerSafeAreaClass();
     }
 
     /**

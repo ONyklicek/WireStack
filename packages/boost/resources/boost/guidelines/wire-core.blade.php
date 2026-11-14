@@ -27,6 +27,10 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
   `->navigate(false)` on `Action`, `HeaderAction` and any table column; `Table::recordUrl($url, navigate: false)`;
   @verbatim`<x-wire::menu-item :navigate="false">`@endverbatim.
 - Actions can open modals via `->modal(...)` and multi-step wizards via `->steps([...])`.
+- Below the mobile breakpoint a dialog is a bottom sheet by default (`wire-core.modals.mobile`: `sheet` | `full-screen` | `dialog`);
+  per action `->slideOverOnMobile()`, `->fullScreenOnMobile()`, `->dialogOnMobile()`. Overlays lock page scroll with
+  `x-scroll-lock="open"` (or `window.wireScrollLock.lock(el)` / `.unlock(el)`) — never `overflow-hidden` on `<body>`, which iOS ignores.
+  A control inside a dialog that consumes Escape must call `$event.preventDefault()` so the dialog stays open.
 - A wizard step's `->schema(fn (array $data) => [...])` Closure builds its fields from data entered in
   earlier steps; the bag is live even for header actions (no record), so later steps can branch on it.
 - An action with a form (`->form([...])`) self-seeds each field from its `->default()` (or a
@@ -48,6 +52,8 @@ Row, header and bulk actions are objects with a fluent API and lifecycle hooks:
   Deep nesting works (capped at `Modals\ModalStack::MAX_DEPTH` as a runaway guard); only the top takes focus/Escape.
   `->requiresConfirmation()` asks before running (native `wire:confirm`, translated default message);
   `->confirm('Really reset?')` sets a custom message.
+  `->undoable(int $seconds = 10)` asks the host to offer an Undo: a table restores what the action left
+  soft-deleted (`offerActionUndo()` / `undoTableAction()` with a one-use cache token); elsewhere it is a no-op.
 - Color, icon and visibility come from the shared `HasColor`, `HasIcons`, `HasVisibility` concerns.
 - On actions, `->label()`, `->icon()`, `->color()`, `->tooltip()` and `->size()` each accept `string|Closure|null`,
   so they can be computed per row — the Closure receives the record: `->color(fn ($record) => $record->isPaid() ? 'success' : 'danger')`.

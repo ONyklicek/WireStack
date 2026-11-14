@@ -52,6 +52,9 @@ class WireInstallCommand extends Command
     /** The part whose presence decides whether the modules are worth offering. */
     private const SHELL = 'nyoncode/wire-admin';
 
+    /** What a ready-made area's pages are built on; the shell is optional above it. */
+    private const PANELS = 'nyoncode/wire-panels';
+
     /**
      * How many headings have been printed.
      *
@@ -507,18 +510,20 @@ class WireInstallCommand extends Command
             static fn (Component $c): bool => $c->group === ComponentGroup::Stack,
         )));
 
-        // The second question, and only when the application has the shell —
+        // The second question, and only when the application has panels —
         // ticked just now, or set up by an earlier run. A ready-made area renders
-        // *inside* a panel, so offering "a users area" to somebody who has not
-        // taken one is offering them a screen with nowhere to appear. The earlier
-        // run counts because that is the documented way to add a module: require
-        // it, run this again, and the shell is ALREADY DONE rather than offered.
-        $shell = array_filter(
+        // *inside* a panel, so offering "a users area" to somebody who has none
+        // is offering them a screen with nowhere to appear. Panels, not the
+        // shell: the shell is the optional layout above them, and an application
+        // that draws its own (the documented opt-out) still wants the areas. The
+        // earlier run counts because that is the documented way to add a module:
+        // require it, run this again, and panels are ALREADY DONE.
+        $panels = array_filter(
             [...$stack, ...$settled],
-            static fn (Component $c): bool => $c->package === self::SHELL,
+            static fn (Component $c): bool => in_array($c->package, [self::PANELS, self::SHELL], true),
         );
 
-        if ($shell === []) {
+        if ($panels === []) {
             return $stack;
         }
 

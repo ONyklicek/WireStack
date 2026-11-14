@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
@@ -112,6 +113,8 @@ it('shows nothing at all to nobody, rather than everything', function () {
 
 it('shows everyone s notifications where an application asked for that', function () {
     config()->set('wire-module-notifications.scope', 'all');
+    config()->set('wire-module-notifications.permission', 'notifications.everyone');
+    Gate::define('notifications.everyone', fn ($user = null): bool => true);
 
     nmNotification('1');
     nmNotification('2');
@@ -163,6 +166,8 @@ it('opens anybody s notification once the screen is the administrative one', fun
     // `scope => all` is the documented administrative view, and the page has to
     // follow the list rather than keep its own idea of whose things these are.
     config()->set('wire-module-notifications.scope', 'all');
+    config()->set('wire-module-notifications.permission', 'notifications.everyone');
+    Gate::define('notifications.everyone', fn ($user = null): bool => true);
 
     $theirs = nmNotification('2');
 

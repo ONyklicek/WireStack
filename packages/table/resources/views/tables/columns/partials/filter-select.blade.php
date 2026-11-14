@@ -14,7 +14,7 @@
     'mobileBreakpoint' => $filter->getMobileBreakpoint(),
     'selectId' => 'colfilter-'.$name,
     'statePath' => $statePath,
-    'options' => $filter->getOptions(),
+    'options' => $filter->getDisplayOptions(),
     'placeholder' => $placeholder,
     'multiple' => false,
     'searchable' => $filter->isSearchable(),

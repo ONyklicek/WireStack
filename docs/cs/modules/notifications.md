@@ -43,6 +43,7 @@ a instalátor to řekne.
 'model' => NyonCode\WireCore\Notifications\DatabaseNotification::class,
 
 'scope' => 'own',   // 'own' vlastní řádky přihlášeného; 'all' řádky všech [tl! focus]
+'permission' => null, // oprávnění, které 'all' uděluje; bez něj nevidí řádky všech nikdo [tl! focus]
 
 'navigation' => [
     'visible' => false,   // do schránky se chodí přes zvonek, ne přes řádek v menu
@@ -57,9 +58,12 @@ a instalátor to řekne.
 vlastní obrazovku, ne tabulku. Vlastní model z ní musí dědit — řádky zapisuje
 driver notifikací, který o tomhle modulu neví.
 
-`scope => 'all'` udělá ze schránky administrativní pohled na poštu všech, což
-chce oprávnění na stránce, ne jen klíč v konfiguraci. Odhlášenému `own`
-neodpovídá nic, což je ta bezpečná půlka volby.
+`scope => 'all'` udělá ze schránky administrativní pohled na poštu všech — pro
+toho, kdo má oprávnění uvedené v `permission` (`WIRE_NOTIFICATIONS_PERMISSION`).
+Všichni ostatní, a když žádné oprávnění uvedené není, tak všichni, dál vidí svou
+vlastní: výpis schránek všech, který kterýkoli přihlášený může přečíst a
+vyprázdnit, není administrativní pohled. Odhlášenému `own` neodpovídá nic, což je
+ta bezpečná půlka volby.
 
 Scope drží i na detailu, nejen ve výpisu, takže id notifikace v URL není
 oprávnění ji číst — pod `own` cizí odpoví 404, místo aby se vykreslila a tiše se

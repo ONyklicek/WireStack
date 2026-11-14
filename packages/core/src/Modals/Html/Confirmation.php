@@ -45,8 +45,8 @@ final class Confirmation implements Htmlable
         public ?bool $closeOnEscape = null,
         /** A CSS length capping the body block, which then scrolls on its own. */
         public ?string $maxHeight = null,
-        public bool $fullScreenOnMobile = false,
-        public bool $slideOverOnMobile = false,
+        public ?bool $fullScreenOnMobile = null,
+        public ?bool $slideOverOnMobile = null,
         public ?string $breakpoint = null,
         public ?string $id = null,
         public ?string $closeAction = null,

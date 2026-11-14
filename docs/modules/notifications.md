@@ -43,6 +43,7 @@ driver there is nothing to list, and the installer says so.
 'model' => NyonCode\WireCore\Notifications\DatabaseNotification::class,
 
 'scope' => 'own',   // 'own' the viewer's own rows; 'all' everyone's [tl! focus]
+'permission' => null, // the ability 'all' is granted by; none means nobody sees everyone's [tl! focus]
 
 'navigation' => [
     'visible' => false,   // the inbox is reached from the bell, not from a menu row
@@ -57,9 +58,12 @@ driver there is nothing to list, and the installer says so.
 the screen, not the table. A model of your own must extend that one — the rows
 are written by the notification driver, which knows nothing about this module.
 
-`scope => 'all'` turns an inbox into an administrative view of everyone's mail,
-which wants a permission on the page rather than a config key alone. Signed out,
-`own` resolves to nothing at all, which is the safe half of the choice.
+`scope => 'all'` turns an inbox into an administrative view of everyone's mail
+— for a viewer holding the ability named in `permission`
+(`WIRE_NOTIFICATIONS_PERMISSION`). Everybody else, and everybody when no ability
+is named, keeps seeing their own: a list of everyone's inbox that any signed-in
+user can read and empty is not an administrative view. Signed out, `own`
+resolves to nothing at all, which is the safe half of the choice.
 
 The scope holds on the detail page as well as the list, so a notification id in
 a URL is not permission to read it — under `own`, somebody else's answers 404

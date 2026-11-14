@@ -127,7 +127,12 @@ class MediaManager extends Component
      */
     public array $tray = [];
 
-    /** The image open in the editor, if any. */
+    /**
+     * The image open in the editor, if any. Locked: only openEditor() — which
+     * refuses what may not be edited — sets it, and an id swapped in the
+     * snapshot would point the replacement at another file.
+     */
+    #[Locked]
     public ?int $editingId = null;
 
     /** `new` or `replace` — set from the editor immediately before it uploads. */

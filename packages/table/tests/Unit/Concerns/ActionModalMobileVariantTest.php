@@ -88,7 +88,7 @@ afterEach(function () {
 it('renders the action modal as a mobile bottom-sheet when slideOverOnMobile() is set', function () {
     Livewire::test(AmvComponent::class, ['mode' => 'slide-over'])
         ->call('openHeaderActionModal', 'invite')
-        ->assertSeeHtml('translate-y-full sm:translate-y-0')
+        ->assertSeeHtml('translate-y-full motion-reduce:translate-y-0 sm:translate-y-0')
         ->assertSeeHtml('rounded-t-2xl')
         ->assertDontSeeHtml('translate-x-full');
 });
@@ -96,7 +96,7 @@ it('renders the action modal as a mobile bottom-sheet when slideOverOnMobile() i
 it('renders the action modal full screen on mobile when fullScreenOnMobile() is set', function () {
     Livewire::test(AmvComponent::class, ['mode' => 'full-screen'])
         ->call('openHeaderActionModal', 'invite')
-        ->assertSeeHtml('translate-y-full sm:translate-y-0')
+        ->assertSeeHtml('translate-y-full motion-reduce:translate-y-0 sm:translate-y-0')
         ->assertSeeHtml('items-stretch justify-center');
 });
 
@@ -105,7 +105,7 @@ it('composes slideOver() + slideOverOnMobile() into a desktop slide-over that be
         ->call('openHeaderActionModal', 'invite')
         // Mobile bottom-sheet: full-width tray pinned to the bottom, slides up.
         ->assertSeeHtml('inset-x-0 bottom-0')
-        ->assertSeeHtml('translate-y-full sm:translate-y-0 sm:translate-x-full')
+        ->assertSeeHtml('translate-y-full motion-reduce:translate-y-0 sm:translate-y-0 sm:translate-x-full')
         ->assertSeeHtml('rounded-t-2xl sm:h-full sm:max-h-none sm:overflow-visible sm:rounded-none')
         // Desktop slide-over: edge-pinned right with the breathing gap.
         ->assertSeeHtml('sm:right-0 sm:pl-10');
@@ -133,7 +133,7 @@ it('renders a confirmation action as a mobile bottom-sheet when slideOverOnMobil
         // The confirmation shell still renders (submit/cancel buttons)...
         ->assertSeeHtml('data-testid="confirmation-confirm"')
         // ...but now slides up from the bottom as a sheet instead of a centered dialog.
-        ->assertSeeHtml('translate-y-full sm:translate-y-0')
+        ->assertSeeHtml('translate-y-full motion-reduce:translate-y-0 sm:translate-y-0')
         ->assertSeeHtml('rounded-t-2xl')
         ->assertDontSeeHtml('translate-x-full');
 });
@@ -142,7 +142,7 @@ it('renders a confirmation action full screen on mobile when fullScreenOnMobile(
     Livewire::test(AmvComponent::class, ['mode' => 'confirm-full'])
         ->call('openHeaderActionModal', 'invite')
         ->assertSeeHtml('data-testid="confirmation-confirm"')
-        ->assertSeeHtml('translate-y-full sm:translate-y-0')
+        ->assertSeeHtml('translate-y-full motion-reduce:translate-y-0 sm:translate-y-0')
         ->assertSeeHtml('items-stretch justify-center');
 });
 

@@ -42,6 +42,8 @@
     $hasViewMenu = $plan->shell()->hasViewMenu;
     $hasSavedViews = $plan->shell()->hasSavedViews;
     $savedViews = $plan->shell()->savedViews;
+    $sharedViews = $plan->shell()->sharedViews;
+    $canShareViews = $plan->shell()->canShareViews;
     $viewMenuLabel = $plan->shell()->viewMenuLabel;
 
     // Table state. Which filters count as ACTIVE is a rule with a sharp edge (see
@@ -49,6 +51,9 @@
     // magic-property hazard this block used to warn about goes with it: the plan
     // reads the state container, so there is nothing here to reach for.
     $tableFilters = $plan->state()->filters;
+    // What the panel's controls show — the draft, in a deferred panel.
+    $panelFilterValues = $plan->state()->panelFilters;
+    $filtersLayout = $table->getFiltersLayout();
     $activeTableFilters = $plan->state()->activeFilters;
     // The mobile sort control names the current column and direction.
     $sortColumn = $plan->state()->sortColumn;
@@ -99,6 +104,8 @@
     $mobileSortableColumns = $plan->columns()->mobileSortable;
     $hasMobileSort = $plan->columns()->hasMobileSort;
     $hasCopyableColumn = $plan->columns()->hasCopyable;
+    $pinnedColumnNames = $plan->columns()->pinnedNames;
+    $pinnableColumns = $plan->columns()->visible;
 
     // The size of the whole result set, for the selection strip's "n of N".
     $recordCount = $plan->paging()->recordCount;
@@ -301,11 +308,28 @@
 
                                 @wireRenderHook('table.toolbar.end')
 
-                                {{-- Filters Toggle --}}
-                                @if($hasFilters)
+                                {{-- Filters Toggle. Above the rows (Table::filtersLayout()) the
+                                     filters need no dropdown: always open there is no button at all,
+                                     and the collapsible kind is opened by a plain toggle. --}}
+                                @if($hasFilters && $filtersLayout === \NyonCode\WireTable\Enums\FiltersLayout::AboveContentCollapsible)
+                                    <button
+                                            type="button"
+                                            x-data
+                                            @click="$dispatch('wire-table-filters-toggle', { id: @js($component->getId()) })"
+                                            data-testid="table-filters-trigger" @wireEl('table-filters-trigger')
+                                            aria-label="{{ __('wire-table::messages.filters') }}"
+                                            class="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    >
+                                        {!! icon('outline:funnel', 'h-4 w-4') !!}
+                                        <span>{{ __('wire-table::messages.filters') }}</span>
+                                        @if($activeTableFilters !== [])
+                                            <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-primary-600 rounded-full">{{ count($activeTableFilters) }}</span>
+                                        @endif
+                                    </button>
+                                @elseif($hasFilters && ! $filtersLayout->isAboveContent())
                                     @include('wire-core::partials.floating-assets')
 
-                                    <div x-data="wireDropdown({ placement: 'bottom-start', offset: 8{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} })" @keydown.escape.window="close()" class="relative">
+                                    <div x-data="wireDropdown({ placement: 'bottom-start', offset: 8{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} })" @keydown.escape.window="dismiss($event)" class="relative">
                                         <button
                                                 x-ref="trigger"
                                                 @click="toggle()"
@@ -340,6 +364,7 @@
                                                         x-transition:leave-start="opacity-100"
                                                         x-transition:leave-end="opacity-0"
                                                         @click="close()"
+                                                        data-sheet-backdrop
                                                         class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70 {{ $sheetBackdrop }}"
                                                 ></div>
                                                 @endif
@@ -356,7 +381,8 @@
                                                         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
                                                         x-transition:leave-end="opacity-0 scale-95 {{ $sheetOnMobile ? $sheetMotion : '' }}"
                                                         @class([
-                                                            'absolute top-0 left-0 z-50 w-72 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700',
+                                                            'absolute top-0 left-0 z-50 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700',
+                                                            $table->getFiltersPanelWidthClass(),
                                                             $sheetPanel => $sheetOnMobile,
                                                         ])
                                                         x-cloak
@@ -365,22 +391,8 @@
                                                     @if($sheetOnMobile)
                                                         @include('wire-core::partials.sheet-grabber', ['dismiss' => 'close()', 'breakpoint' => $sheetBp])
                                                     @endif
-                                                    <div class="p-4 space-y-4">
-                                                        @foreach($filters as $filter)
-                                                            @if($filter->canView())
-                                                                {!! $filter->render($tableFilters[$filter->getName()] ?? null) !!}
-                                                            @endif
-                                                        @endforeach
-
-                                                        <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
-                                                            <button
-                                                                    type="button"
-                                                                    wire:click="resetTableFilters"
-                                                                    class="w-full text-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                                                            >
-                                                                {{ __('wire-table::messages.filter_reset') }}
-                                                            </button>
-                                                        </div>
+                                                    <div class="p-4">
+                                                        @include('wire-table::tables.partials.filters-panel-body')
                                                     </div>
                                                 </div>
                                             </div>
@@ -446,7 +458,7 @@
 
                                     <div
                                             x-data="wireDropdown({ placement: 'bottom-end'{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} })"
-                                            @keydown.escape.window="close()"
+                                            @keydown.escape.window="dismiss($event)"
                                             class="relative"
                                     >
                                         <button
@@ -477,6 +489,7 @@
                                                         x-transition:leave-start="opacity-100"
                                                         x-transition:leave-end="opacity-0"
                                                         @click="close()"
+                                                        data-sheet-backdrop
                                                         class="fixed inset-0 z-40 bg-gray-500/60 dark:bg-gray-900/70 {{ $sheetBackdrop }}"
                                                 ></div>
                                                 @endif
@@ -534,6 +547,37 @@
                                                             >{!! icon('outline:trash', 'h-4 w-4') !!}</button>
                                                         </div>
                                                     @endforeach
+                                                    {{-- Shared views (Table::shareViews()): listed for everyone,
+                                                         marked so a user can tell theirs from the team's, and
+                                                         deletable only by someone who may publish them. --}}
+                                                    @foreach($sharedViews as $sharedView)
+                                                        <div class="flex items-center gap-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50" data-shared-view>
+                                                            <button
+                                                                    type="button"
+                                                                    wire:click="applyTableView(@js($sharedView), true)"
+                                                                    wire:loading.attr="disabled"
+                                                                    wire:target="applyTableView(@js($sharedView), true)"
+                                                                    data-testid="table-shared-view-{{ $sharedView }}"
+                                                                    class="flex flex-1 min-w-0 items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300"
+                                                            >
+                                                                {!! icon('outline:user-group', 'h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400') !!}
+                                                                <span class="truncate">{{ $sharedView }}</span>
+                                                                <span class="sr-only">({{ __('wire-table::messages.shared_view') }})</span>
+                                                            </button>
+                                                            @if($canShareViews)
+                                                                <button
+                                                                        type="button"
+                                                                        wire:click="deleteTableView(@js($sharedView), true)"
+                                                                        wire:loading.attr="disabled"
+                                                                        wire:target="deleteTableView(@js($sharedView), true)"
+                                                                        data-testid="table-shared-view-delete-{{ $sharedView }}"
+                                                                        title="{{ __('wire-table::messages.delete_view') }}"
+                                                                        aria-label="{{ __('wire-table::messages.delete_view') }}"
+                                                                        class="shrink-0 rounded-md p-1.5 mr-1 text-gray-500 hover:text-red-600 dark:hover:text-red-400"
+                                                                >{!! icon('outline:trash', 'h-4 w-4') !!}</button>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
                                                     {{-- The name is asked for in the browser rather than with a
                                                          field in this panel: the panel is teleported to <body>
                                                          and closes on click-outside, so an input in it would
@@ -544,12 +588,23 @@
                                                             data-testid="table-view-save" @wireEl('table-view-save')
                                                             @class([
                                                                 'mt-1 flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg',
-                                                                'border-t border-gray-100 dark:border-gray-700' => $savedViews !== [],
+                                                                'border-t border-gray-100 dark:border-gray-700' => $savedViews !== [] || $sharedViews !== [],
                                                             ])
                                                     >
                                                         {!! icon('outline:bookmark', 'h-4 w-4') !!}
                                                         {{ __('wire-table::messages.save_current_view') }}
                                                     </button>
+                                                    @if($canShareViews)
+                                                        <button
+                                                                type="button"
+                                                                x-on:click="$wire.saveTableView(window.prompt(@js(__('wire-table::messages.save_view_prompt'))) ?? '', true)"
+                                                                data-testid="table-view-share" @wireEl('table-view-share')
+                                                                class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg"
+                                                        >
+                                                            {!! icon('outline:user-group', 'h-4 w-4') !!}
+                                                            {{ __('wire-table::messages.save_shared_view') }}
+                                                        </button>
+                                                    @endif
                                                 @endif
                                                 @if($hasColumnToggles)
                                                 <div
@@ -579,6 +634,30 @@
                                                                 class="text-sm text-gray-700 dark:text-gray-300">{{ $column->getLabel() }}</span>
                                                     </label>
                                                 @endforeach
+                                                {{-- Pinned columns (Table::pinnableColumns()): every column on
+                                                     screen, pinned or not; one the developer pinned stays so. --}}
+                                                @if($table->hasPinnableColumns())
+                                                    <div class="px-3 py-2 mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-t border-gray-100 dark:border-gray-700">
+                                                        {{ __('wire-table::messages.pinned_columns') }}
+                                                    </div>
+                                                    @foreach($pinnableColumns as $column)
+                                                        @php $isPinned = in_array($column->getName(), $pinnedColumnNames, true); @endphp
+                                                        <button
+                                                                type="button"
+                                                                @unless($column->isPinned()) wire:click="toggleColumnPin(@js($column->getName()))" @endunless
+                                                                @disabled($column->isPinned())
+                                                                aria-pressed="{{ $isPinned ? 'true' : 'false' }}"
+                                                                data-testid="table-column-pin-{{ $column->getName() }}" @wireEl('table-column-pin')
+                                                                class="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                        >
+                                                            <span @class(['flex h-5 w-5 shrink-0 items-center justify-center', 'text-primary-600 dark:text-primary-400' => $isPinned, 'text-gray-400 dark:text-gray-500' => ! $isPinned])>
+                                                                {!! icon($isPinned ? 'solid:map-pin' : 'outline:map-pin', 'h-4 w-4') !!}
+                                                            </span>
+                                                            <span class="truncate">{{ $column->getLabel() }}</span>
+                                                            <span class="sr-only">— {{ __('wire-table::messages.pin_column') }}</span>
+                                                        </button>
+                                                    @endforeach
+                                                @endif
                                                 {{-- Sub-row expansion: the baseline that survives paging,
                                                      and the only bulk expand/collapse a phone gets. --}}
                                                 @if($isSubRowsExpandable)
@@ -624,6 +703,30 @@
                         </div>
                     </div>
 
+                    {{-- The filters above the rows (FiltersLayout::AboveContent and its
+                         collapsible kind). Closed or open is remembered per browser for
+                         the collapsible kind, keyed by the component's name (its id is new on
+                         every page load); storage may be unavailable, so it is read
+                         and written defensively and the default (closed) stands. --}}
+                    @if($hasFilters && $filtersLayout->isAboveContent())
+                        @php $filtersCollapsible = $filtersLayout === \NyonCode\WireTable\Enums\FiltersLayout::AboveContentCollapsible; @endphp
+                        <div
+                                @if($filtersCollapsible)
+                                x-data="{
+                                    open: (() => { try { return localStorage.getItem('wire-table-filters:' + @js($component->getName())) === '1' } catch (e) { return false } })(),
+                                    toggle() { this.open = ! this.open; try { localStorage.setItem('wire-table-filters:' + @js($component->getName()), this.open ? '1' : '0') } catch (e) {} },
+                                }"
+                                @wire-table-filters-toggle.window="$event.detail.id === @js($component->getId()) && toggle()"
+                                x-show="open"
+                                x-cloak
+                                @endif
+                                data-testid="table-filters-above" @wireEl('table-filters-above')
+                                class="border-b border-gray-200 bg-gray-50/60 px-4 py-4 lg:px-6 dark:border-gray-700 dark:bg-gray-800/40"
+                        >
+                            @include('wire-table::tables.partials.filters-panel-body')
+                        </div>
+                    @endif
+
                     {{-- Active Filter Indicators --}}
                     @if($hasFilters)
                         @include('wire-table::tables.partials.filter-indicators', ['component' => $component])
@@ -635,7 +738,11 @@
                                 x-show="selectedCount > 0"
                                 x-cloak
                                 data-testid="table-bulk-bar" @wireEl('table-bulk-bar')
-                                class="px-4 lg:px-6 py-3 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-primary-800/30">
+                                {{-- On a phone the bar rides the bottom edge, where the thumb is, above
+                                     the home indicator — not at the top of a table scrolled out of
+                                     sight while the user ticks rows further down. Opaque there: it
+                                     floats over the rows. --}}
+                                class="px-4 lg:px-6 py-3 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-primary-800/30 max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-30 max-sm:border-t max-sm:border-b-0 max-sm:pb-[calc(0.75rem_+_env(safe-area-inset-bottom))] max-sm:shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.25)] max-sm:dark:bg-gray-900">
                             {{-- Stacks on mobile so multiple bulk-action buttons wrap instead of overflowing. --}}
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div class="flex items-center gap-3">

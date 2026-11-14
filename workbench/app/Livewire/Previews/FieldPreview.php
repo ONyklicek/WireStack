@@ -340,6 +340,20 @@ class FieldPreview extends Component
                     'viewer' => 'Viewer',
                 ]),
 
+            // A list longer than half a phone: the sheet opens at the medium
+            // detent and is pulled up to the large one (verify-sheet-detents).
+            'select-long' => Select::make('role')
+                ->label('Country')
+                ->options(collect(['Austria', 'Belgium', 'Bulgaria', 'Croatia', 'Cyprus', 'Czechia', 'Denmark', 'Estonia', 'Finland', 'France', 'Germany', 'Greece', 'Hungary', 'Ireland', 'Italy', 'Latvia', 'Lithuania', 'Luxembourg', 'Malta', 'Netherlands', 'Poland', 'Portugal', 'Romania', 'Slovakia', 'Slovenia', 'Spain', 'Sweden'])->mapWithKeys(fn (string $c) => [strtolower($c) => $c])->all()),
+
+            // The same list with a search, as a sheet (a searchable select is a
+            // floating dropdown on a phone unless it asks for the sheet).
+            'select-long-search' => Select::make('role')
+                ->label('Country')
+                ->searchable()
+                ->sheetOnMobile()
+                ->options(collect(['Austria', 'Belgium', 'Bulgaria', 'Croatia', 'Cyprus', 'Czechia', 'Denmark', 'Estonia', 'Finland', 'France', 'Germany', 'Greece', 'Hungary', 'Ireland', 'Italy', 'Latvia', 'Lithuania', 'Luxembourg', 'Malta', 'Netherlands', 'Poland', 'Portugal', 'Romania', 'Slovakia', 'Slovenia', 'Spain', 'Sweden'])->mapWithKeys(fn (string $c) => [strtolower($c) => $c])->all()),
+
             // Per-component breakpoint: sheet up to lg (1024) even when the global
             // default is sm — so it's a sheet on a tablet at ~900px.
             'select-bp-lg' => Select::make('role')

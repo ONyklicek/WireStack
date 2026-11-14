@@ -116,6 +116,49 @@ vypadalo jako menu, ve kterém to sedí:
 [Modul uživatelů](../modules/users.md) dodává stránku profilu pro přihlášeného
 uživatele, pokud ji nechcete psát sami.
 
+## Kde sedí účet a sbalovací tlačítko
+
+Obojí ve výchozím stavu sedí v horní liště. Každé se může samostatně přesunout
+do paty sloupce s menu:
+
+```php
+// config/wire-admin.php
+'layout' => [
+    'user' => 'sidebar',        // 'topbar' (výchozí) | 'sidebar' — menu účtu
+    'rail_toggle' => 'sidebar', // 'topbar' (výchozí) | 'sidebar' — sbalovací tlačítko
+],
+```
+
+nebo jen pro jeden layout:
+
+```blade
+<x-wire-admin::layout user-placement="sidebar" rail-toggle-placement="sidebar">
+```
+
+| Nastavení | V horní liště | V patě menu |
+| --- | --- | --- |
+| `user` | avatar a jméno vpravo nahoře, menu se otevírá dolů | řádek pod menu, menu se otevírá **nahoru**; v railu jen avatar na ose ikon nad ním a jeho menu se vysune přes stránku |
+| `rail_toggle` | tlačítko vedle tlačítka menu | úplně poslední řádek, pod účtem, když jsou tam oba |
+
+Menu je stejné, ať sedí kdekoli: slot `user` (váš vlastní spouštěč), slot
+`user-menu` i každá položka, kterou zaregistroval balíček — profil z modulu
+users, odhlášení z modulu auth — se stěhují spolu, takže přesun nikdy nenechá
+odhlášení za sebou. ⌘B sbalí menu, ať je jeho tlačítko kdekoli; je navázané
+jednou pro stránku, ne na tlačítko. Hodnota, která nejmenuje ani jedno místo, se
+odmítne výjimkou `ChromeSlotException` místo vykreslení v horní liště.
+
+Dva důsledky, které je dobré zvolit vědomě:
+
+- **Na telefonu je sloupec menu šuplík**, takže účet v jeho patě je tam za
+  tlačítkem menu — horní lišta pak neříká, kdo je přihlášený. Sbalovací tlačítko
+  se na telefonu nekreslí tak jako tak; telefon žádný rail nemá.
+- **Váš vlastní spouštěč `user` se stěhuje tak, jak je.** V patě sbaleného menu
+  sedí ve sloupci širokém 64 pixelů a jeho markup znáte jen vy: dejte mu úzký
+  tvar přes `data-rail-hide` (v railu zmizí) a `data-rail-only` (ukáže se jen tam).
+
+Při `navigation => 'top'` od `lg` výš žádný sloupec není, takže obojí zůstane v
+horní liště, ať tu stojí cokoli.
+
 ## Související
 
 - [Sidebar](sidebar.md) — menu, které tenhle layout staví vedle stránky

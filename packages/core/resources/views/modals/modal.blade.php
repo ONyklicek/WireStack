@@ -20,6 +20,12 @@
     if ($openEvent !== null && ! preg_match('/^[a-zA-Z][a-zA-Z0-9_-]*$/', $openEvent)) {
         $openEvent = null;
     }
+    // Ids per dialog, not per shell: two stacked dialogs used to both label
+    // themselves `#modal-title`, and a screen reader read the parent's heading for
+    // the child. Derived, not random, so a re-render keeps the same ids.
+    $dialogKey = substr(md5(($id ?? '').'|'.($zIndex ?? '').'|'.($heading ?? '')), 0, 8);
+    $titleId = 'modal-title-'.$dialogKey;
+    $descriptionId = 'modal-description-'.$dialogKey;
 @endphp
 <template x-teleport="body" wire:key="wire-modal-modal{{ $id ? '-'.$id : '' }}">
 <div
@@ -30,13 +36,15 @@
     @if($openEvent) x-on:{{ $openEvent }}.window="show = true" @endif
     @endif
     @include('wire-core::modals.partials.focus-trap')
+    x-scroll-lock="show"
     x-show="show"
     x-cloak
     style="display: none;@if($zIndex !== null) z-index: {{ $zIndex }};@endif"
-    @if($closeOnEscape) x-on:keydown.escape.window="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
+    @if($closeOnEscape) x-on:keydown.escape.window="setTimeout(() => $event.defaultPrevented || ! show || (show = false, {{ $closeAction ? "\$wire.{$closeAction}()" : 'null' }}))" @endif
     class="fixed inset-0 z-50 overflow-y-auto"
     @if($id) id="{{ $id }}" @endif
-    aria-labelledby="modal-title"
+    aria-labelledby="{{ $titleId }}"
+    @if($description ?? null) aria-describedby="{{ $descriptionId }}" @endif
     role="dialog"
     aria-modal="true"
 >
@@ -50,7 +58,7 @@
             x-transition:leave="ease-in duration-200"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
+            data-sheet-backdrop class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 backdrop-blur-sm transition-opacity"
             @if($closeOnClickAway) @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}" @endif
         ></div>
 
@@ -73,6 +81,11 @@
             ])
             @if($maxHeight) style="max-height: {{ $maxHeight }}" @endif
         >
+            {{-- A bottom sheet is pulled down to close, like every other sheet. --}}
+            @if($style->hasGrabber())
+                @include('wire-core::partials.sheet-grabber', ['dismiss' => 'show = false; '.($closeAction ? '$wire.'.$closeAction.'()' : ''), 'breakpoint' => $style->breakpoint(), 'detents' => 'large', 'class' => 'shrink-0'])
+            @endif
+
             {{-- Header --}}
             @if($heading || $icon || isset($header))
                 <div @class([
@@ -89,14 +102,14 @@
                         {{-- px keeps a centered mobile heading clear of the pinned close button. --}}
                         <div class="mt-3 px-8 text-center sm:mt-0 sm:px-0 {{ $icon ? 'sm:ml-4' : '' }} sm:text-left flex-1">
                             @if($heading)
-                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="modal-title">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="{{ $titleId }}">
                                     {{ $heading }}
                                 </h3>
                             @endif
 
                             @if($description)
                                 <div class="mt-2">
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    <p class="text-sm text-gray-500 dark:text-gray-400" id="{{ $descriptionId }}">
                                         {{ $description }}
                                     </p>
                                 </div>
@@ -109,11 +122,11 @@
                         <button
                             type="button"
                             @click="show = false; {{ $closeAction ? "\$wire.{$closeAction}()" : '' }}"
-                            data-testid="modal-close" @wireEl('modal-close')
+                            data-testid="modal-close" data-focus-skip @wireEl('modal-close')
                             aria-label="{{ __('Close') }}"
             {{-- Larger tap target on mobile (p-2.5 ≈ 40px), back to the compact
                              desktop size from sm up. --}}
-                            class="absolute right-2 top-2 sm:static sm:right-auto sm:top-auto sm:ml-auto sm:-mr-1.5 rounded-lg p-2.5 sm:p-1.5 text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 touch-manipulation"
+                            class="absolute right-2 top-2 sm:static sm:right-auto sm:top-auto sm:ml-auto sm:-mr-1.5 rounded-lg p-2.5 sm:p-1.5 text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 touch-manipulation"
                         >
                             <span class="sr-only">{{ __('Close') }}</span>
                             {!! icon('outline:x-mark', 'h-5 w-5') !!}
@@ -154,6 +167,7 @@
                 <div @class([
                     'px-4 pb-4 sm:px-6 sm:pb-6',
                     'sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 pt-4' => $stickyFooter,
+                    $style->footerSafeAreaClass(),
                 ])>
                     @isset($footerView)
                         @include($footerView, $footerData ?? [])

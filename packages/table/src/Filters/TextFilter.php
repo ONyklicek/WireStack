@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use NyonCode\WireCore\Core\Query\FilterDefinition;
 use NyonCode\WireCore\Foundation\Concerns\HasDebounce;
 use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireTable\Enums\FilterOperator;
 
 /**
  * Free-text filter with a configurable SQL operator.
@@ -42,6 +43,18 @@ class TextFilter extends Filter
         return $this->operator;
     }
 
+    /** Every comparison a text column can be asked: contains, equals, starts/ends with, their negatives and emptiness. */
+    public function supportedOperators(): array
+    {
+        return FilterOperator::forText();
+    }
+
+    /** The operator set with {@see operator()} — `like` (contains) unless the developer chose another. */
+    protected function baseOperator(): FilterOperator
+    {
+        return FilterOperator::resolve($this->operator) ?? FilterOperator::Contains;
+    }
+
     /**
      * @param  Builder<Model>  $query
      * @return Builder<Model>
@@ -56,44 +69,42 @@ class TextFilter extends Filter
             return $this->applyQueryCallback($query, $this->normalizeValue($value), $value);
         }
 
+        $operator = $this->getActiveOperator();
+
         // Crafted/stale state can deliver an array here; guard against
         // "Array to string conversion" in the LIKE/comparison branches.
-        if (! is_scalar($value)) {
+        if ($operator->requiresValue() && ! is_scalar($value)) {
             return $query;
         }
 
-        return $this->applyToColumn($query, fn (Builder $q, string $column) => match ($this->operator) {
-            'equals', '=' => $q->where($column, $value),
-            'starts_with' => $q->where($column, 'like', "$value%"),
-            'ends_with' => $q->where($column, 'like', "%$value"),
-            '>', '>=', '<', '<=', '!=' => $q->where($column, $this->operator, $value),
-            default => $q->where($column, 'like', "%$value%"),
-        });
+        return $this->applyOperator($query, $operator, $value, blankIsEmpty: true);
     }
 
     /**
-     * Express the text match as a single planner clause: the operator maps to
-     * LIKE (with the value wrapped for substring / prefix / suffix) or a direct
-     * comparison, so it plans alongside relation joins + qualification.
+     * Express the text match as a single planner clause where one clause can say
+     * it — LIKE with the value wrapped for substring / prefix / suffix, or a
+     * direct comparison — so it plans alongside relation joins + qualification.
+     * The negatives and "is empty" keep NULLs or match '' too, which one clause
+     * cannot, and go through {@see apply()}.
      */
     public function toPlannerDefinitions(mixed $value): array
     {
-        if ($this->queryCallback !== null || ! is_scalar($value) || $value === '') {
+        if ($this->queryCallback !== null || $value === '' || $value === null) {
             return [];
         }
 
-        [$operator, $planValue] = match ($this->operator) {
-            'equals', '=' => ['=', $value],
-            'starts_with' => ['LIKE', "$value%"],
-            'ends_with' => ['LIKE', "%$value"],
-            '>', '>=', '<', '<=', '!=' => [$this->operator, $value],
-            default => ['LIKE', "%$value%"],
-        };
+        $operator = $this->getActiveOperator();
 
-        return [FilterDefinition::make(
+        if (! $operator->requiresValue() || ! is_scalar($value)) {
+            return [];
+        }
+
+        $clause = $operator->toPlannerClause($value);
+
+        return $clause === null ? [] : [FilterDefinition::make(
             column: $this->getColumn(),
-            operator: $operator,
-            value: $planValue,
+            operator: $clause[0],
+            value: $clause[1],
         )];
     }
 

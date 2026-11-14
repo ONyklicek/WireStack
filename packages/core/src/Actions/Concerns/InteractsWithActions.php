@@ -458,6 +458,17 @@ trait InteractsWithActions
     }
 
     /**
+     * Offer to take an action's result back (BaseAction::undoable()), and say
+     * whether a notice carrying the offer was sent. The engine has nothing it
+     * can restore; a host that can — the table, for soft-deleted records —
+     * overrides this.
+     */
+    protected function offerActionUndo(mixed $action, mixed $context): bool
+    {
+        return false;
+    }
+
+    /**
      * Give the form-hosting layer a chance to attach a Form instance to a halt
      * modal. No-op in core (form-free); overridden by InteractsWithActionForms.
      */
@@ -713,7 +724,12 @@ trait InteractsWithActions
         // notification config (fires only when a message is configured, so
         // actions without one stay silent).
         $notification = $context->get('notification');
-        if ($notification) {
+
+        // A host that can take the result back sends its own notice, with the
+        // Undo on it, in place of the configured one.
+        if (! $notification && $pipelineResult->isSuccess() && $this->offerActionUndo($action, $payload['record'] ?? $payload['records'] ?? null)) {
+            // Sent.
+        } elseif ($notification) {
             $this->sendActionNotification(
                 Notification::make(
                     $notification['type'] ?? 'success',

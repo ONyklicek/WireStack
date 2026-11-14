@@ -270,6 +270,7 @@ Hodnoty šířky modalu jsou size tokeny ve stylu Tailwindu jako `sm`, `md`, `lg
     'slide_over_width' => 'xl',
     'close_on_click_away' => false,
     'close_on_escape' => true,
+    'mobile' => 'sheet', // 'sheet' | 'full-screen' | 'dialog'
 ],
 ```
 
@@ -660,6 +661,8 @@ hledání: [Sidebar](../admin/sidebar.md#filtrovani-menu).
 // config/wire-admin.php
 'layout' => [
     'navigation' => 'sidebar', // 'sidebar' | 'top' — viz Layout § Menu jako pruh
+    'user' => 'topbar',        // 'topbar' | 'sidebar' — kde sedí menu účtu
+    'rail_toggle' => 'topbar', // 'topbar' | 'sidebar' — kde sedí sbalovací tlačítko
 ],
 'navigation' => [
     'filter' => 'auto',        // 'auto' | 'always' | 'never'

@@ -136,6 +136,71 @@ BulkAction::make('archive')
 `selectedRecordsQuery()` vrátí tentýž výběr jako query builder — pro hromadný
 update nebo export, který streamuje.
 
+### Vrácení smazání — `undoable()`
+
+`->undoable(int $seconds = 10)` na řádkové nebo hromadné akci změní oznámení
+o úspěchu na *Smazány 2 záznamy · Zpět* na zadaný počet sekund.
+
+**Jak to funguje.** Po doběhnutí akce se tabulka podívá na záznamy, které akce
+dostala, a ponechá si ty, které akce nechala **soft-deleted**. Model bez
+`SoftDeletes`, nebo záznam smazaný natrvalo, nemá co obnovit, a tak odejde
+obyčejné oznámení. Klíče nikdy necestují do prohlížeče: leží v cache pod
+náhodným tokenem po dobu okna pro vrácení, svázané s touto instancí tabulky a
+tímto uživatelem, a tlačítko v toastu nese jen token. *Zpět* obnoví každý záznam
+— a kde má model policy `restore`, zeptá se jí — a tabulku obnoví. Token platí
+jednou.
+
+```php
+->bulkActions([
+    DeleteBulkAction::make()
+        ->undoable() // [tl! focus]
+        ->action(fn ($records) => $records->each->delete()),
+])
+```
+
+### Úprava mnoha záznamů najednou — `BulkEditAction`
+
+„Přesuň těchto 40 faktur do Zaplaceno“, „přiřaď tyhle tikety Evě“: jedna akce,
+která na každém vybraném záznamu nastaví pole na stejnou hodnotu.
+
+**Jak to funguje.** Každé pole, které uvedete, se vykreslí za přepínačem —
+*Změnit Stav* — a zapíšou se jen pole se zapnutým přepínačem. Hromadná úprava,
+která by zapsala každé zobrazené pole, by vymazala všechno, co chtěl uživatel
+nechat být. Klíč, který formulář pošle a vy jste ho neuvedli, se ignoruje, stejně
+jako zakázané pole, a hodnoty se před zápisem ověří pravidly každého pole a — u
+selectu — jeho množinou voleb. Záznamy se ukládají jeden po druhém přes
+`fill()` v Eloquentu (platí `$fillable` / `$guarded` modelu), takže casty, observery,
+auditní stopa i `optimisticLock()` vidí obyčejné uložení. Když má model policy
+s metodou `update`, záznam, který odmítne, se přeskočí a započítá, nikdy nezapíše;
+bez takové policy se zapíše každý vybraný záznam. Oznámení o úspěchu řekne, kolik
+se změnilo a kolik zůstalo beze změny. Výběr je omezená kolekce tabulky
+(`bulkMaxRecords()` výše).
+
+```php
+use NyonCode\WireForms\Components\Select;
+use NyonCode\WireForms\Components\TextInput;
+use NyonCode\WireTable\Actions\BulkEditAction;
+
+->bulkActions([
+    BulkEditAction::make()->fields([ // [tl! focus:start]
+        Select::make('status')->options(['open' => 'Otevřený', 'closed' => 'Uzavřený']),
+        TextInput::make('assignee'),
+    ]), // [tl! focus:end]
+])
+```
+
+```php
+BulkEditAction::make(string $name = 'bulkEdit')
+->fields(array $fields)                    // list<Field> — každé za vlastním přepínačem „Změnit …“
+->getEditableFields(): array               // pole tak, jak byla zadána
+->getFormSchema(): array                   // přepínače a pole, které modal kreslí, v pořadí
+->changesFrom(array $data): array          // atributy, které odeslaný formulář chce změnit
+->applyTo(Collection $records, array $data): array // zapíše je; ['updated' => int, 'skipped' => int]
+```
+
+Všechny ostatní metody hromadné akce (`label()`, `icon()`, `visible()`,
+`deselectRecordsAfterCompletion()` …) fungují jako u `BulkAction`.
+
 ### Řazení na telefonu
 
 Skládané karty skrývají hlavičkový řádek a s ním všechna tlačítka řazení. Pod

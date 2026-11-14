@@ -6,6 +6,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Auth\User as AuthUser;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Session;
 use Livewire\Component;
@@ -848,4 +849,140 @@ it('opens the view menu for saved views even with nothing else in it', function 
         ->savedViews();
 
     expect($table->getSavedViewsKey())->toBe('orders');
+});
+
+// ─── Shared views (Table::shareViews()) ──────────────────────────
+
+class SharedViewComponent extends SavedViewComponent
+{
+    public function table(Table $table): Table
+    {
+        return parent::table($table)->shareViews('views.share');
+    }
+}
+
+function sharedViewComponent(): SharedViewComponent
+{
+    $component = new SharedViewComponent;
+    $component->mountWithTable();
+
+    return $component;
+}
+
+function sharedViewWorld(): array
+{
+    createTablePreferencesSchema();
+    TablePreferenceManager::swap(new DatabasePreferenceDriver);
+
+    $editor = PrefUser::query()->create(['name' => 'Editor']);
+    $reader = PrefUser::query()->create(['name' => 'Reader']);
+
+    Gate::define('views.share', fn ($user): bool => $user->getKey() === $editor->getKey());
+
+    return [$editor, $reader];
+}
+
+it('lists a view someone published for everyone, and applies it', function () {
+    [$editor, $reader] = sharedViewWorld();
+
+    test()->be($editor);
+    $published = sharedViewComponent();
+    $published->tableState->set('search', 'paid');
+    $published->saveTableView('Paid this month', shared: true);
+
+    test()->be($reader);
+    $reading = sharedViewComponent();
+
+    expect($reading->getSharedTableViews())->toBe(['Paid this month'])
+        // Not mixed into the reader's own.
+        ->and($reading->getTableViews())->toBe([])
+        ->and($reading->canShareTableViews())->toBeFalse();
+
+    $reading->applyTableView('Paid this month', shared: true);
+    expect($reading->tableState->get('search'))->toBe('paid');
+
+    // A name the shared list does not hold is not loaded as shared.
+    $reading->tableState->set('search', null);
+    $reading->applyTableView('Nope', shared: true);
+    expect($reading->tableState->get('search'))->toBeNull();
+});
+
+it('lets only a publisher write or delete a shared view', function () {
+    [$editor, $reader] = sharedViewWorld();
+
+    test()->be($reader);
+    $reading = sharedViewComponent();
+    $reading->saveTableView('Mine to everyone', shared: true);
+
+    test()->be($editor);
+    $editing = sharedViewComponent();
+    $editing->saveTableView('Team', shared: true);
+
+    test()->be($reader);
+    $reading = sharedViewComponent();
+    $reading->deleteTableView('Team', shared: true);
+
+    expect($reading->getSharedTableViews())->toBe(['Team']);
+
+    test()->be($editor);
+    $editing = sharedViewComponent();
+    $editing->deleteTableView('Team', shared: true);
+
+    expect($editing->getSharedTableViews())->toBe([]);
+});
+
+it('draws the shared views, and the publishing controls only for a publisher', function () {
+    [$editor, $reader] = sharedViewWorld();
+    (new DatabasePreferenceDriver)->save('orders-index', null, ['search' => 'x'], 'Team');
+
+    test()->be($editor);
+    Livewire::test(SharedViewComponent::class)
+        ->assertSeeHtml('data-testid="table-shared-view-Team"')
+        ->assertSeeHtml('data-testid="table-shared-view-delete-Team"')
+        ->assertSeeHtml('data-testid="table-view-share"');
+
+    test()->be($reader);
+    Livewire::test(SharedViewComponent::class)
+        ->assertSeeHtml('data-testid="table-shared-view-Team"')
+        ->assertDontSeeHtml('data-testid="table-shared-view-delete-Team"')
+        ->assertDontSeeHtml('data-testid="table-view-share"');
+});
+
+it('shares nothing for a guest, over a store with no "everyone", or when the table does not share', function () {
+    sharedViewWorld();
+
+    // A guest's own views are the user-less rows already.
+    expect(sharedViewComponent()->getSharedTableViews())->toBe([])
+        ->and(Table::make()->rememberColumns('x')->savedViews()->shareViews(fn () => true)->mayShareViews(null))->toBeFalse()
+        ->and(Table::make()->shareViews()->sharesViews())->toBeFalse()
+        ->and(Table::make()->rememberColumns('x')->savedViews()->shareViews()->mayShareViews(new PrefUser))->toBeTrue()
+        ->and(Table::make()->rememberColumns('x')->savedViews()->shareViews(false)->sharesViews())->toBeFalse()
+        ->and(Table::make()->rememberColumns('x')->savedViews()->shareViews(fn ($user) => false)->mayShareViews(new PrefUser))->toBeFalse();
+
+    $editor = PrefUser::query()->first();
+    test()->be($editor);
+    TablePreferenceManager::swap(new SessionPreferenceDriver);
+
+    $component = sharedViewComponent();
+    expect($component->canShareTableViews())->toBeFalse()
+        ->and($component->getSharedTableViews())->toBe([]);
+
+    Gate::define('views.share', fn () => throw new RuntimeException('no guard'));
+    expect(Table::make()->rememberColumns('x')->savedViews()->shareViews('views.share')->mayShareViews($editor))->toBeFalse();
+});
+
+it('keeps a guest from writing a user-less row, which is the shared view', function () {
+    sharedViewWorld();
+
+    $guest = sharedViewComponent();
+    $guest->tableState->set('search', 'mine');
+    $guest->saveTableView('Guest view');
+
+    (new DatabasePreferenceDriver)->save('orders-index', null, ['search' => 'x'], 'Team');
+    $guest->deleteTableView('Team');
+    $guest->applyTableView('Team');
+
+    expect((new DatabasePreferenceDriver)->views('orders-index', null))->toBe(['Team'])
+        ->and($guest->getTableViews())->toBe([])
+        ->and($guest->tableState->get('search'))->toBe('mine');
 });

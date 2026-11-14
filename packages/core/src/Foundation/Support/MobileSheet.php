@@ -59,9 +59,9 @@ final class MobileSheet
     public static function panel(?string $breakpoint = null): string
     {
         return match (self::breakpoint($breakpoint)) {
-            'md' => 'max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:top-auto max-md:w-auto max-md:max-h-[85vh] max-md:overflow-y-auto max-md:rounded-b-none max-md:rounded-t-2xl max-md:border-x-0 max-md:border-b-0 max-md:pb-[env(safe-area-inset-bottom)]',
-            'lg' => 'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-auto max-lg:w-auto max-lg:max-h-[85vh] max-lg:overflow-y-auto max-lg:rounded-b-none max-lg:rounded-t-2xl max-lg:border-x-0 max-lg:border-b-0 max-lg:pb-[env(safe-area-inset-bottom)]',
-            default => 'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:w-auto max-sm:max-h-[85vh] max-sm:overflow-y-auto max-sm:rounded-b-none max-sm:rounded-t-2xl max-sm:border-x-0 max-sm:border-b-0 max-sm:pb-[env(safe-area-inset-bottom)]',
+            'md' => 'max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:top-auto max-md:w-auto max-md:max-h-[var(--wire-sheet-h,85dvh)] max-md:overflow-y-auto max-md:rounded-b-none max-md:rounded-t-2xl max-md:border-x-0 max-md:border-b-0 max-md:pb-[max(1rem,env(safe-area-inset-bottom))]',
+            'lg' => 'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-auto max-lg:w-auto max-lg:max-h-[var(--wire-sheet-h,85dvh)] max-lg:overflow-y-auto max-lg:rounded-b-none max-lg:rounded-t-2xl max-lg:border-x-0 max-lg:border-b-0 max-lg:pb-[max(1rem,env(safe-area-inset-bottom))]',
+            default => 'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:w-auto max-sm:max-h-[var(--wire-sheet-h,85dvh)] max-sm:overflow-y-auto max-sm:rounded-b-none max-sm:rounded-t-2xl max-sm:border-x-0 max-sm:border-b-0 max-sm:pb-[max(1rem,env(safe-area-inset-bottom))]',
         };
     }
 
@@ -72,22 +72,23 @@ final class MobileSheet
     public static function panelPadded(?string $breakpoint = null): string
     {
         return match (self::breakpoint($breakpoint)) {
-            'md' => 'max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:top-auto max-md:w-auto max-md:max-h-[85vh] max-md:overflow-y-auto max-md:rounded-b-none max-md:rounded-t-2xl max-md:border-x-0 max-md:border-b-0 max-md:pb-[calc(1rem_+_env(safe-area-inset-bottom))]',
-            'lg' => 'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-auto max-lg:w-auto max-lg:max-h-[85vh] max-lg:overflow-y-auto max-lg:rounded-b-none max-lg:rounded-t-2xl max-lg:border-x-0 max-lg:border-b-0 max-lg:pb-[calc(1rem_+_env(safe-area-inset-bottom))]',
-            default => 'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:w-auto max-sm:max-h-[85vh] max-sm:overflow-y-auto max-sm:rounded-b-none max-sm:rounded-t-2xl max-sm:border-x-0 max-sm:border-b-0 max-sm:pb-[calc(1rem_+_env(safe-area-inset-bottom))]',
+            'md' => 'max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:top-auto max-md:w-auto max-md:max-h-[var(--wire-sheet-h,85dvh)] max-md:overflow-y-auto max-md:rounded-b-none max-md:rounded-t-2xl max-md:border-x-0 max-md:border-b-0 max-md:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]',
+            'lg' => 'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-auto max-lg:w-auto max-lg:max-h-[var(--wire-sheet-h,85dvh)] max-lg:overflow-y-auto max-lg:rounded-b-none max-lg:rounded-t-2xl max-lg:border-x-0 max-lg:border-b-0 max-lg:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]',
+            default => 'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:w-auto max-sm:max-h-[var(--wire-sheet-h,85dvh)] max-sm:overflow-y-auto max-sm:rounded-b-none max-sm:rounded-t-2xl max-sm:border-x-0 max-sm:border-b-0 max-sm:pb-[calc(1rem_+_max(0.5rem,env(safe-area-inset-bottom)))]',
         };
     }
 
     /**
      * Enter-start / leave-end transform for the slide-up (added to the base
-     * desktop scale transition).
+     * desktop scale transition). With "reduce motion" set the sheet does not
+     * travel up the screen; it fades in where it rests.
      */
     public static function motion(?string $breakpoint = null): string
     {
         return match (self::breakpoint($breakpoint)) {
-            'md' => 'max-md:scale-100 max-md:translate-y-full',
-            'lg' => 'max-lg:scale-100 max-lg:translate-y-full',
-            default => 'max-sm:scale-100 max-sm:translate-y-full',
+            'md' => 'max-md:scale-100 max-md:translate-y-full motion-reduce:translate-y-0',
+            'lg' => 'max-lg:scale-100 max-lg:translate-y-full motion-reduce:translate-y-0',
+            default => 'max-sm:scale-100 max-sm:translate-y-full motion-reduce:translate-y-0',
         };
     }
 
@@ -124,9 +125,35 @@ final class MobileSheet
     public static function scrollArea(?string $breakpoint = null): string
     {
         return match (self::breakpoint($breakpoint)) {
-            'md' => 'max-md:w-full max-md:max-h-[60vh]',
-            'lg' => 'max-lg:w-full max-lg:max-h-[60vh]',
-            default => 'max-sm:w-full max-sm:max-h-[60vh]',
+            'md' => 'max-md:w-full max-md:max-h-[calc(var(--wire-sheet-h,85dvh)_-_6rem)]',
+            'lg' => 'max-lg:w-full max-lg:max-h-[calc(var(--wire-sheet-h,85dvh)_-_6rem)]',
+            default => 'max-sm:w-full max-sm:max-h-[calc(var(--wire-sheet-h,85dvh)_-_6rem)]',
+        };
+    }
+
+    /**
+     * A search field inside a sheet, pinned under the grabber (which is itself
+     * pinned at the top) while the list below it scrolls.
+     */
+    public static function stickySearch(?string $breakpoint = null): string
+    {
+        return match (self::breakpoint($breakpoint)) {
+            'md' => 'max-md:sticky max-md:top-5 max-md:z-10 max-md:bg-inherit',
+            'lg' => 'max-lg:sticky max-lg:top-5 max-lg:z-10 max-lg:bg-inherit',
+            default => 'max-sm:sticky max-sm:top-5 max-sm:z-10 max-sm:bg-inherit',
+        };
+    }
+
+    /**
+     * A list inside a sheet, inset from the screen edges with rounded rows — a
+     * full-bleed highlight runs into a phone's rounded corners at the bottom.
+     */
+    public static function listInset(?string $breakpoint = null): string
+    {
+        return match (self::breakpoint($breakpoint)) {
+            'md' => 'max-md:px-2 max-md:[&>li]:rounded-lg max-md:[&>li>*]:rounded-lg',
+            'lg' => 'max-lg:px-2 max-lg:[&>li]:rounded-lg max-lg:[&>li>*]:rounded-lg',
+            default => 'max-sm:px-2 max-sm:[&>li]:rounded-lg max-sm:[&>li>*]:rounded-lg',
         };
     }
 
