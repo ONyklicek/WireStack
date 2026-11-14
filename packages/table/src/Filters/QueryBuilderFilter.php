@@ -55,7 +55,22 @@ class QueryBuilderFilter extends Filter
                 $filter->operators();
             }
 
-            $this->constraints[$filter->getName()] = $filter->statePathPrefix('tableState.filters.'.$this->name);
+            $this->constraints[$filter->getName()] = $filter->statePathPrefix($this->getStatePath());
+        }
+
+        return $this;
+    }
+
+    /**
+     * Move the constraints with the builder: they live under its path, which
+     * the table points at the draft when the panel is deferred.
+     */
+    public function statePathPrefix(string $prefix): static
+    {
+        parent::statePathPrefix($prefix);
+
+        foreach ($this->constraints as $constraint) {
+            $constraint->statePathPrefix($this->getStatePath());
         }
 
         return $this;

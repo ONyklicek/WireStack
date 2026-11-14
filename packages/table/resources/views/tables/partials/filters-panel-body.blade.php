@@ -2,14 +2,14 @@
      the rows (Table::filtersLayout()): the filters in Table::filtersFormColumns()
      columns, then Reset and, for a deferred panel (Table::deferFilters()), Apply.
 
-     Deferred, the controls bind without `.live`, so nothing is sent until a
-     request goes — Apply is that request. --}}
-{{-- Variables: $table, $filters, $tableFilters --}}
+     Deferred, the controls write to a draft (tableState.filterDraft) rather
+     than to the filters the query reads; Apply copies it across. --}}
+{{-- Variables: $table, $filters, $panelFilterValues --}}
 @php $deferred = $table->hasDeferredFilters(); @endphp
 <div class="{{ $table->getFiltersGridClass() }}">
     @foreach($filters as $filter)
         @if($filter->canView())
-            <div @class(['min-w-0', 'col-span-full' => $filter->spansFullWidth()])>{!! $filter->render($tableFilters[$filter->getName()] ?? null) !!}</div>
+            <div @class(['min-w-0', 'col-span-full' => $filter->spansFullWidth()])>{!! $filter->render($panelFilterValues[$filter->getName()] ?? null) !!}</div>
         @endif
     @endforeach
 </div>

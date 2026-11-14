@@ -32,6 +32,10 @@ final class TableQueryState
      * @param  mixed  $sortColumn  Untyped for the same reason as `$search`.
      * @param  bool  $hasActiveFilters  Whether the user narrowed the set at all;
      *                                  a search on its own counts.
+     * @param  array<string, mixed>  $panelFilters  What the filter panel's
+     *                                              controls show: the filters, or
+     *                                              the unapplied draft of a
+     *                                              deferred panel.
      */
     private function __construct(
         public readonly mixed $search,
@@ -43,6 +47,7 @@ final class TableQueryState
         public readonly string $sortDirection,
         public readonly int $perPage,
         public readonly bool $hasActiveFilters,
+        public readonly array $panelFilters = [],
     ) {}
 
     public static function resolve(Table $table, mixed $component): self
@@ -50,6 +55,7 @@ final class TableQueryState
         $search = $component->tableState->get('search');
         $filters = $component->tableState->get('filters', []) ?? [];
         $columnFilters = $component->tableState->get('columnFilters', []) ?? [];
+        $draft = $table->hasDeferredFilters() ? $component->tableState->get('filterDraft') : null;
 
         $activeFilters = array_filter($filters, self::holdsValue(...));
         $activeColumnFilters = array_filter($columnFilters, self::holdsValue(...));
@@ -66,6 +72,7 @@ final class TableQueryState
             hasActiveFilters: ! empty($search)
                 || $activeFilters !== []
                 || $activeColumnFilters !== [],
+            panelFilters: is_array($draft) ? $draft : $filters,
         );
     }
 

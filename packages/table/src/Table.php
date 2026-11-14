@@ -485,11 +485,15 @@ class Table implements Htmlable
     public function getFilters(): array
     {
         // A filter draws its own control, so it has to know whether the panel
-        // applies on Apply or on every change; the table is what decides.
+        // applies on Apply or on every change; the table is what decides. A
+        // deferred panel's controls write to a draft rather than to the filters
+        // the query reads, so no other request — a page, a sort, a poll —
+        // carries a half-made choice into the rows before Apply.
         $deferred = $this->hasDeferredFilters();
 
         foreach ($this->filters as $filter) {
-            $filter->deferred($deferred);
+            $filter->deferred($deferred)
+                ->statePathPrefix($deferred ? 'tableState.filterDraft' : 'tableState.filters');
         }
 
         return $this->filters;

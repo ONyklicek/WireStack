@@ -27,7 +27,7 @@
     @if($filter->hasOperatorPicker())
         @include('wire-table::tables.filters.partials.operator-select', [
             'raw' => $value,
-            'statePath' => 'tableState.filters.'.$name,
+            'statePath' => $filter->getStatePath(),
             'controlId' => 'filter-'.$name.'-operator',
             'label' => $label,
         ])
@@ -36,7 +36,7 @@
     @include('wire-core::partials.select-control', [
         'nativeMode' => $filter->getNativeControlMode(),
         'selectId' => 'filter-' . $name,
-        'statePath' => 'tableState.filters.' . $name . '.value',
+        'statePath' => $filter->getStatePath().'.value',
         'options' => $filter->getDisplayOptions(),
         'placeholder' => $filter->getPlaceholder(),
         'multiple' => $filter->isMultiple(),

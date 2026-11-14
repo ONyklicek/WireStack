@@ -131,9 +131,13 @@ Tři nastavení tabulky rozhodují, jak se panel chová a kde sedí:
 
 - **`->deferFilters()`** — prvky panelu se přestanou aplikovat při každé změně a
   vedle *Resetovat* se objeví tlačítko **Použít**: jeden dotaz pro „vyber tři
-  věci“, ne tři. Hodnoty se váží bez `.live` a cestují s requestem Použít
-  (`applyTableFilters()`), který také vrátí tabulku na první stránku. Hlavičkové
-  filtry sloupců zůstávají živé.
+  věci“, ne tři. Prvky zapisují do konceptu — `tableState.filterDraft` místo
+  `tableState.filters` — takže žádný jiný request (stránka, řazení, polling,
+  akce řádku) nezúží řádky rozpracovanou volbou. *Použít*
+  (`applyTableFilters()`) zkopíruje koncept do filtrů a vrátí tabulku na první
+  stránku. Cokoli jiného, co filtry přepíše — *Resetovat*, odebrání chipu,
+  uložený pohled — začne koncept znovu od nich. Hlavičkové filtry sloupců
+  zůstávají živé.
 - **`->filtersLayout()`** — `FiltersLayout::Dropdown` (výchozí) nechá panel za
   tlačítkem *Filtry* v toolbaru, na telefonu jako spodní sheet.
   `FiltersLayout::AboveContent` rozloží filtry nad řádky, vždy otevřené — vhodné

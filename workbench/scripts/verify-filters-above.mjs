@@ -5,7 +5,8 @@ import { openPage, checker } from './lib/cdp.mjs';
  * FiltersLayout::AboveContentCollapsible, deferFilters() and a QueryBuilderFilter.
  *
  * In the browser only: the toolbar button toggles the area (and the choice
- * survives a reload), a deferred change does nothing until Apply, and the
+ * survives a reload), a deferred change does nothing until Apply — not even
+ * when another request (a sort) goes in between — and the
  * builder's add / combine / remove buttons rebuild the conditions through
  * real roundtrips.
  *
@@ -36,6 +37,14 @@ try {
   await eval_(`(() => { const s = document.querySelector('#filter-customer-operator'); s.value = 'contains'; const i = document.querySelector('#filter-customer-value'); i.value = 'Acme'; i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
   await new Promise((r) => setTimeout(r, 900));
   check('a deferred change leaves the rows alone', (await eval_(rows)) === total);
+
+  // Another request in between — a sort — used to carry the pending value
+  // and apply it: the draft has to ride it and narrow nothing.
+  const firstRow = `document.querySelector('tbody tr[data-row-key]')?.dataset.rowKey`;
+  const before = await eval_(firstRow);
+  await eval_(`[...document.querySelectorAll('thead *')].find((el) => el.getAttribute('wire:click') === "sortTable('number')").click()`);
+  await waitFor(`${firstRow} !== ${JSON.stringify(before)}`).catch(() => {});
+  check('a sort in between does not apply the draft', (await eval_(rows)) === total, `${await eval_(rows)} of ${total}`);
   await eval_(`document.querySelector('[data-testid=table-filters-apply]').click()`);
   await waitFor(`${rows} < ${total}`).catch(() => {});
   check('Apply narrows them', (await eval_(rows)) < total, `${await eval_(rows)} of ${total}`);

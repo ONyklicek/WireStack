@@ -4,7 +4,7 @@
 {{-- Variables: $filter, $value --}}
 @php
     $name = $filter->getName();
-    $base = 'tableState.filters.'.$name;
+    $base = $filter->getStatePath();
     $hasPicker = $filter->hasOperatorPicker();
 @endphp
 <div class="flex flex-col gap-1">

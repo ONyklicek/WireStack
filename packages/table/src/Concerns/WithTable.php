@@ -267,29 +267,7 @@ trait WithTable
         // resetting is this host's job. See StateInvalidation for the rules,
         // including why a re-sort leaves the selection alone and a filter does
         // not.
-        $invalidated = StateInvalidation::forPath($path);
-
-        if ($invalidated !== null) {
-            if ($invalidated->normalisesPerPage) {
-                $this->normalizePerPage();
-            }
-
-            if ($invalidated->marksViewChanged) {
-                $this->markTableViewChanged();
-            }
-
-            if ($invalidated->resetsSelectionScope) {
-                $this->resetSelectionScope();
-            }
-
-            if ($invalidated->resetsPage) {
-                $this->resetPage();
-            }
-
-            if ($invalidated->clearsCursor) {
-                $this->tableState->set('pagination.cursor', null);
-            }
-
+        if ($this->invalidateTableStateFor($path)) {
             return;
         }
 
@@ -895,6 +873,7 @@ trait WithTable
         // the plan agrees with the view either way.
         if ($this->renderPlan === null) {
             $this->resolveDatePresets();
+            $this->syncTableFilterDraft();
             $this->countFilterOptions();
         }
 
@@ -917,7 +896,15 @@ trait WithTable
     {
         $table = $this->getTable();
 
-        foreach (['filters' => $table->getFilters(), 'columnFilters' => array_filter(array_map(fn ($column) => $column->getFilter(), $table->getColumns()))] as $key => $filters) {
+        $sources = ['filters' => $table->getFilters(), 'columnFilters' => array_filter(array_map(fn ($column) => $column->getFilter(), $table->getColumns()))];
+
+        // A deferred panel's picker draws the draft, so a preset chosen there
+        // needs its dates worked out there too.
+        if ($table->hasDeferredFilters() && is_array($this->tableState->get('filterDraft'))) {
+            $sources['filterDraft'] = $sources['filters'];
+        }
+
+        foreach ($sources as $key => $filters) {
             $state = $this->tableState->get($key, []);
             $changed = false;
 
@@ -1585,13 +1572,112 @@ trait WithTable
     }
 
     /**
-     * Apply a deferred filter panel (Table::deferFilters()). The values it holds
-     * arrive with this very request — the controls bind without `.live` — so
-     * all that is left is to start again from the first page.
+     * Apply a deferred filter panel (Table::deferFilters()): the draft its
+     * controls wrote becomes the filters the query reads, and the list starts
+     * again from the first page.
+     *
+     * Until this runs nothing the panel holds narrows the rows — not the
+     * values, not a query builder's fields or groups — however many other
+     * requests (a page, a sort, a poll, a row action) go in between.
      */
     public function applyTableFilters(): void
     {
-        $this->resetPage();
+        $draft = $this->getTable()->hasDeferredFilters() ? $this->tableState->get('filterDraft') : null;
+
+        if (! is_array($draft)) {
+            $this->resetPage();
+
+            return;
+        }
+
+        // The same write a live panel makes control by control, made at once —
+        // and so the same consequences: the selection scope, the page, the
+        // cursor, the view marked changed.
+        $this->tableState->set('filters', $draft);
+        $this->invalidateTableStateFor('filters');
+    }
+
+    /**
+     * Do what a write to this table-state path invalidates (see
+     * {@see StateInvalidation}). False when the path invalidates nothing.
+     */
+    protected function invalidateTableStateFor(string $path): bool
+    {
+        $invalidated = StateInvalidation::forPath($path);
+
+        if ($invalidated === null) {
+            return false;
+        }
+
+        if ($invalidated->normalisesPerPage) {
+            $this->normalizePerPage();
+        }
+
+        if ($invalidated->marksViewChanged) {
+            $this->markTableViewChanged();
+        }
+
+        if ($invalidated->resetsSelectionScope) {
+            $this->resetSelectionScope();
+        }
+
+        if ($invalidated->resetsPage) {
+            $this->resetPage();
+        }
+
+        if ($invalidated->clearsCursor) {
+            $this->tableState->set('pagination.cursor', null);
+        }
+
+        return true;
+    }
+
+    /**
+     * The state key a panel filter's control writes to — the filters
+     * themselves, or the draft of a deferred panel.
+     */
+    protected function tableFilterPanelStateKey(): string
+    {
+        return $this->getTable()->hasDeferredFilters() ? 'filterDraft' : 'filters';
+    }
+
+    /**
+     * The values the filter panel draws: what its controls are bound to.
+     *
+     * @return array<string, mixed>
+     */
+    public function getTableFilterPanelValues(): array
+    {
+        $values = $this->tableState->get($this->tableFilterPanelStateKey(), []);
+
+        return is_array($values) ? $values : [];
+    }
+
+    /**
+     * Take the draft of a deferred panel again whenever the applied filters
+     * are no longer the ones it was taken from.
+     *
+     * The fingerprint is what keeps this from needing every writer of the
+     * filters to know about the draft: Reset, a chip's remove, a saved view,
+     * a link, Apply itself — each rewrites 'filters', and the next render
+     * notices and starts the draft over from them. A user's unapplied edits
+     * survive every request that leaves the filters alone.
+     */
+    protected function syncTableFilterDraft(): void
+    {
+        if (! $this->getTable()->hasDeferredFilters()) {
+            return;
+        }
+
+        $filters = $this->tableState->get('filters', []) ?? [];
+        $fingerprint = md5(serialize($filters));
+
+        if ($this->tableState->get('filterDraftOf') === $fingerprint && is_array($this->tableState->get('filterDraft'))) {
+            return;
+        }
+
+        $this->tableState->set('filterDraft', $filters);
+        $this->tableState->set('filterDraftOf', $fingerprint);
     }
 
     /**

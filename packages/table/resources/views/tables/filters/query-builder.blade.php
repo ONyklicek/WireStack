@@ -3,7 +3,8 @@
      filter's constraints), the operator that field's filter offers, and the
      value control that field takes. The structure — field, operator, the
      combinator, add / remove — is live, because it decides what is drawn; the
-     values follow the panel (live, or on Apply when it is deferred). --}}
+     values follow the panel. In a deferred panel all of it writes to the draft
+     (tableState.filterDraft), so nothing narrows the rows until Apply. --}}
 {{-- Variables: $filter, $value --}}
 @php
     use NyonCode\WireTable\Support\QueryBuilderState;
@@ -11,7 +12,7 @@
 
     $name = $filter->getName();
     $state = QueryBuilderState::normalize($value);
-    $base = 'tableState.filters.'.$name;
+    $base = $filter->getStatePath();
     $control = FilterControl::classes();
 @endphp
 

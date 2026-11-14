@@ -71,10 +71,12 @@ nejednoznačným. Builder nikdy neplánuje `QueryPlanner` — běží vždy pře
 
 **Kde to běží.** Přidání podmínky, přidání skupiny a odebrání jsou Livewire akce
 na komponentě s `WithTable` — `queryBuilderAddRule()`, `queryBuilderAddGroup()`,
-`queryBuilderRemove()` — a každá vrátí tabulku na první stránku. Výběr pole a
-operátoru je vždy živý, protože rozhoduje, který prvek pro hodnotu se vykreslí.
-Hodnoty se řídí panelem: živě, nebo se drží do Použít, když tabulka
-[odkládá filtry](index.md#panel-filtru).
+`queryBuilderRemove()` — a v živém panelu každá vrátí tabulku na první
+stránku. Výběr pole a operátoru je vždy živý, protože rozhoduje, který prvek pro
+hodnotu se vykreslí.
+Když tabulka [odkládá filtry](index.md#panel-filtru), všechno — hodnoty, pole,
+skupiny i přepínač *vše/kterýkoli* — upravuje koncept panelu a nic nezúží řádky
+do *Použít*.
 
 **Persistence.** Strom je pro query string příliš vnořený, takže se s
 `Table::queryString()` do URL **nezapisuje**; uložený pohled ho zachová. Chip je
@@ -242,6 +244,7 @@ QueryBuilderFilter::make(string $name)
 ->query(Closure $callback)             // zděděno — nahradí celý builder; fn (Builder $query, array $tree): Builder
 ->hasActiveRule(mixed $state): bool    // zda by nějaká podmínka zúžila řádky
 ->getConstraints(): array              // array<string, Filter> podle názvu
+->statePathPrefix(string $prefix)      // nastavuje tabulka — filtry, nebo koncept odloženého panelu; přesune s sebou i pole
 ```
 
 Akce komponenty, které volají tlačítka builderu (z `WithTable`):

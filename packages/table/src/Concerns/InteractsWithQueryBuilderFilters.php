@@ -59,15 +59,24 @@ trait InteractsWithQueryBuilderFilters
     /** @return array<string, mixed> */
     protected function queryBuilderState(string $filter): array
     {
-        return QueryBuilderState::normalize($this->tableState->get('filters', [])[$filter] ?? null);
+        return QueryBuilderState::normalize($this->getTableFilterPanelValues()[$filter] ?? null);
     }
 
-    /** @param  array<string, mixed>  $state */
+    /**
+     * Write a builder's structure where its controls write — the filters, or
+     * the draft of a deferred panel, which narrows nothing until Apply.
+     *
+     * @param  array<string, mixed>  $state
+     */
     protected function writeQueryBuilderState(string $filter, array $state): void
     {
-        $filters = $this->tableState->get('filters', []);
+        $key = $this->tableFilterPanelStateKey();
+        $filters = $this->getTableFilterPanelValues();
         $filters[$filter] = $state;
-        $this->tableState->set('filters', $filters);
-        $this->resetPage();
+        $this->tableState->set($key, $filters);
+
+        if ($key === 'filters') {
+            $this->invalidateTableStateFor('filters');
+        }
     }
 }

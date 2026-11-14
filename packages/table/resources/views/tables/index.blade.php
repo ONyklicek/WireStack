@@ -49,6 +49,8 @@
     // magic-property hazard this block used to warn about goes with it: the plan
     // reads the state container, so there is nothing here to reach for.
     $tableFilters = $plan->state()->filters;
+    // What the panel's controls show — the draft, in a deferred panel.
+    $panelFilterValues = $plan->state()->panelFilters;
     $filtersLayout = $table->getFiltersLayout();
     $activeTableFilters = $plan->state()->activeFilters;
     // The mobile sort control names the current column and direction.

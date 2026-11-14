@@ -71,10 +71,11 @@ by the `QueryPlanner` — it always runs through its own `apply()`.
 
 **Where it runs.** Adding a condition, adding a group and removing one are
 Livewire actions on the `WithTable` component — `queryBuilderAddRule()`,
-`queryBuilderAddGroup()`, `queryBuilderRemove()` — and each returns the table to
-page one. The field and operator selects are always live, because they decide
-which value control is drawn. The values follow the panel: live, or held until
-Apply when the table [defers its filters](index.md#the-filter-panel).
+`queryBuilderAddGroup()`, `queryBuilderRemove()` — and in a live panel each
+returns the table to page one. The field and operator selects are always live, because they decide
+which value control is drawn. When the table [defers its filters](index.md#the-filter-panel)
+all of it — values, fields, groups, the *all/any* switch — edits the panel's
+draft, and nothing narrows the rows until *Apply*.
 
 **Persistence.** The tree is too nested for a query string, so it is **not**
 written to the URL with `Table::queryString()`; a saved view keeps it. The chip
@@ -243,6 +244,7 @@ QueryBuilderFilter::make(string $name)
 ->query(Closure $callback)             // inherited — replaces the whole builder; fn (Builder $query, array $tree): Builder
 ->hasActiveRule(mixed $state): bool    // whether any condition would narrow the rows
 ->getConstraints(): array              // array<string, Filter> keyed by name
+->statePathPrefix(string $prefix)      // set by the table — the filters, or the deferred panel's draft; moves the constraints with it
 ```
 
 Component actions the builder's buttons call (from `WithTable`):

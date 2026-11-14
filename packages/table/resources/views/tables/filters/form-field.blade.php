@@ -1,5 +1,6 @@
 {{-- Generic filter wrapper for filters with multi-field getFormFields().
-     Wire:model paths are built as: tableState.filters.{filterName}.{fieldName}.
+     Wire:model paths are built as: {Filter::getStatePath()}.{fieldName} —
+     tableState.filters.{name}, or tableState.filterDraft.{name} in a deferred panel.
      Used by NumberRangeFilter and DateFilter (range mode). --}}
 {{-- Variables: $filter, $value --}}
 @php
@@ -16,7 +17,7 @@
     @if($hasPicker)
         @include('wire-table::tables.filters.partials.operator-select', [
             'raw' => $value,
-            'statePath' => 'tableState.filters.'.$name,
+            'statePath' => $filter->getStatePath(),
             'controlId' => 'filter-'.$name.'-operator',
             'label' => $label,
         ])
@@ -41,7 +42,7 @@
                 <input
                     type="{{ $type }}"
                     id="filter-{{ $name }}-{{ $fieldName }}"
-                    {{ $filter->wireModelDirective(500) }}="tableState.filters.{{ $name }}.{{ $fieldName }}"
+                    {{ $filter->wireModelDirective(500) }}="{{ $filter->getStatePath() }}.{{ $fieldName }}"
                     value="{{ $currentValue }}"
                     placeholder="{{ $placeholder }}"
                     class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-base sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
