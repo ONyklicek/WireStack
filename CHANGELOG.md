@@ -2,6 +2,19 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.10.1]
+
+### Fixed
+
+- **A halt raised from a row button now opens.** The row buttons sit in the table's `data-region` island,
+  and a click there answers with that island alone — while the halt modal is drawn outside it. A row action
+  with no modal of its own that halted set the halt state and sent nothing that draws it, so the click
+  looked dead and the modal appeared only on some later full render. Raising a halt now renders the host
+  (`Actions\Support\HaltRender`), on a table and on any `WithActions` host alike; a row action that does
+  not halt still answers with the island alone.
+- **`Radio::colors()` / `CheckboxList::colors()` take a `Color` case**, as `color()` always did. The case
+  reached the view as given and failed the render with a `TypeError`.
+
 ## [2.10.0]
 
 ### Added
