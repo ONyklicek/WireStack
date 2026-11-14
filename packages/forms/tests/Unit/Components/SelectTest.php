@@ -7,6 +7,7 @@ use Illuminate\Validation\Rules\In;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
 use NyonCode\WireCore\Foundation\Enums\ModalWidth;
 use NyonCode\WireCore\Modals\Modal;
+use NyonCode\WireForms\Components\Radio;
 use NyonCode\WireForms\Components\Select;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireForms\Forms\Form;
@@ -767,4 +768,11 @@ test('touchOnMobile() renders the touch sheet and keeps remote search and create
         ->and(renderSelect($remote))
         ->toContain('select-touch-sheet')
         ->toContain('remote: true');
+});
+
+test('a radio with a literal array of options is held to them too', function () {
+    $rules = Radio::make('size')->options(['s' => 'S', 'm' => 'M'])->getValidationRules();
+
+    expect(validator(['size' => 'xl'], ['size' => $rules])->passes())->toBeFalse()
+        ->and(validator(['size' => 'm'], ['size' => $rules])->passes())->toBeTrue();
 });

@@ -6,6 +6,7 @@ namespace NyonCode\WireAdmin\View;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
+use NyonCode\WireAdmin\Enums\ChromeSlot;
 use NyonCode\WireAdmin\Enums\NavigationShape;
 use NyonCode\WireCore\Notifications\Support\ConfiguredDrivers;
 
@@ -46,7 +47,30 @@ class Layout extends Component
         public bool $linkedOnly = false,
         public ?bool $notifications = null,
         public ?string $navigation = null,
+        public ?string $userPlacement = null,
+        public ?string $railTogglePlacement = null,
     ) {}
+
+    /**
+     * Where the account menu sits. The attribute wins over
+     * `wire-admin.layout.user`; under the `top` shape there is no column from
+     * `lg` up to put it in, so it stays in the top bar.
+     */
+    public function userSlot(): ChromeSlot
+    {
+        $slot = ChromeSlot::resolve($this->userPlacement ?? config('wire-admin.layout.user'), 'user');
+
+        return $this->navigationShape() === NavigationShape::Top ? ChromeSlot::Topbar : $slot;
+    }
+
+    /**
+     * Where the button that collapses the menu sits — `wire-admin.layout.rail_toggle`,
+     * or the attribute. Read only in the column shape: a bar has no rail.
+     */
+    public function railToggleSlot(): ChromeSlot
+    {
+        return ChromeSlot::resolve($this->railTogglePlacement ?? config('wire-admin.layout.rail_toggle'), 'rail_toggle');
+    }
 
     /**
      * The menu's shape from `lg` up — a column, or a bar under the header.

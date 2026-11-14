@@ -457,7 +457,7 @@ trait InteractsWithTableActions
                 $result = $this->updateTableCell($record->getKey(), $column->getName(), $value);
 
                 if (! $result['success']) {
-                    $this->sendNotification(Notification::make()->title($result['message'] ?? __('wire-table::messages.save_failed'))->danger());
+                    $this->sendNotification(Notification::make('error', $result['message'] ?? __('wire-table::messages.save_failed')));
 
                     return;
                 }

@@ -661,6 +661,8 @@ hledání: [Sidebar](../admin/sidebar.md#filtrovani-menu).
 // config/wire-admin.php
 'layout' => [
     'navigation' => 'sidebar', // 'sidebar' | 'top' — viz Layout § Menu jako pruh
+    'user' => 'topbar',        // 'topbar' | 'sidebar' — kde sedí menu účtu
+    'rail_toggle' => 'topbar', // 'topbar' | 'sidebar' — kde sedí sbalovací tlačítko
 ],
 'navigation' => [
     'filter' => 'auto',        // 'auto' | 'always' | 'never'

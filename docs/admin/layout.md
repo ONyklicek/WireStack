@@ -118,6 +118,51 @@ it looks like the menu it sits in:
 The [users module](../modules/users.md) ships a profile page for the signed-in user,
 if you want one rather than writing it.
 
+## Where The Account And The Collapse Button Sit
+
+Both sit in the top bar by default. Either can move to the foot of the menu
+column instead, on its own:
+
+```php
+// config/wire-admin.php
+'layout' => [
+    'user' => 'sidebar',        // 'topbar' (default) | 'sidebar' — the account menu
+    'rail_toggle' => 'sidebar', // 'topbar' (default) | 'sidebar' — the collapse button
+],
+```
+
+or for one layout only:
+
+```blade
+<x-wire-admin::layout user-placement="sidebar" rail-toggle-placement="sidebar">
+```
+
+| Setting | In the top bar | At the foot of the menu |
+| --- | --- | --- |
+| `user` | avatar and name top right, the menu opening down | a row under the menu, the menu opening **up**; in the rail the avatar alone, on the axis of the icons above it, its menu sliding out over the page |
+| `rail_toggle` | the button beside the menu handle | the very last row, under the account when both are there |
+
+The menu is the same menu wherever it sits: the `user` slot (your own
+trigger), the `user-menu` slot and every entry a package registered — the users
+module's profile page, the auth module's sign-out — move together, so a
+placement can never leave the way out behind. ⌘B collapses the menu wherever its
+button is; it is bound once, for the page, not on the button. A value that names
+neither place is refused with a `ChromeSlotException` rather than drawn in the
+top bar.
+
+Two consequences to choose knowingly:
+
+- **On a phone the menu column is the drawer**, so an account at its foot is
+  behind the menu button there — the top bar then does not say who is signed in.
+  The collapse button is not drawn on a phone either way; a phone has no rail.
+- **Your own `user` trigger moves as it is.** At the foot of a collapsed menu it
+  sits in a column 64 pixels wide, and only you know its markup: give it a
+  narrow form with `data-rail-hide` (dropped in the rail) and `data-rail-only`
+  (shown only there).
+
+Under `navigation => 'top'` there is no column from `lg` up, so both stay in the
+top bar whatever these say.
+
 ## Related
 
 - [The Sidebar](sidebar.md) — the menu this layout puts beside the page

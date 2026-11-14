@@ -68,6 +68,12 @@ resource pages and its own chrome simply does not install this.
   link, and what does not fit goes under *More* (`wireTopNav`, hidden in the bar exactly when shown in the
   panel). Below `lg` the drawer is still the menu (`<x-wire-admin::sidebar :drawer-only="true">`), so the bar's
   names are `admin-topnav-*`, never `admin-nav-*`. No rail toggle or ⌘B in that shape.
+- **The account menu and the collapse button can sit at the foot of the menu column**:
+  `wire-admin.layout.user` / `rail_toggle` = `'topbar'` (default) | `'sidebar'` (or the layout's
+  `user-placement` / `rail-toggle-placement`; anything else throws `ChromeSlotException`). One partial each
+  (`partials/user-menu`, `partials/rail-toggle`) — the `user` / `user-menu` slots and `PageChrome::USER_MENU`
+  move with the menu; exactly one `admin-user` and one `admin-rail-toggle` per document; ⌘B is bound once on
+  the page (`[data-rail-shortcut]`), never on the button. Under `navigation => 'top'` both stay in the top bar.
 @endverbatim
 - **Pins and recent pages are `NavigationMemory`** (wire-core, over the `PreferenceDriver` — `navigation[:zone]`
   bag of keys), drawn by the one Livewire piece of the menu, `wire-admin.nav-pins`. Offered only when

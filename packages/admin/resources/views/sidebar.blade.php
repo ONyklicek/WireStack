@@ -237,6 +237,25 @@
         @endforelse
     </nav>
 
+    {{-- The foot of the column: the account menu and the collapse button, when
+         `wire-admin.layout` puts them here — the button under the account.
+         `shrink-0`, so a long menu scrolls inside the nav above rather than
+         squeezing this. Not drawn at all when nothing is placed here: an empty
+         rule over the last row of the menu is a visible mistake.
+
+         On a phone this is in the drawer, so the account is one tap behind the
+         menu button there — the top bar then does not say who is signed in. --}}
+    @if ($footerUser || $footerRailToggle)
+        <div data-testid="admin-sidebar-footer" @wireEl('admin-sidebar-footer') class="shrink-0 space-y-1 border-t border-gray-200 p-2 dark:border-gray-800">
+            @if ($footerUser)
+                @include('wire-admin::partials.user-menu', ['place' => 'sidebar', 'user' => $user, 'userMenu' => $userMenu])
+            @endif
+            @if ($footerRailToggle)
+                @include('wire-admin::partials.rail-toggle', ['place' => 'sidebar'])
+            @endif
+        </div>
+    @endif
+
     {{-- The foot of the drawer, on a phone only. The top bar owns these two from
          `sm` up and has no room for them below it; the drawer is the one piece of
          shell chrome a phone always has, and it does not depend on whether the

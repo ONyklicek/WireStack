@@ -6,6 +6,7 @@ namespace NyonCode\WireAdmin\View;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
+use NyonCode\WireAdmin\Enums\ChromeSlot;
 use NyonCode\WireAdmin\Support\MenuMemory;
 use NyonCode\WireCore\Core\Resources\Navigation\ActiveNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationGroup;
@@ -41,12 +42,22 @@ class Sidebar extends Component
      *                            its catalogue wants one or the other, and which one is taste.
      * @param  bool  $drawerOnly  Only the phone drawer: from `lg` up the menu is drawn
      *                            elsewhere — the bar a `top` layout puts under the header.
+     * @param  string|null  $userPlace  'sidebar' draws the account menu at the foot of
+     *                                  the column; null asks `wire-admin.layout.user`.
+     * @param  string|null  $railTogglePlace  The same for the collapse button
+     *                                        (`wire-admin.layout.rail_toggle`).
+     * @param  mixed  $user  The layout's `user` slot, handed on: the application's own trigger.
+     * @param  mixed  $userMenu  The layout's `userMenu` slot: the application's entries.
      */
     public function __construct(
         public bool $linkedOnly = false,
         public bool $drawerOnly = false,
         ?string $zone = null,
         ?string $activeKey = null,
+        public ?string $userPlace = null,
+        public ?string $railTogglePlace = null,
+        public mixed $user = null,
+        public mixed $userMenu = null,
     ) {
         $this->zone = $zone ?? Zone::current();
         $this->activeKey = $activeKey ?? Zone::currentKey();
@@ -57,6 +68,22 @@ class Sidebar extends Component
      *
      * @return array<string, NavigationGroup>
      */
+    /**
+     * Whether the column carries the account menu at its foot. Protected for
+     * the reason {@see active()} gives.
+     */
+    protected function hostsUser(): bool
+    {
+        return ChromeSlot::resolve($this->userPlace ?? config('wire-admin.layout.user'), 'user')->isSidebar();
+    }
+
+    /** Whether the column carries the collapse button at its foot. */
+    protected function hostsRailToggle(): bool
+    {
+        return ! $this->drawerOnly
+            && ChromeSlot::resolve($this->railTogglePlace ?? config('wire-admin.layout.rail_toggle'), 'rail_toggle')->isSidebar();
+    }
+
     public function groups(): array
     {
         return app(Workspace::class)->navigation($this->zone, $this->linkedOnly);
@@ -158,6 +185,8 @@ class Sidebar extends Component
             'active' => $this->active(),
             'filter' => $filter = $this->showsFilter($groups),
             'filterMessages' => $filter ? $this->filterMessages($groups) : [],
+            'footerUser' => $this->hostsUser(),
+            'footerRailToggle' => $this->hostsRailToggle(),
         ]);
     }
 }

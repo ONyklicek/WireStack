@@ -74,6 +74,12 @@ class ScxTable extends Component
                     ->disabled(fn (Model $record): bool => $this->lockedRows && $record->getKey() === 2)
                     ->createOptionForm([TextInput::make('name')->required()])
                     ->createOptionUsing(fn (array $data) => ScxTag::create($data)),
+                SelectColumn::make('status_note')
+                    ->label('Note')
+                    ->options(['ok' => 'OK'])
+                    ->editableRules(fn (): array => ['in:ok'])
+                    ->createOptionForm([TextInput::make('name')->required()])
+                    ->createOptionUsing(fn (array $data): string => $data['name']),
             ]);
     }
 
@@ -88,6 +94,7 @@ beforeEach(function () {
         $table->id();
         $table->string('status')->nullable();
         $table->json('tags')->nullable();
+        $table->string('status_note')->nullable();
     });
     Schema::create('scx_tags', function (Blueprint $table) {
         $table->id();
@@ -109,7 +116,7 @@ afterEach(function () {
 it('draws a trigger per row and the list once per table', function () {
     $html = Livewire::test(ScxTable::class)->html();
 
-    expect(substr_count($html, 'wireSearchableSelect('))->toBe(10)
+    expect(substr_count($html, 'wireSearchableSelect('))->toBe(15)
         ->and(substr_count($html, 'data-select-panel="select-column:status"'))->toBe(1)
         ->and(substr_count($html, 'data-select-panel="select-column:tags"'))->toBe(1)
         // The labels travel in the panel's data, not in each row.
@@ -271,4 +278,65 @@ it('lets a search box lift an earlier native()', function () {
 
     expect($column->isNative())->toBeFalse()
         ->and($column->hasSearchableOptions())->toBeTrue();
+});
+
+it('tells the user when the created option cannot be written, and writes nothing', function () {
+    Livewire::test(ScxTable::class)
+        ->call('openActionModal', '1', 'select-column-create-option:status_note')
+        ->set('tableState.modal.actions.0.data.name', 'nope')
+        ->call('submitActionModal')
+        ->assertNotDispatched('select-option-created');
+
+    expect(ScxRow::find(1)->status_note)->toBeNull();
+});
+
+it('finds no create action for a column that is not there', function () {
+    Livewire::test(ScxTable::class)
+        ->call('openActionModal', '1', 'select-column-create-option:nope')
+        ->assertSet('tableState.modal.actions', []);
+});
+
+it('labels a created option by its model, by its key, and creates nothing for no key', function () {
+    $record = ScxRow::find(1);
+    $written = [];
+    $write = function (Model $record, mixed $value) use (&$written): void {
+        $written[] = $value;
+    };
+
+    // A model, named by the column's title attribute, on a list that does not hold it yet.
+    $byModel = SelectColumn::make('status')->options(['open' => 'Open'])->relationship('tag', 'name')
+        ->createOptionForm([])->createOptionUsing(fn (array $data) => ScxTag::create(['name' => 'Fresh']))
+        ->createOptionModalHeading('New status');
+    ($byModel->getCreateOptionAction($write)->getActionCallback())([], $record);
+
+    // A bare key the list does not hold: its label is the key.
+    $byKey = SelectColumn::make('status')->options(['open' => 'Open'])
+        ->createOptionForm([])->createOptionUsing(fn (array $data): string => 'later');
+    ($byKey->getCreateOptionAction($write)->getActionCallback())([], $record);
+
+    // Nothing usable came back: nothing is written.
+    $none = SelectColumn::make('status')->options(['open' => 'Open'])
+        ->createOptionForm([])->createOptionUsing(fn (array $data) => null);
+    ($none->getCreateOptionAction($write)->getActionCallback())([], $record);
+
+    expect($written)->toBe(['3', 'later'])
+        ->and($byModel->getOptions()['3'])->toBe('Fresh')
+        ->and($byKey->getOptions()['later'])->toBe('later')
+        ->and($byModel->getCreateOptionAction($write)->getModalHeading())->toBe('New status');
+});
+
+it('reads a list stored as JSON text, and refuses a multiple value that is not a list', function () {
+    $column = SelectColumn::make('tags')->multiple()->options(['1' => 'Urgent', '2' => 'Later']);
+    $record = ScxRow::find(1);
+
+    expect($column->selectedKeys('["2","1"]'))->toBe(['2', '1'])
+        ->and($column->selectedKeys('[not json'))->toBe(['[not json'])
+        ->and($column->dehydrateState(5, $record))->toBe(5)
+        ->and($column->validate('1', $record)['valid'])->toBeFalse();
+});
+
+it('draws nothing for a row that may not see the cell', function () {
+    $column = SelectColumn::make('status')->options(['open' => 'Open'])->visibleForRecord(fn (): bool => false);
+
+    expect($column->renderCell(ScxRow::find(1)))->toBe('');
 });

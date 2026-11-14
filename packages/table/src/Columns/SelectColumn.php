@@ -232,13 +232,8 @@ class SelectColumn extends Column implements DehydratesState, InheritsRecordStat
                 && $this->canInlineEdit()
                 && $this->canEdit($record))
             ->action(function (array $data, Model $record) use ($write): void {
-                $callback = $this->createOptionCallback;
-
-                if (! $callback instanceof Closure) {
-                    return;
-                }
-
-                $created = $callback($data);
+                // Set: the action exists only with a create callback.
+                $created = ($this->createOptionCallback ?? static fn (): mixed => null)($data);
                 $key = is_object($created) && method_exists($created, 'getKey') ? $created->getKey() : $created;
 
                 if (! is_scalar($key) || $key === '') {

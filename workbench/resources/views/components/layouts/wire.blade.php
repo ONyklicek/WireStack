@@ -9,7 +9,10 @@
      Nothing in the package sets `livewire.component_layout`; that line lives in
      WorkbenchServiceProvider, because installing the shell must not be the same
      act as adopting it. --}}
-<x-wire-admin::layout :title="$title ?? 'Wire'">
+{{-- `?chrome=sidebar` puts the account menu and the collapse button at the foot
+     of the menu (verify-admin-placement.mjs); the configuration is the default. --}}
+@php($chromeInSidebar = request()->query('chrome') === 'sidebar' ? 'sidebar' : null)
+<x-wire-admin::layout :title="$title ?? 'Wire'" :user-placement="$chromeInSidebar" :rail-toggle-placement="$chromeInSidebar">
     <x-slot:head>
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </x-slot:head>

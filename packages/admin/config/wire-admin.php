@@ -55,9 +55,20 @@ return [
     | drawer either way. One layout can differ from the rest with
     | `<x-wire-admin::layout navigation="top">`.
     |
+    | `user` is where the signed-in person's menu sits: 'topbar' (top right) or
+    | 'sidebar' (the foot of the menu column, opening upwards). `rail_toggle`
+    | is where the button that collapses the menu sits: 'topbar' or 'sidebar'
+    | (the very foot, under the account). ⌘B works wherever it is. Both follow
+    | the column, so under `navigation => 'top'` they stay in the top bar. One
+    | layout can differ with `user-placement` / `rail-toggle-placement`.
+    |
     */
     'layout' => [
         'navigation' => env('WIRE_ADMIN_NAVIGATION', 'sidebar'),
+
+        'user' => env('WIRE_ADMIN_USER_MENU', 'topbar'),
+
+        'rail_toggle' => env('WIRE_ADMIN_RAIL_TOGGLE', 'topbar'),
     ],
 
     /*

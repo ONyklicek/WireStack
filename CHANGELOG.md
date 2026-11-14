@@ -95,6 +95,13 @@ All notable changes to the Wire ecosystem will be documented in this file.
   opened, and the cell is a skeleton filled per row, so a column of selects costs no view render per row. A
   pasted label is read as its option, and copied rows carry the labels.
 
+- **The account menu and the collapse button can sit at the foot of the admin menu.** `wire-admin.layout.user`
+  and `wire-admin.layout.rail_toggle` take `'topbar'` (today's place, the default) or `'sidebar'`, on their own,
+  or per layout with `user-placement` / `rail-toggle-placement`. The account menu opens upwards there and keeps
+  the application's entries and every package's (profile, sign-out); in the rail it is the avatar on the icons'
+  axis. ⌘B is bound once for the page, so it works wherever the button sits. An unknown value throws a
+  `ChromeSlotException`.
+
 ### Changed
 
 - **A filter's `visible()` / `hidden()` and an action's are one implementation**, `Foundation\Concerns\HasContextualVisibility`,

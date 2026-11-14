@@ -2,7 +2,7 @@
 title: Umístění uživatelského menu a sbalovacího tlačítka v admin shellu
 date: 2026-09-07
 scope: packages/admin (layout, sidebar, config, lang, tests), docs/admin/overview.md + docs/cs, workbench/scripts
-status: PLÁN — nezahájeno. Zadání vlastníka („roadmap 2.x"), měřeno proti stromu 2026-09-07
+status: HOTOVO 2026-11-14 (2.10.0). Atributy layoutu jsou `user-placement` / `rail-toggle-placement` — `user-menu` je jméno slotu. Pod tvarem `navigation => 'top'` zůstává obojí v horní liště.
 owner_request: |
   modul admin layout — volitelně nastavit uživatele vpravo nahoře nebo vlevo
   dole v menu; tlačítko pro sbalení nahoře, nebo dole pod uživatelem v menu
