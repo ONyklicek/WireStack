@@ -33,7 +33,7 @@ trait HasChoiceVariants
     /** Accent color of the selected option across every variant. */
     protected string $color = 'primary';
 
-    /** @var array<string|int, string>|Closure */
+    /** @var array<string|int, string|Color>|Closure */
     protected array|Closure $colors = [];
 
     protected bool $inline = false;
@@ -87,8 +87,9 @@ trait HasChoiceVariants
 
     /**
      * Per-option accent colors keyed by option value (`[value => color]`).
+     * A color is a name or a {@see Color} case, like {@see Color()} takes.
      *
-     * @param  array<string|int, string>|Closure  $colors
+     * @param  array<string|int, string|Color>|Closure  $colors
      */
     public function colors(array|Closure $colors): static
     {
@@ -145,7 +146,14 @@ trait HasChoiceVariants
      */
     public function getColors(): array
     {
-        return $this->mergeEnumDerived(EnumResolver::colors(...), $this->colors);
+        // A Color case is the same color as its name, as it is on color(); the
+        // views hand each entry to HasColor, which takes the name.
+        $explicit = array_map(
+            fn (string|Color $color): string => $color instanceof Color ? $color->value : $color,
+            (array) $this->evaluate($this->colors),
+        );
+
+        return $this->mergeEnumDerived(EnumResolver::colors(...), $explicit);
     }
 
     /**

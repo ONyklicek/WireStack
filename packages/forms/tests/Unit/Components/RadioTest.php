@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\ViewErrorBag;
 use NyonCode\WireCore\Foundation\Colors\Color;
+use NyonCode\WireCore\Foundation\Concerns\HasColor as HasColorConcern;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasColor;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasIcon;
 use NyonCode\WireCore\Foundation\Contracts\Enum\HasLabel;
@@ -303,6 +304,19 @@ test('per-option color falls back to the group color when unset', function () {
     // Option a filled red (its own color), option b filled primary (group fallback).
     expect($html)->toContain('peer-checked:bg-red-600')
         ->and($html)->toContain('peer-checked:bg-primary-600');
+});
+
+test('per-option colors take a Color case like the group color does', function () {
+    // Regression: colors() stored the case as given and the view handed it to
+    // HasColor::getChoiceColorClasses(string), which threw a TypeError on render.
+    $field = Radio::make('plan')
+        ->options(['a' => 'A', 'b' => 'B'])
+        ->buttons()
+        ->colors(['a' => Color::Yellow, 'b' => 'danger']);
+
+    expect($field->getColors())->toBe(['a' => 'yellow', 'b' => 'danger'])
+        ->and(renderRadio($field))->toContain('peer-checked:bg-yellow-')
+        ->and($field->getColorClassesFor('a'))->toBe(HasColorConcern::getChoiceColorClasses('yellow'));
 });
 
 test('every variant renders per-option icons', function () {

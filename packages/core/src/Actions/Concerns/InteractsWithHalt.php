@@ -7,6 +7,7 @@ namespace NyonCode\WireCore\Actions\Concerns;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 use NyonCode\WireCore\Actions\ActionHalt;
+use NyonCode\WireCore\Actions\Support\HaltRender;
 use NyonCode\WireCore\Core\Validation\ValidationPipeline;
 use ReflectionMethod;
 
@@ -136,6 +137,9 @@ trait InteractsWithHalt
         $this->resolveHaltModalForm($halt);
 
         $this->setHaltModalState('show', true);
+
+        // Drawn by the host's view, never by the island a call targeted.
+        HaltRender::force($this);
     }
 
     // ==========================================

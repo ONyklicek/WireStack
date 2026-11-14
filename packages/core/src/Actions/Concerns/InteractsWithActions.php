@@ -14,6 +14,7 @@ use NyonCode\WireCore\Actions\HeaderAction;
 use NyonCode\WireCore\Actions\Jobs\RunActionJob;
 use NyonCode\WireCore\Actions\ModalFooterAction;
 use NyonCode\WireCore\Actions\Support\ActionCallbackInvoker;
+use NyonCode\WireCore\Actions\Support\HaltRender;
 use NyonCode\WireCore\Core\Actions\ActionContext;
 use NyonCode\WireCore\Core\Actions\ActionPipeline;
 use NyonCode\WireCore\Core\Actions\ActionResult;
@@ -822,6 +823,9 @@ trait InteractsWithActions
         $this->resolveHaltModalForm($halt);
 
         $this->setHaltModalState('show', true);
+
+        // Drawn by the host's view, never by the island a call targeted.
+        HaltRender::force($this);
     }
 
     /**
