@@ -19,7 +19,7 @@
 @endphp
 <span
     x-data="wireDropdown({ placement: 'bottom-start', offset: 6{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} })"
-    @keydown.escape.window="open && $event.preventDefault(); close()"
+    @keydown.escape.window="dismiss($event)"
     class="relative inline-flex align-middle normal-case"
     data-testid="column-filter-{{ $columnName }}" @wireEl('column-filter')
 >

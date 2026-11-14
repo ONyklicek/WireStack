@@ -14,7 +14,7 @@
 
     <div
         x-data="wireDropdown({ placement: 'bottom-start', offset: 4 })"
-        x-on:keydown.escape.window="open && (close(), $refs.trigger.focus())"
+        x-on:keydown.escape.window="dismiss($event)"
         class="relative"
         data-testid="panels-tenant-switcher" @wireEl('panels-tenant-switcher')
     >

@@ -9,7 +9,7 @@ import { openPage, checker } from './lib/cdp.mjs';
  * through a real roundtrip while the panel stays open, the funnel is marked,
  * Clear and Escape work, the date preset resolves, and a right-click on a
  * cell offers "Exclude this value" and applies it. On a phone the panel is a
- * bottom sheet.
+ * bottom sheet, and an Escape in a sheet opened from it closes that one only.
  *
  * Usage:
  *   vendor/bin/testbench serve --host=127.0.0.1 --port=8085   # in background
@@ -119,6 +119,22 @@ const setSelect = (selector, value) => `(() => { const s = document.querySelecto
     check('on a phone the panel is a bottom sheet, edge to edge', box.left === 0 && Math.round(box.right) === box.w && Math.round(box.bottom) === box.h, JSON.stringify(box));
     check('with a grabber and a Done button', await eval_(`!! document.querySelector('[data-testid=column-filter-panel-role] [x-sheet-dismiss]')`));
     await shot('05-phone-sheet');
+
+    // A sheet inside the sheet: the role list opens its own touch sheet. One
+    // Escape there closes that one only — the window listener of the column
+    // sheet must see the key as taken (defaultPrevented) and stay open.
+    const touchOpen = `(() => { const t = [...document.querySelectorAll('[data-testid=select-touch-sheet]')].find((n) => getComputedStyle(n).display !== 'none'); return !! t; })()`;
+    await eval_(`document.querySelector('[data-testid=column-filter-panel-role] [data-testid=select-trigger]').click()`);
+    const nested = await waitFor(touchOpen).then(() => true, () => false);
+    check('the role list opens its own sheet on top', nested);
+    if (nested) {
+      await eval_(`[...document.querySelectorAll('[data-testid=select-touch-sheet]')].find((n) => getComputedStyle(n).display !== 'none').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+      await waitFor(`! ${touchOpen}`).catch(() => {});
+      check('one Escape closes the inner sheet only', ! (await eval_(touchOpen)) && (await eval_(panelOpen('role'))));
+      await eval_(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+      await waitFor(`! ${panelOpen('role')}`).catch(() => {});
+      check('a second Escape closes the column sheet', ! (await eval_(panelOpen('role'))));
+    }
   } catch (error) {
     check('phone pass ran to completion', false, error.message);
   } finally {

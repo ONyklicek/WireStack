@@ -42,7 +42,7 @@
                         $panelLabel = $group ? $group->getLabel() : $entry['item']->getLabel();
                         $panelIcon = $group ? $group->getIcon() : $entry['item']->getIcon();
                     @endphp
-                    <div x-data="wireDropdown({ placement: 'bottom-start', offset: 4 })" x-on:keydown.escape.window="open && (close(), $refs.trigger.focus())">
+                    <div x-data="wireDropdown({ placement: 'bottom-start', offset: 4 })" x-on:keydown.escape.window="dismiss($event)">
                         <button
                             type="button"
                             x-ref="trigger"
@@ -95,7 +95,7 @@
          between two widths on every measurement. --}}
     <div
         x-data="wireDropdown({ placement: 'bottom-end', offset: 4 })"
-        x-on:keydown.escape.window="open && (close(), $refs.trigger.focus())"
+        x-on:keydown.escape.window="dismiss($event)"
         {{-- Object syntax, which removes a class that is also written
              statically — the string form only adds, and left `invisible` on. --}}
         x-bind:class="{ 'invisible': ! overflow.length }"

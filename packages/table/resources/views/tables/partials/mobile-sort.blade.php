@@ -20,7 +20,7 @@
 <div class="{{ $visibleClass }}">
     <div
             x-data="wireDropdown({ placement: 'bottom-end'{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} })"
-            @keydown.escape.window="close()"
+            @keydown.escape.window="dismiss($event)"
             class="relative"
     >
         <button

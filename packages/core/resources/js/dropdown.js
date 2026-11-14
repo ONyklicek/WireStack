@@ -334,6 +334,22 @@ const wireDropdown = (config = {}, items = null) => ({
         this.stop()
     },
 
+    // Escape, bound on the window (`@keydown.escape.window="dismiss($event)"`).
+    // A panel nested inside this one — a select's touch sheet, a picker — takes
+    // the key first, on its own element, and says so with preventDefault(); the
+    // window hears it afterwards and must leave this panel open, or one Escape
+    // shuts both. Focus goes back to the trigger the panel was opened from, so a
+    // keyboard user is not left on <body>.
+    dismiss(event) {
+        if (! this.open || event?.defaultPrevented) {
+            return
+        }
+
+        event?.preventDefault()
+        this.close()
+        this.$refs.trigger?.focus({ preventScroll: true })
+    },
+
     stop() {
         if (this._cleanup) {
             this._cleanup()

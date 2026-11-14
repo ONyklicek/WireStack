@@ -15,7 +15,7 @@
             @if($showMenu)
                 @include('wire-core::partials.floating-assets')
 
-                <div class="relative" x-data="wireDropdown({ placement: 'bottom-end' })" @keydown.escape.window="close()">
+                <div class="relative" x-data="wireDropdown({ placement: 'bottom-end' })" @keydown.escape.window="dismiss($event)">
                     <button type="button"
                             x-ref="trigger"
                             x-on:click="toggle()"

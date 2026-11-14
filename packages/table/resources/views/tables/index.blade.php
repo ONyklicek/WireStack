@@ -325,7 +325,7 @@
                                 @elseif($hasFilters && ! $filtersLayout->isAboveContent())
                                     @include('wire-core::partials.floating-assets')
 
-                                    <div x-data="wireDropdown({ placement: 'bottom-start', offset: 8{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} })" @keydown.escape.window="close()" class="relative">
+                                    <div x-data="wireDropdown({ placement: 'bottom-start', offset: 8{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} })" @keydown.escape.window="dismiss($event)" class="relative">
                                         <button
                                                 x-ref="trigger"
                                                 @click="toggle()"
@@ -454,7 +454,7 @@
 
                                     <div
                                             x-data="wireDropdown({ placement: 'bottom-end'{{ $sheetOnMobile ? ', sheetOnMobile: true, sheetBreakpoint: '.$sheetBpPx : '' }} })"
-                                            @keydown.escape.window="close()"
+                                            @keydown.escape.window="dismiss($event)"
                                             class="relative"
                                     >
                                         <button
