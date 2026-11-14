@@ -2626,7 +2626,7 @@ trait WithTable
             return null;
         }
 
-        $record = $this->getTable()->findRecord((string) $recordKey);
+        $record = $this->resolveRowActionRecord((string) $recordKey);
 
         return $record instanceof Model ? $record : null;
     }

@@ -92,7 +92,7 @@
 
                 @if($hasSubRowActions)
                     <div class="-mr-2 flex shrink-0 items-center self-center">
-                        {!! $subRowActionGroup->render($subRow) !!}
+                        {!! $subRowActionGroup->render($subRow, new \NyonCode\WireTable\Actions\SubRowActionClickResolver($recordKey)) !!}
                     </div>
                 @endif
             </div>

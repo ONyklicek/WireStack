@@ -2,6 +2,19 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.10.3]
+
+### Fixed
+
+- **Sub-row actions run.** `Table::subRowActions()` drew buttons that called a bare `mountAction('name')`, a
+  method a table host does not have, so an action on a child row did nothing but fail. The buttons now call
+  the row action entry points (`openActionModal` / `executeTableAction`) under a `Support\SubRowKey` — the
+  parent row's key and the child's (`SubRowActionClickResolver`) — and the host answers such a key from
+  `subRowActions()` only, with the child found through its parent (`Table::findSubRowRecord()`: the table's
+  own lookup, then `getSubRowsQuery()`). Modals, forms, halts and confirmation work as on a row; a key outside
+  the table's query, under another parent or under a row whose `rowInactive()` withholds its actions is
+  refused. One name used on both surfaces runs the action of the surface that was clicked.
+
 ## [2.10.2]
 
 ### Fixed
