@@ -139,6 +139,41 @@ it('ignores conditions without a value, on an unknown field, or crafted', functi
         ->and(qbRun(['combinator' => 'and', 'rules' => [['combinator' => 'or', 'rules' => []]]]))->toBe([1, 2, 3, 4]);
 });
 
+it('caps a crafted tree: the number of conditions, and the size of their values', function () {
+    $many = array_fill(0, 500, qbRule('customer', 'contains', 'Acme'));
+    $normal = QueryBuilderState::normalize(['combinator' => 'and', 'rules' => [
+        ...array_slice($many, 0, 40),
+        ['combinator' => 'or', 'rules' => array_slice($many, 0, 40)],
+        // past the cap, nothing more is read — not even an empty group
+        ['combinator' => 'or', 'rules' => []],
+    ]]);
+
+    expect(QueryBuilderState::ruleCount($normal))->toBe(QueryBuilderState::MAX_RULES)
+        ->and(QueryBuilderState::ruleCount(['rules' => $many]))->toBe(QueryBuilderState::MAX_RULES)
+        // the group was cut to what was left
+        ->and($normal['rules'])->toHaveCount(41)
+        ->and($normal['rules'][40]['rules'])->toHaveCount(10);
+
+    $huge = QueryBuilderState::normalize(['rules' => [
+        qbRule('customer', 'contains', str_repeat('x', 5000)),
+        qbRule('status', 'in', [...array_fill(0, 300, 'paid'), ['nested'], str_repeat('y', 5000)]),
+        qbRule('customer', 'equals', ['deep' => ['er']]),
+        qbRule('customer', 'equals', new \stdClass),
+    ]]);
+
+    expect(mb_strlen($huge['rules'][0]['value']))->toBe(QueryBuilderState::MAX_VALUE_LENGTH)
+        ->and($huge['rules'][1]['value'])->toHaveCount(QueryBuilderState::MAX_VALUES)
+        ->and($huge['rules'][2]['value'])->toBe([])
+        ->and($huge['rules'][3]['value'])->toBeNull();
+
+    // At the cap, adding does nothing.
+    $full = ['combinator' => 'and', 'rules' => array_slice($many, 0, QueryBuilderState::MAX_RULES)];
+    expect(QueryBuilderState::addRule($full, 'customer', 'contains')['rules'])->toHaveCount(QueryBuilderState::MAX_RULES)
+        ->and(QueryBuilderState::addGroup($full, 'customer', 'contains')['rules'])->toHaveCount(QueryBuilderState::MAX_RULES)
+        ->and(QueryBuilderState::normalize(['rules' => [qbRule('status', 'in', [...array_fill(0, 3, 'x'), str_repeat('z', 2000)])]])['rules'][0]['value'][3])
+        ->toHaveLength(QueryBuilderState::MAX_VALUE_LENGTH);
+});
+
 it('words the active conditions as one chip', function () {
     $filter = qbBuilder();
     $state = ['combinator' => 'and', 'rules' => [

@@ -151,6 +151,13 @@ hodnotu.
 opačným k nejvyšší úrovni. Odebráním poslední podmínky skupiny se odebere i
 skupina. Skupina ve skupině není.
 
+**Limity.** Strom drží nejvýše `QueryBuilderState::MAX_RULES` (50) podmínek
+včetně těch ve skupinách — na limitu *Přidat podmínku* ani *Přidat skupinu* nic
+neudělají. Textová hodnota si nechá `MAX_VALUE_LENGTH` (1000) znaků a vícenásobná
+volba `MAX_VALUES` (100) položek. Strom cestuje ve snapshotu Livewire a každá
+podmínka je omezení, které dotaz autorizuje a aplikuje, takže tytéž limity
+ořežou podvržený payload dřív, než cokoli poběží.
+
 ## Pole přes relaci
 
 Tečkový název constraintu je cesta relací, zpracovaná jako všude jinde: pozitivní

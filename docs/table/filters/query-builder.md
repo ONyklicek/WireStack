@@ -150,6 +150,13 @@ An operator that needs no value (*is empty*) draws no value control.
 opposite to the top level's. Removing a group's last condition removes the group.
 There is no group inside a group.
 
+**Limits.** A tree holds at most `QueryBuilderState::MAX_RULES` (50) conditions,
+groups included — at the cap *Add condition* and *Add group* do nothing. A text
+value keeps `MAX_VALUE_LENGTH` (1000) characters and a multiple choice
+`MAX_VALUES` (100) entries. The tree travels in the Livewire snapshot and every
+condition is a constraint the query authorizes and applies, so the same limits
+cut a crafted payload down before anything runs.
+
 ## Fields Across A Relation
 
 A dotted constraint name is a relation path, handled as it is everywhere else:
