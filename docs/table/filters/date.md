@@ -47,6 +47,16 @@ from/to beside it, and before every render the table writes today's dates for it
 into from/to, so the picker shows the period the name stands for now. Picking
 days by hand clears the name.
 
+**A day in another timezone than the stored one.** Days are compared by
+`DATE(column)` — "on 3 March" matches 3 March at 14:00. When `->timezone()`
+differs from `app.timezone` and the column holds a moment (a `datetime` cast or
+one of the model's timestamps), `DATE()` would be the stored day, not the
+reader's: a row written at 23:30 UTC is the next day in Prague. There a day
+becomes the range from its first moment to the next day's, converted to
+`app.timezone` — `created_at >= '2026-11-11 23:00:00' AND created_at < '2026-11-12 23:00:00'`
+for 12 November in Prague, which an index on the column can also serve. A plain
+`date` column has no moment to shift and keeps `DATE()`.
+
 **The controls are the forms pickers.** A single date is drawn with the forms
 `DateTimePicker`, a range with the forms `DateRangePicker` — one box, two months
 side by side with the presets beside them; on a phone the two pickers with the
@@ -249,7 +259,7 @@ class ListInvoices extends Component
 ->minDate(string|DateTimeInterface|null $date)   // min selectable date
 ->maxDate(string|DateTimeInterface|null $date)   // max selectable date
 ->presets(array|bool $presets = true) // named ranges beside the dates: true = all, or list<DatePreset|string>; turns range() on
-->timezone(?string $timezone)       // the timezone a preset's "today" is read in — default app.timezone
+->timezone(?string $timezone)       // the timezone days are read in — a preset's "today", and the day bounds on a timestamp column; default app.timezone
 ->operators(array|bool $operators = true) // inherited — single date only: 'equals'|'not_equals'|'lt'|'lte'|'gt'|'gte'|'is_empty'|'is_not_empty'
 ->defaultOperator(FilterOperator|string $operator) // inherited — default 'equals' (is on)
 ->getPresets(): array               // list<DatePreset>

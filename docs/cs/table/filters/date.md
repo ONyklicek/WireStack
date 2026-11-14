@@ -45,6 +45,16 @@ Týden začíná pondělím. Když je předvolba nastavená, vyhrává nad od/do
 tabulka před každým vykreslením zapíše do od/do dnešní data, takže picker ukazuje
 období, které název právě znamená. Ruční výběr dnů název vymaže.
 
+**Den v jiné časové zóně, než ve které se ukládá.** Dny se porovnávají přes
+`DATE(column)` — „3. března“ najde 3. března ve 14:00. Když se `->timezone()`
+liší od `app.timezone` a sloupec drží okamžik (cast `datetime` nebo jedno
+z časových razítek modelu), `DATE()` by byl den úložiště, ne čtenáře: řádek
+zapsaný ve 23:30 UTC je v Praze už další den. Tam se den stane rozsahem od jeho
+prvního okamžiku do prvního okamžiku dne následujícího, převedeným do
+`app.timezone` — `created_at >= '2026-11-11 23:00:00' AND created_at < '2026-11-12 23:00:00'`
+pro 12. listopadu v Praze, což umí obsloužit i index nad sloupcem. Obyčejný
+sloupec `date` nemá okamžik k posunutí a zůstane u `DATE()`.
+
 **Ovládání jsou pickery z formulářů.** Jedno datum kreslí `DateTimePicker`
 z formulářů, rozsah `DateRangePicker` — jedno pole, dva měsíce vedle sebe
 s předvolbami po straně; na telefonu oba pickery s předvolbami jako čipy —
@@ -246,7 +256,7 @@ class ListInvoices extends Component
 ->minDate(string|DateTimeInterface|null $date)   // min volitelné datum
 ->maxDate(string|DateTimeInterface|null $date)   // max volitelné datum
 ->presets(array|bool $presets = true) // pojmenované rozsahy vedle dat: true = všechny, nebo list<DatePreset|string>; zapne range()
-->timezone(?string $timezone)       // časová zóna, ve které se čte „dnes“ předvolby — výchozí app.timezone
+->timezone(?string $timezone)       // časová zóna, ve které se čtou dny — „dnes“ předvolby i hranice dne na sloupci s časem; výchozí app.timezone
 ->operators(array|bool $operators = true) // zděděno — jen jedno datum: 'equals'|'not_equals'|'lt'|'lte'|'gt'|'gte'|'is_empty'|'is_not_empty'
 ->defaultOperator(FilterOperator|string $operator) // zděděno — výchozí 'equals' (je dne)
 ->getPresets(): array               // list<DatePreset>

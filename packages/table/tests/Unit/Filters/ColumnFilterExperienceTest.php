@@ -144,6 +144,36 @@ it('reads "today" in the filter timezone', function () {
 
 // ─── Counts and the value list ───────────────────────────────────────────
 
+it('reads a day in the filter timezone on a timestamp, and by DATE() on a date', function () {
+    config()->set('app.timezone', 'UTC');
+    // 23:30 UTC on the 11th is 00:30 on the 12th in Prague; 23:30 UTC on the 12th is the 13th there.
+    CfxPerson::query()->whereKey(1)->update(['created_at' => '2026-11-11 23:30:00', 'joined_on' => '2026-11-12']);
+    CfxPerson::query()->whereKey(2)->update(['created_at' => '2026-11-12 23:30:00', 'joined_on' => '2026-11-12']);
+    CfxPerson::query()->whereKey(3)->update(['created_at' => '2026-11-12 10:00:00', 'joined_on' => '2026-11-13']);
+
+    $names = function (DateFilter $filter, mixed $state): array {
+        $query = CfxPerson::query();
+        $filter->forState($state)->apply($query, $filter->forState($state)->extractValue($state));
+
+        return $query->orderBy('id')->pluck('name')->all();
+    };
+    $prague = fn (string $column): DateFilter => DateFilter::make($column)->timezone('Europe/Prague');
+
+    expect($names($prague('created_at'), '2026-11-12'))->toBe(['Ada', 'Cy'])
+        ->and($names($prague('created_at')->range(), ['from' => '2026-11-13', 'to' => '2026-11-13']))->toBe(['Bo'])
+        ->and($names($prague('created_at')->operators(), ['value' => '2026-11-12', 'operator' => 'not_equals']))->toBe(['Bo'])
+        ->and($names($prague('created_at')->operators(), ['value' => '2026-11-12', 'operator' => 'gt']))->toBe(['Bo'])
+        ->and($names($prague('created_at')->operators(), ['value' => '2026-11-12', 'operator' => 'lt']))->toBe([])
+        ->and($names($prague('created_at')->operators(), ['value' => '2026-11-12', 'operator' => 'lte']))->toBe(['Ada', 'Cy'])
+        ->and($names($prague('created_at')->operators(), ['value' => '2026-11-13', 'operator' => 'gte']))->toBe(['Bo'])
+        // A date column has no moment to shift: still DATE().
+        ->and($names($prague('joined_on'), '2026-11-12'))->toBe(['Ada', 'Bo'])
+        // Read in the application's own timezone, DATE() is right as it is.
+        ->and($names(DateFilter::make('created_at'), '2026-11-12'))->toBe(['Bo', 'Cy'])
+        // A malformed day is not shifted, just compared.
+        ->and($names($prague('created_at'), '2026-02-31'))->toBe([]);
+});
+
 it('counts each option under the other filters, never under its own', function () {
     $table = Table::make()->model(CfxPerson::class);
     $role = SelectFilter::make('role')->multiple()->options(['admin' => 'Admin', 'editor' => 'Editor', 'viewer' => 'Viewer'])->withCounts();
