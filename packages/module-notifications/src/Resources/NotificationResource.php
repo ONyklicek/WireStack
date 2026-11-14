@@ -6,6 +6,7 @@ namespace NyonCode\WireModuleNotifications\Resources;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 use NyonCode\WireCore\Core\Resources\Concerns\DescribesRecords;
 use NyonCode\WireCore\Core\Resources\Contracts\DescribesResource;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
@@ -20,6 +21,7 @@ use NyonCode\WireCore\Notifications\DatabaseNotification;
 use NyonCode\WireModuleNotifications\Exceptions\NotificationsModuleException;
 use NyonCode\WireModuleNotifications\Pages\ListNotifications;
 use NyonCode\WireModuleNotifications\Pages\ViewNotification;
+use Throwable;
 
 /**
  * The history behind the bell.
@@ -117,6 +119,34 @@ class NotificationResource implements DescribesResource, ProvidesNavigation, Pro
     }
 
     /**
+     * Whether the viewer sees everyone's notifications: `scope => 'all'`, and
+     * the ability that grants it (`wire-module-notifications.permission`).
+     *
+     * Every read and write on these screens goes through
+     * {@see scopeToViewer()}, so this one answer is what stands between a
+     * signed-in user and deleting somebody else's inbox. No ability configured
+     * means nobody: failing closed is the only safe reading of "all" alone.
+     */
+    public static function seesEveryone(): bool
+    {
+        if (config('wire-module-notifications.scope', 'own') !== 'all') {
+            return false;
+        }
+
+        $permission = config('wire-module-notifications.permission');
+
+        if (! is_string($permission) || $permission === '') {
+            return false;
+        }
+
+        try {
+            return Gate::allows($permission);
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
      * Whose notifications this screen shows.
      *
      * The default is the viewer's own, because a notification is addressed to
@@ -128,7 +158,7 @@ class NotificationResource implements DescribesResource, ProvidesNavigation, Pro
      */
     public static function scopeToViewer(Builder $query): Builder
     {
-        if (config('wire-module-notifications.scope', 'own') === 'all') {
+        if (self::seesEveryone()) {
             return $query;
         }
 

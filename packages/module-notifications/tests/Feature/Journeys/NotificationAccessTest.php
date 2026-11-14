@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Auth\User;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
@@ -11,6 +12,7 @@ use Illuminate\Support\Str;
 use Livewire\Livewire;
 use NyonCode\WireCore\Notifications\DatabaseNotification;
 use NyonCode\WireModuleNotifications\Pages\ListNotifications;
+use NyonCode\WireModuleNotifications\Resources\NotificationResource;
 
 /*
  * Who can open which notification, over the routes an application registers.
@@ -180,6 +182,8 @@ it('refuses every list action on someone else s id, not only the page', function
 
 it('opens anybody s notification from its URL once the application asked for the administrative view', function () {
     config()->set('wire-module-notifications.scope', 'all');
+    config()->set('wire-module-notifications.permission', 'notifications.everyone');
+    Gate::define('notifications.everyone', fn ($user = null): bool => true);
 
     $theirs = njNotification('2', 'Sam s salary review');
 
@@ -187,4 +191,27 @@ it('opens anybody s notification from its URL once the application asked for the
         ->get(route('wire.notifications.view', $theirs->id))
         ->assertOk()
         ->assertSee('Sam s salary review');
+});
+
+it('does not open everyone s inbox on the scope alone', function () {
+    // 'all' with no ability configured, or one this viewer lacks, is their own
+    // inbox — or every signed-in user could read and empty everybody else's.
+    config()->set('wire-module-notifications.scope', 'all');
+
+    $theirs = njNotification('2', 'Sam s salary review');
+
+    $this->actingAs($this->jane)
+        ->get(route('wire.notifications.view', $theirs->id))
+        ->assertNotFound();
+
+    config()->set('wire-module-notifications.permission', 'notifications.everyone');
+    Gate::define('notifications.everyone', fn ($user = null): bool => false);
+
+    Livewire::test(ListNotifications::class)->call('delete', $theirs->id);
+
+    expect($theirs->fresh())->not->toBeNull()
+        ->and(NotificationResource::seesEveryone())->toBeFalse();
+
+    Gate::define('notifications.everyone', fn ($user = null): bool => throw new RuntimeException('no guard'));
+    expect(NotificationResource::seesEveryone())->toBeFalse();
 });

@@ -6,8 +6,10 @@ namespace NyonCode\WireModuleMedia\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use NyonCode\WireModuleMedia\Models\Media;
 use NyonCode\WireModuleMedia\Support\MediaAccess;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -70,6 +72,20 @@ class MediaController
         // far better than a stream of nothing.
         abort_unless($disk->exists($path), 404);
 
+        $type = $path === (string) $media->path
+            ? (string) ($media->mime_type ?: 'application/octet-stream')
+            : ((string) $disk->mimeType($path) ?: 'application/octet-stream');
+
+        // A file a browser would run rather than show — an SVG, an HTML page —
+        // opened from this route runs on the application's own origin, with the
+        // signed-in user's session: stored XSS by upload. It is never drawn
+        // inline, and the sandbox keeps it inert even where something does.
+        $scriptable = self::scriptable($type);
+
+        if ($scriptable) {
+            $disposition = 'attachment';
+        }
+
         return new StreamedResponse(
             static function () use ($disk, $path): void {
                 $stream = $disk->readStream($path);
@@ -84,18 +100,41 @@ class MediaController
                 // The thumbnail's own type and length, not the original's: a
                 // WebP served as `image/png` with the original's byte count is
                 // a picture some browsers refuse and every proxy mistrusts.
-                'Content-Type' => $path === (string) $media->path
-                    ? (string) ($media->mime_type ?: 'application/octet-stream')
-                    : ((string) $disk->mimeType($path) ?: 'application/octet-stream'),
+                'Content-Type' => $type,
                 'Content-Length' => (string) ($path === (string) $media->path ? $media->size : $disk->size($path)),
                 // The stored name, not the path: a file downloaded as
-                // `9f2a1c8e.pdf` is a file nobody can find again.
-                'Content-Disposition' => $disposition.'; filename="'.addslashes((string) $media->name).'"',
+                // `9f2a1c8e.pdf` is a file nobody can find again. Encoded the
+                // way RFC 6266 says, with an ASCII fallback — a quote or a line
+                // break in an uploaded name must not end the header.
+                'Content-Disposition' => self::disposition($disposition, (string) $media->name),
+                // The type above is the one stored for the file, and the
+                // browser is to believe it rather than guess from the bytes.
+                'X-Content-Type-Options' => 'nosniff',
                 // Private, because the whole reason this route exists is that the
                 // file is not public — a shared cache holding it would undo the
                 // policy check above.
                 'Cache-Control' => 'private, max-age=3600',
-            ],
+            ] + ($scriptable ? ['Content-Security-Policy' => "default-src 'none'; sandbox"] : []),
         );
+    }
+
+    /** Whether a browser runs this type rather than displaying it. */
+    private static function scriptable(string $type): bool
+    {
+        $type = strtolower(trim(explode(';', $type)[0]));
+
+        return in_array($type, [
+            'text/html', 'application/xhtml+xml', 'image/svg+xml', 'text/xml', 'application/xml',
+            'text/javascript', 'application/javascript', 'application/ecmascript', 'text/ecmascript',
+        ], true) || str_ends_with($type, '+xml');
+    }
+
+    private static function disposition(string $disposition, string $name): string
+    {
+        $name = str_replace(["\r", "\n", "\0", '/', '\\'], ' ', $name);
+        $name = trim($name) === '' ? 'file' : $name;
+        $fallback = trim((string) preg_replace('/[^\x20-\x7e]|["%]/', '_', Str::ascii($name))) ?: 'file';
+
+        return HeaderUtils::makeDisposition($disposition, $name, $fallback);
     }
 }

@@ -23,10 +23,24 @@ return [
     |--------------------------------------------------------------------------
     |
     |   own   — a signed-in user sees their own notifications (the default)
-    |   all   — everyone's, which is an administrative view and wants a policy
+    |   all   — everyone's, for a viewer holding `permission` below; everybody
+    |           else still sees their own
     |
     */
     'scope' => env('WIRE_NOTIFICATIONS_SCOPE', 'own'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Who May See Everyone's
+    |--------------------------------------------------------------------------
+    |
+    | The ability `scope => 'all'` is granted by — read, mark and delete any
+    | user's notifications. Without one, 'all' is not honoured for anybody: a
+    | list of everyone's inbox that every signed-in user can empty is not an
+    | administrative view.
+    |
+    */
+    'permission' => env('WIRE_NOTIFICATIONS_PERMISSION'),
 
     'navigation' => [
         /*

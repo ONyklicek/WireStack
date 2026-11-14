@@ -208,10 +208,12 @@ it('will not replace someone else s picture, whichever way the editor was reache
         ->call('openEditor', $this->janes->id)
         ->assertSet('editingId', null);
 
-    // Round the button: the editing id is a public property, so the check
-    // that holds has to be the one at the moment the bytes arrive.
+    // Round the button: the editing id cannot be written from the browser at
+    // all (#[Locked]); replaceOriginal() asks the policy again regardless.
+    expect(fn () => Livewire::test(MediaManager::class)->set('editingId', $this->janes->id))
+        ->toThrow(CannotUpdateLockedPropertyException::class);
+
     Livewire::test(MediaManager::class)
-        ->set('editingId', $this->janes->id)
         ->set('editorIntent', 'replace')
         ->set('editorUpload', UploadedFile::fake()->image('overwrite.png', 40, 40))
         ->assertOk();

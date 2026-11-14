@@ -343,7 +343,46 @@ it('streams a file the disk will not hand out itself', function () {
     // The stored name, not the path: a file downloaded as `9f2a1c8e.txt` is a
     // file nobody can find again.
     $this->get((string) $media->downloadUrl())
-        ->assertHeader('content-disposition', 'attachment; filename="contract.txt"');
+        ->assertHeader('content-disposition', 'attachment; filename=contract.txt');
+});
+
+it('never lets an uploaded file run on the application\'s origin', function () {
+    maPrivateDisk();
+
+    Storage::disk('vault')->put('media/x.svg', '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+    Storage::disk('vault')->put('media/a.png', 'png');
+
+    $svg = Media::create(['disk' => 'vault', 'path' => 'media/x.svg', 'name' => 'x.svg', 'mime_type' => 'image/svg+xml', 'size' => 70]);
+    $png = Media::create(['disk' => 'vault', 'path' => 'media/a.png', 'name' => 'a.png', 'mime_type' => 'image/png', 'size' => 3]);
+
+    // A script-carrying type is a download, sandboxed, whatever the route asked for.
+    $this->get((string) $svg->url())
+        ->assertHeader('x-content-type-options', 'nosniff')
+        ->assertHeader('content-security-policy', "default-src 'none'; sandbox")
+        ->assertHeader('content-disposition', 'attachment; filename=x.svg');
+
+    // A picture is still shown in place, and the browser is told not to guess its type.
+    $this->get((string) $png->url())
+        ->assertHeader('x-content-type-options', 'nosniff')
+        ->assertHeader('content-disposition', 'inline; filename=a.png')
+        ->assertHeaderMissing('content-security-policy');
+});
+
+it('keeps an uploaded name from breaking the header', function () {
+    maPrivateDisk();
+    Storage::disk('vault')->put('media/n.txt', 'x');
+
+    $media = Media::create(['disk' => 'vault', 'path' => 'media/n.txt', 'name' => "Faktura \"č. 5\"\r\nX-Evil: 1/ü.txt", 'mime_type' => 'text/plain', 'size' => 1]);
+
+    $header = $this->get((string) $media->downloadUrl())->headers->get('content-disposition');
+
+    // The ASCII fallback carries no quote to end it early; the exact name rides in filename*.
+    expect($header)->toStartWith('attachment; filename="Faktura _c. 5_  X-Evil: 1 u.txt"')
+        ->and($header)->toContain("filename*=utf-8''")
+        ->and($header)->not->toContain("\n");
+
+    $blank = Media::create(['disk' => 'vault', 'path' => 'media/n.txt', 'name' => 'ěščř', 'mime_type' => 'text/plain', 'size' => 1]);
+    expect($this->get((string) $blank->downloadUrl())->headers->get('content-disposition'))->toContain('filename=escr');
 });
 
 it('answers 403 for a file the policy will not show', function () {

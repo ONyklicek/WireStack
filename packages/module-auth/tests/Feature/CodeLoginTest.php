@@ -172,6 +172,32 @@ it('mails another once the window has passed', function () {
     Notification::assertSentToTimes(CodeUser::query()->firstOrFail(), OneTimeCodeNotification::class, 2);
 });
 
+it('answers a resend the same way whether the address has an account or not', function () {
+    // SendOneTimeCode answers false for "no such account" as well as for "too
+    // soon"; the screen must not turn that into a way to test addresses.
+    CodeWorld::user();
+
+    $answers = [];
+
+    foreach (['ann@example.com', 'nobody@example.com'] as $address) {
+        $this->post('/login/code', ['email' => $address]);
+
+        $answers[$address] = [
+            $this->post('/login/code/challenge/send')->getSession()->get('status'),
+        ];
+
+        $this->travel(2)->minutes();
+
+        $answers[$address][] = $this->post('/login/code/challenge/send')->getSession()->get('status');
+    }
+
+    expect($answers['nobody@example.com'])->toBe($answers['ann@example.com'])
+        ->and($answers['ann@example.com'])->toBe([
+            __('wire-module-auth::messages.code_sent_recently'),
+            __('wire-module-auth::messages.code_sent'),
+        ]);
+});
+
 it('registers the routes of the flow that is on, and of no other', function () {
     // ADR 0037 §3: four switches, four groups of routes. A flow that is off
     // cannot be reached by guessing its URL, and an installation that turned

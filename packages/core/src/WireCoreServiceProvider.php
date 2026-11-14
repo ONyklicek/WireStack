@@ -924,6 +924,9 @@ class WireCoreServiceProvider extends PackageServiceProvider
         $dashboards = $this->app->make(DashboardRegistry::class);
         $groups = $this->app->make(NavigationGroups::class);
 
+        // Group keys a module has already declared in this pass.
+        $declared = [];
+
         foreach ($this->app->make(PluginManager::class)->all() as $plugin) {
             if (! $plugin instanceof Module) {
                 continue;
@@ -934,9 +937,26 @@ class WireCoreServiceProvider extends PackageServiceProvider
 
             $group = $plugin->navigation();
 
-            if ($group !== null) {
-                $groups->register($group);
+            if ($group === null) {
+                continue;
             }
+
+            // Two modules naming one heading — audit, notifications and settings
+            // all ship `system` — declare one group, not a race to replace each
+            // other: which one booted last used to decide its position. The first
+            // declaration's heading and icon stand, and the group sits where the
+            // earliest of them asked. An application registering the key itself
+            // still replaces, as the registry promises.
+            $existing = isset($declared[$group->getKey()]) ? $groups->find($group->getKey()) : null;
+
+            if ($existing !== null) {
+                $existing->sort(min($existing->getSort(), $group->getSort()));
+
+                continue;
+            }
+
+            $groups->register($group);
+            $declared[$group->getKey()] = true;
         }
     }
 
@@ -973,7 +993,19 @@ class WireCoreServiceProvider extends PackageServiceProvider
                     throw PluginRegistrationException::notAPlugin($pluginClass, Plugin::class);
                 }
 
-                $manager->register($this->app->make($pluginClass));
+                $plugin = $this->app->make($pluginClass);
+
+                // A module registers itself when its package is installed, and
+                // listing it here as well is the natural thing to try. The same
+                // class under the same id is that, and is already done; another
+                // class claiming the id is a real conflict and still refused.
+                $existing = $manager->get($plugin->getId());
+
+                if ($existing !== null && $existing::class === $plugin::class) {
+                    continue;
+                }
+
+                $manager->register($plugin);
             }
         });
     }
