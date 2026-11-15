@@ -114,6 +114,35 @@ Obě podmínky se skládají a ta levnější běží první — záznam, který
 ->subRowsHideWhenEmpty();
 ```
 
+### Když podřádky nemá žádný řádek na stránce
+
+S kteroukoli z obou podmínek může vzniknout stránka, kde podřádky nemá žádný
+záznam — filtr nechal jen objednávky bez dětí, poslední stránka, hledání.
+Stránka pak vynechá **sloupec s chevrony** celý: hlavičku s master chevronem,
+buňku v řádku filtrů, prázdnou buňku v každém řádku i odpovídající mezeru
+v patičce a skupinových mezisoučtech. Další stránka, kde nějaký záznam děti má,
+ho vykreslí znovu.
+
+```text
+hledání "Acme" → podřádky nemá nikdo       vymazáno → někdo je má
+┌────────────┬──────────┬────────┐        ┌───┬────────────┬──────────┬────────┐
+│ FAKTURA    │ ZÁKAZNÍK │ CELKEM │        │   │ FAKTURA    │ ZÁKAZNÍK │ CELKEM │
+│ INV-1003   │ Acme     │  8 450 │        │ ⌄ │ INV-1001   │ Northw…  │  9 350 │
+└────────────┴──────────┴────────┘        │   │ INV-1003   │ Acme     │  8 450 │
+                                          └───┴────────────┴──────────┴────────┘
+```
+
+Rozhoduje se jednou za vykreslení ze záznamů stránky, stejnými odpověďmi po
+záznamech, na které se ptají chevrony — takže to nestojí žádný vlastní dotaz.
+Tabulka bez obou podmínek má sloupec na každé neprázdné stránce, protože tam
+podřádky má každý řádek. Přepínač **Rozbalit na všech řádcích** v menu
+zobrazení zůstává: nastavuje baseline pro stránky, kde děti jsou.
+
+S [`rowPartials()`](advanced.md#radkove-partials) zápis obvykle odpoví jen změněným řádkem.
+Když právě ten řádek může o sloupci rozhodovat — žádný jiný řádek na stránce
+podřádky nemá — tabulka místo toho vykreslí celou datovou oblast, aby se
+s ním změnila i hlavička a patička.
+
 ## Rozbalení a sbalení
 
 ```php

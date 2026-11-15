@@ -81,7 +81,7 @@ final class ColumnRenderPlan
      *                                              consumer's component needs no `implements` to keep working; the contract
      *                                              is what it must be able to answer, and what a test double implements.
      */
-    public static function resolve(Table $table, mixed $component): self
+    public static function resolve(Table $table, mixed $component, ?bool $hasExpanderColumn = null): self
     {
         $visible = array_filter(
             $table->getColumns(),
@@ -150,7 +150,9 @@ final class ColumnRenderPlan
             colSpan: ($table->isSelectable() ? 1 : 0)
                 + count($visible)
                 + ($table->hasActions() ? 1 : 0)
-                + ($hasSubRows ? 1 : 0),
+                // The expander column, when this page draws it — without a page
+                // to ask, whenever the table has sub-rows.
+                + (($hasExpanderColumn ?? $hasSubRows) ? 1 : 0),
             toggleable: $toggleable,
             visibleToggleableCount: count(array_filter(
                 $toggleable,

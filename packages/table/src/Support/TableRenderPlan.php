@@ -89,6 +89,8 @@ final class TableRenderPlan
 
     private ?ShellRenderPlan $shell = null;
 
+    private ?bool $hasExpanderColumn = null;
+
     /**
      * @param  LengthAwarePaginator<int, Model>|Paginator<int, Model>|CursorPaginator<int, Model>|Collection<int, Model>  $records
      */
@@ -124,7 +126,7 @@ final class TableRenderPlan
     /** Which columns this render shows, and what was resolved off them. */
     public function columns(): ColumnRenderPlan
     {
-        return $this->columns ??= ColumnRenderPlan::resolve($this->table, $this->component);
+        return $this->columns ??= ColumnRenderPlan::resolve($this->table, $this->component, $this->hasExpanderColumn());
     }
 
     /** Which actions it offers, and how they reach the host. */
@@ -173,6 +175,20 @@ final class TableRenderPlan
             $this->table,
             $this->component,
             $this->columns()->hasToggles,
+            $this->hasExpanderColumn(),
+        );
+    }
+
+    /**
+     * Whether this page draws the expander column — decided once, from the
+     * records, because the header, the filter row, every row, the footer, the
+     * group subtotals and every full-width colspan must all agree on it.
+     * See {@see Table::showsExpanderColumnFor()}.
+     */
+    public function hasExpanderColumn(): bool
+    {
+        return $this->hasExpanderColumn ??= $this->table->showsExpanderColumnFor(
+            $this->records instanceof Collection ? $this->records->all() : $this->records->items(),
         );
     }
 

@@ -106,7 +106,7 @@ final class RowRenderer
             $html .= $selectionCell->fill(['keyJs' => $keyJs, 'key' => $key]);
         }
 
-        if ($this->plan->shell()->hasSubRows) {
+        if ($this->plan->shell()->hasExpanderColumn) {
             $html .= $this->table->getSubRowCell(
                 $keyJs,
                 $key,
