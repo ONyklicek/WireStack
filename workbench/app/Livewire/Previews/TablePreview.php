@@ -55,7 +55,7 @@ class TablePreview extends Component
     /** Variants backed by the Invoice → InvoiceItem relationship. */
     private const INVOICE_VARIANTS = [
         'subrows', 'summary', 'row-color',
-        'subrows-flatten', 'subrows-limit', 'subrows-filter',
+        'subrows-flatten', 'subrows-limit', 'subrows-filter', 'subrows-fixed',
     ];
 
     /** Variants that expand only the first invoice (a single drill-down). */
@@ -331,6 +331,11 @@ class TablePreview extends Component
 
         if ($this->variant === 'subrows-limit') {
             $table->subRowsLimit(2);
+        }
+
+        // Always open, no toggle — and only the invoices that have items.
+        if ($this->variant === 'subrows-fixed') {
+            $table->subRowsExpandable(false)->subRowsHideWhenEmpty();
         }
 
         if ($filterable) {

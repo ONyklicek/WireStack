@@ -54,8 +54,24 @@ class SraHost extends Component
     /** @var list<string> */
     public array $log = [];
 
+    /** Turn order 1 away from sub-rows altogether (subRowsVisible()). */
+    public bool $hideFirstOrder = false;
+
+    /** A subRowQuery() that mutates the builder and returns nothing. */
+    public bool $voidSubRowQuery = false;
+
     public function table(Table $table): Table
     {
+        if ($this->hideFirstOrder) {
+            $table->subRowsVisible(fn (SraOrder $order) => $order->getKey() !== 1);
+        }
+
+        if ($this->voidSubRowQuery) {
+            $table->subRowQuery(function ($query): void {
+                $query->where('label', '!=', 'nothing');
+            });
+        }
+
         return $table
             // Order 3 is outside the table's query: its lines must be out of reach.
             ->query(SraOrder::query()->whereKeyNot(3))
@@ -170,6 +186,29 @@ it('refuses a sub-row key the table cannot reach', function (string $key) {
     'an unknown line' => [SubRowKey::encode(1, 99)],
     'a locked parent' => [SubRowKey::encode(2, 2)],
 ]);
+
+it('refuses a child of a parent whose sub-rows are turned off', function () {
+    Livewire::test(SraHost::class, ['hideFirstOrder' => true])
+        ->call('executeTableAction', SubRowKey::encode(1, 1), 'touch')
+        ->call('openActionModal', SubRowKey::encode(1, 1), 'rename')
+        ->assertSet('log', [])
+        ->assertSet('tableState.modal.actions', []);
+});
+
+it('finds the child through a subRowQuery() that returns nothing', function () {
+    Livewire::test(SraHost::class, ['voidSubRowQuery' => true])
+        ->call('executeTableAction', SubRowKey::encode(1, 1), 'touch')
+        ->assertSet('log', ['sub:'.SraLine::class.':1']);
+});
+
+it('refuses submitted form data for a locked row and for a sub-row under it', function () {
+    Livewire::test(SraHost::class)
+        ->call('executeTableActionWithData', '2', 'touch', [])
+        ->call('executeTableActionWithData', SubRowKey::encode(2, 2), 'rename', ['label' => 'Forged'])
+        ->assertSet('log', []);
+
+    expect(SraLine::find(2)->label)->toBe('Two');
+});
 
 it('does not run a row action for a sub-row key, nor a sub-row action for a row key', function () {
     Livewire::test(SraHost::class)

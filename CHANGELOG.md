@@ -2,6 +2,25 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.10.4]
+
+### Fixed
+
+- **Sub-row actions under a parent without sub-rows are refused.** A parent whose panel is never drawn —
+  rejected by `subRowsVisible()`, or childless under `subRowsHideWhenEmpty()` — refuses its children's actions,
+  so a forged sub-row key cannot reach them.
+- **`subRowsExpandable(false)` is always open.** Documented as "always open, no toggle", it removed the toggle
+  and left the baseline collapsed, so every panel stayed shut with nothing to open it. Every row with sub-rows
+  is now expanded, and `toggleRowExpansion()` / the expand-all methods are ignored on such a table. The footer
+  and group-subtotal rows kept their expander spacer only while the toggle existed, so they sat one column to
+  the left of the rows; they now follow the expander cell the rows always draw.
+- **A `subRowQuery()` that returns nothing.** A callback that mutates the builder without returning it worked
+  for the eager load and the empty-row count but threw a `TypeError` from `getSubRowsQuery()` — the path a
+  sub-row action, an active sub-row filter and "show all" take. The builder it was handed is now used.
+- **`executeTableActionWithData()` honours an inactive row's lock.** `executeTableAction()` and
+  `openActionModal()` refused a row whose `rowInactive()` withholds its actions; the form-submit entry point
+  did not, so a direct call with data ran the action anyway — on the row, or on a sub-row under it.
+
 ## [2.10.3]
 
 ### Fixed

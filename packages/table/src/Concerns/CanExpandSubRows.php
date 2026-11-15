@@ -43,6 +43,12 @@ trait CanExpandSubRows
      */
     public function toggleRowExpansion(mixed $recordKey): void
     {
+        // A table without a toggle (subRowsExpandable(false)) is always open;
+        // there is nothing a request could move.
+        if (! $this->getTable()->isSubRowsExpandable()) {
+            return;
+        }
+
         $key = (string) $recordKey;
         $expanded = $this->tableState->get('rows.expanded', []);
 
@@ -61,6 +67,10 @@ trait CanExpandSubRows
      */
     public function expandsSubRowsByDefault(): bool
     {
+        if (! $this->getTable()->isSubRowsExpandable()) {
+            return true;
+        }
+
         $override = $this->tableState->get('rows.expandAll');
 
         return $override === null
@@ -80,7 +90,9 @@ trait CanExpandSubRows
      */
     public function setSubRowsExpandAll(bool $expand): void
     {
-        if (! $this->getTable()->hasSubRows()) {
+        $table = $this->getTable();
+
+        if (! $table->hasSubRows() || ! $table->isSubRowsExpandable()) {
             return;
         }
 
@@ -139,6 +151,15 @@ trait CanExpandSubRows
      */
     public function isRowExpanded(mixed $recordKey): bool
     {
+        // subRowsExpandable(false) means "always open, no toggle". Without this
+        // the rows had neither: no chevron to open them, and a baseline of
+        // "collapsed" that kept every panel shut.
+        $table = $this->getTable();
+
+        if ($table->hasSubRows() && ! $table->isSubRowsExpandable()) {
+            return true;
+        }
+
         $expanded = $this->tableState->get('rows.expanded', []);
         $isException = in_array((string) $recordKey, $expanded, true);
 

@@ -123,6 +123,12 @@ Both conditions compose, and the cheap one runs first — a record
 ->subRowsToggleLabel('Show items')     // label for the toggle column
 ```
 
+`subRowsExpandable(false)` opens every panel that has something to show and
+removes every control that could close it — the row chevrons, the master
+chevron and the view-menu switch. Requests to toggle are ignored, and the
+expander column stays (empty) so the rows, the group subtotals and the footer
+keep their columns aligned.
+
 Expansion is one state, not two: a **baseline** says whether rows start open, and
 Livewire state lists only the rows that differ from it. `subRowsDefaultExpanded()`
 sets the baseline; the user moves it with the **master chevron in the expander
@@ -321,10 +327,27 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\DeleteAction;
 
 ->subRowActions([
-    Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
-    DeleteAction::make(),
+    Action::make('edit')->label('Edit')->icon('pencil')->color('primary')
+        ->url(fn (InvoiceItem $record) => route('items.edit', $record)),
+    DeleteAction::make()
+        ->action(fn (InvoiceItem $record) => $record->delete()), // [tl! focus]
 ])
 ```
+
+A sub-row button sends both keys — the parent's and the child's — and the
+server finds the child **through the parent**: the parent by the table's own
+query (its scopes, its tenant), the child among that parent's sub-rows
+(`subRows()` relation plus `subRowQuery()`). A key outside either is refused, so
+a forged request cannot reach a child the table would never draw. The same goes
+for a parent whose panel is never drawn — turned away by `subRowsVisible()`, or
+childless under `subRowsHideWhenEmpty()`.
+
+The two surfaces stay apart: a sub-row button runs only an action from
+`subRowActions()`, a row button only one from `actions()`, so the same name on
+both runs the one that was clicked. A child belongs to its parent's row, so a
+parent whose [inactive state](inactive-records.md) withholds its actions
+withholds its children's too — on opening the modal, on executing, and on
+submitting the modal's form.
 
 ```text
 Product        Qty   Line total       Actions

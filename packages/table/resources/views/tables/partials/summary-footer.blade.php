@@ -64,8 +64,9 @@
                     <td class="w-12 {{ $cellPadding }}" data-select-cell></td>
                 @endif
 
-                {{-- Sub-row toggle spacer --}}
-                @if($table->hasSubRows() && $table->isSubRowsExpandable())
+                {{-- Sub-row expander spacer. Every row draws the expander cell
+                     whenever the table has sub-rows, toggle or not — so must this. --}}
+                @if($table->hasSubRows())
                     <td class="w-10 {{ $cellPadding }}"></td>
                 @endif
 

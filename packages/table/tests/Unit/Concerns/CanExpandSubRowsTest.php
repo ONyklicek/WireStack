@@ -65,16 +65,23 @@ class CeSubRowsComponent extends Component
     /** Render the stacked mobile cards alongside the desktop table. */
     public bool $stacked = false;
 
+    /** subRowsExpandable(false): always open, no toggle. */
+    public bool $alwaysOpen = false;
+
+    /** A sum on the parent column, so the footer row renders. */
+    public bool $withFooter = false;
+
     public function table(Table $table): Table
     {
         $table = $table
             ->model(CeInvoice::class)
             ->paginated(false)
-            ->columns([Column::make('number')])
+            ->columns([$this->withFooter ? Column::make('number')->summarizeCount() : Column::make('number')])
             ->subRows('items')
             ->subRowColumns([Column::make('product'), Column::make('price')])
             ->subRowsSortable(sortable: $this->sortableHeaders, default: 'price', direction: 'asc')
-            ->subRowsFilterable();
+            ->subRowsFilterable()
+            ->subRowsExpandable(! $this->alwaysOpen);
 
         if ($this->defaultExpanded) {
             $table->subRowsDefaultExpanded();
@@ -558,4 +565,42 @@ it('answers null for a table with no relation, and for a non-model', function ()
     $withRelation->mountWithTable();
     expect($withRelation->getLoadedSubRowCount(['not' => 'a model']))->toBeNull()
         ->and($withRelation->getLoadedSubRowCount(null))->toBeNull();
+});
+
+// ─── Always open (subRowsExpandable(false)) ───────────────────
+
+it('opens every panel when the table offers no toggle', function () {
+    $test = Livewire::test(CeSubRowsComponent::class, ['alwaysOpen' => true]);
+
+    // No chevron to open a row with, so a collapsed baseline would have left
+    // every child unreachable.
+    expect($test->instance()->isRowExpanded('1'))->toBeTrue()
+        ->and($test->instance()->expandsSubRowsByDefault())->toBeTrue();
+
+    $test->assertSee('Pen')->assertSee('Pad')
+        ->assertDontSeeHtml('data-testid="table-row-expand"')
+        ->assertDontSeeHtml('data-testid="subrows-master-toggle"');
+});
+
+it('ignores a request to collapse a table that offers no toggle', function () {
+    $test = Livewire::test(CeSubRowsComponent::class, ['alwaysOpen' => true])
+        ->call('toggleRowExpansion', '1')
+        ->call('collapseAllRows')
+        ->call('toggleAllRowExpansion');
+
+    expect($test->instance()->tableState->get('rows.expanded'))->toBe([])
+        ->and($test->instance()->tableState->get('rows.expandAll'))->toBeNull()
+        ->and($test->instance()->isRowExpanded('1'))->toBeTrue();
+});
+
+it('keeps the footer on the same columns as the rows when there is no toggle', function () {
+    $html = Livewire::test(CeSubRowsComponent::class, ['alwaysOpen' => true, 'withFooter' => true])->html();
+
+    // Every row still draws the expander cell; the footer used to drop its
+    // spacer with the toggle and slide one column left.
+    preg_match('/<thead.*?<\/tr>/s', $html, $head);
+    preg_match('/<tfoot.*?<\/tfoot>/s', $html, $foot);
+
+    expect($foot[0] ?? '')->not->toBe('')
+        ->and(substr_count($foot[0], '<td'))->toBe(substr_count($head[0], '<th'));
 });
