@@ -123,6 +123,12 @@ Obě podmínky se skládají a ta levnější běží první — záznam, který
 ->subRowsToggleLabel('Show items')     // popisek sloupce přepínače
 ```
 
+`subRowsExpandable(false)` otevře každý panel, který má co ukázat, a odebere
+všechna ovládání, která by ho mohla zavřít — chevrony řádků, master chevron i
+přepínač v menu zobrazení. Požadavky na přepnutí se ignorují a sloupec
+s chevrony zůstává (prázdný), takže řádky, skupinové mezisoučty i patička drží
+sloupce zarovnané.
+
 Rozbalení je jeden stav, ne dva: **výchozí stav (baseline)** říká, jestli řádky
 začínají otevřené, a Livewire stav drží jen řádky, které se od něj liší.
 `subRowsDefaultExpanded()` nastaví baseline; uživatel s ním pohne **master
@@ -320,10 +326,26 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\DeleteAction;
 
 ->subRowActions([
-    Action::make('edit')->label('Edit')->icon('pencil')->color('primary'),
-    DeleteAction::make(),
+    Action::make('edit')->label('Edit')->icon('pencil')->color('primary')
+        ->url(fn (InvoiceItem $record) => route('items.edit', $record)),
+    DeleteAction::make()
+        ->action(fn (InvoiceItem $record) => $record->delete()), // [tl! focus]
 ])
 ```
+
+Tlačítko podřádku posílá oba klíče — rodiče i dítěte — a server najde dítě
+**přes rodiče**: rodiče vlastním dotazem tabulky (jejími scopy, jejím tenantem),
+dítě mezi podřádky toho rodiče (relace `subRows()` plus `subRowQuery()`). Klíč
+mimo kterýkoli z nich je odmítnut, takže podvržený požadavek nedosáhne na dítě,
+které by tabulka nikdy nevykreslila. Totéž platí pro rodiče, jehož panel se
+nikdy nevykreslí — odmítnutého `subRowsVisible()` nebo bez dětí při
+`subRowsHideWhenEmpty()`.
+
+Oba povrchy zůstávají oddělené: tlačítko podřádku spustí jen akci ze
+`subRowActions()`, tlačítko řádku jen akci z `actions()`, takže stejné jméno na
+obou spustí tu, na kterou se kliklo. Dítě patří k řádku svého rodiče, takže
+rodič, jehož [neaktivní stav](inactive-records.md) odepírá akce, je odepírá i
+svým dětem — při otevření modalu, při spuštění i při odeslání formuláře modalu.
 
 ```text
 Product        Qty   Line total       Actions

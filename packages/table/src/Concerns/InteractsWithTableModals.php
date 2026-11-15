@@ -338,7 +338,10 @@ trait InteractsWithTableModals
 
         $record = $this->resolveRowActionRecord($recordKey);
 
-        if (! $record || ! $action->canExecute($record)) {
+        // The same lock executeTableAction() and openActionModal() apply: this
+        // is a public entry point too, and a forged call with data must not
+        // reach a row (or a sub-row of a row) whose actions are withheld.
+        if (! $record || $this->isRowActionLocked($recordKey, $record) || ! $action->canExecute($record)) {
             return;
         }
 
