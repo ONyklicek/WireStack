@@ -8,7 +8,7 @@
      the row — a total is computed over the whole filtered set — so the footer is
      queued alongside it. See Support\SummaryRenderer. --}}
 {{-- Variables: $table, $component, $summaries, $summaryScope, $summaryScopeOptions,
-     $isSelectable, $hasActions, $actionsPosition, $cellPadding, $isBordered, $visibleColumns, $colSpan,
+     $isSelectable, $hasActions, $actionsPosition, $cellPadding, $isBordered, $visibleColumns, $colSpan, $hasExpanderColumn,
      $stickyCellClass, $stickyLayers, $subRowGrandTotals (optional) --}}
 {{-- The two sticky strings are empty unless Table::stickyActions() pinned the
      actions column, in which case the footer's copy of that column has to pin
@@ -64,9 +64,9 @@
                     <td class="w-12 {{ $cellPadding }}" data-select-cell></td>
                 @endif
 
-                {{-- Sub-row expander spacer. Every row draws the expander cell
-                     whenever the table has sub-rows, toggle or not — so must this. --}}
-                @if($table->hasSubRows())
+                {{-- Sub-row expander spacer: present exactly when the rows draw
+                     the expander cell (ShellRenderPlan::$hasExpanderColumn). --}}
+                @if($hasExpanderColumn ?? $table->hasSubRows())
                     <td class="w-10 {{ $cellPadding }}"></td>
                 @endif
 

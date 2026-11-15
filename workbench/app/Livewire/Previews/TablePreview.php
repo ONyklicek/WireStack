@@ -305,12 +305,13 @@ class TablePreview extends Component
     private function subRowsTable(Table $table): Table
     {
         $filterable = $this->variant === 'subrows-filter';
+        $searchable = $this->variant === 'subrows-fixed';
 
         $table
             ->model(Invoice::class)
             ->columns([
-                TextColumn::make('number')->label('Invoice')->sortable(),
-                TextColumn::make('customer')->label('Customer'),
+                TextColumn::make('number')->label('Invoice')->sortable()->searchable($searchable),
+                TextColumn::make('customer')->label('Customer')->searchable($searchable),
                 BadgeColumn::make('status')->label('Status')->colors($this->statusColors()),
                 $this->invoiceTotalColumn(),
             ])
@@ -333,9 +334,13 @@ class TablePreview extends Component
             $table->subRowsLimit(2);
         }
 
-        // Always open, no toggle — and only the invoices that have items.
+        // Always open, no toggle — and only on invoices that have items and are
+        // not overdue. Searching "Acme" (the overdue one) leaves a page where no
+        // row has sub-rows, which drops the expander column altogether.
         if ($this->variant === 'subrows-fixed') {
-            $table->subRowsExpandable(false)->subRowsHideWhenEmpty();
+            $table->subRowsExpandable(false)
+                ->subRowsHideWhenEmpty()
+                ->subRowsVisible(fn (Invoice $invoice) => $invoice->status !== 'overdue');
         }
 
         if ($filterable) {

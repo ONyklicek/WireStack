@@ -554,6 +554,13 @@ trait WithTable
             return false;
         }
 
+        // The changed rows may decide whether the page has an expander column
+        // at all, which lives in the header and footer too — see
+        // rowPartialsKeepExpanderColumn().
+        if ($changed !== [] && ! $this->rowPartialsKeepExpanderColumn($ordered, $changed)) {
+            return false;
+        }
+
         // Nothing moved, and this knew it per row rather than from a checksum over
         // the set — so the poll can answer with nothing at all. That is the common
         // case on a table nobody is editing, and the cheapest answer there is.
@@ -2847,6 +2854,12 @@ trait WithTable
 
         $records = $this->getTableRecords();
         $key = $table->getPrimaryKey();
+
+        // Likewise when this row may be the one that decides whether the page
+        // draws an expander column at all (rowPartialsKeepExpanderColumn()).
+        if (! $this->rowPartialsKeepExpanderColumn($records, [$recordKey])) {
+            return;
+        }
 
         foreach ($records as $index => $record) {
             if ((string) $record->{$key} !== (string) $recordKey) {

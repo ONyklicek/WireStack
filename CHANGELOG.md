@@ -2,6 +2,19 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.10.5]
+
+### Changed
+
+- **A page where no record has sub-rows drops the expander column.** With `subRowsHideWhenEmpty()` or
+  `subRowsVisible()`, a page whose records all lost their sub-rows kept an empty column down the left, with a
+  master chevron above it that opened nothing. The page now decides the column once
+  (`Table::showsExpanderColumnFor()`, `ShellRenderPlan::$hasExpanderColumn`), from the per-record answers the
+  chevrons already ask, and the header, the filter-row cell, every row, the footer, the group subtotals and
+  every full-width colspan follow it. A table without either condition is unchanged. The view menu's
+  "Expand on every row" switch stays. With `rowPartials()`, a write whose row may be the one deciding the
+  column renders the data region instead of the row.
+
 ## [2.10.4]
 
 ### Fixed

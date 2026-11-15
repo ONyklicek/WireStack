@@ -114,6 +114,35 @@ Both conditions compose, and the cheap one runs first — a record
 ->subRowsHideWhenEmpty();
 ```
 
+### When No Row on the Page Has Any
+
+With either condition on, a page can end up with no record that gets sub-rows —
+a filter that left only childless orders, the last page, a search. The page then
+drops the **expander column** altogether: the header with its master chevron,
+the filter-row cell, the empty cell on every row, and the matching spacer in the
+footer and the group subtotals. The next page where some record has children
+draws it again.
+
+```text
+search "Acme" → no row has sub-rows        cleared → some rows do
+┌────────────┬──────────┬────────┐        ┌───┬────────────┬──────────┬────────┐
+│ INVOICE    │ CUSTOMER │  TOTAL │        │   │ INVOICE    │ CUSTOMER │  TOTAL │
+│ INV-1003   │ Acme     │  8 450 │        │ ⌄ │ INV-1001   │ Northw…  │  9 350 │
+└────────────┴──────────┴────────┘        │   │ INV-1003   │ Acme     │  8 450 │
+                                          └───┴────────────┴──────────┴────────┘
+```
+
+The decision is made once per render from the page's records, using the same
+per-record answers the chevrons ask — so it costs no query of its own. A table
+without either condition keeps the column on every non-empty page, since every
+row there has sub-rows. The **Expand on every row** switch in the view menu
+stays: it sets the baseline for pages that do have children.
+
+With [`rowPartials()`](advanced.md#row-partials), a write normally answers with the changed
+row alone. When that row may be the one deciding the column — no other row on
+the page has sub-rows — the table renders the data region instead, so the header
+and the footer change with it.
+
 ## Expand and Collapse
 
 ```php

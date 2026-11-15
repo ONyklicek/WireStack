@@ -168,6 +168,43 @@ trait CanExpandSubRows
     }
 
     /**
+     * Whether answering a write with row partials for these keys leaves the
+     * expander column where the last full render put it.
+     *
+     * The column is a property of the page ({@see Table::showsExpanderColumnFor()}),
+     * but a row partial redraws one row and leaves the header, the filter row
+     * and the footer alone. That is only safe while the answer cannot move:
+     * the table decides sub-rows the same way for every record, or some row
+     * this write did NOT touch still has them — then the column was there
+     * before and is there after. Otherwise the changed rows may be the ones
+     * deciding it (a subRowsVisible() closure over the edited attribute), and
+     * the caller renders the region instead, the way it does for an edit to the
+     * column the table groups by.
+     *
+     * @param  iterable<mixed>  $records  The page.
+     * @param  array<int, int|string>  $changedKeys
+     */
+    protected function rowPartialsKeepExpanderColumn(iterable $records, array $changedKeys): bool
+    {
+        $table = $this->getTable();
+
+        if (! $table->hasSubRows() || ! $table->decidesSubRowsPerRecord()) {
+            return true;
+        }
+
+        $changed = array_flip(array_map('strval', $changedKeys));
+        $key = $table->getPrimaryKey();
+
+        foreach ($records as $record) {
+            if (! isset($changed[(string) $record->{$key}]) && $table->hasSubRowsFor($record)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Get sub-rows for a parent record.
      * Applies sub-row filters if enabled.
      * When no relation is set, returns the record itself as a single-item collection.

@@ -336,6 +336,44 @@ trait HasSubRows
     }
 
     /**
+     * Whether {@see hasSubRowsFor()} can answer differently for two records —
+     * a subRowsVisible() closure, or subRowsHideWhenEmpty() over a relation.
+     * Without either, every record of a table with sub-rows has them.
+     */
+    public function decidesSubRowsPerRecord(): bool
+    {
+        return $this->subRowsVisible instanceof Closure
+            || ($this->subRowsHideWhenEmpty && $this->subRowRelation !== null);
+    }
+
+    /**
+     * Whether a page of records draws the expander column at all: the table has
+     * sub-rows and at least one of these records gets them.
+     *
+     * A page where {@see subRowsVisible()} or {@see subRowsHideWhenEmpty()}
+     * turns every record down would otherwise keep an empty column, with a
+     * master chevron above it that opens nothing. The per-record answers are
+     * the ones the chevrons ask anyway — memoized, and read off the planner's
+     * presence count — so deciding the column costs no query of its own.
+     *
+     * @param  iterable<mixed>  $records
+     */
+    public function showsExpanderColumnFor(iterable $records): bool
+    {
+        if (! $this->hasSubRows()) {
+            return false;
+        }
+
+        foreach ($records as $record) {
+            if ($this->hasSubRowsFor($record)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * The uncached answer behind {@see hasSubRowsFor()}. The condition runs
      * first: a record it already rejected never needs counting.
      */
