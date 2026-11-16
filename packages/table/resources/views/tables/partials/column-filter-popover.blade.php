@@ -68,6 +68,7 @@
                 x-ref="panel"
                 x-show="open"
                 @click.outside="$clickedInside($event) || close()"
+                @contextmenu.outside="$clickedInside($event) || close()"
                 @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
                 role="dialog"
                 aria-label="{{ __('wire-table::messages.column_filter_open', ['column' => $columnLabel]) }}"

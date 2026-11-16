@@ -102,8 +102,9 @@ it('keeps a field within its per-instance byte budget', function (string $type, 
     // The trigger label truncates and an option label wraps, so neither pushes a
     // phone-width form sideways. In a sheet the rows are inset from the screen's
     // rounded corners and the grabber stays pinned while the list scrolls
-    // (~180 bytes, the classes that say so).
-    'select' => ['select', 8_600],
+    // (~180 bytes, the classes that say so). The list also closes on a right
+    // click outside it, not only a left one (~90 bytes, `@contextmenu.outside`).
+    'select' => ['select', 8_700],
     'tags' => ['tags', 8_800],
     'rating' => ['rating', 10_400],
     // The shipped toolbar draws its two heading buttons (h2, h3) since the

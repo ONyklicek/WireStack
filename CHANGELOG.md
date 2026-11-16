@@ -12,6 +12,13 @@ All notable changes to the Wire ecosystem will be documented in this file.
   as before. The pinned bar is opt-in: `Table::bulkBarAtBottomOnMobile()` or
   `wire-table.defaults.bulk_bar_at_bottom_on_mobile`, and `--wire-table-bulk-bar-offset` lifts it above a
   bottom bar of the application's own. The classes come from `LayoutRenderPlan::$bulkBarMobileClass`.
+- **A right click outside an open panel closes it.** Every floating panel closed on `@click.outside` only, and
+  a right click fires no `click`. So a `SelectColumn` list stayed open while the right click opened the row's
+  context menu beside it, and the same went for the action group, the toolbar's filter and column panels, the
+  column-filter popover, the date and time pickers, the builder's block menu, the tenant switcher and the
+  admin top bar. Each now carries `@contextmenu.outside` with the same expression as its click twin.
+  `tests/Integration/PanelsCloseOnRightClickOutsideTest.php` holds every view to it, and
+  `workbench/scripts/verify-contextmenu-outside.mjs` checks it in a browser.
 
 ## [2.10.5]
 

@@ -64,6 +64,7 @@
                         x-ref="panel"
                         x-show="open"
                         @click.outside="$clickedInside($event) || close()"
+                        @contextmenu.outside="$clickedInside($event) || close()"
                         @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
                         x-transition:enter="transition ease-out duration-100"
                         x-transition:enter-start="transform opacity-0 scale-95 {{ $sheetOnMobile ? $sheetMotion : '' }}"

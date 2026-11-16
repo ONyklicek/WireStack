@@ -161,6 +161,7 @@
                      capture phase, so it would close the list a beat before the
                      chevron's own handler toggles it. --}}
                 @click.outside="$clickedInside($event) || $refs.trigger.contains($event.target) || (open = false)"
+                @contextmenu.outside="$clickedInside($event) || $refs.trigger.contains($event.target) || (open = false)"
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0 -translate-y-1 {{ $sheetOnMobile ? $sheetMotion : '' }}"
                 x-transition:enter-end="opacity-100 translate-y-0"
