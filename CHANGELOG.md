@@ -2,6 +2,17 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.10.6]
+
+### Fixed
+
+- **The bulk bar is back above the rows on a phone.** Since 2.10.5 it was pinned to the bottom edge below
+  `sm`, where it floated over the records still being ticked and slid under an application's own bottom
+  navigation bar (`z-30` under its `z-40`), hiding every action. It now sits above the rows at every width,
+  as before. The pinned bar is opt-in: `Table::bulkBarAtBottomOnMobile()` or
+  `wire-table.defaults.bulk_bar_at_bottom_on_mobile`, and `--wire-table-bulk-bar-offset` lifts it above a
+  bottom bar of the application's own. The classes come from `LayoutRenderPlan::$bulkBarMobileClass`.
+
 ## [2.10.5]
 
 ### Changed

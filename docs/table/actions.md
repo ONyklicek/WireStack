@@ -202,6 +202,37 @@ BulkEditAction::make(string $name = 'bulkEdit')
 Every other bulk-action method (`label()`, `icon()`, `visible()`,
 `deselectRecordsAfterCompletion()` …) works as on `BulkAction`.
 
+### The Bulk Bar on a Phone
+
+The bulk bar sits above the rows at every width. Below `sm` it can be pinned to
+the bottom edge of the screen instead, where the thumb is and where it stays in
+reach while a long list scrolls:
+
+```php
+->bulkBarAtBottomOnMobile()       // this table
+```
+
+```php
+// config/wire-table.php — every table
+'defaults' => [
+    'bulk_bar_at_bottom_on_mobile' => true,
+],
+```
+
+Pinned, the bar floats over the rows, so with several actions it can cover a
+good part of a small screen. It also lands on anything the application keeps at
+the bottom edge itself. A layout with its own bottom navigation bar lifts it
+clear with one CSS variable:
+
+```css
+body:has(.app-bottom-nav) {
+    --wire-table-bulk-bar-offset: calc(4.5rem + env(safe-area-inset-bottom));
+}
+```
+
+`->bulkBarAtBottomOnMobile(false)` keeps one table above the rows when the
+config pins the rest.
+
 ### Sorting on a Phone
 
 The stacked card layout hides the header row, and with it every sort button. A

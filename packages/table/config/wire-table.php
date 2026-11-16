@@ -78,6 +78,16 @@ return [
         'column_filter_layout' => env('WIRE_TABLE_COLUMN_FILTER_LAYOUT', 'row'),
 
         /*
+        | Where the bulk bar sits on a phone (below `sm`). false (the default)
+        | keeps it above the rows, as on a wider screen. true pins it to the
+        | bottom edge, where the thumb is — over the rows, and over a bottom
+        | navigation bar of the application's own unless the application lifts
+        | it with the `--wire-table-bulk-bar-offset` CSS variable.
+        | Per table: Table::bulkBarAtBottomOnMobile().
+        */
+        'bulk_bar_at_bottom_on_mobile' => env('WIRE_TABLE_BULK_BAR_AT_BOTTOM_ON_MOBILE', false),
+
+        /*
         | Where the filter panel (Table::filters()) is drawn: 'dropdown' behind
         | the toolbar's Filters button (the default), 'above' always open above
         | the rows, or 'above_collapsible' above the rows behind a toggle.
