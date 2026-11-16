@@ -6,13 +6,16 @@ B = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath
 T = os.path.dirname(os.path.abspath(__file__))
 CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?'
-         'family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">')
+         'family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">')
 
 def render(svg_path, out_path, w, h, scale=2, transparent=False):
     svg = io.open(svg_path, encoding='utf-8').read()
     svg = svg.replace('width="%d"' % w, 'width="%d"' % w, 1)
+    # Webfonty jen tam, kde je text: u značky bez textu čekal Chrome na fonty do
+    # nekonečna (favicon-180 se dvakrát zasekl) a nic tím nezískal.
+    fonts = FONTS if '<text' in svg else ''
     html = ('%s<style>html,body{margin:0;padding:0}svg{display:block;width:%dpx;height:%dpx}</style>\n%s'
-            % (FONTS, w, h, svg))
+            % (fonts, w, h, svg))
     tmp = T + '/_r.html'
     io.open(tmp, 'w', encoding='utf-8').write(html)
     cmd = [CHROME, '--headless', '--disable-gpu', '--hide-scrollbars',
@@ -20,11 +23,16 @@ def render(svg_path, out_path, w, h, scale=2, transparent=False):
            '--virtual-time-budget=5000', '--screenshot=' + out_path, tmp]
     if transparent:
         cmd.insert(4, '--default-background-color=00000000')
-    subprocess.run(cmd, capture_output=True)
+    try:
+        subprocess.run(cmd, capture_output=True, timeout=90)
+    except subprocess.TimeoutExpired:
+        print('  ! timeout:', os.path.basename(out_path))
     return os.path.getsize(out_path) if os.path.exists(out_path) else 0
 
 jobs = [
-    (B + '/github/social-preview.svg',      B + '/github/social-preview.png',      1280, 640, 2, False),
+    # 1×, ne 2×: GitHub odmítne social kartu nad 1 MB a záře v pozadí se špatně
+    # komprimují — při 2× vyšla na 1,03 MB. 1280×640 je navíc jeho doporučená velikost.
+    (B + '/github/social-preview.svg',      B + '/github/social-preview.png',      1280, 640, 1, False),
     (B + '/github/readme-banner-light.svg', B + '/github/readme-banner-light.png', 1200, 280, 2, False),
     (B + '/github/readme-banner-dark.svg',  B + '/github/readme-banner-dark.png',  1200, 280, 2, False),
     (B + '/github/avatar.svg',              B + '/github/avatar.png',               512, 512, 2, False),

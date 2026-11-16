@@ -1,5 +1,5 @@
 /* ============================================================
-   Wire Docs — modern documentation theme
+   WireStack Docs — modern documentation theme
    Light + dark, sticky chrome, refined typography.
    ============================================================ */
 
@@ -190,15 +190,14 @@ pre {
     min-width: 0;
 }
 
-/* The mark is an open drawing, not a tile: no ground, no radius, no shadow.
-   `color` feeds its two contact pads through `currentColor`, so they follow the
-   theme the way the wordmark beside them does. */
+/* The mark is a drawing, not a tile: no ground, no radius, no shadow. Its
+   yellow → red ramp is mid-tone on purpose, so the one file sits on the light
+   sidebar and the dark one alike. */
 .brand-mark {
     display: block;
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     flex: none;
-    color: var(--text);
 }
 
 .brand-mark svg {
@@ -212,8 +211,8 @@ pre {
     align-items: center;
     gap: 8px;
     font-size: 16px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
+    font-weight: 700;
+    letter-spacing: -0.03em;
     color: var(--text);
 }
 
@@ -1832,9 +1831,13 @@ a.locale-item:hover { background: var(--surface-2); color: var(--text); }
    ============================================================ */
 
 :root {
-    --brand-grad: linear-gradient(115deg, #f59e0b 0%, #fb7185 48%, #d946ef 100%);
-    --brand-grad-soft: linear-gradient(115deg, rgba(245, 158, 11, 0.16), rgba(217, 70, 239, 0.14));
-    --ring-grad: linear-gradient(140deg, rgba(245, 158, 11, 0.55), rgba(217, 70, 239, 0.45));
+    /* The mark's ramp (docs-site/assets/brand/README.md): yellow → orange → red. */
+    --brand-grad: linear-gradient(115deg, #fbbf24 0%, #f97316 50%, #ef4444 100%);
+    --brand-grad-soft: linear-gradient(115deg, rgba(251, 191, 36, 0.16), rgba(239, 68, 68, 0.14));
+    --ring-grad: linear-gradient(140deg, rgba(251, 191, 36, 0.55), rgba(249, 115, 22, 0.5) 60%, rgba(239, 68, 68, 0.45));
+    /* The button starts at amber-500 (--primary), not the ramp's yellow: white
+       text on #fbbf24 was barely readable at the button's left edge. */
+    --btn-grad: linear-gradient(115deg, #f59e0b 0%, #f97316 50%, #ef4444 100%);
 }
 
 /* Reveal targets start hidden ONLY when motion is enabled; JS animates them in
@@ -1867,9 +1870,9 @@ a.locale-item:hover { background: var(--surface-2); color: var(--text); }
     inset: -20% -10% auto -10%;
     height: 520px;
     background:
-        radial-gradient(38% 55% at 22% 8%, rgba(245, 158, 11, 0.30), transparent 70%),
-        radial-gradient(40% 55% at 82% 4%, rgba(217, 70, 239, 0.26), transparent 72%),
-        radial-gradient(45% 60% at 50% 0%, rgba(251, 113, 133, 0.22), transparent 70%);
+        radial-gradient(38% 55% at 22% 8%, rgba(251, 191, 36, 0.30), transparent 70%),
+        radial-gradient(40% 55% at 82% 4%, rgba(239, 68, 68, 0.22), transparent 72%),
+        radial-gradient(45% 60% at 50% 0%, rgba(249, 115, 22, 0.22), transparent 70%);
     filter: blur(8px);
     pointer-events: none;
     z-index: -1;
@@ -1909,12 +1912,12 @@ a.locale-item:hover { background: var(--surface-2); color: var(--text); }
 .btn { height: 48px; border-radius: 999px; transition: transform 160ms cubic-bezier(.22,1,.36,1), box-shadow 200ms ease, filter 200ms ease; }
 
 .btn-primary {
-    background: var(--brand-grad);
+    background: var(--btn-grad);
     background-size: 160% 160%;
     color: #fff;
-    box-shadow: 0 12px 30px -10px rgba(217, 70, 239, 0.5), 0 6px 16px -8px rgba(245, 158, 11, 0.5);
+    box-shadow: 0 12px 30px -10px rgba(239, 68, 68, 0.45), 0 6px 16px -8px rgba(245, 158, 11, 0.5);
 }
-.btn-primary:hover { transform: translateY(-2px); filter: saturate(1.08) brightness(1.03); box-shadow: 0 18px 40px -12px rgba(217, 70, 239, 0.6); }
+.btn-primary:hover { transform: translateY(-2px); filter: saturate(1.08) brightness(1.03); box-shadow: 0 18px 40px -12px rgba(249, 115, 22, 0.55); }
 
 .btn-ghost { border-radius: 999px; }
 .btn-ghost:hover { transform: translateY(-2px); }

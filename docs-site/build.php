@@ -377,7 +377,7 @@ foreach ($pages as $page) {
     $previewUrl = $previewItems[0]['image'] ?? null;
 
     $html = renderTemplate($siteRoot.'/templates/page.php', [
-        'siteTitle' => 'Wire Docs',
+        'siteTitle' => 'WireStack Docs',
         't' => $t,
         'page' => array_merge($page, $content, ['previewUrl' => $previewUrl, 'previewItems' => $previewItems]),
         'navSections' => buildNavSections($pages, $page['source'], $versionRoot),
@@ -388,7 +388,7 @@ foreach ($pages as $page) {
         'isVersionHome' => false,
         'canonicalUrl' => $absoluteUrl($page['output'], $localeSubdir),
         'alternateUrls' => $alternatesFor($page['output']),
-        'ogTitle' => $content['title'].' | '.'Wire Docs',
+        'ogTitle' => $content['title'].' | '.'WireStack Docs',
         'ogDescription' => $content['excerpt'],
         'ogImage' => $previewUrl !== null && $siteBaseUrl !== ''
             ? $absoluteUrl('index.html', $localeSubdir).ltrim(preg_replace('#^(\.\./)+#', '', $previewUrl) ?? '', '/')
@@ -418,7 +418,7 @@ foreach ($pages as $page) {
 }
 
 $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
-    'siteTitle' => 'Wire Docs',
+    'siteTitle' => 'WireStack Docs',
     't' => $t,
     'navSections' => buildNavSections($pages, null, $versionRoot),
     'versionMenu' => buildVersionMenu($siteVersions, 'index.html', $outputSubdir, $localeSubdir, $activeVersionLabel),
@@ -428,7 +428,7 @@ $homeHtml = renderTemplate($siteRoot.'/templates/home.php', [
     'isVersionHome' => true,
     'canonicalUrl' => $absoluteUrl('index.html', $localeSubdir),
     'alternateUrls' => $alternatesFor('index.html'),
-    'ogTitle' => 'Wire Docs — '.$t('Forms, Tables & Sorting for Livewire'),
+    'ogTitle' => 'WireStack Docs — '.$t('Forms, Tables & Sorting for Livewire'),
     'ogDescription' => $t('Complete static documentation for the Wire ecosystem: forms, tables, sortable, and core runtime, with real runtime preview screenshots.'),
     'ogImage' => $brandCardUrl,
     'searchIndexUrl' => 'search-index.json',
