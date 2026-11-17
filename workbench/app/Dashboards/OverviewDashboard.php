@@ -159,6 +159,11 @@ final class OverviewDashboard extends Dashboard implements ConfiguresRoutes, Pro
      * One query: the invoices of the last year with their line totals summed,
      * and every series below is a fold over that collection — eight weekly
      * buckets per figure would otherwise be thirty-two queries for one card.
+     *
+     * Except the overdue figure itself. An invoice stays overdue however long
+     * ago it was issued, or with no issue date at all, so its count and amount
+     * come from a query of their own, unbounded by date — the same set the
+     * invoice navigation badge counts. Only its eight-week line reads the year.
      */
     private function kpis(): StatsOverviewWidget
     {
@@ -168,7 +173,11 @@ final class OverviewDashboard extends Dashboard implements ConfiguresRoutes, Pro
         $previous = $this->sumBetween($invoices, $now->copy()->subDays(60), $now->copy()->subDays(30));
         $change = $previous > 0 ? (int) round(($current - $previous) / $previous * 100) : 0;
         $paid = $invoices->where('status', 'paid');
-        $overdue = $invoices->where('status', 'overdue');
+        $overdue = Invoice::query()
+            ->where('status', 'overdue')
+            ->withSum('items', 'line_total')
+            ->get(['id', 'status', 'issued_at'])
+            ->toBase();
 
         return StatsOverviewWidget::make()
             ->key('kpis')
@@ -190,7 +199,7 @@ final class OverviewDashboard extends Dashboard implements ConfiguresRoutes, Pro
                     ->description($this->money((float) $overdue->sum('items_sum_line_total')).' waiting')
                     ->descriptionIcon('exclamation-triangle')
                     ->color('danger')
-                    ->chart($this->weekly($overdue, count: true)),
+                    ->chart($this->weekly($invoices->where('status', 'overdue'), count: true)),
             ]);
     }
 
