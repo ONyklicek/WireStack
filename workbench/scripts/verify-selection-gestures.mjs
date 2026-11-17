@@ -919,7 +919,9 @@ try {
   await sleep(900);
   await eval_(helpers);
   await waitForTable();
-  await eval_(`(() => { const i = $q('[data-testid="table-search"]'); i.value = 'Record 0'; i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+  // Quoted: the box reads words since search tokenizes by default, and an
+  // unquoted `Record 0` also finds Record 10, 20, 30 and 40 (13 rows, not 9).
+  await eval_(`(() => { const i = $q('[data-testid="table-search"]'); i.value = '"Record 0"'; i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
   // The search is debounced and then re-renders: wait for the narrowed page rather
   // than for a stopwatch, or the select-all below runs against the unfiltered table.
   await waitFor(`rows().length < 20`, 8000);
