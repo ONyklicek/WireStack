@@ -38,14 +38,17 @@ php artisan migrate
 
 ## Tailwind CSS
 
-Add the package views to your Tailwind content paths.
+Add the package views **and `src`** to your Tailwind content paths. Some classes are resolved in PHP, so scanning the views alone misses them.
 
 ```js
 export default {
     content: [
         './vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-core/src/**/*.php',
         './vendor/nyoncode/wire-table/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-table/src/**/*.php',
         './vendor/nyoncode/wire-sortable/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-sortable/src/**/*.php',
     ],
 }
 ```

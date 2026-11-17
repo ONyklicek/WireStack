@@ -23,7 +23,7 @@ composer require nyoncode/wire-core
 
 ### Tailwind CSS
 
-Wire Core's Blade components (icons, badges, buttons, dropdowns, modals, notifications) use Tailwind CSS classes. Add the package views to your Tailwind content configuration:
+Wire Core's Blade components (icons, badges, buttons, dropdowns, modals, notifications) use Tailwind CSS classes. Add the package views **and `src`** to your Tailwind content configuration. Some classes are resolved in PHP (the bottom sheet on a phone), so scanning the views alone misses them:
 
 **Tailwind 3** (`tailwind.config.js`):
 
@@ -32,6 +32,7 @@ export default {
     content: [
         // ... your app paths
         './vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-core/src/**/*.php',
     ],
 }
 ```
@@ -40,6 +41,7 @@ export default {
 
 ```css
 @source "../../vendor/nyoncode/wire-core/resources/views";
+@source "../../vendor/nyoncode/wire-core/src";
 ```
 
 ### Alpine.js

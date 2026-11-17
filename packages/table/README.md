@@ -43,7 +43,7 @@ This automatically installs `wire-core` and `wire-forms` as dependencies. Servic
 
 ### Tailwind CSS Setup
 
-Add the Wire packages' Blade views to your Tailwind content paths:
+Add the Wire packages' Blade views **and `src`** to your Tailwind content paths. Some classes (the bottom sheet on a phone, the pinned bulk bar, responsive grid columns) are resolved in PHP, so scanning the views alone misses them:
 
 **Tailwind 3** (`tailwind.config.js`):
 
@@ -53,8 +53,11 @@ export default {
         './resources/**/*.blade.php',
         './app/**/*.php',
         './vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-core/src/**/*.php',
         './vendor/nyoncode/wire-forms/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-forms/src/**/*.php',
         './vendor/nyoncode/wire-table/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-table/src/**/*.php',
     ],
     darkMode: 'class',
     plugins: [require('@tailwindcss/forms')],
@@ -67,8 +70,11 @@ export default {
 @import "tailwindcss";
 @plugin "@tailwindcss/forms";
 @source "../../vendor/nyoncode/wire-core/resources/views";
+@source "../../vendor/nyoncode/wire-core/src";
 @source "../../vendor/nyoncode/wire-forms/resources/views";
+@source "../../vendor/nyoncode/wire-forms/src";
 @source "../../vendor/nyoncode/wire-table/resources/views";
+@source "../../vendor/nyoncode/wire-table/src";
 ```
 
 Then rebuild:
