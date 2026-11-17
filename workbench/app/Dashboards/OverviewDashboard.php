@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Workbench\App\Dashboards;
 
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use NyonCode\WireCore\Core\Resources\Contracts\ProvidesNavigation;
 use NyonCode\WireCore\Core\Resources\Navigation\NavigationItem;
 use NyonCode\WireCore\Foundation\Routing\Contracts\ConfiguresRoutes;
@@ -19,7 +21,6 @@ use NyonCode\WireCore\Widgets\Stat;
 use NyonCode\WireCore\Widgets\StatsOverviewWidget;
 use NyonCode\WireCore\Widgets\Widget;
 use Workbench\App\Livewire\Dashboards\ShowOverview;
-use Workbench\App\Models\Document;
 use Workbench\App\Models\Invoice;
 use Workbench\App\Models\Task;
 
@@ -49,8 +50,8 @@ use Workbench\App\Models\Task;
  * replaces the other: the preview is where a driver can instrument the grid,
  * and this is where the default path has to hold.
  *
- * Six widgets in two groups is the smallest declaration that shows what the
- * tray is for. With everything placed the tray is empty and says so; take a
+ * Six widgets in two groups — figures, a year of trend, the status split, and
+ * the work feeds — is the smallest declaration that shows what the tray is for. With everything placed the tray is empty and says so; take a
  * widget off and it reappears there under its own group heading, which is the
  * one rule (`not placed` == `available`) doing both jobs.
  */
@@ -113,10 +114,10 @@ final class OverviewDashboard extends Dashboard implements ConfiguresRoutes, Pro
     public function widgets(): array
     {
         return [
-            $this->billingTotals(),
+            $this->kpis(),
+            $this->invoicedByMonth(),
             $this->invoicedByStatus(),
             $this->latestInvoices(),
-            $this->workTotals(),
             $this->taskProgress(),
             $this->dueSoon(),
         ];
@@ -152,29 +153,130 @@ final class OverviewDashboard extends Dashboard implements ConfiguresRoutes, Pro
     }
 
     /**
-     * The two figures an invoice list is read for, at the width a pair of
-     * figures reads well and no other.
+     * The three figures somebody opens this page for, each with the last eight
+     * weeks drawn beside it.
      *
-     * `sizes()` is the offer the tray honours, so a card that only looks right
-     * at two columns is not dropped in as a 1×1 the user then has to fix.
+     * One query: the invoices of the last year with their line totals summed,
+     * and every series below is a fold over that collection — eight weekly
+     * buckets per figure would otherwise be thirty-two queries for one card.
+     *
+     * Except the overdue figure itself. An invoice stays overdue however long
+     * ago it was issued, or with no issue date at all, so its count and amount
+     * come from a query of their own, unbounded by date — the same set the
+     * invoice navigation badge counts. Only its eight-week line reads the year.
      */
-    private function billingTotals(): StatsOverviewWidget
+    private function kpis(): StatsOverviewWidget
     {
+        $invoices = $this->invoicesOfTheLastYear();
+        $now = Carbon::now();
+        $current = $this->sumBetween($invoices, $now->copy()->subDays(30), $now);
+        $previous = $this->sumBetween($invoices, $now->copy()->subDays(60), $now->copy()->subDays(30));
+        $change = $previous > 0 ? (int) round(($current - $previous) / $previous * 100) : 0;
+        $paid = $invoices->where('status', 'paid');
+        $overdue = Invoice::query()
+            ->where('status', 'overdue')
+            ->withSum('items', 'line_total')
+            ->get(['id', 'status', 'issued_at'])
+            ->toBase();
+
         return StatsOverviewWidget::make()
-            ->key('billing-totals')
+            ->key('kpis')
             ->group('Billing')
-            ->heading('Billing')
-            ->columnSpan(2)
-            ->sizes([[2, 1], [3, 1], [1, 1]])
+            ->columnSpanFull()
+            ->sizes([[3, 1], [2, 1]])
             ->stats([
-                Stat::make('Invoices', (string) Invoice::query()->count())
-                    ->icon('document-text')
-                    ->color('primary'),
-                Stat::make('Overdue', (string) Invoice::query()->where('status', 'overdue')->count())
-                    ->description('unpaid past their date')
-                    ->icon('exclamation-triangle')
-                    ->color('danger'),
+                Stat::make('Invoiced · 30 days', $this->money($current))
+                    ->description(($change >= 0 ? '+' : '').$change.' % vs previous 30 days')
+                    ->descriptionIcon($change >= 0 ? 'arrow-trending-up' : 'arrow-trending-down')
+                    ->color($change >= 0 ? 'success' : 'danger')
+                    ->chart($this->weekly($invoices)),
+                Stat::make('Paid', $this->money((float) $paid->sum('items_sum_line_total')))
+                    ->description($paid->count().' invoices settled')
+                    ->descriptionIcon('check-circle')
+                    ->color('primary')
+                    ->chart($this->weekly($paid)),
+                Stat::make('Overdue', (string) $overdue->count())
+                    ->description($this->money((float) $overdue->sum('items_sum_line_total')).' waiting')
+                    ->descriptionIcon('exclamation-triangle')
+                    ->color('danger')
+                    ->chart($this->weekly($invoices->where('status', 'overdue'), count: true)),
             ]);
+    }
+
+    /**
+     * Twelve months of line totals, so the page has a shape before anyone reads
+     * a number on it. Pure CSS, like the status chart beside it.
+     */
+    private function invoicedByMonth(): BarChartWidget
+    {
+        $invoices = $this->invoicesOfTheLastYear();
+        $months = collect(range(11, 0))->map(fn (int $back): Carbon => Carbon::now()->startOfMonth()->subMonths($back));
+        $last = $months->last();
+
+        return BarChartWidget::make()
+            ->key('invoiced-by-month')
+            ->group('Billing')
+            ->heading('Invoiced per month')
+            ->description('Last twelve months, from the line items')
+            ->type('vertical')
+            ->variant('finance')
+            ->height(200)
+            ->columnSpan(2)
+            ->sizes([[2, 1], [3, 1]])
+            ->items($months->map(function (Carbon $month) use ($invoices, $last): ChartItem {
+                $total = $this->sumBetween($invoices, $month, $month->copy()->endOfMonth());
+
+                return ChartItem::make($month->format('M'))
+                    ->value($total)
+                    ->formattedValue(number_format($total / 1000, 0, ',', ' ').'k')
+                    ->color($month->equalTo($last) ? 'orange' : 'blue');
+            })->all());
+    }
+
+    /**
+     * @return Collection<int, Invoice>
+     */
+    private function invoicesOfTheLastYear(): Collection
+    {
+        return $this->lastYear ??= Invoice::query()
+            ->withSum('items', 'line_total')
+            ->where('issued_at', '>=', Carbon::now()->startOfMonth()->subMonths(11))
+            ->get(['id', 'status', 'issued_at'])
+            ->toBase();
+    }
+
+    /** @var Collection<int, Invoice>|null */
+    private ?Collection $lastYear = null;
+
+    /**
+     * @param  Collection<int, Invoice>  $invoices
+     */
+    private function sumBetween(Collection $invoices, Carbon $from, Carbon $to): float
+    {
+        return (float) $invoices
+            ->filter(fn (Invoice $invoice): bool => $invoice->issued_at !== null && $invoice->issued_at->betweenIncluded($from, $to))
+            ->sum('items_sum_line_total');
+    }
+
+    /**
+     * The last eight weeks, oldest first — the order a sparkline is read in.
+     *
+     * @param  Collection<int, Invoice>  $invoices
+     * @return array<int, float|int>
+     */
+    private function weekly(Collection $invoices, bool $count = false): array
+    {
+        return collect(range(7, 0))->map(function (int $back) use ($invoices, $count): float|int {
+            $from = Carbon::now()->startOfWeek()->subWeeks($back);
+            $in = $invoices->filter(fn (Invoice $invoice): bool => $invoice->issued_at?->betweenIncluded($from, $from->copy()->endOfWeek()) === true);
+
+            return $count ? $in->count() : (float) $in->sum('items_sum_line_total');
+        })->all();
+    }
+
+    private function money(float $amount): string
+    {
+        return number_format($amount, 0, ',', ' ').' Kč';
     }
 
     /**
@@ -233,24 +335,6 @@ final class OverviewDashboard extends Dashboard implements ConfiguresRoutes, Pro
                     ->color($colors[$invoice->status] ?? 'gray'))
                 ->all())
             ->emptyState('No invoices yet.');
-    }
-
-    private function workTotals(): StatsOverviewWidget
-    {
-        return StatsOverviewWidget::make()
-            ->key('work-totals')
-            ->group('Work')
-            ->heading('Work')
-            ->columnSpan(2)
-            ->sizes([[2, 1], [3, 1], [1, 1]])
-            ->stats([
-                Stat::make('Open tasks', (string) Task::query()->where('completed', false)->count())
-                    ->icon('clipboard-document-list')
-                    ->color('warning'),
-                Stat::make('Documents', (string) Document::query()->count())
-                    ->icon('folder')
-                    ->color('primary'),
-            ]);
     }
 
     /**

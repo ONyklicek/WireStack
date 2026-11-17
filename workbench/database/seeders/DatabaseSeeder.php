@@ -139,6 +139,8 @@ class DatabaseSeeder extends Seeder
             }
         }
 
+        $this->seedInvoiceHistory();
+
         // Selection-gesture previews: enough rows that the document scrolls and
         // a 20-per-page variant spans two pages. Deterministic on purpose — the
         // CDP drivers address rows by name and key.
@@ -332,5 +334,68 @@ class DatabaseSeeder extends Seeder
             ."<rect width='64' height='64' rx='32' fill='%23{$hex}'/>"
             ."<text x='32' y='41' text-anchor='middle' font-family='ui-sans-serif,system-ui,sans-serif' "
             ."font-size='26' font-weight='600' fill='white'>{$initials}</text></svg>";
+    }
+
+    /**
+     * A year of invoices behind the three above, so the overview dashboard has
+     * a shape: the monthly chart, the 30-day change and the sparklines all read
+     * the last twelve months, and three invoices in one month draw one bar.
+     *
+     * Deterministic rather than Faker — the drivers address rows by name, and a
+     * screenshot taken twice should show the same chart. Dates are relative to
+     * today, so the chart is full whenever the seed runs. Numbered from
+     * INV-2001, so the three hand-written invoices still head the list.
+     */
+    private function seedInvoiceHistory(): void
+    {
+        $customers = [
+            'Initech', 'Umbrella Logistics', 'Stark Fabrication', 'Wayne Analytics', 'Hooli Cloud', 'Vandelay Imports',
+            'Pied Piper', 'Soylent Foods', 'Cyberdyne Systems', 'Wonka Industries', 'Tyrell Corporation', 'Gringotts Partners',
+        ];
+        $products = [
+            ['Software license', 990], ['Priority support', 3500], ['Onboarding workshop', 12000], ['Cloud hosting (monthly)', 2400],
+            ['Custom integration', 18500], ['Security audit', 9800], ['Data migration', 7600], ['Training session', 4200],
+        ];
+        // Invoices per month, oldest first: a steady climb with the dips a real
+        // year has, ending on the current month.
+        $perMonth = [4, 5, 4, 6, 6, 7, 9, 7, 8, 8, 10, 5];
+        $number = 2001;
+
+        foreach ($perMonth as $index => $count) {
+            $back = count($perMonth) - 1 - $index;
+            $month = now()->startOfMonth()->subMonths($back);
+            $lastDay = $back === 0 ? max(1, now()->day) : $month->daysInMonth;
+
+            foreach (range(0, $count - 1) as $i) {
+                $seed = $number * 7;
+                $invoice = Invoice::query()->create([
+                    'number' => 'INV-'.$number,
+                    'customer' => $customers[$seed % count($customers)],
+                    // Older work is settled; the last two months still carry
+                    // some open and overdue invoices, as a real ledger does.
+                    'status' => match (true) {
+                        $back > 1 => $seed % 9 === 0 ? 'overdue' : 'paid',
+                        $seed % 3 === 0 => 'pending',
+                        $seed % 5 === 0 => 'overdue',
+                        default => 'paid',
+                    },
+                    'issued_at' => $month->copy()->addDays(intdiv(($i * ($lastDay - 1)), max(1, $count - 1)))->setTime(9 + $i % 8, ($i * 13) % 60),
+                ]);
+
+                foreach (range(0, $seed % 3) as $line) {
+                    [$product, $price] = $products[($seed + $line * 3) % count($products)];
+                    $quantity = 1 + ($seed + $line) % 4;
+
+                    $invoice->items()->create([
+                        'product' => $product,
+                        'quantity' => $quantity,
+                        'unit_price' => $price,
+                        'line_total' => $quantity * $price,
+                    ]);
+                }
+
+                $number++;
+            }
+        }
     }
 }
