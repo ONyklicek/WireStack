@@ -100,6 +100,12 @@ class Table implements Htmlable
     protected bool $selectable = false;
 
     /**
+     * Pin the bulk bar to the bottom edge on a phone. Null defers to
+     * `wire-table.defaults.bulk_bar_at_bottom_on_mobile`. See {@see bulkBarAtBottomOnMobile()}.
+     */
+    protected ?bool $bulkBarAtBottomOnMobile = null;
+
+    /**
      * The selection cell's compiled markup — {@see getSelectionCellSkeleton()} —
      * keyed by its one shape beyond the record key: live or inert.
      *
@@ -741,6 +747,33 @@ class Table implements Htmlable
     public function isSelectable(): bool
     {
         return $this->selectable || ! empty($this->bulkActions);
+    }
+
+    /**
+     * Pin the bulk bar to the bottom edge of the screen below `sm`, where the
+     * thumb is, instead of leaving it above the rows.
+     *
+     * Off by default: a fixed bar floats over the records the user is still
+     * ticking — with several actions it wraps and covers a third of a phone
+     * screen — and it lands on whatever the application keeps at that edge
+     * itself, a bottom navigation bar most of all. Above the rows it scrolls
+     * away with the table instead, which is the trade this switch reverses.
+     *
+     * An application with its own bottom bar lifts the pinned bar above it
+     * with `--wire-table-bulk-bar-offset` (any CSS length, `0px` by default).
+     */
+    public function bulkBarAtBottomOnMobile(?bool $atBottom = true): static
+    {
+        $this->bulkBarAtBottomOnMobile = $atBottom;
+
+        return $this;
+    }
+
+    /** Whether the bulk bar is pinned to the bottom edge below `sm`. */
+    public function hasBulkBarAtBottomOnMobile(): bool
+    {
+        return $this->bulkBarAtBottomOnMobile
+            ?? (bool) config('wire-table.defaults.bulk_bar_at_bottom_on_mobile', false);
     }
 
     /**

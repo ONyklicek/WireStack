@@ -423,6 +423,8 @@ class TrpLayoutComponent extends Component
 
     public ?string $stickyMaxHeight = null;
 
+    public ?bool $bulkBarAtBottom = null;
+
     public function table(Table $table): Table
     {
         $table->model(TrpRow::class)->columns([TextColumn::make('name')]);
@@ -431,6 +433,10 @@ class TrpLayoutComponent extends Component
             $this->stickyMaxHeight === null
                 ? $table->stickyHeader()
                 : $table->stickyHeader(maxHeight: $this->stickyMaxHeight);
+        }
+
+        if ($this->bulkBarAtBottom !== null) {
+            $table->bulkBarAtBottomOnMobile($this->bulkBarAtBottom);
         }
 
         return $this->dense
@@ -448,6 +454,15 @@ function trpLayoutPlan(bool $dense): TableRenderPlan
 {
     $component = new TrpLayoutComponent;
     $component->dense = $dense;
+    $component->mountWithTable();
+
+    return TableRenderPlan::build($component->getTable(), $component, collect());
+}
+
+function trpBulkBarPlan(?bool $atBottom): TableRenderPlan
+{
+    $component = new TrpLayoutComponent;
+    $component->bulkBarAtBottom = $atBottom;
     $component->mountWithTable();
 
     return TableRenderPlan::build($component->getTable(), $component, collect());
@@ -545,6 +560,27 @@ it('still resolves the sheet classes when the sheet is switched off', function (
     expect($layout->sheetOnMobile)->toBeFalse()
         ->and($layout->sheetPanel)->toBeString()
         ->and($layout->sheetBackdrop)->toBeString();
+});
+
+it('keeps the bulk bar above the rows on a phone by default', function () {
+    // Pinned to the bottom edge it floats over the records still being ticked,
+    // and over an application's own bottom navigation bar.
+    expect(trpBulkBarPlan(null)->layout()->bulkBarMobileClass)->toBe('');
+});
+
+it('pins the bulk bar to the bottom edge when the table asks', function () {
+    $class = trpBulkBarPlan(true)->layout()->bulkBarMobileClass;
+
+    expect($class)->toContain('max-sm:fixed')
+        ->and($class)->toContain('max-sm:bottom-[var(--wire-table-bulk-bar-offset,0px)]')
+        ->and($class)->toContain('safe-area-inset-bottom');
+});
+
+it('takes the bulk bar position from the config, and the table overrides it', function () {
+    config()->set('wire-table.defaults.bulk_bar_at_bottom_on_mobile', true);
+
+    expect(trpBulkBarPlan(null)->layout()->bulkBarMobileClass)->toContain('max-sm:fixed')
+        ->and(trpBulkBarPlan(false)->layout()->bulkBarMobileClass)->toBe('');
 });
 
 // ─── Paging ──────────────────────────────────────────────────────────────────

@@ -29,7 +29,9 @@ use NyonCode\WireTable\Table;
  *    with one, only the half that browser shows is emitted
  *    ({@see Table::getClientLayout()}) and the swap classes go empty;
  *  - **the mobile sheet** — floating filter and column-toggle panels present as a
- *    bottom sheet on a phone unless `Table::sheetOnMobile(false)` turns it off.
+ *    bottom sheet on a phone unless `Table::sheetOnMobile(false)` turns it off;
+ *  - **the bulk bar** — above the rows everywhere, or pinned to the bottom edge
+ *    below `sm` with `Table::bulkBarAtBottomOnMobile()`.
  *
  * The sheet's five class strings all derive from the same breakpoint through
  * {@see MobileSheet}, which is the canonical owner in `wire-core`; resolving them
@@ -59,6 +61,7 @@ final class LayoutRenderPlan
      * @param  string  $cardsVisibleClass  Shows the stacked cards there.
      * @param  string  $sheetBreakpoint  The breakpoint the sheet switches at.
      * @param  float  $sheetBreakpointPx  The same as a pixel value, for JS.
+     * @param  string  $bulkBarMobileClass  Pins the bulk bar to the bottom edge below `sm`; empty when it stays above the rows.
      */
     private function __construct(
         public readonly bool $isBordered,
@@ -82,6 +85,7 @@ final class LayoutRenderPlan
         public readonly string $sheetPanel,
         public readonly string $sheetMotion,
         public readonly string $sheetBackdrop,
+        public readonly string $bulkBarMobileClass,
     ) {}
 
     public static function resolve(Table $table): self
@@ -141,6 +145,12 @@ final class LayoutRenderPlan
             sheetPanel: MobileSheet::panel($breakpoint),
             sheetMotion: MobileSheet::motion($breakpoint),
             sheetBackdrop: MobileSheet::backdropHide($breakpoint),
+            // Pinned, the bar is opaque — it floats over the rows — and clears the
+            // home indicator. `--wire-table-bulk-bar-offset` is the application's
+            // to set, so a bottom navigation bar of its own does not cover it.
+            bulkBarMobileClass: $table->hasBulkBarAtBottomOnMobile()
+                ? 'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-[var(--wire-table-bulk-bar-offset,0px)] max-sm:z-30 max-sm:border-t max-sm:border-b-0 max-sm:pb-[calc(0.75rem_+_env(safe-area-inset-bottom))] max-sm:shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.25)] max-sm:dark:bg-gray-900'
+                : '',
         );
     }
 }

@@ -201,6 +201,37 @@ BulkEditAction::make(string $name = 'bulkEdit')
 Všechny ostatní metody hromadné akce (`label()`, `icon()`, `visible()`,
 `deselectRecordsAfterCompletion()` …) fungují jako u `BulkAction`.
 
+### Lišta hromadných akcí na telefonu
+
+Lišta hromadných akcí stojí na každé šířce nad řádky. Pod `sm` ji jde místo
+toho připnout ke spodnímu okraji obrazovky, kde je palec a kde zůstává na dosah
+i při posouvání dlouhého seznamu:
+
+```php
+->bulkBarAtBottomOnMobile()       // tato tabulka
+```
+
+```php
+// config/wire-table.php — všechny tabulky
+'defaults' => [
+    'bulk_bar_at_bottom_on_mobile' => true,
+],
+```
+
+Připnutá lišta leží přes řádky, takže s několika akcemi umí zakrýt velkou část
+malé obrazovky. Dopadne také na všechno, co aplikace sama drží u spodního
+okraje. Layout s vlastní spodní navigací ji nad ni zvedne jednou CSS
+proměnnou:
+
+```css
+body:has(.app-bottom-nav) {
+    --wire-table-bulk-bar-offset: calc(4.5rem + env(safe-area-inset-bottom));
+}
+```
+
+`->bulkBarAtBottomOnMobile(false)` nechá jednu tabulku nad řádky, i když
+konfigurace připíná ostatní.
+
 ### Řazení na telefonu
 
 Skládané karty skrývají hlavičkový řádek a s ním všechna tlačítka řazení. Pod

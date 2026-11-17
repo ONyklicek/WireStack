@@ -38,6 +38,7 @@
                 x-show="open"
                 x-cloak
                 x-on:click.outside="$clickedInside($event) || close()"
+                x-on:contextmenu.outside="$clickedInside($event) || close()"
                 class="absolute top-0 left-0 z-50 w-64 rounded-lg bg-white p-1 shadow-lg ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10"
                 style="display: none;"
             >

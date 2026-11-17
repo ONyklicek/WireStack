@@ -62,7 +62,7 @@
         <span class="sr-only">{{ __('wire-core::messages.notifications_unread') }}</span>
     @endunless
 
-    <div class="relative shrink-0" x-on:click.outside="open = false" x-on:keydown.escape.window="open = false">
+    <div class="relative shrink-0" x-on:click.outside="open = false" x-on:contextmenu.outside="open = false" x-on:keydown.escape.window="open = false">
         <button
             type="button"
             x-on:click="open = ! open"

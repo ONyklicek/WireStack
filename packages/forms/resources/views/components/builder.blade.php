@@ -194,6 +194,7 @@
                 x-show="adding"
                 x-cloak
                 @click.outside="adding = false"
+                @contextmenu.outside="adding = false"
                 class="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800"
             >
                 @foreach($blocks as $block)

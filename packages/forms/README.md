@@ -25,7 +25,7 @@ This automatically installs `wire-core` as a dependency. The service providers a
 
 ### Tailwind CSS Setup
 
-Wire Forms uses Tailwind utility classes in its Blade templates. Add the package views to your Tailwind content paths:
+Wire Forms uses Tailwind utility classes in its Blade templates. Add the package views **and `src`** to your Tailwind content paths. Some classes are resolved in PHP (the bottom sheet on a phone, responsive grid columns), so scanning the views alone misses them:
 
 **Tailwind 3** (`tailwind.config.js`):
 
@@ -35,7 +35,9 @@ export default {
         './resources/**/*.blade.php',
         './app/**/*.php',
         './vendor/nyoncode/wire-core/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-core/src/**/*.php',
         './vendor/nyoncode/wire-forms/resources/views/**/*.blade.php',
+        './vendor/nyoncode/wire-forms/src/**/*.php',
     ],
     darkMode: 'class',
     plugins: [require('@tailwindcss/forms')],
@@ -48,7 +50,9 @@ export default {
 @import "tailwindcss";
 @plugin "@tailwindcss/forms";
 @source "../../vendor/nyoncode/wire-core/resources/views";
+@source "../../vendor/nyoncode/wire-core/src";
 @source "../../vendor/nyoncode/wire-forms/resources/views";
+@source "../../vendor/nyoncode/wire-forms/src";
 ```
 
 Install the forms plugin and rebuild:

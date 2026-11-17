@@ -71,6 +71,7 @@
                                 x-show="open"
                                 x-cloak
                                 x-on:click.outside="$clickedInside($event) || close()"
+                                x-on:contextmenu.outside="$clickedInside($event) || close()"
                                 x-on:keydown.arrow-down="panelStep($event, 1)"
                                 x-on:keydown.arrow-up="panelStep($event, -1)"
                                 x-on:keydown.tab="close()"
@@ -120,6 +121,7 @@
                 x-show="open"
                 x-cloak
                 x-on:click.outside="$clickedInside($event) || close()"
+                x-on:contextmenu.outside="$clickedInside($event) || close()"
                 x-on:keydown.arrow-down="panelStep($event, 1)"
                 x-on:keydown.arrow-up="panelStep($event, -1)"
                 x-on:keydown.tab="close()"

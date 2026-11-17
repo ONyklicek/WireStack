@@ -373,6 +373,7 @@
                                                         x-ref="panel"
                                                         x-show="open"
                                                         @click.outside="$clickedInside($event) || close()"
+                                                        @contextmenu.outside="$clickedInside($event) || close()"
                                                         @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
                                                         x-transition:enter="transition ease-out duration-100"
                                                         x-transition:enter-start="opacity-0 scale-95 {{ $sheetOnMobile ? $sheetMotion : '' }}"
@@ -498,6 +499,7 @@
                                                     x-ref="panel"
                                                     x-show="open"
                                                     @click.outside="$clickedInside($event) || close()"
+                                                    @contextmenu.outside="$clickedInside($event) || close()"
                                                     @if($sheetOnMobile) x-focus-trap="open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
                                                     x-transition:enter="transition ease-out duration-100"
                                                     x-transition:enter-start="transform opacity-0 scale-95 {{ $sheetOnMobile ? $sheetMotion : '' }}"
@@ -738,11 +740,9 @@
                                 x-show="selectedCount > 0"
                                 x-cloak
                                 data-testid="table-bulk-bar" @wireEl('table-bulk-bar')
-                                {{-- On a phone the bar rides the bottom edge, where the thumb is, above
-                                     the home indicator — not at the top of a table scrolled out of
-                                     sight while the user ticks rows further down. Opaque there: it
-                                     floats over the rows. --}}
-                                class="px-4 lg:px-6 py-3 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-primary-800/30 max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-30 max-sm:border-t max-sm:border-b-0 max-sm:pb-[calc(0.75rem_+_env(safe-area-inset-bottom))] max-sm:shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.25)] max-sm:dark:bg-gray-900">
+                                {{-- Above the rows by default. Table::bulkBarAtBottomOnMobile() pins it
+                                     to the bottom edge on a phone instead — see LayoutRenderPlan. --}}
+                                class="px-4 lg:px-6 py-3 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-primary-800/30 {{ $plan->layout()->bulkBarMobileClass }}">
                             {{-- Stacks on mobile so multiple bulk-action buttons wrap instead of overflowing. --}}
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div class="flex items-center gap-3">

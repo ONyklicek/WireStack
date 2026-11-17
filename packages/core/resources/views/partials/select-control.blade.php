@@ -269,6 +269,7 @@
                 {{-- On a phone in touch mode this panel is hidden and the touch
                      sheet is open instead; a tap in that sheet is not "outside". --}}
                 @click.outside="if (! touchNow && ! $clickedInside($event)) { open = false; activeIndex = -1 }"
+                @contextmenu.outside="if (! touchNow && ! $clickedInside($event)) { open = false; activeIndex = -1 }"
                 @if($sheetOnMobile) x-focus-trap="$data.open" tabindex="-1" data-sheet-bp="{{ $sheetBpPx }}" @endif
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0 -translate-y-1 {{ $sheetOnMobile ? $sheetMotion : '' }}"

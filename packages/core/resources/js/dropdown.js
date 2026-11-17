@@ -1139,8 +1139,11 @@ const registerWireCoreDropdown = () => {
 
     // $clickedInside($event) → true when the event came from inside this element
     // *or* from a panel nested in it through a teleport. Guards `@click.outside`
-    // on any panel that can host another floating panel:
+    // on any panel that can host another floating panel — and its twin,
+    // `@contextmenu.outside`: a right click fires no `click`, so without it a
+    // panel stays open under the row menu the right click opens.
     //     @click.outside="$clickedInside($event) || close()"
+    //     @contextmenu.outside="$clickedInside($event) || close()"
     window.Alpine.magic('clickedInside', (el) => (event) => containsThroughTeleports(el, event?.target))
 
     window.Alpine.data('wireDropdown', wireDropdown)
