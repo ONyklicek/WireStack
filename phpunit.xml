@@ -126,6 +126,11 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- The address the tests assume ("Testbench serves http://localhost").
+             `composer workbench:clean` writes the preview server's APP_URL
+             (http://localhost:8000) into testbench's .env, which every suite
+             would otherwise read. -->
+        <env name="APP_URL" value="http://localhost"/>
         <!-- Both keys: CACHE_DRIVER is what Laravel 10 read, CACHE_STORE what 11
              reads, and testbench's own .env sets the latter to `database` —
              whose table this suite has no reason to migrate. -->

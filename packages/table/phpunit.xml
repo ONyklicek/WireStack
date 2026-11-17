@@ -22,6 +22,11 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- The address the tests assume ("Testbench serves http://localhost").
+             `composer workbench:clean` writes the preview server's APP_URL
+             (http://localhost:8000) into testbench's .env, which every suite
+             would otherwise read. -->
+        <env name="APP_URL" value="http://localhost"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>

@@ -23,6 +23,23 @@ import { openPage, checker } from './lib/cdp.mjs';
 const origin = process.env.PREVIEW_ORIGIN ?? 'http://127.0.0.1:8085';
 const { check, finish } = checker();
 
+// The two `-hours` fixtures are bounded to 1 October – 31 December 2026, and an
+// empty picker opens on today's month: the checks that an arrow out of the
+// bounds is closed only hold while that month is the first one. So those two
+// pages pin the browser's clock inside it — the driver was right on 18 October
+// and wrong from November on. The clock still ticks from there; only "today" is
+// fixed. Not the unbounded pages: their presets are resolved by the server
+// against its own today, which a browser clock cannot move.
+const pinnedToday = `(() => {
+  const Real = Date;
+  const shift = new Real(2026, 9, 18, 9, 0, 0).getTime() - Real.now();
+  class Pinned extends Real {
+    constructor(...args) { super(...(args.length ? args : [Real.now() + shift])); }
+    static now() { return Real.now() + shift; }
+  }
+  window.Date = Pinned;
+})();`;
+
 const helpers = (prefix) => `
   window.tid = (s) => document.querySelector('[data-testid="${prefix}-' + s + '"]');
   window.click = (s) => { const el = tid(s); if (! el) throw new Error('missing ' + s); el.click(); return true; };
@@ -99,7 +116,7 @@ const helpers = (prefix) => `
 // ── The daily window ──────────────────────────────────────────────────────
 {
   const { eval_, waitFor, consoleErrors, close } =
-    await openPage({ url: `${origin}/previews/field-date-time-picker-hours`, shotPrefix: 'date-panels-hours' });
+    await openPage({ url: `${origin}/previews/field-date-time-picker-hours`, shotPrefix: 'date-panels-hours', preload: pinnedToday });
 
   try {
     await eval_(helpers('form-datetime-data.slot_at'));
@@ -176,7 +193,7 @@ const helpers = (prefix) => `
 // ── A range with time, inside working hours ───────────────────────────────
 {
   const { eval_, waitFor, consoleErrors, close } =
-    await openPage({ url: `${origin}/previews/field-date-range-picker-hours`, shotPrefix: 'date-panels-shift' });
+    await openPage({ url: `${origin}/previews/field-date-range-picker-hours`, shotPrefix: 'date-panels-shift', preload: pinnedToday });
   const period = `wire().get('data.shift_from') + '..' + wire().get('data.shift_to')`;
 
   try {
