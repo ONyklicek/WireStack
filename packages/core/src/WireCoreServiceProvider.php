@@ -19,6 +19,7 @@ use NyonCode\LaravelPackageToolkit\Support\PublishedAssets;
 use NyonCode\WireCore\Actions\Console\MakeActionCommand;
 use NyonCode\WireCore\Actions\Support\ActionCallbackInvoker;
 use NyonCode\WireCore\Actions\Support\ComponentActionRunner;
+use NyonCode\WireCore\Actions\Support\ModalIslandHook;
 use NyonCode\WireCore\Actions\View\BulkButtonComponent;
 use NyonCode\WireCore\Actions\View\ButtonComponent;
 use NyonCode\WireCore\Actions\View\GroupComponent;
@@ -281,6 +282,11 @@ class WireCoreServiceProvider extends PackageServiceProvider
         // Under Testbench that means the first test of a process silently has no
         // hook and later ones do — which is exactly how it presented.
         ComponentHookRegistry::register(PartialRenderHook::class);
+
+        // A modal mounted by a call that targeted another island (a row action
+        // without a modal of its own opening one) still answers with the modal.
+        // Registered here for the same reason as the hook above.
+        ComponentHookRegistry::register(ModalIslandHook::class);
 
         // Per request: a sprite scope opened by a render that then threw must not
         // keep the next request's PDFs and mails sprited.

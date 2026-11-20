@@ -14,6 +14,7 @@ use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\ActionGroup;
 use NyonCode\WireCore\Actions\BulkAction;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
+use NyonCode\WireCore\Actions\Support\ModalIslandHook;
 use NyonCode\WireCore\Core\Events\TableRefreshed;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Support\RecordVersion;
@@ -62,6 +63,8 @@ trait InteractsWithTableActions
         $this->actionModalFormInstance = null;
         $this->actionModalInfolistInstance = null;
         $this->actionModalConfigCache = [];
+
+        ModalIslandHook::frameMounted($this);
     }
 
     protected function popActionFrame(): void
