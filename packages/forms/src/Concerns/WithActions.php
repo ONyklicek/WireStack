@@ -9,6 +9,7 @@ use Livewire\Attributes\On;
 use NyonCode\WireCore\Actions\Action;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithActions;
 use NyonCode\WireCore\Actions\Concerns\InteractsWithHalt;
+use NyonCode\WireCore\Actions\Support\ModalIslandHook;
 use NyonCode\WireCore\Notifications\Concerns\InteractsWithNotifications;
 use NyonCode\WireForms\Forms\Form;
 
@@ -466,6 +467,8 @@ trait WithActions
         $this->actionModalFormInstance = null;
         $this->actionModalInfolistInstance = null;
         $this->actionModalConfigCache = [];
+
+        ModalIslandHook::frameMounted($this);
     }
 
     protected function popActionFrame(): void

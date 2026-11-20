@@ -2,6 +2,21 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [2.10.7]
+
+### Fixed
+
+- **A row button that opens a modal from its callback shows the modal.** Livewire 4 targets the island a
+  button sits in, so a click in the table's `data-region` answered with the rows alone. A button whose action
+  has a modal carries `wire:island="action-modals"`; one whose action has none and opens a modal from its
+  callback (`openActionModal()` to the editor for the record's kind, `mountAction()`) does not, so the frame
+  was mounted and nothing drew it: the click looked dead and the modal appeared with the next request. On a
+  stacked mobile card every behaviour-only record action is such a button. `Actions\Support\ModalIslandHook`
+  now queues the `action-modals` island beside the one the call targeted whenever that call mounted a frame —
+  for a table and for a standalone `WithActions` host with islands of its own alike. The targeted island still
+  renders, so a callback that also wrote rows is not left stale. Opening the modal without re-rendering the
+  rows stays the button's choice: `->extraAttributes(['wire:island' => 'action-modals'])`.
+
 ## [2.10.6]
 
 ### Fixed
