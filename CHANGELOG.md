@@ -2,6 +2,28 @@
 
 All notable changes to the Wire ecosystem will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **A name that is already text is no longer title-cased into its label.** A component given no `->label()`
+  fell back to `Str::headline()` of its name, which capitalises every word — `Section::make('Pro montážníky')`
+  was headed "Pro Montážníky", a heading nobody wrote, and every translated string used as a name read the same
+  way. A name with a space in it is now kept as written, only its first letter raised. Identifiers
+  (`plan_period`, `sendReminder`) are humanised as before.
+
+### Added
+
+- **How a name becomes a label is the application's to choose.** One owner, `Foundation\Support\NameLabel`,
+  now answers the fallback for fields, layouts, actions, modal footer actions, columns, filters and import
+  columns, which each used to call `Str::headline()` themselves. `wire-core.labels.from_name`
+  (`WIRE_LABELS_FROM_NAME`) picks the style — `headline` (default: "Plan Period"), `sentence` ("Plan period")
+  or `name` (as written), also as the `Foundation\Enums\LabelStyle` enum — or names an invokable class that
+  decides every label; `NameLabel::using(fn (string $name) => …)` does the same at runtime. An unknown style
+  throws `LabelStyleException` rather than falling back.
+- The docs for `Section` and `Fieldset` said a named section or fieldset draws no heading from its name. It
+  always did; they now say so.
+
 ## [2.10.7]
 
 ### Fixed

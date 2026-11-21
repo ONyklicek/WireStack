@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireTable\Import;
 
 use Closure;
-use Illuminate\Support\Str;
+use NyonCode\WireCore\Foundation\Support\NameLabel;
 
 /**
  * Maps one column of an imported file to a model attribute.
@@ -88,7 +88,7 @@ class ImportColumn
     {
         $label = $this->label instanceof Closure ? ($this->label)() : $this->label;
 
-        return $label ?? Str::headline($this->name);
+        return $label ?? NameLabel::for($this->name);
     }
 
     public function isRequiredMapping(): bool

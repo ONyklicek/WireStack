@@ -31,6 +31,7 @@ use NyonCode\WireCore\Foundation\Enums\Breakpoint;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Icons\IconManager;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\Support\NameLabel;
 use NyonCode\WireCore\Foundation\View\ExtraAttributes;
 use NyonCode\WireCore\Foundation\View\Skeleton;
 use NyonCode\WireTable\Concerns\CanBeEdited;
@@ -1065,7 +1066,7 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
 
     /**
      * Get the label of the column.
-     * Overrides DataComponent to use Str::headline for prettier labels.
+     * Overrides DataComponent: the fallback is {@see NameLabel}, like every other component.
      */
     public function getLabel(): string
     {
@@ -1077,6 +1078,6 @@ class Column extends DataComponent implements HasSearchColumns, HasSearchValueTy
             ? $this->relationPath->getColumnName()
             : $this->name;
 
-        return Str::headline($name);
+        return NameLabel::for($name);
     }
 }

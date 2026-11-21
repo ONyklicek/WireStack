@@ -40,7 +40,7 @@ vedle ní.
 znamená „druhá záložka, která se opravdu vykresluje“. Záložka skrytá podmínkou
 nikdy nenechá v liště díru ani neposune aktivní panel na špatný obsah.
 
-Popisek záložky spadne na `Str::headline()` jejího jména, takže `Tab::make('Profile')`
+Popisek záložky spadne na její jméno ([Popisky ze jmen](../../foundation/index.md#popisky-ze-jmen)), takže `Tab::make('Profile')`
 žádné `->label()` nepotřebuje. Na úzkých obrazovkách se lišta scrolluje vodorovně
 místo aby se zalamovala — zalomené záložky přirozené šířky vypadají jako dvě
 roztřepené řady.

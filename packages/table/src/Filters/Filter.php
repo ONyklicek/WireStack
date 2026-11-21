@@ -15,6 +15,7 @@ use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Concerns\HasAuthorization;
 use NyonCode\WireCore\Foundation\Concerns\HasContextualVisibility;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\Support\NameLabel;
 use NyonCode\WireForms\Components\TextInput;
 use NyonCode\WireTable\Enums\FilterOperator;
 
@@ -943,7 +944,7 @@ class Filter implements Htmlable
 
     public function getLabel(): string
     {
-        return $this->label ?? Str::headline($this->name);
+        return $this->label ?? NameLabel::for($this->name);
     }
 
     public function getDefault(): mixed

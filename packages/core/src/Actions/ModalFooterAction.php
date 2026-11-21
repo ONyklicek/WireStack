@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Actions;
 
 use Closure;
-use Illuminate\Support\Str;
 use NyonCode\WireCore\Core\Support\Trans;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Concerns\InteractsWithColor;
 use NyonCode\WireCore\Foundation\Icons\Icon;
+use NyonCode\WireCore\Foundation\Support\NameLabel;
 
 /**
  * ModalFooterAction - Extra button in modal footer.
@@ -140,7 +140,7 @@ class ModalFooterAction
 
     public function getLabel(): string
     {
-        return $this->label ?? Str::headline($this->name);
+        return $this->label ?? NameLabel::for($this->name);
     }
 
     public function getIcon(): ?string

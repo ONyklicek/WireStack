@@ -595,4 +595,29 @@ return [
     */
     'shape' => env('WIRE_SHAPE', 'rounded'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Labels
+    |--------------------------------------------------------------------------
+    |
+    | What a component is called when it was given no `->label()` — a field, a
+    | section, an action, a column, a filter. One owner reads this:
+    | `Foundation\Support\NameLabel`.
+    |
+    |   'headline'  plan_period → "Plan Period"   (default)
+    |   'sentence'  plan_period → "Plan period"
+    |   'name'      plan_period → "plan_period"
+    |
+    | or the class name of an invokable `(string $name): string` that decides
+    | every label itself; at runtime `NameLabel::using(fn ($name) => …)`.
+    |
+    | Under the three styles a name that is already text — it has a space in it,
+    | `Section::make('Pro montážníky')` — is kept as written, only its first
+    | letter raised. An unknown style throws rather than falling back.
+    |
+    */
+    'labels' => [
+        'from_name' => env('WIRE_LABELS_FROM_NAME', 'headline'),
+    ],
+
 ];

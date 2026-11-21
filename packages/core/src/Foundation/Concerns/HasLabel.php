@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Foundation\Concerns;
 
 use Closure;
-use Illuminate\Support\Str;
+use NyonCode\WireCore\Foundation\Support\NameLabel;
 
 /**
  * Provides a label property with auto-generation from name.
@@ -65,6 +65,6 @@ trait HasLabel
     {
         $label = $this->evaluate($this->label);
 
-        return $label ?? Str::headline($this->getName());
+        return $label ?? NameLabel::for($this->getName());
     }
 }
