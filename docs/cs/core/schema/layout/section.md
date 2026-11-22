@@ -22,9 +22,10 @@ přidá i odebere bez dotyku na data. Vykreslí orámovanou kartu s odsazením,
 volitelný hlavičkový blok a pod ním děti v gridu.
 
 **Hlavička existuje, jen když do ní něco jde.** Žádný popisek, žádný popis a žádné
-hlavičkové akce znamená, že hlavičkový blok nevznikne vůbec — holá karta. Stojí za
-to to vědět, protože `Section::make('billing')` samo o sobě ze svého jména nadpis
-*neudělá* tak, jak to dělá pole. Napište `->label('Fakturace')`.
+hlavičkové akce znamená, že hlavičkový blok nevznikne vůbec — holá karta. Sekce se
+jménem ale popisek má vždy: `Section::make('billing')` má nadpis „Billing“ ze svého
+jména, stejně jako pole ([Popisky ze jmen](../../foundation/index.md#popisky-ze-jmen)).
+Pro holou kartu jméno vynechte nebo napište `->label('')`.
 
 **Skládání je Alpine, ne Livewire.** `collapsible()` dá na kartu
 `x-data="{ open }"` a na tělo `x-show` + `x-collapse`, takže otevírání a zavírání

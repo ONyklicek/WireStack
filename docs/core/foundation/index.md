@@ -63,6 +63,41 @@ your icon, your colour, your size, are you visible — and they answer them with
 > [Canonical color resolvers](colors.md#canonical-color-resolvers-hascolor)), not from a
 > per-component map. `HasButtonStyles` remains only as a deprecated alias.
 
+### Labels From Names
+
+A component given no `->label()` is named after its `make()` name, and one owner
+decides how: `Foundation\Support\NameLabel`. Fields, sections, fieldsets, tabs,
+actions, columns, filters and import columns all ask it, so a project changes the
+rule once.
+
+**A name that is already text stays text.** A name with a space in it was written
+for people, so it is kept as written and only its first letter is raised —
+`Section::make('Pro montážníky')` reads "Pro montážníky", not "Pro Montážníky".
+**An identifier is humanised by the configured style**, `wire-core.labels.from_name`
+(`WIRE_LABELS_FROM_NAME`):
+
+| Style | `plan_period` | `withTransport` |
+|---|---|---|
+| `headline` (default) | Plan Period | With Transport |
+| `sentence` | Plan period | With transport |
+| `name` | plan_period | withTransport |
+
+```php
+// config/wire-core.php
+'labels' => [
+    'from_name' => 'sentence',                     // or LabelStyle::Sentence
+    // 'from_name' => App\Support\OurLabels::class, // invokable (string $name): string
+],
+
+// or at runtime, from a service provider's boot()
+NameLabel::using(fn (string $name): string => __("labels.{$name}"));
+```
+
+An invokable class or a `using()` closure decides **every** label, the text rule
+included. An unknown style throws `LabelStyleException` rather than falling back,
+because a typo would otherwise leave every screen almost right. An explicit
+`->label()` always wins, and `->label('')` still means "no label at all".
+
 ### Closure Evaluation
 
 All configuration methods accept both scalar values and Closures:
@@ -100,6 +135,7 @@ $action = Action::make('delete');
 | `EvaluatesClosures` | Trait — evaluates Closure-or-value with parameter injection |
 | `ArrayDotHelper` | Dot-notation access: `get('user.name', $array)`, `set()`, `has()`, `forget()` |
 | `EnumResolver` | Static — canonical enum/array normalizer (`scalar`, `label`, `display`, `color`, `icon`, `options`) |
+| `NameLabel` | Static — the label a component carries when it was given none ([Labels From Names](#labels-from-names)) |
 
 ## In This Section
 

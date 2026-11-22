@@ -1293,6 +1293,12 @@ class TablePreview extends Component
             ->recordAction(DeleteAction::make()->onContextMenu())
             ->paginated(false);
 
+        // Every plain cell becomes a link to its record — the shape whose cell
+        // text used to answer a right-click with the browser's link menu.
+        if ($this->variant === 'record-link') {
+            $table->recordUrl(fn (User $record): string => '/previews/table-record-link?user='.$record->id);
+        }
+
         // Only the variants whose whole point is whole-row interaction ask for
         // the opt-in layer. The rest — `table-overview` included, the preview
         // people look at to see what a table *is* — stay on the shipped

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace NyonCode\WireCore\Actions\Concerns;
 
 use Closure;
-use Illuminate\Support\Str;
 use NyonCode\WireCore\Foundation\Colors\Color;
 use NyonCode\WireCore\Foundation\Enums\IconPosition;
 use NyonCode\WireCore\Foundation\Enums\Size;
 use NyonCode\WireCore\Foundation\Icons\Icon;
 use NyonCode\WireCore\Foundation\Support\EnumResolver;
+use NyonCode\WireCore\Foundation\Support\NameLabel;
 
 /**
  * Trait HasDynamicProperties
@@ -93,7 +93,7 @@ trait HasDynamicProperties
             return ($this->labelCallback)($context);
         }
 
-        return $this->label ?? Str::headline($this->name);
+        return $this->label ?? NameLabel::for($this->name);
     }
 
     /**

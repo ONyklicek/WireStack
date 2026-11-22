@@ -63,6 +63,40 @@ slovník vyplatí naučit jednou.
 > [Kanonické color resolvery](colors.md#kanonicke-color-resolvery-hascolor)), ne z
 > mapy pro jednotlivé komponenty. `HasButtonStyles` zůstává jen jako deprecated alias.
 
+### Popisky ze jmen
+
+Komponenta bez `->label()` se jmenuje podle svého jména z `make()` a o tom, jak,
+rozhoduje jeden vlastník: `Foundation\Support\NameLabel`. Ptají se ho pole, sekce,
+fieldsety, záložky, akce, sloupce, filtry i sloupce importu, takže projekt mění
+pravidlo na jednom místě.
+
+**Jméno, které už je text, zůstane textem.** Jméno s mezerou bylo napsané pro lidi,
+takže zůstane, jak je, jen první písmeno se zvětší — `Section::make('Pro montážníky')`
+čte „Pro montážníky“, ne „Pro Montážníky“. **Identifikátor se polidští podle
+nastaveného stylu**, `wire-core.labels.from_name` (`WIRE_LABELS_FROM_NAME`):
+
+| Styl | `plan_period` | `withTransport` |
+|---|---|---|
+| `headline` (výchozí) | Plan Period | With Transport |
+| `sentence` | Plan period | With transport |
+| `name` | plan_period | withTransport |
+
+```php
+// config/wire-core.php
+'labels' => [
+    'from_name' => 'sentence',                     // nebo LabelStyle::Sentence
+    // 'from_name' => App\Support\OurLabels::class, // invokable (string $name): string
+],
+
+// nebo za běhu, z boot() service provideru
+NameLabel::using(fn (string $name): string => __("labels.{$name}"));
+```
+
+Invokable třída nebo closura z `using()` rozhoduje o **každém** popisku, včetně
+pravidla o textu. Neznámý styl vyhodí `LabelStyleException` místo tichého návratu
+k výchozímu, protože překlep by jinak nechal každou obrazovku skoro správně.
+Explicitní `->label()` vyhrává vždy a `->label('')` dál znamená „žádný popisek“.
+
 ### Vyhodnocování closur
 
 Všechny konfigurační metody přijímají skalární hodnoty i closury:
@@ -101,6 +135,7 @@ $action = Action::make('delete');
 |-------|-------------|
 | `EvaluatesClosures` | Trait — vyhodnocuje closura-nebo-hodnota s injekcí parametrů |
 | `ArrayDotHelper` | Přístup tečkovou notací: `get('user.name', $array)`, `set()`, `has()`, `forget()` |
+| `NameLabel` | Statická — popisek komponenty, která žádný nedostala ([Popisky ze jmen](#popisky-ze-jmen)) |
 | `EnumResolver` | Statický — kanonický normalizér enum/pole (`scalar`, `label`, `display`, `color`, `icon`, `options`) |
 
 ## V této sekci

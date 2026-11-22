@@ -106,7 +106,7 @@ adds.
 *not* a state path: a layout holds no value, so the name only names the thing.
 
 ```php
-->label(string|Closure|null $label)      // heading text; falls back to Str::headline() of the name
+->label(string|Closure|null $label)      // heading text; falls back to NameLabel::for() of the name
 ->hiddenLabel(bool $condition = true)    // keep the component, draw no heading
 ->schema(array $components)              // the children, in render order
 ->statePath(?string $path)               // re-root the state path for everything beneath

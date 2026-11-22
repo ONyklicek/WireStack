@@ -54,6 +54,6 @@
         "patch-package": "^8.0.1",
         "playwright": "^1.63.0",
         "tailwindcss": "^4.1.8",
-        "vite": "^8.1.5"
+        "vite": "8.3.3"
     }
 }

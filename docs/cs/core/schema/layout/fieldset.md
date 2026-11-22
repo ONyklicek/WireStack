@@ -20,11 +20,11 @@ Fieldset je **layoutová komponenta**: nenese hodnotu ani state path, takže se 
 přidat nebo odebrat bez dotyku na data. Vykreslí orámovaný box, dá `label()` do
 legendy a děti uvnitř rozloží do gridu.
 
-**Bez popisku není legenda.** Element `<legend>` se vypíše jen tehdy, když je popisek
-nastavený, takže `Fieldset::make('address')` a nic dalšího vykreslí orámovaný box
-bez nadpisu — což je legitimní přání a překvapení, když jste čekali, že se jméno
-stane legendou. Na rozdíl od pole si fieldset ze jména popisek *neudělá*: napište
-`->label('Adresa')`.
+**Bez popisku není legenda.** Element `<legend>` se vypíše jen tehdy, když popisek
+existuje. Fieldset se jménem ho má vždy, ze jména, stejně jako pole
+([Popisky ze jmen](../../foundation/index.md#popisky-ze-jmen)) — takže
+`Fieldset::make('address')` dostane legendu „Address“. Pro orámovaný box bez nadpisu
+jméno vynechte nebo napište `->label('')`.
 
 **Výchozí počet sloupců je 1**, ne 2 — fieldset je v první řadě seskupení a až
 potom grid. Vyhodnocuje se různě podle tvaru, který předáte, a tohle je ta část,

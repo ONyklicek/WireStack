@@ -40,7 +40,7 @@ dropped**. Fields go inside a tab, never beside one.
 means "the second tab that is actually rendered". A tab hidden by a condition
 never leaves a gap in the bar or shifts the active panel onto the wrong content.
 
-A tab's label falls back to `Str::headline()` of its name, so `Tab::make('Profile')`
+A tab's label falls back to its name ([Labels From Names](../../foundation/index.md#labels-from-names)), so `Tab::make('Profile')`
 needs no `->label()`. On narrow screens the bar scrolls horizontally rather than
 wrapping — wrapping intrinsic-width tabs reads as two ragged rows.
 

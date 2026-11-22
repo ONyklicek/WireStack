@@ -21,11 +21,11 @@ A fieldset is a **layout component**: it holds no value and no state path, so it
 can be added or removed without touching your data. It renders a bordered box,
 puts `label()` in the legend, and lays its children out in a grid inside.
 
-**No label, no legend.** The `<legend>` element is only emitted when a label is
-set, so `Fieldset::make('address')` with nothing else renders a bordered box with
-no heading — which is a valid thing to want, and a surprise if you expected the
-name to become the legend. Unlike a field, a fieldset does *not* headline its
-name into a label for you: write `->label('Address')`.
+**No label, no legend.** The `<legend>` element is only emitted when there is a
+label. A named fieldset always has one, from its name, like a field
+([Labels From Names](../../foundation/index.md#labels-from-names)) — so
+`Fieldset::make('address')` gets the legend "Address". Leave the name out or write
+`->label('')` for a bordered box with no heading.
 
 **The column count defaults to 1**, not 2 — a fieldset is a grouping first and a
 grid second. It resolves differently depending on the shape you pass, and this is

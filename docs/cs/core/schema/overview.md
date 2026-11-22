@@ -106,7 +106,7 @@ Vytvoří ji `Component::make(?string $name = null)`. Jméno je volitelné a **n
 state path: layout nenese hodnotu, takže jméno jen pojmenovává.
 
 ```php
-->label(string|Closure|null $label)      // text nadpisu; fallback je Str::headline() jména
+->label(string|Closure|null $label)      // text nadpisu; fallback je NameLabel::for() jména
 ->hiddenLabel(bool $condition = true)    // komponentu zachová, nadpis nevykreslí
 ->schema(array $components)              // děti, v pořadí vykreslení
 ->statePath(?string $path)               // přepne kořen state path pro všechno pod ní

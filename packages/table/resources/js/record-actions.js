@@ -299,7 +299,7 @@ const wireRecordActions = (config = {}) => ({
             if (event.pointerType !== 'touch' || ! event.isPrimary) return
 
             const row = this.row(event)
-            if (! row || this.blocked(event, row) || ! this.menuFor(row)) return
+            if (! row || this.blocked(event, row, { menu: true }) || ! this.menuFor(row)) return
 
             const x = event.clientX
             const y = event.clientY
@@ -943,10 +943,18 @@ const wireRecordActions = (config = {}) => ({
     // island. The search is scoped to the row on purpose: the controller's own
     // root (`<tbody x-data>`) is an ancestor of every row and would otherwise
     // match the `[x-data]` clause and swallow every event.
-    blocked(event, row) {
+    //
+    // `menu` asks for the context menu, where the record link is the exception:
+    // with `recordUrl()` every plain cell is wrapped in it, so treating it like
+    // any other link would leave the row's menu reachable only from the cell
+    // padding. It is the row's own link, not an element inside the row; a click
+    // still follows it, and a link a cell draws itself keeps the browser's menu.
+    blocked(event, row, { menu = false } = {}) {
         const hit = event.target.closest(INTERACTIVE)
 
-        return !! hit && row.contains(hit)
+        if (! hit || ! row.contains(hit)) return false
+
+        return ! (menu && hit.matches('[data-record-link]'))
     },
 
     onPointer(type, event) {
@@ -1059,7 +1067,7 @@ const wireRecordActions = (config = {}) => ({
         // the moment the press timer would. One menu, opened as a touch one.
         if (this._pointerType === 'touch') {
             const row = this.row(event)
-            if (! row || this.blocked(event, row) || ! this.menuFor(row)) return
+            if (! row || this.blocked(event, row, { menu: true }) || ! this.menuFor(row)) return
 
             event.preventDefault()
 
@@ -1085,7 +1093,7 @@ const wireRecordActions = (config = {}) => ({
         }
 
         const row = this.row(event)
-        if (! row || this.blocked(event, row)) return
+        if (! row || this.blocked(event, row, { menu: true })) return
 
         const panel = document.querySelector(
             `[data-record-menu="${CSS.escape(row.dataset.rowKey)}"]`

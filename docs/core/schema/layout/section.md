@@ -22,9 +22,10 @@ remove without touching data. It renders a bordered, padded card, an optional
 header block, and its children in a grid below.
 
 **The header only exists if something goes in it.** No label, no description and
-no header actions means no header block at all — a bare card. This is worth
-knowing because `Section::make('billing')` alone does *not* headline its name
-into a heading the way a field does. Write `->label('Billing')`.
+no header actions means no header block at all — a bare card. A named section
+always has a label, though: `Section::make('billing')` is headed "Billing", from
+its name, the way a field is ([Labels From Names](../../foundation/index.md#labels-from-names)).
+For a bare card, leave the name out or write `->label('')`.
 
 **Folding is Alpine, not Livewire.** `collapsible()` puts `x-data="{ open }"` on
 the card and `x-show` + `x-collapse` on the body, so opening and closing is
