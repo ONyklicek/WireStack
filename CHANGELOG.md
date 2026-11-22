@@ -4,6 +4,8 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ## [Unreleased]
 
+## [2.10.8]
+
 ### Fixed
 
 - **A right-click on the text of a `recordUrl()` cell opens the row's menu.** The record url wraps every plain
