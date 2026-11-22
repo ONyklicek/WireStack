@@ -146,6 +146,16 @@ it('wraps a cell in the record url, and leaves the editable one alone', function
         ->and(rmsFirstRow())->not->toContain('<a href="/rows/1"');
 });
 
+it('marks the record url as the row\'s own link', function () {
+    // A right-click on a cell lands on this link. Unmarked, the row controller
+    // reads it as an interactive element inside the row and leaves the browser's
+    // link menu through, so the row's menu answers only in the cell padding.
+    $row = rmsFirstRow(['url' => true]);
+
+    expect($row)->toContain('<a href="/rows/1" data-record-link')
+        ->and(substr_count($row, 'data-record-link'))->toBe(substr_count($row, '<a href="/rows/1"'));
+});
+
 it('escapes the record url it builds', function () {
     // The url reaches an href, so it goes through e() — a record whose url
     // carries a quote must not be able to close the attribute.

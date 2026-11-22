@@ -6,6 +6,12 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ### Fixed
 
+- **A right-click on the text of a `recordUrl()` cell opens the row's menu.** The record url wraps every plain
+  cell in a link, and the row controller left any link inside a row to the browser — so the row's context menu
+  answered only in the cell padding and a wide name column was nearly all link. The record link now carries
+  `data-record-link` and the context menu (right-click and a long press) treats it as the row; a click still
+  follows it, and a link a cell draws itself keeps the browser's menu.
+
 - **A name that is already text is no longer title-cased into its label.** A component given no `->label()`
   fell back to `Str::headline()` of its name, which capitalises every word — `Section::make('Pro montážníky')`
   was headed "Pro Montážníky", a heading nobody wrote, and every translated string used as a name read the same

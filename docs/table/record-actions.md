@@ -63,6 +63,14 @@ can carry several triggers:
 Action::make('edit')->onDoubleClick()->onKey('Enter')
 ```
 
+A trigger never fires from an interactive element inside the row — a button, a
+checkbox, an inline-editable cell, a dropdown or a link a cell draws itself keeps
+its own click and its own right-click. The link `recordUrl()` wraps around every
+plain cell is the exception for the context menu: it **is** the row, so a
+right-click on the cell text opens the row's menu rather than the browser's link
+menu, while a click still follows it (⌘-click and the middle button still open a
+new tab).
+
 ## Behaviour-only vs. also a button
 
 A record action renders **no button** by default — it is pure row behaviour. This

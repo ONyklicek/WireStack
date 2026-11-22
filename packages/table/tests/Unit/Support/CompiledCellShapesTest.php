@@ -151,7 +151,7 @@ it('compiles the record link once and fills it per cell', function () {
 
     expect($table->getRecordLinkSkeleton())->toBe($skeleton)
         ->and($skeleton->fill(['url' => e('/rows/1?a=1&b=2'), 'content' => '<span>Ada</span>']))
-        ->toBe('<a href="/rows/1?a=1&amp;b=2" class="hover:text-primary-600 dark:hover:text-primary-400"><span>Ada</span></a>');
+        ->toBe('<a href="/rows/1?a=1&amp;b=2" data-record-link class="hover:text-primary-600 dark:hover:text-primary-400"><span>Ada</span></a>');
 });
 
 it('compiles a second record link for one that navigates', function () {
@@ -163,7 +163,7 @@ it('compiles a second record link for one that navigates', function () {
     expect($table->getRecordLinkSkeleton(navigate: true))->toBe($skeleton)
         ->and($table->getRecordLinkSkeleton())->not->toBe($skeleton)
         ->and($skeleton->fill(['url' => '/rows/1', 'content' => 'Ada']))
-        ->toBe('<a href="/rows/1" wire:navigate class="hover:text-primary-600 dark:hover:text-primary-400">Ada</a>');
+        ->toBe('<a href="/rows/1" data-record-link wire:navigate class="hover:text-primary-600 dark:hover:text-primary-400">Ada</a>');
 });
 
 it('asks the record url whether it navigates', function () {

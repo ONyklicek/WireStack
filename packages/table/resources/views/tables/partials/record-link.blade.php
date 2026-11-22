@@ -11,8 +11,12 @@
     own rendered markup. $navigate is not a slot but a shape — the table compiles
     one skeleton per value ({@see \NyonCode\WireCore\Foundation\Routing\ClientNavigation}).
 
+    `data-record-link` tells the row controller this link IS the row: a right-click
+    on it opens the row's menu rather than the browser's link menu, where any other
+    link in a cell keeps its own ({@see record-actions.js} `blocked()`).
+
     Mind the whitespace: this wraps a cell inline, so the tags touch. A run of
     whitespace between two tags is a DOM text node the morph walks — here it would
     also put a space inside the link text.
 --}}
-<a href="{!! $url !!}"{!! $navigate ? ' wire:navigate' : '' !!} class="hover:text-primary-600 dark:hover:text-primary-400">{!! $content !!}</a>
+<a href="{!! $url !!}" data-record-link{!! $navigate ? ' wire:navigate' : '' !!} class="hover:text-primary-600 dark:hover:text-primary-400">{!! $content !!}</a>

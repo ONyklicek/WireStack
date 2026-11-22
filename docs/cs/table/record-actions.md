@@ -63,6 +63,14 @@ může nést víc triggerů:
 Action::make('edit')->onDoubleClick()->onKey('Enter')
 ```
 
+Trigger nikdy nevystřelí z interaktivního prvku uvnitř řádku — tlačítko,
+checkbox, inline editovatelná buňka, dropdown i odkaz, který si buňka vykreslí
+sama, si nechávají svůj klik i pravé tlačítko. Výjimkou pro kontextové menu je
+odkaz, kterým `recordUrl()` obalí každou obyčejnou buňku: ten **je** řádek, takže
+pravé tlačítko na textu buňky otevře menu řádku, ne nabídku prohlížeče pro
+odkaz, a klik ho dál následuje (⌘+klik i prostřední tlačítko dál otevřou novou
+kartu).
+
 ## Jen chování vs. i tlačítko
 
 Record action se ve výchozím stavu **nerenderuje jako tlačítko** — je to čisté
