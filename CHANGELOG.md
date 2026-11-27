@@ -4,6 +4,33 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A reactive field in a page's action modal reacts.** `afterStateUpdated()` on a `->live()` field ran in a
+  table's action modals and nowhere else. On a panel page's header actions, and in any `WithActions`
+  component, the value changed and nothing else happened, with no error to say so. The same went for
+  `validateLive()`, and for a field inside a repeater in such a modal. Both hosts now map a changed path to
+  its modal form in one place. That place also answers for a modal still open behind a stacked one, which the
+  table only did for the top modal. A halt form's `validateLive()` fields now validate as they change on a
+  page too.
+- **`Placeholder`, `Html`, `Alert` and `ViewField` closures receive `$get`, `$set` and `$state`.** They did not
+  implement the state accessors, so `content(fn ($get) => …)` or `visible(fn ($get) => …)` on one of them died
+  on "Unable to resolve dependency [Parameter #0 $get]". Display components now resolve them against the same
+  bag a field beside them does: the form, the repeater item, or the action modal.
+- **`validate-wire-component` no longer flags a rollup column.** `TextColumn::make('clients_count')->counts('clients')`
+  was reported as an unknown attribute that would render blank. A rollup is now checked for its relation, and a
+  rollup over a relation the model does not have is an `unknown-relation` error.
+
+### Added
+
+- **`validate-wire-component` checks action forms and pages.** Every action's modal form is built and its fields
+  checked: a table's row, bulk and header actions, a page's header actions, a component's own `actions()`,
+  actions inside a group, and each wizard step. Findings are targeted to the field, and `actionForms` counts
+  what each form held. A page with only actions is inspected (`kind: actions`) instead of being refused. New
+  arguments: `record`, a key set on a view or edit page's `$record` before it is built, and `action`, to check
+  a single action. A builder or an action form that throws while it builds is now one `build-failed` finding
+  against that target, and the rest of the component is still checked.
+
 ## [2.10.8]
 
 ### Fixed

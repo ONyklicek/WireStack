@@ -30,7 +30,7 @@ slovník komponent.
 | `describe-infolist` | Vyresolvovat schéma entries infolistu. |
 | `describe-resource` | Vypíše zaregistrované resource — klíč, model, popisky, které povrchy který deklaruje, a jeho položku v navigaci. |
 | `describe-module` | Vypíše doménové moduly — id, závislosti a resource, dashboardy a navigační skupinu, které každý deklaruje. |
-| `validate-wire-component` | Postavit komponentu a nahlásit neznámé barvy, neregistrované ikony a názvy, které model neumí vyresolvovat. |
+| `validate-wire-component` | Postavit komponentu — tabulku, formulář, infolist nebo stránku s akcemi — a nahlásit neznámé barvy, neregistrované ikony, názvy, které model neumí vyresolvovat, a chyby uvnitř modálního formuláře každé akce. |
 | `list-component-types` | Vypsat vestavěné typy kategorie: `columns`, `filters`, `fields`, `actions`, `infolist-entries`, `panel-entries`, `widgets`, `modals`, `layouts`. |
 | `describe-component-api` | Vypsat veřejné fluent API typu komponenty — signatury, výchozí hodnoty a hodnoty, které každý parametr přijímá (FQCN nebo krátký název jako `badge-column`). |
 | `list-icons` | Názvy ikon registrované ve wire `IconManager` (pro `->icon()`). |
@@ -104,6 +104,54 @@ nález pojmenuje cíl a navrhne, co jste nejspíš mysleli:
 
 Kontrola atributů potřebuje dostupnou databázovou tabulku; bez ní se přeskočí (a nahlásí se to), místo aby
 se hádalo. Sloupce, které si počítají hodnotu samy přes `->state()`, se nehlásí nikdy.
+
+U agregačního sloupce se kontroluje **relace**, ne jeho název. `TextColumn::make('clients_count')->counts('clients')`
+nese jméno atributu, do kterého Eloquent zapíše počet, a ten žádný model nedeklaruje. Nástroj se proto
+ptá, jestli je `clients` relace. Když není, nález je `unknown-relation`, a to jako chyba, protože dotaz
+při načítání agregace spadne.
+
+### Formuláře akcí
+
+Modální formulář akce se sestaví teprve po kliknutí, takže chyba v něm projde každým testem vykreslení.
+Nástroj sestaví každý z nich tak, jak by to udělalo okno: řádkovou, hromadnou i hlavičkovou akci
+tabulky, hlavičkové akce stránky, vlastní `actions()` komponenty, každou akci uvnitř `ActionGroup` a
+každý krok průvodce. U každého pole pak zkontroluje ikonu a barvu. Nálezy míří až na konkrétní pole a
+`actionForms` udává, kolik polí který formulář měl:
+
+```json
+{
+  "kind": "actions",
+  "actionForms": { "pageHeaderActions.publish": 2, "pageActions.onboard": 3 },
+  "diagnostics": [
+    {
+      "severity": "error",
+      "rule": "unknown-color",
+      "target": "pageActions.onboard.form.plan",
+      "message": "Color [blu] is not a wire color; it will silently render as gray.",
+      "suggestions": ["blue"]
+    }
+  ]
+}
+```
+
+Stránka bez `table()`, `form()` a `infolist()` se kontroluje jen přes své akce (`kind: actions`).
+
+Každý builder i každý formulář akce se sestavuje zvlášť. Když některý z nich vyhodí výjimku, třeba
+formulář, který při sestavení volá službu, výsledkem je nález `build-failed` u daného cíle (`form()`,
+`pageActions.dns.form`). Všechno ostatní se zkontroluje dál.
+
+### Stránky záznamu a jedna akce
+
+Dva volitelné argumenty zužují, co se sestavuje:
+
+| Argument | Účinek |
+|----------|--------|
+| `record` | Klíč záznamu, který se nastaví do veřejné vlastnosti `$record` komponenty dřív, než se cokoli sestaví, stejně jako to udělá mount stránky pro zobrazení nebo úpravu. Bez něj stránka záznamu skončí jako `build-failed` s hláškou „mounted without a record“. Tentýž záznam dostanou i formuláře akcí, které na něm závisí (`form(fn ($record) => …)`). |
+| `action` | Zkontrolovat jen tuto akci: její ikonu, barvu a modální formulář. Název, který nic neodpovídá, je chyba `unknown-action` s návrhem nejbližšího názvu. |
+
+```json
+{ "component": "App\\Livewire\\Servers\\ViewServer", "record": "42", "action": "deploy" }
+```
 
 ## Obecné nástroje (parita s Laravel Boost)
 

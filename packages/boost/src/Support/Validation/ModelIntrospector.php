@@ -50,6 +50,38 @@ class ModelIntrospector
         return $this->model->getTable();
     }
 
+    /** @return class-string<Model> */
+    public function modelClass(): string
+    {
+        return $this->model::class;
+    }
+
+    /**
+     * Relations declared with a return type — the ones that can be named
+     * without calling anything. Only for suggestions: an untyped relation is
+     * still recognised by {@see isRelation()}, just never offered.
+     *
+     * @return array<int, string>
+     */
+    public function relations(): array
+    {
+        $names = [];
+
+        foreach ((new ReflectionClass($this->model))->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+            $type = $method->getReturnType();
+
+            if ($method->getNumberOfRequiredParameters() === 0
+                && $type instanceof ReflectionNamedType
+                && ! $type->isBuiltin()
+                && is_a($type->getName(), Relation::class, true)
+            ) {
+                $names[] = $method->getName();
+            }
+        }
+
+        return $names;
+    }
+
     /**
      * Real database columns, or [] when the table cannot be inspected (no
      * connection, no migration run yet).

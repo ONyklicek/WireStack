@@ -37,6 +37,13 @@ a string you built, not one a user typed.
 placeholder useful for a value that depends on the rest of the form rather than
 on a stored field.
 
+**Its closures get the same state accessors as a field's.** `$get`, `$set` and
+`$state` resolve against the form's own bag: the form's `statePath`, the item of
+a repeater it sits in, or the frame of the action modal it is shown in. So
+`content(fn ($get) => …)` and `visible(fn ($get) => …)` read sibling values the
+way a field's `visible()` does. The other display components (`Html`, `Alert`,
+`ViewField`) take them from the same place.
+
 ## Basic Usage
 
 ```php
@@ -53,6 +60,14 @@ Because the content is resolved on read, it can look at whatever the host knows:
 Placeholder::make('total')
     ->label('Total')
     ->content(fn (): string => number_format($this->lineTotal(), 2).' CZK')   // [tl! focus]
+```
+
+Or read the sibling fields directly with `$get`, without a method on the host:
+
+```php
+Placeholder::make('total')
+    ->label('Total')
+    ->content(fn ($get): string => number_format((float) $get('quantity') * (float) $get('unit_price'), 2).' CZK')   // [tl! focus]
 ```
 
 For the value to refresh as the user types, the fields it depends on need

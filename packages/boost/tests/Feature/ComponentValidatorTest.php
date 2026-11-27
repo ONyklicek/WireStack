@@ -7,13 +7,18 @@ use NyonCode\WireBoost\Exceptions\UnresolvableComponentException;
 use NyonCode\WireBoost\Mcp\Tools\ValidateComponent;
 use NyonCode\WireBoost\Mcp\WireBoostServer;
 use NyonCode\WireBoost\Support\Validation\ComponentValidator;
+use NyonCode\WireBoost\Tests\Fixtures\ActionsOnlyPage;
+use NyonCode\WireBoost\Tests\Fixtures\AggregatePostTable;
+use NyonCode\WireBoost\Tests\Fixtures\AwkwardPage;
 use NyonCode\WireBoost\Tests\Fixtures\BrokenPostTable;
 use NyonCode\WireBoost\Tests\Fixtures\DemoForm;
 use NyonCode\WireBoost\Tests\Fixtures\DemoTable;
 use NyonCode\WireBoost\Tests\Fixtures\LooseTable;
 use NyonCode\WireBoost\Tests\Fixtures\NotAComponent;
 use NyonCode\WireBoost\Tests\Fixtures\Post;
+use NyonCode\WireBoost\Tests\Fixtures\PostPage;
 use NyonCode\WireBoost\Tests\Fixtures\ThrowingTable;
+use NyonCode\WireBoost\Tests\Fixtures\UnbuildablePage;
 use NyonCode\WireBoost\Tests\Fixtures\UntypedTable;
 use NyonCode\WireBoost\Tests\Fixtures\ValidPostTable;
 
@@ -30,7 +35,9 @@ beforeEach(function () {
         $table->unsignedInteger('author_id')->nullable();
     });
 
-    $this->validate = fn (string $class): array => app(ComponentValidator::class)->validate($class);
+    $this->validate = fn (string $class, mixed $record = null, ?string $action = null): array => app(ComponentValidator::class)->validate($class, $record, $action);
+
+    PostPage::$formContexts = [];
 });
 
 afterEach(function () {
@@ -148,6 +155,162 @@ it('reports a component that cannot be built as a finding, not a failure', funct
 it('fails on a class that does not exist', function () {
     ($this->validate)('App\\Nope');
 })->throws(UnresolvableComponentException::class, 'does not exist');
+
+// --- Aggregates ------------------------------------------------------------
+
+it('does not flag a rollup column for not being an attribute', function () {
+    $targets = collect(($this->validate)(AggregatePostTable::class)['diagnostics'])->pluck('target');
+
+    expect($targets)->not->toContain('columns.tags_count')
+        ->and($targets)->not->toContain('columns.author_count')
+        ->and($targets)->not->toContain('columns.author.count');
+});
+
+it('catches a rollup over a relation the model does not have', function () {
+    $diagnostics = ($this->validate)(AggregatePostTable::class)['diagnostics'];
+
+    expect($diagnostics)->toHaveCount(1)
+        ->and($diagnostics[0]['rule'])->toBe('unknown-relation')
+        ->and($diagnostics[0]['target'])->toBe('columns.nope_count')
+        ->and($diagnostics[0]['severity'])->toBe('error')
+        ->and($diagnostics[0]['message'])->toContain('[nope]')
+        ->and($diagnostics[0]['message'])->toContain('count');
+});
+
+// --- Pages and their actions -------------------------------------------------
+
+it('inspects a page that has only actions', function () {
+    $result = ($this->validate)(ActionsOnlyPage::class);
+
+    expect($result['kind'])->toBe('actions')
+        ->and($result['ok'])->toBeTrue()
+        ->and($result['checked'])->toBe(['pageActions' => 1])
+        ->and($result['actionForms'])->toBe(['pageActions.backup' => 1])
+        ->and($result)->not->toHaveKey('attributesChecked');
+});
+
+it('reports a record page built without a record, and still checks its actions', function () {
+    $result = ($this->validate)(PostPage::class);
+    $diagnostics = collect($result['diagnostics']);
+
+    expect($diagnostics->firstWhere('target', 'infolist()')['message'])->toContain('mounted without a record')
+        // The infolist failing is one finding; the header actions beside it are
+        // still looked at.
+        ->and($diagnostics->pluck('target'))->toContain('pageHeaderActions.publish');
+});
+
+it('builds a record page from the record key it is given', function () {
+    $post = Post::query()->create(['title' => 'Hello']);
+
+    $result = ($this->validate)(PostPage::class, $post->getKey());
+
+    expect($result['record'])->toBe($post->getKey())
+        ->and($result['checked'])->toHaveKey('schema')
+        ->and(collect($result['diagnostics'])->pluck('target'))->not->toContain('infolist()')
+        // The action's form was built against the page's record.
+        ->and(PostPage::$formContexts[0])->toBeInstanceOf(Post::class)
+        ->and(PostPage::$formContexts[0]->getKey())->toBe($post->getKey());
+});
+
+it('checks every action form on a page — header, grouped, wizard steps', function () {
+    $post = Post::query()->create(['title' => 'Hello']);
+    $result = ($this->validate)(PostPage::class, $post->getKey());
+    $diagnostics = collect($result['diagnostics'])->keyBy('target');
+
+    expect($diagnostics['pageHeaderActions.publish']['rule'])->toBe('unknown-icon')
+        ->and($diagnostics['pageHeaderActions.publish.form.hint']['rule'])->toBe('unknown-color')
+        ->and($diagnostics['pageHeaderActions.grouped.form.careful']['rule'])->toBe('unknown-icon')
+        ->and($diagnostics['pageActions.onboard.form.plan']['rule'])->toBe('unknown-color')
+        ->and($diagnostics['pageActions.onboard.form.plan']['suggestions'])->toContain('blue')
+        ->and($result['actionForms'])->toBe([
+            'pageHeaderActions.publish' => 2,
+            'pageHeaderActions.grouped' => 1,
+            'pageActions.onboard' => 2,
+        ]);
+});
+
+it('reports an action form that cannot be built against that action alone', function () {
+    $post = Post::query()->create(['title' => 'Hello']);
+    $result = ($this->validate)(PostPage::class, $post->getKey());
+
+    $failed = collect($result['diagnostics'])->firstWhere('target', 'pageActions.dns.form');
+
+    expect($failed['rule'])->toBe('build-failed')
+        ->and($failed['message'])->toContain('agent unreachable')
+        ->and($result['actionForms'])->toHaveKey('pageActions.onboard');
+});
+
+it('checks a single action when one is named', function () {
+    $post = Post::query()->create(['title' => 'Hello']);
+    $result = ($this->validate)(PostPage::class, $post->getKey(), 'onboard');
+
+    expect($result['action'])->toBe('onboard')
+        ->and($result['checked'])->toBe(['pageActions' => 1])
+        ->and($result['actionForms'])->toBe(['pageActions.onboard' => 2])
+        ->and(collect($result['diagnostics'])->pluck('target')->all())->toBe(['pageActions.onboard.form.plan']);
+});
+
+it('names the action meant when the one asked for does not exist', function () {
+    $post = Post::query()->create(['title' => 'Hello']);
+    $diagnostic = collect(($this->validate)(PostPage::class, $post->getKey(), 'onbaord')['diagnostics'])
+        ->firstWhere('rule', 'unknown-action');
+
+    expect($diagnostic['severity'])->toBe('error')
+        ->and($diagnostic['suggestions'])->toContain('onboard');
+});
+
+it('checks the forms of a table\'s own row actions', function () {
+    $result = ($this->validate)(BrokenPostTable::class);
+    $color = collect($result['diagnostics'])->firstWhere('target', 'actions.flag.form.policy');
+
+    expect($result['actionForms'])->toBe(['actions.flag' => 2])
+        ->and($color['rule'])->toBe('unknown-color')
+        ->and($color['suggestions'])->toContain('orange')
+        // A form field is no model attribute: `reason` is not flagged.
+        ->and(collect($result['diagnostics'])->pluck('target'))->not->toContain('actions.flag.form.reason');
+});
+
+it('says when a record key has nowhere to go', function () {
+    $diagnostic = collect(($this->validate)(ActionsOnlyPage::class, 5)['diagnostics'])->firstWhere('rule', 'record-ignored');
+
+    expect($diagnostic['severity'])->toBe('warning');
+});
+
+it('reports header actions that cannot be listed, and checks the rest', function () {
+    $result = ($this->validate)(AwkwardPage::class);
+
+    expect(collect($result['diagnostics'])->firstWhere('target', 'getHeaderActions()')['message'])
+        ->toContain('header needs the request')
+        ->and($result['checked'])->toBe(['pageActions' => 1]);
+});
+
+it('says when the record property refuses the key', function () {
+    $diagnostic = collect(($this->validate)(AwkwardPage::class, 'not-a-number')['diagnostics'])
+        ->firstWhere('rule', 'record-ignored');
+
+    expect($diagnostic['severity'])->toBe('warning')
+        ->and($diagnostic['message'])->toContain('int');
+});
+
+it('reports a component the container cannot make', function () {
+    $result = ($this->validate)(UnbuildablePage::class);
+
+    expect($result['ok'])->toBeFalse()
+        ->and($result['kind'])->toBe('actions')
+        ->and($result['diagnostics'][0]['rule'])->toBe('build-failed');
+});
+
+it('passes record and action through the mcp tool', function () {
+    $post = Post::query()->create(['title' => 'Hello']);
+
+    WireBoostServer::tool(ValidateComponent::class, [
+        'component' => PostPage::class,
+        'record' => (string) $post->getKey(),
+        'action' => 'onboard',
+    ])
+        ->assertOk()
+        ->assertSee('pageActions.onboard.form.plan');
+});
 
 it('fails on a class that builds nothing', function () {
     // NotAComponent::table() returns a string. PHP silently discards the extra

@@ -62,7 +62,8 @@ class WireBoostServer extends Server
     After writing or editing a wire component:
     - `validate-wire-component` to catch the faults that do not throw — an unknown color renders
       gray, an unregistered icon renders nothing, and a name the model cannot resolve renders an
-      empty cell. A passing render test does not rule any of these out.
+      empty cell. A passing render test does not rule any of these out. It builds every action's
+      modal form too; pass `record` for a view or edit page and `action` to check a single action.
 
     Prefer extending existing canonical concerns over inventing local variants, and render reusable
     markup from PHP (Htmlable) rather than ad-hoc Blade conditionals.

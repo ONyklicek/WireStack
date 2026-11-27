@@ -8,7 +8,9 @@ summary: Pole, která na sebe reagují, aniž by opustila schéma — které clo
 Pole mohou reagovat na hodnoty druhých bez opuštění schématu. Každá dynamická field
 closura — `visible()`, `hidden()`, `disabled()`, `afterStateUpdated()` — se vyhodnocuje se
 state accessory ve stylu Filamentu resolvovanými proti **živému** Livewire state bagu. Stejné API
-funguje v samostatném `WithForms` formuláři i uvnitř modalu akce tabulky.
+funguje v samostatném `WithForms` formuláři i uvnitř jakéhokoli modalu akce, tabulky i stránky.
+Zobrazovací komponenty (`Placeholder`, `Html`, `Alert`, `ViewField`) dostávají tytéž accessory ve
+svých closures `content()` a `visible()`.
 
 ## State accessory
 
@@ -21,7 +23,8 @@ funguje v samostatném `WithForms` formuláři i uvnitř modalu akce tabulky.
 | `$component` | Instanci pole. |
 
 Sáhněte po `$get` / `$set` místo `Livewire::current()` + `data_get()` — accessory za vás vyresolvují
-správný prefix bagu, včetně bagu `tableState.modal.action.formData` action modalu.
+správný prefix bagu, včetně bagu action modalu (`tableState.modal.actions.{n}.data` v tabulce,
+`mountedActions.{n}.data` na stránce).
 
 ## Podmíněná pole
 
@@ -121,7 +124,7 @@ Vícekrokové formuláře dostávají stejné zacházení: uvnitř Livewire host
 
 ## Předvyplnění formuláře z akce
 
-Formulář action modalu čte a zapisuje bag `modal.action.formData`. Naplňte jeho počáteční hodnoty
+Formulář action modalu čte a zapisuje vlastní bag svého rámce (`modal.actions.{n}.data`). Naplňte jeho počáteční hodnoty
 pomocí `fillFormUsing()`. Callback dostane záznam pro řádkové akce (a `null` pro hlavičkové akce,
 které záznam nemají):
 
@@ -140,7 +143,13 @@ EditAction::make()
 ```
 
 Uvnitř toho formuláře se reaktivní accessory výše chovají přesně jako v samostatném formuláři — `$get`,
-`$set` a `afterStateUpdated()` se všechny resolvují proti živému modal bagu.
+`$set` a `afterStateUpdated()` se všechny resolvují proti živému modal bagu a pole s `validateLive()`
+se validuje průběžně. Platí to u každého hostitele, který otevírá modaly akcí: u řádkových,
+hromadných a hlavičkových akcí tabulky, u hlavičkových akcí stránky i u vlastních akcí komponenty
+s `WithActions`. Platí to i pro modal, který zůstal otevřený pod jiným, vrstveným na něj.
+
+Halt formulář se průběžně validuje také, jeho `afterStateUpdated()` se ale nespustí. Formulář haltu
+se mezi požadavky drží v cache a schéma, které obsahuje Closure, se tam uložit nedá.
 
 <a id="modal-footer-actions"></a>
 ## Akce v patičce modalu

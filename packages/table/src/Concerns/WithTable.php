@@ -159,14 +159,6 @@ trait WithTable
     // *incompatible* redeclaration, and therefore invisible.
 
     /**
-     * Previous modal form-data values captured in updatingTableState() so the
-     * matching field's afterStateUpdated() callback receives `$old`.
-     *
-     * @var array<string, mixed>
-     */
-    protected array $modalStateBeforeUpdate = [];
-
-    /**
      * Whether something that shapes what the table renders (per-page, search,
      * filters, sort, the page, which columns are visible) changed in this
      * request. Livewire merges everything queued for one component into a single
@@ -250,9 +242,7 @@ trait WithTable
     {
         $this->rememberSelectionBeforeUpdate($path);
 
-        if ($this->isModalFormDataPath($path)) {
-            $this->modalStateBeforeUpdate[$path] = $this->tableState->get($path);
-        }
+        $this->rememberActionFormStateBeforeUpdate('tableState.'.$path);
     }
 
     public function updatedTableState(mixed $value, string $path): void
@@ -277,19 +267,10 @@ trait WithTable
         }
 
         // A field inside an action/halt modal form changed — run its reactive
-        // afterStateUpdated() callback against the live form-data bag.
-        if ($this->isModalFormDataPath($path)) {
-            $old = $this->modalStateBeforeUpdate[$path] ?? null;
-            unset($this->modalStateBeforeUpdate[$path]);
-
-            $forms = array_filter([
-                $this->getActionModalFormInstance(),
-                $this->getHaltModalFormInstance(),
-            ]);
-
-            $this->dispatchAfterStateUpdated($forms, 'tableState.'.$path, $old);
-            $this->dispatchLiveValidation($forms, 'tableState.'.$path);
-        }
+        // afterStateUpdated() callback against the live form-data bag. The
+        // mapping from path to form is shared with the page host
+        // (InteractsWithActionForms), which is why the path goes in absolute.
+        $this->dispatchActionFormStateUpdate('tableState.'.$path);
     }
 
     /**
@@ -315,15 +296,6 @@ trait WithTable
         }
 
         $this->tableState->set('pagination.perPage', $perPage);
-    }
-
-    /**
-     * Whether a tableState sub-path points at a field inside an open modal form.
-     */
-    private function isModalFormDataPath(string $path): bool
-    {
-        return (str_starts_with($path, 'modal.actions.') && str_contains($path, '.data.'))
-            || str_starts_with($path, 'modal.halt.formData.');
     }
 
     // ==========================================
