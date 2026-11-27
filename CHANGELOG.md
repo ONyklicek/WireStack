@@ -4,6 +4,8 @@ All notable changes to the Wire ecosystem will be documented in this file.
 
 ## [Unreleased]
 
+## [2.10.9]
+
 ### Fixed
 
 - **A reactive field in a page's action modal reacts.** `afterStateUpdated()` on a `->live()` field ran in a
