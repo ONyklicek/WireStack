@@ -334,6 +334,7 @@ class ComponentValidator
         return match ($group) {
             'actions' => $this->actions->sampleRow($table),
             'bulkActions' => collect(array_filter([$this->actions->sampleRow($table)])),
+            // A table hands its header actions no record at all.
             'headerActions' => null,
             default => $this->actions->contextRecord($component),
         };

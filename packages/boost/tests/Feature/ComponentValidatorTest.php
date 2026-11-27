@@ -281,7 +281,7 @@ it('builds a row action form against a row and a bulk form against a selection',
     $result = ($this->validate)(RowFormPostTable::class);
 
     expect($result['ok'])->toBeTrue()
-        ->and($result['actionForms'])->toBe(['actions.rename' => 1, 'bulkActions.retitle' => 1]);
+        ->and($result['actionForms'])->toBe(['actions.rename' => 1, 'headerActions.import' => 1, 'bulkActions.retitle' => 1]);
 });
 
 it('warns rather than fails when the table has no row to build a form against', function () {

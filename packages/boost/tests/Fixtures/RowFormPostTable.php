@@ -31,6 +31,14 @@ class RowFormPostTable extends Component
                     ->form(fn (Post $record): array => [TextInput::make('title')->default($record->title)])
                     ->action(fn () => null),
             ])
+            ->headerActions([
+                // A table's header action has no row: its form gets nothing.
+                Action::make('import')
+                    ->form(fn ($record): array => $record === null
+                        ? [TextInput::make('file')]
+                        : throw new \RuntimeException('a header action was handed a record'))
+                    ->action(fn () => null),
+            ])
             ->bulkActions([
                 BulkAction::make('retitle')
                     ->form(fn (Collection $records): array => $records->isEmpty()
