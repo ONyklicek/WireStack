@@ -331,11 +331,16 @@ class ComponentValidator
      */
     private function actionContext(string $group, object $component, ?object $table): mixed
     {
+        // A table hands its header actions no record at all. (A statement, not
+        // a `=> null` arm: a constant arm compiles to nothing a coverage run
+        // can see execute.)
+        if ($group === 'headerActions') {
+            return null;
+        }
+
         return match ($group) {
             'actions' => $this->actions->sampleRow($table),
             'bulkActions' => collect(array_filter([$this->actions->sampleRow($table)])),
-            // A table hands its header actions no record at all.
-            'headerActions' => null,
             default => $this->actions->contextRecord($component),
         };
     }
