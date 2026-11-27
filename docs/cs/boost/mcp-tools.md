@@ -136,6 +136,12 @@ každý krok průvodce. U každého pole pak zkontroluje ikonu a barvu. Nálezy 
 
 Stránka bez `table()`, `form()` a `infolist()` se kontroluje jen přes své akce (`kind: actions`).
 
+Každý formulář se sestaví proti tomu, co by mu předal jeho hostitel. Řádková akce dostane řádek tabulky a
+hromadná akce výběr s tímto řádkem. Hlavičková akce tabulky nedostane žádný záznam a akce stránky dostanou
+záznam stránky. `form(fn (Post $record) => …)` se tak sestaví stejně jako po kliknutí. Když formulář vyhodí
+výjimku a záznam, který čeká, nebyl k dispozici, protože je tabulka prázdná nebo stránka nemá `record`, je
+nálezem varování `needs-record`, ne chyba. O formuláři není známo, že je rozbitý, jen ho tu nešlo sestavit.
+
 Každý builder i každý formulář akce se sestavuje zvlášť. Když některý z nich vyhodí výjimku, třeba
 formulář, který při sestavení volá službu, výsledkem je nález `build-failed` u daného cíle (`form()`,
 `pageActions.dns.form`). Všechno ostatní se zkontroluje dál.

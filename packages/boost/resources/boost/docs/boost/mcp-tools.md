@@ -136,6 +136,13 @@ field, and `actionForms` counts the fields each form had:
 
 A page with no `table()`, `form()` or `infolist()` is inspected for its actions alone (`kind: actions`).
 
+Each form is built against what its host would hand it. A row action gets a row of the table, and a bulk
+action gets a selection holding that row. A table's header action gets no record, and a page's actions get
+the page's own record. So a `form(fn (Post $record) => …)` is built the way a click would build it. When a
+form throws and the record it expects was not there to give, the table being empty or the page lacking a
+`record`, the finding is a `needs-record` warning rather than an error. The form is not known to be broken,
+only unbuildable here.
+
 Each builder and each action form is built on its own. When one of them throws, for example a form that
 calls a service while it builds, the result is a `build-failed` finding against that target
 (`form()`, `pageActions.dns.form`). Everything beside it is still checked.

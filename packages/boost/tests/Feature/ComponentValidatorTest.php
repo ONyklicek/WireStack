@@ -17,6 +17,7 @@ use NyonCode\WireBoost\Tests\Fixtures\LooseTable;
 use NyonCode\WireBoost\Tests\Fixtures\NotAComponent;
 use NyonCode\WireBoost\Tests\Fixtures\Post;
 use NyonCode\WireBoost\Tests\Fixtures\PostPage;
+use NyonCode\WireBoost\Tests\Fixtures\RowFormPostTable;
 use NyonCode\WireBoost\Tests\Fixtures\ThrowingTable;
 use NyonCode\WireBoost\Tests\Fixtures\UnbuildablePage;
 use NyonCode\WireBoost\Tests\Fixtures\UntypedTable;
@@ -196,7 +197,11 @@ it('reports a record page built without a record, and still checks its actions',
     expect($diagnostics->firstWhere('target', 'infolist()')['message'])->toContain('mounted without a record')
         // The infolist failing is one finding; the header actions beside it are
         // still looked at.
-        ->and($diagnostics->pluck('target'))->toContain('pageHeaderActions.publish');
+        ->and($diagnostics->pluck('target'))->toContain('pageHeaderActions.publish')
+        // A form that throws with no record to hand is not known to be broken.
+        ->and($diagnostics->firstWhere('target', 'pageActions.dns.form')['rule'])->toBe('needs-record')
+        ->and($diagnostics->firstWhere('target', 'pageActions.dns.form')['severity'])->toBe('warning')
+        ->and($diagnostics->firstWhere('target', 'pageActions.dns.form')['message'])->toContain('pass `record`');
 });
 
 it('builds a record page from the record key it is given', function () {
@@ -268,6 +273,32 @@ it('checks the forms of a table\'s own row actions', function () {
         ->and($color['suggestions'])->toContain('orange')
         // A form field is no model attribute: `reason` is not flagged.
         ->and(collect($result['diagnostics'])->pluck('target'))->not->toContain('actions.flag.form.reason');
+});
+
+it('builds a row action form against a row and a bulk form against a selection', function () {
+    Post::query()->create(['title' => 'Hello']);
+
+    $result = ($this->validate)(RowFormPostTable::class);
+
+    expect($result['ok'])->toBeTrue()
+        ->and($result['actionForms'])->toBe(['actions.rename' => 1, 'bulkActions.retitle' => 1]);
+});
+
+it('warns rather than fails when the table has no row to build a form against', function () {
+    $diagnostics = collect(($this->validate)(RowFormPostTable::class)['diagnostics'])->keyBy('target');
+
+    expect($diagnostics['actions.rename.form']['rule'])->toBe('needs-record')
+        ->and($diagnostics['actions.rename.form']['severity'])->toBe('warning')
+        ->and($diagnostics['actions.rename.form']['message'])->toContain('no row')
+        ->and($diagnostics['bulkActions.retitle.form']['rule'])->toBe('needs-record');
+});
+
+it('leaves an unrelated source that fails out of a single-action check', function () {
+    // getHeaderActions() throws; the action asked about lives in actions().
+    $result = ($this->validate)(AwkwardPage::class, null, 'ping');
+
+    expect($result['ok'])->toBeTrue()
+        ->and($result['diagnostics'])->toBe([]);
 });
 
 it('says when a record key has nowhere to go', function () {

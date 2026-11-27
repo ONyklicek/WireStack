@@ -6,6 +6,7 @@ namespace NyonCode\WireBoost\Support\Validation;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use NyonCode\WireBoost\Exceptions\ComponentBuildFailedException;
 use NyonCode\WireBoost\Exceptions\UnresolvableComponentException;
 use NyonCode\WireCore\Foundation\Colors\Color;
@@ -92,6 +93,7 @@ class ComponentValidator
         $tableGroups = [];
         $builderFailures = [];
         $model = null;
+        $table = null;
 
         foreach ($kinds as $builderKind) {
             try {
@@ -108,13 +110,14 @@ class ComponentValidator
             if ($builderKind === 'table') {
                 $tableGroups = array_keys($groups);
                 $model ??= $this->model($builder);
+                $table = $builder;
             }
         }
 
         if ($hostsActions) {
-            [$hostGroups, $hostDiagnostics] = $this->actions->hostActions($component);
+            [$hostGroups, $hostFailures] = $this->actions->hostActions($component);
             $components = array_merge($components, $hostGroups);
-            $diagnostics = array_merge($diagnostics, $hostDiagnostics);
+            $builderFailures = array_merge($builderFailures, $hostFailures);
         }
 
         foreach (self::ACTION_GROUPS as $group) {
@@ -128,9 +131,9 @@ class ComponentValidator
             $diagnostics = array_merge($diagnostics, $missing);
         }
 
-        // A builder that would not build is only beside the point once the
-        // action asked about has been found without it — it may be where that
-        // action was declared.
+        // A builder or a list of actions that would not build is only beside
+        // the point once the action asked about has been found without it — it
+        // may be where that action was declared.
         if ($action === null || $components === []) {
             $diagnostics = array_merge($builderFailures, $diagnostics);
         }
@@ -155,7 +158,7 @@ class ComponentValidator
             }
         }
 
-        [$actionForms, $formDiagnostics] = $this->checkActionForms($components, $component);
+        [$actionForms, $formDiagnostics] = $this->checkActionForms($components, $component, $table);
         $diagnostics = array_merge($diagnostics, $formDiagnostics);
 
         if ($components === [] && $actionForms === [] && $diagnostics !== []) {
@@ -265,15 +268,18 @@ class ComponentValidator
     /**
      * Build every action's modal form and check its fields.
      *
+     * Each form is built against the context its host would hand it: a table
+     * row for a row action, a selection for a bulk action, nothing for a
+     * table's header action, and the page's own record for a page's actions.
+     *
      * @param  array<string, array<int, object>>  $components
      * @return array{0: array<string, int>, 1: array<int, Diagnostic>}
      */
-    private function checkActionForms(array $components, object $component): array
+    private function checkActionForms(array $components, object $component, ?object $table): array
     {
         $counts = [];
         $diagnostics = [];
-        $context = null;
-        $contextResolved = false;
+        $contexts = [];
 
         foreach (self::ACTION_GROUPS as $group) {
             foreach ($components[$group] ?? [] as $action) {
@@ -283,17 +289,17 @@ class ComponentValidator
                     continue;
                 }
 
-                if (! $contextResolved) {
-                    $context = $this->actions->contextRecord($component);
-                    $contextResolved = true;
+                if (! array_key_exists($group, $contexts)) {
+                    $contexts[$group] = $this->actionContext($group, $component, $table);
                 }
 
+                $context = $contexts[$group];
                 $target = "{$group}.{$name}.form";
 
                 try {
                     $forms = $this->actions->forms($action, $context);
                 } catch (Throwable $e) {
-                    $diagnostics[] = Diagnostic::error('build-failed', $target, $e->getMessage());
+                    $diagnostics[] = $this->formBuildFailure($group, $target, $context, $e);
 
                     continue;
                 }
@@ -318,6 +324,40 @@ class ComponentValidator
         }
 
         return [$counts, $diagnostics];
+    }
+
+    /**
+     * What an action group's forms are built against.
+     */
+    private function actionContext(string $group, object $component, ?object $table): mixed
+    {
+        return match ($group) {
+            'actions' => $this->actions->sampleRow($table),
+            'bulkActions' => collect(array_filter([$this->actions->sampleRow($table)])),
+            'headerActions' => null,
+            default => $this->actions->contextRecord($component),
+        };
+    }
+
+    /**
+     * A form that throws without the record it expects is not known to be
+     * broken — only unbuildable here. That is a warning that says what was
+     * missing; a form that throws with its record in hand is an error.
+     */
+    private function formBuildFailure(string $group, string $target, mixed $context, Throwable $e): Diagnostic
+    {
+        $missing = $group !== 'headerActions'
+            && ($context === null || ($context instanceof Collection && $context->isEmpty()));
+
+        if (! $missing) {
+            return Diagnostic::error('build-failed', $target, $e->getMessage());
+        }
+
+        $hint = in_array($group, ['actions', 'bulkActions'], true)
+            ? 'the table has no row to build it against'
+            : 'no record to build it against; pass `record`';
+
+        return Diagnostic::warning('needs-record', $target, "Not built: {$hint}. {$e->getMessage()}");
     }
 
     /**

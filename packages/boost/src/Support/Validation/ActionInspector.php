@@ -141,7 +141,11 @@ class ActionInspector
     public function contextRecord(object $component): mixed
     {
         foreach (['getRecord', 'resolveRecord'] as $accessor) {
-            if (! method_exists($component, $accessor)) {
+            // A table host's `getRecord($key)` looks a row up by key; it is not
+            // the record the component is showing, and called bare it throws.
+            if (! method_exists($component, $accessor)
+                || (new ReflectionMethod($component, $accessor))->getNumberOfRequiredParameters() > 0
+            ) {
                 continue;
             }
 
@@ -161,6 +165,29 @@ class ActionInspector
         }
 
         return null;
+    }
+
+    /**
+     * A row of the table to build row-action forms against.
+     *
+     * A table hands a row action's form the row it was clicked on, and a bulk
+     * action's form the selected rows, so a `form(fn (Post $record) => …)` is
+     * entitled to one. Any real row stands in for "the row clicked". Null when
+     * the table is empty or its query cannot run here.
+     */
+    public function sampleRow(?object $table): mixed
+    {
+        if ($table === null || ! method_exists($table, 'getQuery')) {
+            return null;
+        }
+
+        try {
+            $query = $table->getQuery();
+
+            return is_object($query) && method_exists($query, 'first') ? (clone $query)->first() : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /**

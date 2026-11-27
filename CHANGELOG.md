@@ -29,7 +29,9 @@ All notable changes to the Wire ecosystem will be documented in this file.
   what each form held. A page with only actions is inspected (`kind: actions`) instead of being refused. New
   arguments: `record`, a key set on a view or edit page's `$record` before it is built, and `action`, to check
   a single action. A builder or an action form that throws while it builds is now one `build-failed` finding
-  against that target, and the rest of the component is still checked.
+  against that target, and the rest of the component is still checked. Each form is built against the context
+  its host hands it (a table row for a row action, a selection for a bulk action, the page's record for a
+  page's actions). A form that throws because that record is missing is a `needs-record` warning, not an error.
 
 ## [2.10.8]
 

@@ -77,6 +77,46 @@ it('falls through an accessor that throws or answers nothing', function () {
         ->and($this->inspector->contextRecord(new stdClass))->toBeNull();
 });
 
+it('does not mistake a table host\'s row lookup for the record it shows', function () {
+    $host = new class
+    {
+        public function getRecord(mixed $key): string
+        {
+            return "row:{$key}";
+        }
+
+        protected function resolveRecord(): string
+        {
+            return 'page';
+        }
+    };
+
+    expect($this->inspector->contextRecord($host))->toBe('page');
+});
+
+it('samples a row only from a table whose query runs', function () {
+    $throwing = new class
+    {
+        public function getQuery(): never
+        {
+            throw new RuntimeException('no connection');
+        }
+    };
+
+    $plain = new class
+    {
+        public function getQuery(): string
+        {
+            return 'not a query';
+        }
+    };
+
+    expect($this->inspector->sampleRow(null))->toBeNull()
+        ->and($this->inspector->sampleRow(new stdClass))->toBeNull()
+        ->and($this->inspector->sampleRow($throwing))->toBeNull()
+        ->and($this->inspector->sampleRow($plain))->toBeNull();
+});
+
 it('names actions and skips what has no name', function () {
     expect($this->inspector->names([Action::make('a'), ActionGroup::make([]), Action::make('a'), Action::make('b')]))
         ->toBe(['a', 'b']);
