@@ -42,7 +42,7 @@ It exposes the following tools:
 | `describe-infolist` | Resolve an infolist's entry schema |
 | `describe-resource` | Registered resources — key, model, labels, the surfaces each declares, its navigation entry |
 | `describe-module` | Domain modules — id, dependencies, and the resources, dashboards and navigation group each declares |
-| `validate-wire-component` | Report unknown colors, unregistered icons and unresolvable attribute names |
+| `validate-wire-component` | Report unknown colors, unregistered icons, unresolvable attribute names and faults in action modal forms |
 | `list-component-types` | Built-in types for a category (columns, fields, filters, actions, …) |
 | `describe-component-api` | Public fluent API of a component type — signatures, defaults, accepted values |
 | `list-icons` | Icon names registered with the wire `IconManager` |
@@ -56,7 +56,8 @@ checkout of the wire repo. `search-wire-docs` returns ranked **sections** with i
 
 `validate-wire-component` targets the faults that never throw: an unknown color renders gray, an
 unregistered icon renders nothing, and a name the model cannot resolve renders an empty cell — none of
-which a render test catches.
+which a render test catches. It builds every action's modal form as well, which no render test does, and
+takes a `record` key for view and edit pages and an `action` name to check one action.
 
 **General (parity with laravel/boost)**
 

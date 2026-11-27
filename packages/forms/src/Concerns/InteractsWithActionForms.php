@@ -40,11 +40,118 @@ use Throwable;
  */
 trait InteractsWithActionForms
 {
+    /** The "depth" {@see actionFormDepthForStatePath()} answers for the halt form's bag. */
+    protected const HALT_FORM_DEPTH = -1;
+
     /** @var Form|null Resolved Form instance for the current action modal */
     protected ?Form $actionModalFormInstance = null;
 
     /** @var Form|null Resolved Form instance for the halt modal */
     protected ?Form $haltModalFormInstance = null;
+
+    /**
+     * What a modal form field held before the write that is in flight, keyed by
+     * its absolute state path, so its `afterStateUpdated()` receives `$old`.
+     *
+     * @var array<string, mixed>
+     */
+    protected array $actionFormStateBeforeUpdate = [];
+
+    // ==========================================
+    // Reactivity inside action and halt modals
+    // ==========================================
+
+    /**
+     * Livewire's `updating` half: remember the previous value of a modal form
+     * field before the write lands.
+     *
+     * The host calls this from its own update hook with the **absolute** path
+     * (`mountedActions.0.data.provider`, `tableState.modal.actions.0.data.provider`),
+     * because only the host knows which of its properties the modal bags live in.
+     */
+    protected function rememberActionFormStateBeforeUpdate(string $absolutePath): void
+    {
+        // Only the path is looked at: building a form to ask would cost a
+        // schema resolve on every keystroke into a table's search box.
+        if ($this->actionFormDepthForStatePath($absolutePath) === null) {
+            return;
+        }
+
+        $this->actionFormStateBeforeUpdate[$absolutePath] = data_get($this, $absolutePath);
+    }
+
+    /**
+     * Livewire's `updated` half: run the changed field's `afterStateUpdated()`
+     * and its live validation, against whichever modal form owns the path.
+     *
+     * One owner for both hosts. A table and a page bind their modal bags under
+     * different properties, but they answer the same two seams —
+     * {@see actionFrameStatePath()} and {@see haltModalFormStatePath()} — so the
+     * mapping from a path to its form is written once, here, instead of once per
+     * host. Before it was, only the table had it, and a reactive field in a page's
+     * header action did nothing at all.
+     */
+    protected function dispatchActionFormStateUpdate(string $absolutePath): void
+    {
+        $forms = $this->actionFormsForStatePath($absolutePath);
+
+        if ($forms === []) {
+            return;
+        }
+
+        $old = $this->actionFormStateBeforeUpdate[$absolutePath] ?? null;
+        unset($this->actionFormStateBeforeUpdate[$absolutePath]);
+
+        $this->dispatchAfterStateUpdated($forms, $absolutePath, $old);
+        $this->dispatchLiveValidation($forms, $absolutePath);
+    }
+
+    /**
+     * The modal form an absolute state path belongs to: the halt form, or the
+     * form of the action frame whose bag holds the path — at any depth, not
+     * only the top one.
+     *
+     * @return array<int, Form>
+     */
+    protected function actionFormsForStatePath(string $absolutePath): array
+    {
+        $depth = $this->actionFormDepthForStatePath($absolutePath);
+
+        if ($depth === null) {
+            return [];
+        }
+
+        if ($depth === self::HALT_FORM_DEPTH) {
+            return array_values(array_filter([$this->getHaltModalFormInstance()]));
+        }
+
+        // The top frame's form is the one the render reuses; a frame behind it
+        // is built for its own depth so its fields carry their own paths.
+        $form = $depth === $this->topActionFrameIndex()
+            ? $this->getActionModalFormInstance()
+            : $this->getActionModalFormInstanceForDepth($depth);
+
+        return $form instanceof Form ? [$form] : [];
+    }
+
+    /**
+     * Which modal bag a path writes into: a frame depth, {@see HALT_FORM_DEPTH}
+     * for the halt form, or null when the path is no modal field at all.
+     */
+    protected function actionFormDepthForStatePath(string $absolutePath): ?int
+    {
+        if (str_starts_with($absolutePath, $this->haltModalFormStatePath().'.')) {
+            return self::HALT_FORM_DEPTH;
+        }
+
+        for ($depth = $this->topActionFrameIndex(); $depth >= 0; $depth--) {
+            if (str_starts_with($absolutePath, $this->actionFrameStatePath($depth).'.')) {
+                return $depth;
+            }
+        }
+
+        return null;
+    }
 
     /**
      * The Livewire binding path to the halt modal's form-data bag. Standalone

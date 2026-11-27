@@ -8,7 +8,9 @@ summary: Fields that react to each other without leaving the schema — which cl
 Fields can react to each other's values without leaving the schema. Every dynamic field
 closure — `visible()`, `hidden()`, `disabled()`, `afterStateUpdated()` — is evaluated with
 Filament-style state accessors resolved against the **live** Livewire state bag. The same API
-works in a standalone `WithForms` form and inside a table action modal.
+works in a standalone `WithForms` form and inside any action modal, a table's or a page's.
+Display components (`Placeholder`, `Html`, `Alert`, `ViewField`) get the same accessors in their
+`content()` and `visible()` closures.
 
 ## State accessors
 
@@ -21,8 +23,8 @@ works in a standalone `WithForms` form and inside a table action modal.
 | `$component` | The field instance. |
 
 Reach for `$get` / `$set` instead of `Livewire::current()` + `data_get()` — the accessors resolve
-the correct bag prefix for you, including the `tableState.modal.action.formData` bag of an action
-modal.
+the correct bag prefix for you, including the bag of an action modal (`tableState.modal.actions.{n}.data`
+on a table, `mountedActions.{n}.data` on a page).
 
 ## Conditional fields
 
@@ -121,7 +123,7 @@ Multi-step forms get the same treatment: inside a Livewire host the standalone
 
 ## Prefill a form from an action
 
-An action modal form reads and writes the `modal.action.formData` bag. Seed its initial values with
+An action modal form reads and writes its frame's own bag (`modal.actions.{n}.data`). Seed its initial values with
 `fillFormUsing()`. The callback receives the record for row actions (and `null` for header actions,
 which have no record):
 
@@ -140,7 +142,13 @@ EditAction::make()
 ```
 
 Inside that form the reactive accessors above behave exactly as in a standalone form — `$get`,
-`$set` and `afterStateUpdated()` all resolve against the live modal bag.
+`$set` and `afterStateUpdated()` all resolve against the live modal bag, and a `validateLive()` field
+validates as it changes. That holds on every host that opens action modals: a table's row, bulk and
+header actions, a page's header actions and a `WithActions` component's own. It also holds for a
+modal still open behind a stacked one.
+
+A halt form validates live too, but its `afterStateUpdated()` does not run. The halt's form is kept
+between requests in the cache, and a schema that holds a Closure cannot be stored there.
 
 ## Modal footer actions
 

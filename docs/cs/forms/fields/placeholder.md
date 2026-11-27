@@ -38,6 +38,13 @@ a stránkou, takže cokoli, co jde do `allowHtml()`, musí být už důvěryhodn
 z placeholderu užitečnou věc pro hodnotu, která závisí na zbytku formuláře, ne na
 uloženém sloupci.
 
+**Jeho closures dostávají stejné state accessory jako closures pole.** `$get`,
+`$set` a `$state` se resolvují proti vlastnímu bagu formuláře: proti `statePath`
+formuláře, proti položce repeateru, ve které leží, nebo proti rámci modalu akce,
+ve kterém se zobrazuje. `content(fn ($get) => …)` a `visible(fn ($get) => …)` tak
+čtou sousední hodnoty stejně jako `visible()` pole. Ostatní zobrazovací komponenty
+(`Html`, `Alert`, `ViewField`) je berou ze stejného místa.
+
 ## Základní použití
 
 ```php
@@ -54,6 +61,14 @@ Protože se obsah vyhodnocuje při čtení, může se dívat na cokoli, co host 
 Placeholder::make('total')
     ->label('Celkem')
     ->content(fn (): string => number_format($this->lineTotal(), 2).' Kč')   // [tl! focus]
+```
+
+Nebo sousední pole přečtěte rovnou přes `$get`, bez metody na hostiteli:
+
+```php
+Placeholder::make('total')
+    ->label('Celkem')
+    ->content(fn ($get): string => number_format((float) $get('quantity') * (float) $get('unit_price'), 2).' Kč')   // [tl! focus]
 ```
 
 Aby se hodnota přepočítávala, jak uživatel píše, potřebují pole, na kterých závisí,

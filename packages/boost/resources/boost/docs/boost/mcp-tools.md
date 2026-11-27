@@ -30,7 +30,7 @@ component vocabulary.
 | `describe-infolist` | Resolve an infolist's entry schema. |
 | `describe-resource` | List the registered resources — key, model, labels, which surfaces each declares, and its navigation entry. |
 | `describe-module` | List the domain modules — id, dependencies, and the resources, dashboards and navigation group each declares. |
-| `validate-wire-component` | Build a component and report unknown colors, unregistered icons, and names the model cannot resolve. |
+| `validate-wire-component` | Build a component — a table, form, infolist or a page that hosts actions — and report unknown colors, unregistered icons, names the model cannot resolve and faults inside every action's modal form. |
 | `list-component-types` | List the built-in types for a category: `columns`, `filters`, `fields`, `actions`, `infolist-entries`, `panel-entries`, `widgets`, `modals`, `layouts`. |
 | `describe-component-api` | List the public fluent API of a component type — signatures, defaults, and the values each parameter accepts (an FQCN or a short name like `badge-column`). |
 | `list-icons` | Icon names registered with the wire `IconManager` (for `->icon()`). |
@@ -104,6 +104,61 @@ relation paths). Each finding names the target and suggests the near miss:
 
 Attribute checks need a reachable database table; without one they are skipped (reported as such) rather
 than guessed at. Columns that compute their own value via `->state()` are never flagged.
+
+A rollup column is checked for its **relation**, not its name. `TextColumn::make('clients_count')->counts('clients')`
+is named after the attribute Eloquent writes the count to, which no model declares, so the tool asks
+whether `clients` is a relation instead. When it is not, the finding is `unknown-relation`, an error,
+because the query throws when it tries to load the rollup.
+
+### Action forms
+
+An action's modal form is built only when someone clicks, so a fault inside it gets past every render
+test. The tool builds each one the way the modal would: a row, bulk or header action of a table, a
+page's header actions, the component's own `actions()`, every action inside an `ActionGroup`, and each
+step of a wizard. Each field is then checked for its icon and color. Findings are targeted down to the
+field, and `actionForms` counts the fields each form had:
+
+```json
+{
+  "kind": "actions",
+  "actionForms": { "pageHeaderActions.publish": 2, "pageActions.onboard": 3 },
+  "diagnostics": [
+    {
+      "severity": "error",
+      "rule": "unknown-color",
+      "target": "pageActions.onboard.form.plan",
+      "message": "Color [blu] is not a wire color; it will silently render as gray.",
+      "suggestions": ["blue"]
+    }
+  ]
+}
+```
+
+A page with no `table()`, `form()` or `infolist()` is inspected for its actions alone (`kind: actions`).
+
+Each form is built against what its host would hand it. A row action gets a row of the table, and a bulk
+action gets a selection holding that row. A table's header action gets no record, and a page's actions get
+the page's own record. So a `form(fn (Post $record) => …)` is built the way a click would build it. When a
+form throws and the record it expects was not there to give, the table being empty or the page lacking a
+`record`, the finding is a `needs-record` warning rather than an error. The form is not known to be broken,
+only unbuildable here.
+
+Each builder and each action form is built on its own. When one of them throws, for example a form that
+calls a service while it builds, the result is a `build-failed` finding against that target
+(`form()`, `pageActions.dns.form`). Everything beside it is still checked.
+
+### Record pages and a single action
+
+Two optional arguments narrow what is built:
+
+| Argument | Effect |
+|----------|--------|
+| `record` | A record key, set on the component's public `$record` before anything is built, as a view or edit page's own mount would. Without it a record page reports `build-failed` with "mounted without a record". The page's record is also what record-aware action forms (`form(fn ($record) => …)`) receive. |
+| `action` | Check only this action: its icon, its color and its modal form. A name that matches nothing is an `unknown-action` error that suggests the near miss. |
+
+```json
+{ "component": "App\\Livewire\\Servers\\ViewServer", "record": "42", "action": "deploy" }
+```
 
 ## General tools (Laravel Boost parity)
 

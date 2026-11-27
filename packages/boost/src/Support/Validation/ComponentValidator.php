@@ -6,6 +6,7 @@ namespace NyonCode\WireBoost\Support\Validation;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use NyonCode\WireBoost\Exceptions\ComponentBuildFailedException;
 use NyonCode\WireBoost\Exceptions\UnresolvableComponentException;
 use NyonCode\WireCore\Foundation\Colors\Color;
@@ -41,75 +42,328 @@ class ComponentValidator
         'infolist' => Infolist::class,
     ];
 
-    public function __construct(private IconManager $icons) {}
+    /**
+     * The groups whose items are actions: named for what they do, never for a
+     * model attribute, and each a possible owner of a modal form.
+     */
+    private const ACTION_GROUPS = ['actions', 'headerActions', 'bulkActions', 'pageHeaderActions', 'pageActions'];
+
+    public function __construct(private IconManager $icons, private ActionInspector $actions) {}
 
     /**
-     * Validate a Livewire component that builds a wire Table, Form or Infolist.
+     * Validate a Livewire component that builds a wire Table, Form or Infolist,
+     * or hosts actions of its own (a panel page, a `WithActions` component).
      *
+     * @param  mixed  $record  A record key for a record page (view, edit): set
+     *                         on the component's `$record` before anything is
+     *                         built, the way the page's own mount would.
+     * @param  string|null  $action  Check only this action — its icon, color and
+     *                               the form its modal opens.
      * @return array<string, mixed>
      */
-    public function validate(string $componentClass): array
+    public function validate(string $componentClass, mixed $record = null, ?string $action = null): array
     {
         if (! class_exists($componentClass)) {
             throw UnresolvableComponentException::classMissing($componentClass);
         }
 
-        $kind = $this->kind($componentClass);
+        $kinds = $this->kinds($componentClass);
+        $hostsActions = $this->actions->hostsActions($componentClass);
 
-        if ($kind === null) {
+        if ($kinds === [] && ! $hostsActions) {
             throw UnresolvableComponentException::notAWireComponent($componentClass);
         }
 
+        $kind = $kinds[0] ?? 'actions';
+
         try {
-            $built = $this->build($componentClass, $kind);
-        } catch (ComponentBuildFailedException $e) {
-            // Reporting problems is this tool's job, so a component that cannot
-            // be built is a finding here rather than a failed call — unlike
-            // every other tool, which needs a working component to say anything.
-            return [
-                'component' => $componentClass,
-                'kind' => $kind,
-                'ok' => false,
-                'diagnostics' => [
-                    Diagnostic::error('build-failed', $kind.'()', $e->getMessage())->toArray(),
-                ],
-            ];
+            $component = app()->make($componentClass);
+        } catch (Throwable $e) {
+            return $this->failed($componentClass, $kind, [
+                Diagnostic::error('build-failed', $componentClass, $e->getMessage()),
+            ]);
         }
 
-        [$builder, $components] = $built;
+        $diagnostics = $record !== null ? $this->assignRecord($component, $record) : [];
 
-        $model = $this->model($builder);
+        // Each builder on its own: a form that calls a service while it builds
+        // fails, and that is one finding, not a reason to say nothing about the
+        // table and the actions beside it.
+        $components = [];
+        $tableGroups = [];
+        $builderFailures = [];
+        $model = null;
+        $table = null;
+
+        foreach ($kinds as $builderKind) {
+            try {
+                $builder = $this->build($component, $componentClass, $builderKind);
+            } catch (ComponentBuildFailedException $e) {
+                $builderFailures[] = Diagnostic::error('build-failed', $builderKind.'()', $e->getMessage());
+
+                continue;
+            }
+
+            $groups = $this->components($builder, $builderKind, $builderKind === $kind);
+            $components = array_merge($components, $groups);
+
+            if ($builderKind === 'table') {
+                $tableGroups = array_keys($groups);
+                $model ??= $this->model($builder);
+                $table = $builder;
+            }
+        }
+
+        if ($hostsActions) {
+            [$hostGroups, $hostFailures] = $this->actions->hostActions($component);
+            $components = array_merge($components, $hostGroups);
+            $builderFailures = array_merge($builderFailures, $hostFailures);
+        }
+
+        foreach (self::ACTION_GROUPS as $group) {
+            if (isset($components[$group])) {
+                $components[$group] = $this->actions->expand($components[$group]);
+            }
+        }
+
+        if ($action !== null) {
+            [$components, $missing] = $this->onlyAction($components, $action);
+            $diagnostics = array_merge($diagnostics, $missing);
+        }
+
+        // A builder or a list of actions that would not build is only beside
+        // the point once the action asked about has been found without it — it
+        // may be where that action was declared.
+        if ($action === null || $components === []) {
+            $diagnostics = array_merge($builderFailures, $diagnostics);
+        }
+
         $introspector = $model instanceof Model ? new ModelIntrospector($model) : null;
 
-        $diagnostics = [];
-
         foreach ($components as $group => $items) {
-            foreach ($items as $component) {
-                $target = $group.'.'.($this->name($component) ?: get_class($component));
+            foreach ($items as $item) {
+                $target = $group.'.'.($this->name($item) ?: get_class($item));
 
                 $diagnostics = array_merge(
                     $diagnostics,
-                    $this->checkIcon($component, $target),
-                    $this->checkColor($component, $target),
-                    $this->checkAttribute($component, $target, $group, $introspector),
+                    $this->checkIcon($item, $target),
+                    $this->checkColor($item, $target),
+                    // Attribute names mean something only against the table's
+                    // own model: a form field may be a confirmation nobody
+                    // stores, and an action is named for what it does.
+                    in_array($group, $tableGroups, true) && ! in_array($group, self::ACTION_GROUPS, true)
+                        ? $this->checkAttribute($item, $target, $introspector)
+                        : [],
                 );
             }
+        }
+
+        [$actionForms, $formDiagnostics] = $this->checkActionForms($components, $component, $table);
+        $diagnostics = array_merge($diagnostics, $formDiagnostics);
+
+        if ($components === [] && $actionForms === [] && $diagnostics !== []) {
+            return $this->failed($componentClass, $kind, $diagnostics);
         }
 
         return array_filter([
             'component' => $componentClass,
             'kind' => $kind,
             'model' => $model instanceof Model ? $model::class : null,
-            'checked' => $this->summary($components),
-            'attributesChecked' => $introspector?->hasTable()
-                ? $introspector->table()
-                : 'skipped (no reachable database table)',
+            'record' => $record,
+            'action' => $action,
+            'checked' => $this->summary($components) ?: null,
+            'actionForms' => $actionForms !== [] ? $actionForms : null,
+            'attributesChecked' => $tableGroups === []
+                ? null
+                : ($introspector?->hasTable() ? $introspector->table() : 'skipped (no reachable database table)'),
             'ok' => $diagnostics === [],
             'diagnostics' => array_map(
                 static fn (Diagnostic $diagnostic): array => $diagnostic->toArray(),
                 $diagnostics,
             ),
         ], static fn (mixed $value): bool => $value !== null);
+    }
+
+    /**
+     * Nothing could be inspected at all — only what went wrong.
+     *
+     * @param  array<int, Diagnostic>  $diagnostics
+     * @return array<string, mixed>
+     */
+    private function failed(string $componentClass, string $kind, array $diagnostics): array
+    {
+        return [
+            'component' => $componentClass,
+            'kind' => $kind,
+            'ok' => false,
+            'diagnostics' => array_map(static fn (Diagnostic $diagnostic): array => $diagnostic->toArray(), $diagnostics),
+        ];
+    }
+
+    /**
+     * Put the record key where a record page reads it from.
+     *
+     * A record page keeps a key in its public `$record` and resolves it on
+     * demand; its `mount()` does nothing more than store it and 404 on a miss.
+     * Calling `mount()` here would also run whatever an application hangs off
+     * it, so only the property is set.
+     *
+     * @return array<int, Diagnostic>
+     */
+    private function assignRecord(object $component, mixed $record): array
+    {
+        $reflection = new ReflectionClass($component);
+        $property = $reflection->hasProperty('record') ? $reflection->getProperty('record') : null;
+
+        if ($property === null || ! $property->isPublic()) {
+            return [Diagnostic::warning(
+                'record-ignored',
+                'record',
+                '['.$component::class.'] has no public $record property, so the record key was not used.',
+            )];
+        }
+
+        try {
+            $property->setValue($component, $record);
+        } catch (Throwable $e) {
+            return [Diagnostic::warning('record-ignored', 'record', $e->getMessage())];
+        }
+
+        return [];
+    }
+
+    /**
+     * Keep only the action that was asked about, wherever it is declared.
+     *
+     * @param  array<string, array<int, object>>  $components
+     * @return array{0: array<string, array<int, object>>, 1: array<int, Diagnostic>}
+     */
+    private function onlyAction(array $components, string $action): array
+    {
+        $kept = [];
+        $all = [];
+
+        foreach (self::ACTION_GROUPS as $group) {
+            foreach ($components[$group] ?? [] as $item) {
+                $all[] = $item;
+
+                if ($this->name($item) === $action) {
+                    $kept[$group][] = $item;
+                }
+            }
+        }
+
+        if ($kept !== []) {
+            return [$kept, []];
+        }
+
+        return [[], [Diagnostic::error(
+            'unknown-action',
+            'actions.'.$action,
+            "No action named [{$action}] is declared on this component, its table or its header.",
+            $this->closest($action, $this->actions->names($all)),
+        )]];
+    }
+
+    /**
+     * Build every action's modal form and check its fields.
+     *
+     * Each form is built against the context its host would hand it: a table
+     * row for a row action, a selection for a bulk action, nothing for a
+     * table's header action, and the page's own record for a page's actions.
+     *
+     * @param  array<string, array<int, object>>  $components
+     * @return array{0: array<string, int>, 1: array<int, Diagnostic>}
+     */
+    private function checkActionForms(array $components, object $component, ?object $table): array
+    {
+        $counts = [];
+        $diagnostics = [];
+        $contexts = [];
+
+        foreach (self::ACTION_GROUPS as $group) {
+            foreach ($components[$group] ?? [] as $action) {
+                $name = $this->name($action);
+
+                if ($name === '' || ! method_exists($action, 'hasFormInstance') || ! $action->hasFormInstance()) {
+                    continue;
+                }
+
+                if (! array_key_exists($group, $contexts)) {
+                    $contexts[$group] = $this->actionContext($group, $component, $table);
+                }
+
+                $context = $contexts[$group];
+                $target = "{$group}.{$name}.form";
+
+                try {
+                    $forms = $this->actions->forms($action, $context);
+                } catch (Throwable $e) {
+                    $diagnostics[] = $this->formBuildFailure($group, $target, $context, $e);
+
+                    continue;
+                }
+
+                $fields = [];
+                foreach ($forms as $form) {
+                    $fields = array_merge($fields, $this->flatten($this->callArray($form, 'getSchema')));
+                }
+
+                $counts["{$group}.{$name}"] = count($fields);
+
+                foreach ($fields as $field) {
+                    $fieldTarget = $target.'.'.($this->name($field) ?: get_class($field));
+
+                    $diagnostics = array_merge(
+                        $diagnostics,
+                        $this->checkIcon($field, $fieldTarget),
+                        $this->checkColor($field, $fieldTarget),
+                    );
+                }
+            }
+        }
+
+        return [$counts, $diagnostics];
+    }
+
+    /**
+     * What an action group's forms are built against.
+     */
+    private function actionContext(string $group, object $component, ?object $table): mixed
+    {
+        // A table hands its header actions no record at all. (A statement, not
+        // a `=> null` arm: a constant arm compiles to nothing a coverage run
+        // can see execute.)
+        if ($group === 'headerActions') {
+            return null;
+        }
+
+        return match ($group) {
+            'actions' => $this->actions->sampleRow($table),
+            'bulkActions' => collect(array_filter([$this->actions->sampleRow($table)])),
+            default => $this->actions->contextRecord($component),
+        };
+    }
+
+    /**
+     * A form that throws without the record it expects is not known to be
+     * broken — only unbuildable here. That is a warning that says what was
+     * missing; a form that throws with its record in hand is an error.
+     */
+    private function formBuildFailure(string $group, string $target, mixed $context, Throwable $e): Diagnostic
+    {
+        $missing = $group !== 'headerActions'
+            && ($context === null || ($context instanceof Collection && $context->isEmpty()));
+
+        if (! $missing) {
+            return Diagnostic::error('build-failed', $target, $e->getMessage());
+        }
+
+        $hint = in_array($group, ['actions', 'bulkActions'], true)
+            ? 'the table has no row to build it against'
+            : 'no record to build it against; pass `record`';
+
+        return Diagnostic::warning('needs-record', $target, "Not built: {$hint}. {$e->getMessage()}");
     }
 
     /**
@@ -153,16 +407,17 @@ class ComponentValidator
     /**
      * @return array<int, Diagnostic>
      */
-    private function checkAttribute(object $component, string $target, string $group, ?ModelIntrospector $introspector): array
+    private function checkAttribute(object $component, string $target, ?ModelIntrospector $introspector): array
     {
         if (! $introspector instanceof ModelIntrospector || ! $introspector->hasTable()) {
             return [];
         }
 
-        // Actions are named for what they do ("delete"), not for an attribute
-        // they read, so their name is never a model attribute.
-        if (in_array($group, ['actions', 'headerActions', 'bulkActions'], true)) {
-            return [];
+        // A rollup (`->counts('clients')`) is named for the attribute Eloquent
+        // writes it to — `clients_count` — which no model declares. What has to
+        // exist is the relation it rolls up.
+        if (method_exists($component, 'isAggregate') && $component->isAggregate()) {
+            return $this->checkAggregateRelation($component, $target, $introspector);
         }
 
         $name = $this->name($component);
@@ -180,6 +435,29 @@ class ComponentValidator
             $target,
             "[{$introspector->table()}] has no attribute [{$name}]; it will render blank.",
             $introspector->suggestionsFor($name),
+        )];
+    }
+
+    /**
+     * @return array<int, Diagnostic>
+     */
+    private function checkAggregateRelation(object $component, string $target, ModelIntrospector $introspector): array
+    {
+        // Both are set together by the one writer of a rollup, so an aggregate
+        // column always has them.
+        [$first] = explode('.', (string) $this->call($component, 'getAggregateRelation'), 2);
+
+        if ($introspector->isRelation($first)) {
+            return [];
+        }
+
+        $function = (string) $this->call($component, 'getAggregateFunction');
+
+        return [Diagnostic::error(
+            'unknown-relation',
+            $target,
+            "[{$introspector->modelClass()}] has no relation [{$first}], so the {$function} cannot be loaded; the query will throw.",
+            $this->closest($first, $introspector->relations()),
         )];
     }
 
@@ -217,35 +495,34 @@ class ComponentValidator
     }
 
     /**
-     * @return array{0: object, 1: array<string, array<int, object>>}
+     * Build one of the component's builders.
      */
-    private function build(string $componentClass, string $kind): array
+    private function build(object $component, string $componentClass, string $kind): object
     {
         $builderClass = self::BUILDERS[$kind];
 
         try {
-            $component = app()->make($componentClass);
-
             /** @var object $builder */
             $builder = $component->{$kind}($builderClass::make());
         } catch (Throwable $e) {
             throw ComponentBuildFailedException::make($componentClass, $kind, $e);
         }
 
-        // Outside the try: a failure in our own extraction is a bug in this
-        // package, not something to blame on the component being inspected.
-        return [$builder, $this->components($builder, $kind)];
+        return $builder;
     }
 
     /**
-     * The schema of a built builder, grouped by role.
+     * The schema of a built builder, grouped by role. Extraction failures are
+     * a bug in this package, not something to blame on the component.
      *
      * @return array<string, array<int, object>>
      */
-    private function components(object $builder, string $kind): array
+    private function components(object $builder, string $kind, bool $primary): array
     {
         if ($kind !== 'table') {
-            return ['schema' => $this->flatten($this->callArray($builder, 'getSchema'))];
+            // The first builder's schema is "schema", as it always was; a second
+            // one (a manage page's form beside its table) is named for its kind.
+            return [$primary ? 'schema' : $kind => $this->flatten($this->callArray($builder, 'getSchema'))];
         }
 
         return [
@@ -293,27 +570,31 @@ class ComponentValidator
     }
 
     /**
-     * Which builder this component declares, if any.
+     * Which builders this component declares, in the order they are reported.
      *
      * The method's signature is checked, not just its name: an unrelated class
      * can easily have a `table()` that means something else entirely, and PHP
      * silently discards the extra argument, so a name-only test would "build"
      * it and report a confusing TypeError instead of "this is not a wire
      * component".
+     *
+     * @return array<int, string>
      */
-    private function kind(string $componentClass): ?string
+    private function kinds(string $componentClass): array
     {
+        $kinds = [];
+
         foreach (self::BUILDERS as $kind => $builderClass) {
             if (! class_exists($builderClass) || ! method_exists($componentClass, $kind)) {
                 continue;
             }
 
             if ($this->builds($componentClass, $kind, $builderClass)) {
-                return $kind;
+                $kinds[] = $kind;
             }
         }
 
-        return null;
+        return $kinds;
     }
 
     private function builds(string $componentClass, string $method, string $builderClass): bool

@@ -40,7 +40,9 @@ Dependency graph (each depends only on those to its right):
 - `list-icons` — valid icon names for `->icon()`.
 - `validate-wire-component` — **run this after writing or editing a component.** An unknown color renders
   gray, an unregistered icon renders nothing, and a name the model cannot resolve renders an empty cell.
-  None of the three throws, so a passing render test does not rule any of them out.
+  None of the three throws, so a passing render test does not rule any of them out. It also builds every
+  action's modal form (row, bulk, header, page and grouped actions, wizard steps), which only a click
+  would otherwise build. Pass `record` (a key) for a view or edit page, and `action` to check one action.
 
 ### Versions and the 1.x → 2.0 upgrade
 

@@ -110,6 +110,29 @@ trait WithActions
     public array $actionModalHaltData = [];
 
     // ==========================================
+    // Reactive modal fields
+    // ==========================================
+
+    /**
+     * Livewire trait hook (fires for every property, full path first): remember
+     * a modal field's value before it changes.
+     */
+    public function updatingWithActions(string $name, mixed $value): void
+    {
+        $this->rememberActionFormStateBeforeUpdate($name);
+    }
+
+    /**
+     * Livewire trait hook: a field in an action or halt modal changed — run its
+     * `afterStateUpdated()` and live validation against the live modal bag, the
+     * way a table host does for its own modals.
+     */
+    public function updatedWithActions(string $name, mixed $value): void
+    {
+        $this->dispatchActionFormStateUpdate($name);
+    }
+
+    // ==========================================
     // Action registry
     // ==========================================
 

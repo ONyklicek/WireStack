@@ -25,8 +25,8 @@ final class UnresolvableComponentException extends InvalidArgumentException impl
     public static function notAWireComponent(string $class): self
     {
         return new self(
-            "[{$class}] defines no table(), form() or infolist() method returning a wire builder, "
-            .'so there is nothing to inspect.'
+            "[{$class}] defines no table(), form() or infolist() method returning a wire builder "
+            .'and hosts no actions, so there is nothing to inspect.'
         );
     }
 
