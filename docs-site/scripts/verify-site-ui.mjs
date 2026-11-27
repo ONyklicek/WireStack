@@ -22,7 +22,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { openPage, checker, sleep } from '../../workbench/scripts/lib/cdp.mjs';
+import { openPage, checker, sleep, until } from '../../workbench/scripts/lib/cdp.mjs';
 
 const REPO = resolve(process.argv[2] ?? '.');
 const PORT = Number(process.env.DOCS_UI_PORT ?? 8123);
@@ -71,8 +71,18 @@ try {
   session = await openPage({ url: `${BASE}/table/overview/`, shotPrefix: 'docs-ui', width: 390, height: 780, mobile: true, settle: 1200 });
   const { page, eval_, shot, shotDir, consoleErrors, badResponses, close } = session;
 
+  // A fixed pause after Page.navigate was the whole wait, and on a slow runner
+  // it ran out before the next page had loaded: the next read hit the page
+  // being left (or none at all) and `querySelector(...)` came back null. So the
+  // document being left is marked, and the wait is for that mark to be gone —
+  // a new document — and for the new one to have finished loading. Waiting on
+  // readyState alone would pass at once on the old, already-complete page. An
+  // evaluate that lands mid-navigation throws ("context destroyed"); that is a
+  // "not yet", not a failure. `settle` stays as the time scripts get to run.
   const goto = async (url, settle = 1000) => {
+    await eval_('window.__docsDriverLeaving = true');
     await page('Page.navigate', { url });
+    await until(() => eval_(`!window.__docsDriverLeaving && document.readyState === 'complete'`).catch(() => false), { timeout: 15000 });
     await sleep(settle);
   };
   const tap = async (selector) => {
